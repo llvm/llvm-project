@@ -7,6 +7,10 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
+; RUN:llc -O0 -mtriple=spirv-- -enable-new-pm -stop-before=spirv-asm-printer < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
+; RUN:llc -O3 -mtriple=spirv-- -enable-new-pm -stop-before=spirv-asm-printer < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
@@ -42,7 +46,7 @@
 ; SPIRV-O0-NEXT:      Natural Loop Information
 ; SPIRV-O0-NEXT:      Canonicalize natural loops
 ; SPIRV-O0-NEXT:      Strip convergence intrinsics and operand bundles
-; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-O0-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
 ; SPIRV-O0-NEXT:    SPIRV push constant Access
@@ -153,7 +157,7 @@
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Canonicalize natural loops
 ; SPIRV-Opt-NEXT:      Strip convergence intrinsics and operand bundles
-; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-Opt-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access
 ; SPIRV-Opt-NEXT:    SPIRV push constant Access
@@ -225,6 +229,14 @@
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      SPIRV Assembly Printer
 ; SPIRV-Opt-NEXT:      Free MachineFunction
+
+; SPIR-V NewPM skips RegBankSelect, so instruction selection must not require it.
+; SPIRV-NPM:legalized:       true
+; SPIRV-NPM-NEXT:regBankSelected: false
+; SPIRV-NPM-NEXT:selected:        true
+; SPIRV-NPM:%[[#VOID:]]:type = OpTypeVoid
+; SPIRV-NPM:%[[#]]:iid = OpFunction %[[#VOID]], 0, %[[#]]
+; SPIRV-NPM:OpReturn
 
 define void @empty() {
   ret void

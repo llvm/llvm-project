@@ -27,6 +27,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace llvm {
 namespace orc {
@@ -42,6 +43,13 @@ enum class SimpleRemoteEPCOpcode : uint8_t {
   Result,
   CallWrapper,
   LastOpC = CallWrapper
+};
+
+/// Result message kind: either a value, or an out-of-band error.
+enum class SimpleRemoteEPCResultKind : uint64_t {
+  Value,
+  OutOfBandError,
+  LastResultKind = OutOfBandError
 };
 
 struct SimpleRemoteEPCExecutorInfo {
@@ -66,6 +74,28 @@ LLVM_ABI shared::WrapperFunctionBuffer encodeHangupPayload(Error Err);
 /// outcomes end the session with an error; they are distinguished only by the
 /// message.
 LLVM_ABI Error decodeHangupPayload(shared::WrapperFunctionBuffer Payload);
+
+/// Encode a wrapper function result as the TagAddr and payload of a Result
+/// message.
+///
+/// An ordinary result travels as its own bytes. An out-of-band error -- which
+/// reports a failure of the wrapper machinery itself, rather than one the
+/// wrapper chose to report -- has no bytes of its own, so its message is
+/// serialized into the payload and the result is tagged OutOfBandError instead.
+LLVM_ABI std::pair<ExecutorAddr, shared::WrapperFunctionBuffer>
+encodeResultMessage(shared::WrapperFunctionBuffer ResultBytes);
+
+/// Decode a Result message produced by encodeResultMessage, returning the
+/// result to complete the pending call with.
+///
+/// Returns an Error if TagAddr does not name a known result kind: like an
+/// unrecognized opcode, that means the peer is speaking a dialect this build
+/// does not know, so the session cannot safely continue. A payload that will
+/// not decode is not fatal by contrast -- it comes back as an out-of-band error
+/// describing itself, so the call waiting on it is still unblocked.
+LLVM_ABI Expected<shared::WrapperFunctionBuffer>
+decodeResultMessage(ExecutorAddr TagAddr,
+                    shared::WrapperFunctionBuffer Payload);
 
 class LLVM_ABI SimpleRemoteEPCTransportClient {
 public:

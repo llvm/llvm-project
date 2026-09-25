@@ -1969,10 +1969,10 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD6]], [[WIDE_LOAD10]]
 ; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = freeze <4 x i1> [[TMP15]]
-; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = or <4 x i1> [[TMP6]], [[TMP19]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21:%.*]] = freeze <4 x i1> [[TMP16]]
-; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP20]], [[TMP21]]
 ; CHECK-VF4IC4-NEXT:    [[TMP23:%.*]] = freeze <4 x i1> [[TMP17]]
+; CHECK-VF4IC4-NEXT:    [[TMP41:%.*]] = or <4 x i1> [[TMP6]], [[TMP19]]
+; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP41]], [[TMP21]]
 ; CHECK-VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP22]], [[TMP23]]
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
 ; CHECK-VF4IC4-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]

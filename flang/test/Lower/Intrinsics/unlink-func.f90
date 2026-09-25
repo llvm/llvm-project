@@ -5,7 +5,7 @@
 integer function unlink_test(path)
 CHARACTER(len=255) :: path
 
-!CHECK-DAG:   %[[func_result:.*]] = fir.alloca i32 {bindc_name = "unlink_test", uniq_name = "_QFunlink_testEunlink_test"}
+!CHECK-DAG:   %[[func_result:.*]] = fir.alloca i32 <{bindc_name = "unlink_test", uniq_name = "_QFunlink_testEunlink_test"}>
 !CHECK-DAG:   %[[func_result_decl:.*]]:{{.*}} = hlfir.declare %[[func_result]] {uniq_name = "_QFunlink_testEunlink_test"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-DAG:   %[[src_path_addr:.*]] = fir.address_of(@_{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>
 !CHECK-DAG:   %[[line_value:.*]] = arith.constant {{.*}} : i64

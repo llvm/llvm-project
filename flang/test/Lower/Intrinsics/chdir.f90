@@ -18,7 +18,7 @@ subroutine test_chdir_subroutine_status_i4()
 ! CHECK-LABEL:   func.func @_QPtest_chdir_subroutine_status_i4() {
 
   call chdir("..", STATUS=stat)
-! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "stat", uniq_name = "_QFtest_chdir_subroutine_status_i4Estat"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "stat", uniq_name = "_QFtest_chdir_subroutine_status_i4Estat"}>
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_chdir_subroutine_status_i4Estat"} : (!fir.ref<i32>) ->
 ! (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QQclX2E2E) : !fir.ref<!fir.char<1,2>>
@@ -40,7 +40,7 @@ subroutine test_chdir_function_status_i4()
 ! CHECK-LABEL:   func.func @_QPtest_chdir_function_status_i4() {
 
   stat = chdir("..")
-! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "stat", uniq_name = "_QFtest_chdir_function_status_i4Estat"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "stat", uniq_name = "_QFtest_chdir_function_status_i4Estat"}>
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_chdir_function_status_i4Estat"} : (!fir.ref<i32>) ->
 ! (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QQclX2E2E) : !fir.ref<!fir.char<1,2>>
@@ -57,7 +57,7 @@ subroutine test_chdir_subroutine_status_i8()
 ! CHECK-LABEL:   func.func @_QPtest_chdir_subroutine_status_i8() {
 
   call chdir("..", STATUS=stat)
-! CHECK:  %[[VAL_0:.*]] = fir.alloca i64 {bindc_name = "stat", uniq_name = "_QFtest_chdir_subroutine_status_i8Estat"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca i64 <{bindc_name = "stat", uniq_name = "_QFtest_chdir_subroutine_status_i8Estat"}>
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_chdir_subroutine_status_i8Estat"} : (!fir.ref<i64>) ->
 ! (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QQclX2E2E) : !fir.ref<!fir.char<1,2>>
@@ -80,7 +80,7 @@ subroutine test_chdir_function_status_i8()
 ! CHECK-LABEL:   func.func @_QPtest_chdir_function_status_i8() {
 
   stat = chdir("..")
-! CHECK:  %[[VAL_0:.*]] = fir.alloca i64 {bindc_name = "stat", uniq_name = "_QFtest_chdir_function_status_i8Estat"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca i64 <{bindc_name = "stat", uniq_name = "_QFtest_chdir_function_status_i8Estat"}>
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_chdir_function_status_i8Estat"} : (!fir.ref<i64>) ->
 ! (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QQclX2E2E) : !fir.ref<!fir.char<1,2>>

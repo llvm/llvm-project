@@ -5219,11 +5219,11 @@ D. References
 
     .. _amdgpu-dwarf-AMDGPU-DWARF-LOC:
 
-4.  [AMDGPU-DWARF-LOC] `Allow Location Descriptions on the DWARF Expression Stack <https://llvm.org/docs/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack.html>`__
+4.  [AMDGPU-DWARF-LOC] :doc:`Allow Location Descriptions on the DWARF Expression Stack <AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack>`
 
     .. _amdgpu-dwarf-AMDGPU-LLVM:
 
-5.  [AMDGPU-LLVM] `User Guide for AMDGPU LLVM Backend <https://llvm.org/docs/AMDGPUUsage.html>`__
+5.  [AMDGPU-LLVM] :doc:`User Guide for AMDGPU LLVM Backend <AMDGPUUsage>`
 
     .. _amdgpu-dwarf-CUDA:
 

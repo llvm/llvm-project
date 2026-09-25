@@ -6,5 +6,12 @@ static_library("CodeGenUtils") {
     "//clang/lib/Basic",
     "//llvm/lib/Support",
   ]
-  sources = [ "CodeGenUtils.cpp" ]
+  sources = [
+    "CallUtils.cpp",
+    "ClassUtils.cpp",
+    "CodeGenUtils.cpp",
+    "ExprUtils.cpp",
+    "FunctionUtils.cpp",
+    "ItaniumCXXABIUtils.cpp",
+  ]
 }

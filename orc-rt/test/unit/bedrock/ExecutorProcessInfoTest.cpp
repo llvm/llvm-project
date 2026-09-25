@@ -14,8 +14,6 @@
 #include "orc-rt/support/bit.h"
 #include "gtest/gtest.h"
 
-#include <unistd.h>
-
 using namespace orc_rt;
 
 TEST(ExecutorProcessInfoTest, DetectSucceeds) {
@@ -32,11 +30,6 @@ TEST(ExecutorProcessInfoTest, DetectPageSizeIsPowerOfTwo) {
 TEST(ExecutorProcessInfoTest, DetectPageSizeAtLeast4096) {
   auto EPI = cantFail(ExecutorProcessInfo::Detect());
   EXPECT_GE(EPI.pageSize(), 4096U);
-}
-
-TEST(ExecutorProcessInfoTest, DetectPageSizeMatchesSysconf) {
-  auto EPI = cantFail(ExecutorProcessInfo::Detect());
-  EXPECT_EQ(EPI.pageSize(), static_cast<size_t>(sysconf(_SC_PAGESIZE)));
 }
 
 TEST(ExecutorProcessInfoTest, ConstructWithExplicitValues) {

@@ -503,5 +503,48 @@ endfunction()
         self.assertEqual(cmake_format.format_cmake_content(code), expected)
 
 
+class TestFileWriting(unittest.TestCase):
+    """Regression tests for the bytes that land on disk, not the formatted string."""
+
+    def test_inplace_write_keeps_lf_endings(self):
+        """In-place formatting writes exactly the bytes format_cmake_content produced.
+
+        A text-mode write substitutes the platform line separator, which
+        rewrites every line of an LF file as CRLF on Windows.
+        """
+        import contextlib
+        import io
+        import tempfile
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+        expected = cmake_format.format_cmake_content(code).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(code)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(cmake_format.process_file(path, inplace=True))
+
+            with open(path, "rb") as f:
+                self.assertEqual(f.read(), expected)
+
+    def test_stdout_write_keeps_lf_endings(self):
+        """Formatting through stdin/stdout does not rewrite the line endings either."""
+        import subprocess
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+        expected = cmake_format.format_cmake_content(code).encode("utf-8")
+
+        proc = subprocess.run(
+            [sys.executable, os.path.join(SCRIPT_DIR, "cmake_format.py")],
+            input=code.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        self.assertEqual(proc.stdout, expected)
+
+
 if __name__ == "__main__":
     unittest.main()

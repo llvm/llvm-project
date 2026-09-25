@@ -93,6 +93,7 @@ void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDiagnosticsPass();
 void registerTestDiagnosticsMetadataPass();
+void registerTestDiagnosticsNextPass();
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestRemarkPass();
@@ -242,6 +243,7 @@ static void registerTestPasses() {
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDiagnosticsPass();
   mlir::test::registerTestDiagnosticsMetadataPass();
+  mlir::test::registerTestDiagnosticsNextPass();
   mlir::test::registerTestDominancePass();
   mlir::test::registerTestDynamicPipelinePass();
   mlir::test::registerTestRemarkPass();

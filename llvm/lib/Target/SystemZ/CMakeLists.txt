@@ -18,6 +18,7 @@ add_public_tablegen_target(SystemZCommonTableGen)
 
 add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
+  SystemZAlignGlobals.cpp
   SystemZCallingConv.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp

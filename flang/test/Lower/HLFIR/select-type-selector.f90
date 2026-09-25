@@ -28,9 +28,9 @@ subroutine test()
   end select
 end subroutine test
 ! CHECK-LABEL:   func.func @_QPtest() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "ub", uniq_name = "_QFtestEub"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "ub", uniq_name = "_QFtestEub"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtestEub"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>> {bindc_name = "x", uniq_name = "_QFtestEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>> <{bindc_name = "x", uniq_name = "_QFtestEx"}>
 ! CHECK:           %[[VAL_3:.*]] = fir.zero_bits !fir.heap<!fir.array<?xnone>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>

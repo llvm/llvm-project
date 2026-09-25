@@ -279,26 +279,26 @@ void test_get_on_temporary_pointer() {
   const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{temporary object does not live long enough}}.
                                                    // expected-note@-1 {{temporary object is destroyed here}}
                                                    // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
-  (void)s_ref;                                     // expected-note {{later used here}}
+  use(s_ref);                                      // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
   const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{temporary object does not live long enough}}.
                                                    // expected-note@-1 {{temporary object is destroyed here}}
                                                    // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
-  (void)s_ref;                                     // expected-note {{later used here}}
+  use(s_ref);                                      // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
   View sv = ViewProvider{1}.getView();      // expected-warning {{temporary object does not live long enough}}.
                                             // expected-note@-1 {{temporary object is destroyed here}}
                                             // expected-note@-2 {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
-  (void)sv;                                 // expected-note {{later used here}}
+  use(sv);                                  // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_copy() {
   ReturnsSelf copy = ReturnsSelf().get();                                               
-  (void)copy;                                     
+  use(copy);
 }
 
 struct MemberReturn {
@@ -605,7 +605,7 @@ void uaf_via_inferred_lifetimebound() {
     f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
                                               // expected-note {{result of call to 'return_lambda_capturing_param' aliases the storage of local variable 'local' because parameter 'x' is inferred as lifetimebound}}
   } // expected-note {{local variable 'local' is destroyed here}}
-  (void)f; // expected-note {{later used here}}
+  use(f);  // expected-note {{later used here}}
 }
 
 } // namespace callable_wrappers
@@ -629,7 +629,7 @@ void test_inference() {
     ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
                               // expected-note {{result of call to 'create_target' aliases the storage of local variable 'obj' because parameter 'obj' is inferred as lifetimebound}}
   } // expected-note {{local variable 'obj' is destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+  use(ptr);  // expected-note {{later used here}}
 }
 } // namespace make_unique_suggestion
 
@@ -643,7 +643,7 @@ void test_new_allocation() {
   View* v = MakeView(MyObj{}); // expected-warning {{temporary object does not live long enough}} \
                                // expected-note {{temporary object is destroyed here}} \
                                // expected-note {{result of call to 'MakeView' aliases the storage of temporary object because parameter 'in' is inferred as lifetimebound}}
-  (void)v;                     // expected-note {{later used here}}
+  use(v);                      // expected-note {{later used here}}
 }
 
 struct LifetimeBoundCtor {

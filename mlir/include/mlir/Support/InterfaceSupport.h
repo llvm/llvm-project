@@ -140,18 +140,6 @@ private:
 // InterfaceMap
 //===----------------------------------------------------------------------===//
 
-/// Template utility that computes the number of elements within `T` that
-/// satisfy the given predicate.
-template <template <class> class Pred, size_t N, typename... Ts>
-struct count_if_t_impl : public std::integral_constant<size_t, N> {};
-template <template <class> class Pred, size_t N, typename T, typename... Us>
-struct count_if_t_impl<Pred, N, T, Us...>
-    : public std::integral_constant<
-          size_t,
-          count_if_t_impl<Pred, N + (Pred<T>::value ? 1 : 0), Us...>::value> {};
-template <template <class> class Pred, typename... Ts>
-using count_if_t = count_if_t_impl<Pred, 0, Ts...>;
-
 /// This class provides an efficient mapping between a given `Interface` type,
 /// and a particular implementation of its concept.
 class InterfaceMap {
@@ -160,8 +148,6 @@ class InterfaceMap {
   using has_get_interface_id = decltype(T::getInterfaceID());
   template <typename T>
   using detect_get_interface_id = llvm::is_detected<has_get_interface_id, T>;
-  template <typename... Types>
-  using num_interface_types_t = count_if_t<detect_get_interface_id, Types...>;
 
   /// Trait to check if T provides a 'initializeInterfaceConcept' method.
   template <typename T, typename... Args>
@@ -191,7 +177,8 @@ public:
   /// do not represent interfaces are not added to the interface map.
   template <typename... Types>
   static InterfaceMap get() {
-    constexpr size_t numInterfaces = num_interface_types_t<Types...>::value;
+    constexpr size_t numInterfaces =
+        (size_t{0} + ... + detect_get_interface_id<Types>::value);
     if constexpr (numInterfaces == 0) {
       return InterfaceMap();
     } else {
@@ -218,22 +205,17 @@ public:
   }
 
 private:
-  /// Insert the given interface types into the map (recursive expansion to
-  /// guarantee sequential, left-to-right evaluation across all compilers).
-  template <typename T>
+  /// Insert the given interface types in source order. A comma fold is
+  /// sequenced left to right in C++17.
+  template <typename... Types>
   void insertPotentialInterfaces() {
-    insertPotentialInterface<T>();
-  }
-  template <typename T, typename T2, typename... Rest>
-  void insertPotentialInterfaces() {
-    insertPotentialInterface<T>();
-    insertPotentialInterfaces<T2, Rest...>();
+    (insertPotentialInterface<Types>(), ...);
   }
 
   /// Insert the given interface type into the map, ignoring it if it doesn't
   /// actually represent an interface.
   template <typename T>
-  inline void insertPotentialInterface() {
+  void insertPotentialInterface() {
     if constexpr (detect_get_interface_id<T>::value)
       insertModel<typename T::ModelT>();
   }

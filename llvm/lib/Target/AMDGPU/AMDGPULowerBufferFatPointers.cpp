@@ -2468,7 +2468,6 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
@@ -2553,8 +2552,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewRsrc);
     return {nullptr, nullptr};
   }
-  case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group: {
+  case Intrinsic::launder_invariant_group: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};

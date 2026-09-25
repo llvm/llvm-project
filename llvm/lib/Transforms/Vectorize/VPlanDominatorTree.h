@@ -36,7 +36,8 @@ template <> struct DomTreeNodeTraits<VPBlockBase> {
 
 /// Template specialization of the standard LLVM dominator tree utility for
 /// VPBlockBases.
-class VPDominatorTree : public DominatorTreeBase<VPBlockBase, false> {
+class LLVM_ABI_FOR_TEST VPDominatorTree
+    : public DominatorTreeBase<VPBlockBase, false> {
   using Base = DominatorTreeBase<VPBlockBase, false>;
 
 public:

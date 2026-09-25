@@ -22,6 +22,23 @@ class TestFrameVar(TestBase):
         self.build()
         self.do_test()
 
+    def test_legacy_expression_path_malformed_trailing_operator(self):
+        """
+        A '-' or '>' with no matching partner is not a valid variable
+        expression path.
+        """
+        self.build()
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
+        )
+        self.runCmd("settings set target.experimental.use-DIL false")
+        for expr in ("test_var-", "test_var>", "test_var-x"):
+            # Make sure parser reprots an error instead of assert.
+            self.expect(
+                f"frame variable {expr}",
+                error=True,
+            )
+
     def do_test(self):
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.c")

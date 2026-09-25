@@ -31,6 +31,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -503,7 +504,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile, isNontemporal);
+  builder.createStore(getLoc(*currSrcLoc), value, addr, isVolatile,
+                      isNontemporal);
 
   assert(!cir::MissingFeatures::opTBAA());
 }
@@ -521,7 +523,7 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
 
   assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
+  return builder.createSetBitfield(getLoc(*currSrcLoc), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -724,7 +726,7 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
   if (lvalue.getType()->isConstantMatrixType()) {
-    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
+    cgm.errorNYI("emitStoreOfScalar constant matrix type");
     return;
   }
 
@@ -782,13 +784,18 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
 /// returning the rvalue.
 RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
-  assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
   if (lv.isBitField())
     return emitLoadOfBitfieldLValue(lv, loc);
 
-  if (lv.isSimple())
+  if (lv.isSimple()) {
+    if (lv.getType()->isConstantMatrixType()) {
+      cgm.errorNYI(loc, "emitLoadOfLValue: constant matrix type");
+      return RValue::get(nullptr);
+    }
+
     return RValue::get(emitLoadOfScalar(lv, loc));
+  }
 
   if (lv.isVectorElt()) {
     const mlir::Value load =
@@ -912,17 +919,41 @@ static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
 LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field,
                                                 mlir::Value thisValue) {
   bool hasExplicitObjectParameter = false;
-  const auto *methD = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
+  const auto *md = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
   LValue lambdaLV;
-  if (methD) {
-    hasExplicitObjectParameter = methD->isExplicitObjectMemberFunction();
-    assert(methD->getParent()->isLambda());
-    assert(methD->getParent() == field->getParent());
+  if (md) {
+    hasExplicitObjectParameter = md->isExplicitObjectMemberFunction();
+    assert(md->getParent()->isLambda());
+    assert(md->getParent() == field->getParent());
   }
+
   if (hasExplicitObjectParameter) {
-    cgm.errorNYI(field->getSourceRange(), "ExplicitObjectMemberFunction");
+    const VarDecl *d = cast<CXXMethodDecl>(curCodeDecl)->getParamDecl(0);
+    auto it = localDeclMap.find(d);
+    assert(it != localDeclMap.end() && "explicit parameter not loaded?");
+    Address addrOfExplicitObject = it->second;
+    if (d->getType()->isReferenceType())
+      lambdaLV = emitLoadOfReferenceLValue(addrOfExplicitObject,
+                                           getLoc(field->getSourceRange()),
+                                           d->getType(), AlignmentSource::Decl);
+    else
+      lambdaLV = makeAddrLValue(addrOfExplicitObject,
+                                d->getType().getNonReferenceType());
+
+    // Make sure we have an lvalue to the lambda itself and not a derived class.
+    auto *thisTy = d->getType().getNonReferenceType()->getAsCXXRecordDecl();
+    auto *lambdaTy = cast<CXXRecordDecl>(field->getParent());
+    if (thisTy != lambdaTy) {
+      const CXXCastPath &basePathArray = getContext().LambdaCastPaths.at(md);
+      Address base = getAddressOfBaseClass(
+          lambdaLV.getAddress(), thisTy,
+          llvm::make_range(basePathArray.begin(), basePathArray.end()),
+          /*nullCheckValue=*/false, SourceLocation());
+      CanQualType t = getContext().getCanonicalTagType(lambdaTy);
+      lambdaLV = makeAddrLValue(base, t);
+    }
   } else {
-    QualType lambdaTagType =
+    CanQualType lambdaTagType =
         getContext().getCanonicalTagType(field->getParent());
     lambdaLV = makeNaturalAlignAddrLValue(thisValue, lambdaTagType);
   }
@@ -1299,15 +1330,6 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
   return arrayAlign.alignmentOfArrayElement(eltSize);
 }
 
-static QualType getFixedSizeElementType(const ASTContext &astContext,
-                                        const VariableArrayType *vla) {
-  QualType eltType;
-  do {
-    eltType = vla->getElementType();
-  } while ((vla = astContext.getAsVariableArrayType(eltType)));
-  return eltType;
-}
-
 static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
                                          mlir::Location beginLoc,
                                          mlir::Location endLoc, mlir::Value ptr,
@@ -1331,7 +1353,7 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   // the thing that the indices are expressed in terms of.
   if (const VariableArrayType *vla =
           cgf.getContext().getAsVariableArrayType(eltType)) {
-    eltType = getFixedSizeElementType(cgf.getContext(), vla);
+    eltType = CodeGenUtils::getFixedSizeElementType(cgf.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -2172,7 +2194,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     RValue rv = emitAnyExpr(e->getRHS());
     LValue lv = emitLValue(e->getLHS());
 
-    SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
+    SourceLocRAIIObject loc{*this, e->getSourceRange()};
     if (lv.isBitField())
       emitStoreThroughBitfieldLValue(rv, lv);
     else
@@ -2217,16 +2239,6 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
   llvm_unreachable("bad evaluation kind");
 }
 
-// Detect the unusual situation where an inline version is shadowed by a
-// non-inline version. In that case we should pick the external one
-// everywhere. That's GCC behavior too.
-static bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *fd) {
-  for (const FunctionDecl *pd = fd; pd; pd = pd->getPreviousDecl())
-    if (!pd->isInlineBuiltinDeclaration())
-      return false;
-  return true;
-}
-
 CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
@@ -2248,7 +2260,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
     // name to make it clear it's not the actual builtin.
     if (auto fn = dyn_cast<cir::FuncOp>(curFn);
         (!fn || fn.getName() != fdInlineName) &&
-        onlyHasInlineBuiltinDeclaration(fd)) {
+        CodeGenUtils::onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
 
@@ -2414,7 +2426,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
-                               e == mustTailCall, getLoc(e->getExprLoc()));
+                               e == mustTailCall, e->getSourceRange());
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 
@@ -2616,6 +2628,14 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return emitIfOnBoolValue(condV, loc, thenBuilder, thenLoc, elseBuilder,
+                           elseLoc);
+}
+
+cir::IfOp CIRGenFunction::emitIfOnBoolValue(
+    mlir::Value condV, mlir::Location loc, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
   cir::IfOp ifOp = cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
                                      /*thenBuilder=*/thenBuilder,
                                      /*elseBuilder=*/elseBuilder);
@@ -2835,8 +2855,10 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
                        name, /*arraySize=*/nullptr, alloca, ip);
   if (ty->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "temporary matrix value");
+    cgm.errorNYI(loc, "createMemTemp constant matrix type");
+    return Address::invalid();
   }
+
   return result;
 }
 
@@ -3080,11 +3102,12 @@ CIRGenFunction::ConditionalInfo
 CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
                                       const FuncTy &branchGenFunc) {
   ConditionalInfo info;
-  ConditionalEvaluation eval(*this);
   mlir::Location loc = getLoc(e->getSourceRange());
   CIRGenBuilderTy &builder = getBuilder();
 
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
+
+  ConditionalEvaluation eval(*this, loc);
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {

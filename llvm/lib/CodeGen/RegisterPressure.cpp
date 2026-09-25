@@ -472,9 +472,12 @@ class RegisterOperandsCollector {
     for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperand(*OperI);
 
-    // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.Defs)
-      removeRegLanes(RegOpers.DeadDefs, P);
+    // An instruction can have overlapping defs where only some carry the dead
+    // flag, for example a dead super-register def alongside a live sub-register
+    // def. A register unit is dead if any def covering it is dead, so subtract
+    // the dead defs from the live defs.
+    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
+      removeRegLanes(RegOpers.Defs, P);
   }
 
   void collectInstrLanes(const MachineInstr &MI) const {

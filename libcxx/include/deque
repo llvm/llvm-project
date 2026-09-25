@@ -732,7 +732,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void assign(size_type __n, const value_type& __v);
 
-  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT { return __alloc_; }
   _LIBCPP_HIDE_FROM_ABI const allocator_type& __alloc() const _NOEXCEPT { return __alloc_; }
 

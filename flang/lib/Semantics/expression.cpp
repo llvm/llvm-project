@@ -1076,6 +1076,72 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::BOZLiteralConstant &x) {
 }
 
 // Names and named constants
+static void WarnForNumericStorageSize(
+    semantics::SemanticsContext &context, const parser::Name &name) {
+  const semantics::Symbol *associated{name.symbol};
+  const semantics::UseDetails *use{nullptr};
+  bool isNumericStorageSize{false};
+  while (associated) {
+    if (const auto *host{
+            associated->detailsIf<semantics::HostAssocDetails>()}) {
+      associated = &host->symbol();
+    } else if (const auto *nextUse{
+                   associated->detailsIf<semantics::UseDetails>()}) {
+      if (!use) {
+        use = nextUse;
+      }
+      const semantics::Symbol &used{nextUse->symbol()};
+      const semantics::Symbol &module{semantics::GetUsedModule(*nextUse)};
+      isNumericStorageSize |= used.name() == "numeric_storage_size" &&
+          module.name() == "iso_fortran_env" &&
+          module.attrs().test(semantics::Attr::INTRINSIC);
+      associated = &used;
+    } else {
+      break;
+    }
+  }
+  if (!isNumericStorageSize) {
+    return;
+  }
+  const auto &defaults{context.defaultKinds()};
+  const auto &targetCharacteristics{context.targetCharacteristics()};
+  const int intKind{defaults.GetDefaultKind(TypeCategory::Integer)};
+  const int realKind{defaults.GetDefaultKind(TypeCategory::Real)};
+  const std::size_t intBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Integer, intKind)};
+  const std::size_t realBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Real, realKind)};
+  if (intBytes != realBytes) {
+    if (auto *message{context.messages().Warn(
+            /*isInModuleFile=*/false, context.languageFeatures(),
+            common::UsageWarning::FoldingValueChecks, name.source,
+            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=%d) and REAL(KIND=%d) have different storage sizes (%zu and %zu bytes, respectively)"_warn_en_US,
+            intKind, realKind, intBytes, realBytes)}) {
+      if (use) {
+        message->Attach(use->location(), "USE-associated here"_en_US);
+      }
+    }
+  }
+}
+
+class NumericStorageSizeWarningVisitor {
+public:
+  explicit NumericStorageSizeWarningVisitor(
+      semantics::SemanticsContext &context)
+      : context_{context} {}
+  template <typename A> bool Pre(const A &) { return true; }
+  bool Pre(const parser::Name &name) {
+    if (!context_.HasError(name.symbol)) {
+      WarnForNumericStorageSize(context_, name);
+    }
+    return false;
+  }
+  template <typename A> void Post(const A &) {}
+
+private:
+  semantics::SemanticsContext &context_;
+};
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   auto restorer{GetContextualMessages().SetLocation(n.source)};
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
@@ -1085,6 +1151,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (context_.HasError(n.symbol)) { // includes case of no symbol
     return std::nullopt;
   } else {
+    // Most expression references are diagnosed here. Analyze(Expr) below
+    // performs the same check explicitly when returning a saved typed
+    // expression, since that path does not call Analyze(Name).
+    WarnForNumericStorageSize(context_, n);
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
       // A bare reference to a derived type parameter within a parameterized
@@ -1645,6 +1715,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
                           std::get_if<Expr<SomeInteger>>(&expr->u)}) {
                     if (coarrayRef.stat()) {
                       Say("coindexed reference has multiple STAT= specifiers"_err_en_US);
+                    } else if (!IsVariable(*intExpr)) {
+                      // A parser::Variable may resolve to a nonpointer
+                      // function reference.
+                      SayAt(x.v,
+                          "STAT= specifier must be a scalar integer variable"_err_en_US);
                     } else {
                       coarrayRef.set_stat(Expr<SomeInteger>{*intExpr});
                     }
@@ -2975,6 +3050,7 @@ static int CompareCudaMatchingDistance(
 // "ACC use_dev" column applies to actuals appearing in a surrounding
 // ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
+    semantics::SemanticsContext &context,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
   bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
@@ -2983,21 +3059,45 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
   // True when an unattributed actual may use the implicit CUDA memory mode
-  // matching enabled by -gpu=mem:unified or -gpu=mem:managed.
+  // matching enabled by -gpu=mem:unified (any variable) or -gpu=mem:managed
+  // (allocatable/pointer objects only).
   bool actualCanUseImplicitCudaMemoryMode{false};
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
       if (evaluate::IsVariable(*expr)) {
-        actualCanUseImplicitCudaMemoryMode = true;
+        bool actualIsAllocatableOrPointer{false};
         // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
         // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
         // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
         // last symbol (GetLastSymbol would only see a).
         for (const Symbol &s : evaluate::GetSymbolVector(*expr)) {
+          if (semantics::IsAllocatableOrPointer(
+                  semantics::ResolveAssociations(s))) {
+            actualIsAllocatableOrPointer = true;
+          }
           if (const auto *object{
                   s.detailsIf<semantics::ObjectEntityDetails>()}) {
             if (auto cudaAttr{object->cudaDataAttr()}) {
               actualDataAttr = *cudaAttr;
+            }
+          }
+        }
+        actualCanUseImplicitCudaMemoryMode =
+            isCudaUnified || (isCudaManaged && actualIsAllocatableOrPointer);
+        // An object mapped by an enclosing structured OpenACC data construct
+        // has a device copy that a Device dummy can be associated with, but
+        // ordinary references to it still denote the host object.
+        if (!actualDataAttr && context.AnyOpenACCDataMapping()) {
+          if (std::optional<parser::CharBlock> source{
+                  actual->sourceLocation()}) {
+            if (const semantics::Scope *scope{
+                    context.FindScopeIfAny(*source)}) {
+              for (const Symbol &symbol : evaluate::GetSymbolVector(*expr)) {
+                if (semantics::IsOpenACCMapped(symbol, *scope)) {
+                  actualDataAttr = common::CUDADataAttr::UseDevice;
+                  break;
+                }
+              }
             }
           }
         }
@@ -3101,10 +3201,10 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   // host_data use_device clause: the variable itself is host-resident, but
   // inside the host_data region it is referenced via its device address.
   // It matches a Device dummy with distance 0, a host dummy (no attribute)
-  // with distance 3, and is incompatible with any other dummy attribute.
+  // with distance 1, and is incompatible with any other dummy attribute.
   if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
     if (!dummyDataAttr)
-      return 3;
+      return 1;
     if (*dummyDataAttr == common::CUDADataAttr::Device)
       return 0;
   }
@@ -3112,7 +3212,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 }
 
 static CudaMatchingDistance ComputeCudaMatchingDistance(
-    const common::LanguageFeatureControl &features,
+    semantics::SemanticsContext &context,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
@@ -3126,7 +3226,8 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
       // Omitted optional arguments do not affect CUDA matching distances.
       continue;
     }
-    int d{GetMatchingDistance(features, dummy, actual)};
+    int d{GetMatchingDistance(
+        context.languageFeatures(), context, dummy, actual)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
       return distance;
@@ -3255,8 +3356,8 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{ComputeCudaMatchingDistance(
-              context_.languageFeatures(), *procedure, localActuals)};
+          CudaMatchingDistance d{
+              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
             if (crtMatchingDistance) {
@@ -4674,6 +4775,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
   MaybeExpr result;
   if (useSavedTypedExprs_) {
     if (expr.typedExpr) {
+      // Returning a saved typed expression bypasses Analyze(Name), so walk the
+      // original expression to perform its numeric_storage_size checks.
+      NumericStorageSizeWarningVisitor visitor{context_};
+      parser::Walk(expr, visitor);
       return expr.typedExpr->v;
     }
     if (!wasIterativelyAnalyzing) {

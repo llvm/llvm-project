@@ -87,31 +87,31 @@ program wsloop_variable
 end program wsloop_variable
 
 !CHECK-LABEL: func.func @_QPwsloop_variable_sub() {
-!CHECK:           %[[VAL_4:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFwsloop_variable_subEi1"}
+!CHECK:           %[[VAL_4:.*]] = fir.alloca i8 <{bindc_name = "i1", uniq_name = "_QFwsloop_variable_subEi1"}>
 !CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFwsloop_variable_subEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 
-!CHECK:           %[[VAL_6:.*]] = fir.alloca i128 {bindc_name = "i16_lb", uniq_name = "_QFwsloop_variable_subEi16_lb"}
+!CHECK:           %[[VAL_6:.*]] = fir.alloca i128 <{bindc_name = "i16_lb", uniq_name = "_QFwsloop_variable_subEi16_lb"}>
 !CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFwsloop_variable_subEi16_lb"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
 
-!CHECK:           %[[VAL_8:.*]] = fir.alloca i8 {bindc_name = "i1_ub", uniq_name = "_QFwsloop_variable_subEi1_ub"}
+!CHECK:           %[[VAL_8:.*]] = fir.alloca i8 <{bindc_name = "i1_ub", uniq_name = "_QFwsloop_variable_subEi1_ub"}>
 !CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFwsloop_variable_subEi1_ub"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 
-!CHECK:           %[[VAL_10:.*]] = fir.alloca i16 {bindc_name = "i2", uniq_name = "_QFwsloop_variable_subEi2"}
+!CHECK:           %[[VAL_10:.*]] = fir.alloca i16 <{bindc_name = "i2", uniq_name = "_QFwsloop_variable_subEi2"}>
 !CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFwsloop_variable_subEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 
-!CHECK:           %[[VAL_12:.*]] = fir.alloca i16 {bindc_name = "i2_s", uniq_name = "_QFwsloop_variable_subEi2_s"}
+!CHECK:           %[[VAL_12:.*]] = fir.alloca i16 <{bindc_name = "i2_s", uniq_name = "_QFwsloop_variable_subEi2_s"}>
 !CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFwsloop_variable_subEi2_s"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 
-!CHECK:           %[[VAL_14:.*]] = fir.alloca i32 {bindc_name = "i4_s", uniq_name = "_QFwsloop_variable_subEi4_s"}
+!CHECK:           %[[VAL_14:.*]] = fir.alloca i32 <{bindc_name = "i4_s", uniq_name = "_QFwsloop_variable_subEi4_s"}>
 !CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFwsloop_variable_subEi4_s"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_16:.*]] = fir.alloca i64 {bindc_name = "i8", uniq_name = "_QFwsloop_variable_subEi8"}
+!CHECK:           %[[VAL_16:.*]] = fir.alloca i64 <{bindc_name = "i8", uniq_name = "_QFwsloop_variable_subEi8"}>
 !CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFwsloop_variable_subEi8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 
-!CHECK:           %[[VAL_18:.*]] = fir.alloca i8 {bindc_name = "j1", uniq_name = "_QFwsloop_variable_subEj1"}
+!CHECK:           %[[VAL_18:.*]] = fir.alloca i8 <{bindc_name = "j1", uniq_name = "_QFwsloop_variable_subEj1"}>
 !CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFwsloop_variable_subEj1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 
-!CHECK:           %[[VAL_20:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFwsloop_variable_subEx"}
+!CHECK:           %[[VAL_20:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFwsloop_variable_subEx"}>
 !CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFwsloop_variable_subEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 subroutine wsloop_variable_sub

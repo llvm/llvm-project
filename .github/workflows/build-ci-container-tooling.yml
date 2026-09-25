@@ -29,7 +29,7 @@ jobs:
   build-ci-container-tooling:
     name: Build Container ${{ matrix.container-name }}
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -65,7 +65,7 @@ jobs:
       - name: Build Container
         uses: ./.github/actions/build-container
         with:
-          container-name: ci-ubuntu-24.04-${{ matrix.container-name }}
+          container-name: ci-ubuntu-26.04-${{ matrix.container-name }}
           dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
           target: ci-container-${{ matrix.target || format('code-{0}', matrix.container-name) }}
           test-command: ${{ matrix.test-command }}
@@ -77,7 +77,7 @@ jobs:
       - build-ci-container-tooling
     permissions:
       packages: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3

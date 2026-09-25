@@ -7,20 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -85,7 +83,8 @@ class CUFDeviceFuncTransform
   }
 
   static gpu::GPUFuncOp createGPUFuncOp(mlir::func::FuncOp funcOp,
-                                        bool isGlobal, int computeCap) {
+                                        llvm::StringRef name, bool isGlobal,
+                                        int computeCap) {
     mlir::OpBuilder builder(funcOp.getContext());
 
     mlir::Region &funcOpBody = funcOp.getBody();
@@ -107,9 +106,8 @@ class CUFDeviceFuncTransform
     mlir::FunctionType type = mlir::FunctionType::get(
         funcOp.getContext(), funcOperandTypes, funcResultTypes);
 
-    auto deviceFuncOp =
-        gpu::GPUFuncOp::create(builder, loc, funcOp.getName(), type,
-                               mlir::TypeRange{}, mlir::TypeRange{});
+    auto deviceFuncOp = gpu::GPUFuncOp::create(
+        builder, loc, name, type, mlir::TypeRange{}, mlir::TypeRange{});
     if (mlir::ArrayAttr argAttrs = funcOp.getAllArgAttrs())
       deviceFuncOp.setAllArgAttrs(argAttrs);
     setIntentInKernelArgAttrs(funcOp, deviceFuncOp);
@@ -183,18 +181,6 @@ class CUFDeviceFuncTransform
     symTab.insert(emptyStub);
   }
 
-  static bool isDeviceFunc(mlir::func::FuncOp funcOp) {
-    if (auto cudaProcAttr =
-            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                cuf::getProcAttrName()))
-      if (cudaProcAttr.getValue() == cuf::ProcAttribute::Device ||
-          cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
-          cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal ||
-          cudaProcAttr.getValue() == cuf::ProcAttribute::HostDevice)
-        return true;
-    return false;
-  }
-
   void runOnOperation() override {
     // Working on Module operation because inserting/removing function from the
     // module is not thread-safe.
@@ -207,64 +193,8 @@ class CUFDeviceFuncTransform
     gpu::GPUModuleOp gpuMod = cuf::getOrCreateGPUModule(mod, symbolTable);
     mlir::SymbolTable gpuModSymTab(gpuMod);
 
-    llvm::SetVector<mlir::func::FuncOp> funcsToClone;
-    llvm::SetVector<mlir::func::FuncOp> deviceFuncs;
-    llvm::SetVector<mlir::func::FuncOp> keepInModule;
-    llvm::StringSet<> deviceFuncNames;
-
-    // Look for all function to migrate to the GPU module.
-    mod.walk([&](mlir::func::FuncOp op) {
-      if (isDeviceFunc(op)) {
-        deviceFuncs.insert(op);
-        deviceFuncNames.insert(op.getSymName());
-      }
-    });
-
-    auto processCallOp = [&](fir::CallOp op) {
-      if (op.getCallee()) {
-        auto func = symbolTable.lookup<mlir::func::FuncOp>(
-            op.getCallee()->getLeafReference());
-        // ACCRoutineToGPUFunc moves the materialized specialized routine into
-        // the GPU module later in the pipeline.
-        if (mlir::acc::isAccRoutine(func))
-          return;
-        if (deviceFuncs.count(func) == 0)
-          funcsToClone.insert(func);
-      }
-    };
-
-    // Gather all function called by device functions.
-    for (auto funcOp : deviceFuncs) {
-      funcOp.walk([&](fir::CallOp op) { processCallOp(op); });
-      funcOp.walk([&](fir::DispatchOp op) {
-        TODO(op.getLoc(), "type-bound procedure call with dynamic dispatch "
-                          "in device procedure");
-      });
-    }
-
-    // Functions that are referenced in a derived-type binding table must be
-    // kept in the host module to avoid LLVM dialect verification errors.
-    for (auto globalOp : mod.getOps<fir::GlobalOp>()) {
-      if (globalOp.getName().contains(fir::kBindingTableSeparator)) {
-        globalOp.walk([&](fir::AddrOfOp addrOfOp) {
-          if (deviceFuncNames.contains(addrOfOp.getSymbol().getLeafReference()))
-            keepInModule.insert(
-                *llvm::find_if(deviceFuncs, [&](mlir::func::FuncOp f) {
-                  return f.getSymName() ==
-                         addrOfOp.getSymbol().getLeafReference();
-                }));
-        });
-      }
-    }
-
-    // Gather all functions called by CUF kernels.
-    mod.walk([&](cuf::KernelOp kernelOp) {
-      kernelOp.walk([&](fir::CallOp op) { processCallOp(op); });
-      kernelOp.walk([&](fir::DispatchOp op) {
-        TODO(op.getLoc(),
-             "type-bound procedure call with dynamic dispatch in cuf kernel");
-      });
-    });
+    cuf::DeviceCodeSet code = cuf::collectDeviceCode(
+        mod, symbolTable, /*rejectDynamicDispatch=*/true);
 
     // Optionally report an error when device code calls the runtime function
     // _FortranAioOutputDescriptor, which is not supported on the device.
@@ -278,35 +208,65 @@ class CUFDeviceFuncTransform
           signalPassFailure();
         }
       };
-      for (auto funcOp : deviceFuncs)
+      for (auto funcOp : code.deviceFuncs)
         funcOp.walk(checkForAioOutputDescriptor);
       mod.walk([&](cuf::KernelOp kernelOp) {
         kernelOp.walk(checkForAioOutputDescriptor);
       });
     }
 
-    for (auto funcOp : funcsToClone)
-      gpuModSymTab.insert(funcOp->clone());
+    // Device copies made by cuf-duplicate-device-func carry the symbol of the
+    // procedure they copy. They take that name back on the device, where
+    // cross-unit references resolve by it, and their originals stay host code.
+    llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> originalOf;
+    llvm::StringSet<> hasDeviceCopy;
+    for (mlir::func::FuncOp funcOp : code.deviceFuncs)
+      if (std::optional<llvm::StringRef> original =
+              cuf::getDeviceCopyOf(funcOp)) {
+        originalOf[funcOp.getSymNameAttr()] =
+            mlir::FlatSymbolRefAttr::get(ctx, *original);
+        hasDeviceCopy.insert(*original);
+      }
+    // cuf.kernel regions stay in host code until they are lowered, and are
+    // matched to the device by the original names.
+    mod.walk([&](cuf::KernelOp kernelOp) {
+      cuf::remapProcedureSymbols(kernelOp, originalOf);
+    });
 
-    for (auto funcOp : deviceFuncs) {
+    for (auto funcOp : code.calledFromDevice)
+      if (!hasDeviceCopy.contains(funcOp.getSymName()))
+        gpuModSymTab.insert(funcOp->clone());
+
+    for (auto funcOp : code.deviceFuncs) {
       auto cudaProcAttr =
           funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
               cuf::getProcAttrName());
       auto isGlobal = cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
                       cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal;
+      std::optional<llvm::StringRef> copyOf = cuf::getDeviceCopyOf(funcOp);
+      // A host_device original whose device copy exists stays host code.
+      if (!copyOf && hasDeviceCopy.contains(funcOp.getSymName()))
+        continue;
+      llvm::StringRef deviceName = copyOf ? *copyOf : funcOp.getSymName();
       if (funcOp.isDeclaration()) {
-        mlir::Operation *clonedFuncOp = funcOp->clone();
+        auto clonedFuncOp = mlir::cast<func::FuncOp>(funcOp->clone());
+        if (copyOf) {
+          clonedFuncOp.setSymName(deviceName);
+          clonedFuncOp->removeAttr(cuf::getDeviceCopyOfAttrName());
+        }
         if (isGlobal) {
           clonedFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                                 builder.getUnitAttr());
           clonedFuncOp->removeAttr(cuf::getProcAttrName());
-          if (auto funcOp = mlir::dyn_cast<func::FuncOp>(clonedFuncOp))
-            funcOp.setNested();
+          clonedFuncOp.setNested();
         }
         gpuModSymTab.insert(clonedFuncOp);
+        if (copyOf)
+          funcOp.erase();
       } else {
         gpu::GPUFuncOp deviceFuncOp =
-            createGPUFuncOp(funcOp, isGlobal, computeCap);
+            createGPUFuncOp(funcOp, deviceName, isGlobal, computeCap);
+        cuf::remapProcedureSymbols(deviceFuncOp, originalOf);
         gpuModSymTab.insert(deviceFuncOp);
 
         if (cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice) {
@@ -314,7 +274,7 @@ class CUFDeviceFuncTransform
           // declaration for the kernel registration. Currently we just
           // erase its body but in the future, the body should be rewritten
           // to be able to launch CUDA Fortran kernel from C code.
-          if (isGlobal || keepInModule.contains(funcOp))
+          if (isGlobal || code.keepInModule.contains(funcOp))
             createHostStub(funcOp, symbolTable, mod);
           else
             funcOp.erase();

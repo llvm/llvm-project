@@ -268,7 +268,7 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_cndmask_b32 v4, v6, v4 :: v_dual_cndmask_b32 v5, v5, v7
+; GFX11-NEXT:    v_dual_cndmask_b32 v5, v5, v7 :: v_dual_cndmask_b32 v4, v6, v4
 ; GFX11-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[2:3]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

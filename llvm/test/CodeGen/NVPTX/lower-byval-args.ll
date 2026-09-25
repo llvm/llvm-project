@@ -810,7 +810,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; LOWER-ARGS-NEXT:    br label %[[MERGE]]
 ; LOWER-ARGS:       [[MERGE]]:
 ; LOWER-ARGS-NEXT:    [[PTRNEW:%.*]] = phi ptr [ [[PTR1]], %[[FIRST]] ], [ [[PTR2]], %[[SECOND]] ]
-; LOWER-ARGS-NEXT:    store i32 1, ptr [[PTRNEW]], align 4
+; LOWER-ARGS-NEXT:    store volatile i32 1, ptr [[PTRNEW]], align 4
 ; LOWER-ARGS-NEXT:    ret void
 ;
 ; COPY-LABEL: define ptx_kernel void @test_phi_write(
@@ -829,7 +829,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; COPY-NEXT:    br label %[[MERGE]]
 ; COPY:       [[MERGE]]:
 ; COPY-NEXT:    [[PTRNEW:%.*]] = phi ptr [ [[PTR1]], %[[FIRST]] ], [ [[PTR2]], %[[SECOND]] ]
-; COPY-NEXT:    store i32 1, ptr [[PTRNEW]], align 4
+; COPY-NEXT:    store volatile i32 1, ptr [[PTRNEW]], align 4
 ; COPY-NEXT:    ret void
 ;
 ; PTX-LABEL: test_phi_write(
@@ -871,7 +871,7 @@ second:                                           ; preds = %bb
 
 merge:                                            ; preds = %second, %first
   %ptrnew = phi ptr [ %ptr1, %first ], [ %ptr2, %second ]
-  store i32 1, ptr %ptrnew, align 4
+  store volatile i32 1, ptr %ptrnew, align 4
   ret void
 }
 

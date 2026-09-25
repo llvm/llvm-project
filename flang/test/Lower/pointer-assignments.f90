@@ -298,7 +298,7 @@ subroutine boxed_derived_pointer_assignment(rhs)
     integer :: i
   end type
   type(t), pointer :: rhs, lhs
-  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>> {bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}
+  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>> <{bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}>
   ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>>>
@@ -313,7 +313,7 @@ subroutine boxed_derived_pointer_assignment_array(rhs)
     integer :: i
   end type
   type(t), contiguous,  pointer :: rhs(:), lhs(:)
-  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>> {bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}
+  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>> <{bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}>
   ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>>>

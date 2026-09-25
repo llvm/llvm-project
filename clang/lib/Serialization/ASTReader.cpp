@@ -11503,13 +11503,16 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   }
   case llvm::omp::OMPC_full:
-    C = OMPFullClause::CreateEmpty(Context);
+    C = new (Context) OMPFullClause();
     break;
   case llvm::omp::OMPC_partial:
-    C = OMPPartialClause::CreateEmpty(Context);
+    C = new (Context) OMPPartialClause();
+    break;
+  case llvm::omp::OMPC_depth:
+    C = new (Context) OMPDepthClause();
     break;
   case llvm::omp::OMPC_looprange:
-    C = OMPLoopRangeClause::CreateEmpty(Context);
+    C = new (Context) OMPLoopRangeClause();
     break;
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
@@ -11684,7 +11687,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPFlushClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_depobj:
-    C = OMPDepobjClause::CreateEmpty(Context);
+    C = new (Context) OMPDepobjClause();
     break;
   case llvm::omp::OMPC_depend: {
     unsigned NumVars = Record.readInt();
@@ -11829,7 +11832,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFilterClause();
     break;
   case llvm::omp::OMPC_bind:
-    C = OMPBindClause::CreateEmpty(Context);
+    C = new (Context) OMPBindClause();
     break;
   case llvm::omp::OMPC_align:
     C = new (Context) OMPAlignClause();
@@ -11946,6 +11949,11 @@ void OMPClauseReader::VisitOMPFullClause(OMPFullClause *C) {}
 
 void OMPClauseReader::VisitOMPPartialClause(OMPPartialClause *C) {
   C->setFactor(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDepthClause(OMPDepthClause *C) {
+  C->setDepth(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

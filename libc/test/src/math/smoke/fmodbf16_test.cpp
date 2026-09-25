@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fmodbf16.h"
 
-LIST_FMOD_TESTS(bfloat16, LIBC_NAMESPACE::fmodbf16)
+LIST_FMOD_TESTS(Fmodbf16, bfloat16, LIBC_NAMESPACE::fmodbf16)

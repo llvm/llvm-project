@@ -37,16 +37,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // __capacity_aware_iterator is an iterator that wraps a contiguous iterator and encodes the maximum number of
 // elements that can appear in a range of such iterators. That maximum number of elements must be known at compile-time.
 // As of writing, the only standard library containers which fulfill these requirements are inplace_vector and optional.
-//
-// It also embeds a tag type to prevent mixing iterators from e.g. different containers. This also allows for some
-// algorithms to detect this iterator and perform optimizations based on the added semantic information.
 
-template <class _Iter, class _Tag, size_t _RangeMaxElements>
+template <class _Iter, size_t _RangeMaxElements>
 class __capacity_aware_iterator {
 private:
   _Iter __iter_;
 
-  template <class, class, size_t>
+  template <class, size_t>
   friend class __capacity_aware_iterator;
 
 public:
@@ -66,10 +63,10 @@ public:
   template <typename _Iter2>
     requires is_convertible_v<_Iter2, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator(
-      const __capacity_aware_iterator<_Iter2, _Tag, _RangeMaxElements>& __y) noexcept
+      const __capacity_aware_iterator<_Iter2, _RangeMaxElements>& __y) noexcept
       : __iter_(__y.__iter_) {}
 
-  template <class _It, class _Tag2, size_t _RangeMaxElems2>
+  template <class _It, size_t _RangeMaxElems2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept;
 
 private:
@@ -172,9 +169,9 @@ public:
   }
 };
 
-template <class _It, class _Tag2, size_t _RangeMaxElems2>
+template <class _It, size_t _RangeMaxElems2>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept {
-  return __capacity_aware_iterator<_It, _Tag2, _RangeMaxElems2>(__iter);
+  return __capacity_aware_iterator<_It, _RangeMaxElems2>(__iter);
 }
 
 _LIBCPP_END_NAMESPACE_STD

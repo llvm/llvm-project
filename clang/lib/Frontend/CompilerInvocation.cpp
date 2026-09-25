@@ -572,7 +572,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
   if (CodeGenOpts.getExceptionHandling() !=
-          CodeGenOptions::ExceptionHandlingKind::None &&
+          CodeGenOptions::ExceptionHandlingKind::Default &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
         << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
@@ -1759,9 +1759,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
         T.isPPC32() ? OPT_msvr4_struct_return : OPT_freg_struct_return;
     GenerateArg(Consumer, Opt);
   }
-
-  if (Opts.EnableAIXExtendedAltivecABI)
-    GenerateArg(Consumer, OPT_mabi_EQ_vec_extabi);
 
   if (Opts.XCOFFReadOnlyPointers)
     GenerateArg(Consumer, OPT_mxcoff_roptr);

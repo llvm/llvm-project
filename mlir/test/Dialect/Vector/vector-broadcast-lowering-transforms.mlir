@@ -236,6 +236,17 @@ func.func @broadcast_vec2d_from_vec1d_scalable_inner(%arg0: vector<2xf32>) -> ve
   return %0 : vector<3x[4]x2xf32>
 }
 
+// TODO: Add support for scalable vectors
+
+// CHECK-LABEL: @broadcast_stretch_at_start_scalable
+// CHECK-SAME:  %[[A:.*]]: vector<1x4xf32>)
+// CHECK: vector.broadcast %[[A]] : vector<1x4xf32> to vector<[3]x4xf32>
+
+func.func @broadcast_stretch_at_start_scalable(%arg0: vector<1x4xf32>) -> vector<[3]x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x4xf32> to vector<[3]x4xf32>
+  return %0 : vector<[3]x4xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

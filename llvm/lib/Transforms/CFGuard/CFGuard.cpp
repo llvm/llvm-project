@@ -311,7 +311,6 @@ PreservedAnalyses CFGuardPass::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 char CFGuard::ID = 0;
-INITIALIZE_PASS(CFGuard, "CFGuard", "CFGuard", false, false)
 
 FunctionPass *llvm::createCFGuardPass() { return new CFGuard(); }
 

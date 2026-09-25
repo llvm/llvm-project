@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -47,9 +48,11 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
   rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
 
-  BootstrapSymbols[rt::DispatchName] =
+  Mangler Mangle(getTargetTriple());
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchName)] =
       ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);
-  BootstrapSymbols[rt::DispatchCtxName] = ExecutorAddr::fromPtr(this);
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchCtxName)] =
+      ExecutorAddr::fromPtr(this);
 
 #ifdef __APPLE__
   // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when

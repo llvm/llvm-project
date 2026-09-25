@@ -427,6 +427,9 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
+  // Avoid some checks and module map parsing when loading PCM files.
+  ScanInvocation->getPreprocessorOpts().ModulesCheckRelocated = false;
+
   // FIXME: Do this even with PCHs by marking the option as something like
   // "preprocessor benign" in LangOptions.def so that it passes the
   // compatibility checks in ASTReader.

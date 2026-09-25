@@ -6,7 +6,7 @@
 subroutine test()
   integer :: N = 100
   real*8 :: b(-1:N)
-! CHECK: %[[A0:.*]] = fir.alloca !fir.array<?xf64>, %{{.*}} {bindc_name = "b", uniq_name = "_QFtestEb"}
+! CHECK: %[[A0:.*]] = fir.alloca !fir.array<?xf64>, %{{.*}} <{bindc_name = "b", uniq_name = "_QFtestEb"}>
 ! CHECK: %[[A1:.*]] = fir.shape_shift {{.*}} : (index, index) -> !fir.shapeshift<1>
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A0]](%[[A1]]) {uniq_name = "_QFtestEb"} : (!fir.ref<!fir.array<?xf64>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>)
 

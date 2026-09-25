@@ -624,6 +624,7 @@ private:
   void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
   void visitMaskedGather(const CallInst &I);
   void visitMaskedScatter(const CallInst &I);
+  void visitSpeculativeLoad(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
   void visitFence(const FenceInst &I);
@@ -798,14 +799,6 @@ struct RegsForValue {
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
-
-  /// Add the specified values to this one.
-  void append(const RegsForValue &RHS) {
-    ValueVTs.append(RHS.ValueVTs.begin(), RHS.ValueVTs.end());
-    RegVTs.append(RHS.RegVTs.begin(), RHS.RegVTs.end());
-    Regs.append(RHS.Regs.begin(), RHS.Regs.end());
-    RegCount.push_back(RHS.Regs.size());
-  }
 
   /// Emit a series of CopyFromReg nodes that copies from this value and returns
   /// the result as a ValueVTs value. This uses Chain/Flag as the input and

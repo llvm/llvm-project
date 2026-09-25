@@ -660,15 +660,58 @@ func.func @no_convert_read_transpose_not_last_dim(%arg0: memref<2x2x2xf16>, %arg
 
 // -----
 
-// Transpose write is not supported.
-// CHECK-LABEL: func @no_convert_write_transpose
+// CHECK-LABEL: func @write_transpose
+func.func @write_transpose(%arg0: memref<3x5xf16>, %arg1: memref<5x3xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<3x5xf16>, vector<3x5xf16>
+  %B = arith.addf %A, %A : vector<3x5xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 3 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<5x3xf16>
+  vector.transfer_write %B, %arg1[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<3x5xf16>, memref<5x3xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @write_transpose_with_strides_3d
+func.func @write_transpose_with_strides_3d(%arg0: memref<3x5xf16>, %arg1: memref<5x7x3xf16>, %arg2: memref<2x5x3xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<3x5xf16>, vector<3x5xf16>
+  %B = arith.addf %A, %A : vector<3x5xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 21 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<5x7x3xf16>
+  vector.transfer_write %B, %arg1[%c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, d0)>} : vector<3x5xf16>, memref<5x7x3xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 3 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<2x5x3xf16>
+  vector.transfer_write %B, %arg2[%c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>} : vector<3x5xf16>, memref<2x5x3xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @write_transpose_with_strides_4d
+func.func @write_transpose_with_strides_4d(%arg0: memref<3x5xf16>, %arg1: memref<5x7x11x3xf16>, %arg2: memref<2x5x11x3xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f16
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<3x5xf16>, vector<3x5xf16>
+  %B = arith.addf %A, %A : vector<3x5xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 231 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<5x7x11x3xf16>
+  vector.transfer_write %B, %arg1[%c0, %c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0)>} : vector<3x5xf16>, memref<5x7x11x3xf16>
+  // CHECK: gpu.subgroup_mma_store_matrix %{{.*}} leadDimension 33 transpose : !gpu.mma_matrix<3x5xf16, "COp">, memref<2x5x11x3xf16>
+  vector.transfer_write %B, %arg2[%c0, %c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1)>} : vector<3x5xf16>, memref<2x5x11x3xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @no_convert_write_transpose_not_last_dim
 // CHECK-NOT: gpu
-func.func @no_convert_write_transpose(%arg0: memref<2x2xf16>) {
+func.func @no_convert_write_transpose_not_last_dim(%arg0: memref<2x2xf16>, %arg1: memref<2x2x2xf16>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
   %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<2x2xf16>, vector<2x2xf16>
   %B = arith.addf %A, %A : vector<2x2xf16>
-  vector.transfer_write %B, %arg0[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<2x2xf16>, memref<2x2xf16>
+  // Legal map, but does not map the last memref dim so should not be lowered to an MMA store.
+  vector.transfer_write %B, %arg1[%c0, %c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d1, d0)>} : vector<2x2xf16>, memref<2x2x2xf16>
   return
 }
 

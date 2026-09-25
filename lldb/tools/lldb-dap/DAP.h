@@ -15,7 +15,6 @@
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
-#include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
@@ -136,7 +135,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   bool configuration_done;
 
   std::mutex call_mutex;
-  ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
   /// unless we send a "thread" event to indicate the thread exited.
@@ -234,9 +232,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   protocol::Id Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);
-
-  void SendProgressEvent(uint64_t progress_id, const char *message,
-                         uint64_t completed, uint64_t total);
 
   src_ref_t CreateSourceReference(lldb::addr_t address);
 

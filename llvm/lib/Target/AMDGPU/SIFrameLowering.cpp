@@ -1443,8 +1443,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool HasFP = false;
   bool HasBP = false;
-  uint32_t NumBytes = MFI.getStackSize();
-  uint32_t RoundedSize = NumBytes;
+  int64_t NumBytes = MFI.getStackSize();
+  int64_t RoundedSize = NumBytes;
 
   // Functions that never return don't need to save and restore the FP or BP.
   const Function &F = MF.getFunction();

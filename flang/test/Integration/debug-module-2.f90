@@ -2,10 +2,12 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-directives-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 
-! CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: {{.*}}debug-module-2.f90{{.*}})
-! CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: {{.*}}debug-module-2.f90{{.*}})
-! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}file: ![[FILE]]{{.*}} globals: ![[GLOBALS:.*]])
-! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE]]{{.*}})
+! More than one DIFile can name this source, so take the one the module is
+! described in from the module itself rather than trying to tell them apart by
+! how each spells the path.
+! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GLOBALS:.*]])
+! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE:[0-9]+]]{{.*}})
+! CHECK-DAG: ![[FILE]] = !DIFile(filename: "debug-module-2.f90"{{.*}})
 ! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
 ! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 module helper
@@ -18,7 +20,7 @@ module helper
   integer gli
 
   contains
-!CHECK-DAG: !DISubprogram(name: "test", linkageName: "_QMhelperPtest", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+1]]{{.*}}unit: ![[CU]]{{.*}})
+!CHECK-DAG: !DISubprogram(name: "test", linkageName: "_QMhelperPtest", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+1]]{{.*}}unit: ![[CU]]{{.*}})
     subroutine test()
     glr = 12.34
     gli = 67

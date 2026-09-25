@@ -1643,7 +1643,7 @@ tuples to return are:
   listed (`dirty-pages:;`) indicates no dirty pages in
   this memory region.  The *absence* of this key means
   that this stub cannot determine dirty pages.
-* `protection-key:<key>` - where `<key>` is an unsigned integer memory
+* `protection-key:<key>;` - where `<key>` is an unsigned integer memory
   protection key.
 
 If the address requested is not in a mapped region (e.g. we've jumped through

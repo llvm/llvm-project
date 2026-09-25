@@ -28,15 +28,19 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
+
+#include <type_traits>
 
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
@@ -56,11 +60,47 @@ static void propagateAttributes(mlir::Operation *fromOp,
   if (!fromOp || !toOp)
     return;
 
-  for (mlir::NamedAttribute attr : fromOp->getAttrs()) {
+  for (mlir::NamedAttribute attr :
+       fromOp->getDiscardableAttrDictionary().getValue()) {
     if (attr.getName().getValue().starts_with(
             mlir::acc::OpenACCDialect::getDialectNamespace()))
-      toOp->setAttr(attr.getName(), attr.getValue());
+      toOp->setDiscardableAttr(attr.getName(), attr.getValue());
   }
+}
+
+static mlir::ParseResult
+parseOptionalProperties(mlir::OpAsmParser &parser,
+                        mlir::Attribute &parsedProperties) {
+  if (mlir::succeeded(parser.parseOptionalLess()) &&
+      (parser.parseAttribute(parsedProperties) || parser.parseGreater()))
+    return mlir::failure();
+  if (parsedProperties && !mlir::isa<mlir::DictionaryAttr>(parsedProperties))
+    return parser.emitError(parser.getNameLoc(),
+                            "expected properties dictionary");
+  return mlir::success();
+}
+
+template <typename Op>
+static mlir::ParseResult setParsedProperties(mlir::OpAsmParser &parser,
+                                             mlir::OperationState &result,
+                                             mlir::Attribute parsedProperties) {
+  mlir::NamedAttrList properties(
+      parsedProperties ? mlir::cast<mlir::DictionaryAttr>(parsedProperties)
+                       : parser.getBuilder().getDictionaryAttr({}));
+  for (llvm::StringRef name : Op::getAttributeNames())
+    if (mlir::Attribute attr = result.attributes.erase(name))
+      properties.set(name, attr);
+
+  mlir::DictionaryAttr propertyDictionary =
+      properties.getDictionary(result.getContext());
+  auto emitError = [&]() {
+    return mlir::emitError(result.location, "invalid properties ")
+           << propertyDictionary << " for op " << result.name.getStringRef()
+           << ": ";
+  };
+  return Op::setPropertiesFromParsedAttr(
+      result.getOrAddProperties<typename Op::Properties>(), propertyDictionary,
+      emitError);
 }
 
 /// Return true if a sequence type is of some incomplete size or a record type
@@ -113,7 +153,7 @@ static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
 /// operation ::= %res = (`fir.alloca` | `fir.allocmem`) $in_type
 ///                      ( `(` $typeparams `)` )? ( `,` $shape )?
 ///                      attr-dict-without-keyword
-template <typename FN>
+template <typename OP, typename FN>
 static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
                                             mlir::OpAsmParser &parser,
                                             mlir::OperationState &result) {
@@ -156,8 +196,11 @@ static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
   }
   result.addAttribute("operandSegmentSizes", builder.getDenseI32ArrayAttr(
                                                  {typeparamsSize, shapeSize}));
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.addTypeToList(restype, result.types))
+  mlir::Attribute parsedProperties;
+  if (parseOptionalProperties(parser, parsedProperties) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.addTypeToList(restype, result.types) ||
+      setParsedProperties<OP>(parser, result, parsedProperties))
     return mlir::failure();
   return mlir::success();
 }
@@ -174,7 +217,9 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
     p << ", ";
     p.printOperand(sh);
   }
-  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
+  OP::printProperties(op.getContext(), p, op.getProperties(),
+                      {"in_type", "operandSegmentSizes"});
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary());
 }
 
 bool fir::mayBeAbsentBox(mlir::Value val) {
@@ -374,7 +419,8 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
 
 mlir::ParseResult fir::AllocaOp::parse(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
-  return parseAllocatableOp(wrapAllocaResultType, parser, result);
+  return parseAllocatableOp<fir::AllocaOp>(wrapAllocaResultType, parser,
+                                           result);
 }
 
 void fir::AllocaOp::print(mlir::OpAsmPrinter &p) {
@@ -473,7 +519,8 @@ void fir::AllocMemOp::build(mlir::OpBuilder &builder,
 
 mlir::ParseResult fir::AllocMemOp::parse(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result) {
-  return parseAllocatableOp(wrapAllocMemResultType, parser, result);
+  return parseAllocatableOp<fir::AllocMemOp>(wrapAllocMemResultType, parser,
+                                             result);
 }
 
 void fir::AllocMemOp::print(mlir::OpAsmPrinter &p) {
@@ -1380,9 +1427,11 @@ struct FoldBoxEleSize : public mlir::OpRewritePattern<fir::BoxEleSizeOp> {
     if (!sizeAndAlign)
       return mlir::failure();
 
-    // The descriptor stores the byte stride between elements (not the raw
-    // natural size), so we must round up to alignment just as
-    // fir::computeElementDistance does.
+    // The descriptor stores the byte stride between elements, which is the
+    // allocation size including tail padding.  getTypeSizeAndAlignment already
+    // rounds up to alignment for RecordType, so llvm::alignTo here is a no-op
+    // for struct types; it is kept for scalar types (e.g. x86_fp80) where the
+    // rounding is still needed, matching fir::computeElementDistance.
     auto [size, alignment] = *sizeAndAlign;
     std::int64_t distance = llvm::alignTo(size, alignment);
 
@@ -1507,10 +1556,12 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
     p.printStrippedAttrOrType(fmfAttr);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {fir::CallOp::getCalleeAttrNameStr(),
-                           getFastmathAttrName(), getProcedureAttrsAttrName(),
-                           getArgAttrsAttrName(), getResAttrsAttrName()});
+  fir::CallOp::printProperties(getContext(), p, getProperties(),
+                               {fir::CallOp::getCalleeAttrNameStr(),
+                                getFastmathAttrName(),
+                                getProcedureAttrsAttrName(),
+                                getArgAttrsAttrName(), getResAttrsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   p << " : ";
   mlir::call_interface_impl::printFunctionSignature(
       p, getArgs().drop_front(isDirect ? 0 : 1).getTypes(), getArgAttrsAttr(),
@@ -1551,7 +1602,9 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
                                                 fmfAttrName, attrs))
       return mlir::failure();
 
-  if (parser.parseOptionalAttrDict(attrs) || parser.parseColon())
+  mlir::Attribute parsedProperties;
+  if (parseOptionalProperties(parser, parsedProperties) ||
+      parser.parseOptionalAttrDict(attrs) || parser.parseColon())
     return mlir::failure();
   llvm::SmallVector<mlir::Type> argTypes;
   llvm::SmallVector<mlir::Type> resTypes;
@@ -1580,7 +1633,7 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
       parser.getBuilder(), result, argAttrs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
   result.addTypes(funcType.getResults());
-  return mlir::success();
+  return setParsedProperties<fir::CallOp>(parser, result, parsedProperties);
 }
 
 void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
@@ -1685,7 +1738,8 @@ static void printCmpOp(mlir::OpAsmPrinter &p, OPTY op) {
   p.printOperand(op.getLhs());
   p << ", ";
   p.printOperand(op.getRhs());
-  p.printOptionalAttrDict(op->getAttrs(),
+  OPTY::printProperties(op.getContext(), p, op.getProperties());
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary(),
                           /*elidedAttrs=*/{OPTY::getPredicateAttrName()});
   p << " : " << op.getLhs().getType();
 }
@@ -1696,10 +1750,12 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> ops;
   mlir::NamedAttrList attrs;
   mlir::Attribute predicateNameAttr;
+  mlir::Attribute parsedProperties;
   mlir::Type type;
   if (parser.parseAttribute(predicateNameAttr, OPTY::getPredicateAttrName(),
                             attrs) ||
       parser.parseComma() || parser.parseOperandList(ops, 2) ||
+      parseOptionalProperties(parser, parsedProperties) ||
       parser.parseOptionalAttrDict(attrs) || parser.parseColonType(type) ||
       parser.resolveOperands(ops, type, result.operands))
     return mlir::failure();
@@ -1718,7 +1774,7 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
             builder.getI64IntegerAttr(static_cast<std::int64_t>(predicate)));
   result.attributes = attrs;
   result.addTypes({i1Type});
-  return mlir::success();
+  return setParsedProperties<OPTY>(parser, result, parsedProperties);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1889,6 +1945,22 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
     if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
       return mlir::IntegerAttr::get(getType(), cst->isZero() ? 0 : 1);
   }
+  // (convert 'cst : iA -> iB) ==> the constant in iB, converted by the same
+  // rules as a non-constant operand: truncate when narrowing, zero-extend an
+  // i1 or unsigned source, sign-extend otherwise. The result must be signless
+  // to materialize as an arith.constant.
+  if (auto fromTy = mlir::dyn_cast<mlir::IntegerType>(getValue().getType()))
+    if (auto toTy = mlir::dyn_cast<mlir::IntegerType>(getType()))
+      if (toTy.isSignless())
+        if (auto cst = fir::getIntIfConstant(getValue())) {
+          unsigned toBits = toTy.getWidth();
+          bool signExtend = toBits > fromTy.getWidth() &&
+                            fromTy.getWidth() != 1 &&
+                            !fromTy.isUnsignedInteger();
+          return mlir::IntegerAttr::get(toTy, signExtend
+                                                  ? cst->sextOrTrunc(toBits)
+                                                  : cst->zextOrTrunc(toBits));
+        }
   return {};
 }
 
@@ -2135,6 +2207,155 @@ llvm::LogicalResult fir::ConvertOp::verify() {
          << getValue().getType() << " / " << getType();
 }
 
+/// Check whether a slot of this pointee may be exposed as an alias. Promoting a
+/// floating-point slot lets its value be folded or, when nothing reads it,
+/// deleted, either of which loses an IEEE exception that the running program
+/// can observe through ieee_get_flag. Hence, restrict to Integer and Logical
+/// types.
+static bool isAliasableSlotPointee(mlir::Type pointee) {
+  return mlir::isa<mlir::IntegerType, fir::LogicalType>(pointee);
+}
+
+/// Pointee of a reference to a simple scalar, or null. Both fir.ref and rank-0
+/// memref qualify, since the storage of a scalar is cast between those forms.
+static mlir::Type getScalarSlotPointeeType(mlir::Type type) {
+  mlir::Type eleTy;
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(type)) {
+    eleTy = refTy.getEleTy();
+  } else if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(type)) {
+    // A rank, layout or memory space lets the cast reinterpret the storage.
+    if (memrefTy.getRank() != 0 || !memrefTy.getLayout().isIdentity() ||
+        memrefTy.getMemorySpace())
+      return {};
+    eleTy = memrefTy.getElementType();
+  } else {
+    return {};
+  }
+  if (!isAliasableSlotPointee(eleTy))
+    return {};
+  return eleTy;
+}
+
+/// Returns the source that 'value' is a view of at offset zero, or null. A
+/// displaced view, such as an array element, addresses a different location and
+/// so is a different slot.
+static mlir::Value getAliasedSlotPointer(mlir::Value value) {
+  auto result = mlir::dyn_cast<mlir::OpResult>(value);
+  if (!result)
+    return {};
+  auto view =
+      mlir::dyn_cast<fir::FortranObjectViewOpInterface>(result.getOwner());
+  if (!view)
+    return {};
+  std::optional<std::int64_t> offset = view.getViewOffset(result);
+  if (!offset || *offset != 0)
+    return {};
+  return view.getViewSource(result);
+}
+
+/// Checks whether a write to the slot reached through `pointer` dominates every
+/// read of it. Otherwise promotion replaces a read with the allocation's
+/// default value, which is fir.undefined for fir.alloca but poison for a memref
+/// allocation, so promoting through a view would change what reading an
+/// uninitialized variable does.
+///
+/// TODO: this is only needed because memref::AllocaOp::getDefaultValue returns
+/// ub.poison, whereas fir::AllocaOp and LLVM::AllocaOp both return undef, as
+/// LLVM's own mem2reg does. Once those align semantically, a read that no
+/// write dominates promotes the same way it already does for fir.alloca and
+/// this check, along with the dominance query it needs, can go away.
+static bool everyReadIsDominatedByAWrite(mlir::Value pointer,
+                                         mlir::Type pointee) {
+  // Start at the root of the chain, to see writes through a sibling alias.
+  while (mlir::Value aliased = getAliasedSlotPointer(pointer)) {
+    if (getScalarSlotPointeeType(aliased.getType()) != pointee)
+      break;
+    pointer = aliased;
+  }
+
+  llvm::SmallVector<mlir::Operation *> reads;
+  llvm::SmallVector<mlir::Operation *> writes;
+  llvm::SmallVector<mlir::Value> worklist{pointer};
+  llvm::SmallPtrSet<mlir::Value, 8> visited{pointer};
+  while (!worklist.empty()) {
+    mlir::Value slotPointer = worklist.pop_back_val();
+    for (mlir::OpOperand &use : slotPointer.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      // A view of the pointer is another handle on the same storage, so its
+      // own uses have to be walked as well.
+      for (mlir::OpResult result : user->getOpResults()) {
+        if (getAliasedSlotPointer(result) != slotPointer)
+          continue;
+        // A different pointee is another slot, which blocks promotion itself.
+        if (getScalarSlotPointeeType(result.getType()) == pointee &&
+            visited.insert(result).second)
+          worklist.push_back(result);
+      }
+      // A user that is not a promotable access blocks promotion itself.
+      if (auto memOp = mlir::dyn_cast<mlir::PromotableMemOpInterface>(user)) {
+        mlir::MemorySlot slot{use.get(), pointee};
+        if (memOp.storesTo(slot))
+          writes.push_back(user);
+        else if (memOp.loadsFrom(slot))
+          reads.push_back(user);
+      }
+    }
+  }
+
+  mlir::DominanceInfo dominance;
+  return llvm::all_of(reads, [&](mlir::Operation *read) {
+    return llvm::any_of(writes, [&](mlir::Operation *write) {
+      return dominance.properlyDominates(write, read);
+    });
+  });
+}
+
+/// The pointee a cast carries through unchanged, or null if the cast is not a
+/// transparent alias of the slot.
+static mlir::Type getPointeePreservedByCast(fir::ConvertOp op) {
+  mlir::Type fromTy = op.getValue().getType();
+  mlir::Type toTy = op.getType();
+  // Volatility may be added or dropped, and such accesses must be kept.
+  if (fir::isa_volatile_type(fromTy) || fir::isa_volatile_type(toTy))
+    return {};
+  // A scalar slot on both sides also excludes fir.llvm_ptr and llvm.ptr, which
+  // carry an address space.
+  mlir::Type from = getScalarSlotPointeeType(fromTy);
+  mlir::Type to = getScalarSlotPointeeType(toTy);
+  if (!from || from != to)
+    return {};
+  // A read that no write dominates must keep its access.
+  if (!everyReadIsDominatedByAWrite(op.getValue(), to))
+    return {};
+  return to;
+}
+
+void fir::ConvertOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot &parentSlot,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  // The result aliases the slot exactly, so value projections are unchanged.
+  if (mlir::Type pointee = getPointeePreservedByCast(*this))
+    newMemorySlots.push_back({getResult(), pointee});
+}
+
+bool fir::ConvertOp::canUsesBeRemoved(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (!getPointeePreservedByCast(*this))
+    return false;
+  for (mlir::OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+mlir::DeletionKind fir::ConvertOp::removeBlockingUses(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder) {
+  return mlir::DeletionKind::Delete;
+}
+
 mlir::Speculation::Speculatability fir::ConvertOp::getSpeculatability() {
   // fir.convert is speculatable, in general. The only concern may be
   // converting from or/and to floating point types, which may trigger
@@ -2237,7 +2458,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
     }
   }
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary().getValue(),
       /*elideAttrs=*/{getBaseTypeAttrName(), getFieldIndicesAttrName()});
   p << " : ";
   p.printFunctionalType(getOperandTypes(), (*this)->getResultTypes());
@@ -2780,7 +3001,8 @@ mlir::ParseResult fir::TypeDescOp::parse(mlir::OpAsmParser &parser,
 
 void fir::TypeDescOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getOperation()->getAttr("in_type");
-  p.printOptionalAttrDict(getOperation()->getAttrs(), {"in_type"});
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 llvm::LogicalResult fir::TypeDescOp::verify() {
@@ -2836,7 +3058,9 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     simpleInitializer = true;
   }
 
-  if (parser.parseOptionalAttrDict(result.attributes))
+  mlir::Attribute parsedProperties;
+  if (parseOptionalProperties(parser, parsedProperties) ||
+      parser.parseOptionalAttrDict(result.attributes))
     return mlir::failure();
 
   if (succeeded(
@@ -2865,7 +3089,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     if (parseResult.has_value() && mlir::failed(*parseResult))
       return mlir::failure();
   }
-  return mlir::success();
+  return setParsedProperties<fir::GlobalOp>(parser, result, parsedProperties);
 }
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
@@ -2878,11 +3102,13 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
   // Print all other attributes that are not pretty printed here.
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(), /*elideAttrs=*/{
-          getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
-          getConstantAttrName(), getTargetAttrName(), getLinkageAttrName(),
-          getInitValAttrName(), getSymVisibilityAttrName()});
+  fir::GlobalOp::printProperties(
+      getContext(), p, getProperties(),
+      /*elidedProps=*/
+      {getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
+       getConstantAttrName(), getTargetAttrName(), getLinkageAttrName(),
+       getInitValAttrName(), getSymVisibilityAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   if (getOperation()->getAttr(getConstantAttrName()))
     p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
@@ -3431,8 +3657,8 @@ void fir::IterWhileOp::print(mlir::OpAsmPrinter &p) {
   } else if (getFinalValue()) {
     p << " -> (" << getResultTypes() << ')';
   }
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {getFinalValueAttrNameStr()});
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
@@ -3578,16 +3804,19 @@ mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
 
 mlir::ParseResult fir::LoadOp::parse(mlir::OpAsmParser &parser,
                                      mlir::OperationState &result) {
+  mlir::Attribute parsedProperties;
   mlir::Type type;
   mlir::OpAsmParser::UnresolvedOperand oper;
   if (parser.parseOperand(oper) ||
+      parseOptionalProperties(parser, parsedProperties) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(type) ||
       parser.resolveOperand(oper, type, result.operands))
     return mlir::failure();
   mlir::Type eleTy;
   if (fir::LoadOp::getElementOf(eleTy, type) ||
-      parser.addTypeToList(eleTy, result.types))
+      parser.addTypeToList(eleTy, result.types) ||
+      setParsedProperties<fir::LoadOp>(parser, result, parsedProperties))
     return mlir::failure();
   return mlir::success();
 }
@@ -3595,7 +3824,8 @@ mlir::ParseResult fir::LoadOp::parse(mlir::OpAsmParser &parser,
 void fir::LoadOp::print(mlir::OpAsmPrinter &p) {
   p << ' ';
   p.printOperand(getMemref());
-  p.printOptionalAttrDict(getOperation()->getAttrs(), {});
+  fir::LoadOp::printProperties(getContext(), p, getProperties());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   p << " : " << getMemref().getType();
 }
 
@@ -3742,7 +3972,9 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
   result.operands.insert(result.operands.begin(), controlOperands.begin(),
                          controlOperands.end());
 
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+  mlir::Attribute parsedProperties;
+  if (parseOptionalProperties(parser, parsedProperties) ||
+      parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return mlir::failure();
 
   // Induction variable.
@@ -3769,7 +4001,7 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
 
   DoLoopOp::ensureTerminator(*body, builder, result.location);
 
-  return mlir::success();
+  return setParsedProperties<fir::DoLoopOp>(parser, result, parsedProperties);
 }
 
 fir::DoLoopOp fir::getForInductionVarOwner(mlir::Value val) {
@@ -3861,9 +4093,11 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
   }
   if (!getInductionVar().getType().isIndex())
     p << " : " << getInductionVar().getType();
-  p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(),
+  fir::DoLoopOp::printProperties(
+      getContext(), p, getProperties(),
       {"unordered", "finalValue", "reduceAttrs", "operandSegmentSizes"});
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
@@ -4342,9 +4576,10 @@ static void printIntegralSwitchTerminator(OpT op, mlir::OpAsmPrinter &p) {
     op.printSuccessorAtIndex(p, i);
   }
   p << ']';
-  p.printOptionalAttrDict(
-      op->getAttrs(), {op.getCasesAttr(), getCompareOffsetAttr(),
-                       getTargetOffsetAttr(), op.getOperandSegmentSizeAttr()});
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue(),
+                          {op.getCasesAttr(), getCompareOffsetAttr(),
+                           getTargetOffsetAttr(),
+                           op.getOperandSegmentSizeAttr()});
 }
 
 //===----------------------------------------------------------------------===//
@@ -4581,9 +4816,10 @@ void fir::SelectCaseOp::print(mlir::OpAsmPrinter &p) {
     printSuccessorAtIndex(p, i);
   }
   p << ']';
-  p.printOptionalAttrDict(getOperation()->getAttrs(),
-                          {getCasesAttr(), getCompareOffsetAttr(),
-                           getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue(),
+      {getCasesAttr(), getCompareOffsetAttr(), getTargetOffsetAttr(),
+       getOperandSegmentSizeAttr()});
 }
 
 unsigned fir::SelectCaseOp::compareOffsetSize() {
@@ -4867,10 +5103,10 @@ void fir::SelectTypeOp::print(mlir::OpAsmPrinter &p) {
     printSuccessorAtIndex(p, i);
   }
   p << ']';
-  p.printOptionalAttrDict(getOperation()->getAttrs(),
-                          {getCasesAttr(), getCompareOffsetAttr(),
-                           getTargetOffsetAttr(),
-                           fir::SelectTypeOp::getOperandSegmentSizeAttr()});
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue(),
+      {getCasesAttr(), getCompareOffsetAttr(), getTargetOffsetAttr(),
+       fir::SelectTypeOp::getOperandSegmentSizeAttr()});
 }
 
 llvm::LogicalResult fir::SelectTypeOp::verify() {
@@ -5134,16 +5370,19 @@ mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
 
 mlir::ParseResult fir::StoreOp::parse(mlir::OpAsmParser &parser,
                                       mlir::OperationState &result) {
+  mlir::Attribute parsedProperties;
   mlir::Type type;
   mlir::OpAsmParser::UnresolvedOperand oper;
   mlir::OpAsmParser::UnresolvedOperand store;
   if (parser.parseOperand(oper) || parser.parseKeyword("to") ||
       parser.parseOperand(store) ||
+      parseOptionalProperties(parser, parsedProperties) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(type) ||
       parser.resolveOperand(oper, fir::StoreOp::elementType(type),
                             result.operands) ||
-      parser.resolveOperand(store, type, result.operands))
+      parser.resolveOperand(store, type, result.operands) ||
+      setParsedProperties<fir::StoreOp>(parser, result, parsedProperties))
     return mlir::failure();
   return mlir::success();
 }
@@ -5153,7 +5392,8 @@ void fir::StoreOp::print(mlir::OpAsmPrinter &p) {
   p.printOperand(getValue());
   p << " to ";
   p.printOperand(getMemref());
-  p.printOptionalAttrDict(getOperation()->getAttrs(), {});
+  fir::StoreOp::printProperties(getContext(), p, getProperties());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   p << " : " << getMemref().getType();
 }
 
@@ -5606,8 +5846,7 @@ void fir::IfOp::print(mlir::OpAsmPrinter &p) {
     p.printRegion(otherReg, /*printEntryBlockArgs=*/false,
                   printBlockTerminators);
   }
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elideAttrs=*/{getRegionWeightsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
@@ -5681,6 +5920,8 @@ struct FoldPresentAbsentIfOp : public mlir::OpRewritePattern<fir::IfOp> {
 void fir::IfOp::getCanonicalizationPatterns(mlir::RewritePatternSet &patterns,
                                             mlir::MLIRContext *context) {
   patterns.add<FoldPresentAbsentIfOp>(context);
+  mlir::populateRegionBranchOpInterfaceInliningPattern(
+      patterns, fir::IfOp::getOperationName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5852,6 +6093,14 @@ valueCheckFirAttributes(mlir::Value value,
 
     return true;
   };
+  auto testOperationAttributes = [&](mlir::Operation *op) {
+    auto hasAttribute = [&](llvm::StringRef name) {
+      return op->hasDiscardableAttr(name);
+    };
+    if (checkAny)
+      return llvm::any_of(attributeNames, hasAttribute);
+    return llvm::all_of(attributeNames, hasAttribute);
+  };
   // If this is a fir.box that was loaded, the fir attributes will be on the
   // related fir.ref<fir.box> creation.
   if (mlir::isa<fir::BoxType>(value.getType()))
@@ -5876,18 +6125,18 @@ valueCheckFirAttributes(mlir::Value value,
     // If this is an allocated value, look at the allocation attributes.
     if (mlir::isa<fir::AllocMemOp>(definingOp) ||
         mlir::isa<fir::AllocaOp>(definingOp))
-      return testAttributeSets(definingOp->getAttrs(), attributeNames);
+      return testOperationAttributes(definingOp);
     // If this is an imported global, look at AddrOfOp and GlobalOp attributes.
     // Both operations are looked at because use/host associated variable (the
     // AddrOfOp) can have ASYNCHRONOUS/VOLATILE attributes even if the ultimate
     // entity (the globalOp) does not have them.
     if (auto addressOfOp = mlir::dyn_cast<fir::AddrOfOp>(definingOp)) {
-      if (testAttributeSets(addressOfOp->getAttrs(), attributeNames))
+      if (testOperationAttributes(addressOfOp))
         return true;
       if (auto module = definingOp->getParentOfType<mlir::ModuleOp>())
         if (auto globalOp =
                 module.lookupSymbol<fir::GlobalOp>(addressOfOp.getSymbol()))
-          return testAttributeSets(globalOp->getAttrs(), attributeNames);
+          return testOperationAttributes(globalOp);
     }
   }
   // TODO: Construct associated entities attributes. Decide where the fir
@@ -6037,20 +6286,46 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
 }
 
+/// Return the pointee of the storage a fir.declare denotes, or null if that
+/// storage must not be promoted.
+static mlir::Type getPromotablePointeeOfDeclare(fir::DeclareOp op) {
+  // Accesses through a volatile reference have to be preserved.
+  if (fir::isa_volatile_type(op.getType()))
+    return {};
+  mlir::Type pointee = fir::unwrapRefType(op.getType());
+  if (!isLegalTypeForValueDeclare(pointee))
+    return {};
+  // Values are not converted between the slot and its alias, so the pointee has
+  // to be the same on both sides.
+  if (fir::unwrapRefType(op.getMemref().getType()) != pointee)
+    return {};
+  return pointee;
+}
+
+void fir::DeclareOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot &parentSlot,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  // fir.declare only attaches source information; the storage is the same.
+  mlir::Type pointee = getPromotablePointeeOfDeclare(*this);
+  if (pointee && isAliasableSlotPointee(pointee))
+    newMemorySlots.push_back({getResult(), pointee});
+}
+
 bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
     mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
     const mlir::DataLayout &dataLayout) {
-  if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
+  mlir::Type pointee = getPromotablePointeeOfDeclare(*this);
+  if (!pointee)
     return false;
-  // MLIR's mem2reg computes defining blocks only from direct users of
-  // the slot pointer. Stores through fir.declare are not direct users,
-  // so they are not registered as defining blocks. This causes missing
-  // phi nodes at join points (e.g., loop headers). Restrict promotion
-  // to the single-block case where no phi nodes are needed.
+  // Without an alias, mem2reg does not see writes made through this declare as
+  // definitions, so uses have to stay in one block for no block argument to be
+  // needed.
+  bool aliased = isAliasableSlotPointee(pointee);
   mlir::Block *declBlock = getOperation()->getBlock();
   for (mlir::OpOperand &use : getResult().getUses()) {
-    if (use.getOwner()->getBlock() != declBlock)
+    if (!aliased && use.getOwner()->getBlock() != declBlock)
       return false;
     newBlockingUses.push_back(&use);
   }
@@ -6647,8 +6922,12 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
   if (parser.parseRegion(*body, regionArgs))
     return mlir::failure();
 
-  // Parse attributes.
-  if (parser.parseOptionalAttrDict(result.attributes))
+  // Parse properties and attributes.
+  mlir::Attribute parsedProperties;
+  if (parseOptionalProperties(parser, parsedProperties) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      setParsedProperties<fir::DoConcurrentLoopOp>(parser, result,
+                                                   parsedProperties))
     return mlir::failure();
 
   return mlir::success();
@@ -6694,13 +6973,15 @@ void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
 
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/{DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
-                       DoConcurrentLoopOp::getLocalSymsAttrName(),
-                       DoConcurrentLoopOp::getReduceSymsAttrName(),
-                       DoConcurrentLoopOp::getReduceAttrsAttrName(),
-                       DoConcurrentLoopOp::getReduceByrefAttrName()});
+  fir::DoConcurrentLoopOp::printProperties(
+      getContext(), p, getProperties(),
+      /*elidedProps=*/
+      {DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+       DoConcurrentLoopOp::getLocalSymsAttrName(),
+       DoConcurrentLoopOp::getReduceSymsAttrName(),
+       DoConcurrentLoopOp::getReduceAttrsAttrName(),
+       DoConcurrentLoopOp::getReduceByrefAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 }
 
 llvm::SmallVector<mlir::Region *> fir::DoConcurrentLoopOp::getLoopRegions() {

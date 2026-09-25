@@ -202,6 +202,32 @@ func.func @volatile_aligned_load() -> () {
   return
 }
 
+// CHECK-LABEL: @make_pointer_visible_load
+func.func @make_pointer_visible_load() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.Load "Function" %{{.*}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  %1 = spirv.Load "Function" %0 ["MakePointerVisible|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @load_bad_operand() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  %1 = spirv.Load "Function" %0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @load_make_pointer_visible_missing_non_private() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  %1 = spirv.Load "Function" %0 ["MakePointerVisible"] : f32
+  return
+}
+
 // -----
 
 // CHECK-LABEL: load_none_access
@@ -401,6 +427,32 @@ func.func @aligned_store(%arg0 : f32) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // CHECK: spirv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
   spirv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
+  return
+}
+
+// CHECK-LABEL: @make_pointer_available_store
+func.func @make_pointer_available_store(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @store_bad_operand(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  spirv.Store  "Function" %0, %arg0 ["MakePointerVisible|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @store_make_pointer_available_missing_non_private(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable"] : f32
   return
 }
 
@@ -685,6 +737,36 @@ func.func @copy_memory_invalid_source_maa2() {
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_target_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_source_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_source_make_pointer_visible_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<MakePointerVisible>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
   spirv.Return
 }
 

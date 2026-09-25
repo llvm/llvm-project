@@ -167,7 +167,7 @@ void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
     if (I < NumUsedOrigins - 1)
       OS << ", ";
   }
-  OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
+  OS << ")\n";
 }
 
 void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,

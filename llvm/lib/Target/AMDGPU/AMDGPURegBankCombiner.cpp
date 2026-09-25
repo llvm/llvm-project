@@ -729,8 +729,8 @@ PreservedAnalyses
 AMDGPURegBankCombinerPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   const Function &F = MF.getFunction();
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !F.hasOptNone();
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
+                   !F.hasOptNone() && !shouldSkipOptimizationForOptBisect(F);
 
   if (!runCombiner(
           MF, [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },

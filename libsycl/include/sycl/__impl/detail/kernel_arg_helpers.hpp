@@ -76,12 +76,12 @@ public:
 /// \name  Helpers to extract types of lambda arguments.
 /// @{
 template <typename RetType, typename Func, typename Arg>
-static Arg member_ptr_helper(RetType (Func::*)(Arg) const);
+[[maybe_unused]] static Arg member_ptr_helper(RetType (Func::*)(Arg) const);
 
 // Non-const version of the above template to match functors whose
 // 'operator()' is declared w/o the 'const' qualifier.
 template <typename RetType, typename Func, typename Arg>
-static Arg member_ptr_helper(RetType (Func::*)(Arg));
+[[maybe_unused]] static Arg member_ptr_helper(RetType (Func::*)(Arg));
 
 template <typename F, typename SuggestedArgType>
 decltype(member_ptr_helper(&F::operator())) argument_helper(int);

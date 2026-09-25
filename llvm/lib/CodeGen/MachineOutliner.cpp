@@ -1109,9 +1109,35 @@ bool MachineOutliner::outline(
       MachineBasicBlock::iterator StartIt = C.begin();
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
+      // Use the first non-debug instruction with a non-zero source line as the
+      // location for the replacement call sequence.
+      DebugLoc CallLoc;
+      for (MachineInstr &MI : C) {
+        const DebugLoc &DL = MI.getDebugLoc();
+        if (!MI.isDebugInstr() && DL && DL.getLine()) {
+          CallLoc = DL;
+          break;
+        }
+      }
+
+      // Remember the instruction the call sequence will be inserted after, so
+      // we can find every instruction the target inserts below.
+      MachineBasicBlock::iterator PrevIt =
+          StartIt == MBB.begin() ? MBB.end() : std::prev(StartIt);
+
       // Insert the call.
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);
-// Insert the call.
+
+      // insertOutlinedCall may emit link register save/restore instructions
+      // around the call, and leaves StartIt on the last instruction it
+      // inserted. Give the whole sequence the candidate's location. Otherwise,
+      // a locationless save or restore can introduce a line 0 row, including
+      // at the return address immediately after the call.
+      MachineBasicBlock::iterator SeqBegin =
+          PrevIt == MBB.end() ? MBB.begin() : std::next(PrevIt);
+      for (MachineInstr &MI : make_range(SeqBegin, std::next(StartIt)))
+        MI.setDebugLoc(CallLoc);
+
 #ifndef NDEBUG
       auto MBBBeingOutlinedFromName =
           MBB.getName().empty() ? "<unknown>" : MBB.getName().str();

@@ -96,6 +96,47 @@ int main(int, char**) {
       std::string ex(str, base(iter));
       assert(ex == "+0");
     }
+    { // Ensure that padding is done properly without any grouping
+      {
+        std::ios ios(0);
+        ios.width(10);
+        long v = 1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "*********1");
+      }
+      {
+        std::ios ios(0);
+        ios.width(10);
+        ios.setf(std::ios::internal);
+        long v = -1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "-********1");
+      }
+      {
+        std::ios ios(0);
+        ios.width(10);
+        ios.setf(std::ios::left);
+        long v = -1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "-1********");
+      }
+      {
+        std::ios ios(0);
+        ios.width(10);
+        ios.setf(std::ios::right);
+        long v = -1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "********-1");
+      }
+    }
   }
   { // test octal
     {
@@ -136,6 +177,54 @@ int main(int, char**) {
       cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
       std::string ex(str, base(iter));
       assert(ex == "0");
+    }
+    { // Ensure that padding is done properly without any grouping
+      {
+        std::ios ios(0);
+        std::oct(ios);
+        ios.width(10);
+        long v = 1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "*********1");
+      }
+      {
+        std::ios ios(0);
+        std::oct(ios);
+        std::showbase(ios);
+        ios.width(10);
+        ios.setf(std::ios::internal);
+        long v = 1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "********01");
+      }
+      {
+        std::ios ios(0);
+        std::oct(ios);
+        std::showbase(ios);
+        ios.width(10);
+        ios.setf(std::ios::left);
+        long v = 1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "01********");
+      }
+      {
+        std::ios ios(0);
+        std::oct(ios);
+        std::showbase(ios);
+        ios.width(10);
+        ios.setf(std::ios::right);
+        long v = 1;
+        char str[50];
+        cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+        std::string ex(str, base(iter));
+        assert(ex == "********01");
+      }
     }
   }
   { // test hexadecimal

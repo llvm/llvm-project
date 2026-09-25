@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
@@ -403,6 +404,38 @@ public:
     }
   };
 
+  /// Utility class to collect and erase dead instructions.
+  class DeadInstructionMorgue {
+  public:
+    DeadInstructionMorgue() = default;
+    DeadInstructionMorgue(const DeadInstructionMorgue &) = delete;
+
+    /// Record instructions in \p Bndl that may be dead after vectorization.
+    /// For load/store bundles, also record non-first-lane pointer operands;
+    /// the first lane's pointer is skipped because the vector load/store
+    /// reuses it. Erased later by \c tryEraseDeadInstrs().
+    template <typename T> void collectPotentiallyDeadInstrs(ArrayRef<T *> Bndl);
+
+    /// Erase candidates recorded by \c collectPotentiallyDeadInstrs() that
+    /// now have no uses, then clear the candidate set.
+    LLVM_ABI void tryEraseDeadInstrs();
+
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const {
+      OS << "DeadInstrCandidates:\n";
+      for (auto *I : DeadInstrCandidates)
+        OS << *I << '\n';
+    }
+    LLVM_DUMP_METHOD void debug() const {
+      print(dbgs());
+      dbgs() << '\n';
+    }
+#endif /* NDEBUG */
+
+  private:
+    DenseSet<Instruction *> DeadInstrCandidates;
+  };
+
   /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops
   /// like: `for (auto [Lane, V] : enumerateLanes(Range))`
   template <typename ValueContainerT>
@@ -420,6 +453,49 @@ public:
   LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
 #endif // NDEBUG
 };
+
+/// An ArrayRef of Values or Instructions that we can print/dump for debugging.
+/// It is mainly used for the vectorizer's instr/value bundles.
+template <typename T> class BndlRef : public ArrayRef<T> {
+public:
+  // Inherit constructors.
+  using ArrayRef<T>::ArrayRef;
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  void print(raw_ostream &OS) const {
+    for (const auto &[Idx, Val] : enumerate(*this))
+      OS << Idx << ". " << *Val << "\n";
+  }
+  LLVM_DUMP_METHOD void dump() const;
+#endif // NDEBUG
+};
+
+/// @name BndlRef Deduction guides
+/// @{
+/// Deduction guide to construct a BndlRef from a single element.
+template <typename T> BndlRef(const T &OneElt) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a pointer and length
+template <typename T> BndlRef(const T *data, size_t length) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a range
+template <typename T> BndlRef(const T *data, const T *end) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T> BndlRef(const SmallVectorImpl<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T, unsigned N>
+BndlRef(const SmallVector<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::vector
+template <typename T> BndlRef(const std::vector<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::array
+template <typename T, std::size_t N>
+BndlRef(const std::array<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef (const)
+template <typename T> BndlRef(const BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef
+template <typename T> BndlRef(BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a C array.
+template <typename T, size_t N> BndlRef(const T (&Arr)[N]) -> BndlRef<T>;
+/// @}
 
 } // namespace sandboxir
 

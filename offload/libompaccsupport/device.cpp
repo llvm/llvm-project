@@ -87,6 +87,14 @@ llvm::Error DeviceTy::init() {
                                      "failed to initialize device %d\n",
                                      DeviceID);
 
+  OMPT_IF_BUILT_AND_INITIALIZED({
+    GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
+    std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
+    performOmptCallback(device_initialize, DeviceID, ComputeUnitKind.c_str(),
+                        reinterpret_cast<ompt_device_t *>(&GenericDevice),
+                        lookupCallbackByName, /*documentation=*/nullptr);
+  });
+
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
@@ -219,6 +227,14 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
     return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
                                      "failed to load binary %p", Img);
+
+  OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(
+      device_load, DeviceID, /*FileName=*/nullptr, /*FileOffset=*/0,
+      /*VmaInFile=*/nullptr,
+      reinterpret_cast<uintptr_t>(Img->ImageEnd) -
+          reinterpret_cast<uintptr_t>(Img->ImageStart),
+      const_cast<void *>(Img->ImageStart),
+      /*DeviceAddr=*/nullptr, /*ModuleId=*/0));
 
   // This symbol is optional.
   void *DeviceEnvironmentPtr;

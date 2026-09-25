@@ -53,15 +53,14 @@ llvm.func @vectorizeOptions() {
 }
 
 // CHECK-DAG: ![[NON_FORCED:[0-9]+]] = !{!"llvm.loop.disable_nonforced"}
-// CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
 // CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.enable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.predicate.enable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.scalable.disable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.width", i32 16}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_vectorized", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_epilogue", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_all", ![[FOLLOWUP]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_vectorized", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_epilogue", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_all", ![[NON_FORCED]]}
 
 // -----
 
@@ -92,14 +91,13 @@ llvm.func @unrollOptions() {
 }
 
 // CHECK-DAG: ![[NON_FORCED:[0-9]+]] = !{!"llvm.loop.disable_nonforced"}
-// CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
 // CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.disable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.count", i32 64}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.runtime.disable", i1 false}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_unrolled", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_remainder", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_all", ![[FOLLOWUP]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_unrolled", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_remainder", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll.followup_all", ![[NON_FORCED]]}
 
 // -----
 
@@ -131,15 +129,14 @@ llvm.func @unrollAndJamOptions() {
 }
 
 // CHECK-DAG: ![[NON_FORCED:[0-9]+]] = !{!"llvm.loop.disable_nonforced"}
-// CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
 // CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.enable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.count", i32 8}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_outer", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_inner", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_remainder_outer", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_remainder_inner", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_all", ![[FOLLOWUP]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_outer", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_inner", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_remainder_outer", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_remainder_inner", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.unroll_and_jam.followup_all", ![[NON_FORCED]]}
 
 // -----
 
@@ -183,13 +180,12 @@ llvm.func @distributeOptions() {
 }
 
 // CHECK-DAG: ![[NON_FORCED:[0-9]+]] = !{!"llvm.loop.disable_nonforced"}
-// CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
 // CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.disable"}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_coincident", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_sequential", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_fallback", ![[FOLLOWUP]]}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_all", ![[FOLLOWUP]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_coincident", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_sequential", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_fallback", ![[NON_FORCED]]}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.distribute.followup_all", ![[NON_FORCED]]}
 
 // -----
 

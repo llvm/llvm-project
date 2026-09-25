@@ -724,7 +724,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     std::optional<common::CUDADataAttr> attr{
         details ? details->cudaDataAttr() : std::nullopt};
     const parser::Name &base{parser::GetFirstName(*component)};
-    if (attr && base.symbol && IsCUDADevice(*base.symbol)) {
+    // An attribute the compiler applied implicitly is not a user requirement,
+    // so there is no conflict to report: the memory space the user did ask
+    // for takes precedence over it.
+    const bool attrIsImplicit{details && details->cudaDataAttrIsImplicit()};
+    if (attr && !attrIsImplicit && base.symbol && IsCUDADevice(*base.symbol)) {
       if (*attr == common::CUDADataAttr::Pinned ||
           *attr == common::CUDADataAttr::Managed ||
           *attr == common::CUDADataAttr::Unified) {

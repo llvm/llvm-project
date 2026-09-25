@@ -11,7 +11,7 @@
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_4]]#1 <{bindc_name = ".tmp", uniq_name = ""}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_2]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -55,7 +55,7 @@
 ! CHECK-LABEL:   func.func @_QPs(
 ! CHECK-SAME:                    %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsEi"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsEi"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
@@ -63,7 +63,7 @@
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.cmpi sgt, %[[VAL_6]], %[[VAL_7]] : index
 ! CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_6]], %[[VAL_7]] : index
-! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_9]] {bindc_name = "c", uniq_name = "_QFsEc"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_9]] <{bindc_name = "c", uniq_name = "_QFsEc"}>
 ! CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_11]]) {uniq_name = "_QFsEc"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32

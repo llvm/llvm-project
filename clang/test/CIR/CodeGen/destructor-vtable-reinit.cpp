@@ -30,7 +30,7 @@ Base::~Base() { some_function(); }
 // LLVM:        %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:        %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVMCIR-NEXT:store ptr getelementptr inbounds nuw (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
-// OGCG-NEXT:   store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV4Base, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG-NEXT:   store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
 // LLVM-NEXT:   call void @_Z13some_functionv()
 // LLVM-NEXT:   ret void
 
@@ -59,7 +59,7 @@ Derived::~Derived() { some_function(); }
 // LLVM:        %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:        %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVMCIR:     store ptr getelementptr inbounds nuw (i8, ptr @_ZTV7Derived, i64 16), ptr %[[THIS]]
-// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV7Derived, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV7Derived, i64 16), ptr %[[THIS]]
 // LLVM-NEXT:   call void @_Z13some_functionv()
 // LLVM:        call void @_ZN4BaseD2Ev(ptr {{.*}}%[[THIS]])
 // LLVM:        ret void
@@ -169,10 +169,10 @@ MultiBase::~MultiBase() { some_function(); }
 // LLVM:        %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:        %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVMCIR:     store ptr getelementptr inbounds nuw (i8, ptr @_ZTV9MultiBase, i64 16), ptr %[[THIS]]
-// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV9MultiBase, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV9MultiBase, i64 16), ptr %[[THIS]]
 // LLVM:        %[[FATHER_ADDR:.*]] = getelementptr {{.*}}i8, ptr %[[THIS]], i{{32|64}} 8
 // LLVMCIR:     store ptr getelementptr inbounds nuw (i8, ptr @_ZTV9MultiBase, i64 48), ptr %[[FATHER_ADDR]]
-// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV9MultiBase, i32 0, i32 1, i32 2), ptr %[[FATHER_ADDR]]
+// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV9MultiBase, i64 48), ptr %[[FATHER_ADDR]]
 // LLVM:        call void @_Z13some_functionv()
 // LLVM:        call void @_ZN6FatherD2Ev(ptr {{.*}})
 // LLVM:        call void @_ZN6MotherD2Ev(ptr {{.*}}%[[THIS]])

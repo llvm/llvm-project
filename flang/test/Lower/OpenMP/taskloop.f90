@@ -47,9 +47,9 @@
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop
-! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloopEi"}
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloopEi"}>
 ! CHECK:          %[[I_VAL:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:          %[[ALLOCA_RES:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFomp_taskloopEres"}
+! CHECK:          %[[ALLOCA_RES:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_taskloopEres"}>
 ! CHECK:          %[[RES_VAL:.*]]:2 = hlfir.declare %[[ALLOCA_RES]] {uniq_name = "_QFomp_taskloopEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[C1_I32:.*]] = arith.constant 1 : i32
 ! CHECK:          %[[C10_I32:.*]] = arith.constant 10 : i32
@@ -83,9 +83,9 @@ end subroutine omp_taskloop
 
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_private
-! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloop_privateEi"}
+! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_privateEi"}>
 ! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_privateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[ALLOCA_RES:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFomp_taskloop_privateEres"}
+! CHECK:           %[[ALLOCA_RES:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_taskloop_privateEres"}>
 ! CHECK:           %[[DECL_RES:.*]]:2 = hlfir.declare %[[ALLOCA_RES]] {uniq_name = "_QFomp_taskloop_privateEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine omp_taskloop_private
   integer :: res, i
@@ -111,9 +111,9 @@ end subroutine omp_taskloop_private
 !===============================================================================
 
 ! CHECK-LABEL:  func.func @_QPtaskloop_allocate
-! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtaskloop_allocateEi"}
+! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtaskloop_allocateEi"}>
 ! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtaskloop_allocateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[ALLOCA_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtaskloop_allocateEx"}
+! CHECK:           %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtaskloop_allocateEx"}>
 ! CHECK:           %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFtaskloop_allocateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine taskloop_allocate()
    use omp_lib
@@ -135,7 +135,7 @@ end subroutine taskloop_allocate
 !===============================================================================
 
 ! CHECK-LABEL:  func.func @_QPtaskloop_final
-! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtaskloop_finalEi"}
+! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtaskloop_finalEi"}>
 ! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtaskloop_finalEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine taskloop_final()
     ! CHECK:  omp.taskloop.context final(%true) private(@[[I_PRIVATE_FINAL]] %[[DECL_I]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) {
@@ -154,7 +154,7 @@ end subroutine
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_if
 ! CHECK:            %[[DECL_BAR:.*]]:2 = hlfir.declare %[[ARG0:.*]] dummy_scope %{{.*}}
-! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloop_ifEi"}
+! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_ifEi"}>
 ! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_ifEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[LOAD_VAL:.*]] = fir.load %[[DECL_BAR]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_BAR:.*]] = fir.convert %[[LOAD_VAL]] : (!fir.logical<4>) -> i1
@@ -234,9 +234,9 @@ end subroutine
 !===============================================================================
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_lastprivate
-! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloop_lastprivateEi"}
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_lastprivateEi"}>
 ! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_lastprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFomp_taskloop_lastprivateEx"}
+! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFomp_taskloop_lastprivateEx"}>
 ! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFomp_taskloop_lastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine omp_taskloop_lastprivate()
    integer x

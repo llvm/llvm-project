@@ -291,7 +291,8 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const override;
+  bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                   unsigned OpIdx) const override;
 
   /// Add appropriate SExt nodes
   void AddSExt(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,

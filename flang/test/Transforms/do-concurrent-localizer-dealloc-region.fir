@@ -70,7 +70,7 @@ func.func @_QPlocalizer_with_dealloc_region(%arg0: !fir.ref<i32> {fir.bindc_name
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 42 : i32
-// CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i"}
+// CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_7]] {uniq_name = "_QFlocalizer_with_dealloc_regionEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
@@ -78,7 +78,7 @@ func.func @_QPlocalizer_with_dealloc_region(%arg0: !fir.ref<i32> {fir.bindc_name
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_1]] : index
 // CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_1]] : index
-// CHECK:           %[[VAL_13:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_12]] {bindc_name = "a", uniq_name = "_QFlocalizer_with_dealloc_regionEa"}
+// CHECK:           %[[VAL_13:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_12]] <{bindc_name = "a", uniq_name = "_QFlocalizer_with_dealloc_regionEa"}>
 // CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_15:.*]] = fir.declare %[[VAL_13]](%[[VAL_14]]) {uniq_name = "_QFlocalizer_with_dealloc_regionEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK:           %[[VAL_16:.*]] = fir.embox %[[VAL_15]](%[[VAL_14]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
@@ -93,7 +93,7 @@ func.func @_QPlocalizer_with_dealloc_region(%arg0: !fir.ref<i32> {fir.bindc_name
 // CHECK:             %[[VAL_19:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 // CHECK:             %[[VAL_20:.*]]:3 = fir.box_dims %[[VAL_19]], %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:             %[[VAL_21:.*]] = fir.shape %[[VAL_20]]#1 : (index) -> !fir.shape<1>
-// CHECK:             %[[VAL_22:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_20]]#1 {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:             %[[VAL_22:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_20]]#1 <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:             %[[VAL_23:.*]] = fir.declare %[[VAL_22]](%[[VAL_21]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
 // CHECK:             %[[VAL_24:.*]] = fir.embox %[[VAL_23]](%[[VAL_21]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:             %[[VAL_25:.*]] = fir.shape_shift %[[VAL_20]]#0, %[[VAL_20]]#1 : (index, index) -> !fir.shapeshift<1>

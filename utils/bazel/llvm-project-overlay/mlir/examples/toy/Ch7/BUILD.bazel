@@ -85,6 +85,7 @@ cc_binary(
         "//mlir:ArithDialect",
         "//mlir:ArithToLLVM",
         "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:CallOpInterfaces",
         "//mlir:CastInterfaces",

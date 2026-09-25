@@ -646,12 +646,13 @@ define amdgpu_ps <2 x bfloat> @fptrunc_v2f32_to_v2bf16_v(<2 x float> %a) {
 ; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX1250-FAKE16-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1250-FAKE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-FAKE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
 ; GFX1250-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-FAKE16-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
@@ -667,12 +668,13 @@ define amdgpu_ps <2 x bfloat> @fptrunc_v2f32_to_v2bf16_v(<2 x float> %a) {
 ; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 1
 ; GFX1250-TRUE16-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1250-TRUE16-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX1250-TRUE16-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-TRUE16-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-TRUE16-NEXT:    v_or_b32_e32 v4, 0x400000, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
 ; GFX1250-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo

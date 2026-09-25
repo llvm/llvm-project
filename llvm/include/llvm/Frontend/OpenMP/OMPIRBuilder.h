@@ -27,6 +27,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -42,10 +43,6 @@ class OpenMPIRBuilder;
 class Loop;
 class LoopAnalysis;
 class LoopInfo;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -744,7 +741,6 @@ public:
   struct LocationDescription {
     LocationDescription(const IRBuilderBase &IRB)
         : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {}
-    LocationDescription(const InsertPointTy &IP) : IP(IP) {}
     LocationDescription(const InsertPointTy &IP, const DebugLoc &DL)
         : IP(IP), DL(DL) {}
     InsertPointTy IP;
@@ -3549,6 +3545,19 @@ public:
   ///
   ///{
 
+  /// Create (or update) the '<kernel>_kernel_environment' global describing
+  /// the launch configuration of the kernel at the current insertion point,
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Attrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  ///
+  /// \returns the (possibly address-space-cast) kernel environment constant,
+  ///          or nullptr if \p Loc has no valid insertion point.
+  LLVM_ABI Constant *emitKernelEnvironment(
+      const LocationDescription &Loc,
+      const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
+
   /// Create a runtime call for kmpc_target_init
   ///
   /// \param Loc The insert and source location description.
@@ -3828,6 +3837,9 @@ public:
   ///        parent function, so it cannot be used for code emitted inside the
   ///        outlined function. If this is empty, such code is emitted without a
   ///        debug location.
+  /// \param RTLocOverride Optional runtime source-location identifier to report
+  ///        to the offload runtime for the kernel launch. When null, a default
+  ///        source-location identifier is used.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3844,7 +3856,7 @@ public:
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
           omp::OMPDynGroupprivateFallbackType::Abort,
-      DebugLoc OutlinedFnLoc = {});
+      DebugLoc OutlinedFnLoc = {}, Value *RTLocOverride = nullptr);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

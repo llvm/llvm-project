@@ -5,7 +5,14 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("//libc:libc_build_rules.bzl", "libc_release_library")
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
 
 licenses(["notice"])
 

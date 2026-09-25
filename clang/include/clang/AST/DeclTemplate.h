@@ -3470,9 +3470,9 @@ public:
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
-  if (auto *PD = P.dyn_cast<TemplateTypeParmDecl *>())
+  if (auto *PD = dyn_cast<TemplateTypeParmDecl *>(P))
     return PD;
-  if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl *>())
+  if (auto *PD = dyn_cast<NonTypeTemplateParmDecl *>(P))
     return PD;
   return cast<TemplateTemplateParmDecl *>(P);
 }

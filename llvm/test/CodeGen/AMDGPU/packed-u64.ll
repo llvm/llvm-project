@@ -448,9 +448,9 @@ define amdgpu_kernel void @add_v2_v_v_vgpr_splat(ptr addrspace(1) %a) {
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1251-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset
@@ -1144,9 +1144,9 @@ define amdgpu_kernel void @sub_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1251-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset

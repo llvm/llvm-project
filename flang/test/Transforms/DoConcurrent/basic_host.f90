@@ -23,7 +23,7 @@ program do_concurrent_basic
 
     ! CHECK: omp.parallel {
 
-    ! CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 {bindc_name = "i"}
+    ! CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 <{bindc_name = "i"}>
     ! CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     ! CHECK: omp.wsloop {

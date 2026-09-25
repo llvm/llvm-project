@@ -27,8 +27,6 @@ class R600TargetLowering final : public AMDGPUTargetLowering {
 public:
   R600TargetLowering(const TargetMachine &TM, const R600Subtarget &STI);
 
-  const R600Subtarget *getSubtarget() const;
-
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;

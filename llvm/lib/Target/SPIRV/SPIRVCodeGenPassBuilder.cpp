@@ -140,7 +140,7 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   }
   addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
   flushFPMsToMPM(PMW);
-  addModulePass(SPIRVLegalizeImplicitBindingPass(), PMW);
+  addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
   addModulePass(SPIRVCBufferAccessPass(), PMW);
   addModulePass(SPIRVPushConstantAccessPass(getTM()), PMW);
@@ -173,7 +173,9 @@ Error SPIRVCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addGlobalInstructionSelect(
     PassManagerWrapper &PMW) {
-  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  addMachineFunctionPass(
+      InstructionSelectPass(getOptLevel(), /*RequireRegBankSelection=*/false),
+      PMW);
   return Error::success();
 }
 

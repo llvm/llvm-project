@@ -2528,6 +2528,8 @@ static llvm::Type *getFPTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   if (llvm::ArrayType *ATy = dyn_cast<llvm::ArrayType>(IRType)) {
     llvm::Type *EltTy = ATy->getElementType();
     unsigned EltSize = TD.getTypeAllocSize(EltTy);
+    if (EltSize == 0)
+      return nullptr;
     IROffset -= IROffset / EltSize * EltSize;
     return getFPTypeAtOffset(EltTy, IROffset, TD);
   }

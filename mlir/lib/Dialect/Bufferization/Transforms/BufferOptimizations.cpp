@@ -122,7 +122,8 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
   if (bitwidth != 0 &&
       *numElements > static_cast<int64_t>(maximumSizeInBytes * 8ULL / bitwidth))
     return false;
-  return *numElements * bitwidth <= maximumSizeInBytes * 8;
+  return *numElements * bitwidth <=
+         static_cast<int64_t>(maximumSizeInBytes * 8ULL);
 }
 
 /// Checks whether the given aliases leave the allocation scope.

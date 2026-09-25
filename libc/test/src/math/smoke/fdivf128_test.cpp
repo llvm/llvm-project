@@ -10,4 +10,4 @@
 
 #include "src/math/fdivf128.h"
 
-LIST_DIV_TESTS(float, float128, LIBC_NAMESPACE::fdivf128)
+LIST_DIV_TESTS(Fdivf128, float, float128, LIBC_NAMESPACE::fdivf128)

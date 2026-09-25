@@ -32,7 +32,7 @@ end subroutine
 ! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A]], %[[LEN_B]] : i64
 ! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i64) -> index
 ! CHECK: %[[RES_LENGTH:.*]] = arith.maxsi %[[LEN_LEN_IDX]], %c0{{.*}} : index
-! CHECK: %[[RES:.*]] = fir.alloca !fir.char<1,?>(%[[RES_LENGTH]] : index) {bindc_name = ".result"}
+! CHECK: %[[RES:.*]] = fir.alloca !fir.char<1,?>(%[[RES_LENGTH]] : index) <{bindc_name = ".result"}>
 ! CHECK: fir.call @_QMm1Pfct1
 
 subroutine sub4(a,b,c)

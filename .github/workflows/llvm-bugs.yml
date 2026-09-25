@@ -11,7 +11,7 @@ on:
 
 jobs:
   auto-subscribe:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0

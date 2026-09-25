@@ -451,13 +451,14 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset OptLevel to None for optnone functions.
+  // Reset OptLevel to None for optnone functions or when opt-bisect skips.
   // TODO: Add a function analysis to handle this.
   Selector->MF = &MF;
-  // Reset OptLevel to None for optnone functions.
-  CodeGenOptLevel NewOptLevel = MF.getFunction().hasOptNone()
-                                    ? CodeGenOptLevel::None
-                                    : Selector->OptLevel;
+  CodeGenOptLevel NewOptLevel =
+      (MF.getFunction().hasOptNone() ||
+       shouldSkipOptimizationForOptBisect(MF.getFunction()))
+          ? CodeGenOptLevel::None
+          : Selector->OptLevel;
 
   OptLevelChanger OLC(*Selector, NewOptLevel);
   Selector->initializeAnalysisResults(MFAM);
@@ -499,8 +500,6 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
-  MachineModuleInfo &MMI =
-      MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
   const ModuleLibcallLoweringInfo *LibcallResult =
       MAMP.getCachedResult<LibcallLoweringModuleAnalysis>(*Fn.getParent());
@@ -510,8 +509,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   }
 
   LibcallLowering = &getLibcallLowering(*LibcallResult, Subtarget);
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
-               FnVarLocs);
+  CurDAG->init(*MF, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -569,15 +567,11 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   if (auto *UAPass = MFP.getAnalysisIfAvailable<UniformityInfoWrapperPass>())
     UA = &UAPass->getUniformityInfo();
 
-  MachineModuleInfo &MMI =
-      MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
   LibcallLowering =
       &MFP.getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
           *Fn.getParent(), Subtarget);
 
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
-               FnVarLocs);
+  CurDAG->init(*MF, LibInfo, LibcallLowering, UA, PSI, BFI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -1456,7 +1450,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
         // Get or create the virtual register to hold the pointer or code.  Mark
         // the live in physreg and copy into the vreg.
         MCRegister EHPhysReg = TLI->getExceptionPointerRegister(
-            TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
+            FuncInfo->ExceptionModel, PersonalityFn);
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
         Register VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
@@ -1490,11 +1484,11 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
     // Mark exception register as live in.
     if (MCRegister Reg = TLI->getExceptionPointerRegister(
-            TLI->getTargetMachine().getExceptionModel(), PersonalityFn))
+            FuncInfo->ExceptionModel, PersonalityFn))
       FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
     // Mark exception selector register as live in.
     if (MCRegister Reg = TLI->getExceptionSelectorRegister(
-            TLI->getTargetMachine().getExceptionModel(), PersonalityFn))
+            FuncInfo->ExceptionModel, PersonalityFn))
       FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
   }
 

@@ -32,6 +32,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -2210,12 +2211,9 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
     BasicBlock *BB = Node->getBlock();
     // Check for redundant stores against active known conditions.
     if (auto *Accesses = MSSA.getBlockDefs(BB)) {
-      for (auto &Access : make_early_inc_range(*Accesses)) {
-        auto *Def = dyn_cast<MemoryDef>(&Access);
-        if (!Def)
-          continue;
-
-        auto *SI = dyn_cast<StoreInst>(Def->getMemoryInst());
+      for (MemoryDef &Def :
+           make_early_inc_range(make_isa_range<MemoryDef>(*Accesses))) {
+        auto *SI = dyn_cast<StoreInst>(Def.getMemoryInst());
         if (!SI || !SI->isUnordered())
           continue;
 
@@ -2229,7 +2227,7 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
         // load and the potential redundant store.
         MemoryAccess *LoadAccess = MSSA.getMemoryAccess(LI);
         MemoryAccess *ClobberingAccess =
-            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(&Def, BatchAA);
         if (MSSA.dominates(ClobberingAccess, LoadAccess)) {
           LLVM_DEBUG(dbgs()
                      << "Removing No-Op Store:\n  DEAD: " << *SI << '\n');

@@ -543,6 +543,16 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       assert(MI.getOperand(3).getReg() == RISCV::VL &&
              MI.getOperand(4).getReg() == RISCV::VTYPE &&
              "Unexpected operands where VL and VTYPE should be");
+
+      if (LIS) {
+        // Clearing a dead flag extends that def past its previous dead-def
+        // slot, so the stale VL/VTYPE range must be dropped.
+        if (MI.getOperand(3).isDead())
+          LIS->removeAllRegUnitsForPhysReg(RISCV::VL);
+        if (MI.getOperand(4).isDead())
+          LIS->removeAllRegUnitsForPhysReg(RISCV::VTYPE);
+      }
+
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
       PrefixTransparent = false;

@@ -14,13 +14,13 @@
 // ALL: #[[BLK_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[BLK_B]], access_type = #[[BLK_B]], offset = 0>
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
-// ALL-LABEL:   fir.global common @blk_(dense<0> : vector<48xi8>) {alignment = 4 : i64} : !fir.array<48xi8>
+// ALL-LABEL:   fir.global common @blk_(dense<0> : vector<48xi8>) <{alignment = 4 : i64}> : !fir.array<48xi8>
   fir.global common @blk_(dense<0> : vector<48xi8>) {alignment = 4 : i64} : !fir.array<48xi8>
 
 // ALL-LABEL:   func.func @_QPtest_common() {
-// ALL:           fir.store{{.*}}{tbaa = [#[[BLK_A_TAG]]]} : !fir.ref<f32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[BLK_C_TAG]]]} : !fir.ref<i32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[BLK_B_TAG]]]} : !fir.ref<f32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[BLK_A_TAG]]]}> : !fir.ref<f32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[BLK_C_TAG]]]}> : !fir.ref<i32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[BLK_B_TAG]]]}> : !fir.ref<f32>
   func.func @_QPtest_common() {
     %c1 = arith.constant 1 : index
     %c1_i32 = arith.constant 1 : i32
@@ -60,9 +60,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // ALL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
 
 // ALL-LABEL:   func.func @_QPtest_local_equiv() {
-// ALL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
-// ALL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<i32>
-// ALL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
+// ALL:         fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
+// ALL:         fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ref<i32>
+// ALL:         fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @_QPtest_local_equiv() {
   %c1 = arith.constant 1 : index
@@ -105,9 +105,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
   }
 
 // ALL-LABEL:   func.func @_QPtest_save_equiv() {
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<i32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ref<i32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
   func.func @_QPtest_save_equiv() {
     %c1 = arith.constant 1 : index
     %c1_i32 = arith.constant 1 : i32
@@ -149,9 +149,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     fir.has_value %0 : !fir.array<40xi8>
   }
 // ALL-LABEL:   func.func @_QPtest_global_equiv() {
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<i32>
-// ALL:           fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ref<i32>
+// ALL:           fir.store{{.*}}<{tbaa = [#[[TAG]]]}> : !fir.ptr<f32>
   func.func @_QPtest_global_equiv() {
     %c1 = arith.constant 1 : index
     %c1_i32 = arith.constant 1 : i32

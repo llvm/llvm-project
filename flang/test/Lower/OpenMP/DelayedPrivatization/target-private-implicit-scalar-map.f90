@@ -18,9 +18,9 @@
 ! CHECK:           omp.yield(%{{.*}} : !fir.ref<i32>)
 ! CHECK:         }
 
-! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "xdgfx", uniq_name = "_QFExdgfx"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "xdgfx", uniq_name = "_QFExdgfx"}>
 ! CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFExdgfx"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK:  %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "xfpvx", uniq_name = "_QFExfpvx"}
+! CHECK:  %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "xfpvx", uniq_name = "_QFExfpvx"}>
 ! CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_2]] {uniq_name = "_QFExfpvx"} : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_3]] : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>

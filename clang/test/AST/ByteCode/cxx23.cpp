@@ -667,7 +667,7 @@ namespace BrokenShuffleVector {
   typedef float __m128 __attribute__((__vector_size__(16)));
 
   static inline constexpr __m128 _mm_cvtps_pd(__m128 z) {
-    __builtin_convertvector(__builtin_shufflevector(z, z), __m128); // all-error {{first two arguments to '__builtin_shufflevector' must have the same type}} \
+    __builtin_convertvector(__builtin_shufflevector(z, z), __m128); // all-error {{2nd argument must be a vector of integer types (was '__m128' (vector of 4 'float' values))}} \
                                                                     // all-warning {{expression result unused}}
   }
 

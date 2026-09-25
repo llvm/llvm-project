@@ -864,12 +864,7 @@ class ExtractElementF64Base<RegisterOperand RO> :
   PseudoSE<(outs GPR32Opnd:$dst), (ins RO:$src, i32imm:$n),
            [(set GPR32Opnd:$dst, (MipsExtractElementF64 RO:$src, imm:$n))]>;
 
-class ExtractElementF64Base_FPR<RegisterOperand RO> :
-  PseudoSE<(outs FGR32Opnd:$dst), (ins RO:$src, i32imm:$n),
-           [(set FGR32Opnd:$dst, (MipsExtractElementF64_FPR RO:$src, imm:$n))]>;
-
 def ExtractElementF64 : ExtractElementF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
-def ExtractElementF64_FPR : ExtractElementF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def ExtractElementF64_64 : ExtractElementF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 def PseudoTRUNC_W_S : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
@@ -1062,6 +1057,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
 def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
       FGR_64;
+
+def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 0)),
+              (EXTRACT_SUBREG AFGR64Opnd:$src, sub_lo)>;
+
+def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 1)),
+              (EXTRACT_SUBREG AFGR64Opnd:$src, sub_hi)>;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)), 
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;

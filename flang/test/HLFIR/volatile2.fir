@@ -32,7 +32,7 @@ func.func private @_QFPc() -> f32 attributes {fir.host_symbol = @_QQmain, llvm.l
 
 
 // CHECK-LABEL:   func.func private @_QFPa() -> i32 attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFFaEa"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFFaEa"}>
 // CHECK:           %[[VAL_1:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFaEa"} : (!fir.ref<i32, volatile>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
@@ -43,7 +43,7 @@ func.func private @_QFPc() -> f32 attributes {fir.host_symbol = @_QQmain, llvm.l
 // CHECK:         }
 
 // CHECK-LABEL:   func.func private @_QFPb() -> i32 attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "r", uniq_name = "_QFFbEr"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "r", uniq_name = "_QFFbEr"}>
 // CHECK:           %[[VAL_1:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFbEr"} : (!fir.ref<i32, volatile>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i32
@@ -54,7 +54,7 @@ func.func private @_QFPc() -> f32 attributes {fir.host_symbol = @_QQmain, llvm.l
 // CHECK:         }
 
 // CHECK-LABEL:   func.func private @_QFPc() -> f32 attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFFcEr"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca f32 <{bindc_name = "r", uniq_name = "_QFFcEr"}>
 // CHECK:           %[[VAL_1:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.ref<f32>) -> !fir.ref<f32, volatile>
 // CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFcEr"} : (!fir.ref<f32, volatile>) -> !fir.ref<f32, volatile>
 // CHECK:           %[[VAL_3:.*]] = arith.constant 3.000000e+00 : f32

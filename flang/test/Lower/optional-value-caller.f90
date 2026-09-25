@@ -164,7 +164,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMtestPtest_ptr_2() {
 subroutine test_ptr_2()
   call scalar(returns_ptr())
-! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_2:.*]] = fir.call @_QPreturns_ptr() {{.*}}: () -> !fir.box<!fir.ptr<i32>>
 ! CHECK:  fir.save_result %[[VAL_2]] to %[[VAL_0]] : !fir.box<!fir.ptr<i32>>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"}

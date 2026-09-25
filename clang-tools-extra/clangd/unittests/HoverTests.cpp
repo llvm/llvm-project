@@ -471,7 +471,7 @@ class Foo final {})cpp";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Parameter;
          HI.Definition = "decltype(lamb) &bar";
-         HI.Type = {"decltype(lamb) &", "(lambda) &"};
+         HI.Type = "(lambda) &";
          HI.ReturnType = "bool";
          HI.Parameters = {
              {{"int"}, std::string("T"), std::nullopt},
@@ -3000,7 +3000,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "";
             HI.Name = "b";
-            HI.Type = "int";
+            HI.Type = "const int";
           }},
       {
           R"cpp(// type with decltype
@@ -3011,10 +3011,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Function;
             HI.NamespaceScope = "";
             HI.Name = "foo";
-            // FIXME: Handle composite types with decltype with a printing
-            // policy.
-            HI.Type = {"auto (decltype(a)) -> decltype(a)",
-                       "auto (int) -> int"};
+            HI.Type = "auto (int) -> int";
             HI.ReturnType = "int";
             HI.Parameters = {{{"int"}, std::string("x"), std::nullopt}};
           }},

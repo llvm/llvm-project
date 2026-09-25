@@ -942,3 +942,25 @@ llvm.func @variant_part_emission(%arg0: i32) {
   llvm.intr.dbg.value #di_local = %arg0 : i32 loc(#loc)
   llvm.return loc(#loc)
 } loc(#loc)
+
+// -----
+
+// CHECK-LABEL: define void @recursive_variant_part
+// CHECK: ![[VARIANT:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_variant_part, elements: ![[ELEMENTS:[0-9]+]])
+// CHECK: ![[ELEMENTS]] = !{![[MEMBER:[0-9]+]]}
+// CHECK: ![[MEMBER]] = !DIDerivedType(tag: DW_TAG_member, scope: ![[VARIANT]], baseType: null)
+
+#recursive_variant_file = #llvm.di_file<"a.rs" in "">
+#recursive_variant_self = #llvm.di_composite_type<recId = distinct[106]<>, isRecSelf = true>
+#recursive_variant_member = #llvm.di_derived_type<tag = DW_TAG_member, scope = #recursive_variant_self>
+#recursive_variant_type = #llvm.di_composite_type<recId = distinct[106]<>, tag = DW_TAG_variant_part, elements = #recursive_variant_member>
+#recursive_variant_subroutine = #llvm.di_subroutine_type<types = #recursive_variant_type>
+#recursive_variant_cu = #llvm.di_compile_unit<id = distinct[107]<>, sourceLanguage = DW_LANG_C, file = #recursive_variant_file, emissionKind = Full>
+#recursive_variant_sp = #llvm.di_subprogram<id = distinct[108]<>, compileUnit = #recursive_variant_cu, file = #recursive_variant_file, subprogramFlags = "Definition", type = #recursive_variant_subroutine>
+#recursive_variant_loc = loc(fused<#recursive_variant_sp>[unknown])
+
+module {
+  llvm.func @recursive_variant_part() {
+    llvm.return
+  } loc(#recursive_variant_loc)
+}

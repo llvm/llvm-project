@@ -4,15 +4,15 @@
 program p
   use ieee_arithmetic, only: ieee_real
 
-  ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca i16 {bindc_name = "j2", uniq_name = "_QFEj2"}
+  ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca i16 <{bindc_name = "j2", uniq_name = "_QFEj2"}>
   ! CHECK:     %[[V_1:[0-9]+]]:2 = hlfir.declare %[[V_0]] {uniq_name = "_QFEj2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
-  ! CHECK:     %[[V_2:[0-9]+]] = fir.alloca i64 {bindc_name = "j8", uniq_name = "_QFEj8"}
+  ! CHECK:     %[[V_2:[0-9]+]] = fir.alloca i64 <{bindc_name = "j8", uniq_name = "_QFEj8"}>
   ! CHECK:     %[[V_3:[0-9]+]]:2 = hlfir.declare %[[V_2]] {uniq_name = "_QFEj8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-  ! CHECK:     %[[V_4:[0-9]+]] = fir.alloca f16 {bindc_name = "x2", uniq_name = "_QFEx2"}
+  ! CHECK:     %[[V_4:[0-9]+]] = fir.alloca f16 <{bindc_name = "x2", uniq_name = "_QFEx2"}>
   ! CHECK:     %[[V_5:[0-9]+]]:2 = hlfir.declare %[[V_4]] {uniq_name = "_QFEx2"} : (!fir.ref<f16>) -> (!fir.ref<f16>, !fir.ref<f16>)
-  ! CHECK:     %[[V_6:[0-9]+]] = fir.alloca f32 {bindc_name = "x4", uniq_name = "_QFEx4"}
+  ! CHECK:     %[[V_6:[0-9]+]] = fir.alloca f32 <{bindc_name = "x4", uniq_name = "_QFEx4"}>
   ! CHECK:     %[[V_7:[0-9]+]]:2 = hlfir.declare %[[V_6]] {uniq_name = "_QFEx4"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! CHECK:     %[[V_8:[0-9]+]] = fir.alloca f64 {bindc_name = "x8", uniq_name = "_QFEx8"}
+  ! CHECK:     %[[V_8:[0-9]+]] = fir.alloca f64 <{bindc_name = "x8", uniq_name = "_QFEx8"}>
   ! CHECK:     %[[V_9:[0-9]+]]:2 = hlfir.declare %[[V_8]] {uniq_name = "_QFEx8"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
   integer(2) :: j2
   integer(8) :: j8

@@ -67,7 +67,9 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         return ss.save(".rela" + out->name);
       return ss.save(".rel" + out->name);
     }
-    if (ctx.arg.relocatable)
+    // Use default LLD behavior for the embedded unoptimized dynamic debugging
+    // relocatable link.
+    if (ctx.arg.relocatable && !ctx.dynDbgRelocatable)
       return s->name;
   }
 

@@ -307,7 +307,7 @@ end subroutine omp_target_update_nowait
 
 !CHECK-LABEL: func.func @_QPomp_target_data() {
 subroutine omp_target_data
-   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_dataEa"}
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> <{bindc_name = "a", uniq_name = "_QFomp_target_dataEa"}>
    !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) {uniq_name = "_QFomp_target_dataEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
@@ -328,9 +328,9 @@ end subroutine omp_target_data
 subroutine omp_target_data_mt
    integer :: a(1024)
    integer :: b(1024)
-   !CHECK: %[[VAR_A:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_data_mtEa"}
+   !CHECK: %[[VAR_A:.*]] = fir.alloca !fir.array<1024xi32> <{bindc_name = "a", uniq_name = "_QFomp_target_data_mtEa"}>
    !CHECK: %[[VAR_A_DECL:.*]]:2 = hlfir.declare %[[VAR_A]](%{{.*}}) {uniq_name = "_QFomp_target_data_mtEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
-   !CHECK: %[[VAR_B:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "b", uniq_name = "_QFomp_target_data_mtEb"}
+   !CHECK: %[[VAR_B:.*]] = fir.alloca !fir.array<1024xi32> <{bindc_name = "b", uniq_name = "_QFomp_target_data_mtEb"}>
    !CHECK: %[[VAR_B_DECL:.*]]:2 = hlfir.declare %[[VAR_B]](%{{.*}}) {uniq_name = "_QFomp_target_data_mtEb"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    !CHECK: %[[BOUNDS_A:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
    !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAR_A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) name("a") -> !fir.ref<!fir.array<1024xi32>>
@@ -406,7 +406,7 @@ subroutine omp_target_depend
 !CHECK-LABEL: func.func @_QPomp_target_implicit() {
 subroutine omp_target_implicit
    !CHECK: %[[VAL_0:.*]] = arith.constant 1024 : index
-   !CHECK: %[[VAL_1:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_implicitEa"}
+   !CHECK: %[[VAL_1:.*]] = fir.alloca !fir.array<1024xi32> <{bindc_name = "a", uniq_name = "_QFomp_target_implicitEa"}>
    !CHECK: %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFomp_target_implicitEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
@@ -473,7 +473,7 @@ subroutine omp_target_implicit_bounds(n)
    !CHECK: %[[VAL_5:.*]] = arith.constant 0 : index
    !CHECK: %[[VAL_6:.*]] = arith.cmpi sgt, %[[VAL_4]], %[[VAL_5]] : index
    !CHECK: %[[VAL_7:.*]] = arith.select %[[VAL_6]], %[[VAL_4]], %[[VAL_5]] : index
-   !CHECK: %[[VAL_8:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_7]] {bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}
+   !CHECK: %[[VAL_8:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_7]] <{bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}>
    !CHECK: %[[VAL_9:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
    !CHECK: %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QFomp_target_implicit_boundsEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
    !CHECK: %[[UB:.*]] = arith.subi %[[VAL_7]], %c1{{.*}} : index
@@ -546,7 +546,7 @@ end subroutine omp_target_device_ptr
  !CHECK-LABEL: func.func @_QPomp_target_device_addr() {
 subroutine omp_target_device_addr
    integer, pointer :: a
-   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}>
    !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFomp_target_device_addrEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
    !CHECK: %[[MAP_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[MAP_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -627,10 +627,10 @@ end subroutine
 !CHECK-LABEL: func.func @_QPomp_target_parallel_do() {
 subroutine omp_target_parallel_do
    !CHECK: %[[C1024:.*]] = arith.constant 1024 : index
-   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_parallel_doEa"}
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> <{bindc_name = "a", uniq_name = "_QFomp_target_parallel_doEa"}>
    !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) {uniq_name = "_QFomp_target_parallel_doEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
-   !CHECK: %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_target_parallel_doEi"}
+   !CHECK: %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_target_parallel_doEi"}>
    !CHECK: %[[VAL_1_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFomp_target_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
    integer :: i
    !CHECK: %[[C1:.*]] = arith.constant 1 : index

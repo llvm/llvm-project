@@ -2,10 +2,11 @@
 // RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
 // RUN: %clang_cc1 -triple arm64_32-apple-ios13 -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 #include <stdint.h>
+#include <arm_acle.h>
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
-// CHECK: call {{.*}} @__clear_cache
+// CHECK: call {{.*}} @llvm.clear_cache.p0
 }
 
 void *tp (void) {
@@ -126,7 +127,7 @@ int32_t jcvt(double v) {
 __typeof__(__builtin_arm_rsr("1:2:3:4:5")) rsr(void);
 
 uint32_t rsr(void) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   // CHECK-NEXT: trunc i64 [[V0]] to i32
   return __builtin_arm_rsr("1:2:3:4:5");
 }
@@ -134,12 +135,12 @@ uint32_t rsr(void) {
 __typeof__(__builtin_arm_rsr64("1:2:3:4:5")) rsr64(void);
 
 uint64_t rsr64(void) {
-  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   return __builtin_arm_rsr64("1:2:3:4:5");
 }
 
 void *rsrp(void) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   // CHECK-NEXT: inttoptr i64 [[V0]] to ptr
   return __builtin_arm_rsrp("1:2:3:4:5");
 }
@@ -148,20 +149,20 @@ __typeof__(__builtin_arm_wsr("1:2:3:4:5", 0)) wsr(unsigned);
 
 void wsr(unsigned v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = zext i32 %v to i64
-  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
+  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 [[V0]])
   __builtin_arm_wsr("1:2:3:4:5", v);
 }
 
 __typeof__(__builtin_arm_wsr64("1:2:3:4:5", 0)) wsr64(uint64_t);
 
 void wsr64(uint64_t v) {
-  // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %v)
+  // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 %v)
   __builtin_arm_wsr64("1:2:3:4:5", v);
 }
 
 void wsrp(void *v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = ptrtoint ptr %v to i64
-  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
+  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 [[V0]])
   __builtin_arm_wsrp("1:2:3:4:5", v);
 }
 
@@ -216,4 +217,26 @@ void trap() {
   __builtin_arm_trap(42);
 }
 
+void atomic_store_with_hint(int64_t *a, int64_t b) {
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 0); // HINT_STSHH_KEEP
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8, !mem.cache_hint ![[M1:[0-9]]]
+
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} seq_cst, align 8, !mem.cache_hint ![[M1]]
+
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, 1); // HINT_STSHH_STRM
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
+
+    __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, HINT_STSHH_STRM);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
+
+  // Invalid hint should be dropped
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 2); // Invalid Hint
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
+}
+
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}
+// CHECK: ![[M1]] = !{i32 1, ![[M2:[0-9]+]]}
+// CHECK: ![[M2]] = !{!"aarch64.mem_hint", i32 0}
+// CHECK: ![[M3]] = !{i32 1, ![[M4:[0-9]+]]}
+// CHECK: ![[M4]] = !{!"aarch64.mem_hint", i32 1}

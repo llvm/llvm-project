@@ -95,6 +95,14 @@ private:
              RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
     });
   }
+
+  /// \returns all vector virtual registers that \p MI defines.
+  auto virtual_vec_defs(const MachineInstr &MI) const {
+    return make_filter_range(MI.all_defs(), [this](const MachineOperand &MO) {
+      return MO.getReg().isVirtual() &&
+             RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
+    });
+  }
 };
 
 class RISCVVLOptimizerLegacy : public MachineFunctionPass {
@@ -222,11 +230,28 @@ static DemandedVL doubleVL(DemandedVL MinimumVL) {
   return MachineOperand::CreateImm(VL * 2);
 }
 
+static DemandedVL halfVL(DemandedVL MinimumVL, bool Ceil = false) {
+  if (!MinimumVL.VL.isImm())
+    return DemandedVL::vlmax();
+
+  int64_t VL = MinimumVL.VL.getImm();
+  if (!isUInt<5>(VL))
+    return DemandedVL::vlmax();
+  return MachineOperand::CreateImm((VL + Ceil) / 2);
+}
+
 static std::pair<unsigned, bool> doubleEMUL(std::pair<unsigned, bool> EMUL) {
   auto [Num, IsFractional] = EMUL;
   if (IsFractional)
     return std::make_pair(Num / 2, Num > 2);
   return std::make_pair(Num * 2, false);
+}
+
+static std::pair<unsigned, bool> halfEMUL(std::pair<unsigned, bool> EMUL) {
+  auto [Num, IsFractional] = EMUL;
+  if (IsFractional || Num == 1)
+    return std::make_pair(Num * 2, true);
+  return std::make_pair(Num / 2, false);
 }
 
 /// Dest has EEW=SEW. Source EEW=SEW/Factor (i.e. F2 => EEW/2).
@@ -928,12 +953,13 @@ static std::optional<OperandInfo> getOperandInfo(const MachineInstr &MI,
       return OperandInfo(*Log2EEW);
     break;
 
-  // Zvzip - vzip.vv interleaves two LMUL vectors into a 2*LMUL result with
-  // the same SEW. Dest, passthru, and mask therefore have 2 * EMUL.
+  // Zvzip - vzip.vv interleaves two half-LMUL vectors into an LMUL result with
+  // the same SEW. The vtype LMUL describes the result, so only the two source
+  // operands have half the instruction's EMUL.
   case RISCV::VZIP_VV: {
     auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
-    if (OpIdx == 0 || OpIdx == MI.getNumExplicitDefs() || OpIdx == 4)
-      EMUL = doubleEMUL(EMUL);
+    if (OpIdx == 2 || OpIdx == 3)
+      EMUL = halfEMUL(EMUL);
     return OperandInfo(EMUL, *Log2EEW);
   }
   // Zvzip - vunzipe.v / vunzipo.v split a 2*LMUL vector into LMUL even/odd
@@ -1117,7 +1143,7 @@ DemandedVL RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineInstr &UserMI,
   unsigned RVVOpc = RISCV::getRVVMCOpcode(UserMI.getOpcode());
   bool IsVUNZIP = RVVOpc == RISCV::VUNZIPE_V || RVVOpc == RISCV::VUNZIPO_V;
   bool IsVZIP = RVVOpc == RISCV::VZIP_VV;
-  if (!IsVUNZIP && !IsVZIP && RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
+  if (!IsVUNZIP && RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
     LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return DemandedVL::vlmax();
   }
@@ -1153,9 +1179,10 @@ DemandedVL RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineInstr &UserMI,
   if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
     MinimumVL = DemandedVLs.lookup(&UserMI);
 
-  if ((IsVUNZIP && UserOp.getOperandNo() == 2) ||
-      (IsVZIP && UserOp.getOperandNo() == 4))
+  if (IsVUNZIP && OpIdx == 2)
     MinimumVL = doubleVL(MinimumVL);
+  if (IsVZIP && (OpIdx == 2 || OpIdx == 3))
+    MinimumVL = halfVL(MinimumVL, OpIdx == 2);
 
   return MinimumVL;
 }
@@ -1383,13 +1410,17 @@ bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
 
   assert(DemandedVLs.empty());
 
-  // For each instruction that defines a vector, propagate the VL it
+  // For each instruction that defines or uses a vector, propagate the VL it
   // uses to its inputs.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     assert(MDT->isReachableFromEntry(MBB));
-    for (MachineInstr &MI : reverse(*MBB))
-      if (!MI.isDebugInstr())
-        Worklist.insert(&MI);
+    for (MachineInstr &MI : reverse(*MBB)) {
+      if (MI.isDebugInstr())
+        continue;
+      if (virtual_vec_defs(MI).empty() && virtual_vec_uses(MI).empty())
+        continue;
+      Worklist.insert(&MI);
+    }
   }
 
   while (!Worklist.empty()) {

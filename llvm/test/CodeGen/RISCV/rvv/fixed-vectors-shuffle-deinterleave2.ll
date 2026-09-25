@@ -1537,7 +1537,6 @@ entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   ret <4 x i64> %c
 }
-
 define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; V-LABEL: unzip2a_dual_v16i64:
 ; V:       # %bb.0: # %entry
@@ -1952,7 +1951,6 @@ entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   ret <4 x i64> %c
 }
-
 define <4 x i64> @unzip2b_dual_v4i64_exact(<4 x i64> %a, <4 x i64> %b) vscale_range(4,4) {
 ; V-LABEL: unzip2b_dual_v4i64_exact:
 ; V:       # %bb.0: # %entry

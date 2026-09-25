@@ -13,7 +13,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY killed $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY killed $vgpr0
   ; GCN-NEXT:   dead early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from constant-pool + 36, align 4, addrspace 4)
   ; GCN-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   renamable $sgpr6 = COPY renamable $sgpr1
@@ -82,8 +82,8 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.2, align 4, addrspace 5)
-  ; GCN-NEXT:   renamable $sgpr2 = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr2, [[COPY]](s32), implicit $exec
+  ; GCN-NEXT:   renamable $sgpr2 = V_READFIRSTLANE_B32 [[COPY]](i32), implicit $exec
+  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr2, [[COPY]](i32), implicit $exec
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 killed renamable $sgpr0_sgpr1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 [[COPY17]], killed $sgpr2, 11, implicit-def $m0, implicit $m0, implicit $exec
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = COPY [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]]

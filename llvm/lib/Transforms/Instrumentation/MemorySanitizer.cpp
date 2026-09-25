@@ -5909,7 +5909,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleLifetimeStart(I);
       break;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       handleInvariantGroup(I);
       break;
     case Intrinsic::bswap:

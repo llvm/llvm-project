@@ -75,7 +75,7 @@ subroutine omp_task_affinity_scalar()
 end subroutine omp_task_affinity_scalar
 
 ! CHECK-LABEL: func.func @_QPomp_task_affinity_scalar()
-! CHECK: %[[S:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "_QFomp_task_affinity_scalarEs"}
+! CHECK: %[[S:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "_QFomp_task_affinity_scalarEs"}>
 ! CHECK: %[[SDECL:.*]]:2 = hlfir.declare %[[S]] {uniq_name = "_QFomp_task_affinity_scalarEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: hlfir.assign %{{.*}} to %[[SDECL]]#0 : i32, !fir.ref<i32>
 ! CHECK: omp.parallel {

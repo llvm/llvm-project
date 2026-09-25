@@ -21,30 +21,20 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        main_source_spec = lldb.SBFileSpec("main.cpp")
 
         # Set a breakpoint in the thread body, and make it active for only the
-        # first thread.
-        break_thread_body = target.BreakpointCreateBySourceRegex(
-            "Break here in thread body.", main_source_spec
+        # first thread.  Several threads can run into it at once.
+        (
+            _,
+            process,
+            victim_thread,
+            break_thread_body,
+        ) = lldbutil.run_to_source_breakpoint(
+            self,
+            "Break here in thread body.",
+            lldb.SBFileSpec("main.cpp"),
+            only_one_thread=False,
         )
-        self.assertTrue(
-            break_thread_body.IsValid() and break_thread_body.GetNumLocations() > 0,
-            "Failed to set thread body breakpoint.",
-        )
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_thread_body)
-
-        victim_thread = threads[0]
 
         # Pick one of the threads, and change the breakpoint so it ONLY stops for this thread,
         # but add a condition that it won't stop for this thread's my_value.  The other threads

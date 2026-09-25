@@ -91,6 +91,15 @@ DialectAsmPrinter::~DialectAsmPrinter() = default;
 
 OpAsmPrinter::~OpAsmPrinter() = default;
 
+void OpAsmPrinter::printOperands(OperandRange operands) {
+  llvm::interleaveComma(operands, getStream(),
+                        [this](Value value) { printOperand(value); });
+}
+
+void OpAsmPrinter::printOperandTypes(ValueTypeRange<OperandRange> types) {
+  llvm::interleaveComma(types, *this);
+}
+
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
   os << '(';

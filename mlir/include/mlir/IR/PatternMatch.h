@@ -545,6 +545,13 @@ public:
   /// This method erases all operations in a block.
   virtual void eraseBlock(Block *block);
 
+  /// Erase the operands selected by `eraseIndices` and update
+  /// operandSegmentSizes if the operation has AttrSizedOperandSegments. The bit
+  /// vector must have one entry for each original operand. The caller must
+  /// select operands that the operation permits removing and update any other
+  /// dependent metadata.
+  void eraseOperands(Operation *op, const BitVector &eraseIndices);
+
   /// Erase the specified results of the given operation. Results cannot be
   /// erased directly, so the implementation creates a new replacement
   /// operation and erases the original operation. The new operation is

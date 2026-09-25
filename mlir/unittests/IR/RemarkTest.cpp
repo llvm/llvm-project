@@ -22,6 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include <vector>
 
 using namespace mlir;
 using namespace testing;
@@ -406,6 +407,101 @@ TEST(Remark, TestRemarkFinal) {
   EXPECT_NE(errOut.find(pass3Msg), std::string::npos); // shown (passed)
   EXPECT_NE(errOut.find(pass4Msg),
             std::string::npos); // shown (passed, diff loc)
+}
+
+/// Streamer that records "<remark name>: <Remark arg>" for every remark it
+/// receives, independent of how Remark::print formats its output.
+class RecordingStreamer : public remark::detail::MLIRRemarkStreamerBase {
+public:
+  explicit RecordingStreamer(std::vector<std::string> &out) : out(out) {}
+  void streamOptimizationRemark(const remark::detail::Remark &remark) override {
+    std::string entry = remark.getRemarkName().str();
+    for (const remark::detail::Remark::Arg &arg : remark.getArgs())
+      if (arg.key == "Remark")
+        entry += ": " + arg.val;
+    out.push_back(std::move(entry));
+  }
+
+private:
+  std::vector<std::string> &out;
+};
+
+static LogicalResult enableFinalPolicy(MLIRContext &context,
+                                       std::vector<std::string> &emitted,
+                                       StringRef category) {
+  mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                      /*passed=*/category.str(),
+                                      /*missed=*/std::nullopt,
+                                      /*analysis=*/category.str(),
+                                      /*failed=*/std::nullopt};
+  return remark::enableOptimizationRemarks(
+      context, std::make_unique<RecordingStreamer>(emitted),
+      std::make_unique<remark::RemarkEmittingPolicyFinal>(), cats,
+      /*printAsEmitRemarks=*/false);
+}
+
+// finalize() drains the stored remarks. mlir-opt calls it explicitly and the
+// engine destructor calls it again; each call emits only the remarks reported
+// since the previous one, and an identity drained by one call can be reported
+// again for the next.
+TEST(Remark, TestRemarkFinalDrains) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    auto *policy = context.getRemarkEngine()->getRemarkEmittingPolicy();
+    auto first = remark::RemarkOpts::name("First").category("LoopUnroll");
+    auto second = remark::RemarkOpts::name("Second").category("LoopUnroll");
+
+    remark::passed(loc, first) << "first";
+    remark::passed(loc, second) << "second";
+    policy->finalize();
+    EXPECT_THAT(emitted,
+                UnorderedElementsAre("First: first", "Second: second"));
+
+    // Nothing pending: a repeated call emits nothing.
+    policy->finalize();
+    EXPECT_EQ(emitted.size(), 2u);
+
+    // A drained identity can be reported again; it waits for the next call,
+    // which here is the engine destructor's.
+    remark::passed(loc, first) << "first again";
+    EXPECT_EQ(emitted.size(), 2u);
+  }
+  ASSERT_EQ(emitted.size(), 3u);
+  EXPECT_EQ(emitted[2], "First: first again");
+}
+
+// A RelatedTo link only resolves between remarks drained by the same
+// finalize() call. A parent reported after its child was drained is emitted
+// without the child being repeated.
+TEST(Remark, TestRemarkFinalLinkAcrossDrains) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    auto *policy = context.getRemarkEngine()->getRemarkEmittingPolicy();
+
+    remark::RemarkId analysisId;
+    {
+      // The remark is reported when the InFlightRemark goes out of scope.
+      auto analysis = remark::analysis(
+          loc, remark::RemarkOpts::name("Analysis").category("LoopUnroll"));
+      analysis << "trip count 128";
+      analysisId = analysis.getId();
+    }
+    policy->finalize();
+    EXPECT_THAT(emitted, ElementsAre("Analysis: trip count 128"));
+
+    remark::passed(loc, remark::RemarkOpts::name("Unroller")
+                            .category("LoopUnroll")
+                            .relatedTo(analysisId))
+        << "unrolled";
+  }
+  EXPECT_THAT(emitted,
+              ElementsAre("Analysis: trip count 128", "Unroller: unrolled"));
 }
 
 TEST(Remark, TestArgWithAttribute) {

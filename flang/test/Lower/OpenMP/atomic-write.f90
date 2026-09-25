@@ -5,11 +5,11 @@
 ! This test checks the lowering of atomic write
 
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "OMPATOMICWRITE"} {
-!CHECK:    %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+!CHECK:    %[[X_REF:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFEx"}>
 !CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[Y_REF:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+!CHECK:    %[[Y_REF:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFEy"}>
 !CHECK:    %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[Z_REF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
+!CHECK:    %[[Z_REF:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFEz"}>
 !CHECK:    %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {uniq_name = "_QFEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C44:.*]] = arith.constant 44 : i32
 !CHECK:    omp.atomic.write %[[X_DECL:.*]]#0 = %[[C44]]   hint(uncontended) memory_order(seq_cst) : !fir.ref<i32>, i32
@@ -42,7 +42,7 @@ end program OmpAtomicWrite
 ! Test lowering atomic read for pointer variables.
 
 !CHECK-LABEL: func.func @_QPatomic_write_pointer() {
-!CHECK:    %[[X_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_write_pointerEx"}
+!CHECK:    %[[X_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "x", uniq_name = "_QFatomic_write_pointerEx"}>
 !CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFatomic_write_pointerEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:    %[[X_ADDR_BOX:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:    %[[X_POINTEE_ADDR:.*]] = fir.box_addr %[[X_ADDR_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
@@ -63,7 +63,7 @@ subroutine atomic_write_pointer()
 end
 
 !CHECK-LABEL: func.func @_QPatomic_write_typed_assign
-!CHECK:    %[[R2_REF:.*]] = fir.alloca f32 {bindc_name = "r2", uniq_name = "_QFatomic_write_typed_assignEr2"}
+!CHECK:    %[[R2_REF:.*]] = fir.alloca f32 <{bindc_name = "r2", uniq_name = "_QFatomic_write_typed_assignEr2"}>
 !CHECK:    %[[R2_DECL:.*]]:2 = hlfir.declare %[[R2_REF]] {uniq_name = "_QFatomic_write_typed_assignEr2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:    %[[C0:.*]] = arith.constant 0.000000e+00 : f32
 !CHECK:    omp.atomic.write %[[R2_DECL]]#0 = %[[C0]]   : !fir.ref<f32>, f32
@@ -75,7 +75,7 @@ subroutine atomic_write_typed_assign
 end subroutine
 
 !CHECK-LABEL: func.func @_QPatomic_write_logical()
-!CHECK:    %[[L_REF:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFatomic_write_logicalEl"}
+!CHECK:    %[[L_REF:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "l", uniq_name = "_QFatomic_write_logicalEl"}>
 !CHECK:    %[[L_DECL:.*]]:2 = hlfir.declare %[[L_REF]] {uniq_name = "_QFatomic_write_logicalEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 !CHECK:    %true = arith.constant true
 !CHECK:    %[[CVT:.*]] = fir.convert %true : (i1) -> !fir.logical<4>

@@ -1397,6 +1397,12 @@ public:
                               const Expr *IfCond,
                               OpenMPDirectiveKind CancelRegion);
 
+  /// Emit the '<kernel>_kernel_environment' global for a target region that
+  /// is compiled for a non-GPU (host-style) offload target, which does not
+  /// go through the GPU device-side runtime init/deinit sequence.
+  void emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                 CodeGenFunction &CGF);
+
   /// Emit outilined function for 'target' directive.
   /// \param D Directive to emit.
   /// \param ParentName Name of the function that encloses the target region.

@@ -19,6 +19,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 static bool AAEQ(const AllocAction &LHS, const AllocAction &RHS) {
   if (LHS.Fn != RHS.Fn)
@@ -133,8 +134,8 @@ static Error check_values_equal(int32_t X, int32_t Y) {
     return Error::success();
   return make_error<StringError>("X and Y differ");
 }
-ORC_RT_SPS_ALLOC_ACTION(macro_defined_allocaction, (int32_t, int32_t),
-                        check_values_equal)
+ORC_RT_SPS_ALLOC_ACTION_IMPL(macro_defined_allocaction, (int32_t, int32_t),
+                             check_values_equal)
 
 TEST(SPSAllocActionTest, RunMacroDefinedAllocActionWithErrorSuccessReturn) {
   AllocAction AA(macro_defined_allocaction,

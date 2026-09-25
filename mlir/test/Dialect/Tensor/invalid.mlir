@@ -699,6 +699,14 @@ func.func @test_empty_reassociation(%arg0: tensor<1x?xf32>) -> tensor<?x10xf32> 
 
 // -----
 
+func.func @expand_shape_empty_reassociation(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  // expected-error@below {{'tensor.expand_shape' op reassociation indices must not be empty}}
+  %0 = tensor.expand_shape %arg0 [[]] output_shape [4] : tensor<4xf32> into tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
 func.func @collapse_shape_requires_ranked_tensor(%arg0: tensor<*xf32>) {
   // expected-error@+1 {{custom op 'tensor.collapse_shape' invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xf32>'}}
   %0 = tensor.collapse_shape %arg0 [[0]] : tensor<*xf32> into tensor<f32>

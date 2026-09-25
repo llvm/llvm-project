@@ -88,12 +88,12 @@ static cl::list<unsigned long long>
     FilterPID("pid",
               cl::desc("only use samples from process with specified PID(s) "
                        "(comma-separated)"),
-              cl::CommaSeparated, cl::ZeroOrMore, cl::cat(AggregatorCategory));
+              cl::CommaSeparated, cl::cat(AggregatorCategory));
 
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
     cl::desc("impute missing fall-throughs for branch-only traces"),
-    cl::Optional, cl::cat(AggregatorCategory));
+    cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
@@ -110,7 +110,6 @@ static cl::opt<unsigned long long>
 MaxSamples("max-samples",
   cl::init(-1ULL),
   cl::desc("maximum number of samples to read from LBR profile"),
-  cl::Optional,
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
@@ -139,7 +138,6 @@ static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(AggregatorCategory));
 
 } // namespace opts
@@ -386,13 +384,20 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     return;
   }
 
+  if (opts::IgnoreBuildID) {
+    errs() << "PERF2BOLT-WARNING: failed to match build-id from perf output, "
+              "continuing because -ignore-build-id was requested. The profile "
+              "will be meaningless if the perf data was not recorded for this "
+              "binary.\n";
+    return;
+  }
+
   errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
             "This indicates the input binary supplied for data aggregation "
             "is not the same recorded by perf when collecting profiling "
             "data, or there were no samples recorded for the binary. "
             "Use -ignore-build-id option to override.\n";
-  if (!opts::IgnoreBuildID)
-    abort();
+  abort();
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {

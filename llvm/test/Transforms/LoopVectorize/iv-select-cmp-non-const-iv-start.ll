@@ -373,10 +373,10 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[TMP14:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD8]], splat (i32 3)
 ; CHECK-VF4IC4-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-VF4IC4-NEXT:    [[TMP16:%.*]] = freeze <4 x i1> [[TMP33]]
-; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = or <4 x i1> [[TMP5]], [[TMP16]]
 ; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP37]]
-; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = or <4 x i1> [[TMP17]], [[TMP18]]
 ; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = freeze <4 x i1> [[TMP14]]
+; CHECK-VF4IC4-NEXT:    [[TMP38:%.*]] = or <4 x i1> [[TMP5]], [[TMP16]]
+; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = or <4 x i1> [[TMP38]], [[TMP18]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21:%.*]] = or <4 x i1> [[TMP19]], [[TMP20]]
 ; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP21]])
 ; CHECK-VF4IC4-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP4]], <4 x i1> [[LAST_ACTIVE_MASK]]
@@ -470,10 +470,10 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF1IC4-NEXT:    [[TMP26:%.*]] = icmp sgt i32 [[TMP22]], 3
 ; CHECK-VF1IC4-NEXT:    [[TMP27:%.*]] = freeze i1 [[CMP1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP24]]
-; CHECK-VF1IC4-NEXT:    [[TMP29:%.*]] = or i1 [[TMP27]], [[TMP28]]
 ; CHECK-VF1IC4-NEXT:    [[TMP30:%.*]] = freeze i1 [[TMP25]]
-; CHECK-VF1IC4-NEXT:    [[TMP31:%.*]] = or i1 [[TMP29]], [[TMP30]]
 ; CHECK-VF1IC4-NEXT:    [[TMP32:%.*]] = freeze i1 [[TMP26]]
+; CHECK-VF1IC4-NEXT:    [[TMP49:%.*]] = or i1 [[TMP27]], [[TMP28]]
+; CHECK-VF1IC4-NEXT:    [[TMP31:%.*]] = or i1 [[TMP49]], [[TMP30]]
 ; CHECK-VF1IC4-NEXT:    [[TMP33:%.*]] = or i1 [[TMP31]], [[TMP32]]
 ; CHECK-VF1IC4-NEXT:    [[TMP34]] = select i1 [[TMP33]], i1 [[CMP1]], i1 [[TMP3]]
 ; CHECK-VF1IC4-NEXT:    [[TMP35]] = select i1 [[TMP33]], i1 [[TMP24]], i1 [[TMP4]]

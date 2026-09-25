@@ -18,7 +18,7 @@ func.func @test(%v: i32, %e0: i32, %e1: i32, %e2: i64, %e3: i64) {
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_2]] : (i32) -> index
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
-// CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?x?x?x?xi32>, %[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?x?x?x?xi32>, %[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_5]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?x?x?x?xi32>>, !fir.shape<4>) -> (!fir.box<!fir.array<?x?x?x?xi32>>, !fir.heap<!fir.array<?x?x?x?xi32>>)
 // CHECK:           %[[VAL_12:.*]] = arith.constant true
 // CHECK:           %[[VAL_13:.*]] = arith.constant false

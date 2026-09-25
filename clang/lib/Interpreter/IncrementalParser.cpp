@@ -15,7 +15,10 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
@@ -191,68 +194,138 @@ void IncrementalParser::withdrawMostRecentTU(
   C.TUDecl = Prev;
 }
 
-void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
-  if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
-    // Collect the keys to erase: erasing during iteration invalidates the map
-    // iterator under backward-shift deletion.
-    llvm::SmallVector<DeclarationName, 16> KeysToErase;
-    for (auto &&[Key, List] : *Map) {
-      DeclContextLookupResult R = List.getLookupResult();
-      std::vector<NamedDecl *> NamedDeclsToRemove;
-      bool RemoveAll = true;
-      for (NamedDecl *D : R) {
-        if (D->getTranslationUnitDecl() == MostRecentTU)
-          NamedDeclsToRemove.push_back(D);
-        else
-          RemoveAll = false;
-      }
-      if (LLVM_LIKELY(RemoveAll)) {
-        KeysToErase.push_back(Key);
-      } else {
-        for (NamedDecl *D : NamedDeclsToRemove)
-          List.remove(D);
-      }
-    }
-    for (DeclarationName Key : KeysToErase)
-      Map->erase(Key);
+/// Removes decls introduced in the discarding PTU and restores the
+/// redeclaration chain to previous state.
+class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
+  Sema &S;
+  TranslationUnitDecl *DiscardedTU;
+
+  template <typename DeclT> void withdraw(Redeclarable<DeclT> *DBase) {
+    if (NamedDecl *Prev = findSurvivor(static_cast<DeclT *>(DBase)))
+      unlinkRedeclChain(S.getASTContext(), DBase, Prev);
   }
 
-  // Check if we need to clean up the IdResolver chain.
-  auto RemoveFromIdResolver = [&](NamedDecl *D) {
-    if (D->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
-        !D->getLangOpts().CPlusPlus)
+  /// The newest declaration of whatever D redeclares that still lives outside
+  /// the DiscardedTU, or null if DiscardedTU introduced the name.
+  NamedDecl *findSurvivor(NamedDecl *D) const {
+    for (Decl *Prev = D->getPreviousDecl(); Prev;
+         Prev = Prev->getPreviousDecl())
+      if (Prev->getTranslationUnitDecl() != DiscardedTU)
+        return dyn_cast<NamedDecl>(Prev);
+    return nullptr;
+  }
+
+  template <typename DeclT>
+  void unlinkRedeclChain(ASTContext &C, Redeclarable<DeclT> *DBase,
+                         NamedDecl *PrevND) {
+    auto *Latest = static_cast<DeclT *>(DBase);
+    auto *Survivor = cast<DeclT>(PrevND);
+
+    // Rebuild First -> ... -> Survivor -> ... -> Latest as
+    // First -> ... -> Survivor.
+    Latest->getFirstDecl()->RedeclLink.setLatest(Survivor);
+
+    // The chain is circular: a withdrawn declaration still linked into it can
+    // never walk back around to itself, so redecls() on one would not
+    // terminate. Give each withdrawn declaration a chain of its own.
+    for (DeclT *Dead = Latest; Dead != Survivor;) {
+      DeclT *Next = Dead->getPreviousDecl();
+      Dead->First = Dead;
+      Dead->RedeclLink = Redeclarable<DeclT>::LatestDeclLink(C);
+      Dead = Next;
+    }
+  }
+
+  /// Remove entry from "C"'s lookup tables
+  void removeFromLookups(NamedDecl *D) {
+    if (D->getDeclName().isEmpty())
+      return;
+
+    if (D->getDeclName().isIdentifier() && D->getDeclName().getFETokenInfo() &&
+        !D->getLangOpts().ObjC && !D->getLangOpts().CPlusPlus)
       S.IdResolver.RemoveDecl(D);
-  };
 
-  ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
-  if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
-    for (auto &&[Key, List] : *Map) {
-      DeclContextLookupResult R = List.getLookupResult();
-      llvm::SmallVector<NamedDecl *, 4> NamedDeclsToRemove;
-      for (NamedDecl *D : R) {
-        // Implicitly generated C decl is not attached to the current TU but
-        // lexically attached to the recent TU, so we need to check the lexical
-        // context.
-        DeclContext *LDC = D->getLexicalDeclContext();
-        while (LDC && !isa<TranslationUnitDecl>(LDC))
-          LDC = LDC->getLexicalParent();
-        TranslationUnitDecl *TopTU = cast_or_null<TranslationUnitDecl>(LDC);
-        if (TopTU == MostRecentTU)
-          NamedDeclsToRemove.push_back(D);
-      }
-      for (NamedDecl *D : NamedDeclsToRemove) {
-        List.remove(D);
-        RemoveFromIdResolver(D);
-      }
+    ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
+    if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
+      auto It = Map->find(D->getDeclName());
+      if (It != Map->end())
+        It->second.remove(D);
     }
   }
 
-  for (Decl *D : MostRecentTU->decls()) {
-    auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND || ND->getDeclName().isEmpty())
-      continue;
-    RemoveFromIdResolver(ND);
+  /// Remove Decls defined in this DC from the lookup table
+  /// and restore the redeclaration chain to previous state
+  void VisitDeclContext(DeclContext *DC) {
+    llvm::SmallVector<Decl *, 8> Members(DC->decls());
+    llvm::SmallVector<NamedDecl *, 8> Survivors;
+    for (Decl *M : Members) {
+      if (auto *ND = dyn_cast<NamedDecl>(M))
+        if (NamedDecl *Prev = findSurvivor(ND))
+          Survivors.push_back(Prev);
+      Visit(M);          // restore redecls
+      DC->removeDecl(M); // remove from lookup
+      if (auto *ND = dyn_cast<NamedDecl>(M))
+        removeFromLookups(ND);
+    }
+
+    // Restore lookup for the surviving predecessor
+    // of any removed decl that had a surviving predecessor
+    DeclContext *Primary = DC->getPrimaryContext();
+    for (NamedDecl *Prev : Survivors)
+      Primary->makeDeclVisibleInContext(Prev);
   }
+
+public:
+  ASTDeclUnmerger(Sema &S, TranslationUnitDecl *DiscardedTU)
+      : S(S), DiscardedTU(DiscardedTU) {}
+
+  void VisitDecl(Decl *D) {
+    if (auto *DC = dyn_cast<DeclContext>(D))
+      VisitDeclContext(DC);
+  }
+
+  void VisitFunctionDecl(FunctionDecl *D) { withdraw(D); }
+  void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) { withdraw(D); }
+  void VisitTypedefNameDecl(TypedefNameDecl *D) { withdraw(D); }
+  void VisitUsingShadowDecl(UsingShadowDecl *D) { withdraw(D); }
+  void VisitVarDecl(VarDecl *D) { withdraw(D); }
+
+  void VisitTagDecl(TagDecl *D) {
+    NamedDecl *Prev = findSurvivor(D);
+    if (!Prev)
+      return;
+    unlinkRedeclChain(S.getASTContext(), D, Prev);
+
+    // A class definition is kept in DefinitionData outside the
+    // redeclaration chain
+    auto *RD = dyn_cast<CXXRecordDecl>(Prev);
+    if (!RD)
+      return;
+    if (CXXRecordDecl *Def = RD->getDefinition();
+        Def && Def->getTranslationUnitDecl() == DiscardedTU)
+      for (auto *R : RD->redecls())
+        cast<CXXRecordDecl>(R)->DefinitionData = nullptr;
+  }
+
+  void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
+    withdraw(D);
+    Visit(D->getTemplatedDecl());
+  }
+
+  void VisitNamespaceDecl(NamespaceDecl *D) {
+    // Handle cases of nested redeclarations like:
+    // PTU1: namespace outer { namespace ns { class Foo; } }
+    // PTU2: namespace outer { namespace ns { class Foo { ... }; error; } }
+    // Foo's redeclaration needs to be restored
+    VisitDeclContext(D);
+    withdraw(D);
+  }
+
+  void VisitTranslationUnitDecl(TranslationUnitDecl *D) { VisitDeclContext(D); }
+};
+
+void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
+  ASTDeclUnmerger(S, MostRecentTU).Visit(MostRecentTU);
 
   // Lookup alone is not enough: the redeclaration chain still reaches these.
   withdrawMostRecentTU(MostRecentTU);

@@ -14,7 +14,7 @@ func.func @test_do_concurrent() {
 // CHECK-LABEL: func.func @test_do_concurrent() {
 // CHECK: fir.do_concurrent {
 // CHECK:   fir.do_concurrent.loop
-// CHECK:     %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "", uniq_name = ""}
+// CHECK:     %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "", uniq_name = ""}>
 // CHECK:     %[[REF:.*]] = fir.convert %[[MEM]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:     fir.call @bar(%[[REF]])
 // CHECK:     fir.freemem %[[MEM]] : !fir.heap<!fir.array<?xf32>>
@@ -45,7 +45,7 @@ func.func @test_do_concurrent_if(%cond: i1) {
 // CHECK:       fir.if {{.*}} {
 // CHECK:         fir.freemem %[[PREV]] : !fir.heap<!fir.array<?xf32>>
 // CHECK:       }
-// CHECK:       %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "", uniq_name = ""}
+// CHECK:       %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "", uniq_name = ""}>
 // CHECK:       %[[REF:.*]] = fir.convert %[[MEM]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:       fir.store %[[MEM]] to %[[PTR]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 // CHECK:       fir.call @bar(%[[REF]])
@@ -86,7 +86,7 @@ func.func @test_do_concurrent_if_else(%cond: i1) {
 // CHECK:       fir.if {{.*}} {
 // CHECK:         fir.freemem %[[PREV_THEN]] : !fir.heap<!fir.array<?xf32>>
 // CHECK:       }
-// CHECK:       %[[MEM_THEN:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "", uniq_name = ""}
+// CHECK:       %[[MEM_THEN:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "", uniq_name = ""}>
 // CHECK:       fir.store %[[MEM_THEN]] to %[[PTR_THEN]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 // CHECK:       fir.call @bar(
 // CHECK:     } else {
@@ -94,7 +94,7 @@ func.func @test_do_concurrent_if_else(%cond: i1) {
 // CHECK:       fir.if {{.*}} {
 // CHECK:         fir.freemem %[[PREV_ELSE]] : !fir.heap<!fir.array<?xf32>>
 // CHECK:       }
-// CHECK:       %[[MEM_ELSE:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "", uniq_name = ""}
+// CHECK:       %[[MEM_ELSE:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "", uniq_name = ""}>
 // CHECK:       fir.store %[[MEM_ELSE]] to %[[PTR_ELSE]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 // CHECK:       fir.call @bar(
 // CHECK:     %[[LAST_THEN:.*]] = fir.load %[[PTR_THEN]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>

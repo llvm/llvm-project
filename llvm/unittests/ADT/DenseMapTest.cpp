@@ -475,9 +475,17 @@ TEST(DenseMapCustomTest, EqualityComparison) {
 }
 
 using IntBucket = detail::DenseMapPair<int, int>;
+using PairBucket =
+    detail::DenseMapPair<std::pair<int, int>, std::pair<int, int>>;
 
 static_assert(std::is_trivially_copyable_v<IntBucket>);
 static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
+
+// std::pair has a user-provided copy assignment operator.
+static_assert(!std::is_trivially_copyable_v<PairBucket>);
+static_assert(densemap::detail::isRelocatableBucket<PairBucket>);
+static_assert(!densemap::detail::isRelocatableBucket<
+              detail::DenseMapPair<int, std::unique_ptr<int>>>);
 
 // A bucket converts to a std::pair, so code naming the pair type keeps working.
 static_assert(std::is_convertible_v<IntBucket, std::pair<int, int>>);

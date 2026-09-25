@@ -69,6 +69,7 @@ cc_library(
         "//mlir:AffineToStandard",
         "//mlir:AllExtensions",
         "//mlir:ArithDialect",
+        "//mlir:ComplexDialect",
         "//mlir:ControlFlowDialect",
         "//mlir:FuncDialect",
         "//mlir:IR",

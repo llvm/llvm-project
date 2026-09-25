@@ -10,8 +10,8 @@ This document highlights coding conventions, test policies, and other
 development guidelines that apply to all AMDGPU-related code across the LLVM
 project (the backend in ``llvm/lib/Target/AMDGPU``, Clang AMDGPU support, LLD,
 associated tests, etc.).  It is **not** a replacement for or summary of the
-`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_ or the
-`LLVM Testing Guide <https://llvm.org/docs/TestingGuide.html>`_; contributors
+:doc:`LLVM Coding Standards <../CodingStandards>` or the
+:doc:`LLVM Testing Guide <../TestingGuide>`; contributors
 are expected to be familiar with those documents as well.
 
 The topics covered here are those that come up frequently during AMDGPU code
@@ -22,14 +22,14 @@ Coding Standards
 ================
 
 AMDGPU-related code follows the
-`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_ with the
+:doc:`LLVM Coding Standards <../CodingStandards>` with the
 refinements listed below.
 
 Use of ``auto``
 ---------------
 
 The LLVM Coding Standards describe the policy for ``auto`` in
-`Use auto Type Deduction to Make Code More Readable <https://llvm.org/docs/CodingStandards.html#use-auto-type-deduction-to-make-code-more-readable>`_.
+:ref:`Use auto Type Deduction to Make Code More Readable <use-auto-type-deduction>`.
 Below are more concrete examples of how that policy applies in AMDGPU code.
 
 Do **not** use ``auto`` except in the following cases:
@@ -77,7 +77,7 @@ Use of Braces
 -------------
 
 The LLVM Coding Standards discuss brace usage in
-`Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements <https://llvm.org/docs/CodingStandards.html#don-t-use-braces-on-simple-single-statement-bodies-of-if-else-loop-statements>`_.
+:ref:`Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements <don-t-use-braces-on-simple-single-statement-bodies-of-if-else-loop-statements>`.
 In AMDGPU code, braces may be omitted **only when the single statement
 fits on one line**.  If the statement spans more than one line (e.g. because of
 a long argument list that wraps), keep the braces.
@@ -215,9 +215,9 @@ Test Policy
 Well-written tests are essential for a healthy codebase.  The guidelines below
 apply to all AMDGPU regression tests (``llvm/test/CodeGen/AMDGPU``,
 ``llvm/test/MC/AMDGPU``, etc.).  See also the general
-`Best practices for regression tests <https://llvm.org/docs/TestingGuide.html#best-practices-for-regression-tests>`_
+:ref:`Best practices for regression tests <best-practices-for-regression-tests>`
 and the
-`Precommit workflow for tests <https://llvm.org/docs/TestingGuide.html#precommit-workflow-for-tests>`_
+:ref:`Precommit workflow for tests <precommit-workflow-for-tests>`
 in the LLVM Testing Guide.
 
 Use Minimal, Reduced Tests
@@ -234,7 +234,7 @@ Avoid Undefined Behavior
 ------------------------
 
 Tests should not rely on undefined behavior (UB).  As the
-`best practices section of the Testing Guide <https://llvm.org/docs/TestingGuide.html#best-practices-for-regression-tests>`_
+:ref:`best practices section of the Testing Guide <best-practices-for-regression-tests>`
 notes, avoid ``undef`` and ``poison`` values unless they are the point of the
 test - patterns like ``br i1 undef`` are likely to break as future
 optimizations evolve.

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVELFStreamer.h"
-#include "RISCVAsmBackend.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -28,10 +27,6 @@ using namespace llvm;
 RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  setTargetABI(
-      RISCVABI::computeTargetABI(STI, MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
@@ -144,7 +139,7 @@ void RISCVTargetELFStreamer::finish() {
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:
-    llvm_unreachable("Improperly initialised target ABI");
+    break;
   }
 
   W.setELFHeaderEFlags(EFlags);

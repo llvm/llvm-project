@@ -2276,6 +2276,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
   Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
+  bool HasLeaf24Subleaf1 =
+      HasLeaf24 && EAX >= 1 &&
+      !getX86CpuIDAndInfoEx(0x24, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["avx10v2aux"] = HasAVX10 && HasLeaf24Subleaf1 && ((ECX >> 3) & 1);
+
   return Features;
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
@@ -2612,6 +2617,22 @@ StringMap<bool> sys::getHostCPUFeatures() {
   if (Query[2].Key != -1 &&
       Query[2].Value == /*RISCV_HWPROBE_MISALIGNED_SCALAR_FAST=*/3)
     Features["unaligned-scalar-mem"] = true;
+
+  // Infer Zvl from vlenb CSR.
+  if (Features["v"] || Features["zve32x"]) {
+#if __riscv_xlen == 64
+    uint64_t VLen;
+#elif __riscv_xlen == 32
+    uint32_t VLen;
+#else
+#error "Unknown XLEN"
+#endif
+    // Use the raw CSR number in case assembler doesn't know vlenb.
+    __asm__ volatile("csrr %0, 0xc22" : "=r"(VLen));
+    VLen *= 8;
+    std::string ZvlFeature = (Twine("zvl") + Twine(VLen) + "b").str();
+    Features[ZvlFeature] = true;
+  }
 
   return Features;
 }

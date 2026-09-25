@@ -15,12 +15,12 @@ contains
     call takes_simple([s1, s2])
   end subroutine
 ! CHECK-LABEL: func.func @_QMderivedarrayctorPtest_simple(
-! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.array<10xi64> {bindc_name = ".rt.arrayctor.vector"}
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>> {bindc_name = ".tmp.arrayctor"}
+! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>> <{bindc_name = ".tmp.arrayctor"}>
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}Es1"
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}Es2"
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 2 : index
-! CHECK:  %[[VAL_7:.*]] = fir.allocmem !fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_7:.*]] = fir.allocmem !fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>)
 ! CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_8]]) : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>
@@ -43,12 +43,12 @@ contains
     call takes_simple([s1, s2])
   end subroutine
 ! CHECK-LABEL: func.func @_QMderivedarrayctorPtest_with_polymorphic(
-! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.array<10xi64> {bindc_name = ".rt.arrayctor.vector"}
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>> {bindc_name = ".tmp.arrayctor"}
+! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>> <{bindc_name = ".tmp.arrayctor"}>
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}Es1"
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}Es2"
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 2 : index
-! CHECK:  %[[VAL_7:.*]] = fir.allocmem !fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_7:.*]] = fir.allocmem !fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>> <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>)
 ! CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_8]]) : (!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<2x!fir.type<_QMtypesTsimple{i:i32,j:i32}>>>>

@@ -2,7 +2,7 @@
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPfoo1
-! CHECK: %[[V0:[0-9]+]] = fir.alloca !fir.type<_QFfoo1Tt0{a0:i32,a1:i32}> {bindc_name = "a", uniq_name = "_QFfoo1Ea"}
+! CHECK: %[[V0:[0-9]+]] = fir.alloca !fir.type<_QFfoo1Tt0{a0:i32,a1:i32}> <{bindc_name = "a", uniq_name = "_QFfoo1Ea"}>
 ! CHECK: %[[V1:[0-9]+]]:2 = hlfir.declare %[[V0]] {uniq_name = "_QFfoo1Ea"} : (!fir.ref<!fir.type<_QFfoo1Tt0{a0:i32,a1:i32}>>) -> (!fir.ref<!fir.type<_QFfoo1Tt0{a0:i32,a1:i32}>>, !fir.ref<!fir.type<_QFfoo1Tt0{a0:i32,a1:i32}>>)
 ! CHECK: %[[V2:[0-9]+]] = hlfir.designate %[[V1]]#0{"a1"}   : (!fir.ref<!fir.type<_QFfoo1Tt0{a0:i32,a1:i32}>>) -> !fir.ref<i32>
 ! CHECK: %[[V3:[0-9]+]] = omp.map.info var_ptr(%[[V2]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a%a1") -> !fir.ref<i32>

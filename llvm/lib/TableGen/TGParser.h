@@ -317,7 +317,6 @@ private: // Parser methods.
       SmallVectorImpl<std::pair<const Init *, const StringInit *>> &Result,
       Record *CurRec);
   bool ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges);
-  bool ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges);
   const TypedInit *ParseSliceElement(Record *CurRec);
   const TypedInit *ParseSliceElements(Record *CurRec, bool Single = false);
   void ParseRangeList(SmallVectorImpl<unsigned> &Result);

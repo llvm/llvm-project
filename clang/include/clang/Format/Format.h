@@ -21,14 +21,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <optional>
 #include <system_error>
-
-namespace llvm {
-namespace vfs {
-class FileSystem;
-}
-} // namespace llvm
 
 namespace clang {
 namespace format {

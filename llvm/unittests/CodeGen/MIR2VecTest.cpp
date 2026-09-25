@@ -86,7 +86,7 @@ protected:
     }
 
     // Set the data layout to match the target machine
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     // Create a dummy function to get subtarget info
     FunctionType *FT = FunctionType::get(Type::getVoidTy(*Ctx), false);

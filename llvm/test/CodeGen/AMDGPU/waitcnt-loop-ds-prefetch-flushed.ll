@@ -14,9 +14,9 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_b32 s1, s[4:5], 0x0 nv
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x10 nv
-; CHECK-NEXT:    v_and_b32_e32 v10, 0x3ff, v0
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_mov_b32 s2, 0x3ff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_bitop2_b32 v10, s2, v0 bitop3:0x40
 ; CHECK-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v6, v4
 ; CHECK-NEXT:    v_dual_mov_b32 v7, v4 :: v_dual_mov_b32 v8, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v4

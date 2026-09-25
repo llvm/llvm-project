@@ -11,7 +11,7 @@
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "y"}) -> !fir.logical<4> {
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test_eq", uniq_name = "_QFtest_eqEtest_eq"}
+// CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test_eq", uniq_name = "_QFtest_eqEtest_eq"}>
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtest_eqEtest_eq"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest_eqEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
@@ -112,7 +112,7 @@
 // CHECK:           %[[VAL_11:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2>>
 // CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] typeparams %c1 dummy_scope %[[VAL_7]] {uniq_name = "_QFtest_neEc2"} : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
-// CHECK:           %[[VAL_14:.*]] = fir.alloca i32 {bindc_name = "test_ne", uniq_name = "_QFtest_neEtest_ne"}
+// CHECK:           %[[VAL_14:.*]] = fir.alloca i32 <{bindc_name = "test_ne", uniq_name = "_QFtest_neEtest_ne"}>
 // CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFtest_neEtest_ne"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %0 = fir.dummy_scope : !fir.dscope
     %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
@@ -202,11 +202,11 @@
   func.func @_QPtest1() -> !fir.logical<4> {
 // CHECK-LABEL:   func.func @_QPtest1() -> !fir.logical<4> {
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1> {bindc_name = "c1", uniq_name = "_QFtest1Ec1"}
+// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c1", uniq_name = "_QFtest1Ec1"}>
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %c1 {uniq_name = "_QFtest1Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1> {bindc_name = "c2", uniq_name = "_QFtest1Ec2"}
+// CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c2", uniq_name = "_QFtest1Ec2"}>
 // CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %c1 {uniq_name = "_QFtest1Ec2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test1", uniq_name = "_QFtest1Etest1"}
+// CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test1", uniq_name = "_QFtest1Etest1"}>
 // CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFtest1Etest1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QQclX) : !fir.ref<!fir.char<1,0>>
 // CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] typeparams %c0 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX"} : (!fir.ref<!fir.char<1,0>>, index) -> (!fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1,0>>)
@@ -307,9 +307,9 @@
   func.func @_QPtest2() -> !fir.logical<4> {
 // CHECK-LABEL:   func.func @_QPtest2() -> !fir.logical<4> {
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.char<1> {bindc_name = "c1", uniq_name = "_QFtest2Ec1"}
+// CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c1", uniq_name = "_QFtest2Ec1"}>
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 {uniq_name = "_QFtest2Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test2", uniq_name = "_QFtest2Etest2"}
+// CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test2", uniq_name = "_QFtest2Etest2"}>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFtest2Etest2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_13:.*]] = fir.address_of(@_QQclX20) : !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX20"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
@@ -406,11 +406,11 @@
   func.func @_QPtest3() -> !fir.logical<4> {
 // CHECK-LABEL:   func.func @_QPtest3() -> !fir.logical<4> {
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.char<1> {bindc_name = "c1", uniq_name = "_QFtest3Ec1"}
+// CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c1", uniq_name = "_QFtest3Ec1"}>
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 {uniq_name = "_QFtest3Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.char<1> {bindc_name = "c2", uniq_name = "_QFtest3Ec2"}
+// CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c2", uniq_name = "_QFtest3Ec2"}>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] typeparams %c1 {uniq_name = "_QFtest3Ec2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
-// CHECK:           %[[VAL_13:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test3", uniq_name = "_QFtest3Etest3"}
+// CHECK:           %[[VAL_13:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test3", uniq_name = "_QFtest3Etest3"}>
 // CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFtest3Etest3"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQclX6162) : !fir.ref<!fir.char<1,2>>
 // CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] typeparams %c2 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX6162"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
@@ -520,7 +520,7 @@
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest4Ec2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_10:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]]#0 typeparams %[[VAL_10]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest4Ec3"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.logical<4> {bindc_name = "test4", uniq_name = "_QFtest4Etest4"}
+// CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test4", uniq_name = "_QFtest4Etest4"}>
 // CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFtest4Etest4"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %0 = fir.dummy_scope : !fir.dscope
     %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)

@@ -785,11 +785,12 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v2, v2
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v4, v4
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(TRANS32_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v5, v5
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v2, v2, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v2, v2, v0 :: v_dual_sub_f32 v1, v4, v1
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v1, v4, v1
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v5, v3
 ; GFX1100-SDAG-NEXT:    global_store_b96 v6, v[0:2], s[4:5]
 ; GFX1100-SDAG-NEXT:    s_endpgm
@@ -1249,8 +1250,9 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v6, v6
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v7, v7
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v9, 0
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v3, v2, v0
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_3)
-; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v3, v2, v0 :: v_dual_sub_f32 v2, v8, v1
+; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v2, v8, v1
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_dual_sub_f32 v1, v6, v4 :: v_dual_sub_f32 v0, v7, v5
 ; GFX1100-SDAG-NEXT:    global_store_b128 v9, v[0:3], s[4:5]
@@ -4228,10 +4230,8 @@ define <2 x half> @v_log2_v2f16(<2 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_v2f16:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v1.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_v2f16:
@@ -4347,10 +4347,8 @@ define <2 x half> @v_log2_fabs_v2f16(<2 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_fabs_v2f16:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.l, |v0.l|
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.h, |v1.l|
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.h, |v0.h|
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_fabs_v2f16:
@@ -4471,10 +4469,8 @@ define <2 x half> @v_log2_fneg_fabs_v2f16(<2 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_fneg_fabs_v2f16:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.l, -|v0.l|
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.h, -|v1.l|
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.h, -|v0.h|
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_fneg_fabs_v2f16:
@@ -4596,10 +4592,8 @@ define <2 x half> @v_log2_fneg_v2f16(<2 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_fneg_v2f16:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.l, -v0.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.h, -v1.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e64 v0.h, -v0.h
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_fneg_v2f16:
@@ -4716,10 +4710,8 @@ define <2 x half> @v_log2_v2f16_fast(<2 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_v2f16_fast:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v1.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_v2f16_fast:
@@ -4845,11 +4837,9 @@ define <3 x half> @v_log2_v3f16(<3 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_v3f16:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.l, v1.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v2.l
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_v3f16:
@@ -4980,11 +4970,9 @@ define <3 x half> @v_log2_v3f16_fast(<3 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_v3f16_fast:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.l, v1.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v2.l
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_v3f16_fast:
@@ -5135,13 +5123,10 @@ define <4 x half> @v_log2_v4f16(<4 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_v4f16:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.l, v1.l
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v2.l
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.h, v3.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.h, v1.h
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_v4f16:
@@ -5297,13 +5282,10 @@ define <4 x half> @v_log2_v4f16_fast(<4 x half> %in) {
 ; GFX1100-SDAG-TRUE16-LABEL: v_log2_v4f16_fast:
 ; GFX1100-SDAG-TRUE16:       ; %bb.0:
 ; GFX1100-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX1100-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.l, v1.l
 ; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
-; GFX1100-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v2.l
-; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.h, v3.l
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
+; GFX1100-SDAG-TRUE16-NEXT:    v_log_f16_e32 v1.h, v1.h
 ; GFX1100-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-SDAG-FAKE16-LABEL: v_log2_v4f16_fast:

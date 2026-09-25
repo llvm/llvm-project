@@ -17,7 +17,7 @@
 !CHECK: }
 
 !CHECK-LABEL: func.func @_QPsimple_complex_add
-!CHECK:  %[[CREF:.*]] = fir.alloca complex<f64> {bindc_name = "c", {{.*}}}
+!CHECK:  %[[CREF:.*]] = fir.alloca complex<f64> <{bindc_name = "c", {{.*}}}>
 !CHECK:  %[[C_DECL:.*]]:2 = hlfir.declare %[[CREF]] {uniq_name = "_QFsimple_complex_addEc"} : (!fir.ref<complex<f64>>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
 !CHECK:  %[[C_START_RE:.*]] = arith.constant 0.000000e+00 : f64
 !CHECK:  %[[C_START_IM:.*]] = arith.constant 0.000000e+00 : f64

@@ -308,6 +308,24 @@ int test_iteration_spaces() {
         for (kk = ii * 10 + 25; kk < jj - 23; kk += 1)
           ;
 
+// expected-error@+3 {{statement expression is not supported in the loop initializer of a non-rectangular loop nest}}
+#pragma omp for collapse(2)
+    for (ii = 0; ii < 10; ii += 1)
+      for (kk = ({int s = ii; s; }); kk < 10; kk += 1)
+        ;
+
+// expected-error@+3 {{statement expression is not supported in the loop condition of a non-rectangular loop nest}}
+#pragma omp for collapse(2)
+    for (ii = 0; ii < 10; ii += 1)
+      for (kk = 0; kk < ({int s = ii; s; }); kk += 1)
+        ;
+
+// expected-error@+3 {{statement expression is not supported in the loop condition of a non-rectangular loop nest}}
+#pragma omp for collapse(2)
+    for (ii = 0; ii < 10; ii += 1)
+      for (kk = ii; kk < ({int s = 10; s; }); kk += 1)
+        ;
+
 #pragma omp parallel
 // expected-note@+2  {{defined as firstprivate}}
 // expected-error@+2 {{loop iteration variable in the associated loop of 'omp for' directive may not be firstprivate, predetermined as private}}

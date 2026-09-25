@@ -246,12 +246,20 @@ class FieldDef:
             type_ = get_args(type_)[0]
 
         origin = get_origin(type_)
+        args = get_args(type_)
+
+        # An unsubscripted operand or result is shorthand for one constrained
+        # by `Any`.
+        if type_ is Operand or type_ is Result:
+            origin = type_
+            args = (Any,)
+
         if origin is ir.OpResult:
             if specifier.type_ and specifier.type_ is not Result:
                 raise TypeError(
                     f"only `result` field specifier can be used for result fields"
                 )
-            constraint = get_args(type_)[0]
+            constraint = args[0]
             return ResultDef(
                 name,
                 variadicity,
@@ -271,7 +279,7 @@ class FieldDef:
             return OperandDef(
                 name,
                 variadicity,
-                get_args(type_)[0],
+                args[0],
                 param_kind=specifier.param_kind,
                 default_is_none=specifier.default_is_none,
             )

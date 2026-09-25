@@ -297,7 +297,8 @@ bool isMaskedLoadCompress(
   } else {
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
-                            LI->getPointerAddressSpace(), CostKind);
+                            LI->getPointerAddressSpace(), CostKind,
+                            TTI::getOperandInfo(LI->getPointerOperand()));
   }
   if (IsStrided && !IsMasked && Order.empty()) {
     // Check for potential segmented(interleaved) loads.

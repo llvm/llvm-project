@@ -261,10 +261,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    // Specify the vector alignment explicitly. For v512x1, the calculated
-    // alignment would be 512*alignment(i1), which is 512 bytes, instead of
-    // the required minimum of 64 bytes.
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                (HexagonNoOpt ? CodeGenOptLevel::None : OL)),

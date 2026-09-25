@@ -289,12 +289,14 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
       }
       break;
     }
+    case Intrinsic::dx_resource_load_level:
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
-      if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
+      if (II->getIntrinsicID() == Intrinsic::dx_resource_load_typedbuffer &&
+          !CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;
       break;
     }

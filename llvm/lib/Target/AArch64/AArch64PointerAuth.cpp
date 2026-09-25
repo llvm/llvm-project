@@ -309,81 +309,44 @@ void AArch64PointerAuthImpl::authenticateLR(
       MF.getSubtarget().getFrameLowering());
   int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
 
-  // When ArgumentStackToRestore > 0, this function received more argument
-  // space than the tail callee pops. The epilogue contains an SP adjustment
-  // (e.g. "add sp, sp, #N") to discard the leftover argument space. We must
-  // authenticate *before* that adjustment so that AUTI[AB]SP sees the entry
-  // SP discriminator. Move any such SP-adjusting instructions to after the
-  // authentication instruction.
-  //
-  // When ArgumentStackToRestore < 0, the tail callee pops more argument space
-  // than this function received, so after the frame teardown, SP is below the
-  // entry SP used as the signing modifier.
-  //
-  // We cannot simply bump SP first and then use AUTI[AB]SP with the bumped
-  // value, because the live arguments would fall below SP and potentially
-  // outside the red-zone. Collect those SP adjustments in case we need to move
-  // them after the AUT.
-  int64_t Offset = -ArgumentStackToRestore;
-  SmallVector<MachineInstr *, 2> SPMods;
-  if (ArgumentStackToRestore > 0) {
-    for (MachineInstr &MI : make_range(MBBI.getReverse(), MBB.rend())) {
-      if (!MI.getFlag(MachineInstr::FrameDestroy))
-        break;
-      if ((MI.getOpcode() == AArch64::ADDXri ||
-           MI.getOpcode() == AArch64::SUBXri) &&
-          MI.getOperand(0).getReg() == AArch64::SP &&
-          MI.getOperand(1).getReg() == AArch64::SP) {
-        SPMods.push_back(&MI);
-        int64_t Imm = MI.getOperand(2).getImm()
-                      << AArch64_AM::getShiftValue(MI.getOperand(3).getImm());
-        Offset += MI.getOpcode() == AArch64::ADDXri ? Imm : -Imm;
+  // The AUTIASP instruction assembles to a hint instruction before v8.3a so
+  // this instruction can safely be used for any v8a architecture.
+  // From v8.3a onwards there are optimised authenticate LR and return
+  // instructions, namely RETA{A,B}, that can be used instead. In this case
+  // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
+  // RET{A,B} requires the SP to match its incoming value on entry to the
+  // function.
+  bool TerminatorIsCombinable = std::next(MBBI) == TI && TI != MBB.end() &&
+                                TI->getOpcode() == AArch64::RET &&
+                                ArgumentStackToRestore == 0;
+
+  if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
+      !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
+    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      assert(PACSym && "No PAC instruction to refer to");
+      BuildMI(MBB, TI, DL,
+              TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
+          .addSym(PACSym)
+          .copyImplicitOps(*MBBI)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else {
+      if (MFnI->branchProtectionPAuthLR()) {
+        emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                        AArch64::X16);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+            .setMIFlag(MachineInstr::FrameDestroy);
       }
+      BuildMI(MBB, TI, DL, TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
+          .copyImplicitOps(*MBBI)
+          .setMIFlag(MachineInstr::FrameDestroy);
     }
+    MBB.erase(TI);
+    return;
   }
 
-  // If there will not be an SP bump afterward, we can use an AUT or RET form
-  // with a hardcoded SP discriminator.
-  if (!Offset) {
-    // The AUTIASP instruction assembles to a hint instruction before v8.3a so
-    // this instruction can safely be used for any v8a architecture.
-    // From v8.3a onwards there are optimised authenticate LR and return
-    // instructions, namely RETA{A,B}, that can be used instead. In this case
-    // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
-    // RET{A,B} requires the SP to match its incoming value on entry to the
-    // function.
-    bool TerminatorIsCombinable = TI != MBB.end() &&
-                                  TI->getOpcode() == AArch64::RET &&
-                                  ArgumentStackToRestore == 0;
-
-    if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
-        !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-      if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-        assert(PACSym && "No PAC instruction to refer to");
-        BuildMI(MBB, TI, DL,
-                TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
-            .addSym(PACSym)
-            .copyImplicitOps(*MBBI)
-            .setMIFlag(MachineInstr::FrameDestroy);
-      } else {
-        if (MFnI->branchProtectionPAuthLR()) {
-          emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                          AArch64::X16);
-          BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-              .setMIFlag(MachineInstr::FrameDestroy);
-        }
-        BuildMI(MBB, TI, DL,
-                TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
-            .copyImplicitOps(*MBBI)
-            .setMIFlag(MachineInstr::FrameDestroy);
-      }
-      MBB.erase(TI);
-      return;
-    }
-
-    for (auto *MI : SPMods)
-      MI->removeFromParent();
-
+  // If PAUTH_EPILOGUE is at insertion point with a net zero offset on SP, we
+  // can use an AUT form with a hardcoded SP discriminator.
+  if (ArgumentStackToRestore == 0) {
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
       BuildMI(MBB, MBBI, DL,
@@ -412,20 +375,26 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     }
 
-    for (auto *MI : SPMods)
-      MBB.insert(MBBI, MI);
-
     return;
   }
 
-  for (auto *MI : SPMods)
-    MI->removeFromParent();
-
-  // Otherwise there is an offset to the incoming SP, and we can't use the aut
-  // variants that hard-code SP. Reconstruct entry SP in x16 and authenticate
-  // using AUTI[AB]1716 (x17=LR, x16=entry_SP).
+  // When ArgumentStackToRestore > 0, this function received more argument
+  // space than the tail callee pops. The epilogue contains an SP adjustment
+  // (e.g. "add sp, sp, #N") to discard the leftover argument space.
+  //
+  // When ArgumentStackToRestore < 0, the tail callee pops more argument space
+  // than this function received, so after the frame teardown, SP is below the
+  // entry SP used as the signing modifier.
+  //
+  // We cannot simply bump SP first and then use AUTI[AB]SP with the bumped
+  // value, because the live arguments would fall below SP and potentially
+  // outside the red-zone.
+  //
+  // At this point there is an offset to the incoming SP, and we can't use the
+  // aut variants that hard-code SP. Reconstruct entry SP in x16 and
+  // authenticate using AUTI[AB]1716 (x17=LR, x16=entry_SP).
   emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                  StackOffset::getFixed(Offset), TII,
+                  StackOffset::getFixed(-ArgumentStackToRestore), TII,
                   MachineInstr::FrameDestroy);
 
   auto emitMOV = [&](Register Dst, Register Src) {
@@ -492,9 +461,6 @@ void AArch64PointerAuthImpl::authenticateLR(
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
         .setMIFlag(MachineInstr::FrameDestroy);
   }
-
-  for (auto *MI : SPMods)
-    MBB.insert(MBBI, MI);
 }
 
 unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {

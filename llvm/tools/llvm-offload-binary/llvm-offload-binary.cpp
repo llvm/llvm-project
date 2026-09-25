@@ -31,8 +31,6 @@
 using namespace llvm;
 using namespace llvm::object;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
 static cl::OptionCategory OffloadBinaryCategory("llvm-offload-binary options");
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
@@ -280,7 +278,7 @@ int main(int argc, const char **argv) {
         << "'clang-offload-packager' is deprecated. Use 'llvm-offload-binary' "
            "instead.\n";
 
-  if (Help || (OutputFile.empty() && InputFile.empty())) {
+  if (OutputFile.empty() && InputFile.empty()) {
     cl::PrintHelpMessage();
     return EXIT_SUCCESS;
   }

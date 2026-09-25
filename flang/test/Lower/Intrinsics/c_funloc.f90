@@ -3,7 +3,7 @@
 ! Test intrinsic module procedure c_funloc
 
 ! CHECK-LABEL: func.func @_QPtest() {
-! CHECK-DAG:     %[[TMP_CPTR_ALLOCA:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> {bindc_name = "tmp_cptr", uniq_name = "_QFtestEtmp_cptr"}
+! CHECK-DAG:     %[[TMP_CPTR_ALLOCA:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> <{bindc_name = "tmp_cptr", uniq_name = "_QFtestEtmp_cptr"}>
 ! CHECK-DAG:     %[[TMP_CPTR:.*]]:2 = hlfir.declare %[[TMP_CPTR_ALLOCA]] {uniq_name = "_QFtestEtmp_cptr"}
 ! CHECK:         %[[VAL_1:.*]] = fir.address_of(@_QPfoo) : (!fir.ref<i32>) -> ()
 ! CHECK:         %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<i32>) -> ()) -> !fir.boxproc<() -> ()>

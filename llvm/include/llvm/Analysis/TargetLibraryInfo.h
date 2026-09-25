@@ -464,6 +464,17 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
+  static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                          bool &ShouldZExtBoolReturn,
+                                          const Triple &T) {
+    ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
+
+    if (!T.isAArch64() && !T.isOSDarwin()) {
+      ShouldZExtBoolParam = true;
+      ShouldZExtBoolReturn = true;
+    }
+  }
+
   static void initExtensionsForTriple(bool &ShouldExtI32Param,
                                       bool &ShouldExtI32Return,
                                       bool &ShouldSignExtI32Param,
@@ -506,6 +517,12 @@ private:
   }
 
 public:
+  static Attribute::AttrKind getExtAttrForBoolParam(const Triple &T) {
+    bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
+    initBoolExtensionsForTriple(ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
+    return ShouldZExtBoolParam ? Attribute::ZExt : Attribute::None;
+  }
+
   static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
                                                    bool Signed = true) {
     bool ShouldExtI32Param, ShouldExtI32Return;

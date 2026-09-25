@@ -35,7 +35,7 @@ end program p
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "P"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> {bindc_name = "c1", uniq_name = "_QFEc1"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> <{bindc_name = "c1", uniq_name = "_QFEc1"}>
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_3]]) typeparams %[[VAL_0]] {uniq_name = "_QFEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QFEc2) : !fir.ref<!fir.array<3x!fir.char<1,4>>>
@@ -109,7 +109,7 @@ end
 ! CHECK:           return
 ! CHECK:         }
 
-! CHECK: fir.global internal @_QQro.4x3xc1.0 {alignment = 64 : i64} constant : !fir.array<4x!fir.char<1,3>>
+! CHECK: fir.global internal @_QQro.4x3xc1.0 <{alignment = 64 : i64}> constant : !fir.array<4x!fir.char<1,3>>
 ! CHECK: AA
 ! CHECK: MM
 ! CHECK: ZZ

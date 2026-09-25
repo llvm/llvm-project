@@ -42,7 +42,7 @@ end module m
 subroutine classify(x)
   use m; use ieee_arithmetic
   real(k) :: x
-  ! CHECK-DAG: %[[R_ALLOC:.*]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}> {bindc_name = "r", uniq_name = "_QFclassifyEr"}
+  ! CHECK-DAG: %[[R_ALLOC:.*]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}> <{bindc_name = "r", uniq_name = "_QFclassifyEr"}>
   ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ALLOC]] {uniq_name = "_QFclassifyEr"}
   ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] {{.*}} {uniq_name = "_QFclassifyEx"}
   type(ieee_class_type) :: r
@@ -127,5 +127,5 @@ program p
   enddo
 end
 
-! CHECK: fir.global linkonce @_FortranAIeeeClassTable(dense<[7, 8, 8, 8, 11, 11, 11, 11, 9, 9, 9, 9, 10, 2, 1, 2, 6, 5, 5, 5, 11, 11, 11, 11, 4, 4, 4, 4, 3, 2, 1, 2]> : tensor<32xi8>) {alignment = 64 : i64} constant : !fir.array<32xi8>
-! CHECK: fir.global linkonce @_FortranAIeeeValueTable_8(dense<[0, 9219994337134247936, 9221120237041090560, -4503599627370496, -4616189618054758400, -9221120237041090560, -9223372036854775808, 0, 2251799813685248, 4607182418800017408, 9218868437227405312, 0]> : tensor<12xi64>) {alignment = 64 : i64} constant : !fir.array<12xi64>
+! CHECK: fir.global linkonce @_FortranAIeeeClassTable(dense<[7, 8, 8, 8, 11, 11, 11, 11, 9, 9, 9, 9, 10, 2, 1, 2, 6, 5, 5, 5, 11, 11, 11, 11, 4, 4, 4, 4, 3, 2, 1, 2]> : tensor<32xi8>) <{alignment = 64 : i64}> constant : !fir.array<32xi8>
+! CHECK: fir.global linkonce @_FortranAIeeeValueTable_8(dense<[0, 9219994337134247936, 9221120237041090560, -4503599627370496, -4616189618054758400, -9221120237041090560, -9223372036854775808, 0, 2251799813685248, 4607182418800017408, 9218868437227405312, 0]> : tensor<12xi64>) <{alignment = 64 : i64}> constant : !fir.array<12xi64>

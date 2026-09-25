@@ -24,6 +24,7 @@
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
+#include <__memory/uninitialized_algorithms.h>
 #include <__numeric/transform_reduce.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
@@ -281,6 +282,24 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation1>(__reduce),
         std::forward<_BinaryOperation2>(__transform));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_copy<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _ForwardIterator>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
+    return std::uninitialized_copy(std::move(__first), std::move(__last), std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_move<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _ForwardIterator>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
+    return std::uninitialized_move(std::move(__first), std::move(__last), std::move(__result));
   }
 };
 

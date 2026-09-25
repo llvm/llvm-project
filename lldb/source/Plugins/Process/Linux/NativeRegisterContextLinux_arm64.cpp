@@ -634,7 +634,6 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
   uint8_t *dst;
   uint32_t offset = LLDB_INVALID_INDEX32;
-  std::vector<uint8_t> sve_reg_non_live;
 
   if (GetRegisterInfo().IsGPR(reg)) {
     error = ReadGPR();

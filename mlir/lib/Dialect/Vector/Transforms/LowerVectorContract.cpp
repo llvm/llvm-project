@@ -148,7 +148,9 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
 
   if (isInt) {
     if (kind == CombiningKind::MINNUMF || kind == CombiningKind::MAXNUMF ||
-        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
+        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF ||
+        kind == CombiningKind::MINIMUMNUMF ||
+        kind == CombiningKind::MAXIMUMNUMF)
       // Only valid for floating point types.
       return std::nullopt;
     mul = arith::MulIOp::create(rewriter, loc, x, y);
@@ -393,7 +395,8 @@ struct UnrolledOuterProductGenerator
     if (vecType)
       promotedType = vecType.clone(promotedType);
     if (isa<FloatType>(dstElementType))
-      return arith::ExtFOp::create(rewriter, loc, promotedType, v);
+      return arith::ExtFOp::create(rewriter, loc, promotedType, v,
+                                   /*fastmath=*/{});
     return arith::ExtSIOp::create(rewriter, loc, promotedType, v);
   }
 

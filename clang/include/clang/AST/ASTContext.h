@@ -315,7 +315,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
-  mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
@@ -1680,6 +1680,22 @@ public:
   getCountAttributedType(QualType T, Expr *CountExpr, bool CountInBytes,
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
+  /// Return a `CountAttributedType` whose count expression has not been parsed
+  /// yet, for use by a late-parsed bounds attribute. The result is *not*
+  /// uniqued, and must be completed with `completeCountAttributedType` once the
+  /// argument becomes parseable. Returns the node rather than a `QualType` so
+  /// the caller can retain it for completion.
+  CountAttributedType *getIncompleteCountAttributedType(QualType WrappedTy,
+                                                        bool CountInBytes,
+                                                        bool OrNull) const;
+
+  /// Supply the count expression and coupled declarations for a type created by
+  /// `getIncompleteCountAttributedType`. Enclosing types keep pointing at the
+  /// same node, so nothing above it needs rebuilding.
+  void completeCountAttributedType(
+      CountAttributedType *CATy, Expr *CountExpr,
+      ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
   /// Return a placeholder type for a late-parsed type attribute.
   /// This type wraps another type and holds the LateParsedAttribute
@@ -3657,6 +3673,9 @@ public:
 
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
+
+  /// Ordinal for the next TopLevelStmtDecl; counts created and loaded ones.
+  unsigned NumTopLevelStmtDecls = 0;
 
   bool hasSeenTypeAwareOperatorNewOrDelete() const {
     return !TypeAwareOperatorNewAndDeletes.empty();

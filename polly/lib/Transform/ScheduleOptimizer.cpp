@@ -101,8 +101,7 @@ static cl::opt<int>
     ScheduleComputeOut("polly-schedule-computeout",
                        cl::desc("Bound the scheduler by maximal amount"
                                 "of computational steps. "),
-                       cl::Hidden, cl::init(300000), cl::ZeroOrMore,
-                       cl::cat(PollyCategory));
+                       cl::Hidden, cl::init(300000), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     GreedyFusion("polly-loopfusion-greedy",

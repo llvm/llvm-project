@@ -2,11 +2,11 @@
 
 ! CHECK-LABEL: func @_QQmain
 program p
-  ! CHECK-DAG: %[[I_ALLOC:.*]] = fir.alloca i32 {{{.*}}uniq_name = "_QFEi"}
+  ! CHECK-DAG: %[[I_ALLOC:.*]] = fir.alloca i32 <{{{.*}}uniq_name = "_QFEi"}>
   ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOC]] {uniq_name = "_QFEi"}
-  ! CHECK-DAG: %[[N_ALLOC:.*]] = fir.alloca i32 {{{.*}}uniq_name = "_QFEn"}
+  ! CHECK-DAG: %[[N_ALLOC:.*]] = fir.alloca i32 <{{{.*}}uniq_name = "_QFEn"}>
   ! CHECK-DAG: %[[N:.*]]:2 = hlfir.declare %[[N_ALLOC]] {uniq_name = "_QFEn"}
-  ! CHECK: %[[T_ALLOC:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "t", uniq_name = "_QFEt"}
+  ! CHECK: %[[T_ALLOC:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "t", uniq_name = "_QFEt"}>
   ! CHECK: %[[T:.*]]:2 = hlfir.declare %[[T_ALLOC]](%{{.*}}) {uniq_name = "_QFEt"}
   integer :: n, foo, t(3)
   ! CHECK: hlfir.assign %c100{{.*}} to %[[N]]#0

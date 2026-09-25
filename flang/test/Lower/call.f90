@@ -47,7 +47,7 @@ end function
 ! CHECK-LABEL: func.func @f_int_to_char(
 ! CHECK-SAME: %[[ARG0:.*]]: i32 {fir.bindc_name = "i"}) -> !fir.char<1> attributes {fir.bindc_name = "f_int_to_char", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
 ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1>
-! CHECK: %[[RESULT:.*]] = fir.alloca !fir.char<1> {bindc_name = "f_int_to_char", uniq_name = "_QFf_int_to_charEf_int_to_char"}
+! CHECK: %[[RESULT:.*]] = fir.alloca !fir.char<1> <{bindc_name = "f_int_to_char", uniq_name = "_QFf_int_to_charEf_int_to_char"}>
 ! CHECK: %[[RESULT_DECL:.*]]:2 = hlfir.declare %[[RESULT]] typeparams %c1{{.*}} {uniq_name = "_QFf_int_to_charEf_int_to_char"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK: %[[INT_I:.*]] = fir.alloca i32
 ! CHECK: fir.store %[[ARG0]] to %[[INT_I]] : !fir.ref<i32>

@@ -1715,6 +1715,7 @@ enum CPUSubTypeARM64 : uint32_t {
   CPU_SUBTYPE_ARM64_ALL = 0,
   CPU_SUBTYPE_ARM64_V8 = 1,
   CPU_SUBTYPE_ARM64E = 2,
+  CPU_SUBTYPE_ARM64E_X1 = 12,
 
   // arm64e uses the capability bits to encode ptrauth ABI information.
   // Bit 63 marks the binary as Versioned.

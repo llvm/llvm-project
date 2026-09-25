@@ -98,6 +98,7 @@ set(hlsl_subdir_files
   hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h
+  hlsl/hlsl_resources.h
   hlsl/hlsl_spirv.h
   )
 set(hlsl_files
@@ -182,6 +183,8 @@ set(x86_files
   avx10_2_512niintrin.h
   avx10_2_512satcvtdsintrin.h
   avx10_2_512satcvtintrin.h
+  avx10v2aux_512intrin.h
+  avx10v2auxintrin.h
   avx10_2bf16intrin.h
   avx10_2convertintrin.h
   avx10_2copyintrin.h

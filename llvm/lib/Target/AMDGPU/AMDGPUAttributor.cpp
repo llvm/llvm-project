@@ -153,6 +153,9 @@ public:
                          BumpPtrAllocator &Allocator,
                          SetVector<Function *> *CGSCC, TargetMachine &TM)
       : InformationCache(M, AG, Allocator, CGSCC), TM(TM),
+        SubArch(M.getTargetTriple().getSubArch()),
+        Features(
+            AMDGPU::getFeatureBitset(AMDGPU::getGPUKindFromSubArch(SubArch))),
         CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {}
 
   TargetMachine &TM;
@@ -166,18 +169,6 @@ public:
         ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT,
     CS_WORST = DS_GLOBAL | ADDR_SPACE_CAST_BOTH_TO_FLAT,
   };
-
-  /// Check if the subtarget has aperture regs.
-  bool hasApertureRegs(Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.hasApertureRegs();
-  }
-
-  /// Check if the subtarget supports GetDoorbellID.
-  bool supportsGetDoorbellID(Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.supportsGetDoorbellID();
-  }
 
   std::optional<std::pair<unsigned, unsigned>>
   getFlatWorkGroupSizeAttr(const Function &F) const {
@@ -193,14 +184,16 @@ public:
     return ST.getDefaultFlatWorkGroupSize(F.getCallingConv());
   }
 
-  std::pair<unsigned, unsigned>
-  getMaximumFlatWorkGroupRange(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
+  std::pair<unsigned, unsigned> getMaximumFlatWorkGroupRange() const {
+    return {AMDGPU::getMinFlatWorkGroupSize(),
+            AMDGPU::getMaxFlatWorkGroupSize()};
   }
 
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
+
+  /// Get the features of the module target.
+  const AMDGPU::AMDGPUFeatureBitset &getFeatures() const { return Features; }
 
   std::optional<std::pair<unsigned, unsigned>>
   getWavesPerEUAttr(const Function &F) {
@@ -208,16 +201,13 @@ public:
                                                /*OnlyFirstRequired=*/true);
     if (!Val)
       return std::nullopt;
-    if (!Val->second) {
-      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-      Val->second = ST.getMaxWavesPerEU();
-    }
+    if (!Val->second)
+      Val->second = AMDGPU::getMaxWavesPerEU(SubArch);
     return std::make_pair(Val->first, *(Val->second));
   }
 
-  unsigned getMaxWavesPerEU(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getMaxWavesPerEU();
+  unsigned getMaxWavesPerEU() const {
+    return AMDGPU::getMaxWavesPerEU(SubArch);
   }
 
   unsigned getMaxAddrSpace() const override {
@@ -288,7 +278,7 @@ public:
   /// Returns true if \p Fn needs the queue pointer because of \p C.
   bool needsQueuePtr(const Constant *C, Function &Fn) {
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(Fn.getCallingConv());
-    bool HasAperture = hasApertureRegs(Fn);
+    bool HasAperture = Features.test(AMDGPU::FEAT_APERTURE_REGS);
 
     // No need to explore the constants.
     if (!IsNonEntryFunc && HasAperture)
@@ -311,6 +301,8 @@ public:
 private:
   /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, std::optional<uint8_t>> ConstantStatus;
+  const Triple::SubArchType SubArch;
+  const AMDGPU::AMDGPUFeatureBitset Features;
   const unsigned CodeObjectVersion;
 };
 
@@ -503,8 +495,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     bool NeedsImplicit = false;
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-    bool HasApertureRegs = InfoCache.hasApertureRegs(*F);
-    bool SupportsGetDoorbellID = InfoCache.supportsGetDoorbellID(*F);
+    const AMDGPU::AMDGPUFeatureBitset &Features = InfoCache.getFeatures();
+    bool HasApertureRegs = Features.test(AMDGPU::FEAT_APERTURE_REGS);
+    bool SupportsGetDoorbellID = Features.test(AMDGPU::FEAT_GET_DOORBELL_ID);
     unsigned COV = InfoCache.getCodeObjectVersion();
 
     for (Function *Callee : AAEdges->getOptimisticEdges()) {
@@ -639,7 +632,8 @@ private:
       return true;
     };
 
-    bool HasApertureRegs = InfoCache.hasApertureRegs(*F);
+    bool HasApertureRegs =
+        InfoCache.getFeatures().test(AMDGPU::FEAT_APERTURE_REGS);
 
     // `checkForAllInstructions` is much more cheaper than going through all
     // instructions, try it first.
@@ -883,7 +877,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
 
     bool HasAttr = false;
     auto Range = InfoCache.getDefaultFlatWorkGroupSize(*F);
-    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange(*F);
+    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange();
 
     if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F)) {
       // We only consider an attribute that is not max range because the front
@@ -918,10 +912,9 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
                                                    Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
-        A, InfoCache.getMaximumFlatWorkGroupRange(*F));
+        A, InfoCache.getMaximumFlatWorkGroupRange());
   }
 
   /// See AbstractAttribute::getName()
@@ -1101,7 +1094,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     // If the attribute exists, we will honor it if it is not the default.
     if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
       std::pair<unsigned, unsigned> MaxWavesPerEURange{
-          1U, InfoCache.getMaxWavesPerEU(*F)};
+          1U, InfoCache.getMaxWavesPerEU()};
       if (*Attr != MaxWavesPerEURange) {
         auto [Min, Max] = *Attr;
         ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
@@ -1157,10 +1150,9 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
                                             Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
-        A, {1U, InfoCache.getMaxWavesPerEU(*F)});
+        A, {1U, InfoCache.getMaxWavesPerEU()});
   }
 
   /// See AbstractAttribute::getName()
@@ -1613,11 +1605,11 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     }
 
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
-    if (!F->isDeclaration() && ST.hasClusters())
+    const AMDGPU::AMDGPUFeatureBitset &Features = InfoCache.getFeatures();
+    if (!F->isDeclaration() && Features.test(AMDGPU::FEAT_CLUSTERS))
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
-    if (ST.hasGFX90AInsts())
+    if (Features.test(AMDGPU::FEAT_AGPR_ALLOC))
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {

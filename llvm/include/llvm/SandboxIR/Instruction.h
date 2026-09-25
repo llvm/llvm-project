@@ -2627,9 +2627,6 @@ protected:
   CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
       : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
-  LLVM_ABI static Value *createCommon(Value *Cond, Value *True, Value *False,
-                                      const Twine &Name, IRBuilder<> &Builder,
-                                      Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;

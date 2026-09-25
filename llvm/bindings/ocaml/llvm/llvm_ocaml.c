@@ -1135,18 +1135,6 @@ value llvm_aggregate_element(value Const, value N) {
 
 /*--... Constant expressions ...............................................--*/
 
-/* lltype -> llvalue */
-value llvm_align_of(value Type) {
-  LLVMValueRef Value = LLVMAlignOf(Type_val(Type));
-  return to_val(Value);
-}
-
-/* lltype -> llvalue */
-value llvm_size_of(value Type) {
-  LLVMValueRef Value = LLVMSizeOf(Type_val(Type));
-  return to_val(Value);
-}
-
 /* llvalue -> llvalue */
 value llvm_const_neg(value Value) {
   LLVMValueRef NegValue = LLVMConstNeg(Value_val(Value));

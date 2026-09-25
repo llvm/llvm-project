@@ -156,20 +156,7 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_v(<2 x bfloat> %src) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
-; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %src)
   ret <2 x bfloat> %result
@@ -240,29 +227,7 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_lshl_b32 s1, s0, 16
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    v_max_num_f32_e64 v0, s1, s1
-; GFX1250-NEXT:    v_readfirstlane_b32 s1, v0
-; GFX1250-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX1250-NEXT:    s_or_b32 s3, s1, 0x400000
-; GFX1250-NEXT:    s_add_co_i32 s2, s2, s1
-; GFX1250-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX1250-NEXT:    s_cmp_u_f32 s1, 0
-; GFX1250-NEXT:    s_cselect_b32 s1, s3, s2
-; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX1250-NEXT:    v_max_num_f32_e64 v0, s0, s0
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX1250-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX1250-NEXT:    s_add_co_i32 s2, s2, s0
-; GFX1250-NEXT:    s_addk_co_i32 s2, 0x7fff
-; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
-; GFX1250-NEXT:    s_cselect_b32 s0, s3, s2
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, s0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %src)
   ret <2 x bfloat> %result

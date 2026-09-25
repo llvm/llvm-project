@@ -307,6 +307,15 @@ Error HTTPClient::perform(const HTTPRequest &Request,
                           Session->TimeoutMs, Session->TimeoutMs))
     return createStringError(errc::io_error, "Failed to set WinHTTP timeout");
 
+  // WinHttpSetTimeouts does not cover the wait inside WinHttpReceiveResponse,
+  // which keeps its own 90 second default.
+  DWORD ResponseTimeoutMs = Session->TimeoutMs;
+  if (!WinHttpSetOption(Session->SessionHandle,
+                        WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT,
+                        &ResponseTimeoutMs, sizeof(ResponseTimeoutMs)))
+    return createStringError(errc::io_error,
+                             "Failed to set WinHTTP response timeout");
+
   // Prevent fallback to TLS 1.0/1.1
   DWORD SecureProtocols =
       WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;

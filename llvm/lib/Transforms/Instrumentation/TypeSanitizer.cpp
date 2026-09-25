@@ -144,16 +144,25 @@ TypeSanitizer::TypeSanitizer(Module &M)
 }
 
 void TypeSanitizer::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(M.getContext());
+  LLVMContext &C = M.getContext();
+  IRBuilder<> IRB(C);
   OrdTy = IRB.getInt32Ty();
   U64Ty = IRB.getInt64Ty();
   Type *BoolType = IRB.getInt1Ty();
 
   AttributeList Attr;
-  Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
-  // Initialize the callbacks.
+  Attr = Attr.addFnAttribute(C, Attribute::NoUnwind);
+  Attribute::AttrKind SExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Param(TargetTriple, /*Signed=*/true);
+  Attribute::AttrKind BoolExtAttr =
+      TargetLibraryInfo::getExtAttrForBoolParam(TargetTriple);
+
+  // Initialize the callbacks.  TODO: use TLI/emitLibFunc() for these functions.
   TysanCheck =
-      M.getOrInsertFunction(kTysanCheckName, Attr, IRB.getVoidTy(),
+      M.getOrInsertFunction(kTysanCheckName,
+                            Attr.maybeAddParamAttribute(C, 1, SExtAttr)
+                                .maybeAddParamAttribute(C, 3, SExtAttr),
+                            IRB.getVoidTy(),
                             IRB.getPtrTy(), // Pointer to data to be read.
                             OrdTy,          // Size of the data in bytes.
                             IRB.getPtrTy(), // Pointer to type descriptor.
@@ -164,21 +173,25 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
       M.getOrInsertFunction(kTysanModuleCtorName, Attr, IRB.getVoidTy());
 
   TysanIntrumentMemInst = M.getOrInsertFunction(
-      "__tysan_instrument_mem_inst", Attr, IRB.getVoidTy(),
+      "__tysan_instrument_mem_inst",
+      Attr.maybeAddParamAttribute(C, 3, BoolExtAttr), IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer of data to be written to
       IRB.getPtrTy(), // Pointer of data to write
       U64Ty,          // Size of the data in bytes
       BoolType        // Do we need to call memmove
   );
 
-  TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
-      "__tysan_instrument_with_shadow_update", Attr, IRB.getVoidTy(),
-      IRB.getPtrTy(), // Pointer to data to be read
-      IRB.getPtrTy(), // Pointer to type descriptor
-      BoolType,       // Do we need to type check this
-      U64Ty,          // Size of data we access in bytes
-      OrdTy           // Flags
-  );
+  TysanInstrumentWithShadowUpdate =
+      M.getOrInsertFunction("__tysan_instrument_with_shadow_update",
+                            Attr.maybeAddParamAttribute(C, 2, BoolExtAttr)
+                                .maybeAddParamAttribute(C, 4, SExtAttr),
+                            IRB.getVoidTy(),
+                            IRB.getPtrTy(), // Pointer to data to be read
+                            IRB.getPtrTy(), // Pointer to type descriptor
+                            BoolType,       // Do we need to type check this
+                            U64Ty,          // Size of data we access in bytes
+                            OrdTy           // Flags
+      );
 
   TysanSetShadowType = M.getOrInsertFunction(
       "__tysan_set_shadow_type", Attr, IRB.getVoidTy(),

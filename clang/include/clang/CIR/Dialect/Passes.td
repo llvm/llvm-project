@@ -173,7 +173,7 @@ def CIREHABILowering : Pass<"cir-eh-abi-lowering", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def LoweringPrepare : Pass<"cir-lowering-prepare"> {
+def LoweringPrepare : Pass<"cir-lowering-prepare", "mlir::ModuleOp"> {
   let summary = "Lower to more fine-grained CIR operations before lowering to "
     "other dialects";
   let description = [{

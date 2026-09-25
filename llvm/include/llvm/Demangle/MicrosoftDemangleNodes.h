@@ -356,6 +356,8 @@ struct DEMANGLE_ABI FunctionSignatureNode : public TypeNode {
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
   void outputPost(OutputBuffer &OB, OutputFlags Flags) const override;
 
+  void outputPreSignature(OutputBuffer &OB, OutputFlags Flags) const;
+
   static bool classof(const Node *N) {
     return N->kind() >= NodeKind::FunctionSignature &&
            N->kind() <= NodeKind::FunctionSignatureEnd;

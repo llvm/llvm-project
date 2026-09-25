@@ -266,7 +266,7 @@ class SPIRVLegalizePointerCastImpl {
       return Scalar;
     if (Ty->isIntOrIntVectorTy())
       return B.CreateIntCast(Scalar, IntTy, /*isSigned=*/false);
-    return B.CreateBitCast(Scalar, IntTy);
+    return B.CreateIntrinsic(Intrinsic::spv_bitcast, {IntTy, Ty}, {Scalar});
   }
 
   Value *storeIntToScalar(IRBuilder<> &B, Value *IntVal, Type *ScalarTy) {
@@ -274,7 +274,8 @@ class SPIRVLegalizePointerCastImpl {
       return IntVal;
     if (ScalarTy->isIntOrIntVectorTy())
       return B.CreateIntCast(IntVal, ScalarTy, /*isSigned=*/false);
-    return B.CreateBitCast(IntVal, ScalarTy);
+    return B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                             {ScalarTy, IntVal->getType()}, {IntVal});
   }
 
   void storeScalarToByteLayout(IRBuilder<> &B, Value *Src, Value *Dst,
@@ -283,6 +284,8 @@ class SPIRVLegalizePointerCastImpl {
     Type *I8Ty = Type::getInt8Ty(Ctx);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     Value *IntVal = scalarToStoreInt(B, Src);
+    if (IntVal != Src)
+      buildAssignType(B, IntVal->getType(), IntVal);
     unsigned NumBytes = DL.getTypeStoreSize(Src->getType());
 
     auto StoreByte = [&](unsigned I, Value *Shifted) {

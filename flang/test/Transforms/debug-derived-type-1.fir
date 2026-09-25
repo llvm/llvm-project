@@ -59,7 +59,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 // CHECK-DAG: #[[ELMD1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "year", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMD2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "month", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 32>
 // CHECK-DAG: #[[ELMD3:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "day", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 64>
-// CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_date", file = #di_file, line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
+// CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_date"{{.*}}line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
 // CHECK-DAG: #[[ELMP1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "t_address", baseType = #[[ADDR]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMP2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "name", baseType = #[[STR_TY]], sizeInBits = 160, alignInBits = 8, offsetInBits = 32>
 // CHECK-DAG: #[[PERS:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_person"{{.*}}line = 35, scope = #[[MOD]], sizeInBits = 192, elements = #[[ELMP1]], #[[ELMP2]]>

@@ -1167,18 +1167,10 @@ std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValueBinaryOp(BinaryOperator *BO, BasicBlock *BB) {
   assert(BO->getOperand(0)->getType()->isSized() &&
          "all operands to binary operators are sized");
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO)) {
-    unsigned NoWrapKind = OBO->getNoWrapKind();
-    return solveBlockValueBinaryOpImpl(
-        BO, BB,
-        [BO, NoWrapKind](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.overflowingBinaryOp(BO->getOpcode(), CR2, NoWrapKind);
-        });
-  }
 
   return solveBlockValueBinaryOpImpl(
       BO, BB, [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.binaryOp(BO->getOpcode(), CR2);
+        return CR1.binaryOp(*BO, CR2);
       });
 }
 

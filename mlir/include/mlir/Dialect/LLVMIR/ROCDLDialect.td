@@ -125,6 +125,14 @@ def ROCDL_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
     }
+    /// Get the LLVM module flag key `rocdl.xnack` translates to.
+    static constexpr ::llvm::StringLiteral getModuleFlagKeyXnackName() {
+      return ::llvm::StringLiteral("amdgpu.xnack");
+    }
+    /// Get the LLVM module flag key `rocdl.sramecc` translates to.
+    static constexpr ::llvm::StringLiteral getModuleFlagKeySramEccName() {
+      return ::llvm::StringLiteral("amdgpu.sramecc");
+    }
     /// Get the LLVM module flag key for the AMDGPU buffer OOB mode.
     static constexpr ::llvm::StringLiteral
     getModuleFlagKeyBufferOOBModeName() {
@@ -154,6 +162,11 @@ def ROCDL_Dialect : Dialect {
      "::mlir::IntegerAttr":$max_flat_work_group_size,
      "::mlir::IntegerAttr":$waves_per_eu,
      "::mlir::BoolAttr":$unsafe_fp_atomics,
+     // Boolean attributes for explicitly enabling/disabling xnack or sramecc.
+     // Not setting these is a third "default"/"any" state, and not the same as
+     // false.
+     "::mlir::BoolAttr":$xnack,
+     "::mlir::BoolAttr":$sramecc,
      // Correspond to LLVM metadata of the same name
      "::mlir::UnitAttr":$last_use,
      "::mlir::UnitAttr":$no_remote_memory,

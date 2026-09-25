@@ -152,14 +152,18 @@ public:
   }
 };
 
-#define LIST_DIV_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcDivTest = DivTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcDivTest, SpecialNumbers) { test_special_numbers(&func); }     \
-  TEST_F(LlvmLibcDivTest, DivisionByZero) { test_division_by_zero(&func); }    \
-  TEST_F(LlvmLibcDivTest, InvalidOperations) {                                 \
+#define LIST_DIV_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = DivTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) {                               \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, DivisionByZero) {                               \
+    test_division_by_zero(&func);                                              \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, InvalidOperations) {                            \
     test_invalid_operations(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcDivTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcDivTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibc##Name##Test, RangeErrors) { test_range_errors(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InexactResults) { test_inexact_results(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_DIVTEST_H

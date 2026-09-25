@@ -268,14 +268,6 @@ Register AVRRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return AVR::SP;
 }
 
-const TargetRegisterClass *
-AVRRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // FIXME: Currently we're using avr-gcc as reference, so we restrict
-  // ptrs to Y and Z regs. Though avr-gcc has buggy implementation
-  // of memory constraint, so we can fix it and bit avr-gcc here ;-)
-  return &AVR::PTRDISPREGSRegClass;
-}
-
 void AVRRegisterInfo::splitReg(Register Reg, Register &LoReg,
                                Register &HiReg) const {
   assert(AVR::DREGSRegClass.contains(Reg) && "can only split 16-bit registers");

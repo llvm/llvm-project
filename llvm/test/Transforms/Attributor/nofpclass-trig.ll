@@ -31,9 +31,9 @@ define float @ret_tan_noinf(float nofpclass(inf) %arg) {
 }
 
 define float @ret_tan_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define nofpclass(inf) float @ret_tan_nonan
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_tan_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.tan.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tan.f32(float %arg)
@@ -225,5 +225,16 @@ define float @ret_atan_nonan(float nofpclass(nan) %arg) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.atan.f32(float %arg)
+  ret float %call
+}
+
+; Check that tan propagates snan.
+define float @ret_tan_nosnan(float nofpclass(snan) %arg) {
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_tan_nosnan
+; CHECK-SAME: (float nofpclass(snan) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.tan.f32(float nofpclass(snan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tan.f32(float %arg)
   ret float %call
 }

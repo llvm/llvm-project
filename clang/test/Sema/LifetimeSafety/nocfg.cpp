@@ -44,7 +44,6 @@ struct [[gsl::Owner(long)]] MyLongOwnerWithConversion {
   long *releaseAsRawPointer();
 };
 
-template<class... T> void use(T... arg);
 
 void danglingHeapObject() {
   new MyLongPointerFromConversion(MyLongOwnerWithConversion{}); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
@@ -77,7 +76,7 @@ struct Y {
 void dangligGslPtrFromTemporary() {
   MyIntPointer p = Y{}.a; // cfg-warning {{temporary object does not live long enough}} \
                           // cfg-note {{destroyed here}}
-  (void)p;                // cfg-note {{later used here}}
+  use(p);                 // cfg-note {{later used here}}
 }
 
 struct DanglingGslPtrField {
@@ -195,7 +194,7 @@ void modelIterators() {
   std::vector<int>::iterator it = std::vector<int>().begin(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                                               // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                               // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
-  (void)it; // cfg-note {{later used here}}
+  use(it);  // cfg-note {{later used here}}
 }
 
 std::vector<int>::iterator modelIteratorReturn() {

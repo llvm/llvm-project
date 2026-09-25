@@ -1102,6 +1102,7 @@ def run_to_name_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
+    has_locations_before_run=True,
 ) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by name on bkpt_name restricted to bkpt_module.
@@ -1129,16 +1130,21 @@ def run_to_name_breakpoint(
     thread stopped at the breakpoint.  Otherwise we only require one
     or more threads stop there.  If there are more than one, we return
     the first thread that stopped.
+
+    Pass has_locations_before_run=False for names that only become
+    resolvable once the process is running, e.g. symbols in a shared
+    library that isn't loaded yet.
     """
 
     target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
 
     breakpoint = target.BreakpointCreateByName(bkpt_name, bkpt_module)
 
-    test.assertTrue(
-        breakpoint.GetNumLocations() > 0,
-        "No locations found for name breakpoint: '%s'." % (bkpt_name),
-    )
+    if has_locations_before_run:
+        test.assertTrue(
+            breakpoint.GetNumLocations() > 0,
+            "No locations found for name breakpoint: '%s'." % (bkpt_name),
+        )
     return run_to_breakpoint_do_run(
         test, target, breakpoint, launch_info, only_one_thread, extra_images
     )

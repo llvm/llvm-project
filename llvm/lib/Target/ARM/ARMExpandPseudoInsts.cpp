@@ -2437,15 +2437,20 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                           ClearRegs); // save+clear FP regs with ClearRegs
       CMSEClearGPRegs(MBB, MBBI, DL, ClearRegs, JumpReg);
 
-      const MachineInstrBuilder NewCall =
-          BuildMI(MBB, MBBI, DL, TII->get(ARM::tBLXNSr))
-              .add(predOps(ARMCC::AL))
-              .addReg(JumpReg, RegState::Kill);
+      // Be careful not to duplicate the LR def that already exists on the
+      // pseudoinstruction.
+      MachineFunction &MF = *MBB.getParent();
+      MachineInstr *NewCall = MF.CreateMachineInstr(TII->get(ARM::tBLXNSr), DL,
+                                                    /*NoImplicit=*/true);
+      MBB.insert(MBBI, NewCall);
+      MachineInstrBuilder(MF, NewCall)
+          .add(predOps(ARMCC::AL))
+          .addReg(JumpReg, RegState::Kill);
 
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         NewCall->addOperand(MO);
       if (MI.isCandidateForAdditionalCallInfo())
-        MI.getMF()->moveAdditionalCallInfo(&MI, NewCall.getInstr());
+        MI.getMF()->moveAdditionalCallInfo(&MI, NewCall);
 
       CMSERestoreFPRegs(MBB, MBBI, DL, OriginalClearRegs); // restore FP registers
 
@@ -2664,22 +2669,30 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           MIB.addImm(0);
         MIB.add(predOps(ARMCC::AL));
 
-        MIB =
-            BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                    TII->get(Thumb ? gettBLXrOpcode(*MF) : getBLXOpcode(*MF)));
+        // The pesudo already has an LR def, avoid introducing a duplicated copy
+        // from the original operand list.
+        unsigned CallOpc = Thumb ? gettBLXrOpcode(*MF) : getBLXOpcode(*MF);
+        MachineInstr *Call = MF->CreateMachineInstr(
+            TII->get(CallOpc), MI.getDebugLoc(), /*NoImplicit=*/true);
+        MBB.insert(MBBI, Call);
+        MIB = MachineInstrBuilder(*MF, Call);
         if (Thumb)
           MIB.add(predOps(ARMCC::AL));
         MIB.addReg(Reg, RegState::Kill);
       } else {
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get(Thumb ? ARM::tBL : ARM::BL));
+        unsigned CallOpc = Thumb ? ARM::tBL : ARM::BL;
+        MachineInstr *Call = MF->CreateMachineInstr(
+            TII->get(CallOpc), MI.getDebugLoc(), /*NoImplicit=*/true);
+        MBB.insert(MBBI, Call);
+        MIB = MachineInstrBuilder(*MF, Call);
         if (Thumb)
           MIB.add(predOps(ARMCC::AL));
         MIB.addExternalSymbol("__aeabi_read_tp", 0);
       }
 
       MIB.cloneMemRefs(MI);
-      MIB.copyImplicitOps(MI);
+      for (const MachineOperand &MO : MI.operands())
+        MIB.add(MO);
       // Update the call info.
       if (MI.isCandidateForAdditionalCallInfo())
         MF->moveAdditionalCallInfo(&MI, &*MIB);
@@ -3249,15 +3262,13 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       const bool Thumb = Opcode == ARM::tBL_PUSHLR;
       Register Reg = MI.getOperand(0).getReg();
       assert(Reg == ARM::LR && "expect LR register!");
-      MachineInstrBuilder MIB;
+      MachineFunction &MF = *MBB.getParent();
+      unsigned CallOpc = Thumb ? ARM::tBL : ARM::BL;
       if (Thumb) {
         // push {lr}
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tPUSH))
             .add(predOps(ARMCC::AL))
             .addReg(Reg);
-
-        // bl __gnu_mcount_nc
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tBL));
       } else {
         // stmdb   sp!, {lr}
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::STMDB_UPD))
@@ -3265,10 +3276,15 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL))
             .addReg(Reg);
-
-        // bl __gnu_mcount_nc
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::BL));
       }
+
+      // bl __gnu_mcount_nc. Be careful not to duplicate the LR-def the original
+      // instruction already has.
+      MachineInstr *Call =
+          MF.CreateMachineInstr(TII->get(CallOpc), MI.getDebugLoc(),
+                                /*NoImplicit=*/true);
+      MBB.insert(MBBI, Call);
+      MachineInstrBuilder MIB(MF, Call);
       MIB.cloneMemRefs(MI);
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         MIB.add(MO);

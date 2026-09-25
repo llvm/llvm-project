@@ -265,50 +265,50 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_22:.*]] = fir.declare %[[VAL_21]] {uniq_name = "_QMmodEzstart"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_23:.*]] = fir.address_of(@_QMmodEzstop) : !fir.ref<i32>
 // CHECK:           %[[VAL_24:.*]] = fir.declare %[[VAL_23]] {uniq_name = "_QMmodEzstop"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_25:.*]] = fir.alloca f32 {bindc_name = "dxold", uniq_name = "_QMmodFcalleeEdxold"}
+// CHECK:           %[[VAL_25:.*]] = fir.alloca f32 <{bindc_name = "dxold", uniq_name = "_QMmodFcalleeEdxold"}>
 // CHECK:           %[[VAL_26:.*]] = fir.declare %[[VAL_25]] {uniq_name = "_QMmodFcalleeEdxold"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK:           %[[VAL_27:.*]] = fir.alloca f32 {bindc_name = "dzinv", uniq_name = "_QMmodFcalleeEdzinv"}
+// CHECK:           %[[VAL_27:.*]] = fir.alloca f32 <{bindc_name = "dzinv", uniq_name = "_QMmodFcalleeEdzinv"}>
 // CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = "_QMmodFcalleeEdzinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK:           %[[VAL_29:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmodFcalleeEi"}
+// CHECK:           %[[VAL_29:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMmodFcalleeEi"}>
 // CHECK:           %[[VAL_30:.*]] = fir.declare %[[VAL_29]] {uniq_name = "_QMmodFcalleeEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_31:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QMmodFcalleeEj"}
+// CHECK:           %[[VAL_31:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QMmodFcalleeEj"}>
 // CHECK:           %[[VAL_32:.*]] = fir.declare %[[VAL_31]] {uniq_name = "_QMmodFcalleeEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_33:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QMmodFcalleeEk"}
+// CHECK:           %[[VAL_33:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QMmodFcalleeEk"}>
 // CHECK:           %[[VAL_34:.*]] = fir.declare %[[VAL_33]] {uniq_name = "_QMmodFcalleeEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
 // CHECK:           %[[VAL_36:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_37:.*]] = fir.rebox %[[VAL_36]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_38:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_39:.*]] = fir.rebox %[[VAL_38]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
-// CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_22]] {tbaa = [#[[GLBL_ZSTART_TAG]]]} : !fir.ref<i32>
+// CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_22]] <{tbaa = [#[[GLBL_ZSTART_TAG]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_41:.*]] = arith.addi %[[VAL_40]], %[[VAL_6]] : i32
 // CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_41]] : (i32) -> index
-// CHECK:           %[[VAL_43:.*]] = fir.load %[[VAL_24]] {tbaa = [#[[GLBL_ZSTOP_TAG]]]} : !fir.ref<i32>
+// CHECK:           %[[VAL_43:.*]] = fir.load %[[VAL_24]] <{tbaa = [#[[GLBL_ZSTOP_TAG]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i32) -> index
 // CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_42]] : (index) -> i32
 // CHECK:           %[[VAL_46:.*]]:2 = fir.do_loop %[[VAL_47:.*]] = %[[VAL_42]] to %[[VAL_44]] step %[[VAL_5]] iter_args(%[[VAL_48:.*]] = %[[VAL_45]]) -> (index, i32) {
-// CHECK:             fir.store %[[VAL_48]] to %[[VAL_34]] {tbaa = [#[[LOCAL1_ALLOC_TAG]]]} : !fir.ref<i32>
-// CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_18]] {tbaa = [#[[GLBL_YSTART_TAG]]]} : !fir.ref<i32>
+// CHECK:             fir.store %[[VAL_48]] to %[[VAL_34]] <{tbaa = [#[[LOCAL1_ALLOC_TAG]]]}> : !fir.ref<i32>
+// CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_18]] <{tbaa = [#[[GLBL_YSTART_TAG]]]}> : !fir.ref<i32>
 // CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_6]] : i32
 // CHECK:             %[[VAL_51:.*]] = fir.convert %[[VAL_50]] : (i32) -> index
-// CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_20]] {tbaa = [#[[GLBL_YSTOP_TAG]]]} : !fir.ref<i32>
+// CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_20]] <{tbaa = [#[[GLBL_YSTOP_TAG]]]}> : !fir.ref<i32>
 // CHECK:             %[[VAL_53:.*]] = fir.convert %[[VAL_52]] : (i32) -> index
 // CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_51]] : (index) -> i32
 // CHECK:             %[[VAL_55:.*]]:2 = fir.do_loop %[[VAL_56:.*]] = %[[VAL_51]] to %[[VAL_53]] step %[[VAL_5]] iter_args(%[[VAL_57:.*]] = %[[VAL_54]]) -> (index, i32) {
-// CHECK:               fir.store %[[VAL_57]] to %[[VAL_32]] {tbaa = [#[[LOCAL2_ALLOC_TAG]]]} : !fir.ref<i32>
-// CHECK:               %[[VAL_58:.*]] = fir.load %[[VAL_16]] {tbaa = [#[[GLBL_XSTART_TAG]]]} : !fir.ref<i32>
+// CHECK:               fir.store %[[VAL_57]] to %[[VAL_32]] <{tbaa = [#[[LOCAL2_ALLOC_TAG]]]}> : !fir.ref<i32>
+// CHECK:               %[[VAL_58:.*]] = fir.load %[[VAL_16]] <{tbaa = [#[[GLBL_XSTART_TAG]]]}> : !fir.ref<i32>
 // CHECK:               %[[VAL_59:.*]] = arith.addi %[[VAL_58]], %[[VAL_6]] : i32
 // CHECK:               %[[VAL_60:.*]] = fir.convert %[[VAL_59]] : (i32) -> index
 // CHECK:               %[[VAL_61:.*]] = fir.convert %[[VAL_60]] : (index) -> i32
 // CHECK:               %[[VAL_62:.*]]:2 = fir.do_loop %[[VAL_63:.*]] = %[[VAL_60]] to %[[VAL_4]] step %[[VAL_5]] iter_args(%[[VAL_64:.*]] = %[[VAL_61]]) -> (index, i32) {
-// CHECK:                 fir.store %[[VAL_64]] to %[[VAL_30]] {tbaa = [#[[LOCAL3_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 fir.store %[[VAL_64]] to %[[VAL_30]] <{tbaa = [#[[LOCAL3_ALLOC_TAG]]]}> : !fir.ref<i32>
 // load from box tagged in CodeGen
 // CHECK:                 %[[VAL_65:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
-// CHECK:                 %[[VAL_66:.*]] = fir.load %[[VAL_30]] {tbaa = [#[[LOCAL3_ALLOC_TAG]]]}  : !fir.ref<i32>
+// CHECK:                 %[[VAL_66:.*]] = fir.load %[[VAL_30]] <{tbaa = [#[[LOCAL3_ALLOC_TAG]]]}>  : !fir.ref<i32>
 // CHECK:                 %[[VAL_67:.*]] = fir.convert %[[VAL_66]] : (i32) -> i64
-// CHECK:                 %[[VAL_68:.*]] = fir.load %[[VAL_32]] {tbaa = [#[[LOCAL2_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 %[[VAL_68:.*]] = fir.load %[[VAL_32]] <{tbaa = [#[[LOCAL2_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:                 %[[VAL_69:.*]] = fir.convert %[[VAL_68]] : (i32) -> i64
-// CHECK:                 %[[VAL_70:.*]] = fir.load %[[VAL_34]]  {tbaa = [#[[LOCAL1_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 %[[VAL_70:.*]] = fir.load %[[VAL_34]]  <{tbaa = [#[[LOCAL1_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:                 %[[VAL_71:.*]] = fir.convert %[[VAL_70]] : (i32) -> i64
 // CHECK:                 %[[VAL_72:.*]] = fir.box_addr %[[VAL_65]] : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>) -> !fir.heap<!fir.array<?x?x?xf32>>
 // CHECK:                 %[[VAL_73:.*]]:3 = fir.box_dims %[[VAL_65]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>, index) -> (index, index, index)
@@ -316,22 +316,22 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:                 %[[VAL_75:.*]]:3 = fir.box_dims %[[VAL_65]], %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>, index) -> (index, index, index)
 // CHECK:                 %[[VAL_76:.*]] = fir.shape_shift %[[VAL_73]]#0, %[[VAL_73]]#1, %[[VAL_74]]#0, %[[VAL_74]]#1, %[[VAL_75]]#0, %[[VAL_75]]#1 : (index, index, index, index, index, index) -> !fir.shapeshift<3>
 // CHECK:                 %[[VAL_77:.*]] = fir.array_coor %[[VAL_72]](%[[VAL_76]]) %[[VAL_67]], %[[VAL_69]], %[[VAL_71]] : (!fir.heap<!fir.array<?x?x?xf32>>, !fir.shapeshift<3>, i64, i64, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_78:.*]] = fir.load %[[VAL_77]] {tbaa = [#[[ARG_LOW_TAG]]]} : !fir.ref<f32>
-// CHECK:                 fir.store %[[VAL_78]] to %[[VAL_26]]  {tbaa = [#[[LOCAL4_ALLOC_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_78:.*]] = fir.load %[[VAL_77]] <{tbaa = [#[[ARG_LOW_TAG]]]}> : !fir.ref<f32>
+// CHECK:                 fir.store %[[VAL_78]] to %[[VAL_26]]  <{tbaa = [#[[LOCAL4_ALLOC_TAG]]]}> : !fir.ref<f32>
 // load from box tagged in CodeGen
 // CHECK:                 %[[VAL_79:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-// CHECK:                 %[[VAL_80:.*]] = fir.load %[[VAL_32]]  {tbaa = [#[[LOCAL2_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 %[[VAL_80:.*]] = fir.load %[[VAL_32]]  <{tbaa = [#[[LOCAL2_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:                 %[[VAL_81:.*]] = fir.convert %[[VAL_80]] : (i32) -> i64
 // CHECK:                 %[[VAL_82:.*]] = fir.box_addr %[[VAL_79]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 // CHECK:                 %[[VAL_83:.*]]:3 = fir.box_dims %[[VAL_79]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 // CHECK:                 %[[VAL_84:.*]] = fir.shape_shift %[[VAL_83]]#0, %[[VAL_83]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:                 %[[VAL_85:.*]] = fir.array_coor %[[VAL_82]](%[[VAL_84]]) %[[VAL_81]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_86:.*]] = fir.load %[[VAL_85]] {tbaa = [#[[DIRECT_A_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_86:.*]] = fir.load %[[VAL_85]] <{tbaa = [#[[DIRECT_A_TAG]]]}> : !fir.ref<f32>
 // load from box
 // CHECK:                 %[[VAL_87:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
-// CHECK:                 %[[VAL_88:.*]] = fir.load %[[VAL_30]] {tbaa = [#[[LOCAL3_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 %[[VAL_88:.*]] = fir.load %[[VAL_30]] <{tbaa = [#[[LOCAL3_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:                 %[[VAL_89:.*]] = fir.convert %[[VAL_88]] : (i32) -> i64
-// CHECK:                 %[[VAL_90:.*]] = fir.load %[[VAL_34]] {tbaa = [#[[LOCAL1_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 %[[VAL_90:.*]] = fir.load %[[VAL_34]] <{tbaa = [#[[LOCAL1_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:                 %[[VAL_91:.*]] = fir.convert %[[VAL_90]] : (i32) -> i64
 // CHECK:                 %[[VAL_92:.*]] = fir.box_addr %[[VAL_87]] : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>) -> !fir.heap<!fir.array<?x?x?xf32>>
 // CHECK:                 %[[VAL_93:.*]]:3 = fir.box_dims %[[VAL_87]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>, index) -> (index, index, index)
@@ -339,7 +339,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:                 %[[VAL_95:.*]]:3 = fir.box_dims %[[VAL_87]], %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>, index) -> (index, index, index)
 // CHECK:                 %[[VAL_96:.*]] = fir.shape_shift %[[VAL_93]]#0, %[[VAL_93]]#1, %[[VAL_94]]#0, %[[VAL_94]]#1, %[[VAL_95]]#0, %[[VAL_95]]#1 : (index, index, index, index, index, index) -> !fir.shapeshift<3>
 // CHECK:                 %[[VAL_97:.*]] = fir.array_coor %[[VAL_92]](%[[VAL_96]]) %[[VAL_89]], %[[VAL_81]], %[[VAL_91]] : (!fir.heap<!fir.array<?x?x?xf32>>, !fir.shapeshift<3>, i64, i64, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_98:.*]] = fir.load %[[VAL_97]] {tbaa = [#[[ARG_LOW_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_98:.*]] = fir.load %[[VAL_97]] <{tbaa = [#[[ARG_LOW_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_99:.*]] = arith.mulf %[[VAL_86]], %[[VAL_98]] fastmath<contract> : f32
 // load from box
 // CHECK:                 %[[VAL_100:.*]] = fir.load %[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -347,53 +347,53 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:                 %[[VAL_102:.*]]:3 = fir.box_dims %[[VAL_100]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 // CHECK:                 %[[VAL_103:.*]] = fir.shape_shift %[[VAL_102]]#0, %[[VAL_102]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:                 %[[VAL_104:.*]] = fir.array_coor %[[VAL_101]](%[[VAL_103]]) %[[VAL_81]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_105:.*]] = fir.load %[[VAL_104]] {tbaa = [#[[DIRECT_B_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_105:.*]] = fir.load %[[VAL_104]] <{tbaa = [#[[DIRECT_B_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_106:.*]] = fir.array_coor %[[VAL_39]] %[[VAL_89]], %[[VAL_81]], %[[VAL_91]] : (!fir.box<!fir.array<?x?x?xf32>>, i64, i64, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_107:.*]] = fir.load %[[VAL_106]] {tbaa = [#[[ARG_Z_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_107:.*]] = fir.load %[[VAL_106]] <{tbaa = [#[[ARG_Z_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_108:.*]] = arith.subi %[[VAL_80]], %[[VAL_6]] : i32
 // CHECK:                 %[[VAL_109:.*]] = fir.convert %[[VAL_108]] : (i32) -> i64
 // CHECK:                 %[[VAL_110:.*]] = fir.array_coor %[[VAL_39]] %[[VAL_89]], %[[VAL_109]], %[[VAL_91]] : (!fir.box<!fir.array<?x?x?xf32>>, i64, i64, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_111:.*]] = fir.load %[[VAL_110]] {tbaa = [#[[ARG_Z_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_111:.*]] = fir.load %[[VAL_110]] <{tbaa = [#[[ARG_Z_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_112:.*]] = arith.subf %[[VAL_107]], %[[VAL_111]] fastmath<contract> : f32
 // CHECK:                 %[[VAL_113:.*]] = fir.no_reassoc %[[VAL_112]] : f32
-// CHECK:                 %[[VAL_114:.*]] = fir.load %[[VAL_14]] {tbaa = [#[[GLBL_DYINV_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_114:.*]] = fir.load %[[VAL_14]] <{tbaa = [#[[GLBL_DYINV_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_115:.*]] = arith.mulf %[[VAL_113]], %[[VAL_114]] fastmath<contract> : f32
 // CHECK:                 %[[VAL_116:.*]] = arith.subi %[[VAL_90]], %[[VAL_6]] : i32
 // CHECK:                 %[[VAL_117:.*]] = fir.convert %[[VAL_116]] : (i32) -> i64
 // CHECK:                 %[[VAL_118:.*]] = fir.array_coor %[[VAL_37]] %[[VAL_89]], %[[VAL_81]], %[[VAL_117]] : (!fir.box<!fir.array<?x?x?xf32>>, i64, i64, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_119:.*]] = fir.load %[[VAL_118]] {tbaa = [#[[ARG_Y_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_119:.*]] = fir.load %[[VAL_118]] <{tbaa = [#[[ARG_Y_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_120:.*]] = fir.array_coor %[[VAL_37]] %[[VAL_89]], %[[VAL_81]], %[[VAL_91]] : (!fir.box<!fir.array<?x?x?xf32>>, i64, i64, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_121:.*]] = fir.load %[[VAL_120]] {tbaa = [#[[ARG_Y_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_121:.*]] = fir.load %[[VAL_120]] <{tbaa = [#[[ARG_Y_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_122:.*]] = arith.subf %[[VAL_119]], %[[VAL_121]] fastmath<contract> : f32
 // CHECK:                 %[[VAL_123:.*]] = fir.no_reassoc %[[VAL_122]] : f32
-// CHECK:                 %[[VAL_124:.*]] = fir.load %[[VAL_28]] {tbaa = [#[[LOCAL5_ALLOC_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_124:.*]] = fir.load %[[VAL_28]] <{tbaa = [#[[LOCAL5_ALLOC_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_125:.*]] = arith.mulf %[[VAL_123]], %[[VAL_124]] fastmath<contract> : f32
 // CHECK:                 %[[VAL_126:.*]] = arith.addf %[[VAL_115]], %[[VAL_125]] fastmath<contract> : f32
 // CHECK:                 %[[VAL_127:.*]] = fir.no_reassoc %[[VAL_126]] : f32
 // CHECK:                 %[[VAL_128:.*]] = arith.mulf %[[VAL_105]], %[[VAL_127]] fastmath<contract> : f32
 // CHECK:                 %[[VAL_129:.*]] = arith.addf %[[VAL_99]], %[[VAL_128]] fastmath<contract> : f32
-// CHECK:                 fir.store %[[VAL_129]] to %[[VAL_97]] {tbaa = [#[[ARG_LOW_TAG]]]} : !fir.ref<f32>
+// CHECK:                 fir.store %[[VAL_129]] to %[[VAL_97]] <{tbaa = [#[[ARG_LOW_TAG]]]}> : !fir.ref<f32>
 // CHECK:                 %[[VAL_130:.*]] = arith.addi %[[VAL_63]], %[[VAL_5]] : index
 // CHECK:                 %[[VAL_131:.*]] = fir.convert %[[VAL_5]] : (index) -> i32
-// CHECK:                 %[[VAL_132:.*]] = fir.load %[[VAL_30]] {tbaa = [#[[LOCAL3_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:                 %[[VAL_132:.*]] = fir.load %[[VAL_30]] <{tbaa = [#[[LOCAL3_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:                 %[[VAL_133:.*]] = arith.addi %[[VAL_132]], %[[VAL_131]] : i32
 // CHECK:                 fir.result %[[VAL_130]], %[[VAL_133]] : index, i32
 // CHECK:               }
-// CHECK:               fir.store %[[VAL_134:.*]]#1 to %[[VAL_30]] {tbaa = [#[[LOCAL3_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:               fir.store %[[VAL_134:.*]]#1 to %[[VAL_30]] <{tbaa = [#[[LOCAL3_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:               %[[VAL_135:.*]] = arith.addi %[[VAL_56]], %[[VAL_5]] : index
 // CHECK:               %[[VAL_136:.*]] = fir.convert %[[VAL_5]] : (index) -> i32
-// CHECK:               %[[VAL_137:.*]] = fir.load %[[VAL_32]] {tbaa = [#[[LOCAL2_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:               %[[VAL_137:.*]] = fir.load %[[VAL_32]] <{tbaa = [#[[LOCAL2_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:               %[[VAL_138:.*]] = arith.addi %[[VAL_137]], %[[VAL_136]] : i32
 // CHECK:               fir.result %[[VAL_135]], %[[VAL_138]] : index, i32
 // CHECK:             }
-// CHECK:             fir.store %[[VAL_139:.*]]#1 to %[[VAL_32]] {tbaa = [#[[LOCAL2_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:             fir.store %[[VAL_139:.*]]#1 to %[[VAL_32]] <{tbaa = [#[[LOCAL2_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:             %[[VAL_140:.*]] = arith.addi %[[VAL_47]], %[[VAL_5]] : index
 // CHECK:             %[[VAL_141:.*]] = fir.convert %[[VAL_5]] : (index) -> i32
-// CHECK:             %[[VAL_142:.*]] = fir.load %[[VAL_34]] {tbaa = [#[[LOCAL1_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:             %[[VAL_142:.*]] = fir.load %[[VAL_34]] <{tbaa = [#[[LOCAL1_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:             %[[VAL_143:.*]] = arith.addi %[[VAL_142]], %[[VAL_141]] : i32
 // CHECK:             fir.result %[[VAL_140]], %[[VAL_143]] : index, i32
 // CHECK:           }
-// CHECK:           fir.store %[[VAL_144:.*]]#1 to %[[VAL_34]] {tbaa = [#[[LOCAL1_ALLOC_TAG]]]} : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_144:.*]]#1 to %[[VAL_34]] <{tbaa = [#[[LOCAL1_ALLOC_TAG]]]}> : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 }

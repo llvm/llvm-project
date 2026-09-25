@@ -52,6 +52,19 @@ func.func @switch_result_number(%arg0: i32) {
     return
 }
 
+// CHECK-LABEL: func @switch_result_number_default
+func.func @switch_result_number_default(%arg0: i32) {
+  %0:2 = "test.op_with_two_results"() : () -> (i32, i32)
+  cf.switch %arg0 : i32, [
+    default: ^bb1(%0#0 : i32),
+    0: ^bb2(%0#1 : i32)
+  ]
+  ^bb1(%1: i32):
+    return
+  ^bb2(%2: i32):
+    return
+}
+
 // CHECK-LABEL: func @cond_weights
 func.func @cond_weights(%cond: i1) {
 // CHECK: cf.cond_br %{{.*}} weights([60, 40]), ^{{.*}}, ^{{.*}}

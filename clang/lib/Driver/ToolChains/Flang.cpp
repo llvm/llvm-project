@@ -358,6 +358,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
                   options::OPT_fno_fp_sum_reassociation);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
+                    options::OPT_fno_unique_internal_linkage_names);
+
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
@@ -377,13 +380,16 @@ void Flang::addCodegenOptions(const ArgList &Args,
       {options::OPT_fdo_concurrent_to_openmp_EQ,
        options::OPT_fno_ppc_native_vec_elem_order,
        options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
-       options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
-       options::OPT_fno_repack_arrays,
+       options::OPT_fno_init_global_zero, options::OPT_finit_local_EQ,
+       options::OPT_frepack_arrays, options::OPT_fno_repack_arrays,
        options::OPT_frepack_arrays_contiguity_EQ,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_relaxed_c_loc});
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   addSeparateSectionFlags(Triple, Args, CmdArgs);
@@ -1331,6 +1337,16 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
+  // -fkeep-inline-functions/-fno-keep-inline-functions are real Clang options
+  // but are not supported by Flang; warn and ignore them.
+  for (options::ID Opt : {options::OPT_fkeep_inline_functions,
+                          options::OPT_fno_keep_inline_functions}) {
+    if (const Arg *A = Args.getLastArg(Opt)) {
+      D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+      A->claim();
+    }
+  }
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -1366,6 +1382,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Initial floating-point exception halting mode. Handled separately so it is
   // not skipped by the -ffast-math fast path in addFloatingPointOptions().
   addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
+
+  // Integer MOD/MODULO zero-divisor check. Forwarded here with -ffpe-trap=
+  // rather than in addFloatingPointOptions() so -ffast-math does not drop it.
+  Args.AddLastArg(CmdArgs, options::OPT_fcheck_integer_mod_zero_divisor);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

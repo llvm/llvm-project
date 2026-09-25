@@ -25,7 +25,7 @@ contains
 end
 
 ! CHECK-LABEL:   func.func @_QPtest_polymporphic_array(
-! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}scalar
 ! CHECK:  %[[VAL_3:.*]] = fir.call @_QPreturn_array_with_side_effects() {{.*}}: () -> !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>
 ! CHECK:  fir.save_result %[[VAL_3]] to %[[VAL_1:.*]] : !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>

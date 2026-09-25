@@ -95,7 +95,7 @@ define i64 @mul_i64(i64 %x, i64 %y) {
 
 define i64 @sdiv_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'sdiv_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r = sdiv i64 %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = sdiv i64 %x, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
 ;
   %r = sdiv i64 %x, %y
@@ -106,7 +106,7 @@ define i64 @sdiv_i64(i64 %x, i64 %y) {
 
 define i64 @udiv_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'udiv_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r = udiv i64 %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = udiv i64 %x, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
 ;
   %r = udiv i64 %x, %y
@@ -117,7 +117,7 @@ define i64 @udiv_i64(i64 %x, i64 %y) {
 
 define i64 @srem_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'srem_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r = srem i64 %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = srem i64 %x, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
 ;
   %r = srem i64 %x, %y
@@ -128,7 +128,7 @@ define i64 @srem_i64(i64 %x, i64 %y) {
 
 define i64 @urem_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'urem_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r = urem i64 %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = urem i64 %x, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
 ;
   %r = urem i64 %x, %y

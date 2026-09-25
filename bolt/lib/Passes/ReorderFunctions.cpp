@@ -53,7 +53,7 @@ cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
                           "reorder functions randomly"),
                clEnumValN(bolt::ReorderFunctions::RT_USER, "user",
                           "use function order specified by -function-order")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory),
+    cl::cat(BoltOptCategory),
     cl::callback([](const bolt::ReorderFunctions::ReorderType &option) {
       if (option == bolt::ReorderFunctions::RT_HFSORT_PLUS) {
         errs() << "BOLT-WARNING: '-reorder-functions=hfsort+' is deprecated,"
@@ -94,7 +94,7 @@ static cl::opt<bool> CgFromPerfData(
     "cg-from-perf-data",
     cl::desc("use perf data directly when constructing the call graph"
              " for stale functions"),
-    cl::init(true), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::opt<bool> CgIgnoreRecursiveCalls(
     "cg-ignore-recursive-calls",
@@ -105,7 +105,7 @@ static cl::opt<bool> CgUseSplitHotSize(
     "cg-use-split-hot-size",
     cl::desc("use hot/cold data on basic blocks to determine hot sizes for "
              "call graph functions"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(false), cl::cat(BoltOptCategory));
 
 } // namespace opts
 

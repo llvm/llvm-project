@@ -190,12 +190,15 @@ public:
 
   void pushScope() {
     symbolMapStack.emplace_back();
+    deviceSymbolMapStack.emplace_back();
     storageMapStack.emplace_back();
     componentMapStack.emplace_back();
   }
   void popScope() {
     symbolMapStack.pop_back();
     assert(symbolMapStack.size() >= 1);
+    deviceSymbolMapStack.pop_back();
+    assert(deviceSymbolMapStack.size() >= 1);
     storageMapStack.pop_back();
     assert(storageMapStack.size() >= 1);
     componentMapStack.pop_back();
@@ -298,6 +301,23 @@ public:
     return lookupSymbol(*sym);
   }
 
+  /// Add and look up an alternate device-address binding for an object mapped
+  /// by a structured OpenACC data construct. Ordinary symbol lookup continues
+  /// to return the host binding.
+  void addDeviceVariableDefinition(semantics::SymbolRef symRef,
+                                   fir::FortranVariableOpInterface definingOp,
+                                   bool force = false) {
+    makeDeviceSym(symRef, SymbolBox(definingOp), force);
+  }
+  SymbolBox lookupDeviceSymbol(semantics::SymbolRef);
+  bool copyDeviceBindingToCurrentScope(semantics::SymbolRef symRef) {
+    if (SymbolBox box{lookupDeviceSymbol(symRef)}) {
+      makeSym(symRef, box, /*force=*/true);
+      return true;
+    }
+    return false;
+  }
+
   /// Find a symbol by name and return its value if it appears in the current
   /// mappings. This lookup is more expensive as it iterates over the map.
   const semantics::Symbol *lookupSymbolByName(llvm::StringRef symName);
@@ -335,6 +355,8 @@ public:
   void clear() {
     symbolMapStack.clear();
     symbolMapStack.emplace_back();
+    deviceSymbolMapStack.clear();
+    deviceSymbolMapStack.emplace_back();
     assert(symbolMapStack.size() == 1);
     impliedDoStack.clear();
     storageMapStack.clear();
@@ -417,8 +439,19 @@ private:
     symbolMapStack.back().try_emplace(sym, box);
   }
 
+  void makeDeviceSym(semantics::SymbolRef symRef, const SymbolBox &box,
+                     bool force = false) {
+    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+    if (force)
+      deviceSymbolMapStack.back().erase(sym);
+    assert(box && "cannot add an undefined device symbol box");
+    deviceSymbolMapStack.back().try_emplace(sym, box);
+  }
+
   llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
       symbolMapStack;
+  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
+      deviceSymbolMapStack;
 
   // Implied DO induction variables are not represented as Se::Symbol in
   // Ev::Expr. Keep the variable markers in their own stack.

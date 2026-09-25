@@ -89,7 +89,6 @@ class HexagonMCChecker {
                    HexagonMCInstrInfo::PredicateInfo Predicated);
 
   // Checks performed.
-  bool checkBranches();
   bool checkPredicates();
   bool checkNewValues();
   bool checkRegisters();

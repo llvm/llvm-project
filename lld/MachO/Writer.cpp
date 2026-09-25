@@ -662,6 +662,12 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
+// Give a symbol its single non-lazy pointer slot. A GOT reference and a TLV
+// reference to a thread-local both want the same value -- the address of its
+// TLV descriptor -- so one __got entry serves both, and the result no longer
+// depends on which reference the relocation scan reaches first.
+static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
+
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const Relocation &r) {
   if (!sym->isLive()) {
@@ -682,10 +688,10 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      in.got->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
-      in.tlvPointers->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
@@ -1440,7 +1446,6 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
-  in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

@@ -646,6 +646,10 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Size = alignTo(Size, 4);
     return Size;
   }
+  case ARM::Int_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 16 : 20;
+  case ARM::tInt_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 10 : 12;
   }
 }
 

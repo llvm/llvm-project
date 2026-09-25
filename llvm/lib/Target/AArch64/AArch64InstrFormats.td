@@ -5024,7 +5024,7 @@ class LoadStoreExclusiveSimple<bits<2> sz, bit o2, bit L, bit o1, bit o0,
 }
 
 // Simple load acquires don't set the exclusive monitor
-let mayLoad = 1, mayStore = 0 in
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
 class LoadAcquire<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                   RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs regtype:$Rt),
@@ -5162,7 +5162,7 @@ multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> 
 }
 
 // Simple store release operations do not check the exclusive monitor.
-let mayLoad = 0, mayStore = 1 in
+let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
 class StoreRelease<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                    RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs),

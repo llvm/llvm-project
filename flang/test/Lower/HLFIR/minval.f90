@@ -216,7 +216,7 @@ end function
 ! CHECK-SAME:                                     %[[MASK_ARG:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask", fir.optional}) -> i32
 ! CHECK:           %[[ARRAY_VAR:.*]]:2 = hlfir.declare %[[ARRAY_ARG]]
 ! CHECK:           %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 {bindc_name = "testoptionalscalar", uniq_name = "_QFtestoptionalscalarEtestoptionalscalar"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "testoptionalscalar", uniq_name = "_QFtestoptionalscalarEtestoptionalscalar"}>
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[MASK_IS_PRESENT:.*]] = fir.is_present %[[MASK_VAR]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:           %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#0
@@ -272,10 +272,10 @@ end function
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x4x!fir.char<1,3>> {bindc_name = "char", uniq_name = "_QFtest_type_mismatchEchar"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x4x!fir.char<1,3>> <{bindc_name = "char", uniq_name = "_QFtest_type_mismatchEchar"}>
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) typeparams %[[VAL_0]] {uniq_name = "_QFtest_type_mismatchEchar"} : (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.shape<2>, index) -> (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.ref<!fir.array<3x4x!fir.char<1,3>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "test_type_mismatch", uniq_name = "_QFtest_type_mismatchEtest_type_mismatch"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = "test_type_mismatch", uniq_name = "_QFtest_type_mismatchEtest_type_mismatch"}>
 ! CHECK:           %[[VAL_7:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>

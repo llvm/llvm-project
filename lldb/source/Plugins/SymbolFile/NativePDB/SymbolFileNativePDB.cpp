@@ -25,6 +25,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
@@ -1273,6 +1276,13 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
   if (!section_list)
     return;
 
+  llvm::DenseMap<lldb::addr_t, llvm::SmallVector<uint32_t, 1>> symbols_by_addr;
+  for (uint32_t i = 0, n = symtab.GetNumSymbols(); i < n; ++i) {
+    Symbol *sym = symtab.SymbolAtIndex(i);
+    if (sym && sym->ValueIsAddress())
+      symbols_by_addr[sym->GetAddressRef().GetFileAddress()].push_back(i);
+  }
+
   PublicSym32 last_sym;
   size_t last_sym_idx = 0;
   lldb::SectionSP section_sp;
@@ -1290,12 +1300,25 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
       return;
 
     if (next && last_sym.Segment == next->Segment) {
-      assert(last_sym.Offset <= next->Offset);
+      if (next->Offset < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "greater than the following offset {3}",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 next->Offset);
+        return;
+      }
       last->SetByteSize(next->Offset - last_sym.Offset);
     } else {
       // the last symbol was the last in its section
-      assert(section_sp->GetByteSize() >= last_sym.Offset);
-      assert(!next || next->Segment > last_sym.Segment);
+      if (section_sp->GetByteSize() < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "past the end of section '{3}' (size {4})",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 section_sp->GetName(), section_sp->GetByteSize());
+        return;
+      }
       last->SetByteSize(section_sp->GetByteSize() - last_sym.Offset);
     }
   };
@@ -1327,20 +1350,29 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
         (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
       type = eSymbolTypeCode;
 
-    last_sym_idx =
-        symtab.AddSymbol(Symbol(/*symID=*/pid,
-                                /*name=*/pub.Name,
-                                /*type=*/type,
-                                /*external=*/true,
-                                /*is_debug=*/true,
-                                /*is_trampoline=*/false,
-                                /*is_artificial=*/false,
-                                /*section_sp=*/section_sp,
-                                /*value=*/pub.Offset,
-                                /*size=*/0,
-                                /*size_is_valid=*/false,
-                                /*contains_linker_annotations=*/false,
-                                /*flags=*/0));
+    Symbol pub_symbol(/*symID=*/pid,
+                      /*name=*/pub.Name,
+                      /*type=*/type,
+                      /*external=*/true,
+                      /*is_debug=*/true,
+                      /*is_trampoline=*/false,
+                      /*is_artificial=*/false,
+                      /*section_sp=*/section_sp,
+                      /*value=*/pub.Offset,
+                      /*size=*/0,
+                      /*size_is_valid=*/false,
+                      /*contains_linker_annotations=*/false,
+                      /*flags=*/0);
+
+    auto it = symbols_by_addr.find(pub_symbol.GetAddressRef().GetFileAddress());
+    if (it != symbols_by_addr.end() &&
+        llvm::any_of(it->second, [&](uint32_t idx) {
+          Symbol *sym = symtab.SymbolAtIndex(idx);
+          return sym && sym->GetMangled() == pub_symbol.GetMangled();
+        }))
+      pub_symbol.SetType(lldb::eSymbolTypeAdditional);
+
+    last_sym_idx = symtab.AddSymbol(pub_symbol);
     last_sym = pub;
   }
 

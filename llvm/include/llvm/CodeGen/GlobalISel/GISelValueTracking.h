@@ -209,6 +209,17 @@ public:
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
 };
+
+class GISelValueTrackingFPClassPrinterPass
+    : public RequiredPassInfoMixin<GISelValueTrackingFPClassPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  GISelValueTrackingFPClassPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H

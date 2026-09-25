@@ -44,7 +44,8 @@ bb:
 !2 = distinct !{!2}
 !3 = !{!"Simple C/C++ TBAA"}
 !4 = !{!"omnipotent char", !3, i64 0}
-!5 = !{!"i8", !4, i64 0}
+!5 = !{!6, !6, i64 0, i64 0}
+!6 = !{!"i8", !4}
 ;.
 ; CHECK: [[TBAA0]] = !{[[META3:![0-9]+]], [[META3]], i64 0, i64 0}
 ; CHECK: [[META3]] = !{!"i8", [[META4:![0-9]+]]}

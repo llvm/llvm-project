@@ -33,7 +33,7 @@ end module
 program test_cray_pointers_01
   real*8 :: var(*)
   ! CHECK: %[[BOX_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf64>>>
-  ! CHECK: %[[IVAR_ALLOCA:.*]] = fir.alloca i64 {bindc_name = "ivar", uniq_name = "_QFEivar"}
+  ! CHECK: %[[IVAR_ALLOCA:.*]] = fir.alloca i64 <{bindc_name = "ivar", uniq_name = "_QFEivar"}>
   ! CHECK: %[[IVAR_DECL_01:.*]]:2 = hlfir.declare %[[IVAR_ALLOCA]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
   pointer(ivar,var)
   ! CHECK: %[[VAR_DECL_02:.*]]:2 = hlfir.declare %[[BOX_ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
@@ -56,7 +56,7 @@ program test_cray_pointers_01
     ! CHECK:   omp.terminator
     ! CHECK: }
     ! CHECK-LABEL: fir.global @_QMtest_host_assoc_cray_pointerEivar : i64
-    ! CHECK-LABEL: fir.global  @_QMtest_host_assoc_cray_pointerEvar {alignment = 64 : i64} : !fir.array<?xf64>
+    ! CHECK-LABEL: fir.global  @_QMtest_host_assoc_cray_pointerEvar <{alignment = 64 : i64}> : !fir.array<?xf64>
 
 
   !$omp end parallel

@@ -1079,19 +1079,18 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
+      if (const Expr *E = dyn_cast<const Expr *>(*Record)) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
-      } else if (auto CR = Record->dyn_cast<const ConceptReference *>()) {
+      } else if (auto CR = dyn_cast<const ConceptReference *>(*Record)) {
         Expected<ConceptReference *> ToCROrErr = import(CR);
         if (!ToCROrErr)
           return ToCROrErr.takeError();
         ToSat.Details.emplace_back(ToCROrErr.get());
       } else {
-        auto Pair =
-            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
+        auto Pair = dyn_cast<const ConstraintSubstitutionDiagnostic *>(*Record);
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)

@@ -61,6 +61,7 @@ def math_mpfr_test(name, hdrs = [], deps = [], **kwargs):
     math_test(
         name = name,
         hdrs = hdrs,
+        overlay_build_only = True,  # mpfr cannot be built in full-build yet
         deps = deps + ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
         **kwargs
     )

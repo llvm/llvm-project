@@ -45,8 +45,10 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; M2-NEXT:    nop
 ; M2-NEXT:  $BB0_2:
 ; M2-NEXT:    mtc1 $7, $f0
-; M2-NEXT:    jr $ra
+; M2-NEXT:    nop
 ; M2-NEXT:    mtc1 $6, $f1
+; M2-NEXT:    jr $ra
+; M2-NEXT:    nop
 ;
 ; CMOV32R1-LABEL: tst_select_i1_double:
 ; CMOV32R1:       # %bb.0: # %entry
@@ -145,8 +147,10 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MIPS1-PSX-NEXT:    nop
 ; MIPS1-PSX-NEXT:  $BB0_2:
 ; MIPS1-PSX-NEXT:    mtc1 $6, $f0
-; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 ; MIPS1-PSX-NEXT:    mtc1 $7, $f1
+; MIPS1-PSX-NEXT:    jr $ra
+; MIPS1-PSX-NEXT:    nop
 entry:
   %r = select i1 %s, double %x, double %y
   ret double %r

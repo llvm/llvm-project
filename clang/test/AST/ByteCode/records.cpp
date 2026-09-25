@@ -1251,6 +1251,41 @@ namespace InheritedConstructor {
 
     constexpr S s(1);
   }
+
+  namespace GH158529 {
+    /// Used to assert when popping the variadic arguments of an inherited
+    /// constructor, since the call site is a CXXInheritedCtorInitExpr.
+    struct foo {
+      constexpr foo(int, ...) {}
+    };
+    struct boo : foo {
+      using foo::foo;
+    };
+    struct bar : boo {
+      using boo::boo;
+    };
+    bar u(0, 1);
+
+    struct A {
+      int a;
+      constexpr A(int a, ...) : a(a) {}
+    };
+    struct B : A { using A::A; };
+    struct C : B { using B::B; };
+
+    constexpr B b(1, 2);
+    static_assert(b.a == 1, "");
+    constexpr C c(3, 4, 5);
+    static_assert(c.a == 3, "");
+    constexpr C c2(6, 7.5, 'c', 8L);
+    static_assert(c2.a == 6, "");
+
+    constexpr int f() {
+      C x(9, 10);
+      return x.a;
+    }
+    static_assert(f() == 9, "");
+  }
 }
 
 namespace InvalidCtorInitializer {
@@ -1302,11 +1337,34 @@ namespace {
   };
   constexpr int a() {
     int x = 1;
-    int f = B{x}.x;
-    B{x}; // both-warning {{expression result unused}}
-
-    return 1;
+    {
+      B b{x};
+    }
+    return x;
   }
+  static_assert(a() == 0);
+
+  constexpr int discarded() {
+    int x = 1;
+    B{x}; // both-warning {{expression result unused}}
+    return x;
+  }
+
+  /// The temporary 'A' created by the default member initializer is destroyed
+  /// at the end of the full-expression containing the aggregate initialization
+  /// (see https://github.com/llvm/llvm-project/issues/85601).
+  static_assert(discarded() == 0);
+
+  /// A const-qualified composite result is writable while under construction.
+  constexpr int decrement(int &x) {
+    return --x;
+  }
+  struct DMIConstComposite {
+    int a;
+    int b = decrement(a);
+  };
+  constexpr DMIConstComposite c{1};
+  static_assert(c.a == 0);
 }
 #endif
 

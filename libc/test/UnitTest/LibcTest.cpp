@@ -13,9 +13,8 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
-#include "src/__support/wchar/string_converter.h"
+#include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/TestLogger.h"
 
 #if __STDC_HOSTED__
@@ -74,35 +73,7 @@ cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
 cpp::string describeValue(cpp::wstring_view Value) {
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-  LIBC_NAMESPACE::internal::mbstate State;
-  LIBC_NAMESPACE::internal::StringConverter<wchar_t> StringConv(
-      Value.data(), &State, /* dstlen = */ SIZE_MAX, Value.size());
-
-  cpp::string S;
-  for (auto Conv = StringConv.pop<char8_t>(); Conv.has_value();
-       Conv = StringConv.pop<char8_t>()) {
-    S += static_cast<char>(*Conv);
-  }
-
-  if (S.empty() && !Value.empty())
-    S = cpp::string("<Failed Conversion To UTF-8>");
-
-  return S;
-#else  // LIBC_TYPES_WCHAR_T_IS_UTF32
-  if (Value.empty())
-    return "{}";
-
-  cpp::string S;
-  S += '{';
-  for (const wchar_t *Iter = Value.begin(); Iter + 1 != Value.end(); ++Iter) {
-    S += cpp::to_string(*Iter);
-    S += ',';
-  }
-  S += cpp::to_string(Value.back());
-  S += '}';
-  return S;
-#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
+  return try_convert_to_utf8(Value);
 }
 
 template <typename ValType>
@@ -314,11 +285,27 @@ bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
                    RHSStr, Loc);
 }
 
+bool test_str_eq(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::EQ,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
 bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc) {
   return test_impl(internal::current_context, TestCond::NE,
                    LHS ? cpp::string_view(LHS) : cpp::string_view(),
                    RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
+bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::NE,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
                    RHSStr, Loc);
 }
 

@@ -72,9 +72,9 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -97,12 +97,12 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C2]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C3]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -157,9 +157,9 @@ define amdgpu_kernel void @test_call_external_i1_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -180,12 +180,12 @@ define amdgpu_kernel void @test_call_external_i1_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -235,9 +235,9 @@ define amdgpu_kernel void @test_call_external_i1_zeroext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -258,12 +258,12 @@ define amdgpu_kernel void @test_call_external_i1_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -297,9 +297,9 @@ define amdgpu_kernel void @test_call_external_i1_signext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -320,12 +320,12 @@ define amdgpu_kernel void @test_call_external_i1_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -359,9 +359,9 @@ define amdgpu_kernel void @test_call_external_i8_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -382,12 +382,12 @@ define amdgpu_kernel void @test_call_external_i8_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -439,9 +439,9 @@ define amdgpu_kernel void @test_call_external_i8_zeroext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -462,12 +462,12 @@ define amdgpu_kernel void @test_call_external_i8_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -501,9 +501,9 @@ define amdgpu_kernel void @test_call_external_i8_signext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -524,12 +524,12 @@ define amdgpu_kernel void @test_call_external_i8_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -563,9 +563,9 @@ define amdgpu_kernel void @test_call_external_i16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -586,12 +586,12 @@ define amdgpu_kernel void @test_call_external_i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -622,9 +622,9 @@ define amdgpu_kernel void @test_call_external_i16_zeroext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -645,12 +645,12 @@ define amdgpu_kernel void @test_call_external_i16_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -684,9 +684,9 @@ define amdgpu_kernel void @test_call_external_i16_signext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -707,12 +707,12 @@ define amdgpu_kernel void @test_call_external_i16_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -746,9 +746,9 @@ define amdgpu_kernel void @test_call_external_i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -769,12 +769,12 @@ define amdgpu_kernel void @test_call_external_i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -822,9 +822,9 @@ define amdgpu_kernel void @test_call_external_i48_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -845,12 +845,12 @@ define amdgpu_kernel void @test_call_external_i48_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -883,9 +883,9 @@ define amdgpu_kernel void @test_call_external_i48_zeroext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -906,12 +906,12 @@ define amdgpu_kernel void @test_call_external_i48_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -946,9 +946,9 @@ define amdgpu_kernel void @test_call_external_i48_signext_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -969,12 +969,12 @@ define amdgpu_kernel void @test_call_external_i48_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1009,9 +1009,9 @@ define amdgpu_kernel void @test_call_external_i64_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1032,12 +1032,12 @@ define amdgpu_kernel void @test_call_external_i64_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1069,9 +1069,9 @@ define amdgpu_kernel void @test_call_external_p1_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1092,12 +1092,12 @@ define amdgpu_kernel void @test_call_external_p1_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1129,9 +1129,9 @@ define amdgpu_kernel void @test_call_external_v2p1_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1152,12 +1152,12 @@ define amdgpu_kernel void @test_call_external_v2p1_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1193,9 +1193,9 @@ define amdgpu_kernel void @test_call_external_p3_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1216,12 +1216,12 @@ define amdgpu_kernel void @test_call_external_p3_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1251,9 +1251,9 @@ define amdgpu_kernel void @test_call_external_v2p3_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1274,12 +1274,12 @@ define amdgpu_kernel void @test_call_external_v2p3_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1311,9 +1311,9 @@ define amdgpu_kernel void @test_call_external_f16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1334,12 +1334,12 @@ define amdgpu_kernel void @test_call_external_f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1371,9 +1371,9 @@ define amdgpu_kernel void @test_call_external_f32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1394,12 +1394,12 @@ define amdgpu_kernel void @test_call_external_f32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1429,9 +1429,9 @@ define amdgpu_kernel void @test_call_external_f64_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1452,12 +1452,12 @@ define amdgpu_kernel void @test_call_external_f64_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1489,9 +1489,9 @@ define amdgpu_kernel void @test_call_external_v2f64_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1512,12 +1512,12 @@ define amdgpu_kernel void @test_call_external_v2f64_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1553,9 +1553,9 @@ define amdgpu_kernel void @test_call_external_v2i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1576,12 +1576,12 @@ define amdgpu_kernel void @test_call_external_v2i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1613,9 +1613,9 @@ define amdgpu_kernel void @test_call_external_v3i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1636,12 +1636,12 @@ define amdgpu_kernel void @test_call_external_v3i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1674,9 +1674,9 @@ define amdgpu_kernel void @test_call_external_v4i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1697,12 +1697,12 @@ define amdgpu_kernel void @test_call_external_v4i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1736,9 +1736,9 @@ define amdgpu_kernel void @test_call_external_v5i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1759,12 +1759,12 @@ define amdgpu_kernel void @test_call_external_v5i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1799,9 +1799,9 @@ define amdgpu_kernel void @test_call_external_v8i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1822,12 +1822,12 @@ define amdgpu_kernel void @test_call_external_v8i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1865,9 +1865,9 @@ define amdgpu_kernel void @test_call_external_v16i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1888,12 +1888,12 @@ define amdgpu_kernel void @test_call_external_v16i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -1939,9 +1939,9 @@ define amdgpu_kernel void @test_call_external_v32i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -1962,12 +1962,12 @@ define amdgpu_kernel void @test_call_external_v32i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2029,9 +2029,9 @@ define amdgpu_kernel void @test_call_external_v2i16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2052,12 +2052,12 @@ define amdgpu_kernel void @test_call_external_v2i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2087,9 +2087,9 @@ define amdgpu_kernel void @test_call_external_v3i16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2110,12 +2110,12 @@ define amdgpu_kernel void @test_call_external_v3i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2149,9 +2149,9 @@ define amdgpu_kernel void @test_call_external_v4i16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2172,12 +2172,12 @@ define amdgpu_kernel void @test_call_external_v4i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2209,9 +2209,9 @@ define amdgpu_kernel void @test_call_external_v2f16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2232,12 +2232,12 @@ define amdgpu_kernel void @test_call_external_v2f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2267,9 +2267,9 @@ define amdgpu_kernel void @test_call_external_v3f16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2290,12 +2290,12 @@ define amdgpu_kernel void @test_call_external_v3f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2329,9 +2329,9 @@ define amdgpu_kernel void @test_call_external_v4f16_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2352,12 +2352,12 @@ define amdgpu_kernel void @test_call_external_v4f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2389,9 +2389,9 @@ define amdgpu_kernel void @test_call_external_v3f32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2412,12 +2412,12 @@ define amdgpu_kernel void @test_call_external_v3f32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2450,9 +2450,9 @@ define amdgpu_kernel void @test_call_external_v5f32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2473,12 +2473,12 @@ define amdgpu_kernel void @test_call_external_v5f32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2514,9 +2514,9 @@ define amdgpu_kernel void @test_call_external_i32_i64_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2537,12 +2537,12 @@ define amdgpu_kernel void @test_call_external_i32_i64_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2604,9 +2604,9 @@ define amdgpu_kernel void @test_call_external_a2i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2627,12 +2627,12 @@ define amdgpu_kernel void @test_call_external_a2i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2667,9 +2667,9 @@ define amdgpu_kernel void @test_call_external_a5i8_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2690,12 +2690,12 @@ define amdgpu_kernel void @test_call_external_a5i8_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2752,9 +2752,9 @@ define amdgpu_kernel void @test_call_external_v32i32_i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2776,12 +2776,12 @@ define amdgpu_kernel void @test_call_external_v32i32_i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2819,9 +2819,9 @@ define amdgpu_kernel void @test_call_external_i32_v32i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2843,12 +2843,12 @@ define amdgpu_kernel void @test_call_external_i32_v32i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2886,9 +2886,9 @@ define amdgpu_kernel void @test_call_external_v33i32_func_void() #0 {
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2910,12 +2910,12 @@ define amdgpu_kernel void @test_call_external_v33i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C1]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C2]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
@@ -2946,9 +2946,9 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr2
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -2975,12 +2975,12 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](s32)
-  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](s32)
+  ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(i32) = COPY [[COPY2]](i32)
+  ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 10
   ; GCN-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY18]], [[C2]](i32)
   ; GCN-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY17]], [[SHL]]
-  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](s32)
+  ; GCN-NEXT:   [[COPY19:%[0-9]+]]:_(i32) = COPY [[COPY]](i32)
   ; GCN-NEXT:   [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[COPY19]], [[C3]](i32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]

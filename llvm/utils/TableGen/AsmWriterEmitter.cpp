@@ -54,6 +54,16 @@ using namespace llvm;
 
 namespace {
 
+/// A group of instructions that share identical printing logic except for at
+/// most one differing operand.
+struct InstructionGroup {
+  AsmWriterInst FirstInst;
+  std::vector<AsmWriterInst> SimilarInsts;
+  unsigned DifferingOperand = ~0;
+
+  InstructionGroup(AsmWriterInst FirstInst) : FirstInst(std::move(FirstInst)) {}
+};
+
 class AsmWriterEmitter {
   const RecordKeeper &Records;
   CodeGenTarget Target;
@@ -105,52 +115,53 @@ PrintCases(std::vector<std::pair<std::string, AsmWriterOperand>> &OpsToPrint,
   O << "\n      break;\n";
 }
 
-/// EmitInstructions - Emit the last instruction in the vector and any other
-/// instructions that are suitably similar to it.
-static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
-                             bool PassSubtarget) {
-  AsmWriterInst FirstInst = Insts.back();
-  Insts.pop_back();
+/// Group instructions by similarity.
+static std::vector<InstructionGroup>
+groupInstructions(std::vector<AsmWriterInst> &Insts) {
+  std::vector<InstructionGroup> Groups;
+  while (!Insts.empty()) {
+    InstructionGroup &G = Groups.emplace_back(std::move(Insts.back()));
+    Insts.pop_back();
 
-  std::vector<AsmWriterInst> SimilarInsts;
-  unsigned DifferingOperand = ~0;
-  for (unsigned i = Insts.size(); i != 0; --i) {
-    unsigned DiffOp = Insts[i - 1].MatchesAllButOneOp(FirstInst);
-    if (DiffOp != ~1U) {
-      if (DifferingOperand == ~0U) // First match!
-        DifferingOperand = DiffOp;
+    for (unsigned I = Insts.size(); I != 0; --I) {
+      unsigned DiffOp = Insts[I - 1].MatchesAllButOneOp(G.FirstInst);
+      if (DiffOp != ~1U) {
+        if (G.DifferingOperand == ~0U) // First match!
+          G.DifferingOperand = DiffOp;
 
-      // If this differs in the same operand as the rest of the instructions in
-      // this class, move it to the SimilarInsts list.
-      if (DifferingOperand == DiffOp || DiffOp == ~0U) {
-        SimilarInsts.push_back(Insts[i - 1]);
-        Insts.erase(Insts.begin() + i - 1);
+        // If this differs in the same operand as the rest of the instructions
+        // in this class, move it to the SimilarInsts list.
+        if (G.DifferingOperand == DiffOp || DiffOp == ~0U) {
+          G.SimilarInsts.push_back(Insts[I - 1]);
+          Insts.erase(Insts.begin() + I - 1);
+        }
       }
     }
   }
+  return Groups;
+}
 
-  O << "  case " << FirstInst.CGI->Namespace << "::" << FirstInst.CGI->getName()
-    << ":\n";
-  for (const AsmWriterInst &AWI : SimilarInsts)
-    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->getName() << ":\n";
-  for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
-    if (i != DifferingOperand) {
+/// Emit operand printing code for an instruction group.
+static void emitInstructionOperands(const InstructionGroup &G, raw_ostream &O,
+                                    bool PassSubtarget) {
+  for (unsigned I = 0, E = G.FirstInst.Operands.size(); I != E; ++I) {
+    if (I != G.DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
-      O << "    " << FirstInst.Operands[i].getCode(PassSubtarget);
+      O << "    " << G.FirstInst.Operands[I].getCode(PassSubtarget);
     } else {
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
       O << "    switch (MI->getOpcode()) {\n";
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
-      OpsToPrint.emplace_back(FirstInst.CGI->Namespace.str() +
-                                  "::" + FirstInst.CGI->getName().str(),
-                              FirstInst.Operands[i]);
+      OpsToPrint.emplace_back(G.FirstInst.CGI->Namespace.str() +
+                                  "::" + G.FirstInst.CGI->getName().str(),
+                              G.FirstInst.Operands[I]);
 
-      for (const AsmWriterInst &AWI : SimilarInsts) {
+      for (const AsmWriterInst &AWI : G.SimilarInsts) {
         OpsToPrint.emplace_back(AWI.CGI->Namespace.str() +
                                     "::" + AWI.CGI->getName().str(),
-                                AWI.Operands[i]);
+                                AWI.Operands[I]);
       }
       std::reverse(OpsToPrint.begin(), OpsToPrint.end());
       while (!OpsToPrint.empty())
@@ -159,6 +170,16 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
     }
     O << "\n";
   }
+}
+
+/// Emit the case labels and operand printing code for an instruction group.
+static void emitInstructions(const InstructionGroup &G, raw_ostream &O,
+                             bool PassSubtarget) {
+  O << "  case " << G.FirstInst.CGI->Namespace
+    << "::" << G.FirstInst.CGI->getName() << ":\n";
+  for (const AsmWriterInst &AWI : G.SimilarInsts)
+    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->getName() << ":\n";
+  emitInstructionOperands(G, O, PassSubtarget);
   O << "    break;\n";
 }
 
@@ -562,16 +583,18 @@ void AsmWriterEmitter::EmitPrintInstruction(
   // elements in the vector.
   std::reverse(Instructions.begin(), Instructions.end());
 
+  std::vector<InstructionGroup> Groups = groupInstructions(Instructions);
+
   // Now that we've emitted all of the operand info that fit into 64 bits, emit
   // information for those instructions that are left.  This is a less dense
   // encoding, but we expect the main 64-bit table to handle the majority of
   // instructions.
-  if (!Instructions.empty()) {
+  if (!Groups.empty()) {
     // Find the opcode # of inline asm.
     O << "  switch (MI->getOpcode()) {\n";
     O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
-    while (!Instructions.empty())
-      EmitInstructions(Instructions, O, PassSubtarget);
+    for (const InstructionGroup &G : Groups)
+      emitInstructions(G, O, PassSubtarget);
 
     O << "  }\n";
   }

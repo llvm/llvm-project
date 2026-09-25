@@ -4,6 +4,10 @@
 
 #include <cstdlib>
 #include <errno.h>
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 #include <mutex>
 #include <stdio.h>
 #include <string>
@@ -86,31 +90,37 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
   // Now switch the I/O over to a pipe, which will be handled by the
   // NativeFile class:
   int to_lldb_des[2];
+#ifdef _WIN32
+  int pipe_result = _pipe(to_lldb_des, 4096, _O_TEXT);
+  FILE *fh_lldb_in = _fdopen(to_lldb_des[0], "r");
+  FILE *fh_to_lldb = _fdopen(to_lldb_des[1], "w");
+#else
   int pipe_result = pipe(to_lldb_des);
   FILE *fh_lldb_in = fdopen(to_lldb_des[0], "r");
   FILE *fh_to_lldb = fdopen(to_lldb_des[1], "w");
+#endif
 
   // We need to reset the handle before destroying the debugger
   // or the same deadlock will stall exiting:
   class Cleanup {
   public:
-    Cleanup(SBDebugger dbg, int filedes[2]) : m_dbg(dbg) {
+    Cleanup(SBDebugger dbg, FILE *read_end, FILE *write_end)
+        : m_dbg(dbg), m_read_end(read_end), m_write_end(write_end) {
       m_file = m_dbg.GetInputFileHandle();
-      m_filedes[0] = filedes[0];
-      m_filedes[1] = filedes[1];
     }
     ~Cleanup() {
+      fclose(m_write_end);
       m_dbg.SetInputFileHandle(m_file, false);
-      close(m_filedes[0]);
-      close(m_filedes[1]);
+      fclose(m_read_end);
     }
 
   private:
     FILE *m_file;
     SBDebugger m_dbg;
-    int m_filedes[2];
+    FILE *m_read_end;
+    FILE *m_write_end;
   };
-  Cleanup cleanup(dbg, to_lldb_des);
+  Cleanup cleanup(dbg, fh_lldb_in, fh_to_lldb);
 
   dbg.SetInputFileHandle(fh_lldb_in, false);
 

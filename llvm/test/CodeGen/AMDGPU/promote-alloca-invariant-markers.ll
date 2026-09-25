@@ -4,7 +4,6 @@
 declare ptr @llvm.invariant.start.p5(i64, ptr addrspace(5) nocapture)
 declare void @llvm.invariant.end.p5(ptr, i64, ptr addrspace(5) nocapture)
 declare ptr addrspace(5) @llvm.launder.invariant.group.p5(ptr addrspace(5))
-declare ptr addrspace(5) @llvm.strip.invariant.group.p5(ptr addrspace(5))
 
 define amdgpu_kernel void @use_invariant_start_and_end() {
 ; CHECK-LABEL: define amdgpu_kernel void @use_invariant_start_and_end() {
@@ -37,8 +36,8 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @use_invariant_group_and_strip() {
-; CHECK-LABEL: define amdgpu_kernel void @use_invariant_group_and_strip() {
+define amdgpu_kernel void @use_invariant_group_and_launder() {
+; CHECK-LABEL: define amdgpu_kernel void @use_invariant_group_and_launder() {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
@@ -54,19 +53,15 @@ define amdgpu_kernel void @use_invariant_group_and_strip() {
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x i32], ptr addrspace(3) @use_invariant_group_and_strip.alloca, i32 0, i32 [[TMP13]]
-; CHECK-NEXT:    [[INVARIANT2:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[TMP14]])
-; CHECK-NEXT:    store <2 x i1> zeroinitializer, ptr addrspace(3) [[INVARIANT2]], align 1
-; CHECK-NEXT:    [[STRIP1:%.*]] = call ptr addrspace(3) @llvm.strip.invariant.group.p3(ptr addrspace(3) [[TMP14]])
-; CHECK-NEXT:    store <2 x i1> zeroinitializer, ptr addrspace(3) [[STRIP1]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x i32], ptr addrspace(3) @use_invariant_group_and_launder.alloca, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[INVARIANT:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[TMP14]])
+; CHECK-NEXT:    store <2 x i1> zeroinitializer, ptr addrspace(3) [[INVARIANT]], align 1
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %alloca = alloca i32, align 4, addrspace(5)
   %invariant = call ptr addrspace(5) @llvm.launder.invariant.group.p5(ptr addrspace(5) %alloca)
   store <2 x i1> zeroinitializer, ptr addrspace(5) %invariant, align 1
-  %strip = call ptr addrspace(5) @llvm.strip.invariant.group.p5(ptr addrspace(5) %alloca)
-  store <2 x i1> zeroinitializer, ptr addrspace(5) %strip, align 1
   ret void
 }
 
@@ -126,12 +121,9 @@ define amdgpu_kernel void @use_invariant_group_and_strip_gep(ptr addrspace(1) %o
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @use_invariant_group_and_strip_gep.alloca, i32 0, i32 [[TMP13]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[TMP14]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 22, ptr addrspace(3) [[GEP]], align 4
-; CHECK-NEXT:    [[LAUNDER2:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[GEP]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr addrspace(3) [[LAUNDER2]], align 4
-; CHECK-NEXT:    [[STRIP1:%.*]] = call ptr addrspace(3) @llvm.strip.invariant.group.p3(ptr addrspace(3) [[GEP]])
+; CHECK-NEXT:    [[STRIP1:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[GEP]])
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr addrspace(3) [[STRIP1]], align 4
-; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V1]], [[V2]]
-; CHECK-NEXT:    store i32 [[SUM]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store i32 [[V2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -140,10 +132,7 @@ bb:
   store i32 22, ptr addrspace(5) %gep, align 4
   %launder = call ptr addrspace(5) @llvm.launder.invariant.group.p5(ptr addrspace(5) %gep)
   %v1 = load i32, ptr addrspace(5) %launder, align 4
-  %strip = call ptr addrspace(5) @llvm.strip.invariant.group.p5(ptr addrspace(5) %gep)
-  %v2 = load i32, ptr addrspace(5) %strip, align 4
-  %sum = add i32 %v1, %v2
-  store i32 %sum, ptr addrspace(1) %out, align 4
+  store i32 %v1, ptr addrspace(1) %out, align 4
   ret void
 }
 ;.

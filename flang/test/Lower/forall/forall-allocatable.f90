@@ -14,7 +14,7 @@ end subroutine forall_with_allocatable
 ! CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a1"}) {
 ! CHECK:         %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:         %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 {uniq_name = "_QFforall_with_allocatableEa1"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "arr", uniq_name = "_QFforall_with_allocatableEarr"}
+! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "arr", uniq_name = "_QFforall_with_allocatableEarr"}>
 ! CHECK:         %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>

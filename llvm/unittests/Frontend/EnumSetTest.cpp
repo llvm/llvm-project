@@ -45,10 +45,10 @@ constexpr bool ElementsAre(Range &&R) {
 }
 } // namespace detail
 
-using ClauseSet = EnumSet<Clause, Clause_enumSize>;
+using Clauses = EnumSet<Clause, Clause_enumSize>;
 
 TEST(EnumSetTest, DefaultInitialization) {
-  constexpr ClauseSet S;
+  constexpr Clauses S;
   EXPECT_THAT(S, testing::IsEmpty());
   EXPECT_EQ(S.size(), static_cast<size_t>(0));
 
@@ -57,7 +57,7 @@ TEST(EnumSetTest, DefaultInitialization) {
 }
 
 TEST(EnumSetTest, ListInitialization) {
-  constexpr ClauseSet S{Clause::OMPC_private, Clause::OMPC_shared};
+  constexpr Clauses S{Clause::OMPC_private, Clause::OMPC_shared};
   EXPECT_THAT(S, testing::ElementsAre(OMPC_private, OMPC_shared));
 
   static_assert(
@@ -66,7 +66,7 @@ TEST(EnumSetTest, ListInitialization) {
 }
 
 TEST(EnumSetTest, CopyInitialization) {
-  constexpr ClauseSet S(ClauseSet{Clause::OMPC_private, Clause::OMPC_shared});
+  constexpr Clauses S(Clauses{Clause::OMPC_private, Clause::OMPC_shared});
   EXPECT_THAT(S, testing::ElementsAre(OMPC_private, OMPC_shared));
 
   static_assert(
@@ -75,38 +75,38 @@ TEST(EnumSetTest, CopyInitialization) {
 }
 
 TEST(EnumSetTest, Set) {
-  ClauseSet S;
+  Clauses S;
   S.set(Clause::OMPC_private);
   EXPECT_THAT(S, testing::ElementsAre(OMPC_private));
 
   static_assert(detail::ElementsAre<Clause, Clause::OMPC_private>(
-      ClauseSet{}.set(Clause::OMPC_private)));
+      Clauses{}.set(Clause::OMPC_private)));
 }
 
 TEST(EnumSetTest, Reset) {
-  ClauseSet S{Clause::OMPC_private, Clause::OMPC_shared};
+  Clauses S{Clause::OMPC_private, Clause::OMPC_shared};
   S.reset(Clause::OMPC_private);
   EXPECT_THAT(S, testing::ElementsAre(OMPC_shared));
 
   static_assert(detail::ElementsAre<Clause, Clause::OMPC_shared>(
-      ClauseSet{Clause::OMPC_private, Clause::OMPC_shared}.reset(
+      Clauses{Clause::OMPC_private, Clause::OMPC_shared}.reset(
           Clause::OMPC_private)));
 }
 
 TEST(EnumSetTest, Flip) {
-  ClauseSet S{Clause::OMPC_private};
+  Clauses S{Clause::OMPC_private};
   S.flip(Clause::OMPC_private);
   S.flip(Clause::OMPC_shared);
   EXPECT_THAT(S, testing::ElementsAre(OMPC_shared));
 
   static_assert(detail::ElementsAre<Clause, Clause::OMPC_shared>(
-      ClauseSet{Clause::OMPC_private}
+      Clauses{Clause::OMPC_private}
           .flip(Clause::OMPC_private)
           .flip(Clause::OMPC_shared)));
 }
 
 TEST(EnumSetTest, Test) {
-  constexpr ClauseSet S{Clause::OMPC_private};
+  constexpr Clauses S{Clause::OMPC_private};
   ASSERT_TRUE(S.test(Clause::OMPC_private));
   ASSERT_FALSE(S.test(Clause::OMPC_shared));
 
@@ -115,7 +115,7 @@ TEST(EnumSetTest, Test) {
 }
 
 TEST(EnumSetTest, SquareBracket) {
-  constexpr ClauseSet S{Clause::OMPC_private};
+  constexpr Clauses S{Clause::OMPC_private};
   ASSERT_TRUE(S[Clause::OMPC_private]);
   ASSERT_FALSE(S[Clause::OMPC_shared]);
 
@@ -124,18 +124,18 @@ TEST(EnumSetTest, SquareBracket) {
 }
 
 TEST(EnumSetTest, UnionUpdate) {
-  ClauseSet S{Clause::OMPC_private, OMPC_shared};
-  ClauseSet A{Clause::OMPC_nowait};
+  Clauses S{Clause::OMPC_private, OMPC_shared};
+  Clauses A{Clause::OMPC_nowait};
   S |= A;
   EXPECT_THAT(S, testing::ElementsAre(Clause::OMPC_nowait, Clause::OMPC_private,
                                       OMPC_shared));
 }
 
 TEST(EnumSetTest, Union) {
-  constexpr ClauseSet A{Clause::OMPC_private, OMPC_shared};
-  constexpr ClauseSet B{Clause::OMPC_nowait};
+  constexpr Clauses A{Clause::OMPC_private, OMPC_shared};
+  constexpr Clauses B{Clause::OMPC_nowait};
   constexpr auto S = A | B;
-  static_assert(std::is_same_v<llvm::remove_cvref_t<decltype(S)>, ClauseSet>);
+  static_assert(std::is_same_v<llvm::remove_cvref_t<decltype(S)>, Clauses>);
   EXPECT_THAT(S, testing::ElementsAre(Clause::OMPC_nowait, Clause::OMPC_private,
                                       OMPC_shared));
 
@@ -144,17 +144,17 @@ TEST(EnumSetTest, Union) {
 }
 
 TEST(EnumSetTest, IntersectionUpdate) {
-  ClauseSet S{Clause::OMPC_private, OMPC_shared};
-  ClauseSet A{Clause::OMPC_nowait, OMPC_shared};
+  Clauses S{Clause::OMPC_private, OMPC_shared};
+  Clauses A{Clause::OMPC_nowait, OMPC_shared};
   S &= A;
   EXPECT_THAT(S, testing::ElementsAre(OMPC_shared));
 }
 
 TEST(EnumSetTest, Intersection) {
-  constexpr ClauseSet A{Clause::OMPC_private, OMPC_shared};
-  constexpr ClauseSet B{Clause::OMPC_nowait, OMPC_shared};
+  constexpr Clauses A{Clause::OMPC_private, OMPC_shared};
+  constexpr Clauses B{Clause::OMPC_nowait, OMPC_shared};
   constexpr auto S = A & B;
-  static_assert(std::is_same_v<llvm::remove_cvref_t<decltype(S)>, ClauseSet>);
+  static_assert(std::is_same_v<llvm::remove_cvref_t<decltype(S)>, Clauses>);
   EXPECT_THAT(S, testing::ElementsAre(OMPC_shared));
 
   static_assert(detail::ElementsAre<Clause, OMPC_shared>(S));

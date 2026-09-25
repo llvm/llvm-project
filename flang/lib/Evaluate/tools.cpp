@@ -693,24 +693,19 @@ Expr<LogicalResult> PromoteAndRelate(
 }
 
 std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
-  if (auto type{expr.GetType()}) {
-    if (const auto *derived{GetDerivedTypeSpec(*type)}) {
-      if (derived->IsEnumerationType()) {
-        if (const auto *scope{derived->GetScope()}) {
-          auto iter{scope->find(semantics::SourceName{
-              semantics::DerivedTypeDetails::ordinalComponentName,
-              sizeof(semantics::DerivedTypeDetails::ordinalComponentName) -
-                  1})};
-          if (iter != scope->end()) {
-            const semantics::Symbol &ordSym{*iter->second};
-            if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
-              if (auto sc{constant->GetScalarValue()}) {
-                return sc->Find(ordSym);
-              }
-            } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
-              return sc->Find(ordSym);
-            }
+  if (const auto *derived{GetEnumerationTypeSpec(expr.GetType())}) {
+    if (const auto *scope{derived->GetScope()}) {
+      auto iter{scope->find(semantics::SourceName{
+          semantics::DerivedTypeDetails::ordinalComponentName,
+          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
+      if (iter != scope->end()) {
+        const semantics::Symbol &ordSym{*iter->second};
+        if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
+          if (auto sc{constant->GetScalarValue()}) {
+            return sc->Find(ordSym);
           }
+        } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
+          return sc->Find(ordSym);
         }
       }
     }
@@ -1531,7 +1526,7 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   SignedNumericExpr<CAT, KIND> headExpr = buildRightAssociatedSignedFold(head);
   SignedNumericExpr<CAT, KIND> tailExpr = buildRightAssociatedSignedFold(tail);
   SignedNumericExpr<CAT, KIND> result =
-      buildSignedAdd(std::move(tailExpr), std::move(headExpr));
+      buildSignedAdd(std::move(headExpr), std::move(tailExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);

@@ -356,8 +356,10 @@ EmulateInstructionARM64::GetOpcodeForInstruction(const uint32_t opcode) {
        &EmulateInstructionARM64::EmulateLDRSTRImm<AddrMode_OFF>,
        "LDR|STR <Bt|Ht|St|Dt|Qt>, [<Xn|SP>{, #<pimm>}]"},
 
-      {0xfc000000, 0x14000000, No_VFP, &EmulateInstructionARM64::EmulateB,
+      {0xfc000000, 0x14000000, No_VFP, &EmulateInstructionARM64::EmulateBOrBl,
        "B <label>"},
+      {0xfc000000, 0x94000000, No_VFP, &EmulateInstructionARM64::EmulateBOrBl,
+       "BL <label>"},
       {0xff000010, 0x54000000, No_VFP, &EmulateInstructionARM64::EmulateBcond,
        "B.<cond> <label>"},
       {0x7f000000, 0x34000000, No_VFP, &EmulateInstructionARM64::EmulateCBZ,
@@ -1082,7 +1084,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   return true;
 }
 
-bool EmulateInstructionARM64::EmulateB(const uint32_t opcode) {
+bool EmulateInstructionARM64::EmulateBOrBl(const uint32_t opcode) {
 #if 0
     // ARM64 pseudo code...
     if branch_type == BranchType_CALL then X[30] = PC[] + 4;

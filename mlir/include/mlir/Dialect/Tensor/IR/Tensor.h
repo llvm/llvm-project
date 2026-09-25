@@ -10,9 +10,9 @@
 #define MLIR_DIALECT_TENSOR_IR_TENSOR_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Tensor/IR/TensorDialect.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
@@ -43,12 +43,6 @@ SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
                                         OpBuilder &b, Location loc);
 
 } // namespace mlir
-
-//===----------------------------------------------------------------------===//
-// Tensor Dialect
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tensor/IR/TensorOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Tensor Dialect Operations

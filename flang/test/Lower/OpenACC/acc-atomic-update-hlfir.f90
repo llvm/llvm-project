@@ -4,13 +4,13 @@
 
 !CHECK-LABEL: @_QPsb
 subroutine sb
-!CHECK:   %[[W_REF:.*]] = fir.alloca i32 {bindc_name = "w", uniq_name = "_QFsbEw"}
+!CHECK:   %[[W_REF:.*]] = fir.alloca i32 <{bindc_name = "w", uniq_name = "_QFsbEw"}>
 !CHECK:   %[[W_DECL:.*]]:2 = hlfir.declare %[[W_REF]] {uniq_name = "_QFsbEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:   %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsbEx"}
+!CHECK:   %[[X_REF:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsbEx"}>
 !CHECK:   %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFsbEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:   %[[Y_REF:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFsbEy"}
+!CHECK:   %[[Y_REF:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFsbEy"}>
 !CHECK:   %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFsbEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:   %[[Z_REF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFsbEz"}
+!CHECK:   %[[Z_REF:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFsbEz"}>
 !CHECK:   %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {uniq_name = "_QFsbEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: w, x, y, z
 

@@ -150,8 +150,15 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
       return false;
   }
 
+  // The induction variable starts at the value coming into the header from
+  // outside the loop. A loop that is not in simplified form has no preheader,
+  // but the header can still have a single predecessor outside the loop.
+  BasicBlock *Predecessor = CurLoop->getLoopPredecessor();
+  if (!Predecessor)
+    return false;
+
   auto DL = ExitBlock->getModule()->getDataLayout();
-  auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
+  auto *IVStart = LHS->getIncomingValueForBlock(Predecessor);
   auto *SimpleValOrNull = simplifyCmpInst(
       Pred, IVStart, RHS, {DL, /*TLI*/ nullptr, DT, /*AC*/ nullptr, BI});
   auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);

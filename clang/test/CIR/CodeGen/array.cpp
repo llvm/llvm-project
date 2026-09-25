@@ -494,10 +494,10 @@ void array_with_complex_elements() {
 
 // CIR: %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 // CIR: %[[CONST:.*]] = cir.get_global @[[COMPLEX_ARR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
-// CIR: cir.copy %[[CONST]] to %[[ARR_ADDR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
+// CIR: cir.copy %[[CONST]] align(16) to %[[ARR_ADDR]] align(16) : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 
 // LLVM: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR_ADDR]], ptr align 4 @[[COMPLEX_ARR:.*]], i64 16, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @[[COMPLEX_ARR:.*]], i64 16, i1 false)
 
 // OGCG: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @__const._Z27array_with_complex_elementsv.arr, i64 16, i1 false)

@@ -15,7 +15,7 @@ subroutine doconc1
 end
 
 ! CHECK-LABEL: func.func @_QPdoconc1()
-! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! CHECK: %[[IV:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: cuf.kernel<<<*, *>>> (%[[ARG0:[^ ]*]] : index) =
 ! CHECK: %[[CONV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
@@ -35,8 +35,8 @@ subroutine doconc2
 end
 
 ! CHECK-LABEL: func.func @_QPdoconc2()
-! CHECK: %[[JMEM:.*]] = fir.alloca i32 {bindc_name = "j"}
-! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[JMEM:.*]] = fir.alloca i32 <{bindc_name = "j"}>
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! CHECK: %[[IDECL:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]] {uniq_name = "_QFdoconc2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: cuf.kernel<<<*, *>>> (%[[ARG0:[^ ]*]] : index, %[[ARG1:[^ ]*]] : index) =
@@ -62,7 +62,7 @@ subroutine doconc_real
 end
 
 ! CHECK-LABEL: func.func @_QPdoconc_real()
-! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! CHECK: %[[IV:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc_realEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: cuf.kernel<<<*, *>>> (%[[ARG0:[^ ]*]] : index) =
 ! CHECK: %[[CONV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
@@ -87,8 +87,8 @@ end
 
 ! CHECK-LABEL: func.func @_QPdoconc_do2()
 ! j is allocated before i in the alloca block (loop control order).
-! CHECK: %[[JMEM:.*]] = fir.alloca i32 {bindc_name = "j"}
-! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[JMEM:.*]] = fir.alloca i32 <{bindc_name = "j"}>
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! CHECK: %[[IDECL:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc_do2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]] {uniq_name = "_QFdoconc_do2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: cuf.kernel{{.*}} (%[[ARG0:[^ ]*]] : index, %[[ARG1:[^ ]*]] : index) =

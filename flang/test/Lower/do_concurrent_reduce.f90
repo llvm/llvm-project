@@ -20,11 +20,11 @@ end
 ! CHECK:        }
 
 ! CHECK-LABEL:  func.func @_QPdo_concurrent_reduce() {
-! CHECK:           %[[S_ALLOC:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "_QFdo_concurrent_reduceEs"}
+! CHECK:           %[[S_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "s", uniq_name = "_QFdo_concurrent_reduceEs"}>
 ! CHECK:           %[[S_DECL:.*]]:2 = hlfir.declare %[[S_ALLOC]] {uniq_name = "_QFdo_concurrent_reduceEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:           fir.do_concurrent {
-! CHECK:             %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK:             %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! CHECK:             %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{[^[:space:]]+}})
 ! CHECK-SAME:          reduce(@add_reduction_i32 #fir.reduce_attr<add> %[[S_DECL]]#0 -> %[[S_ARG:.*]] : !fir.ref<i32>) {

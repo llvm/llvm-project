@@ -17,7 +17,6 @@
 
 #include <sycl/__impl/aspect.hpp>
 #include <sycl/__impl/backend.hpp>
-#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/info/device_type.hpp>
@@ -30,6 +29,7 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+class context;
 class device;
 
 namespace detail {

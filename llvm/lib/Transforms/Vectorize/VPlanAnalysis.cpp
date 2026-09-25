@@ -26,12 +26,11 @@ void llvm::collectEphemeralRecipesForVPlan(
   SmallVector<VPRecipeBase *> Worklist;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      if (!match(&RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
-      Worklist.push_back(RepR);
-      EphRecipes.insert(RepR);
+      Worklist.push_back(&RepR);
+      EphRecipes.insert(&RepR);
     }
   }
 
@@ -163,11 +162,10 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
     if (VPBB == LoopRegion->getExiting()) {
       // VPWidenIntOrFpInductionRecipes are used implicitly at the end of the
       // exiting block, where their increment will get materialized eventually.
-      for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-        if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-          EndPoint[WideIV] = Idx2Recipe.size();
-          Ends.insert(WideIV);
-        }
+      for (auto &WideIV : make_isa_range<VPWidenIntOrFpInductionRecipe>(
+               LoopRegion->getEntryBasicBlock()->phis())) {
+        EndPoint[&WideIV] = Idx2Recipe.size();
+        Ends.insert(&WideIV);
       }
     }
   }

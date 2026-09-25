@@ -100,10 +100,11 @@ uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
     // function's layout, which an interposed replacement wouldn't preserve.
     // There's no meaningful way to "interpose" an interior offset.
     symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    symVA = sym->resolveGotVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
-    symVA = sym->resolveTlvVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT) ||
+             relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    // Both kinds read the symbol's single non-lazy pointer slot; for a
+    // thread-local that slot holds the address of its TLV descriptor.
+    symVA = sym->resolveNonLazyPtrVA();
   } else {
     symVA = sym->getVA();
   }

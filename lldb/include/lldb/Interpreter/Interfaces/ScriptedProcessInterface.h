@@ -28,6 +28,10 @@ public:
 
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
 
+  /// The number of bits this process uses for addressing, as a dictionary
+  /// with optional "lowmem" and "highmem" keys.
+  virtual StructuredData::DictionarySP GetAddressableBits() { return {}; }
+
   virtual Status Attach(const ProcessAttachInfo &attach_info) {
     return Status::FromErrorString("ScriptedProcess did not attach");
   }

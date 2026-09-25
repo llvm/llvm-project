@@ -111,4 +111,13 @@ gpu.module @cuda_device_mod {
   }
 }
 
-// CHECK-COUNT-2: cuf.shared_memory 
+// CHECK-COUNT-2: cuf.shared_memory
+
+// -----
+
+func.func @_QPdevice_is_active() {
+  %0 = cuf.device_is_active : i1
+  return
+}
+
+// CHECK: %{{.*}} = cuf.device_is_active : i1

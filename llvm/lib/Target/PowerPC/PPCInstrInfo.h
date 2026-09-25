@@ -17,7 +17,6 @@
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -381,6 +380,9 @@ public:
   ///
   const PPCRegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
+
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
   }
@@ -740,8 +742,7 @@ public:
   }
   void promoteInstr32To64ForElimEXTSW(const Register &Reg,
                                       MachineRegisterInfo *MRI,
-                                      unsigned BinOpDepth,
-                                      LiveVariables *LV) const;
+                                      unsigned BinOpDepth) const;
 
   bool convertToImmediateForm(MachineInstr &MI,
                               SmallSet<Register, 4> &RegsToUpdate,

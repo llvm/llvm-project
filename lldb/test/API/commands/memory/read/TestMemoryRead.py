@@ -37,7 +37,7 @@ class MemoryReadTestCase(TestBase):
         self.expect(cmd.format(3), substrs=['"ab"'])
         self.assertRegex(
             self.res.GetError(),
-            "unable to find a NULL terminated string at 0x[0-9A-Fa-f]+"
+            "unable to find a null-terminated string at 0x[0-9A-Fa-f]+"
             ". Consider increasing the maximum read length",
         )
 

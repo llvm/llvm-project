@@ -185,9 +185,6 @@ struct DeviceTy {
   }
 
 private:
-  /// Deinitialize the device (and plugin).
-  void deinit();
-
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;

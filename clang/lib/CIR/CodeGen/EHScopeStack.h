@@ -102,6 +102,8 @@ public:
 
     virtual ~Cleanup() = default;
 
+    virtual bool isRedundantBeforeReturn() { return false; }
+
     /// Generation flags.
     class Flags {
       enum {

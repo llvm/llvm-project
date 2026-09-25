@@ -26,7 +26,7 @@ static cl::opt<bool>
 
 #define LoadSeedsDef "loads"
 #define StoreSeedsDef "stores"
-cl::opt<std::string> CollectSeeds(
+static cl::opt<std::string> CollectSeeds(
     "sbvec-collect-seeds", cl::init(StoreSeedsDef), cl::Hidden,
     cl::desc("Collect these seeds. Use empty for none or a comma-separated "
              "list of '" StoreSeedsDef "' and '" LoadSeedsDef "'."));
@@ -36,23 +36,16 @@ namespace sandboxir {
 SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
     : FunctionPass("seed-collection"),
       RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {
-  if (!AuxArg.empty()) {
-    if (AuxArg != DiffTypesArgStr) {
-      std::string ErrStr;
-      raw_string_ostream ErrSS(ErrStr);
-      ErrSS << "SeedCollection only supports '" << DiffTypesArgStr
-            << "' aux argument!\n";
-      reportFatalUsageError(ErrStr.c_str());
-    }
-    AllowDiffTypes = true;
+  ArgsRegistry.parse(AuxArg);
+  // If the user has not specified seed types default to stores.
+  if (!CollectStores && !CollectLoads) {
+    CollectStores = true;
   }
 }
 
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
-  bool CollectStores = CollectSeeds.find(StoreSeedsDef) != std::string::npos;
-  bool CollectLoads = CollectSeeds.find(LoadSeedsDef) != std::string::npos;
 
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {

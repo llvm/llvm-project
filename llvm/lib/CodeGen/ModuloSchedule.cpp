@@ -992,7 +992,7 @@ void ModuloScheduleExpander::updateMemOperands(MachineInstr &NewMI,
     }
     unsigned Delta;
     if (Num != UINT_MAX && computeDelta(OldMI, Delta)) {
-      int64_t AdjOffset = Delta * Num;
+      int64_t AdjOffset = static_cast<int64_t>(Delta) * Num;
       NewMMOs.push_back(
           MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {

@@ -819,28 +819,30 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     }
 
     auto getSpecialVirtualFn = [&](StringRef name) -> llvm::Constant * {
-      // FIXME(PR43094): When merging comdat groups, lld can select a local
-      // symbol as the signature symbol even though it cannot be accessed
-      // outside that symbol's TU. The relative vtables ABI would make
-      // __cxa_pure_virtual and __cxa_deleted_virtual local symbols, and
-      // depending on link order, the comdat groups could resolve to the one
-      // with the local symbol. As a temporary solution, fill these components
-      // with zero. We shouldn't be calling these in the first place anyway.
-      if (RelativeCXXABIVTables)
-        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
-
-      // For NVPTX devices in OpenMP emit special functon as null pointers,
-      // otherwise linking ends up with unresolved references.
-      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsTargetDevice &&
-          CGM.getTriple().isNVPTX())
-        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-      llvm::Constant *fn = cast<llvm::Constant>(
+      auto *F = cast<llvm::Function>(
           CGM.CreateRuntimeFunction(fnTy, name).getCallee());
-      if (auto f = dyn_cast<llvm::Function>(fn))
-        f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      return fn;
+      F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+      // The Microsoft ABI uses the same function name for pure and deleted
+      // virtual functions.
+      if (!F->empty())
+        return F;
+
+      // For device compilation, provide a weak definition that
+      // traps, otherwise linking ends up with unresolved references.
+      if (CGM.getLangOpts().isTargetDevice()) {
+        F->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
+        CodeGenFunction CGF(CGM);
+        const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
+        CGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI,
+                          FunctionArgList{});
+        CGF.EmitTrapCallAndMakeUnreachable();
+        CGF.FinishFunction();
+      }
+
+      return F;
     };
 
     llvm::Constant *fnPtr;

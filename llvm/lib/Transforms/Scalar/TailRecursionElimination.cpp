@@ -446,98 +446,6 @@ static bool isUnaryAccumulatorRecurrence(Instruction *I) {
   return isa<ConstantInt>(I->getOperand(1));
 }
 
-// Find the base-case return value for function F, given the accumulator
-// recursion instruction AccRecInstr that is about to be eliminated. Every
-// return other than the one fed by AccRecInstr survives the transformation and
-// will be rewritten to return the accumulator, so all of them have to yield the
-// same base-case constant. Return that constant, or nullptr on failure.
-//
-// FIXME: There is a room for improvement here in the future, e.g., consider
-// non-constant values and multiple base cases -- e.g., we want to be able to
-// handle code like:
-// ```
-// int f(int x) {
-//  if (x == 1) return 1;
-//  if (x == 10) return 10;
-//  return f(x-1) << 1;
-// }
-// ```
-static Constant *findBaseCaseRetConstant(Function &F,
-                                         Instruction *AccRecInstr) {
-  Constant *BaseCaseVal = nullptr;
-
-  for (BasicBlock &BB : F) {
-    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI || !RI->getReturnValue())
-      continue;
-
-    Value *RV = RI->getReturnValue();
-
-    // This is the recursive case being turned into a loop: the return goes
-    // away along with AccRecInstr.
-    if (RV == AccRecInstr)
-      continue;
-
-    // Anything else has to be the base case. In particular a return still
-    // computing from a recursive call (e.g. a second recursion site that is
-    // not eliminated) must be rejected: returning the accumulator in its place
-    // would drop that computation.
-    auto *C = dyn_cast<Constant>(RV);
-    if (!C)
-      return nullptr;
-
-    if (!BaseCaseVal)
-      BaseCaseVal = C;
-    else if (BaseCaseVal != C)
-      return nullptr;
-  }
-
-  return BaseCaseVal;
-}
-
-// This function checks whether the instruction I can be used
-// to perform accumulator recursion elimination for the
-// call instruction CI.
-static Constant *canTransformAccumulatorRecursion(Instruction *I,
-                                                  CallInst *CI) {
-  bool IsUnaryAccumulatorRecurrence = isUnaryAccumulatorRecurrence(I);
-  if ((!I->isAssociative() || !I->isCommutative()) &&
-      !IsUnaryAccumulatorRecurrence)
-    return nullptr;
-
-  assert(I->getNumOperands() >= 2 &&
-         "Associative/commutative operations should have at least 2 args!");
-
-  Constant *AccInitVal = nullptr;
-  if (IsUnaryAccumulatorRecurrence) {
-    // For unary accumulator recurrences, we require that the recursive call
-    // is always on the first operand.
-    if (I->getOperand(0) != CI)
-      return nullptr;
-
-    // findTRECandidate guarantees CI is a recursive call to its own
-    // function, so scan the enclosing function for the base-case return.
-    AccInitVal = findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I);
-    if (!AccInitVal)
-      return nullptr;
-  } else {
-    AccInitVal = ConstantExpr::getIdentity(I, I->getType());
-    if (!AccInitVal)
-      return nullptr;
-
-    // Exactly one operand should be the result of the call instruction.
-    if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
-        (I->getOperand(0) != CI && I->getOperand(1) != CI))
-      return nullptr;
-  }
-
-  // The only user of this instruction we allow is a single return instruction.
-  if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
-    return nullptr;
-
-  return AccInitVal;
-}
-
 namespace {
 class TailRecursionEliminator {
   Function &F;
@@ -597,6 +505,10 @@ class TailRecursionEliminator {
     }
   }
 
+  Constant *findBaseCaseRetConstant(Instruction *AccRecInstr);
+
+  Constant *canTransformAccumulatorRecursion(Instruction *I, CallInst *CI);
+
   CallInst *findTRECandidate(BasicBlock *BB);
 
   void createTailRecurseLoopHeader(CallInst *CI);
@@ -620,6 +532,113 @@ public:
                         ProfileSummaryInfo *PSI, bool UpdateFunctionEntryCount);
 };
 } // namespace
+
+// Find the base-case return value for the function, given the accumulator
+// recursion instruction AccRecInstr that is about to be eliminated. Every
+// return other than the one fed by AccRecInstr survives the transformation and
+// will be rewritten to return the accumulator, so all of them have to yield the
+// same base-case constant. Return that constant, or nullptr on failure.
+//
+// RetSelects are the selects already inserted for call sites eliminated via
+// the "found return value" mechanism instead of the accumulator one. Their
+// original `ret` is gone, so they'd otherwise be invisible to the scan below,
+// but they still have to agree on the same base-case constant.
+//
+// FIXME: There is a room for improvement here in the future, e.g., consider
+// non-constant values and multiple base cases -- e.g., we want to be able to
+// handle code like:
+// ```
+// int f(int x) {
+//  if (x == 1) return 1;
+//  if (x == 10) return 10;
+//  return f(x-1) << 1;
+// }
+// ```
+Constant *
+TailRecursionEliminator::findBaseCaseRetConstant(Instruction *AccRecInstr) {
+  Constant *BaseCaseVal = nullptr;
+
+  // Records C as the base-case constant the first time it's seen, and
+  // otherwise checks that it agrees with the one already on record.
+  auto SetOrMatchBaseCase = [&](Constant *C) {
+    if (!BaseCaseVal)
+      BaseCaseVal = C;
+    return BaseCaseVal == C;
+  };
+
+  for (BasicBlock &BB : F) {
+    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!RI || !RI->getReturnValue())
+      continue;
+
+    Value *RV = RI->getReturnValue();
+
+    // This is the recursive case being turned into a loop: the return goes
+    // away along with AccRecInstr.
+    if (RV == AccRecInstr)
+      continue;
+
+    // Anything else has to be the base case. In particular a return still
+    // computing from a recursive call (e.g. a second recursion site that is
+    // not eliminated) must be rejected: returning the accumulator in its place
+    // would drop that computation.
+    auto *C = dyn_cast<Constant>(RV);
+    if (!C || !SetOrMatchBaseCase(C))
+      return nullptr;
+  }
+
+  for (SelectInst *SI : RetSelects) {
+    auto *C = dyn_cast<Constant>(SI->getFalseValue());
+    if (!C || !SetOrMatchBaseCase(C))
+      return nullptr;
+  }
+
+  return BaseCaseVal;
+}
+
+// This function checks whether the instruction I can be used
+// to perform accumulator recursion elimination for the
+// call instruction CI.
+Constant *
+TailRecursionEliminator::canTransformAccumulatorRecursion(Instruction *I,
+                                                          CallInst *CI) {
+  bool IsUnaryAccumulatorRecurrence = isUnaryAccumulatorRecurrence(I);
+  if ((!I->isAssociative() || !I->isCommutative()) &&
+      !IsUnaryAccumulatorRecurrence)
+    return nullptr;
+
+  assert(I->getNumOperands() >= 2 &&
+         "Associative/commutative operations should have at least 2 args!");
+
+  Constant *AccInitVal = nullptr;
+  if (IsUnaryAccumulatorRecurrence) {
+    // For unary accumulator recurrences, we require that the recursive call
+    // is always on the first operand.
+    if (I->getOperand(0) != CI)
+      return nullptr;
+
+    // findTRECandidate guarantees CI is a recursive call to its own
+    // function, so scan the enclosing function for the base-case return.
+    AccInitVal = findBaseCaseRetConstant(/*AccRecInstr=*/I);
+    if (!AccInitVal)
+      return nullptr;
+  } else {
+    AccInitVal = ConstantExpr::getIdentity(I, I->getType());
+    if (!AccInitVal)
+      return nullptr;
+
+    // Exactly one operand should be the result of the call instruction.
+    if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
+        (I->getOperand(0) != CI && I->getOperand(1) != CI))
+      return nullptr;
+  }
+
+  // The only user of this instruction we allow is a single return instruction.
+  if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
+    return nullptr;
+
+  return AccInitVal;
+}
 
 CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
   Instruction *TI = BB->getTerminator();

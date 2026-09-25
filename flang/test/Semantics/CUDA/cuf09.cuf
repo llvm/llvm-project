@@ -207,6 +207,16 @@ program main
     end do
     continue
   end do
+  ! A compiler directive between the outer and inner DO is likewise not
+  ! tight nesting: the outer loop's body has two elements (the directive
+  ! and the inner DO), not one.
+  !ERROR: !$CUF KERNEL DO (2) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do (2) <<< 1, 2 >>>
+  do j=1,10
+    !dir$ ivdep
+    do k=1,10
+    end do
+  end do
   !$cuf kernel do <<< 1, 2 >>>
   do j = 1, 10
     !ERROR: 'foo' may not be called in device code

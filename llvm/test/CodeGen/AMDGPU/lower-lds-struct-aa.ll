@@ -17,8 +17,8 @@ define amdgpu_kernel void @no_clobber_ds_load_stores_x2(ptr addrspace(1) %arg, i
 ; CHECK-NEXT:    store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, align 16, !alias.scope !1, !noalias !4
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_A:%.*]] = load i32, ptr addrspace(3) [[GEP_A]], align 4, !alias.scope !1, !noalias !4
-; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 0, i32 1), align 16, !alias.scope !4, !noalias !1
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 0, i32 1), i32 0, i32 [[I]]
+; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 256), align 16, !alias.scope !4, !noalias !1
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2.lds, i32 256), i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_B:%.*]] = load i32, ptr addrspace(3) [[GEP_B]], align 4, !alias.scope !4, !noalias !1
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[VAL_A]], [[VAL_B]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[ARG]], align 4
@@ -61,11 +61,11 @@ define amdgpu_kernel void @no_clobber_ds_load_stores_x3(ptr addrspace(1) %arg, i
 ; CHECK-NEXT:    store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, align 16, !alias.scope !6, !noalias !9
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_A:%.*]] = load i32, ptr addrspace(3) [[GEP_A]], align 4, !alias.scope !6, !noalias !9
-; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X3_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 1), align 16, !alias.scope !12, !noalias !13
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X3_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 1), i32 0, i32 [[I]]
+; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 256), align 16, !alias.scope !12, !noalias !13
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 256), i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_B:%.*]] = load i32, ptr addrspace(3) [[GEP_B]], align 4, !alias.scope !12, !noalias !13
-; CHECK-NEXT:    store i32 3, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X3_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 2), align 16, !alias.scope !14, !noalias !15
-; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X3_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 0, i32 2), i32 0, i32 [[I]]
+; CHECK-NEXT:    store i32 3, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 512), align 16, !alias.scope !14, !noalias !15
+; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x3.lds, i32 512), i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_C:%.*]] = load i32, ptr addrspace(3) [[GEP_C]], align 4, !alias.scope !14, !noalias !15
 ; CHECK-NEXT:    [[VAL_1:%.*]] = add i32 [[VAL_A]], [[VAL_B]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[VAL_1]], [[VAL_C]]

@@ -134,3 +134,16 @@ acc.routine @routine_nohost func(@host_nohost) gang nohost
 func.func @host_nohost() {
   return
 }
+
+// -----
+
+// The device copy keeps the host's visibility, signature attributes and
+// function properties.
+acc.routine @routine_attrs func(@host_attrs) seq
+func.func private @host_attrs(%v: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext}) attributes {no_inline, test.marker = "keep"} {
+  return %v : i16
+}
+// CHECK-LABEL: func.func private @host_attrs(
+// CHECK:       func.func private @host_attrs_0(
+// CHECK-SAME:    %{{.*}}: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+// CHECK-SAME:    attributes {acc.specialized_routine = #acc.specialized_routine<@routine_attrs, <seq>, "host_attrs">, test.marker = "keep", no_inline}

@@ -100,7 +100,7 @@ void test_virt_base_initializer() {
 // OGCG: define {{.*}} void @_ZN11VirtDerivedC1Ev
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
 // OGCG:   call void @_ZN4BaseC2Ei(ptr {{.*}} %[[THIS]], i32 {{.*}} 0)
-// OGCG:   store ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTV11VirtDerived, i32 0, i32 0, i32 3), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV11VirtDerived, i64 24), ptr %[[THIS]]
 // OGCG:   invoke void @_Z8mayThrowv()
 // OGCG:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 // OGCG: [[INVOKE_CONT:.*]]:

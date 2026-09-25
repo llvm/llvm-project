@@ -26,8 +26,7 @@ define void @test(ptr noalias %A, i64 %v, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ 0, %[[VECTOR_PH2]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[INDEX9:%.*]] = add i64 [[TMP17]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[A]], i64 [[TMP17]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[A]], i64 [[INDEX9]], i32 0

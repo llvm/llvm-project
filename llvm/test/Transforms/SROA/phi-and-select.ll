@@ -764,22 +764,39 @@ merge:
 ; insert a bitcast instruction *before* a PHI, producing an invalid module;
 ; make sure we insert *after* the first non-PHI instruction.
 define void @PR20822(i1 %c1, i1 %c2, ptr %ptr) {
-; CHECK-LABEL: @PR20822(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[F1_SROA_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[PTR:%.*]], i32 0, i32 0
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_END:%.*]], label [[FOR_COND:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
-; CHECK-NEXT:    br i1 [[C2:%.*]], label [[IF_THEN5:%.*]], label [[IF_THEN2:%.*]]
-; CHECK:       if.then2:
-; CHECK-NEXT:    br label [[IF_THEN5]]
-; CHECK:       if.then5:
-; CHECK-NEXT:    [[F1_SROA_PHI:%.*]] = phi ptr [ [[F1_SROA_GEP]], [[IF_THEN2]] ], [ [[F_SROA_0]], [[IF_END]] ]
-; CHECK-NEXT:    store i32 0, ptr [[F1_SROA_PHI]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-PRESERVE-CFG-LABEL: @PR20822(
+; CHECK-PRESERVE-CFG-NEXT:  entry:
+; CHECK-PRESERVE-CFG-NEXT:    [[F_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[F1_SROA_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[PTR:%.*]], i32 0, i32 0
+; CHECK-PRESERVE-CFG-NEXT:    br i1 [[C1:%.*]], label [[IF_END:%.*]], label [[FOR_COND:%.*]]
+; CHECK-PRESERVE-CFG:       for.cond:
+; CHECK-PRESERVE-CFG-NEXT:    br label [[IF_END]]
+; CHECK-PRESERVE-CFG:       if.end:
+; CHECK-PRESERVE-CFG-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
+; CHECK-PRESERVE-CFG-NEXT:    br i1 [[C2:%.*]], label [[IF_THEN5:%.*]], label [[IF_THEN2:%.*]]
+; CHECK-PRESERVE-CFG:       if.then2:
+; CHECK-PRESERVE-CFG-NEXT:    br label [[IF_THEN5]]
+; CHECK-PRESERVE-CFG:       if.then5:
+; CHECK-PRESERVE-CFG-NEXT:    [[F1_SROA_PHI:%.*]] = phi ptr [ [[F1_SROA_GEP]], [[IF_THEN2]] ], [ [[F_SROA_0]], [[IF_END]] ]
+; CHECK-PRESERVE-CFG-NEXT:    store i32 0, ptr [[F1_SROA_PHI]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret void
+;
+; CHECK-MODIFY-CFG-LABEL: @PR20822(
+; CHECK-MODIFY-CFG-NEXT:  entry:
+; CHECK-MODIFY-CFG-NEXT:    [[F1_SROA_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[PTR:%.*]], i32 0, i32 0
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[C1:%.*]], label [[IF_END:%.*]], label [[FOR_COND:%.*]]
+; CHECK-MODIFY-CFG:       for.cond:
+; CHECK-MODIFY-CFG-NEXT:    br label [[IF_END]]
+; CHECK-MODIFY-CFG:       if.end:
+; CHECK-MODIFY-CFG-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[C2:%.*]], label [[IF_THEN5_SROA_STORE:%.*]], label [[IF_THEN2:%.*]]
+; CHECK-MODIFY-CFG:       if.then2:
+; CHECK-MODIFY-CFG-NEXT:    store i32 0, ptr [[F1_SROA_GEP]], align 4
+; CHECK-MODIFY-CFG-NEXT:    br label [[IF_THEN5:%.*]]
+; CHECK-MODIFY-CFG:       if.then5.sroa.store:
+; CHECK-MODIFY-CFG-NEXT:    br label [[IF_THEN5]]
+; CHECK-MODIFY-CFG:       if.then5:
+; CHECK-MODIFY-CFG-NEXT:    ret void
 ;
 entry:
   %f = alloca %struct.S, align 4

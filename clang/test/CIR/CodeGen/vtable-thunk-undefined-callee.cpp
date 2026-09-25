@@ -27,7 +27,7 @@ int Derived::f(int x) { return x; }
 // Emitting that thunk creates the Right::f declaration on demand.  It must
 // become a sibling of the thunk rather than nesting inside its body, so the
 // declarations are pinned to the ops immediately following the thunk.
-// CIR-LABEL: cir.func available_externally @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi
+// CIR-LABEL: cir.func alignment(2) available_externally @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi
 // CIR-NOT:     cir.func
 // CIR:         cir.call @_ZN23ConstructionVTableThunk5Right1fEi(
 // CIR:         cir.return %{{.+}} : !s32i

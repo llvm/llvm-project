@@ -52,7 +52,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_NoRegs})
+  // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nofreeobj, llvm.noundef})
 
   // {__int128, char} spans more than two eightbytes, so it does not fit in
   // registers: the argument is byval and the return uses sret.

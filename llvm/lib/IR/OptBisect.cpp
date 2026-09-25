@@ -29,7 +29,7 @@ static OptBisect &getOptBisector() {
 }
 
 static cl::opt<int> OptBisectLimit(
-    "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
+    "opt-bisect-limit", cl::Hidden, cl::init(-1),
     cl::cb<void, int>([](int Limit) {
       if (Limit == -1)
         // -1 means run all passes.
@@ -49,7 +49,7 @@ static cl::opt<int> OptBisectLimit(
         "Maximum optimization to perform (equivalent to -opt-bisect=1-N)"));
 
 static cl::opt<std::string> OptBisectIntervals(
-    "opt-bisect", cl::Hidden, cl::Optional,
+    "opt-bisect", cl::Hidden,
     cl::cb<void, const std::string &>([](const std::string &IntervalStr) {
       if (IntervalStr == "-1") {
         // -1 means run all passes.
@@ -77,10 +77,10 @@ static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
     cl::desc(
         "Show verbose output when opt-bisect-limit and/or opt-disable are set"),
-    cl::Hidden, cl::init(true), cl::Optional);
+    cl::Hidden, cl::init(true));
 
 static cl::list<std::string> OptDisablePasses(
-    "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
+    "opt-disable", cl::Hidden, cl::CommaSeparated,
     cl::cb<void, std::string>([](const std::string &Pass) {
       getOptBisector().setDisabled(Pass);
     }),

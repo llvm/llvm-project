@@ -72,3 +72,12 @@ fir.global @common_block : !fir.array<8xi8>
 // DECL: %[[STORAGE:.*]] = fir.address_of(@common_block) : !fir.ref<!fir.array<8xi8>>
 // DECL: fircg.ext_declare {{.*}} storage(%[[STORAGE]][0]) {uniq_name = "_QFEx"}
 // DECL: fircg.ext_declare {{.*}} storage(%[[STORAGE]][4]) {uniq_name = "_QFEy"}
+
+// Test that the CUDA Fortran data attribute is preserved during conversion
+func.func @test_data_attr(%arg0: !fir.ref<i32>) {
+  %0 = fir.declare %arg0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFEd"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  return
+}
+
+// DECL-LABEL: func.func @test_data_attr(
+// DECL: fircg.ext_declare {{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFEd"}

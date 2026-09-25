@@ -12,7 +12,7 @@ func.func @test_poly_expr_without_associate() {
 }
 // CHECK-LABEL:   func.func @test_poly_expr_without_associate() {
 // CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>
-// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>> {bindc_name = "r", uniq_name = "_QFtestEr"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>> <{bindc_name = "r", uniq_name = "_QFtestEr"}>
 // CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEr"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>)
 // CHECK:           %[[VAL_3:.*]] = fir.undefined !fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>) -> (!fir.class<!fir.type<_QFtestTt{c:i32}>>, !fir.class<!fir.type<_QFtestTt{c:i32}>>)
@@ -66,7 +66,7 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
 // CHECK-LABEL:   func.func @test_poly_expr_with_associate(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.class<!fir.array<3x!fir.type<_QMtest_typeTt1{i:i32}>>> {fir.bindc_name = "v2"}) {
 // CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>
-// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>> {bindc_name = ".result"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>> <{bindc_name = ".result"}>
 // CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFtestEv2"} : (!fir.class<!fir.array<3x!fir.type<_QMtest_typeTt1{i:i32}>>>) -> (!fir.class<!fir.array<3x!fir.type<_QMtest_typeTt1{i:i32}>>>, !fir.class<!fir.array<3x!fir.type<_QMtest_typeTt1{i:i32}>>>)
 // CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>)
 // CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>

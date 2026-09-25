@@ -18,12 +18,12 @@ end program
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1000 : i32
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFEa"}>
 ! CHECK:           %[[VAL_5:.*]] = fir.volatile_cast %[[VAL_4]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEa"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
-! CHECK:           %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_9:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFEn"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFEn"}>
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_6]]#0 : i32, !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_10]]#0 : i32, !fir.ref<i32>

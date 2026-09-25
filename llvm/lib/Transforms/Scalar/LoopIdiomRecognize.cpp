@@ -2735,12 +2735,11 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
   // would have identical behavior in the original loop and thus
   if (!IsCntPhiUsedOutsideLoop) {
     auto *PreCondBB = PH->getSinglePredecessor();
-    if (!PreCondBB)
-      return false;
-    auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
-    if (!PreCondBI)
-      return false;
-    if (matchCondition(PreCondBI, PH) != InitX)
+    auto *PreCondBI =
+        PreCondBB ? dyn_cast<CondBrInst>(PreCondBB->getTerminator()) : nullptr;
+    if (!(PreCondBI && matchCondition(PreCondBI, PH) == InitX) &&
+        !isKnownNonZero(
+            InitX, SimplifyQuery(*DL, DT, /*AC=*/nullptr, PH->getTerminator())))
       return false;
     ZeroCheck = true;
   }

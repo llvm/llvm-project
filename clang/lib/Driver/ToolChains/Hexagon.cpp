@@ -218,7 +218,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
-  addSanitizerRuntimes(HTC, Args, CmdArgs);
+  addSanitizerRuntimes(HTC, Args, CmdArgs, C);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -304,7 +304,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------

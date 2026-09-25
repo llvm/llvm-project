@@ -4,26 +4,26 @@
 
 !CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "WSLOOP_COLLAPSE"} {
 program wsloop_collapse
-!CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
+!CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFEa"}>
 !CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFEb"}
+!CHECK:           %[[VAL_8:.*]] = fir.alloca i32 <{bindc_name = "b", uniq_name = "_QFEb"}>
 !CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_10:.*]] = fir.alloca i32 {bindc_name = "c", uniq_name = "_QFEc"}
+!CHECK:           %[[VAL_10:.*]] = fir.alloca i32 <{bindc_name = "c", uniq_name = "_QFEc"}>
 !CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFEc"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 
-!CHECK:           %[[VAL_12:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+!CHECK:           %[[VAL_12:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 !CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_14:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFEj"}
+!CHECK:           %[[VAL_14:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFEj"}>
 !CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_16:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFEk"}
+!CHECK:           %[[VAL_16:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFEk"}>
 !CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_18:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+!CHECK:           %[[VAL_18:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFEx"}>
 !CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:           %[[VAL_20:.*]] = arith.constant 3 : i32

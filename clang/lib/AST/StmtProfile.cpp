@@ -535,6 +535,11 @@ void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
     Profiler->VisitExpr(Factor);
 }
 
+void OMPClauseProfiler::VisitOMPDepthClause(const OMPDepthClause *C) {
+  if (const Expr *Depth = C->getDepth())
+    Profiler->VisitExpr(Depth);
+}
+
 void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   if (const Expr *First = C->getFirst())
     Profiler->VisitExpr(First);
@@ -1091,6 +1096,10 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPFlattenDirective(const OMPFlattenDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 

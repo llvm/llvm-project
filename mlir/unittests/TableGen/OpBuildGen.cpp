@@ -291,13 +291,17 @@ TEST_F(OpBuildGenTest, BuildMethodsVariadicProperties) {
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, noAttrs);
 
   // Test build method with result types, supplied attributes.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   op = test::TableGenBuildOp6::create(builder, loc, TypeRange{f32Ty},
                                       ValueRange{*cstI32, *cstI32}, attrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
 
   // Test build method with no result types and supplied attributes.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   op = test::TableGenBuildOp6::create(builder, loc,
                                       ValueRange{*cstI32, *cstI32}, attrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
 
   // Test replacing an inherent attribute backed by a native property.
@@ -336,8 +340,10 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   // Check that the old-style builder partitions the attributes and populates
   // properties before Operation::create.
   OperationState state(loc, test::TableGenBuildOp7::getOperationName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   test::TableGenBuildOp7::build(builder, state, TypeRange{}, ValueRange{},
                                 attrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   ASSERT_TRUE(state.getRawProperties());
   EXPECT_EQ(state.attributes.getAttrs().size(), 1u);
   EXPECT_EQ(state.attributes.getAttrs()[0], attrs[1]);
@@ -348,9 +354,11 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   auto op7FromState = cast<test::TableGenBuildOp7>(builder.create(state));
   verifyOp(op7FromState, {}, {}, attrs);
 
-  // Check that the legacy create forwarder remains compatible.
+  // Check that the deprecated create forwarder remains compatible.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   auto op7b = test::TableGenBuildOp7::create(builder, loc, TypeRange{},
                                              ValueRange{}, attrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   // Note: this goes before verifyOp() because verifyOp() calls erase(), causing
   // use-after-free.
   ASSERT_EQ(op7b.getProperties().getAttr0(), attrs[0].getValue());
@@ -368,8 +376,10 @@ TEST_F(OpBuildGenTest, BuildMethodsLegacyMixedProperties) {
       builder.getNamedAttr("unknown", builder.getStringAttr("discardable"))};
   OperationState state(loc, test::TableGenBuildOp8::getOperationName());
 
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   test::TableGenBuildOp8::build(builder, state, ValueRange{*cstI32, *cstF32},
                                 mixedAttrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   ASSERT_TRUE(state.getRawProperties());
   ASSERT_EQ(state.attributes.getAttrs().size(), 1u);
@@ -395,9 +405,11 @@ TEST_F(OpBuildGenTest, BuildMethodsLegacyMixedProperties) {
 
 TEST_F(OpBuildGenTest, BuildMethodsLegacyDefaultsWithoutAttributes) {
   OperationState state(loc, test::TableGenBuildOp8::getOperationName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   test::TableGenBuildOp8::build(builder, state, TypeRange{i32Ty},
                                 ValueRange{*cstI32, *cstF32},
                                 ArrayRef<NamedAttribute>{});
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   ASSERT_TRUE(state.getRawProperties());
   const auto &properties =
@@ -409,8 +421,10 @@ TEST_F(OpBuildGenTest, BuildMethodsLegacySameOperandAndResultType) {
   SmallVector<NamedAttribute> mixedAttrs{
       builder.getNamedAttr("attr0", builder.getBoolAttr(true)),
       builder.getNamedAttr("unknown", builder.getUnitAttr())};
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   auto op = test::TableGenBuildOp9::create(builder, loc, ValueRange{*cstI32},
                                            mixedAttrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   EXPECT_EQ(op.getResult().getType(), i32Ty);
   EXPECT_TRUE(op.getAttr0());
   EXPECT_EQ(op->getDiscardableAttrDictionary().size(), 1u);
@@ -422,8 +436,10 @@ TEST_F(OpBuildGenTest, BuildMethodsLegacyFirstAttrDerivedResultType) {
   SmallVector<NamedAttribute> mixedAttrs{
       builder.getNamedAttr("type", TypeAttr::get(f32Ty)),
       builder.getNamedAttr("unknown", builder.getUnitAttr())};
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   auto op = test::TableGenBuildOp10::create(builder, loc, ValueRange{*cstI32},
                                             mixedAttrs);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   EXPECT_EQ(op.getResult().getType(), f32Ty);
   EXPECT_EQ(op.getType(), f32Ty);
   EXPECT_EQ(op->getDiscardableAttrDictionary().size(), 1u);
@@ -443,10 +459,12 @@ TEST_F(OpBuildGenTest, BuildMethodsInvalidLegacyPropertyConversion) {
   SmallVector<NamedAttribute> badAttrs{
       builder.getNamedAttr("attr0", builder.getStringAttr("not-a-bool"))};
   OperationState state(loc, test::TableGenBuildOp7::getOperationName());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_DEATH_IF_SUPPORTED(
       test::TableGenBuildOp7::build(builder, state, TypeRange{}, ValueRange{},
                                     badAttrs),
       "Invalid attribute.*attr0");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 } // namespace mlir

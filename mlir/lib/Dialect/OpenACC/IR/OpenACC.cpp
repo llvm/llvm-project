@@ -225,7 +225,7 @@ struct MemRefPointerLikeModel
     if (memrefTy.getRank() != 0)
       return {};
 
-    return memref::LoadOp::create(builder, loc, memrefValue);
+    return memref::LoadOp::create(builder, loc, memrefValue, ValueRange{});
   }
 
   bool genStore(Type pointer, OpBuilder &builder, Location loc,
@@ -279,7 +279,7 @@ struct MemRefPointerLikeModel
     return {};
   }
 
-  bool isDeviceData(Type pointer, Value var) const {
+  bool isDeviceAccessible(Type pointer, Value var) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
@@ -387,6 +387,15 @@ struct MemrefAddressOfGlobalModel
   }
 };
 
+struct LLVMAddressOfGlobalModel
+    : public AddressOfGlobalOpInterface::ExternalModel<LLVMAddressOfGlobalModel,
+                                                       LLVM::AddressOfOp> {
+  SymbolRefAttr getSymbol(Operation *op) const {
+    auto addressOfOp = cast<LLVM::AddressOfOp>(op);
+    return addressOfOp.getGlobalNameAttr();
+  }
+};
+
 struct MemrefGlobalVariableModel
     : public GlobalVariableOpInterface::ExternalModel<MemrefGlobalVariableModel,
                                                       memref::GlobalOp> {
@@ -405,10 +414,17 @@ struct MemrefGlobalVariableModel
     return nullptr;
   }
 
-  bool isDeviceData(Operation *op) const {
+  bool isDeviceAccessible(Operation *op) const {
     auto globalOp = cast<memref::GlobalOp>(op);
     Attribute memSpace = globalOp.getType().getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
+
+  bool isInDeviceMemory(Operation *op) const {
+    // A memref address space models storage that is physically resident on the
+    // device, so a device-accessible global is also in device memory. (There
+    // is no host-shared/migratable address space to exclude here.)
+    return isDeviceAccessible(op);
   }
 
   bool isCompilerGenerated(Operation *op) const { return false; }
@@ -518,6 +534,7 @@ void OpenACCDialect::initialize() {
   // Attach operation interfaces
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
+  LLVM::AddressOfOp::attachInterface<LLVMAddressOfGlobalModel>(*getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
   gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
@@ -1686,21 +1703,6 @@ void acc::UpdateHostOp::getEffects(
   addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
 }
 
-template <typename StructureOp>
-static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
-                                unsigned nRegions = 1) {
-
-  SmallVector<Region *, 2> regions;
-  for (unsigned i = 0; i < nRegions; ++i)
-    regions.push_back(state.addRegion());
-
-  for (Region *region : regions)
-    if (parser.parseRegion(*region, /*arguments=*/{}, /*argTypes=*/{}))
-      return failure();
-
-  return success();
-}
-
 namespace {
 /// Pattern to remove operation without region that have constant false `ifCond`
 /// and remove the condition from the operation if the `ifCond` is a true
@@ -2430,9 +2432,9 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      /*selfAttr=*/false, reductionOperands, gangPrivateOperands,
       gangFirstPrivateOperands, dataClauseOperands,
-      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+      /*defaultAttr=*/nullptr, /*combined=*/false);
 }
 
 void acc::ParallelOp::addNumWorkersOperand(
@@ -5506,6 +5508,13 @@ bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
         return bitEnumContainsAny(mapInfo.getMapFlags(),
                                   mlir::acc::MapFlags::implicit);
       })
+      .Default([&](mlir::Operation *) { return false; });
+}
+
+bool mlir::acc::getSyntheticFlag(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, bool>(accDataClauseOp)
+      .Case<ACC_DATA_CLAUSE_OPS>(
+          [&](auto dataClause) { return dataClause.getSynthetic(); })
       .Default([&](mlir::Operation *) { return false; });
 }
 

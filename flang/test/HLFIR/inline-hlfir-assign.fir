@@ -23,7 +23,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.array<3x3xf32>> {fir.bindc_name = "x"})
 // CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.array<3x3xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf32>>, !fir.ref<!fir.array<3x3xf32>>)
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xf32> {bindc_name = "y", uniq_name = "_QFtest1Ey"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xf32> <{bindc_name = "y", uniq_name = "_QFtest1Ey"}>
 // CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_3]]) {uniq_name = "_QFtest1Ey"} : (!fir.ref<!fir.array<3x3xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf32>>, !fir.ref<!fir.array<3x3xf32>>)
 // CHECK:           %[[VAL_7:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]])  shape %[[VAL_3]] : (!fir.ref<!fir.array<3x3xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<3x3xf32>>
 // CHECK:           %[[VAL_8:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]])  shape %[[VAL_3]] : (!fir.ref<!fir.array<3x3xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<3x3xf32>>
@@ -74,7 +74,7 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest2Ex"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xf32> {bindc_name = "y", uniq_name = "_QFtest2Ey"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xf32> <{bindc_name = "y", uniq_name = "_QFtest2Ey"}>
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_3]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) {uniq_name = "_QFtest2Ey"} : (!fir.ref<!fir.array<3x3xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf32>>, !fir.ref<!fir.array<3x3xf32>>)
 // CHECK:           %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_4]]#1, %[[VAL_1]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
@@ -133,7 +133,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest3Ex"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xf32> {bindc_name = "y", uniq_name = "_QFtest3Ey"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<3x3xf32> <{bindc_name = "y", uniq_name = "_QFtest3Ey"}>
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_3]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) {uniq_name = "_QFtest3Ey"} : (!fir.ref<!fir.array<3x3xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf32>>, !fir.ref<!fir.array<3x3xf32>>)
 // CHECK:           %[[VAL_8:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_2]]:%[[VAL_3]]:%[[VAL_2]], %[[VAL_2]]:%[[VAL_3]]:%[[VAL_2]])  shape %[[VAL_6]] : (!fir.ref<!fir.array<3x3xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<3x3xf32>>

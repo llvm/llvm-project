@@ -603,8 +603,14 @@ bool LTOCodeGenerator::optimize() {
   // Mark which symbols can not be internalized
   this->applyScopeRestrictions();
 
-  // Add an appropriate DataLayout instance for this module...
-  MergedModule->setDataLayout(TargetMach->createDataLayout());
+  // Seed a DataLayout only if the merged module does not already carry one, so
+  // an input module's own DataLayout is preserved. Compute it from the module's
+  // ABI so the target-abi module flag is respected.
+  if (MergedModule->getDataLayout().isDefault()) {
+    MergedModule->setDataLayout(
+        MergedModule->getTargetTriple().computeDataLayout(
+            TargetMach->getTargetABIName(*MergedModule)));
+  }
 
   if (!SaveIRBeforeOptPath.empty()) {
     std::error_code EC;

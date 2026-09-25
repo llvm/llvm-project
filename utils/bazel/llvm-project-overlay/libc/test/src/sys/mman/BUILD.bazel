@@ -25,6 +25,7 @@ libc_test(
     name = "mincore_test",
     srcs = ["linux/mincore_test.cpp"],
     deps = [
+        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc:madvise",
         "//libc:mincore",
@@ -32,7 +33,6 @@ libc_test(
         "//libc:mmap",
         "//libc:munlock",
         "//libc:munmap",
-        "//libc:sysconf",
     ],
 )
 
@@ -41,6 +41,7 @@ libc_test(
     srcs = ["linux/mlock_test.cpp"],
     deps = [
         "//libc:__support_osutil_syscall",
+        "//libc:getpagesize",
         "//libc:getrlimit",
         "//libc:hdr_sys_mman_macros",
         "//libc:hdr_sys_resource_macros",
@@ -53,7 +54,6 @@ libc_test(
         "//libc:munlock",
         "//libc:munlockall",
         "//libc:munmap",
-        "//libc:sysconf",
     ],
 )
 
@@ -97,13 +97,13 @@ libc_test(
     name = "msync_test",
     srcs = ["linux/msync_test.cpp"],
     deps = [
+        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc:mlock",
         "//libc:mmap",
         "//libc:msync",
         "//libc:munlock",
         "//libc:munmap",
-        "//libc:sysconf",
     ],
 )
 
@@ -142,13 +142,13 @@ libc_test(
     srcs = ["linux/remap_file_pages_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc:hdr_sys_stat_macros",
         "//libc:mmap",
         "//libc:munmap",
         "//libc:open",
         "//libc:remap_file_pages",
-        "//libc:sysconf",
     ],
 )
 

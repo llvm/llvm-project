@@ -385,8 +385,17 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     }
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+      OperationName($_qualCppClassName::getOperationName(),
+                    $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
     auto op = $_qualCppClassName::create($_builder,
-      $_location, resultTypes, mlirOperands, mlirAttrs);
+      $_location, resultTypes, mlirOperands, properties, {});
     }];
   string baseMlirBuilderArgAndResultAttrs = [{
     moduleImport.convertArgAndResultAttrs(

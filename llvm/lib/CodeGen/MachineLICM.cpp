@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegister.h"
@@ -635,12 +636,15 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const MachineFunction &MF = *BB->getParent();
       const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-      if (MCRegister Reg = TLI.getExceptionPointerRegister(
-              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
+      // Prefer the "exception-model" module flag, else the TargetOptions
+      // default.
+      ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+      if (EH == ExceptionHandling::Default)
+        EH = TLI.getTargetMachine().getExceptionModel();
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(EH, PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
-      if (MCRegister Reg = TLI.getExceptionSelectorRegister(
-              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(EH, PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
     }

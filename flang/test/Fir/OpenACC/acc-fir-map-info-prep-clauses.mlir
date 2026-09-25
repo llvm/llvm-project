@@ -130,7 +130,7 @@ func.func @deviceptr() {
 // CHECK-LABEL: func.func @detach
 // CHECK: %[[MAP:.*]] = acc.map_info varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 // CHECK-SAME: descKind(cfi)
-// CHECK-SAME: mapFlags(ptr_and_obj)
+// CHECK-SAME: mapFlags(ptr_and_obj,detach)
 // CHECK: acc.exit_data dataOperands(%[[MAP]]
 // CHECK-NOT: acc.detach
 func.func @detach() {

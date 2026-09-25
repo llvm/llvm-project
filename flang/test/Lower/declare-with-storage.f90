@@ -159,7 +159,7 @@ subroutine test5
   equivalence (x(5), y(7))
 end subroutine test5
 ! ALL-LABEL:     func.func @_QPtest5() {
-! HLFIR:           %[[VAL_1:.*]] = fir.alloca !fir.array<48xi8> {uniq_name = "_QFtest5Ex"}
+! HLFIR:           %[[VAL_1:.*]] = fir.alloca !fir.array<48xi8> <{uniq_name = "_QFtest5Ex"}>
 ! HLFIR:           %[[VAL_2:.*]] = arith.constant 8 : index
 ! HLFIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<48xi8>>, index) -> !fir.ref<i8>
 ! HLFIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xf32>>
@@ -171,7 +171,7 @@ end subroutine test5
 
 ! FIR:           %[[VAL_0:.*]] = arith.constant 0 : index
 ! FIR:           %[[VAL_2:.*]] = arith.constant 8 : index
-! FIR:           %[[VAL_4:.*]] = fir.alloca !fir.array<48xi8> {uniq_name = "_QFtest5Ex"}
+! FIR:           %[[VAL_4:.*]] = fir.alloca !fir.array<48xi8> <{uniq_name = "_QFtest5Ex"}>
 ! FIR:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.array<48xi8>>, index) -> !fir.ref<i8>
 ! FIR:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xf32>>
 ! FIR:           %[[VAL_8:.*]] = fir.declare %[[VAL_6]](%{{.*}}) storage(%[[VAL_4]][8]) {uniq_name = "_QFtest5Ex"} : (!fir.ptr<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<48xi8>>) -> !fir.ptr<!fir.array<10xf32>>

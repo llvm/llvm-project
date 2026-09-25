@@ -196,7 +196,10 @@ WebAssemblyPreLegalizerCombinerPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   bool Changed = runCombinerOnMachineFunction(
       MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
-      [&]() { return MF.getFunction().hasOptNone(); },
+      [&]() {
+        return MF.getFunction().hasOptNone() ||
+               shouldSkipOptimizationForOptBisect(MF.getFunction());
+      },
       [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
       [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
   return Changed ? getMachineFunctionPassPreservedAnalyses()

@@ -1628,8 +1628,16 @@ void InstructionMatcher::optimize() {
 
   if (InsnVarID > 0) {
     assert(!Operands.empty() && "Nested instruction is expected to def a vreg");
-    for (auto &OP : Operands[0]->predicates())
+    for (auto &OP : Operands[0]->predicates()) {
+      // LLTOperandMatcher need to be kept as they may have a more specific type
+      // than the parent instruction type.
+      if (const auto *LLTPred = dyn_cast<LLTOperandMatcher>(&*OP)) {
+        if (!LLTPred->getTy().get().isAnyScalar() &&
+            !LLTPred->getTy().get().isAnyVector())
+          continue;
+      }
       OP.reset();
+    }
     Operands[0]->eraseNullPredicates();
   }
   for (auto &OM : Operands) {

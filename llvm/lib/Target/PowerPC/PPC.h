@@ -49,7 +49,6 @@ class ModulePass;
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOptLevel OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
-  FunctionPass *createPPCExpandISELPass();
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
@@ -97,6 +96,16 @@ class ModulePass;
   InstructionSelector *
   createPPCInstructionSelector(const PPCTargetMachine &, const PPCSubtarget &,
                                const PPCRegisterBankInfo &);
+
+  /// The PowerPC ABI variant. PPC_ABI_AIX_EXTABI is the AIX extended Altivec
+  /// ABI ("vec-extabi").
+  enum PPCABI {
+    PPC_ABI_UNKNOWN,
+    PPC_ABI_ELFv1,
+    PPC_ABI_ELFv2,
+    PPC_ABI_AIX_EXTABI
+  };
+
   namespace PPCII {
 
   /// Target Operand Flag enum.

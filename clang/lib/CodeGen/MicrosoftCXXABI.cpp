@@ -1953,13 +1953,14 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // importing it.  We never reference the RTTI data directly so there is no
   // need to make room for it.
   if (VTableAliasIsRequred) {
-    llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
-                                 llvm::ConstantInt::get(CGM.Int32Ty, 0),
-                                 llvm::ConstantInt::get(CGM.Int32Ty, 1)};
+    llvm::Constant *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                    llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                    llvm::ConstantInt::get(CGM.Int32Ty, 1)};
     // Create a GEP which points just after the first entry in the VFTable,
     // this should be the location of the first virtual method.
-    llvm::Constant *VTableGEP = llvm::ConstantExpr::getInBoundsGetElementPtr(
-        VTable->getValueType(), VTable, GEPIndices);
+    llvm::Constant *VTableGEP = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), VTable->getValueType(), VTable, GEPIndices,
+        llvm::GEPNoWrapFlags::inBounds());
     if (llvm::GlobalValue::isWeakForLinker(VFTableLinkage)) {
       VFTableLinkage = llvm::GlobalValue::ExternalLinkage;
       if (C)

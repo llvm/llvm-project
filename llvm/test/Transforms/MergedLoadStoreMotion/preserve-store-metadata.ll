@@ -27,7 +27,7 @@ entry:
 
 then:
   store ptr %dst, ptr %gep.dst.16, align 8, !tbaa !0, !alias.scope !9, !noalias !9, !llvm.access.group !13
-  store ptr %dst, ptr %min, align 8, !tbaa !5
+  store ptr %dst, ptr %min, align 8, !tbaa !4
   br label %return
 
 else:
@@ -63,7 +63,7 @@ entry:
   br i1 %c, label %then, label %else
 
 then:
-  store ptr %dst, ptr %gep.dst.16, align 8, !tbaa !5, !alias.scope !9, !noalias !9, !llvm.access.group !13
+  store ptr %dst, ptr %gep.dst.16, align 8, !tbaa !4, !alias.scope !9, !noalias !9, !llvm.access.group !13
   store ptr %dst, ptr %min, align 8, !tbaa !6
   br label %return
 
@@ -93,7 +93,7 @@ return:
 !13 = distinct !{}
 !14 = distinct !{}
 ;.
-; CHECK: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 0}
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}

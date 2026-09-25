@@ -29,8 +29,9 @@ BootstrapInfo::CreateDefault(Session &S,
 
   SimpleSymbolTable InitialSymbols;
   // Add session symbol.
-  std::pair<const char *, const void *> SessionSymbol[] = {
-      {"orc_rt_Session_Instance", static_cast<const void *>(&S)}};
+  std::pair<SymbolNameSpec, const void *> SessionSymbol[] = {
+      {SymbolNameSpec::c("orc_rt_Session_Instance"),
+       static_cast<const void *>(&S)}};
   if (auto Err = InitialSymbols.addUnique(SessionSymbol))
     return std::move(Err);
 

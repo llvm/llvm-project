@@ -63,6 +63,7 @@ public:
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
+  bool hasTargetABI() const { return TargetABI != RISCVABI::ABI_Unknown; }
   void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }

@@ -21,7 +21,7 @@ contains
   ! Test local scalar is default initialized
   ! CHECK-LABEL: func @_QMtest_dinitPlocal()
   subroutine local
-    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocalEx"}
+    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}> <{bindc_name = "x", uniq_name = "_QMtest_dinitFlocalEx"}>
     !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFlocalEx"}
     !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
     !CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
@@ -45,7 +45,7 @@ contains
   ! scalars.
   ! CHECK-LABEL: func @_QMtest_dinitPlocal_alloc_comp()
   subroutine local_alloc_comp
-    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
+    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt_alloc_comp{{(,sequence)?}}{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}> <{bindc_name = "x", uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}>
     !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFlocal_alloc_compEx"}
     !CHECK: %[[COORD:.*]] = fir.coordinate_of %[[x]]#0, i : (!fir.ref<!fir.type<_QMtest_dinitTt_alloc_comp{i:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
@@ -58,7 +58,7 @@ contains
   ! Test function results are default initialized.
   ! CHECK-LABEL: func @_QMtest_dinitPresult() -> !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>
   function result()
-    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}> {bindc_name = "result", uniq_name = "_QMtest_dinitFresultEresult"}
+    !CHECK: %[[xalloc:.*]] = fir.alloca !fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}> <{bindc_name = "result", uniq_name = "_QMtest_dinitFresultEresult"}>
     !CHECK: %[[x:.*]]:2 = hlfir.declare %[[xalloc]] {uniq_name = "_QMtest_dinitFresultEresult"}
     !CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtest_dinitTt.DerivedInit) : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>
     !CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>, !fir.ref<!fir.type<_QMtest_dinitTt{{(,sequence)?}}{i:i32}>>

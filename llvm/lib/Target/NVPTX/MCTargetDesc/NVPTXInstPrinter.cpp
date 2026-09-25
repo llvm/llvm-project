@@ -590,6 +590,12 @@ void NVPTXInstPrinter::printTMAValidateDataFlags(const MCInst *MI, int OpNum,
     << nvvm::getTMAValidateDataPatternName(Pattern);
 }
 
+void NVPTXInstPrinter::printMemScope(const MCInst *MI, int OpNum,
+                                     const MCSubtargetInfo &, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  O << "." << nvvm::getMemScopeName(static_cast<nvvm::MemScope>(MO.getImm()));
+}
+
 void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &, raw_ostream &O,
                                         StringRef Modifier) {

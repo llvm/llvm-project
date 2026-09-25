@@ -2030,21 +2030,21 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%11> to index 0
 ; CHECK:    store ir<%13> to index 1
-; CHECK:  Cost for VF 4: 36 (Estimated cost per lane: 9)
+; CHECK:  Cost for VF 4: 34 (Estimated cost per lane: 8.5)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%10>
 ; CHECK:    ir<%11> = load from index 0
 ; CHECK:    ir<%13> = load from index 1
 ; CHECK:  Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%11> to index 0
 ; CHECK:    store ir<%13> to index 1
-; CHECK:  Cost for VF 8: 40 (Estimated cost per lane: 5)
+; CHECK:  Cost for VF 8: 38 (Estimated cost per lane: 4.75)
 ; CHECK:  Cost of 68 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%10>
 ; CHECK:    ir<%11> = load from index 0
 ; CHECK:    ir<%13> = load from index 1
 ; CHECK:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%11> to index 0
 ; CHECK:    store ir<%13> to index 1
-; CHECK:  Cost for VF 16: 81 (Estimated cost per lane: 5.06)
+; CHECK:  Cost for VF 16: 79 (Estimated cost per lane: 4.94)
 ; CHECK:  LV: Selecting VF: 8.
 ;
   %5 = icmp sgt i32 %3, 0
@@ -2084,7 +2084,7 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%38> = load ir<%37>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%41> = load ir<%40>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%48>, ir<%49>
-; CHECK:  Cost for VF 2: 81 (Estimated cost per lane: 40.5)
+; CHECK:  Cost for VF 2: 79 (Estimated cost per lane: 39.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
@@ -2098,7 +2098,7 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%30> to index 0
 ; CHECK:    store ir<%48> to index 1
-; CHECK:  Cost for VF 4: 74 (Estimated cost per lane: 18.5)
+; CHECK:  Cost for VF 4: 72 (Estimated cost per lane: 18)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
@@ -2112,7 +2112,7 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK:  Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%30> to index 0
 ; CHECK:    store ir<%48> to index 1
-; CHECK:  Cost for VF 8: 90 (Estimated cost per lane: 11.3)
+; CHECK:  Cost for VF 8: 88 (Estimated cost per lane: 11)
 ; CHECK:  Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
@@ -2126,7 +2126,7 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%30> to index 0
 ; CHECK:    store ir<%48> to index 1
-; CHECK:  Cost for VF 16: 323 (Estimated cost per lane: 20.2)
+; CHECK:  Cost for VF 16: 321 (Estimated cost per lane: 20.1)
 ; CHECK:  LV: Selecting VF: 8.
 ;
   %5 = icmp sgt i32 %3, 0
@@ -2199,7 +2199,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%28>, ir<%29>
-; CHECK:  Cost for VF 2: 53 (Estimated cost per lane: 26.5)
+; CHECK:  Cost for VF 2: 51 (Estimated cost per lane: 25.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
@@ -2208,7 +2208,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%18> to index 0
 ; CHECK:    store ir<%28> to index 1
-; CHECK:  Cost for VF 4: 48 (Estimated cost per lane: 12)
+; CHECK:  Cost for VF 4: 46 (Estimated cost per lane: 11.5)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
@@ -2217,7 +2217,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 ; CHECK:  Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%18> to index 0
 ; CHECK:    store ir<%28> to index 1
-; CHECK:  Cost for VF 8: 56 (Estimated cost per lane: 7)
+; CHECK:  Cost for VF 8: 54 (Estimated cost per lane: 6.75)
 ; CHECK:  Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
@@ -2226,7 +2226,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 ; CHECK:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%18> to index 0
 ; CHECK:    store ir<%28> to index 1
-; CHECK:  Cost for VF 16: 175 (Estimated cost per lane: 10.9)
+; CHECK:  Cost for VF 16: 173 (Estimated cost per lane: 10.8)
 ; CHECK:  LV: Selecting VF: 8.
 ;
   %5 = icmp sgt i32 %3, 0

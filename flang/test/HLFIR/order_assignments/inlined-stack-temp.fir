@@ -39,7 +39,7 @@ func.func @test_scalar_save(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_10:.*]] = arith.divsi %[[VAL_9]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_7]] : index
 // CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_7]] : index
-// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_12]] {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_12]] <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[VAL_14:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_12]] : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_14]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.do_loop %[[VAL_16:.*]] = %[[VAL_4]] to %[[VAL_5]] step %[[VAL_6]] {
@@ -113,7 +113,7 @@ func.func @mask_and_rhs_conflict(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_11:.*]] = arith.divsi %[[VAL_10]], %[[VAL_7]] : index
 // CHECK:           %[[VAL_12:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_13:.*]] = arith.select %[[VAL_12]], %[[VAL_11]], %[[VAL_8]] : index
-// CHECK:           %[[MASK_TEMP:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_13]] {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[MASK_TEMP:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_13]] <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[MASK_SHAPE:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_13]] : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK_TEMP]](%[[MASK_SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi1>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
 // CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
@@ -122,7 +122,7 @@ func.func @mask_and_rhs_conflict(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_19:.*]] = arith.divsi %[[VAL_18]], %[[VAL_7]] : index
 // CHECK:           %[[VAL_20:.*]] = arith.cmpi sgt, %[[VAL_19]], %[[VAL_16]] : index
 // CHECK:           %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_19]], %[[VAL_16]] : index
-// CHECK:           %[[RHS_TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[RHS_TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[RHS_SHAPE:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_21]] : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[RHS_DECL:.*]]:2 = hlfir.declare %[[RHS_TEMP]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.do_loop %[[VAL_24:.*]] = %[[VAL_5]] to %[[VAL_6]] step %[[VAL_7]] {
@@ -260,7 +260,7 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:           %[[VAL_12:.*]] = arith.divsi %[[VAL_11]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_9]] : index
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_12]], %[[VAL_9]] : index
-// CHECK:           %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_14]] {bindc_name = ".tmp.where", uniq_name = ""}
+// CHECK:           %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_14]] <{bindc_name = ".tmp.where", uniq_name = ""}>
 // CHECK:           %[[VAL_16:.*]] = fir.shape_shift %[[VAL_8]], %[[VAL_14]] : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) {uniq_name = ".tmp.where"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.do_loop %[[VAL_18:.*]] = %[[VAL_8]] to %[[VAL_6]] step %[[VAL_8]] {

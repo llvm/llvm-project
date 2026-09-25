@@ -606,6 +606,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkostemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkostemp
+)
+
+add_entrypoint_object(
   mkstemp
   ALIAS
   DEPENDS
@@ -691,6 +698,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  secure_getenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.secure_getenv
 )
 
 add_entrypoint_object(

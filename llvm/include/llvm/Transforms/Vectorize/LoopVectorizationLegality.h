@@ -347,16 +347,6 @@ public:
   /// Returns True if V is a Phi node of an induction variable in this loop.
   LLVM_ABI bool isInductionPhi(const Value *V) const;
 
-  /// Returns True if V is a cast that is part of an induction def-use chain,
-  /// and had been proven to be redundant under a runtime guard (in other
-  /// words, the cast has the same SCEV expression as the induction phi).
-  LLVM_ABI bool isCastedInductionVariable(const Value *V) const;
-
-  /// Returns True if V can be considered as an induction variable in this
-  /// loop. V can be the induction phi, or some redundant cast in the def-use
-  /// chain of the inducion phi.
-  LLVM_ABI bool isInductionVariable(const Value *V) const;
-
   /// Returns True if PN is a reduction variable in this loop.
   bool isReductionVariable(PHINode *PN) const { return Reductions.count(PN); }
 
@@ -457,9 +447,6 @@ public:
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
   bool hasVectorCallVariants() const { return VecCallVariantsFound; }
-
-  unsigned getNumStores() const { return LAI->getNumStores(); }
-  unsigned getNumLoads() const { return LAI->getNumLoads(); }
 
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
@@ -688,12 +675,6 @@ private:
   /// Notice that inductions don't need to start at zero and that induction
   /// variables can be pointers.
   InductionList Inductions;
-
-  /// Holds all the casts that participate in the update chain of the induction
-  /// variables, and that have been proven to be redundant (possibly under a
-  /// runtime guard). These casts can be ignored when creating the vectorized
-  /// loop body.
-  SmallPtrSet<Instruction *, 4> InductionCastsToIgnore;
 
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;

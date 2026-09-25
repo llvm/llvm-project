@@ -9,3 +9,48 @@ v_wmma_scale_f32_32x16x128_f4 v[0:15], v[8:23], v[0:7], v[0:15], s0, s0
 
 v_wmma_scale16_f32_32x16x128_f4 v[0:15], v[8:23], v[0:7], v[0:15], s[0:1], s[0:1]
 // GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_scale16_f32_32x16x128_f4
+
+v_cvt_scale_pk8_f16_fp8 v[10:13], v[20:21], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_f16_fp8
+
+v_cvt_scale_pk8_bf16_fp8 v[10:13], v[20:21], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_bf16_fp8
+
+v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_f16_bf8
+
+v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_bf16_bf8
+
+v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_f32_fp8
+
+v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_f32_bf8
+
+v_cvt_scale_pk16_f16_fp6 v[10:17], v[20:22], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk16_f16_fp6
+
+v_cvt_scale_pk16_bf16_fp6 v[10:17], v[20:22], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk16_bf16_fp6
+
+v_cvt_scale_pk16_f16_bf6 v[10:17], v[20:22], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk16_f16_bf6
+
+v_cvt_scale_pk16_bf16_bf6 v[10:17], v[20:22], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk16_bf16_bf6
+
+v_cvt_scale_pk16_f32_fp6 v[10:25], v[20:22], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk16_f32_fp6
+
+v_cvt_scale_pk16_f32_bf6 v[10:25], v[20:22], v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk16_f32_bf6
+
+v_cvt_scale_pk8_f16_fp4 v[10:13], v20, v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_f16_fp4
+
+v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_bf16_fp4
+
+v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8
+// GFX1250-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_cvt_scale_pk8_f32_fp4

@@ -3447,8 +3447,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
                                           bool IsLogical) {
   CmpPredicate PredL, PredR;
   Value *LHS0, *LHS1, *RHS0, *RHS1;
-  if (!match(LHS, m_ICmp(PredL, m_Value(LHS0), m_Value(LHS1))) ||
-      !match(RHS, m_ICmp(PredR, m_Value(RHS0), m_Value(RHS1))))
+  if (!match(LHS, m_ICmpLike(PredL, m_Value(LHS0), m_Value(LHS1))) ||
+      !match(RHS, m_ICmpLike(PredR, m_Value(RHS0), m_Value(RHS1))))
     return nullptr;
 
   bool LHSOneUse = LHS->hasOneUse();
@@ -3492,17 +3492,20 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     return V;
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
-  if (Value *V = foldAndOrOfICmpsWithConstEq(
-          PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
-          /*IsLogical=*/false, Builder, Q, I)) {
-    // If RHS is still used, we should drop samesign flag.
-    if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
-      auto *CmpR = cast<ICmpInst>(RHS);
-      CmpR->setSameSign(false);
-      addToWorklist(CmpR);
+  // Can not handle RHS = trunc nuw as it is not same as icmp ne 0 for all
+  // values
+  if (isa<ICmpInst>(RHS))
+    if (Value *V = foldAndOrOfICmpsWithConstEq(
+            PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
+            /*IsLogical=*/false, Builder, Q, I)) {
+      // If RHS is still used, we should drop samesign flag.
+      if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
+        auto *CmpR = cast<ICmpInst>(RHS);
+        CmpR->setSameSign(false);
+        addToWorklist(CmpR);
+      }
+      return V;
     }
-    return V;
-  }
 
   if (Value *V = foldIsPowerOf2OrZero(PredL, LHS0, LHS1, PredR, RHS0, RHS1,
                                       IsAnd, Builder, *this))
@@ -4371,6 +4374,29 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           Constant *C01 = ConstantInt::get(Ty, *C0 | *C1);
           return BinaryOperator::CreateAnd(Or, C01);
         }
+      }
+
+      // ((trunc (lshr X, S)) & C0) | ((lshr (trunc X), S) & C1)
+      // --> ((trunc (lshr X, S)) & (C0 | C1)) (and similar cases)
+      // A = trunc (lshr X, S) B = lshr (trunc X), S
+      const APInt *ShiftAmt;
+      if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->ult(A->getType()->getScalarSizeInBits()) &&
+          C1->isIntN(A->getType()->getScalarSizeInBits() -
+                     ShiftAmt->getZExtValue())) {
+        return BinaryOperator::CreateAnd(
+            A, ConstantInt::get(I.getType(), *C0 | *C1));
+      }
+      // A = lshr (trunc X), S
+      // B = trunc (lshr X, S)
+      if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->ult(A->getType()->getScalarSizeInBits()) &&
+          C0->isIntN(A->getType()->getScalarSizeInBits() -
+                     ShiftAmt->getZExtValue())) {
+        return BinaryOperator::CreateAnd(
+            B, ConstantInt::get(I.getType(), *C0 | *C1));
       }
     }
 

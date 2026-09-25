@@ -65,3 +65,9 @@ int **p9 = (int*[]){&x, &x};
 // LLVM: @x = global i32 0, align 4
 // LLVM: @.compoundliteral.9 = internal global [2 x ptr] [ptr @x, ptr @x], align 8
 // LLVM: @p9 = global ptr @.compoundliteral.9, align 8
+
+unsigned long addr = (unsigned long)(int[]){1, 2, 3};
+// CIR: cir.global "private" internal @".compoundliteral.10" = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 3> {alignment = 4 : i64}
+// CIR: cir.global external @addr = #cir.global_view<@".compoundliteral.10"> : !u64i {alignment = 8 : i64}
+// LLVM: @.compoundliteral.10 = internal global [3 x i32] [i32 1, i32 2, i32 3], align 4
+// LLVM: @addr = global i64 ptrtoint (ptr @.compoundliteral.10 to i64), align 8

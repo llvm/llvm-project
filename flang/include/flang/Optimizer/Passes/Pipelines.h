@@ -99,8 +99,6 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm);
 
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
-
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
 void addTargetRewritePass(mlir::PassManager &pm);

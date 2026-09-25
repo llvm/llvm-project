@@ -15,4 +15,5 @@
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LIST_FMAXIMUM_NUM_TESTS(float128, LIBC_NAMESPACE::fmaximum_numf128)
+LIST_FMAXIMUM_NUM_TESTS(FmaximumNumf128, float128,
+                        LIBC_NAMESPACE::fmaximum_numf128)

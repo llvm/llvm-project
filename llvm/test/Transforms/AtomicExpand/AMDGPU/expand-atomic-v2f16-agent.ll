@@ -765,7 +765,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX942-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode(
@@ -804,10 +804,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX12-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; GFX12-NEXT:    ret <2 x half> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -865,12 +865,12 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX942-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -909,10 +909,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX12-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x half> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -987,7 +987,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX942-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
@@ -1026,10 +1026,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX12-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x half> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1087,12 +1087,12 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX942-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -1131,10 +1131,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX12-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x half> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1192,12 +1192,12 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX942-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
@@ -1236,10 +1236,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX12-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x half> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1297,12 +1297,12 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX942-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
@@ -1341,10 +1341,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX12-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x half> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1458,7 +1458,7 @@ define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1480,7 +1480,7 @@ define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1502,7 +1502,7 @@ define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1524,7 +1524,7 @@ define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1638,7 +1638,7 @@ define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1660,7 +1660,7 @@ define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1682,7 +1682,7 @@ define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1704,7 +1704,7 @@ define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1818,7 +1818,7 @@ define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1840,7 +1840,7 @@ define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1862,7 +1862,7 @@ define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 
@@ -1884,7 +1884,7 @@ define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent__amdgpu_ignore_denorma
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x half> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x half> %res
 }
 

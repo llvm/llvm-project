@@ -431,15 +431,20 @@ void Session::wrapperReturn(orc_rt_SessionRef S,
 
 // --- C API Implementation ---
 
-extern "C" void orc_rt_Session_callController(
-    orc_rt_SessionRef S, orc_rt_ControllerHandlerTag T,
-    orc_rt_WrapperFunctionBuffer ArgBytes,
-    orc_rt_Session_CallControllerReturn Return, void *ReturnCtx) {
+extern "C" {
+
+void orc_rt_Session_callController(orc_rt_SessionRef S,
+                                   orc_rt_ControllerHandlerTag T,
+                                   orc_rt_WrapperFunctionBuffer ArgBytes,
+                                   orc_rt_Session_CallControllerReturn Return,
+                                   void *ReturnCtx) {
   unwrap(S)->callController(
       [S, Return, ReturnCtx](WrapperFunctionBuffer ResultBytes) {
         Return(S, ResultBytes.release(), ReturnCtx);
       },
       T, WrapperFunctionBuffer(ArgBytes));
 }
+
+} // extern "C"
 
 } // namespace orc_rt

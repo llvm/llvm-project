@@ -76,7 +76,8 @@ class flat_set {
 
   friend __flat_set_utils;
 
-  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
+  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>,
+                "The stored elements' key type must match the underlying key container's value_type.");
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
   using __key_iterator _LIBCPP_NODEBUG = typename _KeyContainer::const_iterator;

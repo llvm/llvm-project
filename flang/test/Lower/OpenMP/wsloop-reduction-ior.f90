@@ -16,9 +16,9 @@
 
 ! CHECK-LABEL:   func.func @_QPreduction_ior(
 ! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFreduction_iorEi"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFreduction_iorEi"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFreduction_iorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFreduction_iorEx"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFreduction_iorEx"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFreduction_iorEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFreduction_iorEy"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32

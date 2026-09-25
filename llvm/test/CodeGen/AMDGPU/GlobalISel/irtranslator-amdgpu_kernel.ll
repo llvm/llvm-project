@@ -2102,3 +2102,35 @@ define amdgpu_kernel void @v2p1i8_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x p
   store { <2 x ptr addrspace(1)>, <2 x ptr addrspace(3)> } %arg, ptr addrspace(1) poison
   ret void
 }
+
+define spir_kernel void @spir_kernel_i32_arg(ptr addrspace(1) nocapture %out, i32 %in) nounwind {
+  ; HSA-VI-LABEL: name: spir_kernel_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI-NEXT:   liveins: $sgpr8_sgpr9
+  ; HSA-VI-NEXT: {{  $}}
+  ; HSA-VI-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; HSA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+  ; HSA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from constant-pool, align 16, addrspace 4)
+  ; HSA-VI-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; HSA-VI-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](i64)
+  ; HSA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (i32) from constant-pool, align 8, addrspace 4)
+  ; HSA-VI-NEXT:   G_STORE [[LOAD1]](i32), [[LOAD]](p1) :: (store (i32) into %ir.out, addrspace 1)
+  ; HSA-VI-NEXT:   S_ENDPGM 0
+  ;
+  ; LEGACY-MESA-VI-LABEL: name: spir_kernel_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI-NEXT:   liveins: $sgpr4_sgpr5
+  ; LEGACY-MESA-VI-NEXT: {{  $}}
+  ; LEGACY-MESA-VI-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+  ; LEGACY-MESA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from constant-pool, align 4, addrspace 4)
+  ; LEGACY-MESA-VI-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](i64)
+  ; LEGACY-MESA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (i32) from constant-pool, addrspace 4)
+  ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD1]](i32), [[LOAD]](p1) :: (store (i32) into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
+  store i32 %in, ptr addrspace(1) %out, align 4
+  ret void
+}

@@ -3,7 +3,7 @@
 ! CHECK-LABEL: func.func @_QQmain
 program r
   use ieee_arithmetic
-  ! CHECK:     %[[V_56:[0-9]+]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}> {bindc_name = "round_value", uniq_name = "_QFEround_value"}
+  ! CHECK:     %[[V_56:[0-9]+]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}> <{bindc_name = "round_value", uniq_name = "_QFEround_value"}>
   ! CHECK:     %[[V_57:[0-9]+]]:2 = hlfir.declare %[[V_56]] {uniq_name = "_QFEround_value"}
   type(ieee_round_type) :: round_value
 

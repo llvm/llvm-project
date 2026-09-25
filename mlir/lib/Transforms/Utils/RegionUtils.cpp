@@ -1280,10 +1280,7 @@ static bool blockArgsDominateInsertionPoint(
 
   for (Operation *op : slice) {
     // Check direct operands.
-    for (Value operand : op->getOperands()) {
-      auto arg = dyn_cast<BlockArgument>(operand);
-      if (!arg)
-        continue;
+    for (auto arg : llvm::make_isa_range<BlockArgument>(op->getOperands())) {
       if (!argDominates(arg, op))
         return false;
     }
@@ -1293,10 +1290,7 @@ static bool blockArgsDominateInsertionPoint(
     for (Region &region : op->getRegions()) {
       SetVector<Value> capturedValues;
       getUsedValuesDefinedAbove(region, region, capturedValues);
-      for (Value val : capturedValues) {
-        auto arg = dyn_cast<BlockArgument>(val);
-        if (!arg)
-          continue;
+      for (auto arg : llvm::make_isa_range<BlockArgument>(capturedValues)) {
         if (!argDominates(arg, op))
           return false;
       }

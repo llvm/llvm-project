@@ -222,6 +222,28 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcscasecmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscasecmp_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.wchar.wcscasecmp
+)
+
+add_libc_test(
+  wcsncasecmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsncasecmp_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.wchar.wcsncasecmp
+)
+
+add_libc_test(
   wcscmp_test
   SUITE
     libc_wchar_unittests

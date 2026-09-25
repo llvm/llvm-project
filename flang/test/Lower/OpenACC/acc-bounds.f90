@@ -23,7 +23,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_derived_type_component_pointer_array() {
-! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}> {bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_pointer_arrayEd"}
+! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}> <{bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_pointer_arrayEd"}>
 ! CHECK: %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMopenacc_boundsFacc_derived_type_component_pointer_arrayEd"} : (!fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>)
 ! CHECK: %[[VAL_4:.*]] = hlfir.designate %[[VAL_2]]#0{"array_comp"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[VAL_6:.*]] = acc.create varPtr(%[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) structured(false) name("d%array_comp") -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
@@ -37,7 +37,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_derived_type_component_array()
-! CHECK: %[[D:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt2{array_comp:!fir.array<10xi32>}> {bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_arrayEd"}
+! CHECK: %[[D:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt2{array_comp:!fir.array<10xi32>}> <{bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_arrayEd"}>
 ! CHECK: %[[DECL_D:.*]]:2 = hlfir.declare %[[D]] {uniq_name = "_QMopenacc_boundsFacc_derived_type_component_arrayEd"} : (!fir.ref<!fir.type<_QMopenacc_boundsTt2{array_comp:!fir.array<10xi32>}>>) -> (!fir.ref<!fir.type<_QMopenacc_boundsTt2{array_comp:!fir.array<10xi32>}>>, !fir.ref<!fir.type<_QMopenacc_boundsTt2{array_comp:!fir.array<10xi32>}>>)
 ! CHECK: %[[C10:.*]] = arith.constant 10 : index
 ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
@@ -57,7 +57,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_derived_type_component_allocatable_array() {
-! CHECK: %[[D:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_allocatable_arrayEd"}
+! CHECK: %[[D:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}> <{bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_allocatable_arrayEd"}>
 ! CHECK: %[[DECL_D:.*]]:2 = hlfir.declare %[[D]] {uniq_name = "_QMopenacc_boundsFacc_derived_type_component_allocatable_arrayEd"} : (!fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
 ! CHECK: %[[COORD:.*]] = hlfir.designate %[[DECL_D]]#0{"array_comp"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) structured(false) name("d%[[VAL_15:.*]]") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

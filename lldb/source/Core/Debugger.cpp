@@ -2622,7 +2622,7 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       *config_up, "zlib", LLVM_ENABLE_ZLIB,
       "A boolean value that indicates if zlib support is enabled in LLDB");
   AddBoolConfigEntry(
-      *config_up, "lzma", LLDB_ENABLE_LZMA,
+      *config_up, "lzma", LLVM_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "python", LLDB_ENABLE_PYTHON,

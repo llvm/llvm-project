@@ -536,7 +536,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK-NEXT:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:           %[[VAL_2:.*]] = arith.constant 20 : index
 // CHECK-NEXT:           %[[VAL_3:.*]] = arith.constant 0 : i64
-// CHECK-NEXT:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMcheck_modFtestEi"}
+// CHECK-NEXT:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMcheck_modFtestEi"}>
 // CHECK-NEXT:           %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (index) -> i32
 // CHECK-NEXT:           %[[VAL_6:.*]]:2 = fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] iter_args(%[[VAL_8:.*]] = %[[VAL_5]]) -> (index, i32) {
 // CHECK-NEXT:             fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.ref<i32>
@@ -594,10 +594,10 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f64
 // CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFsum1dEa"} : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:           %[[VAL_5:.*]] = fir.rebox %[[VAL_4]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
-// CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsum1dEi"}
+// CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsum1dEi"}>
 // CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_6]] {uniq_name = "_QFsum1dEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFsum1dEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_9:.*]] = fir.alloca f64 {bindc_name = "sum", uniq_name = "_QFsum1dEsum"}
+// CHECK:           %[[VAL_9:.*]] = fir.alloca f64 <{bindc_name = "sum", uniq_name = "_QFsum1dEsum"}>
 // CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] {uniq_name = "_QFsum1dEsum"} : (!fir.ref<f64>) -> !fir.ref<f64>
 // CHECK:           fir.store %[[VAL_3]] to %[[VAL_10]] : !fir.ref<f64>
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
@@ -704,13 +704,13 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f64
 // CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFsum2dEa"} : (!fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?x?xf64>>
 // CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?x?xf64>>
-// CHECK:           %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsum2dEi"}
+// CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsum2dEi"}>
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {uniq_name = "_QFsum2dEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_9:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFsum2dEj"}
+// CHECK:           %[[VAL_9:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFsum2dEj"}>
 // CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] {uniq_name = "_QFsum2dEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_11:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFsum2dEnx"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_2]] {uniq_name = "_QFsum2dEny"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_13:.*]] = fir.alloca f64 {bindc_name = "sum", uniq_name = "_QFsum2dEsum"}
+// CHECK:           %[[VAL_13:.*]] = fir.alloca f64 <{bindc_name = "sum", uniq_name = "_QFsum2dEsum"}>
 // CHECK:           %[[VAL_14:.*]] = fir.declare %[[VAL_13]] {uniq_name = "_QFsum2dEsum"} : (!fir.ref<f64>) -> !fir.ref<f64>
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_14]] : !fir.ref<f64>
 // CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
@@ -859,16 +859,16 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f64
 // CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFsum3dEa"} : (!fir.box<!fir.array<?x?x?xf64>>) -> !fir.box<!fir.array<?x?x?xf64>>
 // CHECK:           %[[VAL_8:.*]] = fir.rebox %[[VAL_7]] : (!fir.box<!fir.array<?x?x?xf64>>) -> !fir.box<!fir.array<?x?x?xf64>>
-// CHECK:           %[[VAL_9:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsum3dEi"}
+// CHECK:           %[[VAL_9:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsum3dEi"}>
 // CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] {uniq_name = "_QFsum3dEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_11:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFsum3dEj"}
+// CHECK:           %[[VAL_11:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFsum3dEj"}>
 // CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_11]] {uniq_name = "_QFsum3dEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_13:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFsum3dEk"}
+// CHECK:           %[[VAL_13:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFsum3dEk"}>
 // CHECK:           %[[VAL_14:.*]] = fir.declare %[[VAL_13]] {uniq_name = "_QFsum3dEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_15:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFsum3dEnx"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_16:.*]] = fir.declare %[[VAL_2]] {uniq_name = "_QFsum3dEny"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_17:.*]] = fir.declare %[[VAL_3]] {uniq_name = "_QFsum3dEnz"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_18:.*]] = fir.alloca f64 {bindc_name = "sum", uniq_name = "_QFsum3dEsum"}
+// CHECK:           %[[VAL_18:.*]] = fir.alloca f64 <{bindc_name = "sum", uniq_name = "_QFsum3dEsum"}>
 // CHECK:           %[[VAL_19:.*]] = fir.declare %[[VAL_18]] {uniq_name = "_QFsum3dEsum"} : (!fir.ref<f64>) -> !fir.ref<f64>
 // CHECK:           fir.store %[[VAL_6]] to %[[VAL_19]] : !fir.ref<f64>
 // CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
@@ -1079,22 +1079,22 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK-SAME:                                %[[VAL_9:.*]]: !fir.ref<i32> {fir.bindc_name = "kpe"}) {
 // CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_12:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlbounds_reproEi"}
+// CHECK:           %[[VAL_12:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlbounds_reproEi"}>
 // CHECK:           %[[VAL_13:.*]] = fir.declare %[[VAL_12]] {uniq_name = "_QFlbounds_reproEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_14:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEims"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_15:.*]] = fir.declare %[[VAL_5]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEipe"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_16:.*]] = fir.declare %[[VAL_4]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEips"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_17:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFlbounds_reproEj"}
+// CHECK:           %[[VAL_17:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFlbounds_reproEj"}>
 // CHECK:           %[[VAL_18:.*]] = fir.declare %[[VAL_17]] {uniq_name = "_QFlbounds_reproEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_19:.*]] = fir.declare %[[VAL_2]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEjms"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_20:.*]] = fir.declare %[[VAL_7]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEjpe"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_21:.*]] = fir.declare %[[VAL_6]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEjps"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_22:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFlbounds_reproEk"}
+// CHECK:           %[[VAL_22:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFlbounds_reproEk"}>
 // CHECK:           %[[VAL_23:.*]] = fir.declare %[[VAL_22]] {uniq_name = "_QFlbounds_reproEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_24:.*]] = fir.declare %[[VAL_3]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEkms"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_25:.*]] = fir.declare %[[VAL_9]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEkpe"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_26:.*]] = fir.declare %[[VAL_8]] {fortran_attrs = {{.*}}, uniq_name = "_QFlbounds_reproEkps"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_27:.*]] = fir.alloca f32 {bindc_name = "vmax", uniq_name = "_QFlbounds_reproEvmax"}
+// CHECK:           %[[VAL_27:.*]] = fir.alloca f32 <{bindc_name = "vmax", uniq_name = "_QFlbounds_reproEvmax"}>
 // CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = "_QFlbounds_reproEvmax"} : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_24]] : !fir.ref<i32>
 // CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> index

@@ -10,7 +10,7 @@ end function
 ! CHECK-SAME:                                       %[[X_ARG:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                       %[[MASK_ARG:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "mask", fir.optional}) -> i32 {
 ! CHECK:           %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 {bindc_name = "test_optional_as_box", uniq_name = "_QFtest_optional_as_boxEtest_optional_as_box"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "test_optional_as_box", uniq_name = "_QFtest_optional_as_boxEtest_optional_as_box"}>
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[X_VAR:.*]]:2 = hlfir.declare %[[X_ARG]]
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
@@ -36,7 +36,7 @@ end function
 ! CHECK-SAME:                                        %[[X_ARG:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                        %[[MASK_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>> {fir.bindc_name = "mask"}) -> i32 {
 ! CHECK:           %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 {bindc_name = "test_optional_as_box2", uniq_name = "_QFtest_optional_as_box2Etest_optional_as_box2"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "test_optional_as_box2", uniq_name = "_QFtest_optional_as_box2Etest_optional_as_box2"}>
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[X_VAR:.*]]:2 = hlfir.declare %[[X_ARG]]
 ! CHECK:           %[[MASK_LD:.*]] = fir.load %[[MASK_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
@@ -76,7 +76,7 @@ end function
 ! CHECK-SAME:                                         %[[IMAG_ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "imaginary", fir.optional}) -> complex<f32> {
 ! CHECK:           %[[IMAG_VAR:.*]]:2 = hlfir.declare %[[IMAG_ARG]]
 ! CHECK:           %[[REAL_VAR:.*]]:2 = hlfir.declare %[[REAL_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca complex<f32> {bindc_name = "test_optional_as_value", uniq_name = "_QFtest_optional_as_valueEtest_optional_as_value"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca complex<f32> <{bindc_name = "test_optional_as_value", uniq_name = "_QFtest_optional_as_valueEtest_optional_as_value"}>
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[IS_PRESENT:.*]] = fir.is_present %[[IMAG_VAR]]#0 : (!fir.ref<f32>) -> i1
 ! CHECK:           %[[REAL_LD:.*]] = fir.load %[[REAL_VAR]]#0 : !fir.ref<f32>
@@ -104,19 +104,19 @@ subroutine test_optional_as_addr
   deallocate(to)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_optional_as_addr() {
-! CHECK:           %[[FROM_STACK:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "from", uniq_name = "_QFtest_optional_as_addrEfrom"}
+! CHECK:           %[[FROM_STACK:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "from", uniq_name = "_QFtest_optional_as_addrEfrom"}>
 ! CHECK:           %[[NULLPTR:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[ZERO_SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[ZERO_BOX:.*]] = fir.embox %[[NULLPTR]](%[[ZERO_SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[ZERO_BOX]] to %[[FROM_STACK]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[FROM_VAR:.*]]:2 = hlfir.declare %[[FROM_STACK]]
-! CHECK:           %[[STAT_STACK:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "stat", uniq_name = "_QFtest_optional_as_addrEstat"}
+! CHECK:           %[[STAT_STACK:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "stat", uniq_name = "_QFtest_optional_as_addrEstat"}>
 ! CHECK:           %[[STAT_NULLPTR:.*]] = fir.zero_bits !fir.heap<i32>
 ! CHECK:           %[[STAT_NULLBOX:.*]] = fir.embox %[[STAT_NULLPTR]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[STAT_NULLBOX]] to %[[STAT_STACK]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[STAT_VAR:.*]]:2 = hlfir.declare %[[STAT_STACK]]
-! CHECK:           %[[TO_STACK:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "to", uniq_name = "_QFtest_optional_as_addrEto"}
+! CHECK:           %[[TO_STACK:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "to", uniq_name = "_QFtest_optional_as_addrEto"}>
 ! CHECK:           %[[TO_NULLPTR:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[C0_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[TO_ZERO_SHAPE:.*]] = fir.shape %[[C0_1]] : (index) -> !fir.shape<1>
@@ -128,7 +128,7 @@ end subroutine
 ! CHECK:           %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK:           %[[CMPI:.*]] = arith.cmpi sgt, %[[C20]], %[[C0_2]] : index
 ! CHECK:           %[[ALLOC_SZ:.*]] = arith.select %[[CMPI]], %[[C20]], %[[C0_2]] : index
-! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}
+! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] <{alignment = 64 : i64, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}> {fir.must_be_heap = true}
 ! CHECK:           %[[FROM_SHAPE:.*]] = fir.shape %[[ALLOC_SZ]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[FROM_BOX:.*]] = fir.embox %[[FROM_ALLOC]](%[[FROM_SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[FROM_BOX]] to %[[FROM_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -171,7 +171,7 @@ end function
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_elemental_optional_as_valueEreal"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> {bindc_name = "test_elemental_optional_as_value", fir.must_be_stack = true, uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> <{bindc_name = "test_elemental_optional_as_value", uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"} : (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.ref<!fir.array<3xcomplex<f32>>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.is_present %[[VAL_4]]#0 : (!fir.ref<!fir.array<3xf32>>) -> i1

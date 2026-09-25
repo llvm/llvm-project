@@ -14,7 +14,7 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 
-class LlvmLibcExpf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+class LlvmLibcExpbf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(bfloat16)
 public:
   void test_special_numbers() {
@@ -64,6 +64,6 @@ public:
   }
 };
 
-TEST_F(LlvmLibcExpf16Test, SpecialNumbers) { test_special_numbers(); }
-TEST_F(LlvmLibcExpf16Test, Overflow) { test_overflow(); }
-TEST_F(LlvmLibcExpf16Test, Undeflow) { test_underflow(); }
+TEST_F(LlvmLibcExpbf16Test, SpecialNumbers) { test_special_numbers(); }
+TEST_F(LlvmLibcExpbf16Test, Overflow) { test_overflow(); }
+TEST_F(LlvmLibcExpbf16Test, Undeflow) { test_underflow(); }

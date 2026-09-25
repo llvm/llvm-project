@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
 
 // Low-level helpers to call the aligned allocation and deallocation functions
 // on the target platform. This is used to implement libc++'s own memory
@@ -58,7 +58,7 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
 #  endif
 }
 
-#endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#endif // _LIBCPP_HAS_ALIGNED_ALLOCATION
 
 _LIBCPP_END_NAMESPACE_STD
 

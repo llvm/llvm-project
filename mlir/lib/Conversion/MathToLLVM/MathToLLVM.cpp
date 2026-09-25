@@ -188,7 +188,8 @@ struct SincosOpLowering
         rewriter.getContext(), {llvmOperandType, llvmOperandType});
 
     auto sincosOp = LLVM::SincosOp::create(
-        rewriter, loc, structType, adaptor.getOperand(), attrs.getAttrs());
+        rewriter, loc, TypeRange{structType}, ValueRange{adaptor.getOperand()},
+        attrs.getProperties(), attrs.getDiscardableAttrs());
 
     auto sinValue = LLVM::ExtractValueOp::create(rewriter, loc, sincosOp, 0);
     auto cosValue = LLVM::ExtractValueOp::create(rewriter, loc, sincosOp, 1);
@@ -233,10 +234,13 @@ struct ExpM1OpLowering
         one =
             LLVM::ConstantOp::create(rewriter, loc, llvmOperandType, floatOne);
       }
-      auto exp = LLVM::ExpOp::create(rewriter, loc, adaptor.getOperand(),
-                                     expAttrs.getAttrs());
+      auto exp = LLVM::ExpOp::create(rewriter, loc, TypeRange{llvmOperandType},
+                                     ValueRange{adaptor.getOperand()},
+                                     expAttrs.getProperties(),
+                                     expAttrs.getDiscardableAttrs());
       rewriter.replaceOpWithNewOp<LLVM::FSubOp>(
-          op, llvmOperandType, ValueRange{exp, one}, subAttrs.getAttrs());
+          op, TypeRange{llvmOperandType}, ValueRange{exp, one},
+          subAttrs.getProperties(), subAttrs.getDiscardableAttrs());
       return success();
     }
 
@@ -253,11 +257,12 @@ struct ExpM1OpLowering
               floatOne);
           auto one = LLVM::ConstantOp::create(rewriter, loc, llvm1DVectorTy,
                                               splatAttr);
-          auto exp = LLVM::ExpOp::create(rewriter, loc, llvm1DVectorTy,
-                                         operands[0], expAttrs.getAttrs());
-          return LLVM::FSubOp::create(rewriter, loc, llvm1DVectorTy,
-                                      ValueRange{exp, one},
-                                      subAttrs.getAttrs());
+          auto exp = LLVM::ExpOp::create(
+              rewriter, loc, TypeRange{llvm1DVectorTy}, ValueRange{operands[0]},
+              expAttrs.getProperties(), expAttrs.getDiscardableAttrs());
+          return LLVM::FSubOp::create(
+              rewriter, loc, TypeRange{llvm1DVectorTy}, ValueRange{exp, one},
+              subAttrs.getProperties(), subAttrs.getDiscardableAttrs());
         },
         rewriter);
   }
@@ -297,11 +302,13 @@ struct Log1pOpLowering
               : LLVM::ConstantOp::create(rewriter, loc, llvmOperandType,
                                          floatOne);
 
-      auto add = LLVM::FAddOp::create(rewriter, loc, llvmOperandType,
+      auto add = LLVM::FAddOp::create(rewriter, loc, TypeRange{llvmOperandType},
                                       ValueRange{one, adaptor.getOperand()},
-                                      addAttrs.getAttrs());
+                                      addAttrs.getProperties(),
+                                      addAttrs.getDiscardableAttrs());
       rewriter.replaceOpWithNewOp<LLVM::LogOp>(
-          op, llvmOperandType, ValueRange{add}, logAttrs.getAttrs());
+          op, TypeRange{llvmOperandType}, ValueRange{add},
+          logAttrs.getProperties(), logAttrs.getDiscardableAttrs());
       return success();
     }
 
@@ -318,11 +325,13 @@ struct Log1pOpLowering
               floatOne);
           auto one = LLVM::ConstantOp::create(rewriter, loc, llvm1DVectorTy,
                                               splatAttr);
-          auto add = LLVM::FAddOp::create(rewriter, loc, llvm1DVectorTy,
-                                          ValueRange{one, operands[0]},
-                                          addAttrs.getAttrs());
-          return LLVM::LogOp::create(rewriter, loc, llvm1DVectorTy,
-                                     ValueRange{add}, logAttrs.getAttrs());
+          auto add = LLVM::FAddOp::create(
+              rewriter, loc, TypeRange{llvm1DVectorTy},
+              ValueRange{one, operands[0]}, addAttrs.getProperties(),
+              addAttrs.getDiscardableAttrs());
+          return LLVM::LogOp::create(rewriter, loc, TypeRange{llvm1DVectorTy},
+                                     ValueRange{add}, logAttrs.getProperties(),
+                                     logAttrs.getDiscardableAttrs());
         },
         rewriter);
   }
@@ -363,10 +372,13 @@ struct RsqrtOpLowering
         one =
             LLVM::ConstantOp::create(rewriter, loc, llvmOperandType, floatOne);
       }
-      auto sqrt = LLVM::SqrtOp::create(rewriter, loc, adaptor.getOperand(),
-                                       sqrtAttrs.getAttrs());
+      auto sqrt = LLVM::SqrtOp::create(
+          rewriter, loc, TypeRange{llvmOperandType},
+          ValueRange{adaptor.getOperand()}, sqrtAttrs.getProperties(),
+          sqrtAttrs.getDiscardableAttrs());
       rewriter.replaceOpWithNewOp<LLVM::FDivOp>(
-          op, llvmOperandType, ValueRange{one, sqrt}, divAttrs.getAttrs());
+          op, TypeRange{llvmOperandType}, ValueRange{one, sqrt},
+          divAttrs.getProperties(), divAttrs.getDiscardableAttrs());
       return success();
     }
 
@@ -383,11 +395,12 @@ struct RsqrtOpLowering
               floatOne);
           auto one = LLVM::ConstantOp::create(rewriter, loc, llvm1DVectorTy,
                                               splatAttr);
-          auto sqrt = LLVM::SqrtOp::create(rewriter, loc, llvm1DVectorTy,
-                                           operands[0], sqrtAttrs.getAttrs());
-          return LLVM::FDivOp::create(rewriter, loc, llvm1DVectorTy,
-                                      ValueRange{one, sqrt},
-                                      divAttrs.getAttrs());
+          auto sqrt = LLVM::SqrtOp::create(
+              rewriter, loc, TypeRange{llvm1DVectorTy}, ValueRange{operands[0]},
+              sqrtAttrs.getProperties(), sqrtAttrs.getDiscardableAttrs());
+          return LLVM::FDivOp::create(
+              rewriter, loc, TypeRange{llvm1DVectorTy}, ValueRange{one, sqrt},
+              divAttrs.getProperties(), divAttrs.getDiscardableAttrs());
         },
         rewriter);
   }

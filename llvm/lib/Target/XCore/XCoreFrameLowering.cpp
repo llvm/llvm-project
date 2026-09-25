@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 
@@ -156,11 +157,14 @@ static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
 /// As offsets are negative, the largest offsets will be first.
 static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                            MachineFrameInfo &MFI, XCoreFunctionInfo *XFI,
-                           const Constant *PersonalityFn,
+                           const Module &M, const Constant *PersonalityFn,
                            const TargetLowering *TL) {
   assert(XFI->hasEHSpillSlot() && "There are no EH register spill slots");
   const int *EHSlot = XFI->getEHSpillSlot();
-  ExceptionHandling EH = TL->getTargetMachine().getExceptionModel();
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = M.getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = TL->getTargetMachine().getExceptionModel();
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[0]),
                     TL->getExceptionPointerRegister(EH, PersonalityFn)));
@@ -323,7 +327,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
       const Constant *PersonalityFn =
           Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
       SmallVector<StackSlotInfo, 2> SpillList;
-      GetEHSpillList(SpillList, MFI, XFI, PersonalityFn,
+      GetEHSpillList(SpillList, MFI, XFI, *Fn->getParent(), PersonalityFn,
                      MF.getSubtarget().getTargetLowering());
       assert(SpillList.size()==2 && "Unexpected SpillList size");
       EmitCfiOffset(MBB, MBBI, dl, TII,
@@ -358,7 +362,7 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
     const Constant *PersonalityFn =
         Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
     SmallVector<StackSlotInfo, 2> SpillList;
-    GetEHSpillList(SpillList, MFI, XFI, PersonalityFn,
+    GetEHSpillList(SpillList, MFI, XFI, *Fn->getParent(), PersonalityFn,
                    MF.getSubtarget().getTargetLowering());
     RestoreSpillList(MBB, MBBI, dl, TII, RemainingAdj, SpillList);
 

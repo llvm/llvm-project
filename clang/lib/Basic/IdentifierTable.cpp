@@ -705,7 +705,7 @@ ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
 namespace {
 
 struct SelectorTableImpl {
-  llvm::FoldingSet<MultiKeywordSelector> Table;
+  llvm::UniquingSet<MultiKeywordSelector> Table;
   llvm::BumpPtrAllocator Allocator;
 };
 
@@ -750,12 +750,9 @@ Selector SelectorTable::getSelector(unsigned nKeys,
 
   SelectorTableImpl &SelTabImpl = getSelectorTableImpl(Impl);
 
-  // Unique selector, to guarantee there is one per name.
-  llvm::FoldingSetNodeID ID;
-  MultiKeywordSelector::Profile(ID, IIV, nKeys);
-
   llvm::FoldingSetInsertToken InsertToken;
-  if (MultiKeywordSelector *SI = SelTabImpl.Table.lookup(ID, InsertToken))
+  if (MultiKeywordSelector *SI =
+          SelTabImpl.Table.lookup(ArrayRef(IIV, nKeys), InsertToken))
     return Selector(SI);
 
   // MultiKeywordSelector objects are not allocated with new because they have a

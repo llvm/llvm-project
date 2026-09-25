@@ -17,8 +17,8 @@
 
 namespace clang {
 
-static CountAttributedType::DynamicCountPointerKind
-getCountAttrKind(bool CountInBytes, bool OrNull) {
+static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
+                                                            bool OrNull) {
   if (CountInBytes)
     return OrNull ? CountAttributedType::SizedByOrNull
                   : CountAttributedType::SizedBy;

@@ -805,7 +805,7 @@ private:
                    const T *>                                                  \
   getNode() const {                                                            \
     assertHoldsState();                                                        \
-    return Callback.getInt() == (Index) ? Node##Index.dyn_cast<const T *>()    \
+    return Callback.getInt() == (Index) ? dyn_cast<const T *>(Node##Index)     \
                                         : nullptr;                             \
   }
 

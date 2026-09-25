@@ -1941,7 +1941,8 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (static_cast<const PPCTargetMachine &>(TM).isELFv2ABI()) {
+  if (PPCTargetMachine::computeABI(M.getTargetTriple(),
+                                   TM.getTargetABIName(M)) == PPC_ABI_ELFv2) {
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitAbiVersion(2);
@@ -2321,7 +2322,7 @@ uint16_t PPCAIXAsmPrinter::getNumberOfVRSaved() {
   // in the default ABI.
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
-      TM.getAIXExtendedAltivecABI()) {
+      Subtarget.isAIXExtendedAltivecABI()) {
     const MachineRegisterInfo &MRI = MF->getRegInfo();
     for (unsigned Reg = PPC::V20; Reg <= PPC::V31; ++Reg)
       if (MRI.isPhysRegModified(Reg))

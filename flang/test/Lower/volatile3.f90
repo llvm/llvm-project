@@ -98,10 +98,10 @@ end program
 ! CHECK:           %[[ADDRESS_OF_7:.*]] = fir.address_of(@_QFEvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           %[[VOLATILE_CAST_3:.*]] = fir.volatile_cast %[[ADDRESS_OF_7]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
 ! CHECK:           %[[DECLARE_7:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_3]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
-! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca i32 {bindc_name = "volatile_integer", uniq_name = "_QFEvolatile_integer"}
+! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca i32 <{bindc_name = "volatile_integer", uniq_name = "_QFEvolatile_integer"}>
 ! CHECK:           %[[VOLATILE_CAST_4:.*]] = fir.volatile_cast %[[ALLOCA_2]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 ! CHECK:           %[[DECLARE_8:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_4]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_integer"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
-! CHECK:           %[[ALLOCA_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "volatile_integer_pointer", uniq_name = "_QFEvolatile_integer_pointer"}
+! CHECK:           %[[ALLOCA_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "volatile_integer_pointer", uniq_name = "_QFEvolatile_integer_pointer"}>
 ! CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ZERO_BITS_0]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_3]] : !fir.ref<!fir.box<!fir.ptr<i32>>>

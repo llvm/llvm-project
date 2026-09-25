@@ -28,6 +28,12 @@ AST_MATCHER(Type, sugaredNullptrType) {
   return false;
 }
 
+AST_MATCHER(DecltypeType, decltypeTypeNullptrLiteral) {
+  if (const Expr *E = Node.getUnderlyingExpr())
+    return isa<CXXNullPtrLiteralExpr>(E->IgnoreParens());
+  return false;
+}
+
 } // namespace
 
 static constexpr char CastSequence[] = "sequence";
@@ -81,6 +87,11 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
           // Skip defaulted comparison operators.
           unless(hasAncestor(functionDecl(isDefaulted())))),
       this);
+
+  if (UseNullptrT)
+    Finder->addMatcher(typeLoc(loc(decltypeType(decltypeTypeNullptrLiteral())))
+                           .bind("matchDecltypeNullptr"),
+                       this);
 }
 
 static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -495,17 +506,40 @@ UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
       IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))) {
+          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))),
+      UseNullptrT(Options.get("UseNullptrT", true)),
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()) {
   NullMacrosStr.split(NullMacros, ",");
+}
+
+void UseNullptrCheck::registerPPCallbacks(const SourceManager &SM,
+                                          Preprocessor *PP,
+                                          Preprocessor *ModuleExpanderPP) {
+  IncludeInserter.registerPreprocessor(PP);
 }
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "NullMacros", NullMacrosStr);
   Options.store(Opts, "IgnoredTypes",
                 utils::options::serializeStringList(IgnoredTypes));
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+  Options.store(Opts, "UseNullptrT", UseNullptrT);
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *MatchedTypeLoc =
+          Result.Nodes.getNodeAs<TypeLoc>("matchDecltypeNullptr")) {
+    diag(MatchedTypeLoc->getBeginLoc(), "use std::nullptr_t instead")
+        << IncludeInserter.createIncludeInsertion(
+               Result.SourceManager->getFileID(MatchedTypeLoc->getBeginLoc()),
+               "<cstddef>")
+        << FixItHint::CreateReplacement(MatchedTypeLoc->getSourceRange(),
+                                        "std::nullptr_t");
+    return;
+  }
+
   const auto *NullCast = Result.Nodes.getNodeAs<CastExpr>(CastSequence);
   assert(NullCast && "Bad Callback. No node provided");
 

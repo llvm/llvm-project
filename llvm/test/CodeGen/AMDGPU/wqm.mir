@@ -42,6 +42,9 @@
   define amdgpu_vs void @no_wqm_in_vs() {
     ret void
   }
+  define amdgpu_ps void @kill_f32_cond_imm_vcc_regunit() {
+    ret void
+  }
 ...
 ---
 
@@ -613,4 +616,39 @@ body:             |
     %101:sgpr_128 = IMPLICIT_DEF
 
     %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+# The live-in $vcc forces the VCC regunit ranges to be computed, so the
+# clobber introduced when lowering the kill must invalidate them.
+name:            kill_f32_cond_imm_vcc_regunit
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: kill_f32_cond_imm_vcc_regunit
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0, $vcc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY $vcc
+  ; CHECK-NEXT:   V_CMP_NGT_F32_e32 0, [[COPY1]], implicit-def $vcc, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   dead [[COPY:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[COPY]], $vcc, implicit-def $scc
+  ; CHECK-NEXT:   SI_EARLY_TERMINATE_SCC0 implicit $exec, implicit $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, $vcc, implicit-def $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $exec = S_AND_B64 $exec, [[COPY2]], implicit-def $scc
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1
+    liveins: $vgpr0, $vcc
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_64 = COPY $vcc
+    SI_KILL_F32_COND_IMM_TERMINATOR %0, 0, 4, implicit-def $vcc, implicit $exec
+
+  bb.1:
+    $exec = S_AND_B64 $exec, %1, implicit-def $scc
+    S_ENDPGM 0
 ...

@@ -94,9 +94,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i32_const_idx(ptr addrs
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-NEXT:    s_wait_xcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX12-NEXT:    s_mov_b32 s4, 0
 ; GFX12-NEXT:  .LBB1_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -326,9 +327,10 @@ define amdgpu_kernel void @struct_ptr_nonatomic_buffer_load_i32(ptr addrspace(8)
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_wait_xcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s6
+; GFX12-NEXT:    v_dual_mov_b32 v1, s6 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX12-NEXT:    buffer_load_b32 v1, v1, s[0:3], null idxen offset:4 th:TH_LOAD_NT
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
@@ -376,113 +378,33 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_i64(ptr addrspace(8) %p
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-TRUE16-LABEL: struct_ptr_atomic_buffer_load_i64:
-; GFX12-SDAG-TRUE16:       ; %bb.0: ; %bb
-; GFX12-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX12-SDAG-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
-; GFX12-SDAG-TRUE16-NEXT:    v_nop
-; GFX12-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX12-SDAG-TRUE16-NEXT:    s_clause 0x1
-; GFX12-SDAG-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
-; GFX12-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, 0
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v2, s6
-; GFX12-SDAG-TRUE16-NEXT:  .LBB6_1: ; %bb1
-; GFX12-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
-; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-SDAG-FAKE16-LABEL: struct_ptr_atomic_buffer_load_i64:
-; GFX12-SDAG-FAKE16:       ; %bb.0: ; %bb
-; GFX12-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX12-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
-; GFX12-SDAG-FAKE16-NEXT:    v_nop
-; GFX12-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX12-SDAG-FAKE16-NEXT:    s_clause 0x1
-; GFX12-SDAG-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
-; GFX12-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s4, 0
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v2, s6
-; GFX12-SDAG-FAKE16-NEXT:  .LBB6_1: ; %bb1
-; GFX12-SDAG-FAKE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-SDAG-FAKE16-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX12-SDAG-FAKE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; GFX12-SDAG-FAKE16-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX12-SDAG-FAKE16-NEXT:  ; %bb.2: ; %bb2
-; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX12-GISEL-TRUE16-LABEL: struct_ptr_atomic_buffer_load_i64:
-; GFX12-GISEL-TRUE16:       ; %bb.0: ; %bb
-; GFX12-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX12-GISEL-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
-; GFX12-GISEL-TRUE16-NEXT:    v_nop
-; GFX12-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX12-GISEL-TRUE16-NEXT:    s_clause 0x1
-; GFX12-GISEL-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
-; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX12-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-GISEL-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s4, 0
-; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v2, s6
-; GFX12-GISEL-TRUE16-NEXT:  .LBB6_1: ; %bb1
-; GFX12-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
-; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; GFX12-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %bb2
-; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-GISEL-FAKE16-LABEL: struct_ptr_atomic_buffer_load_i64:
-; GFX12-GISEL-FAKE16:       ; %bb.0: ; %bb
-; GFX12-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX12-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
-; GFX12-GISEL-FAKE16-NEXT:    v_nop
-; GFX12-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX12-GISEL-FAKE16-NEXT:    s_clause 0x1
-; GFX12-GISEL-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
-; GFX12-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX12-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-GISEL-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    s_mov_b32 s4, 0
-; GFX12-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v2, s6
-; GFX12-GISEL-FAKE16-NEXT:  .LBB6_1: ; %bb1
-; GFX12-GISEL-FAKE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
-; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX12-GISEL-FAKE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-FAKE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
-; GFX12-GISEL-FAKE16-NEXT:    s_cbranch_execnz .LBB6_1
-; GFX12-GISEL-FAKE16-NEXT:  ; %bb.2: ; %bb2
-; GFX12-GISEL-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: struct_ptr_atomic_buffer_load_i64:
+; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX12-NEXT:    s_mov_b64 s[64:65], 0
+; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX12-NEXT:    s_wait_xcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
+; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s6
+; GFX12-NEXT:  .LBB6_1: ; %bb1
+; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-NEXT:    buffer_load_b64 v[4:5], v2, s[0:3], null idxen offset:4 th:TH_LOAD_NT
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[4:5], v[0:1]
+; GFX12-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
+; GFX12-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX12-NEXT:  ; %bb.2: ; %bb2
+; GFX12-NEXT:    s_endpgm
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %id.zext = zext i32 %id to i64

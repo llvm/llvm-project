@@ -12,6 +12,7 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
@@ -21,12 +22,14 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Frontend/Offloading/OffloadWrapper.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -195,17 +198,26 @@ public:
           MlirModule->print(out);
       }
 
+      // If errors occurred during codegen, stop before running the backend.
+      if (CI.getDiagnostics().hasErrorOccurred())
+        return;
+
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());
 
+      LLVMModule->setDataLayout(C.getTargetInfo().getDataLayoutString());
+
       if (linkInModules(*LLVMModule))
         return;
 
+      // Embed the offloaded SYCL device binary into the host module.
+      if (C.getLangOpts().SYCLIsHost && !CGO.OffloadBinaryToEmbedFile.empty())
+        embedSYCLDeviceBinary(*LLVMModule);
+
       BackendAction BEAction = getBackendActionFromOutputType(Action);
-      emitBackendOutput(
-          CI, CI.getCodeGenOpts(), C.getTargetInfo().getDataLayoutString(),
-          LLVMModule.get(), BEAction, FS, std::move(OutputStream));
+      emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
+                        std::move(OutputStream));
       break;
     }
     }
@@ -244,6 +256,28 @@ public:
 
     LinkModules.clear();
     return false;
+  }
+
+  // Reads the device binary named by -foffload-include-binary and embeds it
+  // into the host module. wrapSYCLBinaries also appends the registration ctor
+  // at priority 101 when no registration-function out-param is supplied.
+  void embedSYCLDeviceBinary(llvm::Module &M) {
+    StringRef fileName = CGO.OffloadBinaryToEmbedFile;
+    auto bufferOrErr = CI.getVirtualFileSystem().getBufferForFile(fileName);
+    if (std::error_code ec = bufferOrErr.getError()) {
+      CI.getDiagnostics().Report(diag::err_cannot_open_file)
+          << fileName << ec.message();
+      return;
+    }
+    std::unique_ptr<llvm::MemoryBuffer> buffer = std::move(bufferOrErr.get());
+    if (llvm::Error err = llvm::offloading::wrapSYCLBinaries(
+            M,
+            ArrayRef<char>(buffer->getBufferStart(), buffer->getBufferSize()),
+            llvm::offloading::SYCLJITOptions(), /*IsFinalizedImage=*/true)) {
+      CI.getDiagnostics().Report(diag::err_fe_error_backend)
+          << llvm::toString(std::move(err));
+      return;
+    }
   }
 
   void HandleTagDeclDefinition(TagDecl *D) override {

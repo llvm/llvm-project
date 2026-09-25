@@ -47,7 +47,6 @@ add_llvm_component_library(LLVMOrcJIT
   LLJIT.cpp
   MachO.cpp
   MachOPlatform.cpp
-  Mangler.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
   ELFNixPlatform.cpp
@@ -59,6 +58,7 @@ add_llvm_component_library(LLVMOrcJIT
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
+  SharedMemoryMapSPS.cpp
   SimpleMemoryMapSPS.cpp
   SimpleRemoteEPC.cpp
   SimpleRemoteMemoryMapper.cpp

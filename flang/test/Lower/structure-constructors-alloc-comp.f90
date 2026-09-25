@@ -81,7 +81,7 @@ contains
     integer, pointer :: p(:)
     type(t_alloc) :: t1 = t_alloc(x=5, a=null(p))
 ! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc4() {
-! HLFIR:    %[[VAL_11:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p", uniq_name = "_QMm_struct_ctorFtest_alloc4Ep"}
+! HLFIR:    %[[VAL_11:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> <{bindc_name = "p", uniq_name = "_QMm_struct_ctorFtest_alloc4Ep"}>
 ! HLFIR:    %[[VAL_12:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
 ! HLFIR:    %[[CONS_6:.*]] = arith.constant 0 : index
 ! HLFIR:    %[[VAL_13:.*]] = fir.shape %[[CONS_6]] : (index) -> !fir.shape<1>

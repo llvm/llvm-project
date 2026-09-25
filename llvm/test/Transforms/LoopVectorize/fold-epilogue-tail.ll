@@ -20,6 +20,11 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
 
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -force-partial-aliasing-vectorization \
+; RUN: -force-target-supports-masked-memory-ops < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ALIAS-MASK
+
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 \
+; RUN: -enable-interleaved-mem-accesses=true < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-INTERLEAVE
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
@@ -38,7 +43,9 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
 ;
-
+; CHECK-ALIAS-MASK-LABEL: Checking a loop in 'test_epilogue_tf'
+; CHECK-ALIAS-MASK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with alias masking
+;
 entry:
   br label %for.body
 
@@ -120,6 +127,49 @@ for.end:
   ret i32 0
 }
 
+define i64 @find_last_offset_wide_canonical_iv(ptr %A, i64 %n) {
+; CHECK-LABEL: Checking a loop in 'find_last_offset_wide_canonical_iv'
+; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with reductions
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ -1, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv
+  %l = load i32, ptr %gep, align 4
+  %c = icmp eq i32 %l, 11
+  %sel = select i1 %c, i64 %iv, i64 %red
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %sel
+}
+
+define i32 @fixed-order-recurrence(ptr %src) {
+; CHECK-LABEL: Checking a loop in 'fixed-order-recurrence'
+; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with fixed-order recurrence
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %ld, %loop ]
+  %gep = getelementptr inbounds i32, ptr %src, i64 %i
+  %ld = load i32, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %i, 1
+  %exitcond = icmp eq i64 %iv.next, 23
+  br i1 %exitcond, label %for.end, label %loop
+
+for.end:
+  %result = phi i32 [ %previous, %loop ]
+  ret i32 %result
+}
+
 define i1 @early_exit(ptr %A, i64 %n, i8 %find) {
 ; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'early_exit'
 ; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
@@ -167,6 +217,36 @@ for.body:
   br i1 %combined.cond, label %exit, label %for.body
 
 exit:
+  ret void
+}
+
+@AB = common global [1024 x i32] zeroinitializer, align 4
+@CD = common global [1024 x i32] zeroinitializer, align 4
+define void @test_no_masked_interleave_support() {
+; CHECK-INVALID-INTERLEAVE-LABEL: LV: Checking a loop in 'test_no_masked_interleave_support'
+; CHECK-INVALID-INTERLEAVE: remark: <unknown>:0:0: Epilogue tail-folding is not supported with interleaved accesses when masking them isn't supported
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %iv
+  %tmp = load i32, ptr %arrayidx0, align 4
+  %tmp1 = or disjoint i64 %iv, 1
+  %arrayidx1 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %tmp1
+  %tmp2 = load i32, ptr %arrayidx1, align 4
+  %add = add nsw i32 %tmp, 3
+  %mul = mul nsw i32 %tmp2, 5
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %iv
+  store i32 %add, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %tmp1
+  store i32 %mul, ptr %arrayidx3, align 4
+  %iv.next = add nuw nsw i64 %iv, 2
+  %cmp = icmp slt i64 %iv.next, 1024
+  br i1 %cmp, label %loop, label %for.end
+
+for.end:
   ret void
 }
 

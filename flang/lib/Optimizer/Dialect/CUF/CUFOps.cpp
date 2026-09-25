@@ -287,16 +287,20 @@ bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
   // Operations that have !fir.ref operands cannot be moved
   // out of cuf.kernel, because this may break implicit data mapping
   // passes that may run after LICM.
-  return !llvm::any_of(candidate->getOperands(),
-                       [&](mlir::Value candidateOperand) {
-                         return fir::isa_ref_type(candidateOperand.getType());
-                       }) &&
-         // Same is true for symbol operands (this has to be revisited,
-         // because this may indicate an issue in ordering between
-         // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
-         !llvm::any_of(candidate->getAttrs(), [&](mlir::NamedAttribute attr) {
-           return mlir::isa_and_present<mlir::SymbolRefAttr>(attr.getValue());
-         });
+  if (llvm::any_of(candidate->getOperands(), [&](mlir::Value operand) {
+        return fir::isa_ref_type(operand.getType());
+      }))
+    return false;
+
+  // Same is true for symbol operands (this has to be revisited,
+  // because this may indicate an issue in ordering between
+  // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
+  bool hasSymbolRefAttr = false;
+  candidate->getName().walkInherentAttrs(
+      candidate, [&](llvm::StringRef, mlir::Attribute &attr) {
+        hasSymbolRefAttr |= mlir::isa_and_present<mlir::SymbolRefAttr>(attr);
+      });
+  return !hasSymbolRefAttr;
 }
 
 //===----------------------------------------------------------------------===//

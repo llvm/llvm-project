@@ -17,6 +17,7 @@
 #endif // __EMSCRIPTEN__
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
@@ -35,8 +36,8 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
 #include "llvm/Support/Error.h"
@@ -70,13 +71,10 @@
 // in a static archive and nothing else references it, it is never linked in and
 // ORC's process-symbol lookup cannot resolve it. Referencing it here
 // force-links the archive member so it is present regardless of how the host
-// provides it. Excluded where an emulated-TLS runtime is not guaranteed on the
-// link line, so the reference would fail to link: non-Unix (MSVC has no such
-// runtime), Emscripten (the wasm executor below does not use this JIT path),
-// and AIX / z/OS (whose runtimes may not provide the symbol). On those hosts
-// thread_locals instead rely on process-symbol lookup, unchanged from before.
-#if defined(LLVM_ON_UNIX) && !defined(__EMSCRIPTEN__) && !defined(_AIX) &&     \
-    !defined(__MVS__) && !defined(__FreeBSD__)
+// provides it. Defined if available at configure time
+// (CLANG_HAVE_EMUTLS_GET_ADDRESS). When unavailable, thread_locals instead rely
+// on process-symbol lookup.
+#if CLANG_HAVE_EMUTLS_GET_ADDRESS
 extern "C" void *__emutls_get_address(void *);
 static void *getEmuTLSGetAddressPtr() {
   return reinterpret_cast<void *>(&__emutls_get_address);
@@ -114,22 +112,10 @@ createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
-  llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = llvm::orc::sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
   size_t SlabSize;
   if (llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows())
@@ -141,7 +127,7 @@ createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
     SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
-      llvm::orc::SharedMemoryMapper>(SlabSize, EPC, SAs);
+      llvm::orc::SharedMemoryMapper>(SlabSize, ES, std::move(*B));
 }
 
 static llvm::Expected<

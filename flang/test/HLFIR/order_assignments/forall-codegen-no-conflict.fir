@@ -51,7 +51,7 @@ func.func @test_index(%x: !fir.ref<!fir.array<10xi32>>) {
 }
 // CHECK-LABEL:   func.func @test_index(
 // CHECK-SAME:                          %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) {
-// CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index

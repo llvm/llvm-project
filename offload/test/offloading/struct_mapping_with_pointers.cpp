@@ -50,7 +50,7 @@ int main() {
 
   // clang-format off
   // CHECK: --> Looking up mapping(HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], Size=288)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 288 with host pointer 0x{{0*}}[[DAT_HST_PTR_BASE]].
+  // CHECK: MemoryManagerTy::allocate: requested memory 288, allocated: {{[0-9]+}} with host pointer 0x{{0*}}[[DAT_HST_PTR_BASE]]
   // CHECK: --> Creating new map entry with HstPtrBase=0x{{0*}}[[DAT_HST_PTR_BASE]], HstPtrBegin=0x{{0*}}[[DAT_HST_PTR_BASE]], TgtAllocBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE:.*]], TgtPtrBegin=0x{{0*}}[[DAT_DEVICE_PTR_BASE]], Size=288, DynRefCount=1, HoldRefCount=0, Name=unknown
   // CHECK: --> Moving 288 bytes (hst:0x{{0*}}[[DAT_HST_PTR_BASE]]) -> (tgt:0x{{0*}}[[DAT_DEVICE_PTR_BASE]])
   // clang-format on
@@ -58,7 +58,7 @@ int main() {
   /// Second argument is dat.datum[ : 10]:
   // clang-format off
   // CHECK: --> Looking up mapping(HstPtrBegin=0x{{0*}}[[DATUM_HST_PTEE_BASE]], Size=40)...
-  // CHECK: PluginInterface --> MemoryManagerTy::allocate: size 40 with host pointer 0x{{0*}}[[DATUM_HST_PTEE_BASE]].
+  // CHECK: MemoryManagerTy::allocate: requested memory 40, allocated: {{[0-9]+}} with host pointer 0x{{0*}}[[DATUM_HST_PTEE_BASE]].
   // CHECK: --> Creating new map entry with HstPtrBase=0x{{0*}}[[DATUM_HST_PTEE_BASE]], HstPtrBegin=0x{{0*}}[[DATUM_HST_PTEE_BASE]], TgtAllocBegin=0x[[DATUM_DEVICE_PTR_BASE:.*]], TgtPtrBegin=0x{{0*}}[[DATUM_DEVICE_PTR_BASE]], Size=40, DynRefCount=1, HoldRefCount=0, Name=unknown
   // CHECK: --> Moving 40 bytes (hst:0x{{0*}}[[DATUM_HST_PTEE_BASE]]) -> (tgt:0x{{0*}}[[DATUM_DEVICE_PTR_BASE]])
   // clang-format on

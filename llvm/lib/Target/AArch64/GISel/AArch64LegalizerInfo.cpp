@@ -1968,14 +1968,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return true;
   }
-  case Intrinsic::aarch64_neon_smax:
-    return LowerBinOp(TargetOpcode::G_SMAX);
-  case Intrinsic::aarch64_neon_smin:
-    return LowerBinOp(TargetOpcode::G_SMIN);
-  case Intrinsic::aarch64_neon_umax:
-    return LowerBinOp(TargetOpcode::G_UMAX);
-  case Intrinsic::aarch64_neon_umin:
-    return LowerBinOp(TargetOpcode::G_UMIN);
   case Intrinsic::aarch64_neon_fmax:
     return LowerBinOp(TargetOpcode::G_FMAXIMUM);
   case Intrinsic::aarch64_neon_fmin:

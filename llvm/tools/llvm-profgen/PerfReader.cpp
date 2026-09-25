@@ -300,11 +300,6 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   // Capture initial state as starting point for unwinding.
   UnwindState State(Sample, Binary);
 
-  // Sanity check - making sure leaf of LBR aligns with leaf of stack sample
-  // Stack sample sometimes can be unreliable, so filter out bogus ones.
-  if (!State.validateInitialState())
-    return false;
-
   NumTotalBranches += State.LBRStack.size();
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
@@ -722,6 +717,14 @@ void HybridPerfReader::unwindSamples() {
                      Unwinder.NumExtCallBranch,
                      "of artificial call branches but doesn't have an external "
                      "frame to match.");
+
+  emitWarningSummary(NumBogusTrace, NumTotalHybridSample,
+                     "of hybrid samples had a callchain leaf that disagreed "
+                     "with the newest LBR target (bogus trace).");
+  if (NumBogusTrace * 100 > NumTotalHybridSample)
+    WithColor::warning() << "Bogus trace rate exceeds 1%: the profile has high "
+                            "sample skid and may not be suitable for "
+                            "optimization.\n";
 }
 
 /// Parse a hex address from \p Str.
@@ -881,6 +884,15 @@ void PerfScriptReader::warnIfMissingMMap() {
   }
 }
 
+// The unwinder requires that LBR tip belong to the leaf frame.
+// External addresses are not checked.
+static bool isValidTrace(ProfiledBinary *Binary, uint64_t StackLeaf,
+                         uint64_t LBRLeaf) {
+  if (StackLeaf == ExternalAddr || LBRLeaf == ExternalAddr)
+    return true;
+  return Binary->findFuncRange(LBRLeaf) == Binary->findFuncRange(StackLeaf);
+}
+
 void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // The raw hybird sample started with call stack in FILO order and followed
   // intermediately by LBR sample
@@ -911,6 +923,19 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
       if (IgnoreStackSamples) {
         Sample->CallStack.clear();
       } else {
+        NumTotalHybridSample++;
+        // Drop samples whose callchain and LBR disagree before the
+        // canonicalization below hides the disagreement.
+        uint64_t StackLeaf = Sample->CallStack.front();
+        uint64_t LBRLeaf = Sample->LBRStack[0].Target;
+        if (!isValidTrace(Binary, StackLeaf, LBRLeaf)) {
+          NumBogusTrace++;
+          if (ShowDetailedWarning)
+            WithColor::warning()
+                << "Bogus trace: stack tip = " << format("%#010x", StackLeaf)
+                << ", LBR tip = " << format("%#010x\n", LBRLeaf);
+          return;
+        }
         // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
         // ranges
         Sample->CallStack.front() = Sample->LBRStack[0].Target;

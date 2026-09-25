@@ -138,6 +138,11 @@ testing macros specifically used for floating point values, such as
   libc/test/src/math/smoke/CMakeLists.txt
   libc/test/src/math/CMakeLists.txt
 ```
+- Add the corresponding Bazel test targets (if applicable) to:
+```
+  utils/bazel/llvm-project-overlay/libc/test/src/math/smoke/BUILD.bazel
+  utils/bazel/llvm-project-overlay/libc/test/src/math/BUILD.bazel
+```
 
 ### Exhaustive tests
 

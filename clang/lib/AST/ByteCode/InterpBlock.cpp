@@ -102,20 +102,11 @@ bool Block::hasPointer(const Pointer *P) const {
 
 void Block::movePointersTo(Block *B) {
   assert(B != this);
-  unsigned MDDiff = static_cast<int>(B->MDSize) - static_cast<int>(MDSize);
 
   while (Pointers) {
     Pointer *P = Pointers;
-
     this->removePointer(P);
     P->BS.Pointee = B;
-
-    // If the metadata size changed between the two blocks, move the pointer
-    // base/offset. Realistically, this should only happen when we move pointers
-    // from a dummy pointer to a global one.
-    P->BS.Base += MDDiff;
-    P->Offset += MDDiff;
-
     B->addPointer(P);
   }
   assert(!this->hasPointers());
@@ -135,7 +126,7 @@ void Block::removePointers() {
 
 DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
     : Root(Root), B(~0u, Blk->Desc, Blk->MDSize, Blk->isExtern(), Blk->IsStatic,
-                    Blk->isWeak(), Blk->isDummy(),
+                    Blk->isWeak(),
                     /*IsDead=*/true) {
   // Add the block to the chain of dead blocks.
   if (Root)

@@ -3,6 +3,7 @@ add_clang_library(MLIRCIRTargetLowering
   CIRCXXABI.cpp
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
+  LowerMicrosoftCXXABI.cpp
   TargetLoweringInfo.cpp
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp

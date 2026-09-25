@@ -81,9 +81,9 @@
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPsimple_int_reduction() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_int_reductionEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_int_reductionEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_int_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_int_reductionEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_int_reductionEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_int_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
@@ -117,9 +117,9 @@ subroutine simple_int_reduction
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_real_reduction() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_real_reductionEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_real_reductionEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_real_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFsimple_real_reductionEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFsimple_real_reductionEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_real_reductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
@@ -154,9 +154,9 @@ subroutine simple_real_reduction
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_int_reduction_switch_order() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_int_reduction_switch_orderEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_int_reduction_switch_orderEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_int_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_int_reduction_switch_orderEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_int_reduction_switch_orderEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_int_reduction_switch_orderEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
@@ -190,9 +190,9 @@ subroutine simple_int_reduction_switch_order
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_real_reduction_switch_order() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_real_reduction_switch_orderEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_real_reduction_switch_orderEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_real_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFsimple_real_reduction_switch_orderEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFsimple_real_reduction_switch_orderEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_real_reduction_switch_orderEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
@@ -227,13 +227,13 @@ subroutine simple_real_reduction_switch_order
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_int_reductions_same_type() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFmultiple_int_reductions_same_typeEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_int_reductions_same_typeEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_int_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_int_reductions_same_typeEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_int_reductions_same_typeEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_int_reductions_same_typeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFmultiple_int_reductions_same_typeEy"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFmultiple_int_reductions_same_typeEy"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmultiple_int_reductions_same_typeEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFmultiple_int_reductions_same_typeEz"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFmultiple_int_reductions_same_typeEz"}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_int_reductions_same_typeEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_8]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
@@ -285,13 +285,13 @@ subroutine multiple_int_reductions_same_type
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_real_reductions_same_type() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFmultiple_real_reductions_same_typeEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_real_reductions_same_typeEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_real_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFmultiple_real_reductions_same_typeEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFmultiple_real_reductions_same_typeEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_real_reductions_same_typeEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFmultiple_real_reductions_same_typeEy"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca f32 <{bindc_name = "y", uniq_name = "_QFmultiple_real_reductions_same_typeEy"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmultiple_real_reductions_same_typeEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca f32 {bindc_name = "z", uniq_name = "_QFmultiple_real_reductions_same_typeEz"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca f32 <{bindc_name = "z", uniq_name = "_QFmultiple_real_reductions_same_typeEz"}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_real_reductions_same_typeEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_8]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
@@ -346,15 +346,15 @@ subroutine multiple_real_reductions_same_type
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_reductions_different_type() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFmultiple_reductions_different_typeEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_reductions_different_typeEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_reductions_different_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca f64 {bindc_name = "w", uniq_name = "_QFmultiple_reductions_different_typeEw"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f64 <{bindc_name = "w", uniq_name = "_QFmultiple_reductions_different_typeEw"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_reductions_different_typeEw"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_reductions_different_typeEx"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_reductions_different_typeEx"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmultiple_reductions_different_typeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca i64 {bindc_name = "y", uniq_name = "_QFmultiple_reductions_different_typeEy"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca i64 <{bindc_name = "y", uniq_name = "_QFmultiple_reductions_different_typeEy"}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_reductions_different_typeEy"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_8:.*]] = fir.alloca f32 {bindc_name = "z", uniq_name = "_QFmultiple_reductions_different_typeEz"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca f32 <{bindc_name = "z", uniq_name = "_QFmultiple_reductions_different_typeEz"}>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFmultiple_reductions_different_typeEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_10]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>

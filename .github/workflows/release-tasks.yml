@@ -12,7 +12,7 @@ on:
 jobs:
   validate-tag:
     name: Validate Tag
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     outputs:
       release-version: ${{ steps.validate-tag.outputs.release-version }}
@@ -26,7 +26,7 @@ jobs:
 
   release-create:
     name: Create a New Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: release
       deployment: false
@@ -82,7 +82,7 @@ jobs:
   # can't use them here.
   release-lit:
     name: Release Lit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       id-token: write # Requred for pypi publishing
     needs:
@@ -169,7 +169,7 @@ jobs:
 
   uncomment-download-links:
     name: Uncomment download links
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # For updating the release message.
     if: '!cancelled()'

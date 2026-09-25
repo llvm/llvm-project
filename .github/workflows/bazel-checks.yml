@@ -18,7 +18,7 @@ on:
 jobs:
   buildifier:
     name: "Buildifier"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
@@ -73,4 +73,5 @@ jobs:
           bazelisk test --config=ci --sandbox_base="" \
             --remote_cache=https://storage.googleapis.com/$CACHE_GCS_BUCKET-bazel \
             --google_default_credentials \
+            --remote_download_outputs=minimal \
             @llvm-project//... //...

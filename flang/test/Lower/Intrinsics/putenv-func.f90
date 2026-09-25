@@ -5,7 +5,7 @@
 integer function putenv_test(str)
 CHARACTER(len=255) :: str
 
-!CHECK-DAG:   %[[func_result:.*]] = fir.alloca i32 {bindc_name = "putenv_test", uniq_name = "_QFputenv_testEputenv_test"}
+!CHECK-DAG:   %[[func_result:.*]] = fir.alloca i32 <{bindc_name = "putenv_test", uniq_name = "_QFputenv_testEputenv_test"}>
 !CHECK-DAG:   %[[func_result_decl:.*]]:{{.*}} = hlfir.declare %[[func_result]] {uniq_name = "_QFputenv_testEputenv_test"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-DAG:   %[[src_str_addr:.*]] = fir.address_of(@_{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>
 !CHECK-DAG:   %[[line_value:.*]] = arith.constant {{.*}} : i64

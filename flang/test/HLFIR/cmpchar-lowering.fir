@@ -8,13 +8,13 @@ func.func @_QPlge_test() {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 7 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<3x!fir.char<1,3>> {bindc_name = "c1", uniq_name = "_QFlge_testEc1"}
+// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<3x!fir.char<1,3>> <{bindc_name = "c1", uniq_name = "_QFlge_testEc1"}>
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) typeparams %[[VAL_2]] {uniq_name = "_QFlge_testEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.ref<!fir.array<3x!fir.char<1,3>>>)
-// CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3x!fir.char<1,7>> {bindc_name = "c2", uniq_name = "_QFlge_testEc2"}
+// CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3x!fir.char<1,7>> <{bindc_name = "c2", uniq_name = "_QFlge_testEc2"}>
 // CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) typeparams %[[VAL_1]] {uniq_name = "_QFlge_testEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.ref<!fir.array<3x!fir.char<1,7>>>)
-// CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.array<3x!fir.logical<4>> {bindc_name = "l", uniq_name = "_QFlge_testEl"}
+// CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.array<3x!fir.logical<4>> <{bindc_name = "l", uniq_name = "_QFlge_testEl"}>
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_11]]) {uniq_name = "_QFlge_testEl"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
 // CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.logical<4>> {

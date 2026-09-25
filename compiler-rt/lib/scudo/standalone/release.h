@@ -13,6 +13,7 @@
 #include "list.h"
 #include "mem_map.h"
 #include "mutex.h"
+#include "string_utils.h"
 #include "thread_annotations.h"
 
 namespace scudo {
@@ -130,35 +131,36 @@ public:
     MemMapT MemMap = {};
   };
 
-  // Return a zero-initialized buffer which can contain at least the given
-  // number of elements, or nullptr on failure.
-  Buffer getBuffer(const uptr NumElements) {
+  // Buf must be an empty buffer that will be filled in to contain a zero
+  // initialized buffer which can contain the given number of elements.
+  // On failure, Buf.data is guaranteed to be nullptr, and returns false.
+  bool getBuffer(Buffer &Buf, const uptr NumElements) {
+    DCHECK(Buf.Data == nullptr);
     if (UNLIKELY(NumElements > StaticBufferNumElements))
-      return getDynamicBuffer(NumElements);
+      return getDynamicBuffer(Buf, NumElements);
 
-    uptr index;
+    uptr Index;
     {
       // TODO: In general, we expect this operation should be fast so the
       // waiting thread won't be put into sleep. The HybridMutex does implement
       // the busy-waiting but we may want to review the performance and see if
       // we need an explict spin lock here.
       ScopedLock L(Mutex);
-      index = getLeastSignificantSetBitIndex(Mask);
-      if (index < StaticBufferCount)
-        Mask ^= static_cast<uptr>(1) << index;
+      Index = getLeastSignificantSetBitIndex(Mask);
+      if (Index < StaticBufferCount)
+        Mask ^= static_cast<uptr>(1) << Index;
     }
 
-    if (index >= StaticBufferCount)
-      return getDynamicBuffer(NumElements);
+    if (Index >= StaticBufferCount)
+      return getDynamicBuffer(Buf, NumElements);
 
-    Buffer Buf;
-    Buf.Data = &RawBuffer[index * StaticBufferNumElements];
-    Buf.BufferIndex = index;
+    Buf.Data = &RawBuffer[Index * StaticBufferNumElements];
+    Buf.BufferIndex = Index;
     memset(Buf.Data, 0, StaticBufferNumElements * sizeof(uptr));
-    return Buf;
+    return true;
   }
 
-  void releaseBuffer(Buffer Buf) {
+  void releaseBuffer(Buffer &Buf) {
     DCHECK_NE(Buf.Data, nullptr);
     DCHECK_LE(Buf.BufferIndex, StaticBufferCount);
     if (Buf.BufferIndex != StaticBufferCount) {
@@ -168,6 +170,7 @@ public:
     } else {
       Buf.MemMap.unmap();
     }
+    Buf.Data = nullptr;
   }
 
   bool isStaticBufferTestOnly(const Buffer &Buf) {
@@ -177,7 +180,7 @@ public:
   }
 
 private:
-  Buffer getDynamicBuffer(const uptr NumElements) {
+  bool getDynamicBuffer(Buffer &Buf, const uptr NumElements) {
     // When using a heap-based buffer, precommit the pages backing the
     // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
     // where page fault exceptions are skipped as the allocated memory
@@ -186,12 +189,15 @@ private:
     const uptr MmapFlags = MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
     const uptr MappedSize =
         roundUp(NumElements * sizeof(uptr), getPageSizeCached());
-    Buffer Buf;
-    if (Buf.MemMap.map(/*Addr=*/0, MappedSize, "scudo:counters", MmapFlags)) {
-      Buf.Data = reinterpret_cast<uptr *>(Buf.MemMap.getBase());
-      Buf.BufferIndex = StaticBufferCount;
+    if (!UNLIKELY(Buf.MemMap.map(/*Addr=*/0, MappedSize, "scudo:counters",
+                                 MmapFlags))) {
+      return false;
     }
-    return Buf;
+
+    DCHECK(Buf.Data == nullptr);
+    Buf.Data = reinterpret_cast<uptr *>(Buf.MemMap.getBase());
+    Buf.BufferIndex = StaticBufferCount;
+    return true;
   }
 
   HybridMutex Mutex;
@@ -222,19 +228,18 @@ public:
     if (!isAllocated())
       return;
     Buffers.releaseBuffer(Buffer);
-    Buffer = {};
   }
 
   // Lock of `StaticBuffer` is acquired conditionally and there's no easy way to
   // specify the thread-safety attribute properly in current code structure.
   // Besides, it's the only place we may want to check thread safety. Therefore,
   // it's fine to bypass the thread-safety analysis now.
-  void reset(uptr NumberOfRegion, uptr CountersPerRegion, uptr MaxValue) {
-    DCHECK_GT(NumberOfRegion, 0);
+  void reset(uptr NumberOfRegions, uptr CountersPerRegion, uptr MaxValue) {
+    DCHECK_GT(NumberOfRegions, 0);
     DCHECK_GT(CountersPerRegion, 0);
     DCHECK_GT(MaxValue, 0);
 
-    Regions = NumberOfRegion;
+    Regions = NumberOfRegions;
     NumCounters = CountersPerRegion;
 
     constexpr uptr MaxCounterBits = sizeof(*Buffer.Data) * 8UL;
@@ -255,7 +260,10 @@ public:
         roundUp(NumCounters, static_cast<uptr>(1U) << PackingRatioLog) >>
         PackingRatioLog;
     BufferNumElements = SizePerRegion * Regions;
-    Buffer = Buffers.getBuffer(BufferNumElements);
+    if (!Buffers.getBuffer(Buffer, BufferNumElements)) {
+      DCHECK(Buffer.Data == nullptr);
+      Printf("Scudo WARNING: unable to allocate buffer for RegionPageMap");
+    }
   }
 
   bool isAllocated() const { return Buffer.Data != nullptr; }
@@ -449,7 +457,6 @@ struct PageReleaseContext {
     if (PageMap.isAllocated())
       return true;
     PageMap.reset(NumberOfRegions, PagesCount, FullPagesBlockCountMax);
-    // TODO: Log some message when we fail on PageMap allocation.
     return PageMap.isAllocated();
   }
 

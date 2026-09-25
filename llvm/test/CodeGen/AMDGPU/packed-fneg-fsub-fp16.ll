@@ -317,13 +317,8 @@ define <4 x half> @fminnum_v4f16_neg(<4 x half> %first, <4 x half> %second) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v2 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v3 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v0, v0, v2
-; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v1, v1, v3
+; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: fminnum_v4f16_neg:
@@ -384,19 +379,10 @@ define <8 x half> @fminnum_v8f16_neg(<8 x half> %first, <8 x half> %second) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v4, v4, v4 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v5, v5, v5 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v6, v6, v6 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v7, v7, v7 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v0, v0, v4
-; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v1, v1, v5
-; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v2, v2, v6
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v3, v3, v7
+; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v0, v0, v4 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v1, v1, v5 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v2, v2, v6 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_min_num_f16 v3, v3, v7 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: fminnum_v8f16_neg:
@@ -451,13 +437,8 @@ define <4 x half> @fmaxnum_v4f16_neg(<4 x half> %first, <4 x half> %second) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v2 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v3 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v2
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v3
+; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: fmaxnum_v4f16_neg:
@@ -518,19 +499,10 @@ define <8 x half> @fmaxnum_v8f16_neg(<8 x half> %first, <8 x half> %second) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v4, v4, v4 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v5, v5, v5 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v6, v6, v6 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v7, v7, v7 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v4
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v5
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v6
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v7
+; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v4 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v5 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v6 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v7 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: fmaxnum_v8f16_neg:

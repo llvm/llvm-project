@@ -84,9 +84,11 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   Register V0 = RegInfo.createVirtualRegister(RC);
   Register V1 = RegInfo.createVirtualRegister(RC);
 
+  MCRegister T9 = ABI.getTempRegPtr(9);
+
   if (ABI.IsN64()) {
-    MF.getRegInfo().addLiveIn(Mips::T9_64);
-    MBB.addLiveIn(Mips::T9_64);
+    MF.getRegInfo().addLiveIn(T9);
+    MBB.addLiveIn(T9);
 
     // lui $v0, %hi(%neg(%gp_rel(fname)))
     // daddu $v1, $v0, $t9
@@ -94,8 +96,7 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
     const GlobalValue *FName = &MF.getFunction();
     BuildMI(MBB, I, DL, TII.get(Mips::LUi64), V0)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::DADDu), V1).addReg(V0)
-        .addReg(Mips::T9_64);
+    BuildMI(MBB, I, DL, TII.get(Mips::DADDu), V1).addReg(V0).addReg(T9);
     BuildMI(MBB, I, DL, TII.get(Mips::DADDiu), GlobalBaseReg).addReg(V1)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
     return;
@@ -113,8 +114,8 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
     return;
   }
 
-  MF.getRegInfo().addLiveIn(Mips::T9);
-  MBB.addLiveIn(Mips::T9);
+  MF.getRegInfo().addLiveIn(T9);
+  MBB.addLiveIn(T9);
 
   if (ABI.IsN32()) {
     // lui $v0, %hi(%neg(%gp_rel(fname)))
@@ -123,7 +124,7 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
     const GlobalValue *FName = &MF.getFunction();
     BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(Mips::T9);
+    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(T9);
     BuildMI(MBB, I, DL, TII.get(Mips::ADDiu), GlobalBaseReg).addReg(V1)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
     return;
@@ -151,7 +152,8 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   MF.getRegInfo().addLiveIn(Mips::V0);
   MBB.addLiveIn(Mips::V0);
   BuildMI(MBB, I, DL, TII.get(Mips::ADDu), GlobalBaseReg)
-      .addReg(Mips::V0).addReg(Mips::T9);
+      .addReg(Mips::V0)
+      .addReg(T9);
 }
 
 void MipsFunctionInfo::createEhDataRegsFI(MachineFunction &MF) {

@@ -36,9 +36,9 @@ public:
   }
 };
 
-#define LIST_NEXTDOWN_TESTS(T, func)                                           \
-  using LlvmLibcNextDownTest = NextDownTestTemplate<T>;                        \
-  TEST_F(LlvmLibcNextDownTest, TestNaN) { testNaN(&func); }                    \
-  TEST_F(LlvmLibcNextDownTest, TestBoundaries) { testBoundaries(&func); }
+#define LIST_NEXTDOWN_TESTS(Name, T, func)                                     \
+  using LlvmLibc##Name##Test = NextDownTestTemplate<T>;                        \
+  TEST_F(LlvmLibc##Name##Test, TestNaN) { testNaN(&func); }                    \
+  TEST_F(LlvmLibc##Name##Test, TestBoundaries) { testBoundaries(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEXTDOWNTEST_H

@@ -35,11 +35,11 @@
 !CHECK: }
 
 !CHECK-LABEL: func.func @_QPmultiple_reduction
-!CHECK:      %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_reductionEx"}
+!CHECK:      %[[X_REF:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_reductionEx"}>
 !CHECK:      %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFmultiple_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:      %[[Y_REF:.*]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFmultiple_reductionEy"}
+!CHECK:      %[[Y_REF:.*]] = fir.alloca f32 <{bindc_name = "y", uniq_name = "_QFmultiple_reductionEy"}>
 !CHECK:      %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_REF]] {uniq_name = "_QFmultiple_reductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:      %[[Z_REF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFmultiple_reductionEz"}
+!CHECK:      %[[Z_REF:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFmultiple_reductionEz"}>
 !CHECK:      %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]] {uniq_name = "_QFmultiple_reductionEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      omp.wsloop private({{.*}}) reduction(
 !CHECK-SAME: @[[ADD_RED_I32_NAME]] %[[X_DECL]]#0 -> %[[PRV_X:[^,]+]],

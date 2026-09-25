@@ -59,6 +59,7 @@ struct Config {
   std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
+  std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;
   CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Default;

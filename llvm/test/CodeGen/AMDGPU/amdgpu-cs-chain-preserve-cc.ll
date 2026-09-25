@@ -30,14 +30,15 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_no_stack({ptr, i3
 define amdgpu_cs void @cs_to_chain_preserve(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: cs_to_chain_preserve:
 ; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v10, v2
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v3, v0
 ; GISEL-GFX11-NEXT:    s_mov_b32 s3, s0
 ; GISEL-GFX11-NEXT:    ;;#ASMSTART
 ; GISEL-GFX11-NEXT:    s_nop
 ; GISEL-GFX11-NEXT:    ;;#ASMEND
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v10, v2
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v8, v3
 ; GISEL-GFX11-NEXT:    s_mov_b32 s4, chain_preserve_callee@abs32@lo
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v1
 ; GISEL-GFX11-NEXT:    s_mov_b32 s5, chain_preserve_callee@abs32@hi
 ; GISEL-GFX11-NEXT:    s_mov_b32 s0, s3
 ; GISEL-GFX11-NEXT:    s_mov_b32 s32, 0
@@ -72,14 +73,15 @@ define amdgpu_cs void @cs_to_chain_preserve(<3 x i32> inreg %a, <3 x i32> %b) #0
 ;
 ; DAGISEL-GFX11-LABEL: cs_to_chain_preserve:
 ; DAGISEL-GFX11:       ; %bb.0:
-; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v10, v2
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v3, v0
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s3, s0
 ; DAGISEL-GFX11-NEXT:    ;;#ASMSTART
 ; DAGISEL-GFX11-NEXT:    s_nop
 ; DAGISEL-GFX11-NEXT:    ;;#ASMEND
+; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v10, v2
+; DAGISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v8, v3
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s5, chain_preserve_callee@abs32@hi
-; DAGISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v1
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s4, chain_preserve_callee@abs32@lo
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s0, s3
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s32, 0

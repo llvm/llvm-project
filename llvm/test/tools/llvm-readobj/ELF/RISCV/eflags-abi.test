@@ -1,0 +1,51 @@
+## Check llvm-readobj's ability to decode the 2-bit EF_RISCV_FLOAT_ABI field
+## of e_flags as an enum, rather than as independent bits. Also check that a
+## non-enum bit (EF_RISCV_RVC) set alongside it is still decoded correctly.
+
+# RUN: yaml2obj %s -o %t-soft -DABI=SOFT
+# RUN: llvm-readobj -h %t-soft | FileCheck --check-prefix=READOBJ-SOFT %s
+# RUN: llvm-readelf -h %t-soft | FileCheck --check-prefix=READELF-SOFT --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-single -DABI=SINGLE
+# RUN: llvm-readobj -h %t-single | FileCheck --check-prefix=READOBJ-SINGLE %s
+# RUN: llvm-readelf -h %t-single | FileCheck --check-prefix=READELF-SINGLE --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-double -DABI=DOUBLE
+# RUN: llvm-readobj -h %t-double | FileCheck --check-prefix=READOBJ-DOUBLE %s
+# RUN: llvm-readelf -h %t-double | FileCheck --check-prefix=READELF-DOUBLE --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-quad -DABI=QUAD
+# RUN: llvm-readobj -h %t-quad | FileCheck --check-prefix=READOBJ-QUAD %s
+# RUN: llvm-readelf -h %t-quad | FileCheck --check-prefix=READELF-QUAD --match-full-lines %s
+
+# READOBJ-SOFT:      Flags [ (0x1)
+# READOBJ-SOFT-NEXT:   EF_RISCV_RVC (0x1)
+# READOBJ-SOFT-NEXT: ]
+
+# READOBJ-SINGLE:      Flags [ (0x3)
+# READOBJ-SINGLE-NEXT:   EF_RISCV_FLOAT_ABI_SINGLE (0x2)
+# READOBJ-SINGLE-NEXT:   EF_RISCV_RVC (0x1)
+# READOBJ-SINGLE-NEXT: ]
+
+# READOBJ-DOUBLE:      Flags [ (0x5)
+# READOBJ-DOUBLE-NEXT:   EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
+# READOBJ-DOUBLE-NEXT:   EF_RISCV_RVC (0x1)
+# READOBJ-DOUBLE-NEXT: ]
+
+# READOBJ-QUAD:      Flags [ (0x7)
+# READOBJ-QUAD-NEXT:   EF_RISCV_FLOAT_ABI_QUAD (0x6)
+# READOBJ-QUAD-NEXT:   EF_RISCV_RVC (0x1)
+# READOBJ-QUAD-NEXT: ]
+
+# READELF-SOFT: Flags: 0x1, RVC
+# READELF-SINGLE: Flags: 0x3, RVC, single-float ABI
+# READELF-DOUBLE: Flags: 0x5, RVC, double-float ABI
+# READELF-QUAD: Flags: 0x7, RVC, quad-float ABI
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+  Flags:   [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_[[ABI]] ]

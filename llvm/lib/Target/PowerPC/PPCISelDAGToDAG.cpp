@@ -400,8 +400,9 @@ namespace {
       case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
-        const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(/*Kind=*/1);
+        const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+        const TargetRegisterClass *TRC =
+            TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =

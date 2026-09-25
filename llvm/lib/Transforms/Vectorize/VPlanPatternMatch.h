@@ -593,8 +593,12 @@ m_ZExtOrSelf(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), Op0);
 }
 
+template <typename Op0_t> inline auto m_ZExtOrTrunc(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0));
+}
+
 template <typename Op0_t> inline auto m_ZExtOrTruncOrSelf(const Op0_t &Op0) {
-  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0), Op0);
+  return m_CombineOr(m_ZExtOrTrunc(Op0), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
@@ -649,6 +653,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::LShr, Op0_t, Op1_t>
 m_LShr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::LShr, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::AShr, Op0_t, Op1_t>
+m_AShr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::AShr, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

@@ -11,7 +11,7 @@ program do_concurrent_basic
     integer :: a(10)
     integer :: i
 
-    ! CHECK: %[[I_ORIG_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i"}
+    ! CHECK: %[[I_ORIG_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "i"}>
     ! CHECK: %[[I_ORIG_DECL:.*]]:2 = hlfir.declare %[[I_ORIG_ALLOC]]
 
     ! CHECK: %[[A_ADDR:.*]] = fir.address_of(@_QFEa)
@@ -50,7 +50,7 @@ program do_concurrent_basic
     ! CHECK: omp.teams {
     ! CHECK-NEXT: omp.parallel {
 
-    ! CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 {bindc_name = "i"}
+    ! CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 <{bindc_name = "i"}>
     ! CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     ! CHECK-NEXT: omp.distribute {

@@ -6,7 +6,7 @@
 !HLFIRDIALECT:   %[[DIMENSIONS:.*]]:3 = fir.box_dims %[[DECLARE]]#0, %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 !HLFIRDIALECT:   fir.store %[[DIMENSIONS]]#1 to %[[SZ_DATA]] : !fir.ref<index>
 !HLFIRDIALECT:   %[[SIZE_SEL:.*]] = arith.select {{.*}}, {{.*}}, {{.*}} : index
-!HLFIRDIALECT:   %[[B_ALLOCA:.*]] = fir.alloca !fir.array<?xf32>, %[[SIZE_SEL]] {bindc_name = "b", uniq_name = "_QFlocal_variable_intrinsic_sizeEb"}
+!HLFIRDIALECT:   %[[B_ALLOCA:.*]] = fir.alloca !fir.array<?xf32>, %[[SIZE_SEL]] <{bindc_name = "b", uniq_name = "_QFlocal_variable_intrinsic_sizeEb"}>
 !HLFIRDIALECT:   %[[B_SHAPE:.*]] = fir.shape %[[SIZE_SEL]] : (index) -> !fir.shape<1>
 !HLFIRDIALECT:   %[[B_DECLARE:.*]]:2 = hlfir.declare %[[B_ALLOCA]](%[[B_SHAPE]]) {uniq_name = "_QFlocal_variable_intrinsic_sizeEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 !HLFIRDIALECT:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}} : index) upper_bound({{.*}} : index) extent({{.*}} : index) stride({{.*}} : index) start_idx({{.*}} : index) stride_in_bytes(true)

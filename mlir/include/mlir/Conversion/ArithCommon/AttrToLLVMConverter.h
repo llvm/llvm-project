@@ -9,7 +9,7 @@
 #ifndef MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
 #define MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 //===----------------------------------------------------------------------===//
@@ -46,27 +46,47 @@ convertArithRoundingModeAttrToLLVM(arith::RoundingModeAttr roundingModeAttr);
 LLVM::FPExceptionBehaviorAttr
 getLLVMDefaultFPExceptionBehavior(MLIRContext &context);
 
-// Attribute converter that populates a NamedAttrList by removing the fastmath
-// attribute from the source operation attributes, and replacing it with an
-// equivalent LLVM fastmath attribute.
+// Convert the source fastmath attribute to LLVM properties, keeping the source
+// discardable attributes separate.
 template <typename SourceOp, typename TargetOp>
 class AttrConvertFastMathToLLVM {
 public:
   AttrConvertFastMathToLLVM(SourceOp srcOp)
-      : convertedAttr(srcOp->getDiscardableAttrDictionary()) {
-    srcOp->getName().populateInherentAttrs(srcOp, convertedAttr);
-    convertedAttr.erase(SourceOp::getFastMathAttrName());
+      : context(srcOp.getOperation()->getContext()),
+        convertedAttr(srcOp->getDiscardableAttrDictionary()) {
     auto arithFMFAttr = srcOp.getFastMathFlagsAttr();
     if (arithFMFAttr) {
-      convertedAttr.set(TargetOp::getFastmathAttrName(),
-                        convertArithFastMathAttrToLLVM(arithFMFAttr));
+      StringRef targetAttrName = TargetOp::getFastmathAttrName();
+      Builder builder(context);
+      propertiesAttr = builder.getDictionaryAttr(builder.getNamedAttr(
+          targetAttrName, convertArithFastMathAttrToLLVM(arithFMFAttr)));
     }
   }
-  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  Attribute getPropAttr() const { return {}; }
+  ArrayRef<NamedAttribute> getDiscardableAttrs() const {
+    return convertedAttr.getAttrs();
+  }
+  ArrayRef<NamedAttribute> getAttrs() const { return getDiscardableAttrs(); }
+  Attribute getPropAttr() const { return propertiesAttr; }
+
+  typename TargetOp::Properties getProperties() const {
+    typename TargetOp::Properties properties{};
+    TargetOp::populateDefaultProperties(
+        OperationName(TargetOp::getOperationName(), context), properties);
+    if (propertiesAttr) {
+      LogicalResult result =
+          TargetOp::setPropertiesFromAttr(properties, propertiesAttr, [&]() {
+            return emitError(UnknownLoc::get(context));
+          });
+      assert(succeeded(result) && "failed to convert target properties");
+      (void)result;
+    }
+    return properties;
+  }
 
 private:
+  MLIRContext *context;
   NamedAttrList convertedAttr;
+  DictionaryAttr propertiesAttr;
 };
 
 // Attribute converter that populates a NamedAttrList by removing the overflow

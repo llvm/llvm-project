@@ -573,6 +573,33 @@ void insertChildMapInfoIntoParent(
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
     llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // If any of our children have the close map type applied and our parent
+  // does not, we must remove it as a user has specified only the members
+  // get close e.g.
+  //
+  //    map(close, to: x%y, x%z)
+  //
+  // This will generate invalid code that will crash at runtime. As we must
+  // allocate this parent, to then transfer individual members, and the
+  // parent has not been specified to have close mapping. As close is
+  // considered a hint, we simply remove it/ignore it.
+  //
+  // The alternative would be to promote the parent to close in these
+  // scenarios, the downside would be cases such as map(close, to: x%x, x%z)
+  // any intermediate member that was not specified in the parent between
+  // the x and z members (e.g. x.y in prior example) would also get close
+  // mapping from the parent. But this way we would still be able to have
+  // close map apply to member mappings, without having to allocate the whole
+  // record type.
+  auto removeCloseMapType = [](OmpMapParentAndMemberData &data) {
+    for (mlir::omp::MapInfoOp memberMap : data.memberMap)
+      if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::close) ==
+          mlir::omp::ClauseMapFlags::close)
+        memberMap.setMapType(memberMap.getMapType() &
+                             ~mlir::omp::ClauseMapFlags::close);
+  };
+
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
         llvm::find_if(mapObjects, [&indices](const Object &object) {
@@ -588,6 +615,13 @@ void insertChildMapInfoIntoParent(
       // components leading to duplicate mappings at runtime.
       if (!indices.second.memberMap.empty() && mapOp.getMapperIdAttr())
         mapOp.setMapperIdAttr(nullptr);
+
+      // If the explicit parent map itself does not have close mapping, then
+      // close mapping for its explicitly mapped members must be ignored. The
+      // semantic checker emits the corresponding user warning.
+      if ((mapOp.getMapType() & mlir::omp::ClauseMapFlags::close) !=
+          mlir::omp::ClauseMapFlags::close)
+        removeCloseMapType(indices.second);
 
       // NOTE: To maintain appropriate SSA ordering, we move the parent map
       // which will now have references to its children after the last
@@ -616,6 +650,11 @@ void insertChildMapInfoIntoParent(
         if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
             mlir::omp::ClauseMapFlags::present)
           mapType |= mlir::omp::ClauseMapFlags::present;
+
+      // A synthesized parent map cannot request close mapping. Remove close
+      // mapping from its explicitly mapped members. The semantic checker emits
+      // the corresponding user warning.
+      removeCloseMapType(indices.second);
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());

@@ -28,9 +28,9 @@ using namespace llvm;
 
 namespace llvm {
 
-template class LLVM_TEMPLATE_ABI RegionBase<RegionTraits<Function>>;
-template class LLVM_TEMPLATE_ABI RegionNodeBase<RegionTraits<Function>>;
-template class LLVM_TEMPLATE_ABI RegionInfoBase<RegionTraits<Function>>;
+template class LLVM_EXPORT_TEMPLATE RegionBase<RegionTraits<Function>>;
+template class LLVM_EXPORT_TEMPLATE RegionNodeBase<RegionTraits<Function>>;
+template class LLVM_EXPORT_TEMPLATE RegionInfoBase<RegionTraits<Function>>;
 
 } // end namespace llvm
 

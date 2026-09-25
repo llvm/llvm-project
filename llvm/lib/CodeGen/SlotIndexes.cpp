@@ -165,6 +165,29 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
   }
 }
 
+void SlotIndexes::removeMBBFromMaps(MachineBasicBlock &MBB) {
+  assert(&MBB != &MBB.getParent()->front() &&
+         "Can't remove the first block of a function.");
+
+  unsigned Num = MBB.getAnalysisNumber();
+  SlotIndex StartIdx = MBBRanges[Num].first;
+  SlotIndex EndIdx = MBBRanges[Num].second;
+
+  // Give MBB's slot range to its layout predecessor so blocks stay contiguous.
+  auto PrevMBB = std::prev(MBB.getIterator());
+  MBBRanges[PrevMBB->getAnalysisNumber()].second = EndIdx;
+
+  // Drop MBB's index -> MBB entry, which would dangle once MBB is erased.
+  auto It = getMBBLowerBound(StartIdx);
+  assert(It != MBBIndexEnd() && It->first == StartIdx && It->second == &MBB &&
+         "MBB not found in index -> MBB map");
+  idx2MBBMap.erase(It);
+
+  // Clear the block-start boundary entry. MBBRanges is never renumbered, so
+  // MBB's now-stale slot is simply left in place.
+  StartIdx.listEntry()->setInstr(nullptr);
+}
+
 // Renumber indexes locally after curItr was inserted, but failed to get a new
 // index.
 void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {

@@ -206,7 +206,7 @@ void TempInArray() {
 // CIR:        cir.do {
 // CIR-NEXT:     %[[CURRENT:.*]] = cir.load %[[ITER:.*]] : !cir.ptr<!cir.ptr<!rec_CausesTemp>>, !cir.ptr<!rec_CausesTemp>
 // CIR-NEXT:     cir.cleanup.scope {
-// CIR-NEXT:       cir.call @_ZN10CausesTempC1E4Temp(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp> {llvm.align = 1 : i64, llvm.byref = !rec_Temp}) -> ()
+// CIR-NEXT:       cir.call @_ZN10CausesTempC1E4Temp(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } cleanup normal {
 // CIR-NEXT:       cir.call @_ZN4TempD1Ev(%[[TMP]]) nothrow
@@ -227,7 +227,7 @@ void TempInArray() {
 // LLVM:       %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
 // LLVM:       br label %[[CONSTRUCT_BR:.*]]
 // LLVM:       [[CONSTRUCT_BR]]:
-// LLVM:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], ptr byref(%struct.Temp) align 1 %[[TMP]])
+// LLVM:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
 // LLVM:       br label %[[CLEANUP_BR:.*]]
 // LLVM:       [[CLEANUP_BR]]:
 // LLVM:       call void @_ZN4TempD1Ev({{.*}}[[TMP]])
@@ -237,7 +237,7 @@ void TempInArray() {
 // OGCG:       br label %[[LOOP:.*]]
 // OGCG:       [[LOOP]]:
 // OGCG:       %[[CURRENT:.*]] = phi ptr
-// OGCG:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], ptr{{.*}}[[TMP]])
+// OGCG:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
 // OGCG:       call void @_ZN4TempD1Ev({{.*}}[[TMP]])
 
 struct Temp2 {
@@ -291,7 +291,7 @@ void Temp2InArray() {
 // CIR-NEXT:     %[[CURRENT:.*]] = cir.load %[[ITER:.*]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
 // CIR-NEXT:     cir.call @_ZN5Temp2C1Ev(%[[TMP]])
 // CIR-NEXT:     cir.cleanup.scope {
-// CIR-NEXT:         cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.byref = !rec_Temp2}) -> ()
+// CIR-NEXT:         cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR-NEXT:         cir.yield
 // CIR-NEXT:       } cleanup normal {
 // CIR-NEXT:         cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
@@ -328,7 +328,7 @@ void Temp2InArray() {
 // LLVM:       call void @_ZN5Temp2C1Ev({{.*}}%[[TMP]])
 // LLVM:       br label %[[CONSTRUCT_BR:.*]]
 // LLVM:       [[CONSTRUCT_BR]]:
-// LLVM:       call void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%[[CURRENT]], ptr byref(%struct.Temp2) align 1 %[[TMP]])
+// LLVM:       call void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%[[CURRENT]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
 // LLVM:       br label %[[CLEANUP_BR:.*]]
 // LLVM:       [[CLEANUP_BR]]:
 // LLVM:       call void @_ZN5Temp2D1Ev({{.*}}[[TMP]])
@@ -341,7 +341,7 @@ void Temp2InArray() {
 // OGCG:       [[LOOP]]:
 // OGCG:       %[[CURRENT:.*]] = phi ptr
 // OGCG:       call void @_ZN5Temp2C1Ev(ptr {{.*}}%[[TMP]])
-// OGCG-NEXT:  call void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%[[CURRENT]], ptr{{.*}}[[TMP]])
+// OGCG-NEXT:  call void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%[[CURRENT]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[TMP]])
 // OGCG-NEXT:  call void @_ZN5Temp2D1Ev({{.*}}[[TMP]])
 // OGCG:       %[[DTOR_ELT:.*]] = getelementptr inbounds %struct.CausesTemp2, ptr %{{.*}}, i64 -1
 // OGCG-NEXT:  call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])

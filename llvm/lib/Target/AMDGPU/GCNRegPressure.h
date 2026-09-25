@@ -341,9 +341,6 @@ protected:
   /// Resets tracker at the specified slot index \p SI.
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI);
 
-  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
-
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
@@ -591,6 +588,18 @@ LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
                                  GCNRegPressure::RegKind Kind,
                                  LiveIntervals &LIS,
                                  const MachineLoopInfo *MLI);
+
+/// Estimate VGPR pressure using greedy, non-splitting register allocation
+/// simulation, accounting for live interval interference.
+/// \param RegionBegin Start iterator of the region
+/// \param RegionEnd End iterator of the region
+/// \param LiveIns Live-in registers for the region
+/// \returns estimated VGPR pressure
+unsigned estimateGreedyVGPRPressure(
+    MachineBasicBlock::const_iterator RegionBegin,
+    MachineBasicBlock::const_iterator RegionEnd,
+    const GCNRPTracker::LiveRegSet &LiveIns, const LiveIntervals &LIS,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI);
 
 } // end namespace llvm
 

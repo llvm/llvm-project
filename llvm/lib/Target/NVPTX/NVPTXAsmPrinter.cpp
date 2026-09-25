@@ -2663,7 +2663,7 @@ static const DILocation *getInlineAsmDebugLoc(const MachineInstr *MI) {
   if (!SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return nullptr;
   const DILocation *DL = MI->getDebugLoc();
-  if (!DL->getFile() || !DL->getLine())
+  if (!DL->getFile() || !DL->getLine() || DL->isImplicitCode())
     return nullptr;
   return DL;
 }

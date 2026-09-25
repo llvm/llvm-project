@@ -172,7 +172,7 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
         MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
                            .add(MI.getOperand(0))
                            .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-                           .addImm(I->Op2));
+                           .addImm(*I->Op2));
       } else {
         Register DstReg = MI.getOperand(0).getReg();
         bool DstIsDead = MI.getOperand(0).isDead();
@@ -182,7 +182,7 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
                                     getDeadRegState(DstIsDead && LastItem) |
                                     RenamableState)
                 .addReg(DstReg)
-                .addImm(I->Op2));
+                .addImm(*I->Op2));
       }
       break;
     case AArch64::EONXrs:
@@ -198,32 +198,33 @@ bool AArch64ExpandPseudoImpl::expandMOVImm(MachineBasicBlock &MBB,
                                   RenamableState)
               .addReg(DstReg)
               .addReg(DstReg)
-              .addImm(I->Op2));
+              .addImm(*I->Op2));
     } break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
     case AArch64::MOVZXi: {
       bool DstIsDead = MI.getOperand(0).isDead();
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .addReg(DstReg, RegState::Define |
-                getDeadRegState(DstIsDead && LastItem) |
-                RenamableState)
-        .addImm(I->Op1)
-        .addImm(I->Op2));
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addImm(*I->Op1)
+              .addImm(*I->Op2));
       } break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi: {
       Register DstReg = MI.getOperand(0).getReg();
       bool DstIsDead = MI.getOperand(0).isDead();
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .addReg(DstReg,
-                RegState::Define |
-                getDeadRegState(DstIsDead && LastItem) |
-                RenamableState)
-        .addReg(DstReg)
-        .addImm(I->Op1)
-        .addImm(I->Op2));
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addReg(DstReg)
+              .addImm(*I->Op1)
+              .addImm(*I->Op2));
       } break;
     }
   }
@@ -898,10 +899,14 @@ static MachineInstr *createCallWithOps(MachineBasicBlock &MBB,
                                        unsigned Opcode,
                                        ArrayRef<MachineOperand> ExplicitOps,
                                        unsigned RegMaskStartIdx) {
-  // Build the MI, with explicit operands first (including the call target).
-  MachineInstr *Call = BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode))
-                           .add(ExplicitOps)
-                           .getInstr();
+  // Be careful not to duplicate the LR def which the original instruction
+  // already carries.
+  MachineFunction &MF = *MBB.getParent();
+  MachineInstr *Call =
+      MF.CreateMachineInstr(TII->get(Opcode), MBBI->getDebugLoc(),
+                            /*NoImplicit=*/true);
+  MBB.insert(MBBI, Call);
+  MachineInstrBuilder(MF, Call).add(ExplicitOps);
 
   // Register arguments are added during ISel, but cannot be added as explicit
   // operands of the branch as it expects to be B <target> which is only one

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: DIVERGENT: %swizzle = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 100) #0
 define amdgpu_kernel void @ds_swizzle(ptr addrspace(1) %out, i32 %src) #0 {

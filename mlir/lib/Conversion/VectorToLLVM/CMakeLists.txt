@@ -38,6 +38,8 @@ add_mlir_conversion_library(MLIRVectorToLLVMPass
   MLIRArmNeonTransforms
   MLIRArmSVEDialect
   MLIRArmSVETransforms
+  MLIRAnalysis
+  MLIRDataLayoutInterfaces
   MLIRX86Dialect
   MLIRX86Transforms
 )

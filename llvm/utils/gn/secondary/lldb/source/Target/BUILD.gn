@@ -89,6 +89,7 @@ static_library("Target") {
     "ThreadPlanCallOnFunctionExit.cpp",
     "ThreadPlanCallUserExpression.cpp",
     "ThreadPlanRunToAddress.cpp",
+    "ThreadPlanRunToBreakpoint.cpp",
     "ThreadPlanShouldStopHere.cpp",
     "ThreadPlanSingleThreadTimeout.cpp",
     "ThreadPlanStack.cpp",

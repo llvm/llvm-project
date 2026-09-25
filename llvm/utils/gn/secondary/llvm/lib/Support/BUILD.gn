@@ -82,6 +82,7 @@ static_library("Support") {
     "DeltaAlgorithm.cpp",
     "DeltaTree.cpp",
     "DivisionByConstantInfo.cpp",
+    "Driver.cpp",
     "DynamicAPInt.cpp",
     "ELFAttrParserCompact.cpp",
     "ELFAttrParserExtended.cpp",

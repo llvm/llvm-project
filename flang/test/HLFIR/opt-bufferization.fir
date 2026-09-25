@@ -463,7 +463,7 @@ func.func @_QMmPrepro(%arg0: !fir.ref<i32> {fir.bindc_name = "imin"}, %arg1: !fi
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QMmEblock"} : (!fir.ref<!fir.array<9x9x9xi32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<9x9x9xi32>>, !fir.ref<!fir.array<9x9x9xi32>>)
 // CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QMmECr) : !fir.ref<i32>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMmECr"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_13:.*]] = fir.alloca i32 {bindc_name = "i1", uniq_name = "_QMmFreproEi1"}
+// CHECK:           %[[VAL_13:.*]] = fir.alloca i32 <{bindc_name = "i1", uniq_name = "_QMmFreproEi1"}>
 // CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QMmFreproEi1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMmFreproEimax"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMmFreproEimin"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -737,9 +737,9 @@ func.func @_QPddx(%arg0: !fir.box<!fir.array<?x?xf64>> {fir.bindc_name = "array"
 // CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFddxEarray"} : (!fir.box<!fir.array<?x?xf64>>) -> (!fir.box<!fir.array<?x?xf64>>, !fir.box<!fir.array<?x?xf64>>)
-// CHECK:           %[[VAL_10:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFddxEi"}
+// CHECK:           %[[VAL_10:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFddxEi"}>
 // CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFddxEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_12:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFddxEj"}
+// CHECK:           %[[VAL_12:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFddxEj"}>
 // CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFddxEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_9]]#0, %[[VAL_8]] : (!fir.box<!fir.array<?x?xf64>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]]#1 : (index) -> i64
@@ -751,7 +751,7 @@ func.func @_QPddx(%arg0: !fir.box<!fir.array<?x?xf64>> {fir.bindc_name = "array"
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> index
 // CHECK:           %[[VAL_22:.*]] = arith.cmpi sgt, %[[VAL_21]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_22]], %[[VAL_21]], %[[VAL_8]] : index
-// CHECK:           %[[VAL_24:.*]] = fir.alloca !fir.array<?x?xf64>, %[[VAL_18]], %[[VAL_23]] {bindc_name = "ddx", uniq_name = "_QFddxEddx"}
+// CHECK:           %[[VAL_24:.*]] = fir.alloca !fir.array<?x?xf64>, %[[VAL_18]], %[[VAL_23]] <{bindc_name = "ddx", uniq_name = "_QFddxEddx"}>
 // CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_18]], %[[VAL_23]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_24]](%[[VAL_25]]) {uniq_name = "_QFddxEddx"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf64>>, !fir.ref<!fir.array<?x?xf64>>)
 // CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_14]]#1 : (index) -> i32

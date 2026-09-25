@@ -496,7 +496,7 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 /// char str1[]; (only if DemangledOnly, MangledOnly)
 /// char str2[]; (only if MangledAndDemangled)
 ///
-/// The strings are stored as NULL terminated UTF8 strings and str1 and str2
+/// The strings are stored as null-terminated UTF8 strings and str1 and str2
 /// are only saved if we need them based on the encoding.
 ///
 /// Some mangled names have a mangled name that can be demangled by the built

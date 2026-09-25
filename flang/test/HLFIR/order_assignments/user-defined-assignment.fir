@@ -149,7 +149,7 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:  %[[VAL_10:.*]] = arith.divsi %[[VAL_9]], %[[VAL_6]] : index
 // CHECK:  %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_7]] : index
 // CHECK:  %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_7]] : index
-// CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_12]] {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_12]] <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:  %[[VAL_16:.*]] = fir.shape_shift %[[VAL_3]], %[[VAL_12]] : (index, index) -> !fir.shapeshift<1>
 // CHECK:  %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi1>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
 // CHECK:  fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_6]] {

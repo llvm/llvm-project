@@ -84,17 +84,18 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
              getTargetTriple().getDefaultExceptionHandling() &&
          "MCAsmInfo and Triple disagree on default exception handling type");
 
-  if (Options.ExceptionModel != ExceptionHandling::None)
+  if (Options.ExceptionModel != ExceptionHandling::Default)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
 
   AsmInfo.reset(TmpAsmInfo);
 }
 
 CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
-    const Target &T, StringRef DataLayoutString, const Triple &TT,
-    StringRef CPU, StringRef FS, const TargetOptions &Options, Reloc::Model RM,
-    CodeModel::Model CM, CodeGenOptLevel OL)
-    : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
+    const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
+    const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
+    CodeGenOptLevel OL)
+    : TargetMachine(T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT,
+                    CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;
   this->OptLevel = OL;
@@ -127,8 +128,7 @@ addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
   TargetLibraryInfoImpl TLII(TM.getTargetTriple(), Options.VecLib);
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(
-      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib));
+      new RuntimeLibraryInfoWrapper(Options.MCOptions.ABIName, Options.VecLib));
 
   invokeGlobalTargetPassConfigCallbacks(TM, PM, PassConfig);
 

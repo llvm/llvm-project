@@ -4,9 +4,9 @@
 ;   long i, j;
 ;
 ;   for (i = 0; i < N; ++i) {
-;     for (i = 0; i < N; ++i) {
+;     for (j = 0; j < N; ++j) {
 ;       init = *init_ptr;
-;       A[i] = init + 2;
+;       A[j] = init + 2;
 ;     }
 ;   }
 ; }

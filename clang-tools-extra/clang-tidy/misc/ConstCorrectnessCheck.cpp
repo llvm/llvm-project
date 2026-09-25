@@ -40,6 +40,7 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
+AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
 
 AST_MATCHER(TypeLoc, hasContainedAutoType) {
   return !Node.getContainedAutoTypeLoc().isNull();
@@ -142,6 +143,10 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto FunctionPointerRef =
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
 
+  // 'const' cannot be combined with 'decltype(auto)'.
+  const auto DecltypeAutoType =
+      hasType(ignoringParens(autoType(isDecltypeAuto())));
+
   const auto CommonExcludeTypes =
       anyOf(ConstType, ConstReference, RValueReference, TemplateType,
             FunctionPointerRef, hasType(cxxRecordDecl(isLambda())),
@@ -153,7 +158,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       isLocal(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), RValueReference,
-                   FunctionPointerRef, isImplicit(), AllowedType)),
+                   FunctionPointerRef, isImplicit(), AllowedType,
+                   DecltypeAutoType)),
       AnalyzeLambdas
           ? Matcher<VarDecl>(anything())
           : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),

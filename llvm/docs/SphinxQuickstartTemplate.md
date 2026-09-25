@@ -20,7 +20,7 @@ See the {ref}`migration <markdown_migration_guidelines>` section for more inform
 
 This article is located in `docs/SphinxQuickstartTemplate.md`.
 To use it as a template, make a copy and open it in a text editor.
-You can then write your docs, and open a [GitHub PR](project:GitHub.md) to request a review.
+You can then write your docs, and open a [GitHub PR](GitHub.md) to request a review.
 
 To view the Markdown source file for this article, click **Show Source** on the right sidebar.
 
@@ -85,6 +85,42 @@ You can format a link [like this](https://llvm.org/). A more [sophisticated synt
 pretty much anywhere else in the document. This is useful when linking to especially long URLs.
 
 [sophisticated syntax]: http://en.wikipedia.org/wiki/LLVM
+
+Use ordinary Markdown links for links within the same Sphinx documentation
+project. Link to the source document, including its `.md` or `.rst` extension,
+rather than to generated `.html` output. MyST resolves these as internal links
+and the Sphinx build checks that the document exists:
+
+```md
+[LLVM's build documentation](GettingStarted.md)
+```
+
+To link to a heading, append its generated lowercase, hyphenated slug. MyST
+also checks that the heading exists:
+
+```md
+[the CMake frequently-used variables](CMake.md#frequently-used-cmake-variables)
+[an earlier section](#creating-new-articles)
+```
+
+Do not add the MyST `project:` prefix to source paths. A relative Markdown link
+has the same Sphinx validation and also works when browsing the source on
+GitHub. Likewise, do not link to generated paths such as `CMake.html`.
+
+Use a Sphinx `{ref}` role when the target is an explicit label rather than a
+generated heading. Explicit labels are useful when
+an anchor must remain stable after its heading or source file is renamed, or
+when a target must be exported to another Sphinx project through an inventory.
+Avoid adding explicit labels to ordinary headings when a checked Markdown link
+is sufficient.
+
+```md
+(stable-section-label)=
+
+## A heading whose text may change
+
+See {ref}`the stable section <stable-section-label>`.
+```
 
 ## Lists
 
@@ -187,7 +223,7 @@ reStructuredText rather than Markdown.
 
 You can generate the HTML documentation from the sources locally if you want to
 see what they would look like. In addition to the normal
-[build tools](project:GettingStarted.md)
+[build tools](GettingStarted.md)
 you need to install [Sphinx] and the necessary extensions
 using the following command inside the `llvm-project` checkout:
 

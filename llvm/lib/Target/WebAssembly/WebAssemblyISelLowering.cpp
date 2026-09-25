@@ -867,7 +867,8 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     }
   }
 
-  for (auto Use : CallParams.uses())
+  // Avoid duplicating the implicit operands.
+  for (auto Use : CallParams.explicit_uses())
     MIB.add(Use);
 
   BB->insert(CallResults.getIterator(), MIB);
@@ -1813,7 +1814,11 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTTZ:
     return DAG.UnrollVectorOp(Op.getNode());
   case ISD::CLEAR_CACHE:
-    report_fatal_error("llvm.clear_cache is not supported on wasm");
+    // Report this as a diagnostic rather than aborting, like the other
+    // unsupported features in this target. Pass the chain through so that
+    // codegen can reach the point where the diagnostic is emitted.
+    fail(SDLoc(Op), DAG, "llvm.clear_cache is not supported on wasm");
+    return Op.getOperand(0);
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return LowerMUL_LOHI(Op, DAG);

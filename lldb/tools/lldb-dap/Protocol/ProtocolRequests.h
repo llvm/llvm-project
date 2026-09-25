@@ -1241,6 +1241,9 @@ llvm::json::Value toJSON(const LocationsResponseBody &);
 struct CompileUnitsArguments {
   /// The ID of the module.
   String moduleId;
+
+  /// IDs of compile units to return, or empty for all.
+  std::vector<uint32_t> compileUnitIds;
 };
 bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
               llvm::json::Path);

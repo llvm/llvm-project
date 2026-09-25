@@ -3622,7 +3622,7 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 //                ...
 // CHECK:         br label %omp.private.init
 // CHECK:       omp.private.init:
-// CHECK:         %[[TASK_STRUCT:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[TASK_STRUCT:.*]] = tail call ptr @malloc(i64 4)
 // CHECK:         %[[GEP:.*]] = getelementptr { i32 }, ptr %[[TASK_STRUCT:.*]], i32 0, i32 0
 // CHECK:         br label %omp.private.copy1
 // CHECK:       omp.private.copy1:

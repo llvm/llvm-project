@@ -3936,7 +3936,7 @@ void ModuleBitcodeWriter::writeFunction(
         // Write out non-instruction debug information attached to this
         // instruction. Write it after the instruction so that it's easy to
         // re-attach to the instruction reading the records in.
-        for (DbgRecord &DR : I.DebugMarker->getDbgRecordRange()) {
+        for (DbgRecord &DR : I.getDbgMarker()->getDbgRecordRange()) {
           if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
             Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
             Vals.push_back(VE.getMetadataID(DLR->getLabel()));

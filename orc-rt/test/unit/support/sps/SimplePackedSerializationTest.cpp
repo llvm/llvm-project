@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 TEST(SimplePackedSerializationTest, SPSOutputBuffer) {
   constexpr unsigned NumBytes = 8;

@@ -51,6 +51,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool IsOpenACCMapped(const Symbol &, const Scope &);
 bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);

@@ -64,6 +64,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
 LLVM_YAML_DECLARE_ENUM_TRAITS(SourceLanguage)
 LLVM_YAML_DECLARE_ENUM_TRAITS(EncodedFramePtrReg)
+LLVM_YAML_DECLARE_ENUM_TRAITS(AssociationKind)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -222,6 +223,15 @@ void ScalarEnumerationTraits<EncodedFramePtrReg>::enumeration(
   for (const auto &E : Names) {
     IO.enumCase(R, E.name(), static_cast<EncodedFramePtrReg>(E.value()));
   }
+}
+
+void ScalarEnumerationTraits<AssociationKind>::enumeration(
+    IO &IO, AssociationKind &Kind) {
+  auto Names = getAssociationKindNames();
+  for (const auto &E : Names)
+    IO.enumCase(Kind, E.name(), static_cast<AssociationKind>(E.value()));
+
+  IO.enumFallback<Hex16>(Kind);
 }
 
 namespace llvm {
@@ -649,6 +659,12 @@ template <> void SymbolRecordImpl<JumpTableSym>::map(IO &IO) {
 template <> void SymbolRecordImpl<HotPatchFuncSym>::map(IO &IO) {
   IO.mapRequired("Function", Symbol.Function);
   IO.mapRequired("Name", Symbol.Name);
+}
+
+template <> void SymbolRecordImpl<AssociationSym>::map(IO &IO) {
+  IO.mapRequired("AssociationKind", Symbol.AssocKind);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
 }
 
 } // end namespace detail

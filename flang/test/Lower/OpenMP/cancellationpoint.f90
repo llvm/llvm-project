@@ -22,7 +22,7 @@ subroutine cancellationpoint_do()
   !$omp end parallel do
 end subroutine
 ! CHECK-LABEL:   func.func @_QPcancellationpoint_do() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcancellationpoint_doEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFcancellationpoint_doEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcancellationpoint_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_2:.*]] = arith.constant 1 : i32

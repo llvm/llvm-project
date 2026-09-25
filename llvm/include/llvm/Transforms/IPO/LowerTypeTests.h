@@ -14,21 +14,29 @@
 #ifndef LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 #define LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 
-#include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <set>
 #include <vector>
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
+class BlockFrequencyInfo;
+class Function;
+class GlobalObject;
+class GlobalValue;
 class Module;
 class ModuleSummaryIndex;
+class ProfileSummaryInfo;
 class raw_ostream;
 
 namespace lowertypetests {
@@ -205,6 +213,24 @@ struct ByteArrayBuilder {
 };
 
 LLVM_ABI bool isJumpTableCanonical(Function *F);
+
+/// Returns whether a global or its associated global has attached type
+/// metadata.
+LLVM_ABI bool hasTypeMetadata(const GlobalObject &GO);
+
+/// Finds all functions and aliases in \p M that may need CFI jump table
+/// entries.
+LLVM_ABI SetVector<GlobalValue *> findCfiFunctions(Module &M);
+
+/// Finds all 64-bit numeric type identifiers in \p M used for cross-DSO CFI.
+LLVM_ABI SetVector<uint64_t> findCfiTypeIds(const Module &M);
+
+/// Creates cfi.functions, aliases, and symvers named metadata in \p DestM
+/// for CFI functions in \p CfiFunctions from source module \p SrcM.
+LLVM_ABI void createCfiMetadata(
+    Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter);
 
 /// Specifies how to drop type tests.
 enum class DropTestKind {

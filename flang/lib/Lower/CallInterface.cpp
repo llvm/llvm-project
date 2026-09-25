@@ -16,6 +16,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -695,10 +696,18 @@ setCUDAAttributes(mlir::func::FuncOp func,
                   std::optional<Fortran::evaluate::characteristics::Procedure>
                       characteristic) {
   if (characteristic && characteristic->cudaSubprogramAttrs) {
-    func.getOperation()->setAttr(
-        cuf::getProcAttrName(),
-        cuf::getProcAttribute(func.getContext(),
-                              *characteristic->cudaSubprogramAttrs));
+    auto procAttr = cuf::getProcAttribute(func.getContext(),
+                                          *characteristic->cudaSubprogramAttrs);
+    func.getOperation()->setAttr(cuf::getProcAttrName(), procAttr);
+    // -fstack-arrays cannot be honored in device code: the device stack is far
+    // smaller, and an automatic array that fits the host stack overflows it.
+    // Recorded unconditionally so the opt-out is explicit in the IR, as on the
+    // module. host_device is the host copy of the routine.
+    cuf::ProcAttribute proc = procAttr.getValue();
+    if (proc != cuf::ProcAttribute::Host &&
+        proc != cuf::ProcAttribute::HostDevice) {
+      cuf::setDeviceAllocationPolicy(func.getOperation());
+    }
   }
 
   if (sym) {

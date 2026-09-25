@@ -164,7 +164,7 @@ createReleaseModePriorityAdvisorAnalysis();
 LLVM_ABI RegAllocPriorityAdvisorAnalysisLegacy *
 createDevelopmentModePriorityAdvisorAnalysis();
 
-LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocPriorityAdvisorProvider *
+LLVM_ABI RegAllocPriorityAdvisorProvider *
 createReleaseModePriorityAdvisorProvider();
 
 LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocPriorityAdvisorProvider *

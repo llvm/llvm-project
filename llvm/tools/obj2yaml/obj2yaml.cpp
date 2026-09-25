@@ -11,29 +11,36 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/Minidump.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
 using namespace llvm::object;
 
-static cl::OptionCategory Cat("obj2yaml Options");
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::opt<std::string>
-    InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
-static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
-                                           cl::value_desc("filename"),
-                                           cl::init("-"), cl::Prefix,
-                                           cl::cat(Cat));
-static cl::bits<RawSegments> RawSegment(
-    "raw-segment",
-    cl::desc("Mach-O: dump the raw contents of the listed segments instead of "
-             "parsing them:"),
-    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")),
-    cl::cat(Cat));
+using namespace llvm::opt;
+#define OPTTABLE_CODE
+#include "Opts.inc"
+
+class Obj2YamlOptTable : public opt::OptTable {
+public:
+  Obj2YamlOptTable() : OptTable(optionTables()) { setDashDashParsing(true); }
+};
+} // namespace
 
 static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
   if (Obj.isCOFF())
@@ -54,7 +61,7 @@ static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
   llvm_unreachable("unexpected object file format");
 }
 
-static Error dumpInput(StringRef File, raw_ostream &OS) {
+static Error dumpInput(StringRef File, unsigned RawSegment, raw_ostream &OS) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
@@ -82,7 +89,7 @@ static Error dumpInput(StringRef File, raw_ostream &OS) {
   // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
   // here with the other binary types.
   if (Binary.isMachO() || Binary.isMachOUniversalBinary())
-    return macho2yaml(OS, Binary, RawSegment.getBits());
+    return macho2yaml(OS, Binary, RawSegment);
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return dumpObject(*Obj, OS);
   if (MinidumpFile *Minidump = dyn_cast<MinidumpFile>(&Binary))
@@ -103,20 +110,46 @@ static void reportError(StringRef Input, Error Err) {
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions(Cat);
-  cl::ParseCommandLineOptions(
-      argc, argv, "Dump a YAML description from an object file", nullptr,
-      nullptr, nullptr, /*LongOptionsUseDoubleDash=*/true);
+  auto Fatal = [](const Twine &Msg) {
+    WithColor::error(errs(), "obj2yaml") << Msg << '\n';
+    exit(1);
+  };
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  Obj2YamlOptTable Tbl;
+  opt::InputArgList Args = Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, Fatal);
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(outs(), "obj2yaml [options] <input file>",
+                  "Dump a YAML description from an object file");
+    return 0;
+  }
+  if (Args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
+    return 0;
+  }
+
+  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
+  if (Inputs.size() > 1)
+    Fatal("too many input files");
+  StringRef InputFilename =
+      Inputs.empty() ? StringRef("-") : StringRef(Inputs[0]);
+  StringRef OutputFilename = Args.getLastArgValue(OPT_o, "-");
+  unsigned RawSegment = RawSegments::none;
+  for (StringRef S : Args.getAllArgValues(OPT_raw_segment_EQ)) {
+    if (S == "data")
+      RawSegment |= RawSegments::data;
+    else if (S == "linkedit")
+      RawSegment |= RawSegments::linkedit;
+    else
+      Fatal("unknown segment '" + S + "' for --raw-segment");
+  }
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> Out(
       new ToolOutputFile(OutputFilename, EC, sys::fs::OF_Text));
-  if (EC) {
-    WithColor::error(errs(), "obj2yaml")
-        << "failed to open '" + OutputFilename + "': " + EC.message() << '\n';
-    return 1;
-  }
-  if (Error Err = dumpInput(InputFilename, Out->os())) {
+  if (EC)
+    Fatal("failed to open '" + OutputFilename + "': " + EC.message());
+  if (Error Err = dumpInput(InputFilename, RawSegment, Out->os())) {
     reportError(InputFilename, std::move(Err));
     return 1;
   }

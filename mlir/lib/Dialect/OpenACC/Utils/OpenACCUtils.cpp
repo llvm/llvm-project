@@ -128,9 +128,13 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
-    if (isa<ACC_DATA_ENTRY_OPS>(definingOp))
+    if (isa<ACC_DATA_ENTRY_OPS, MapInfoOp>(definingOp))
       if (auto name = acc::getVarName(definingOp))
         return name->str();
+
+    // A global goes by the symbol it is addressed through.
+    if (auto addressOf = dyn_cast<AddressOfGlobalOpInterface>(definingOp))
+      return addressOf.getSymbol().getLeafReference().str();
 
     // If it's a view operation, continue to the source
     if (auto viewOp = dyn_cast<ViewLikeOpInterface>(definingOp)) {
@@ -241,7 +245,7 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Device data is already resident on the device and does not need mapping.
   if (auto globalVar =
           mlir::dyn_cast<mlir::acc::GlobalVariableOpInterface>(definingOp))
-    if (globalVar.isDeviceData())
+    if (globalVar.isDeviceAccessible())
       return true;
 
   // Check if the defining op is a function
@@ -272,15 +276,15 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   return hasDeclare;
 }
 
-bool mlir::acc::isDeviceValue(mlir::Value val) {
+bool mlir::acc::isDeviceAccessibleValue(mlir::Value val) {
   // Check if the value is device data via type interfaces.
   // Device data is already resident on the device and does not need mapping.
   if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
-    if (mappableTy.isDeviceData(val))
+    if (mappableTy.isDeviceAccessible(val))
       return true;
 
   if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
-    if (pointerLikeTy.isDeviceData(val))
+    if (pointerLikeTy.isDeviceAccessible(val))
       return true;
 
   mlir::Operation *defOp = val.getDefiningOp();
@@ -301,7 +305,7 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
   if (auto partialAccess =
           dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
     if (mlir::Value base = partialAccess.getBaseEntity())
-      return isDeviceValue(base);
+      return isDeviceAccessibleValue(base);
   }
 
   // Handle address_of - check if the referenced global is device data.
@@ -310,7 +314,51 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     auto symbol = addrOfIface.getSymbol();
     if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
             mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-      return global.isDeviceData();
+      return global.isDeviceAccessible();
+  }
+
+  return false;
+}
+
+bool mlir::acc::isInDeviceMemoryValue(mlir::Value val) {
+  // In-device-memory data is a subset of device-accessible data: it must be
+  // accessible and its storage must physically reside in device memory.
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
+    if (mappableTy.isInDeviceMemory(val))
+      return true;
+
+  if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
+    if (pointerLikeTy.isInDeviceMemory(val))
+      return true;
+
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data whose storage is already in device
+  // memory.
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is in device memory.
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isInDeviceMemoryValue(base);
+  }
+
+  // Handle address_of - check if the referenced global is in device memory.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isInDeviceMemory();
   }
 
   return false;
@@ -332,7 +380,7 @@ bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
     return true;
 
   // If this is device data, it is valid.
-  if (isDeviceValue(val))
+  if (isDeviceAccessibleValue(val))
     return true;
 
   // Arguments of an enclosing acc routine are already on the device.

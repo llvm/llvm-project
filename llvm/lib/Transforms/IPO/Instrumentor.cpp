@@ -82,7 +82,7 @@ static cl::list<std::string>
     ConfigFiles("instrumentor-read-config-files",
                 cl::desc("Read the instrumentor configuration from the "
                          "specified JSON files (comma separated)"),
-                cl::ZeroOrMore, cl::CommaSeparated);
+                cl::CommaSeparated);
 
 /// The user option to specify an input file to read the configuration file
 /// paths from.

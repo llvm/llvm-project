@@ -309,6 +309,8 @@ public:
 
   cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
+  cir::IntType getBoolMemoryTy() { return getUInt8Ty(); }
+
   cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
   cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
   cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }
@@ -320,7 +322,7 @@ public:
   cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::FP16Type getFp16Ty() { return typeCache.fP16Ty; }
-  cir::BF16Type getBfloat6Ty() { return typeCache.bFloat16Ty; }
+  cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
 

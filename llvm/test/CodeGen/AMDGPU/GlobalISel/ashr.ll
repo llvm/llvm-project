@@ -1850,7 +1850,8 @@ define i65 @v_ashr_i65(i65 %value, i65 %amount) {
 ; GFX11-NEXT:    v_ashrrev_i64 v[6:7], v3, v[4:5]
 ; GFX11-NEXT:    v_ashrrev_i64 v[10:11], v10, v[4:5]
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v4, 31, v5
-; GFX11-NEXT:    v_dual_cndmask_b32 v2, v10, v2 :: v_dual_cndmask_b32 v3, v11, v8
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v10, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v3, v11, v8, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, v4, v6, vcc_lo

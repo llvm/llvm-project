@@ -13,7 +13,7 @@
 #include "mlir/Conversion/ShardToMPI/ShardToMPI.h"
 #include "mlir/Dialect/Shard/Transforms/Transforms.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"

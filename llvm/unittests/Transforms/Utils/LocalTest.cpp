@@ -1367,5 +1367,5 @@ TEST(Local, ReplaceDbgVariableRecord) {
   EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
 
   // Teardown.
-  RetInst->DebugMarker->eraseFromParent();
+  RetInst->getDbgMarker()->eraseFromParent();
 }

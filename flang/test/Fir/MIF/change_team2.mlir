@@ -70,9 +70,9 @@
 // CHECK:   %[[VAL_1:.*]] = fir.alloca i64
 // CHECK:   %[[VAL_2:.*]] = fir.alloca i32
 // CHECK:   %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:   %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "image_status", uniq_name = "_QFEimage_status"}
+// CHECK:   %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "image_status", uniq_name = "_QFEimage_status"}>
 // CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFEimage_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:   %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "new_team", uniq_name = "_QFEnew_team"}
+// CHECK:   %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "new_team", uniq_name = "_QFEnew_team"}>
 // CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFEnew_team"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:   %[[VAL_8:.*]] = fir.address_of(@_QMiso_fortran_envECstat_failed_image) : !fir.ref<i32>
 // CHECK:   %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMiso_fortran_envECstat_failed_image"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

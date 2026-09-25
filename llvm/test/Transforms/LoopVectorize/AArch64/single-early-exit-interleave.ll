@@ -50,10 +50,10 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP59:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = freeze <vscale x 16 x i1> [[TMP32]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = freeze <vscale x 16 x i1> [[TMP30]]
-; CHECK-NEXT:    [[TMP54:%.*]] = or <vscale x 16 x i1> [[TMP37]], [[TMP38]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = freeze <vscale x 16 x i1> [[TMP31]]
-; CHECK-NEXT:    [[TMP62:%.*]] = or <vscale x 16 x i1> [[TMP54]], [[TMP60]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = freeze <vscale x 16 x i1> [[TMP59]]
+; CHECK-NEXT:    [[TMP24:%.*]] = or <vscale x 16 x i1> [[TMP37]], [[TMP38]]
+; CHECK-NEXT:    [[TMP62:%.*]] = or <vscale x 16 x i1> [[TMP24]], [[TMP60]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = or <vscale x 16 x i1> [[TMP62]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP33]])
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP1]]

@@ -16,9 +16,9 @@
 ! CHECK:     }
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_reduction
-! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloop_reductionEi"}
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_reductionEi"}>
 ! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFomp_taskloop_reductionEx"}
+! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFomp_taskloop_reductionEx"}>
 ! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFomp_taskloop_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[INIT_X:.*]] = arith.constant 0 : i32
 ! CHECK:          hlfir.assign %[[INIT_X]] to %[[DECL_X]]#0 : i32, !fir.ref<i32>

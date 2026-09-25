@@ -4,12 +4,10 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBB
 
-; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctlz_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    beqz a1, .LBB0_2
+; RV64I-NEXT:    beqz a0, .LBB0_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -66,9 +64,8 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sext.w a1, a0
 ; RV64I-NEXT:    li s0, 31
-; RV64I-NEXT:    beqz a1, .LBB1_2
+; RV64I-NEXT:    beqz a0, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    srliw a1, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
@@ -123,7 +120,6 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
   ret i32 %2
 }
 
-; FIXME: We don't need the shift pair before the beqz for RV64I.
 define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: log2_ceil_i32:
 ; RV64I:       # %bb.0:
@@ -392,8 +388,7 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: cttz_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    beqz a1, .LBB6_2
+; RV64I-NEXT:    beqz a0, .LBB6_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -871,7 +866,6 @@ define signext i32 @min_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB19_2:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: min_i32:
@@ -908,7 +902,6 @@ define signext i32 @max_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB21_2:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: max_i32:
@@ -938,8 +931,6 @@ define i64 @max_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
-; FIXME: We don't need the shift pairs. The inputs are sign extended, we can
-; compare them directly.
 define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: minu_i32:
 ; RV64I:       # %bb.0:
@@ -947,7 +938,6 @@ define signext i32 @minu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB23_2:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: minu_i32:
@@ -977,8 +967,6 @@ define i64 @minu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
-; FIXME: We don't need the shift pairs. The inputs are sign extended, we can
-; compare them directly.
 define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: maxu_i32:
 ; RV64I:       # %bb.0:
@@ -986,7 +974,6 @@ define signext i32 @maxu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB25_2:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: maxu_i32:
@@ -1034,7 +1021,7 @@ define i32 @abs_i32(i32 %x) {
   ret i32 %abs
 }
 
-; FIXME: sext.w is not needed
+; FIXME: sext.w is not needed if we use negw.
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:

@@ -125,6 +125,14 @@ class LibcallLibrary<string name, dag impls,
   RuntimeLibcallAvailability Pred = pred;
 }
 
+// Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
+// impls in `exclude`. Lets an override target pull a provider library (e.g.
+// compiler-rt) but keep its own versions of a few entries.
+class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude> {
+  LibcallLibrary Library = lib;
+  list<RuntimeLibcallImpl> Exclude = exclude;
+}
+
 /// Define a complete top level set of runtime libcalls for a target.
 class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
   /// Set the default calling convention assumed for RuntimeLibcallImpl members.

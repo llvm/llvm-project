@@ -541,3 +541,8 @@ TEST_CPU_SUPPORTS(amx_movrs, "amx-movrs")
 // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // CHECK: = and i32 [[LOAD]], 134217728
 TEST_CPU_SUPPORTS(avx512bmm, "avx512bmm")
+
+// CHECK-LABEL: define{{.*}} void @test_avx10v2aux(
+// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
+// CHECK: = and i32 [[LOAD]], 268435456
+TEST_CPU_SUPPORTS(avx10v2aux, "avx10v2aux")

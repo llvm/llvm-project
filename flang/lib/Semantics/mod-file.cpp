@@ -10,6 +10,7 @@
 #include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -385,7 +386,7 @@ static void PutOpenMPRequirements(
   llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
 
   if (const auto *decls{GetOmpDeclarative(symbol)}) {
-    if (const llvm::omp::ClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+    if (const llvm::omp::Clauses &reqs{decls->ompRequires()}; reqs.count()) {
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
@@ -401,7 +402,7 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
 
   for (const Symbol &symbol : symbols) {
     if (const auto *decls{GetOmpDeclarative(symbol)}) {
-      if (const llvm::omp::ClauseSet &dtgt{decls->ompDeclTarget()};
+      if (const llvm::omp::Clauses &dtgt{decls->ompDeclTarget()};
           dtgt.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
@@ -414,8 +415,7 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
       // this module recovers the directive from the .mod file. Common-block
       // names must be wrapped in slashes when reparsed.
-      if (const llvm::omp::ClauseSet &gp{decls->ompGroupprivate()};
-          gp.count()) {
+      if (const llvm::omp::Clauses &gp{decls->ompGroupprivate()}; gp.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_groupprivate, version))
@@ -628,6 +628,10 @@ void ModFileWriter::PutDerivedType(
     PutDECStructure(typeSymbol, scope);
     return;
   }
+  if (details.isEnumerationType()) {
+    PutEnumerationType(typeSymbol);
+    return;
+  }
   PutAttrs(decls_ << "type", typeSymbol.attrs());
   if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
     decls_ << ",extends(" << extends->name() << ')';
@@ -698,6 +702,88 @@ void ModFileWriter::PutDECStructure(
   decls_ << '\n';
   PutComponents(typeSymbol);
   decls_ << "end structure\n";
+}
+
+void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
+  auto &details{typeSymbol.get<DerivedTypeDetails>()};
+  PutAttrs(decls_ << "enumeration type", typeSymbol.attrs());
+  decls_ << "::" << typeSymbol.name() << '\n';
+  // Collect the enumerator PARAMETER symbols of this enumeration type from the
+  // enclosing scope, sorted by ordinal value.  The intrinsic enumerators
+  // created by the ENUMERATOR statement carry
+  // Symbol::Flag::EnumeratorParameter, which distinguishes them from
+  // user-declared PARAMETERs of the same enumeration type; only the flagged
+  // symbols are listed here and suppressed from standalone emission.
+  struct EnumeratorInfo {
+    SourceName name;
+    const Symbol *sym{nullptr};
+    int ordinal{0};
+  };
+  int count{details.enumeratorCount()};
+  std::vector<EnumeratorInfo> enumerators(count); // indexed by ordinal-1
+  std::vector<bool> filled(count, false);
+  for (const auto &ref : typeSymbol.owner().GetSymbols()) {
+    if (ref->test(Symbol::Flag::EnumeratorParameter)) {
+      if (const auto *obj{ref->detailsIf<ObjectEntityDetails>()}) {
+        if (obj->type() &&
+            obj->type()->category() == DeclTypeSpec::TypeDerived &&
+            &obj->type()->derivedTypeSpec().typeSymbol() == &typeSymbol) {
+          int ordinal{0};
+          if (const auto &init{obj->init()}) {
+            // The init may be a bare StructureConstructor or a
+            // Constant<SomeDerived> (after folding). Use
+            // GetScalarConstantValue which handles both.
+            if (auto ctor{
+                    evaluate::GetScalarConstantValue<evaluate::SomeDerived>(
+                        *init)}) {
+              for (const auto &[compRef, val] : *ctor) {
+                if (auto intVal{evaluate::ToInt64(val.value())}) {
+                  ordinal = static_cast<int>(*intVal);
+                }
+              }
+            }
+          }
+          if (ordinal >= 1 && ordinal <= count && !filled[ordinal - 1]) {
+            enumerators[ordinal - 1] = {ref->name(), &*ref, ordinal};
+            filled[ordinal - 1] = true;
+          }
+        }
+      }
+    }
+  }
+  if (!enumerators.empty()) {
+    decls_ << "enumerator::";
+    bool first{true};
+    for (const auto &e : enumerators) {
+      if (!first) {
+        decls_ << ',';
+      }
+      decls_ << e.name;
+      first = false;
+    }
+    decls_ << '\n';
+  }
+  decls_ << "end enumeration type\n";
+  // Emit an explicit access statement for every enumerator that differs from
+  // the default the reader will reconstruct.  The reader derives that default
+  // solely from the ENUMERATION TYPE statement it reads back: PutAttrs writes
+  // the type's own PRIVATE attribute as an access-spec there, and an access-
+  // spec sets the enumerator default (F2023 7.6.2p2).  A module file never
+  // emits a bare module-default `private`, and enumeratorDefaultAccess() is
+  // not separately serialized, so the round-trip default is exactly "PRIVATE
+  // if the type itself is PRIVATE, else PUBLIC".
+  if (!isSubmodule_) {
+    Attr enumDefault{
+        typeSymbol.attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
+    for (const auto &e : enumerators) {
+      Attr actual{
+          e.sym->attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
+      if (actual != enumDefault) {
+        decls_ << (actual == Attr::PRIVATE ? "private::" : "public::") << e.name
+               << '\n';
+      }
+    }
+  }
 }
 
 // Attributes that may be in a subprogram prefix
@@ -1140,6 +1226,15 @@ void ModFileWriter::PutObjectEntity(
         return; // symbol was emitted on STRUCTURE statement
       }
     }
+    // Enumerator PARAMETERs are emitted as part of the ENUMERATION TYPE
+    // block — suppress standalone emission to avoid duplicates on USE.
+    // Keyed on Symbol::Flag::EnumeratorParameter so this is independent of
+    // whether the enumeration type block has already been emitted (the
+    // enumerator may sort before its type, e.g. when an accessibility
+    // statement precedes the ENUMERATION TYPE definition).
+    if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
+      return;
+    }
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
@@ -1323,6 +1418,12 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
   if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (auto attr{details->cudaDataAttr()}) {
       PutLower(os << ',', common::EnumToString(*attr));
+      // Record that the compiler applied this attribute, so that a reader can
+      // tell it from one the user wrote and let an explicit memory space on an
+      // enclosing object take precedence over it.
+      if (details->cudaDataAttrIsImplicit()) {
+        os << "(implicit)";
+      }
     }
   }
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
@@ -1659,11 +1760,20 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
+  // CUDA Fortran device code can call procedures whose device-side call target
+  // is described by an `acc routine bind(...)` directive in the module that
+  // declares them, so the sentinel must be recognized here even when this
+  // compilation itself was not given an OpenACC target.
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC) ||
+      context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     options.features.Enable(common::LanguageFeature::OpenACC);
   }
   options.features.Enable(common::LanguageFeature::OpenMP);
   options.features.Enable(common::LanguageFeature::CUDA);
+  // Module files may record that the compiler applied a CUDA data attribute
+  // itself, as MANAGED(IMPLICIT). That spelling exists only here.
+  options.features.Enable(
+      common::LanguageFeature::CUDAImplicitDataAttrSpelling);
   if (!isIntrinsic.value_or(false) && !notAModule) {
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic
@@ -1910,18 +2020,28 @@ static std::optional<SourceName> GetSubmoduleParent(
   }
 }
 
+// Does this symbol carry a CUDA data attribute the user actually wrote? An
+// attribute the compiler applied on the user's behalf does not make the module
+// a definer of CUDA symbols: the user wrote no CUDA Fortran, so a consumer
+// without CUDA enabled has nothing to object to.
+static bool HasExplicitCUDADataAttr(const Symbol &symbol) {
+  const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  return object && object->cudaDataAttr() && !object->cudaDataAttrIsImplicit();
+}
+
 static bool ScopeHasCUDAModuleVariables(const Scope &scope) {
   for (const auto &[_, symbolRef] : scope) {
     const Symbol &symbol{*symbolRef};
     if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (object->cudaDataAttr()) {
+      if (HasExplicitCUDADataAttr(symbol)) {
         return true;
       }
       const DeclTypeSpec *type{object->type()};
       const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
       if (derived &&
-          FindUltimateComponent(*derived,
-              [](const Symbol &component) { return HasCUDAAttr(component); })) {
+          FindUltimateComponent(*derived, [](const Symbol &component) {
+            return HasExplicitCUDADataAttr(component);
+          })) {
         return true;
       }
     }

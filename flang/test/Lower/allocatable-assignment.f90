@@ -27,7 +27,7 @@ subroutine test_simple_local_scalar()
   x = 42.
 end subroutine
 ! CHECK-LABEL:   func.func @_QMalloc_assignPtest_simple_local_scalar() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "x", uniq_name = "_QMalloc_assignFtest_simple_local_scalarEx"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<f32>> <{bindc_name = "x", uniq_name = "_QMalloc_assignFtest_simple_local_scalarEx"}>
 ! CHECK:           %[[VAL_1:.*]] = fir.zero_bits !fir.heap<f32>
 ! CHECK:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
 ! CHECK:           fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -162,7 +162,7 @@ subroutine test_runtime_shape(x)
 end subroutine
 ! CHECK-LABEL:   func.func @_QMalloc_assignPtest_runtime_shape(
 ! CHECK-SAME:                                                  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xf32>>> {bindc_name = ".result"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xf32>>> <{bindc_name = ".result"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMalloc_assignFtest_runtime_shapeEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.call @_QPreturn_pointer() fastmath<contract> : () -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>

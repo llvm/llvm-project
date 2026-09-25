@@ -333,6 +333,9 @@ public:
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,

@@ -332,7 +332,8 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
   auto index_or_err = GetIndexOfChildWithName(name);
 
   if (!index_or_err) {
-    llvm::consumeError(index_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),
+                   "{0}");
     return lldb::ValueObjectSP();
   }
 
@@ -345,45 +346,48 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
 
   ConstString name(name_ref);
 
-  std::optional<uint32_t> found_index = std::nullopt;
   {
     std::lock_guard<std::mutex> guard(m_child_mutex);
     auto name_to_index = m_name_toindex.find(name.GetCString());
     if (name_to_index != m_name_toindex.end())
-      found_index = name_to_index->second;
+      return name_to_index->second;
   }
 
-  if (!found_index && m_synth_filter_up != nullptr) {
-    size_t index = SIZE_MAX;
-    if (auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name)) {
-      index = *index_or_err;
-    } else if (!m_synth_sp->CustomSubscripting()) {
-      // Provide automatic support for subscript child names ("[N]").
-      auto maybe_index = formatters::ExtractIndexFromString(name.GetCString());
-      if (!maybe_index)
-        // The child name was not of the form "[N]", return the original error.
-        return index_or_err.takeError();
-
-      // Subscripting succeeded, ignore the original error.
-      llvm::consumeError(index_or_err.takeError());
-      index = *maybe_index;
-
-      // Prevent unnecessary work by limiting max to one past the index.
-      uint32_t max = index + 1;
-      auto num_children = GetNumChildrenIgnoringErrors(max);
-      if (index >= num_children)
-        return llvm::createStringErrorV("subscript index out of range: {0}",
-                                        index);
-    }
-    std::lock_guard<std::mutex> guard(m_child_mutex);
-    m_name_toindex[name.GetCString()] = index;
-    return index;
-  } else if (!found_index && m_synth_filter_up == nullptr) {
+  if (!m_synth_filter_up)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  } else if (found_index)
-    return *found_index;
 
-  return llvm::createStringErrorV("type has no child named '{0}'", name);
+  size_t index;
+  auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name);
+  if (index_or_err) {
+    index = *index_or_err;
+  } else {
+    // The front-end does its own subscripting, so its answer is final.
+    if (m_synth_sp->CustomSubscripting())
+      return index_or_err.takeError();
+
+    // Provide automatic support for subscript child names ("[N]").
+    auto maybe_index = formatters::ExtractIndexFromString(name.GetCString());
+    if (!maybe_index)
+      // The child name was not of the form "[N]", return the original error.
+      return index_or_err.takeError();
+
+    // Subscripting succeeded, ignore the original error.
+    llvm::consumeError(index_or_err.takeError());
+    index = *maybe_index;
+
+    // Prevent unnecessary work by limiting max to one past the index.
+    uint32_t max = index + 1;
+    auto num_children = GetNumChildren(max);
+    if (!num_children)
+      return num_children.takeError();
+    if (index >= *num_children)
+      return llvm::createStringErrorV("subscript index out of range: {0}",
+                                      index);
+  }
+
+  std::lock_guard<std::mutex> guard(m_child_mutex);
+  m_name_toindex[name.GetCString()] = index;
+  return index;
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }

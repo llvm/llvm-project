@@ -87,34 +87,34 @@ struct CtorDtor {
 // LLVM-BOTH-DAG: @_ZTH11tls_int_dyn = alias void (), ptr @__tls_init
 
 // Wrappers: 
-// LLVM: define linkonce_odr hidden ptr @_ZTW12maybe_inited() {
+// LLVM: define linkonce_odr hidden ptr @_ZTW12maybe_inited() comdat {
 // LLVM:   %[[HAS_INIT_FUNC:.*]] = icmp ne ptr @_ZTH12maybe_inited, null
 // LLVM:   br i1 %[[HAS_INIT_FUNC]]
 // LLVM:   call void @_ZTH12maybe_inited()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @maybe_inited)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW21definitely_inited_dyn() {
+// LLVM: define weak_odr hidden ptr @_ZTW21definitely_inited_dyn() comdat {
 // LLVM:   call void @_ZTH21definitely_inited_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @definitely_inited_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW17definitely_inited() {
+// LLVM: define weak_odr hidden ptr @_ZTW17definitely_inited() comdat {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @definitely_inited)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW17tls_int_self_init() {
+// LLVM: define weak_odr hidden ptr @_ZTW17tls_int_self_init() comdat {
 // LLVM:   call void @_ZTH17tls_int_self_init()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int_self_init)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_ref() {
+// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_ref() comdat {
 // LLVM:   call void @_ZTH11tls_int_ref()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int_ref)
 // LLVM:   ret ptr %[[GET_GLOB]]
 //
-// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_dyn() {
+// LLVM: define weak_odr hidden ptr @_ZTW11tls_int_dyn() comdat {
 // LLVM:   call void @_ZTH11tls_int_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
@@ -133,7 +133,7 @@ struct CtorDtor {
 // LLVM:   br label 
 // LLVM:   ret void
 
-// LLVM: define weak_odr hidden ptr @_ZTW7tls_int() {
+// LLVM: define weak_odr hidden ptr @_ZTW7tls_int() comdat {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_int)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }

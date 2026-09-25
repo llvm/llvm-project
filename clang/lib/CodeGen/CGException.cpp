@@ -39,18 +39,6 @@ static llvm::FunctionCallee getFreeExceptionFn(CodeGenModule &CGM) {
   return CGM.CreateRuntimeFunction(FTy, "__cxa_free_exception");
 }
 
-static llvm::FunctionCallee getSehTryBeginFn(CodeGenModule &CGM) {
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.begin");
-}
-
-static llvm::FunctionCallee getSehTryEndFn(CodeGenModule &CGM) {
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.end");
-}
-
 static llvm::FunctionCallee getUnexpectedFn(CodeGenModule &CGM) {
   // void __cxa_call_unexpected(void *thrown_exception);
 
@@ -530,8 +518,10 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // throw with types.
     // TODO Correctly handle exception specification in Emscripten EH
     if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
-        CGM.getCodeGenOpts().getExceptionHandling() ==
-            CodeGenOptions::ExceptionHandlingKind::None &&
+        (CGM.getCodeGenOpts().getExceptionHandling() ==
+             CodeGenOptions::ExceptionHandlingKind::None ||
+         CGM.getCodeGenOpts().getExceptionHandling() ==
+             CodeGenOptions::ExceptionHandlingKind::Default) &&
         EST == EST_Dynamic)
       CGM.getDiags().Report(D->getLocation(),
                             diag::warn_wasm_dynamic_exception_spec_ignored)
@@ -1681,7 +1671,7 @@ void CodeGenFunction::EmitSEHTryStmt(const SEHTryStmt &S) {
     llvm::BasicBlock *TryBB = nullptr;
     // IsEHa: emit an invoke to _seh_try_begin() runtime for -EHa
     if (getLangOpts().EHAsynch) {
-      EmitRuntimeCallOrInvoke(getSehTryBeginFn(CGM));
+      EmitCallOrInvoke(CGM.getIntrinsic(llvm::Intrinsic::seh_try_begin), {});
       if (SEHTryEpilogueStack.size() == 1) // outermost only
         TryBB = Builder.GetInsertBlock();
     }
@@ -2248,8 +2238,7 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
 
   // IsEHa: emit an invoke _seh_try_end() to mark end of FT flow
   if (getLangOpts().EHAsynch && Builder.GetInsertBlock()) {
-    llvm::FunctionCallee SehTryEnd = getSehTryEndFn(CGM);
-    EmitRuntimeCallOrInvoke(SehTryEnd);
+    EmitCallOrInvoke(CGM.getIntrinsic(llvm::Intrinsic::seh_try_end), {});
   }
 
   // Otherwise, we must have an __except block.

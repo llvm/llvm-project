@@ -825,10 +825,12 @@ linalg::packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   // 2.a. Rewrite as a generic.
   auto genericOp = dyn_cast<GenericOp>(linalgOp.getOperation());
   if (!genericOp) {
-    FailureOr<GenericOp> generalizeResult =
+    FailureOr<LinalgOp> generalizeResult =
         generalizeNamedOp(rewriter, linalgOp);
-    assert(succeeded(generalizeResult) && "unexpected failure generalizing op");
-    genericOp = *generalizeResult;
+    assert(succeeded(generalizeResult) &&
+           isa<GenericOp>(generalizeResult->getOperation()) &&
+           "unexpected failure generalizing op");
+    genericOp = cast<GenericOp>(generalizeResult->getOperation());
   }
 
   // 2.b. Interchange to move the dimensions (k, m, n) as most-minor

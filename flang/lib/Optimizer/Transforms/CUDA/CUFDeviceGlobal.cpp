@@ -91,9 +91,7 @@ static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
 static void prepareImplicitDeviceGlobals(
     mlir::func::FuncOp funcOp, mlir::SymbolTable &symbolTable,
     llvm::DenseSet<fir::GlobalOp> &candidates, bool skipDeadDeclares) {
-  auto cudaProcAttr{
-      funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
-  if (cudaProcAttr && cudaProcAttr.getValue() != cuf::ProcAttribute::Host) {
+  if (cuf::isDeviceProcedure(funcOp)) {
     funcOp.walk([&](fir::AddrOfOp op) {
       processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false,
                       skipDeadDeclares);

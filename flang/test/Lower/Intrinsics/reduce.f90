@@ -67,7 +67,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i8> {fir.bindc_name = "id"}
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMreduce_modFinteger1Ea"} : (!fir.box<!fir.array<?xi8>>, !fir.dscope) -> (!fir.box<!fir.array<?xi8>>, !fir.box<!fir.array<?xi8>>)
 ! CHECK: %[[ID:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} {uniq_name = "_QMreduce_modFinteger1Eid"} : (!fir.ref<i8>, !fir.dscope) -> (!fir.ref<i8>, !fir.ref<i8>)
-! CHECK: %[[ALLOC_RES:.*]] = fir.alloca i8 {bindc_name = "res", uniq_name = "_QMreduce_modFinteger1Eres"}
+! CHECK: %[[ALLOC_RES:.*]] = fir.alloca i8 <{bindc_name = "res", uniq_name = "_QMreduce_modFinteger1Eres"}>
 ! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[ALLOC_RES]] {uniq_name = "_QMreduce_modFinteger1Eres"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK: %[[ADDR_OP:.*]] = fir.address_of(@_QMreduce_modPred_int1) : (!fir.ref<i8>, !fir.ref<i8>) -> i8
 ! CHECK: %[[BOX_PROC:.*]] = fir.emboxproc %[[ADDR_OP]] : ((!fir.ref<i8>, !fir.ref<i8>) -> i8) -> !fir.boxproc<() -> ()>
@@ -549,7 +549,7 @@ subroutine char1(a)
   res = reduce(a, red_char1)
 end subroutine
 
-! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1> {bindc_name = ".chrtmp"}
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1> <{bindc_name = ".chrtmp"}>
 ! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
 ! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 
@@ -565,7 +565,7 @@ subroutine char2(a)
   res = reduce(a, red_char2)
 end subroutine
 
-! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<2,10> {bindc_name = ".chrtmp"}
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<2,10> <{bindc_name = ".chrtmp"}>
 ! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<2,10>>) -> !fir.ref<i16>
 ! CHECK: fir.call @_FortranAReduceChar2(%[[RESULT]], {{.*}})
 
@@ -874,7 +874,7 @@ subroutine charDyn()
 end subroutine
 
 ! CHECK: %[[BOX_ELESIZE:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
-! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1,?>(%[[BOX_ELESIZE]] : index) {bindc_name = ".chrtmp"}
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1,?>(%[[BOX_ELESIZE]] : index) <{bindc_name = ".chrtmp"}>
 ! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 

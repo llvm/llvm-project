@@ -797,8 +797,8 @@ static llvm::Error Evaluate_DW_OP_entry_value(EvalContext &eval_ctx,
           "no call edge for retn-pc = {0:x} in parent frame {1}", return_pc,
           parent_func->GetName());
     }
-    Function *callee_func = call_edge->GetCallee(modlist, parent_exe_ctx);
-    if (callee_func != current_func) {
+    SymbolContext callee = call_edge->GetCallee(modlist, parent_exe_ctx);
+    if (callee.function != current_func) {
       return llvm::createStringError(
           "ambiguous call sequence, can't find real parent frame");
     }
@@ -807,7 +807,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(EvalContext &eval_ctx,
     // call sequence that produced the current activation.  The first edge in
     // the parent that points to the current function must be valid.
     for (auto &edge : parent_func->GetTailCallingEdges()) {
-      if (edge->GetCallee(modlist, parent_exe_ctx) == current_func) {
+      if (edge->GetCallee(modlist, parent_exe_ctx).function == current_func) {
         call_edge = edge.get();
         break;
       }

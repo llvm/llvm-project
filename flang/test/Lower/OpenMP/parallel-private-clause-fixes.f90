@@ -36,11 +36,11 @@
 ! CHECK-LABEL: @_QPmultiple_private_fix(
 ! CHECK-SAME:  %[[GAMA:.*]]: !fir.ref<i32> {fir.bindc_name = "gama"}
 ! CHECK-DAG:         %[[GAMA_DECL:.*]]:2 = hlfir.declare %[[GAMA]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmultiple_private_fixEgama"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-DAG:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFmultiple_private_fixEi"}
+! CHECK-DAG:         %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_private_fixEi"}>
 ! CHECK-DAG:         %[[I_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_private_fixEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-DAG:         %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFmultiple_private_fixEj"}
+! CHECK-DAG:         %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFmultiple_private_fixEj"}>
 ! CHECK-DAG:         %[[J_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFmultiple_private_fixEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-DAG:         %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_private_fixEx"}
+! CHECK-DAG:         %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_private_fixEx"}>
 ! CHECK-DAG:         %[[X_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_private_fixEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.parallel {
 
@@ -94,7 +94,7 @@ subroutine multiple_private_fix(gama)
 end subroutine
 
 ! CHECK-LABEL: multiple_private_fix2
-! CHECK:  %[[X1:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_private_fix2Ex"}
+! CHECK:  %[[X1:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_private_fix2Ex"}>
 ! CHECK:  %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {uniq_name = "_QFmultiple_private_fix2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  omp.parallel private({{.*}} {{.*}}#0 -> %[[X2:.*]] : {{.*}}) {
 ! CHECK:    %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] {uniq_name = "_QFmultiple_private_fix2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

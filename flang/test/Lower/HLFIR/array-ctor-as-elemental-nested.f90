@@ -10,9 +10,9 @@
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtestEh1"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
-! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFtestEk"}
+! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QFtestEk"}>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtestEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "l", uniq_name = "_QFtestEl"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "l", uniq_name = "_QFtestEl"}>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFtestEl"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QFtestECn) : !fir.ref<i32>
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtestECn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

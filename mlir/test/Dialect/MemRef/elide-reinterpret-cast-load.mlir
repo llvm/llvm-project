@@ -54,6 +54,25 @@ func.func private @expand_1D(
   return
 }
 
+/// Same as @expand_1D, with attributes on the load.
+// CHECK-LABEL: func.func private @expand_1D_load_attrs(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x999xf32>) {
+func.func private @expand_1D_load_attrs(
+    %src : memref<1x999xf32>) {
+  // CHECK-DAG:   %[[IDX_1:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[IDX_2:.*]] = arith.constant 13 : index
+  %idx_1 = arith.constant 0 : index
+  %idx_2 = arith.constant 13 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 1, 999], strides: [999, 999, 1]
+    : memref<1x999xf32> to memref<1x1x999xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[IDX_1]], %[[IDX_2]]] alignment(16) nontemporal(true) invariant(true) : memref<1x999xf32>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_1, %idx_2]
+    alignment(16) nontemporal(true) invariant(true) : memref<1x1x999xf32>
+  return
+}
+
 // CHECK-LABEL: func.func private @collapse_1D(
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x1x999xf32>) {
 func.func private @collapse_1D(

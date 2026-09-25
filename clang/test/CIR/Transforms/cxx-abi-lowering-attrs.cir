@@ -44,7 +44,9 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
     // Attrs don't really allow getting a 'bad' type into them.  We attempt to
     // transform them anyway, but they'll probably never fail the legalizer.
 
-    cir.trap
+    // OpenCLVersionAttr contains no types and remains unchanged.
+    cir.trap {test.opencl_versions = [#cir.cl.version<3, 0>]}
+    // CHECK: cir.trap {test.opencl_versions = [#cir.cl.version<3, 0>]}
   }
 
   // cir::TypeAttr: function type is a type attr, so this shows it converting.

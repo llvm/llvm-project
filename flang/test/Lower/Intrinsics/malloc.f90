@@ -6,7 +6,7 @@ subroutine malloc_ptr()
   integer :: x
   pointer (ptr_x, x)
   ! CHECK:           %[[X:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
-  ! CHECK:           %[[X_PTR:.*]] = fir.alloca i64 {bindc_name = "ptr_x", uniq_name = "_QFmalloc_ptrEptr_x"}
+  ! CHECK:           %[[X_PTR:.*]] = fir.alloca i64 <{bindc_name = "ptr_x", uniq_name = "_QFmalloc_ptrEptr_x"}>
   ! CHECK:           %[[X_PTR_DECL:.*]]:2 = hlfir.declare %[[X_PTR]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFmalloc_ptrEptr_x"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
   ! CHECK:           %[[CST:.*]] = arith.constant 4 : i32
   ! CHECK:           %[[CST_I64:.*]] = fir.convert %[[CST]] : (i32) -> i64
@@ -21,7 +21,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPmalloc_i8() {
 subroutine malloc_i8()
   integer(kind=1) :: x
-! CHECK:           %[[X:.*]] = fir.alloca i8 {bindc_name = "x", uniq_name = "_QFmalloc_i8Ex"}
+! CHECK:           %[[X:.*]] = fir.alloca i8 <{bindc_name = "x", uniq_name = "_QFmalloc_i8Ex"}>
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFmalloc_i8Ex"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK:           %[[CST:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[CST_I64:.*]] = fir.convert %[[CST]] : (i32) -> i64
@@ -35,7 +35,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPmalloc_i16() {
 subroutine malloc_i16()
   integer(kind=2) :: x
-! CHECK:           %[[X:.*]] = fir.alloca i16 {bindc_name = "x", uniq_name = "_QFmalloc_i16Ex"}
+! CHECK:           %[[X:.*]] = fir.alloca i16 <{bindc_name = "x", uniq_name = "_QFmalloc_i16Ex"}>
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFmalloc_i16Ex"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 ! CHECK:           %[[CST:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[CST_I64:.*]] = fir.convert %[[CST]] : (i32) -> i64
@@ -50,7 +50,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPmalloc_i32() {
 subroutine malloc_i32()
   integer(kind=4) :: x
-! CHECK:           %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmalloc_i32Ex"}
+! CHECK:           %[[X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmalloc_i32Ex"}>
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFmalloc_i32Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[CST:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[CST_I64:.*]] = fir.convert %[[CST]] : (i32) -> i64
@@ -64,7 +64,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPmalloc_i64() {
 subroutine malloc_i64()
   integer(kind=8) :: x
-! CHECK:           %[[X:.*]] = fir.alloca i64 {bindc_name = "x", uniq_name = "_QFmalloc_i64Ex"}
+! CHECK:           %[[X:.*]] = fir.alloca i64 <{bindc_name = "x", uniq_name = "_QFmalloc_i64Ex"}>
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFmalloc_i64Ex"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[CST:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[CST_I64:.*]] = fir.convert %[[CST]] : (i32) -> i64

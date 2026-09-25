@@ -561,6 +561,23 @@ public:
 
   bool isWeakForLinker() const { return isWeakForLinker(getLinkage()); }
 
+  /// Assign a stable name to this GlobalValue if it is unnamed. setName will
+  /// make the name unique (e.g. __llvm_unnamed.1) if it is already taken.
+  void nameUnnamed() {
+    if (!hasName())
+      setName("__llvm_unnamed");
+  }
+
+  /// Promote this GlobalValue to external linkage with hidden visibility if
+  /// it has local linkage, and name it if it is unnamed.
+  void externalize() {
+    if (hasLocalLinkage()) {
+      setLinkage(ExternalLinkage);
+      setVisibility(HiddenVisibility);
+    }
+    nameUnnamed();
+  }
+
 protected:
   /// Copy all additional attributes (those not needed to create a GlobalValue)
   /// from the GlobalValue Src to this one.

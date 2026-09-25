@@ -20,10 +20,12 @@
 
 #include <OffloadAPI.h>
 
+#include <string_view>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-class ProgramAndKernelManager;
+class DeviceImageManager;
 
 // TODO: Pointers to instances of this class are supported to be stored in
 // header function templates as a static variable to avoid repeated runtime
@@ -44,36 +46,8 @@ public:
   DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
 
 private:
-  std::unordered_map<ol_device_handle_t, ol_symbol_handle_t> MBuiltKernels;
-
   std::string_view MName;
   DeviceImageManager &MDeviceImage;
-
-  /// Searches for the existing kernel handle compatible with the specified
-  /// device.
-  /// \param Device the device the kernel must be compatible with.
-  /// \return a liboffload kernel handle if a built kernel was found; otherwise
-  /// returns nullptr.
-  ol_symbol_handle_t getKernel(ol_device_handle_t Device) const {
-    auto KernelIt = MBuiltKernels.find(Device);
-    if (KernelIt == MBuiltKernels.end())
-      return nullptr;
-    return KernelIt->second;
-  }
-
-  /// Attaches a liboffload kernel handle to this device kernel info object.
-  /// \param Device the device the kernel symbol was created for.
-  /// \param Kernel the liboffload kernel symbol to attach.
-  void addKernel(ol_device_handle_t Device, ol_symbol_handle_t Kernel) {
-    assert(Kernel && "Invalid liboffload kernel handle");
-    assert(Device && "Invalid liboffload device handle");
-    assert((MBuiltKernels.find(Device) == MBuiltKernels.end()) &&
-           "Kernel is being managed already");
-    MBuiltKernels.insert({Device, Kernel});
-  }
-
-  /// Kernel info update is intended to be done only by ProgramAndKernelManager.
-  friend class ProgramAndKernelManager;
 };
 
 } // namespace detail

@@ -14,19 +14,19 @@ subroutine test_int
 ! CHECK:           %[[C5:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", uniq_name = "_QMtest_show_descriptorFtest_intEa"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "a", uniq_name = "_QMtest_show_descriptorFtest_intEa"}>
 ! CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ZERO_BITS_0]](%[[SHAPE_0]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_intEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMtest_show_descriptorFtest_intEn"}
+! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QMtest_show_descriptorFtest_intEn"}>
 ! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_1]] {uniq_name = "_QMtest_show_descriptorFtest_intEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:           fir.store %[[C5]] to %[[DECLARE_1]] : !fir.ref<i32>
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 ! CHECK:           %[[SELECT_0:.*]] = arith.maxsi %[[CONVERT_0]], %[[C0]] : index
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[SELECT_0]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QMtest_show_descriptorFtest_intEa.alloc"}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[SELECT_0]] <{alignment = 64 : i64, uniq_name = "_QMtest_show_descriptorFtest_intEa.alloc"}> {fir.must_be_heap = true}
 
   call show_descriptor(a)
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[SELECT_0]] : (index) -> !fir.shape<1>
@@ -83,7 +83,7 @@ subroutine test_logical
 ! CHECK:           %[[ADDRESS_OF_2:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_logicalEla2) : !fir.ref<!fir.array<2x!fir.logical<2>>>
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ADDRESS_OF_2]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_logicalEla2"} : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.logical<2>>>
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>> {bindc_name = "pla2", uniq_name = "_QMtest_show_descriptorFtest_logicalEpla2"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>> <{bindc_name = "pla2", uniq_name = "_QMtest_show_descriptorFtest_logicalEpla2"}>
 ! CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.logical<2>>>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ZERO_BITS_0]](%[[SHAPE_1]]) : (!fir.ptr<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>
@@ -242,12 +242,12 @@ subroutine test_derived
 ! CHECK:           %[[DECLARE_16:.*]] = fir.declare %[[ADDRESS_OF_15]] typeparams %[[C1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.c"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:           %[[ADDRESS_OF_16:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.t2) : !fir.ref<!fir.char<1,2>>
 ! CHECK:           %[[DECLARE_17:.*]] = fir.declare %[[ADDRESS_OF_16]] typeparams %[[C2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.t2"} : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
-! CHECK:           %[[ALLOCA_CT1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>> {bindc_name = "c_t1", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"}
+! CHECK:           %[[ALLOCA_CT1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>> <{bindc_name = "c_t1", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"}>
 ! CHECK:           %[[ZERO_BITS_CT1:.*]] = fir.zero_bits !fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>
 ! CHECK:           %[[EMBOX_CT1:.*]] = fir.embox %[[ZERO_BITS_CT1]] : (!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>
 ! CHECK:           fir.store %[[EMBOX_CT1]] to %[[ALLOCA_CT1]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
 ! CHECK:           %[[DECLARE_CT1:.*]] = fir.declare %[[ALLOCA_CT1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
-! CHECK:           %[[ALLOCA_CU:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "c_unlimited", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"}
+! CHECK:           %[[ALLOCA_CU:.*]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "c_unlimited", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"}>
 ! CHECK:           %[[ZERO_BITS_CU:.*]] = fir.zero_bits !fir.heap<none>
 ! CHECK:           %[[EMBOX_CU:.*]] = fir.embox %[[ZERO_BITS_CU]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
 ! CHECK:           fir.store %[[EMBOX_CU]] to %[[ALLOCA_CU]] : !fir.ref<!fir.class<!fir.heap<none>>>

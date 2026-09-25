@@ -17,6 +17,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
@@ -392,6 +393,17 @@ add_header_library(
     frac128.h
   DEPENDS
     .big_int
+    .frac64
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  frac256
+  HDRS
+    frac256.h
+  DEPENDS
+    .big_int
+    .frac128
     libc.src.__support.macros.config
 )
 

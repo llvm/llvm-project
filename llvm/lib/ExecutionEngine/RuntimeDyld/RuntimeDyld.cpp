@@ -864,6 +864,9 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
     if (IsTLS) {
       auto TLSSection = MemMgr.allocateTLSSection(Allocate, Alignment.value(),
                                                   SectionID, Name);
+      if (!TLSSection.InitializationImage)
+        return make_error<RuntimeDyldError>(
+            "Unable to allocate TLS section memory");
       Addr = TLSSection.InitializationImage;
       LoadAddress = TLSSection.Offset;
     } else if (IsCode) {
@@ -1299,7 +1302,7 @@ RuntimeDyld::MemoryManager::allocateTLSSection(uintptr_t Size,
                                                unsigned Alignment,
                                                unsigned SectionID,
                                                StringRef SectionName) {
-  report_fatal_error("allocation of TLS not implemented");
+  return {};
 }
 
 void RuntimeDyld::MemoryManager::anchor() {}

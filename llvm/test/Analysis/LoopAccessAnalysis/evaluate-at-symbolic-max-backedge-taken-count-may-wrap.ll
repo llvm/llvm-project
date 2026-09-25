@@ -94,7 +94,7 @@ define i32 @check_no_dep_via_bounds_compare_symbolic_max_btc_neg_1(ptr %P, i32 %
 ; CHECK-NEXT:            store i64 0, ptr %gep.iv, align 4 ->
 ; CHECK-NEXT:            %l.2 = load i32, ptr %gep.P.4, align 4
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.iv, align 4 ->
 ; CHECK-NEXT:            store i64 0, ptr %gep.iv, align 4
 ; CHECK-EMPTY:

@@ -72,14 +72,14 @@ module attributes {
   // CHECK:   cir.store %arg1, %[[HI]] : !s8i, !cir.ptr<!s8i>
   // CHECK:   %{{.+}} = cir.cast bitcast %[[RECSLOT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Nine>
 
-  // A packed record the caller must destroy takes byref rather than byval, and
-  // byref keeps the record's declared alignment where byval would raise it to
-  // the ABI minimum of 8.
+  // A packed record the caller must destroy takes the non-byval form rather
+  // than byval, which keeps the record's declared alignment where byval would
+  // raise it to the ABI minimum of 8.
   cir.func @take_p(%arg0: !rec_P) {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.byref = !rec_P})
+  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.dereferenceable = 5 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A union coerces through the same one-register path as FiveShort.
   cir.func @take_upacked(%arg0: !rec_UPacked) {

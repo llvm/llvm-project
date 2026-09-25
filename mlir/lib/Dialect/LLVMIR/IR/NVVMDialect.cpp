@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "IR/NVVMOps.h"
+
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -93,8 +95,8 @@ getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
   llvm_unreachable("unsupported cta_group value");
 }
 
-static ParseResult parseCTAGroup(OpAsmParser &parser,
-                                 NVVM::CTAGroupKindAttr &groupAttr) {
+ParseResult mlir::NVVM::parseCTAGroup(OpAsmParser &parser,
+                                      NVVM::CTAGroupKindAttr &groupAttr) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
     return failure();
@@ -106,8 +108,8 @@ static ParseResult parseCTAGroup(OpAsmParser &parser,
   return success();
 }
 
-static void printCTAGroup(OpAsmPrinter &printer, Operation *,
-                          NVVM::CTAGroupKindAttr groupAttr) {
+void mlir::NVVM::printCTAGroup(OpAsmPrinter &printer, Operation *,
+                               NVVM::CTAGroupKindAttr groupAttr) {
   printer << NVVM::stringifyCTAGroupKind(groupAttr.getValue());
 }
 
@@ -3928,6 +3930,18 @@ Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return {id, {mt.lookupValue(thisOp.getSrc())}};
 }
 
+LogicalResult NVVM::Ex2Op::verify() {
+  auto vectorType = dyn_cast<VectorType>(getSrc().getType());
+  if (!vectorType)
+    return success();
+
+  if (vectorType.getElementType().isF16() && getFtz())
+    return emitOpError("FTZ is not supported for vector<2xf16>");
+  if (vectorType.getElementType().isBF16() && !getFtz())
+    return emitOpError("FTZ is required for vector<2xbf16>");
+  return success();
+}
+
 mlir::NVVM::IDArgPair
 RsqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                llvm::IRBuilderBase &builder) {
@@ -4253,13 +4267,19 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  // We have the most basic mbarrier.arrive_drop supported on sm_80.
+  // It supports: Space=cta, scope=cta, No relaxed, No explicit count.
+  // So, only for this combination use the legacy intrinsic.
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  if (!hasCount &&
+      (id == llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cta))
+    return {llvm::Intrinsic::nvvm_mbarrier_arrive_drop_shared, {mbar}};
+
   // When count is not explicitly specified, the default is 1.
   llvm::LLVMContext &ctx = mt.getLLVMContext();
-  bool hasCount = static_cast<bool>(thisOp.getCount());
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
-
   return {id, {mbar, count}};
 }
 
@@ -4559,6 +4579,9 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
     args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask)
                                     : i16Unused);
+  } else {
+    args.push_back(builder.getInt32(0)); // ignore_bytes_left
+    args.push_back(builder.getInt32(0)); // ignore_bytes_right
   }
 
   // Cache hint, if available.
@@ -4567,10 +4590,17 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *i64Unused = llvm::ConstantInt::get(builder.getInt64Ty(), 0);
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
 
-  // Flag arguments for multicast and cachehint.
-  if (!isSharedCTA)
-    args.push_back(builder.getInt1(hasMulticastMask));
-  args.push_back(builder.getInt1(hasCacheHint));
+  // Flag arguments for multicast/ignore_oob and cachehint.
+  if (isSharedCTA) {
+    args.push_back(builder.getInt1(hasCacheHint)); // flag_ch
+    args.push_back(builder.getInt1(false));        // flag_oob
+  } else {
+    args.push_back(builder.getInt1(hasMulticastMask)); // flag_mc
+    args.push_back(builder.getInt1(hasCacheHint));     // flag_ch
+  }
+
+  // flag_valid_pattern = disabled.
+  args.push_back(builder.getInt32(0));
 
   llvm::Intrinsic::ID id =
       isSharedCTA
@@ -4659,8 +4689,8 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *cg =
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
 
-  // validate_pattern = disabled
-  llvm::Value *validatePattern = builder.getInt32(0);
+  // flag_valid_pattern = disabled
+  llvm::Value *flagValidPattern = builder.getInt32(0);
 
   if (!isCTAOnly) {
     // For shared::cluster, all the arguments that we build are applicable.
@@ -4669,12 +4699,12 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt1(hasMC));
     args.push_back(builder.getInt1(hasCacheHint));
     args.push_back(cg);
-    args.push_back(validatePattern);
+    args.push_back(flagValidPattern);
   } else {
     // For shared::cta, only cache-hint is applicable.
     args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
     args.push_back(builder.getInt1(hasCacheHint));
-    args.push_back(validatePattern);
+    args.push_back(flagValidPattern);
   }
 
   constexpr size_t numDims = 5;  // 1D to 5D
@@ -5644,8 +5674,10 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
+  // The PZO modifier is not supported with the RS rounding mode.
   // TODO: Add support for PZO modifier
-  args.push_back(builder.getInt1(false));
+  if (op.getRnd() != FPRoundingMode::RS)
+    args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5696,7 +5728,8 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
   // TODO: Add support for PZO modifier
-  args.push_back(builder.getInt1(false));
+  if (op.getRnd() != FPRoundingMode::RS)
+    args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5836,10 +5869,10 @@ LogicalResult Tcgen05StOp::verify() {
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
-static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
-                                  Value result,
-                                  ArrayRef<::mlir::ConstantIntRanges> argRanges,
-                                  SetIntRangeFn setResultRanges) {
+void mlir::NVVM::nvvmInferResultRanges(
+    std::optional<LLVM::ConstantRangeAttr> range, Value result,
+    ArrayRef<::mlir::ConstantIntRanges> argRanges,
+    SetIntRangeFn setResultRanges) {
   if (range) {
     setResultRanges(result, {range->getLower(), range->getUpper(),
                              range->getLower(), range->getUpper()});
@@ -5850,9 +5883,8 @@ static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
 
 /// Verify the range attribute satisfies LLVM ConstantRange constructor
 /// requirements for NVVM SpecialRangeableRegisterOp.
-static LogicalResult
-verifyConstantRangeAttr(Operation *op,
-                        std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
+LogicalResult mlir::NVVM::verifyConstantRangeAttr(
+    Operation *op, std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
   if (!rangeAttr)
     return success();
 
@@ -6975,10 +7007,7 @@ struct NVVMInlinerInterface final : DialectInlinerInterface {
 
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
-      >();
+  registerNVVMDialectOperations(this);
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
@@ -7195,9 +7224,6 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
   return success();
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"

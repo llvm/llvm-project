@@ -17,7 +17,7 @@ func.func @_QPtest1() {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 11 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 13 : index
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<11x13xf32> {bindc_name = "x", uniq_name = "_QFtest1Ex"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<11x13xf32> <{bindc_name = "x", uniq_name = "_QFtest1Ex"}>
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.array<11x13xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<11x13xf32>>, !fir.ref<!fir.array<11x13xf32>>)
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.array<11x13xf32>>) -> !fir.ref<!fir.array<143xf32>>

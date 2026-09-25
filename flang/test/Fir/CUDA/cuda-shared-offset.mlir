@@ -17,7 +17,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>       
 // CHECK: gpu.return
 // CHECK: }
-// CHECK: fir.global external @_QPdynshared__shared_mem__ {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
+// CHECK: fir.global external @_QPdynshared__shared_mem__ <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<0xi8>
 
 // -----
 
@@ -51,12 +51,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: cuf.shared_memory[%c0{{.*}} : i32] f32 align 4 {bindc_name = "r", isStatic, uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
 // CHECK: gpu.return
 // CHECK: }
-// CHECK: fir.global internal @_QPshared_static__shared_mem__a {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__b {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__c {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__d {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__e {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<8xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__r {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__a <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__b <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__c <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__d <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__e <{alignment = 8 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<8xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__r <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
 // CHECK: }
 // CHECK: }
 
@@ -164,7 +164,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf64>, %{{.*}} : index {bindc_name = "dmasks", uniq_name = "_QMmtestsFtestanyEdmasks"} -> !fir.ref<!fir.array<?xf64>>
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %{{.*}} : index {bindc_name = "smasks", uniq_name = "_QMmtestsFtestanyEsmasks"} -> !fir.ref<!fir.array<?xf32>>
 
-// CHECK: fir.global external @_QMmtestsPtestany__shared_mem__ {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
+// CHECK: fir.global external @_QMmtestsPtestany__shared_mem__ <{alignment = 8 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<0xi8>
 
 // -----
 
@@ -200,8 +200,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK:   cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "_lro_private_0", isStatic, uniq_name = "_lro_private_0"} -> !fir.ref<i32>
 // CHECK:   scf.parallel
 // CHECK:     cuf.shared_memory[%c0{{.*}} : i32] i32 align 4 {bindc_name = "_lro_private_1", isStatic, uniq_name = "_lro_private_1"} -> !fir.ref<i32>
-// CHECK: fir.global internal @_QPreduce_kernel__shared_mem___lro_private_0 {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPreduce_kernel__shared_mem___lro_private_1 {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPreduce_kernel__shared_mem___lro_private_0 <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPreduce_kernel__shared_mem___lro_private_1 <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<4xi8>
 
 // -----
 
@@ -233,5 +233,49 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // CHECK-LABEL: gpu.func @_QPt1()
-// CHECK: fir.global internal @_QPt1__shared_mem__s {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<1024xi8>
-// CHECK: fir.global external @_QPt1__shared_mem__ {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
+// CHECK: fir.global internal @_QPt1__shared_mem__s <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<1024xi8>
+// CHECK: fir.global external @_QPt1__shared_mem__ <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<0xi8>
+
+// -----
+
+// Tail-padded record in shared memory: !fir.type<tp{a:i32,b:i8}> has
+// 5 typed bytes but 8 allocation bytes (3 bytes of tail padding).
+// The shared memory global must be allocated as !fir.array<8xi8>, not
+// !fir.array<5xi8>, so subsequent shared variables start at the correct
+// aligned offset.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QPshared_tail_padded() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+      %0 = cuf.shared_memory !fir.type<tp{a:i32,b:i8}> {bindc_name = "x", uniq_name = "_QFshared_tail_paddedEx"} -> !fir.ref<!fir.type<tp{a:i32,b:i8}>>
+      %1 = fir.declare %0 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_tail_paddedEx"} : (!fir.ref<!fir.type<tp{a:i32,b:i8}>>) -> !fir.ref<!fir.type<tp{a:i32,b:i8}>>
+      gpu.return
+    }
+  }
+}
+
+// Shared memory global must use the allocation size (8), not the typed
+// size (5).  Using 5 would misalign any variable placed after this one.
+// CHECK-LABEL: gpu.func @_QPshared_tail_padded()
+// CHECK: fir.global internal @_QPshared_tail_padded__shared_mem__x <{alignment = 4 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<8xi8>
+
+// -----
+
+// Packed record in shared memory: !fir.type<tp<{i:i32,d:f64}>> has no
+// alignment gaps and no tail padding; its size is 4+8=12 bytes (not 16).
+// The shared memory global must be !fir.array<12xi8>, not !fir.array<16xi8>.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QPshared_packed() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+      %0 = cuf.shared_memory !fir.type<tp<{i:i32,d:f64}>> {bindc_name = "x", uniq_name = "_QFshared_packedEx"} -> !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
+      %1 = fir.declare %0 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_packedEx"} : (!fir.ref<!fir.type<tp<{i:i32,d:f64}>>>) -> !fir.ref<!fir.type<tp<{i:i32,d:f64}>>>
+      gpu.return
+    }
+  }
+}
+
+// Shared memory global must use the packed size (12), not the aligned
+// unpacked size (16).
+// CHECK-LABEL: gpu.func @_QPshared_packed()
+// CHECK: fir.global internal @_QPshared_packed__shared_mem__x <{alignment = 1 : i64, data_attr = #cuf.cuda<shared>}> : !fir.array<12xi8>

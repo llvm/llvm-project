@@ -747,8 +747,17 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   }
 
   Location loc = createFileLineColLoc(opBuilder);
-  spirv::CopyMemoryOp::create(opBuilder, loc, resultTypes, operands,
-                              attributes);
+  spirv::CopyMemoryOp::Properties properties{};
+  spirv::CopyMemoryOp::populateDefaultProperties(
+      OperationName(spirv::CopyMemoryOp::getOperationName(),
+                    opBuilder.getContext()),
+      properties);
+  if (failed(spirv::CopyMemoryOp::setPropertiesFromAttr(
+          properties, opBuilder.getDictionaryAttr(attributes),
+          [&]() { return emitError(loc); })))
+    return failure();
+  spirv::CopyMemoryOp::create(opBuilder, loc, resultTypes, operands, properties,
+                              /*discardableAttributes=*/{});
 
   return success();
 }

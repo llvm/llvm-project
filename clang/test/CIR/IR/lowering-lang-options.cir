@@ -1,0 +1,16 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// #cir.lowering_lang_options holds plain data, so it parses and prints without a
+// live clang::LangOptions. Check that every field round-trips, including a
+// non-default i32 clang_abi_compat and non-default booleans.
+
+module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+  exceptions = true, threadsafe_statics = false, cuda = true,
+  cuda_is_device = true, hip = true, gpu_rdc = true, openmp = true,
+  openmp_is_target_device = true, clang_abi_compat = 9>} {
+}
+
+// CHECK: cir.lowering_lang_options = #cir.lowering_lang_options<
+// CHECK-SAME: exceptions = true, threadsafe_statics = false, cuda = true,
+// CHECK-SAME: cuda_is_device = true, hip = true, gpu_rdc = true, openmp = true,
+// CHECK-SAME: openmp_is_target_device = true, clang_abi_compat = 9>

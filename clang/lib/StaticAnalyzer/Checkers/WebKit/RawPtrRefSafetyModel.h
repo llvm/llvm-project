@@ -9,7 +9,10 @@
 #ifndef LLVM_CLANG_ANALYZER_WEBKIT_RAWPTRREFSAFETYMODEL_H
 #define LLVM_CLANG_ANALYZER_WEBKIT_RAWPTRREFSAFETYMODEL_H
 
+#include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
+#include "clang/AST/Type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -37,7 +40,7 @@ public:
   /// managed) type, false if not, std::nullopt if inconclusive.
   virtual std::optional<bool> isUnsafeType(QualType QT) const = 0;
 
-  /// \returns whether \p QT is a raw pointer or reference to an unsafe type,
+  /// \returns whether \p QT is a pointer/reference/view to an analyzed type,
   /// false if not, std::nullopt if inconclusive. \p IgnoreARC requests that
   /// Objective-C ARC be ignored when deciding retainability.
   virtual std::optional<bool> isUnsafePtr(QualType QT,
@@ -54,7 +57,23 @@ public:
   virtual bool isPtrType(const std::string &Name) const = 0;
 
   /// \returns whether \p E is known to produce a safe value for this policy.
-  virtual bool isSafeExpr(const Expr *) const { return false; }
+  /// \p PtrIsLifetimeBoundToOrigin is whether the traversal that reached \p E
+  /// followed at least one [[clang::lifetimebound]] edge.
+  virtual bool isSafeExpr(const Expr *, bool PtrIsLifetimeBoundToOrigin) const {
+    return false;
+  }
+
+  /// \returns whether this policy checks for destruction of an object's
+  /// interior while the object itself stays alive (borrow checking), rather
+  /// than for deallocation of the object (the smart pointer policies).
+  virtual bool checksForInteriorDestruction() const { return false; }
+
+  /// \returns whether this policy checks assignment through indirection, such
+  /// as *out = _ or arr[0] = _. (Direct assignment to a named variable is
+  /// always checked.)
+  ///
+  /// FIXME: Make this flag true in all analyses and then remove it.
+  virtual bool recognizesIndirectStores() const { return false; }
 
   /// \returns whether \p D refers to a declaration that is safe by construction
   /// for this policy (e.g. immortal system-header globals).
@@ -65,6 +84,20 @@ public:
   /// \returns a human readable name for the safe type category, used in
   /// diagnostics (e.g. "RefPtr-capable type").
   virtual const char *typeName() const = 0;
+
+  /// Prints a phrase describing why the reported value is unsafe, completing a
+  /// sentence of the form "Local variable 'x' is a ". \p Origin is the
+  /// expression the value was traced back to, or null when the trace found
+  /// none. \p SinkType is the type of the reported location.
+  virtual void describeHazard(llvm::raw_ostream &Os, const Expr *,
+                              QualType SinkType) const {
+    auto *VarType = SinkType.getTypePtr();
+    auto *DesugaredType = VarType->getUnqualifiedDesugaredType();
+    bool IsPtr = isa<PointerType, ObjCObjectPointerType>(DesugaredType);
+    Os << "raw " << (IsPtr ? "pointer" : "reference") << " to ";
+    Os << typeName() << " ";
+    printTypeName(Os, SinkType);
+  }
 
   /// \returns the RetainTypeChecker backing this policy, or nullptr if the
   /// policy does not track retain/OS types.
@@ -86,6 +119,10 @@ std::unique_ptr<PtrRefSafetyModel> makeCheckedPtrSafetyModel();
 
 /// \returns a policy that treats RetainPtr / OSPtr as safe.
 std::unique_ptr<PtrRefSafetyModel> makeRetainPtrSafetyModel();
+
+/// \returns a policy that treats a loan on a CanBorrow object's interior as
+/// safe only when it is guarded by a Borrow<T>.
+std::unique_ptr<PtrRefSafetyModel> makeBorrowSafetyModel();
 
 } // namespace clang
 

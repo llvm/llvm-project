@@ -646,6 +646,36 @@
 // CHECK-PCX86_64ELF-SAME: "-lc"
 // CHECK-PCX86_64ELF-SAME: "-o" "a.out"
 
+// RUN: %clang -no-canonical-prefixes %s -### --target=loongarch32-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA32ELF %s
+// CHECK-LA32ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-LA32ELF: "-nostdsysteminc"
+// CHECK-LA32ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-LA32ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-LA32ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-LA32ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-LA32ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf32loongarch" "-X"
+// CHECK-LA32ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-LA32ELF-SAME:"{{.*}}.o"
+// CHECK-LA32ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-LA32ELF-SAME: "-lc"
+// CHECK-LA32ELF-SAME: "-o" "a.out"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=loongarch64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64ELF %s
+// CHECK-LA64ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-LA64ELF: "-nostdsysteminc"
+// CHECK-LA64ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-LA64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-LA64ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-LA64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-LA64ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf64loongarch" "-X"
+// CHECK-LA64ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-LA64ELF-SAME:"{{.*}}.o"
+// CHECK-LA64ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-LA64ELF-SAME: "-lc"
+// CHECK-LA64ELF-SAME: "-o" "a.out"
+
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.
 // RUN: rm -rf %t.dir/baremetal_clang_rt_noarch

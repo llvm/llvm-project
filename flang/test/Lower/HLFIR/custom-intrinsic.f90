@@ -10,7 +10,7 @@ end function
 ! CHECK-NEXT:    %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_ARG]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFmax_simpleEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NEXT:    %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ARG]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFmax_simpleEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-NEXT:    %[[RES_ALLOC:.*]] = fir.alloca i32 {bindc_name = "max_simple", uniq_name = "_QFmax_simpleEmax_simple"}
+! CHECK-NEXT:    %[[RES_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "max_simple", uniq_name = "_QFmax_simpleEmax_simple"}>
 ! CHECK-NEXT:    %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES_ALLOC]] {uniq_name = "_QFmax_simpleEmax_simple"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NEXT:    %[[A_LD:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i32>
 ! CHECK-NEXT:    %[[B_LD:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i32>
@@ -32,7 +32,7 @@ end function
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmax_dynamic_optional_scalarEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmax_dynamic_optional_scalarEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmax_dynamic_optional_scalarEc"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "max_dynamic_optional_scalar", uniq_name = "_QFmax_dynamic_optional_scalarEmax_dynamic_optional_scalar"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "max_dynamic_optional_scalar", uniq_name = "_QFmax_dynamic_optional_scalarEmax_dynamic_optional_scalar"}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmax_dynamic_optional_scalarEmax_dynamic_optional_scalar"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
@@ -64,7 +64,7 @@ end function
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmax_dynamic_optional_scalar2Eb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmax_dynamic_optional_scalar2Ec"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmax_dynamic_optional_scalar2Ed"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "max_dynamic_optional_scalar2", uniq_name = "_QFmax_dynamic_optional_scalar2Emax_dynamic_optional_scalar2"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 <{bindc_name = "max_dynamic_optional_scalar2", uniq_name = "_QFmax_dynamic_optional_scalar2Emax_dynamic_optional_scalar2"}>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFmax_dynamic_optional_scalar2Emax_dynamic_optional_scalar2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -104,7 +104,7 @@ end function
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmax_arrayEb"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "max_array", fir.must_be_stack = true, uniq_name = "_QFmax_arrayEmax_array"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> <{bindc_name = "max_array", uniq_name = "_QFmax_arrayEmax_array"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFmax_arrayEmax_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
@@ -139,7 +139,7 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmax_dynamic_optional_arrayEc"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "max_dynamic_optional_array", fir.must_be_stack = true, uniq_name = "_QFmax_dynamic_optional_arrayEmax_dynamic_optional_array"}
+! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> <{bindc_name = "max_dynamic_optional_array", uniq_name = "_QFmax_dynamic_optional_arrayEmax_dynamic_optional_array"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_12]]) {uniq_name = "_QFmax_dynamic_optional_arrayEmax_dynamic_optional_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.is_present %[[VAL_9]]#0 : (!fir.ref<!fir.array<10xi32>>) -> i1
@@ -174,7 +174,7 @@ end function
 ! CHECK-SAME:                             %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}) -> i32 {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_simpleEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_simpleEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "min_simple", uniq_name = "_QFmin_simpleEmin_simple"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "min_simple", uniq_name = "_QFmin_simpleEmin_simple"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmin_simpleEmin_simple"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
@@ -196,7 +196,7 @@ end function
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_dynamic_optional_scalarEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_dynamic_optional_scalarEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmin_dynamic_optional_scalarEc"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "min_dynamic_optional_scalar", uniq_name = "_QFmin_dynamic_optional_scalarEmin_dynamic_optional_scalar"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "min_dynamic_optional_scalar", uniq_name = "_QFmin_dynamic_optional_scalarEmin_dynamic_optional_scalar"}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmin_dynamic_optional_scalarEmin_dynamic_optional_scalar"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
@@ -228,7 +228,7 @@ end function
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_dynamic_optional_scalar2Eb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmin_dynamic_optional_scalar2Ec"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmin_dynamic_optional_scalar2Ed"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "min_dynamic_optional_scalar2", uniq_name = "_QFmin_dynamic_optional_scalar2Emin_dynamic_optional_scalar2"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 <{bindc_name = "min_dynamic_optional_scalar2", uniq_name = "_QFmin_dynamic_optional_scalar2Emin_dynamic_optional_scalar2"}>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFmin_dynamic_optional_scalar2Emin_dynamic_optional_scalar2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -268,7 +268,7 @@ end function
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_arrayEb"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "min_array", fir.must_be_stack = true, uniq_name = "_QFmin_arrayEmin_array"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> <{bindc_name = "min_array", uniq_name = "_QFmin_arrayEmin_array"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFmin_arrayEmin_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
@@ -303,7 +303,7 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmin_dynamic_optional_arrayEc"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "min_dynamic_optional_array", fir.must_be_stack = true, uniq_name = "_QFmin_dynamic_optional_arrayEmin_dynamic_optional_array"}
+! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> <{bindc_name = "min_dynamic_optional_array", uniq_name = "_QFmin_dynamic_optional_arrayEmin_dynamic_optional_array"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_12]]) {uniq_name = "_QFmin_dynamic_optional_arrayEmin_dynamic_optional_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.is_present %[[VAL_9]]#0 : (!fir.ref<!fir.array<10xi32>>) -> i1
@@ -336,7 +336,7 @@ function associated_simple(pointer)
 end function
 ! CHECK-LABEL:   func.func @_QPassociated_simple(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "pointer"}) -> !fir.logical<4> {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.logical<4> {bindc_name = "associated_simple", uniq_name = "_QFassociated_simpleEassociated_simple"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "associated_simple", uniq_name = "_QFassociated_simpleEassociated_simple"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFassociated_simpleEassociated_simple"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_simpleEpointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -359,7 +359,7 @@ end function
 ! CHECK-LABEL:   func.func @_QPassociated_target(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "pointer"},
 ! CHECK-SAME:                                    %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "target", fir.target}) -> !fir.logical<4> {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> {bindc_name = "associated_target", uniq_name = "_QFassociated_targetEassociated_target"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "associated_target", uniq_name = "_QFassociated_targetEassociated_target"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFassociated_targetEassociated_target"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_targetEpointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFassociated_targetEtarget"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -383,7 +383,7 @@ end function
 ! CHECK-LABEL:   func.func @_QPassociated_pointer(
 ! CHECK-SAME:                                     %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "pointer"},
 ! CHECK-SAME:                                     %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "target"}) -> !fir.logical<4> {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> {bindc_name = "associated_pointer", uniq_name = "_QFassociated_pointerEassociated_pointer"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "associated_pointer", uniq_name = "_QFassociated_pointerEassociated_pointer"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFassociated_pointerEassociated_pointer"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_pointerEpointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_pointerEtarget"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
@@ -407,7 +407,7 @@ end function
 ! CHECK-LABEL:   func.func @_QPassociated_array(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pointer"},
 ! CHECK-SAME:                                   %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "target"}) -> !fir.logical<4> {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> {bindc_name = "associated_array", uniq_name = "_QFassociated_arrayEassociated_array"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "associated_array", uniq_name = "_QFassociated_arrayEassociated_array"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFassociated_arrayEassociated_array"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_arrayEpointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFassociated_arrayEtarget"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
@@ -431,7 +431,7 @@ end function
 ! CHECK-SAME:                                %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "shift"},
 ! CHECK-SAME:                                %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "size"}) -> i32 {
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_simpleEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "ishftc_simple", uniq_name = "_QFishftc_simpleEishftc_simple"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "ishftc_simple", uniq_name = "_QFishftc_simpleEishftc_simple"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFishftc_simpleEishftc_simple"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_simpleEshift"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_simpleEsize"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -482,7 +482,7 @@ end function
 ! CHECK-SAME:                                                     %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "shift"},
 ! CHECK-SAME:                                                     %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "size", fir.optional}) -> i32 {
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_dynamically_optional_scalarEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "ishftc_dynamically_optional_scalar", uniq_name = "_QFishftc_dynamically_optional_scalarEishftc_dynamically_optional_scalar"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "ishftc_dynamically_optional_scalar", uniq_name = "_QFishftc_dynamically_optional_scalarEishftc_dynamically_optional_scalar"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFishftc_dynamically_optional_scalarEishftc_dynamically_optional_scalar"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_dynamically_optional_scalarEshift"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFishftc_dynamically_optional_scalarEsize"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -542,7 +542,7 @@ end function
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_arrayEi"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "ishftc_array", fir.must_be_stack = true, uniq_name = "_QFishftc_arrayEishftc_array"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> <{bindc_name = "ishftc_array", uniq_name = "_QFishftc_arrayEishftc_array"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = "_QFishftc_arrayEishftc_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 42 : index
@@ -609,7 +609,7 @@ end function
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_dynamically_optional_arrayEi"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "ishftc_dynamically_optional_array", fir.must_be_stack = true, uniq_name = "_QFishftc_dynamically_optional_arrayEishftc_dynamically_optional_array"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> <{bindc_name = "ishftc_dynamically_optional_array", uniq_name = "_QFishftc_dynamically_optional_arrayEishftc_dynamically_optional_array"}> {fir.must_be_stack = true}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = "_QFishftc_dynamically_optional_arrayEishftc_dynamically_optional_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_dynamically_optional_arrayEshift"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -705,7 +705,7 @@ end subroutine
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_17]], %[[VAL_24]] : index
 ! CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_17]], %[[VAL_24]] : index
-! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
+! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] <{alignment = 64 : i64, uniq_name = "_QFallocatables_testEa.alloc"}> {fir.must_be_heap = true}
 ! CHECK:           %[[VAL_28:.*]] = fir.shape %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_27]](%[[VAL_28]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_29]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
@@ -724,7 +724,7 @@ end subroutine
 ! CHECK:           %[[VAL_42:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_43:.*]] = arith.cmpi sgt, %[[VAL_35]], %[[VAL_42]] : index
 ! CHECK:           %[[VAL_44:.*]] = arith.select %[[VAL_43]], %[[VAL_35]], %[[VAL_42]] : index
-! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
+! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] <{alignment = 64 : i64, uniq_name = "_QFallocatables_testEb.alloc"}> {fir.must_be_heap = true}
 ! CHECK:           %[[VAL_46:.*]] = fir.shape %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_47:.*]] = fir.embox %[[VAL_45]](%[[VAL_46]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_47]] to %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
@@ -743,7 +743,7 @@ end subroutine
 ! CHECK:           %[[VAL_60:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_61:.*]] = arith.cmpi sgt, %[[VAL_53]], %[[VAL_60]] : index
 ! CHECK:           %[[VAL_62:.*]] = arith.select %[[VAL_61]], %[[VAL_53]], %[[VAL_60]] : index
-! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
+! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] <{alignment = 64 : i64, uniq_name = "_QFallocatables_testEc.alloc"}> {fir.must_be_heap = true}
 ! CHECK:           %[[VAL_64:.*]] = fir.shape %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_65:.*]] = fir.embox %[[VAL_63]](%[[VAL_64]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_65]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>

@@ -9,6 +9,7 @@ unittest("OffloadArchTests") {
   ]
   sources = [
     "//clang/tools/offload-arch/AMDGPUArchByKFD.cpp",
+    "//clang/tools/offload-arch/LevelZeroArch.cpp",
     "OffloadArchTest.cpp",
   ]
 

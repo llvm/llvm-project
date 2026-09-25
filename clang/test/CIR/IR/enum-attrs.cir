@@ -120,13 +120,6 @@ cir.func @calling_conv_attr() {
                           #cir.calling_conv<amdgpu_kernel>]}
 }
 
-// CHECK-LABEL: cir.func @side_effect_attr() {
-cir.func @side_effect_attr() {
-  // CHECK: cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>, #cir.side_effect<const>]}
-  cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>,
-                          #cir.side_effect<const>]}
-}
-
 // A bit enum, so a value can name several flags.
 
 // CHECK-LABEL: cir.func @fp_class_attr() {

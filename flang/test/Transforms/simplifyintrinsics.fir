@@ -479,7 +479,7 @@ func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %a
 // CHECK-LABEL:   func.func @dot_f32(
 // CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"},
 // CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
-// CHECK:           %[[RESLOC:.*]] = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+// CHECK:           %[[RESLOC:.*]] = fir.alloca f32 <{bindc_name = "dot", uniq_name = "_QFdotEdot"}>
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
 // CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
 // CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductReal4_f32_f32_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> f32
@@ -616,7 +616,7 @@ fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK-LABEL:   func.func @dot_i32(
 // CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) -> i32 {
-// CHECK:           %[[RESLOC:.*]] = fir.alloca i32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+// CHECK:           %[[RESLOC:.*]] = fir.alloca i32 <{bindc_name = "dot", uniq_name = "_QFdotEdot"}>
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductInteger4_i32_i32_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> i32
@@ -757,7 +757,7 @@ fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK-LABEL:   func.func @dot_f64_f32(
 // CHECK-SAME:      %[[A:.*]]: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK-SAME:      %[[B:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f64 {
-// CHECK:           %[[RESLOC:.*]] = fir.alloca f64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+// CHECK:           %[[RESLOC:.*]] = fir.alloca f64 <{bindc_name = "dot", uniq_name = "_QFdotEdot"}>
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
 // CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
 // CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductReal8_f64_f32_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> f64

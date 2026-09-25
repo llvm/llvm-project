@@ -59,7 +59,7 @@ func.func @test_host_data_hoisting_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.
 // unused use_device clause for a different variable
 func.func @test_host_data_hoisting_ref_to_box() {
   %1 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr", uniq_name = "_QFEptr"}
-  // CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr", uniq_name = "_QFEptr"}
+  // CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "ptr", uniq_name = "_QFEptr"}>
   %4 = fir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   // CHECK: %[[DECLARE:.*]] = fir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   // Second pointer variable (unused in host_data region)

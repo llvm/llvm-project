@@ -232,6 +232,13 @@ bool hasCopyOutSibling(Operation *entryOp);
 /// \p entryResult, which take it as their `accVar`.
 SmallVector<Operation *> getPairedDataExitOps(Value entryResult);
 
+/// Returns where the mappings of \p dataClauseOperands end, taken from the
+/// first of them that says. This is where a structured construct tears its
+/// mappings down, which is past the end of its region and therefore not a
+/// position the construct itself carries. A mapping that is never closed has
+/// none.
+std::optional<Location> getMappingExitLoc(ValueRange dataClauseOperands);
+
 /// Compute total mapped byte size for `acc.map_info`.
 /// Returns 0 when bounds or a non-`none` descriptor kind carry size, the
 /// mappable size when statically known, and -1 when the size cannot be
@@ -239,6 +246,11 @@ SmallVector<Operation *> getPairedDataExitOps(Value entryResult);
 /// belong to a dialect, such as a tuple holding dialect-specific references.
 int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
                                 ValueRange bounds, const DataLayout &dataLayout,
+                                OpenACCSupport *support = nullptr);
+
+/// Same as above, obtaining \p dataLayout from the module \p var lives in.
+int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
+                                ValueRange bounds,
                                 OpenACCSupport *support = nullptr);
 
 /// Record known extents of the source array on bounds that may describe a

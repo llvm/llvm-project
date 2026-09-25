@@ -107,8 +107,8 @@ public:
   /// registers, register costs, and allocation orders must remain unchanged.
   LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
 
-  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                           MachineFunctionAnalysisManager::Invalidator &) {
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &) {
     auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
     return !PAC.preservedWhenStateless();
   }
@@ -186,10 +186,11 @@ class MachineRegisterClassAnalysis
 public:
   using Result = RegisterClassInfo;
 
-  Result run(MachineFunction &, MachineFunctionAnalysisManager &);
+  LLVM_ABI Result run(MachineFunction &, MachineFunctionAnalysisManager &);
 };
 
-class MachineRegisterClassInfoWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineRegisterClassInfoWrapperPass
+    : public MachineFunctionPass {
   virtual void anchor();
 
   RegisterClassInfo RCI;

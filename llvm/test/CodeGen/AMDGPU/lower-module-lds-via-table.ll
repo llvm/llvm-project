@@ -23,7 +23,7 @@
 ; The kernel naming pattern and the structs being named after the functions helps verify placement of poison
 ; The remainder are constant expressions into the variable instances checked above
 
-; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [4 x ptr addrspace(3)]] [[4 x ptr addrspace(3)] [ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k01.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds, i32 0, i32 2), ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds, ptr addrspace(3) poison, ptr addrspace(3) poison], [4 x ptr addrspace(3)] [ptr addrspace(3) poison, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 3), ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1)], [4 x ptr addrspace(3)] [ptr addrspace(3) poison, ptr addrspace(3) poison, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k23.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 0, i32 1)]]
+; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [4 x ptr addrspace(3)]] [[4 x ptr addrspace(3)] [ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds, i32 4), ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds, ptr addrspace(3) poison, ptr addrspace(3) poison], [4 x ptr addrspace(3)] [ptr addrspace(3) poison, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 8), ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 2)], [4 x ptr addrspace(3)] [ptr addrspace(3) poison, ptr addrspace(3) poison, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 8)]]
 
 
 define void @f0() {
@@ -314,9 +314,9 @@ define amdgpu_kernel void @k123() {
 ; OPT-SAME: ) #[[ATTR1]] {{.*}}.amdgcn.lds.kernel.id [[META14:![0-9]+]] {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META15:![0-9]+]], !noalias [[META18:![0-9]+]]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META21:![0-9]+]], !noalias [[META22:![0-9]+]]
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 2), align 2, !alias.scope [[META21:![0-9]+]], !noalias [[META22:![0-9]+]]
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META21]], !noalias [[META22]]
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 2), align 2, !alias.scope [[META21]], !noalias [[META22]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;

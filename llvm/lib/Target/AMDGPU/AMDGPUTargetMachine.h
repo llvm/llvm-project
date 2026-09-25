@@ -49,7 +49,6 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~AMDGPUTargetMachine() override;
 
-  const TargetSubtargetInfo *getSubtargetImpl() const;
   const TargetSubtargetInfo *
   getSubtargetImpl(const Function &) const override = 0;
 

@@ -150,9 +150,8 @@ constexpr auto &EnumSetIterator<Enum, Size>::operator++() {
 }
 } // namespace detail
 
-using ClauseSet = EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
-using DirectiveSet =
-    EnumSet<llvm::omp::Directive, llvm::omp::Directive_enumSize>;
+using Clauses = EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+using Directives = EnumSet<llvm::omp::Directive, llvm::omp::Directive_enumSize>;
 
 LLVM_ABI ArrayRef<Directive> getLeafConstructs(Directive D);
 LLVM_ABI ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);

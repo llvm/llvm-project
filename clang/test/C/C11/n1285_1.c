@@ -94,6 +94,7 @@ int func_return(void) {
 // C11-O2-NEXT:    store ptr [[ARRAYDECAY]], ptr @p, align 8, !tbaa [[INTPTR_TBAA6]]
 // C11-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr [[REF_TMP]]) #[[ATTR4]]
 // C11-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr [[Q]]) #[[ATTR4]]
+// C11-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTCOMPOUNDLITERAL]]) #[[ATTR4]]
 // C11-O2-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[DOTCOMPOUNDLITERAL]], i8 0, i64 20, i1 false)
 // C11-O2-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw [[STRUCT_X]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 0
 // C11-O2-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_X]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 0
@@ -104,6 +105,7 @@ int func_return(void) {
 // C11-O2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[Q]], align 8, !tbaa [[INTPTR_TBAA6]]
 // C11-O2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA9]]
 // C11-O2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP3]]
+// C11-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTCOMPOUNDLITERAL]]) #[[ATTR4]]
 // C11-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr [[Q]]) #[[ATTR4]]
 // C11-O2-NEXT:    ret i32 [[ADD]]
 //

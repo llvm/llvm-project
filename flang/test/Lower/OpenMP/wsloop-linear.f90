@@ -4,7 +4,7 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,DEFAULT
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,OPENMP52
 
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_linearEx"}>
 !CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFsimple_linearEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 subroutine simple_linear
@@ -24,7 +24,7 @@ subroutine simple_linear
 end subroutine
 
 
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_stepEx"}
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_stepEx"}>
 !CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_stepEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine linear_step
     implicit none
@@ -43,9 +43,9 @@ subroutine linear_step
     !CHECK: }
 end subroutine
 
-!CHECK: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
+!CHECK: %[[A_alloca:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFlinear_exprEa"}>
 !CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] {uniq_name = "_QFlinear_exprEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_exprEx"}
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_exprEx"}>
 !CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_exprEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine linear_expr
     implicit none

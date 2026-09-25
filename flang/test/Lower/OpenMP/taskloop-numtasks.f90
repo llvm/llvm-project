@@ -20,9 +20,9 @@
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL:  func.func @_QPtest_num_tasks
-! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_num_tasksEi"}
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_num_tasksEi"}>
 ! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtest_num_tasksEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_num_tasksEx"}
+! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_num_tasksEx"}>
 ! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFtest_num_tasksEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[VAL_NUMTASKS:.*]] = arith.constant 10 : i32
 subroutine test_num_tasks

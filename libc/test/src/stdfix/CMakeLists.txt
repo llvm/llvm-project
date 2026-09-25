@@ -131,13 +131,13 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r)
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   add_libc_test(
     ${suffix}divi_test
     SUITE
       libc-stdfix-tests
     HDRS
-      DivITest.h
+      FxDiviTest.h
     SRCS
       ${suffix}divi_test.cpp
     DEPENDS

@@ -18,7 +18,7 @@ on:
 jobs:
   test-python:
     name: "Check Python Tests"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources

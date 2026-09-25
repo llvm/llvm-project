@@ -23,6 +23,7 @@
 #include <cstring>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 

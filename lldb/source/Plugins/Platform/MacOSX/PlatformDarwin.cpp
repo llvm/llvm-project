@@ -43,8 +43,8 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -57,10 +57,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-#define OPTTABLE_STR_TABLE_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
 static Status ExceptionMaskValidator(const char *string, void *unused) {
   Status error;
@@ -1119,7 +1115,7 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
         "could not resolve SDK for target: executable's symbol file has no "
         "compile units");
 
-  XcodeSDK merged_sdk;
+  XcodeSDKAndSysroot merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
     if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
       merged_sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
@@ -1179,33 +1175,29 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   // clang has no version-min clang flag for XROS.
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
       sdk_type != XcodeSDK::Type::XROS) {
-#define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
-  llvm::StringRef opt_##VAR = OptionStrTable[NAME_OFFSET];                     \
-  (void)opt_##VAR;
-#include "clang/Options/Options.inc"
-#undef OPTION
-    minimum_version_option << '-';
+    clang::options::ID version_min_option = clang::options::OPT_INVALID;
     switch (sdk_type) {
     case XcodeSDK::Type::MacOSX:
-      minimum_version_option << opt_mmacos_version_min_EQ;
+      version_min_option = clang::options::OPT_mmacos_version_min_EQ;
       break;
     case XcodeSDK::Type::iPhoneSimulator:
-      minimum_version_option << opt_mios_simulator_version_min_EQ;
+      version_min_option = clang::options::OPT_mios_simulator_version_min_EQ;
       break;
     case XcodeSDK::Type::iPhoneOS:
-      minimum_version_option << opt_mios_version_min_EQ;
+      version_min_option = clang::options::OPT_mios_version_min_EQ;
       break;
     case XcodeSDK::Type::AppleTVSimulator:
-      minimum_version_option << opt_mtvos_simulator_version_min_EQ;
+      version_min_option = clang::options::OPT_mtvos_simulator_version_min_EQ;
       break;
     case XcodeSDK::Type::AppleTVOS:
-      minimum_version_option << opt_mtvos_version_min_EQ;
+      version_min_option = clang::options::OPT_mtvos_version_min_EQ;
       break;
     case XcodeSDK::Type::WatchSimulator:
-      minimum_version_option << opt_mwatchos_simulator_version_min_EQ;
+      version_min_option =
+          clang::options::OPT_mwatchos_simulator_version_min_EQ;
       break;
     case XcodeSDK::Type::watchOS:
-      minimum_version_option << opt_mwatchos_version_min_EQ;
+      version_min_option = clang::options::OPT_mwatchos_version_min_EQ;
       break;
     case XcodeSDK::Type::XRSimulator:
     case XcodeSDK::Type::XROS:
@@ -1221,7 +1213,10 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
       }
       return;
     }
-    minimum_version_option << version.getAsString();
+    minimum_version_option << clang::getDriverOptTable()
+                                  .getOption(version_min_option)
+                                  .getPrefixedName()
+                           << version.getAsString();
     options.emplace_back(std::string(minimum_version_option.GetString()));
   }
 
@@ -1450,7 +1445,7 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
 #endif // __APPLE__
 }
 
-llvm::Expected<std::pair<XcodeSDK, bool>>
+llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
 PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   SymbolFile *sym_file = module.GetSymbolFile();
   if (!sym_file)
@@ -1467,7 +1462,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
 
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
-  XcodeSDK merged_sdk;
+  XcodeSDKAndSysroot merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
     if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
       auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
@@ -1484,11 +1479,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   return std::pair{std::move(merged_sdk), found_mismatch};
 }
 
-llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(XcodeSDK sdk) {
-  if (FileSpec sysroot = sdk.GetSysroot();
-      FileSystem::Instance().Exists(sysroot))
-    return sysroot;
-
+llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(const XcodeSDK &sdk) {
   Progress progress("Looking for Xcode SDK", sdk.GetString().str());
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)
@@ -1496,6 +1487,19 @@ llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(XcodeSDK sdk) {
                                 "could not find SDK '{0}'", sdk.GetString())),
                             path_or_err.takeError());
   return FileSpec(*path_or_err);
+}
+
+llvm::Expected<FileSpec>
+PlatformDarwin::ResolveXcodeSDK(const XcodeSDKAndSysroot &sdk) {
+  // The sysroot recorded in debug info names the SDK the module was built
+  // against; if it exists, prefer it over a matching SDK Xcode has to offer.
+  // This commonly happens if a program was built with the CommandLineTools
+  // and lldb comes from Xcode.
+  if (const FileSpec &sysroot = sdk.GetSysroot();
+      FileSystem::Instance().Exists(sysroot))
+    return sysroot;
+
+  return ResolveXcodeSDK(sdk.GetSDK());
 }
 
 llvm::Expected<std::string>
@@ -1512,7 +1516,7 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
   return path_or_err->GetPath();
 }
 
-llvm::Expected<XcodeSDK>
+llvm::Expected<XcodeSDKAndSysroot>
 PlatformDarwin::GetSDKPathFromDebugInfo(CompileUnit &unit) {
   ModuleSP module_sp = unit.CalculateSymbolContextModule();
   if (!module_sp)

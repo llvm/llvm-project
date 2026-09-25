@@ -18,6 +18,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/TargetParser/Triple.h>
 
 #include <clang/Interpreter/Interpreter.h>
 
@@ -48,6 +49,7 @@ struct Result {
 
 Result lldMain(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                llvm::raw_ostream &stderrOS, llvm::ArrayRef<DriverDef> drivers);
+[[noreturn]] void exitLld(int val);
 
 namespace wasm {
 bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -88,7 +90,6 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 
   llvm::SmallString<256> ObjectFileName(TempDir);
   llvm::sys::path::append(ObjectFileName, PTU.TheModule->getName() + ".o");
@@ -117,7 +118,11 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
 
   ObjectFileOutput.close();
 
+  std::string Emulation = "-m";
+  Emulation +=
+      llvm::Triple(PTU.TheModule->getTargetTriple()).getArchName().str();
   std::vector<const char *> LinkerArgs = {"wasm-ld",
+                                          Emulation.c_str(),
                                           "-shared",
                                           "--import-memory",
                                           "--stack-first",
@@ -131,6 +136,11 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   WasmDriverArgs.push_back(WasmDriver);
   lld::Result Result =
       lld::lldMain(LinkerArgs, llvm::outs(), llvm::errs(), WasmDriverArgs);
+
+  // A fatal error may have recovered control flow without restoring LLD's
+  // process state. Do not allow another incremental link in that case.
+  if (!Result.canRunAgain)
+    lld::exitLld(Result.retCode);
 
   if (Result.retCode)
     return llvm::make_error<llvm::StringError>(

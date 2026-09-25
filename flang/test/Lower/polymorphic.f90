@@ -824,12 +824,12 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPclass_with_entry(
 ! CHECK-SAME:    %[[A:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"})
-! CHECK:         %[[B:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {bindc_name = "b", uniq_name = "_QMpolymorphic_testFclass_with_entryEb"}
+! CHECK:         %[[B:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> <{bindc_name = "b", uniq_name = "_QMpolymorphic_testFclass_with_entryEb"}>
 ! CHECK:         fir.select_type %{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPd(
 ! CHECK-SAME:    %[[B:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "b"})
-! CHECK:         %[[A:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {bindc_name = "a", uniq_name = "_QMpolymorphic_testFclass_with_entryEa"}
+! CHECK:         %[[A:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> <{bindc_name = "a", uniq_name = "_QMpolymorphic_testFclass_with_entryEa"}>
 ! CHECK:         fir.select_type %{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 
 

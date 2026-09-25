@@ -12,7 +12,7 @@ end subroutine test_coarray_cleanup
 !CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.array<0xi64>
 !CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.array<1xi64>
 !CHECK:  %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-!CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>, corank:1> {bindc_name = "n", uniq_name = "_QFtest_coarray_cleanupEn"}
+!CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>, corank:1> <{bindc_name = "n", uniq_name = "_QFtest_coarray_cleanupEn"}>
 !CHECK:  %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
 !CHECK:  %[[C0:.*]] = arith.constant 0 : index
 !CHECK:  %[[VAL_5:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>

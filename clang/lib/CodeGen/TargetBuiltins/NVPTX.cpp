@@ -1028,6 +1028,56 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(f2bf16_rz_satfinite);
     PZO_CVT(f2bf16_rz_relu_satfinite);
 
+    PZO_CVT(ff_to_e4m3x2_rn);
+    PZO_CVT(ff_to_e4m3x2_rn_relu);
+    PZO_CVT(ff_to_e4m3x2_rz);
+    PZO_CVT(ff_to_e4m3x2_rz_relu);
+    PZO_CVT(ff_to_e5m2x2_rn);
+    PZO_CVT(ff_to_e5m2x2_rn_relu);
+    PZO_CVT(ff_to_e5m2x2_rz);
+    PZO_CVT(ff_to_e5m2x2_rz_relu);
+    PZO_CVT(f16x2_to_e4m3x2_rn);
+    PZO_CVT(f16x2_to_e4m3x2_rn_relu);
+    PZO_CVT(f16x2_to_e4m3x2_rz);
+    PZO_CVT(f16x2_to_e4m3x2_rz_relu);
+    PZO_CVT(f16x2_to_e5m2x2_rn);
+    PZO_CVT(f16x2_to_e5m2x2_rn_relu);
+    PZO_CVT(f16x2_to_e5m2x2_rz);
+    PZO_CVT(f16x2_to_e5m2x2_rz_relu);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e2m3x2_rn_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rz_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rn_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rz_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite);
+
 #undef PZO_CVT
 
   case NVPTX::BI__nvvm_fma_rn_f16:

@@ -13,7 +13,6 @@
 #include <__config>
 #include <__locale_dir/ctype.h>
 #include <__locale_dir/ctype_base.h>
-#include <__locale_dir/get_c_locale.h>
 #include <__locale_dir/locale.h>
 #include <__locale_dir/scan_keyword.h>
 #include <ios>
@@ -656,7 +655,7 @@ class _LIBCPP_EXPORTED_FROM_ABI __time_put {
   __locale::__locale_t __loc_;
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(_LIBCPP_GET_C_LOCALE) {}
+  _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(__locale::__get_c_locale()) {}
   __time_put(const char* __nm);
   __time_put(const string& __nm);
   ~__time_put();

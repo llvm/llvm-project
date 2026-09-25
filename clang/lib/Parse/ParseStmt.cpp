@@ -611,8 +611,7 @@ StmtResult Parser::ParseSEHTryBlock() {
     return TryBlock;
 
   StmtResult Handler;
-  if (Tok.is(tok::identifier) &&
-      Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+  if (isTokenSEHExcept()) {
     SourceLocation Loc = ConsumeToken();
     Handler = ParseSEHExceptBlock(Loc);
   } else if (Tok.is(tok::kw___finally)) {
@@ -2680,16 +2679,13 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
 
   // Borland allows SEH-handlers with 'try'
 
-  if ((Tok.is(tok::identifier) &&
-       Tok.getIdentifierInfo() == getSEHExceptKeyword()) ||
-      Tok.is(tok::kw___finally)) {
+  if (isTokenSEHExcept() || Tok.is(tok::kw___finally)) {
     // TODO: Factor into common return ParseSEHHandlerCommon(...)
     StmtResult Handler;
-    if(Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+    if (isTokenSEHExcept()) {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHExceptBlock(Loc);
-    }
-    else {
+    } else {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHFinallyBlock(Loc);
     }
@@ -2700,8 +2696,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
                                     TryLoc,
                                     TryBlock.get(),
                                     Handler.get());
-  }
-  else {
+  } else {
     StmtVector Handlers;
 
     // C++11 attributes can't appear here, despite this context seeming

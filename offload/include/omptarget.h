@@ -291,6 +291,7 @@ const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 size_t omp_get_gprivate_limit(int DeviceNum,
                               omp_access_t AccessGroup = omp_access_cgroup);
+void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
@@ -442,6 +443,9 @@ int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
                                  bool EmitReport, const char *OutputDirPath);
 
+// Gets mapped device pointer. If device pointer is not found, returns
+// host pointer
+void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // Registers a callback for the RPC server. Expects this function type.
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
 // code for details.

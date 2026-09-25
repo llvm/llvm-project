@@ -1607,3 +1607,203 @@ T tf() {
 
 template long tf<long>();
 }
+
+// Boilerplate needed for tests involving coroutines
+namespace std {
+template <class... Args>
+struct void_t_imp {
+  using type = void;
+};
+template <class... Args>
+using void_t = typename void_t_imp<Args...>::type;
+
+template <class T, class = void>
+struct traits_sfinae_base {};
+
+template <class T>
+struct traits_sfinae_base<T, void_t<typename T::promise_type>> {
+  using promise_type = typename T::promise_type;
+};
+
+template <class Ret, class... Args>
+struct coroutine_traits : public traits_sfinae_base<Ret> {};
+
+template <class PromiseType = void>
+struct coroutine_handle {
+  static coroutine_handle from_address(void *) noexcept;
+  static coroutine_handle from_promise(PromiseType &promise);
+};
+template <>
+struct coroutine_handle<void> {
+  template <class PromiseType>
+  coroutine_handle(coroutine_handle<PromiseType>) noexcept;
+  static coroutine_handle from_address(void *) noexcept;
+  template <class PromiseType>
+  static coroutine_handle from_promise(PromiseType &promise);
+};
+
+struct suspend_always {
+  bool await_ready() noexcept { return false; }
+  template <typename F>
+  void await_suspend(F) noexcept;
+  void await_resume() noexcept {}
+};
+
+struct suspend_never {
+  bool await_ready() noexcept { return true; }
+  template <typename F>
+  void await_suspend(F) noexcept;
+  void await_resume() noexcept {}
+};
+} // namespace std
+
+struct task {
+  struct promise_type {
+    task get_return_object() { return {}; }
+    std::suspend_never initial_suspend() noexcept { return {}; }
+    std::suspend_never final_suspend() noexcept { return {}; }
+    void return_void() {}
+    std::suspend_never yield_value(int) { return {}; }
+    void unhandled_exception() {}
+  };
+};
+
+namespace decl_context_issues {
+void local_class() {
+  template for (int x : {0}) {
+    struct Local {
+      template <class T> // expected-error {{templates cannot be declared inside of a local class}}
+      void member(T) {}
+    };
+
+    template for (int y : {1}) {
+      struct Nested {
+        template <class T> // expected-error {{templates cannot be declared inside of a local class}}
+        void member(T) {}
+      };
+    }
+  }
+
+  template for (int x : {}) {
+    struct DiscardedLocal {
+      template <class T> // expected-error {{templates cannot be declared inside of a local class}}
+      void member(T) {}
+    };
+  }
+}
+
+void thread_local_var() {
+  template for (int x : {0}) {
+    thread_local int v1;
+    __thread int v2; // expected-error {{'__thread' variables must have global storage}}
+    static __thread int v3;
+  }
+}
+
+task coro() {
+  template for (int x : {0}) {
+    co_await std::suspend_never{};
+    co_yield 1;
+    co_return;
+  }
+  co_return;
+}
+
+task coro_discarded() {
+  template for (int x : {}) {
+    co_await std::suspend_never{}; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  }
+
+  // This is a coroutine even though the co_await above is discarded.
+  return task(); // expected-error {{return statement not allowed in coroutine; did you mean 'co_return'?}}
+}
+
+void inline_static() {
+  template for (int x : {0}) {
+    inline int y = x; // expected-error {{inline declaration of 'y' not allowed in block scope}}
+    inline void f1(); // expected-error {{inline declaration of 'f1' not allowed in block scope}}
+    static void f2(); // expected-error {{function declared in block scope cannot have 'static' storage class}}
+  }
+}
+
+struct VexingParse {};
+void vexing_parse() {
+  template for (int x : {}) {
+    VexingParse v(); // expected-warning {{empty parentheses interpreted as a function declaration}} expected-note {{remove parentheses to declare a variable}}
+  }
+}
+
+void builtin_va_start(int x, ...) {
+  __builtin_va_list ap;
+  template for (int y : {1}) {
+    __builtin_va_start(ap, x);
+  }
+
+  (void) ^ (int x, ...) {
+    __builtin_va_list ap;
+    template for (int y : {1}) {
+      __builtin_va_start(ap, x);
+    }
+  };
+}
+
+constexpr void local_label_constexpr() {
+  template for (int x : {0}) {
+    __label__ local; // expected-error {{statement not allowed in constexpr function}}
+    local:
+  }
+}
+
+#pragma GCC diagnostic warning "-Wformat"
+#pragma GCC diagnostic warning "-Wmissing-format-attribute"
+
+__attribute__((format(printf, 1, 0)))
+int vfprintf(const char *, __builtin_va_list);
+
+void call_vfprintf(const char *format, __builtin_va_list arguments) { // expected-note {{'call_vfprintf' declared here}}
+  template for (int x : {0}) {
+    vfprintf(format, arguments); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 0)' attribute to the declaration of 'call_vfprintf'}}
+  }
+}
+
+void format_warn(__builtin_va_list arguments) {
+  call_vfprintf("%", arguments); // expected-warning {{incomplete format specifier}}
+}
+
+void local_class_enclosing_var() {
+  template for (int index : {0}) { // expected-note {{in instantiation of}}
+    int value = index; // expected-note {{declared here}}
+    struct Local { // expected-note {{in instantiation of}}
+      int read() {
+        return value; // expected-error {{reference to local variable 'value' declared in enclosing function 'decl_context_issues::local_class_enclosing_var'}}
+      }
+    };
+  }
+}
+
+namespace nested {
+void function();
+}
+
+void function_redecl() {
+  template for (int x : {0}) {
+    void nested::function(); // expected-error {{definition or redeclaration of 'function' not allowed inside a function}}
+  }
+}
+
+void default_arg_in_redecl() {
+  template for (int x : {0}) {
+    void f(int);
+    void f(int value = 0);
+    f();
+  }
+
+  template for (constexpr int x : {1, 2, 3}) {
+    void f(int[x]);
+    void f(int[x] = nullptr);
+    f();
+  }
+}
+
+
+} // namespace decl_context_issues

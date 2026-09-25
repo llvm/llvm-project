@@ -91,9 +91,9 @@ define float @ret_log_noninf(float nofpclass(ninf) %arg) #0 {
 }
 
 define float @ret_log_nonan(float nofpclass(nan) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nzero sub) float @ret_log_nonan
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_log_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub) float @llvm.log.f32(float nofpclass(nan) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.log.f32(float nofpclass(nan) [[ARG]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.log.f32(float %arg)
@@ -101,9 +101,9 @@ define float @ret_log_nonan(float nofpclass(nan) %arg) #0 {
 }
 
 define float @ret_log_nonan_noinf(float nofpclass(nan inf) %arg) #0 {
-; CHECK-LABEL: define nofpclass(pinf nzero sub) float @ret_log_nonan_noinf
+; CHECK-LABEL: define nofpclass(snan pinf nzero sub) float @ret_log_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf nzero sub) float @llvm.log.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan pinf nzero sub) float @llvm.log.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.log.f32(float %arg)
@@ -111,9 +111,9 @@ define float @ret_log_nonan_noinf(float nofpclass(nan inf) %arg) #0 {
 }
 
 define float @ret_log_nonan_noinf_nozero(float nofpclass(nan inf zero) %arg) #0 {
-; CHECK-LABEL: define nofpclass(inf nzero sub) float @ret_log_nonan_noinf_nozero
+; CHECK-LABEL: define nofpclass(snan inf nzero sub) float @ret_log_nonan_noinf_nozero
 ; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub) float @llvm.log.f32(float nofpclass(nan inf zero) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero sub) float @llvm.log.f32(float nofpclass(nan inf zero) [[ARG]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.log.f32(float %arg)
@@ -154,10 +154,10 @@ define float @ret_log_positive_source(i32 %arg) #0 {
 
 ; Could produce a nan because we don't know if the multiply is negative.
 define float @ret_log_unknown_sign(float nofpclass(nan) %arg, float nofpclass(nan) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nzero sub) float @ret_log_unknown_sign
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_log_unknown_sign
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[UNKNOWN_SIGN_NOT_NAN:%.*]] = fmul nnan float [[ARG]], [[ARG1]]
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub) float @llvm.log.f32(float [[UNKNOWN_SIGN_NOT_NAN]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.log.f32(float [[UNKNOWN_SIGN_NOT_NAN]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %unknown.sign.not.nan = fmul nnan float %arg, %arg1
@@ -276,9 +276,9 @@ define float @constrained_log(float %arg) strictfp {
 }
 
 define float @constrained_log_nonan(float nofpclass(nan) %arg) strictfp {
-; CHECK-LABEL: define nofpclass(nzero sub) float @constrained_log_nonan
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @constrained_log_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR9]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nzero sub) float @llvm.experimental.constrained.log.f32(float nofpclass(nan) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR11]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(snan nzero sub) float @llvm.experimental.constrained.log.f32(float nofpclass(nan) [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.log.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -346,9 +346,9 @@ define float @ret_log2_noinf_noneg_noqnan(float nofpclass(inf nsub nnorm qnan) %
 }
 
 define float @ret_log2_noinf_noneg_nosnan(float nofpclass(inf nsub nnorm snan) %arg) #0 {
-; CHECK-LABEL: define nofpclass(pinf nzero sub) float @ret_log2_noinf_noneg_nosnan
+; CHECK-LABEL: define nofpclass(snan pinf nzero sub) float @ret_log2_noinf_noneg_nosnan
 ; CHECK-SAME: (float nofpclass(snan inf nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf nzero sub) float @llvm.log2.f32(float nofpclass(snan inf nsub nnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan pinf nzero sub) float @llvm.log2.f32(float nofpclass(snan inf nsub nnorm) [[ARG]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.log2.f32(float %arg)

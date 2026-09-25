@@ -44,6 +44,12 @@ MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI,
     : MipsGenInstrInfo(STI, RI, Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
       Subtarget(STI), UncondBrOpc(UncondBr) {}
 
+const TargetRegisterClass *MipsInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.getABI().ArePtrs64bit() ? &Mips::GPR64RegClass
+                                           : &Mips::GPR32RegClass;
+}
+
 const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
   if (STI.inMips16Mode())
     return createMips16InstrInfo(STI);
@@ -682,6 +688,8 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   case Mips::LW:
   case Mips::LWR:
   case Mips::LWL:
+  // On MIPS-I, the only float load there is; the rest came with later ISAs.
+  case Mips::LWC1:
     return true;
   default:
     return false;
