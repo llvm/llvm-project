@@ -77,7 +77,9 @@ public:
   }
 };
 
-template <typename RangeT> DedupRange<RangeT> dedup(RangeT &&R) { return R; }
+template <typename RangeT> DedupRange<RangeT> dedup(RangeT &&R) {
+  return std::forward<RangeT>(R);
+}
 
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
