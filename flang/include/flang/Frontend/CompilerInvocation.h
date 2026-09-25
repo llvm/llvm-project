@@ -117,10 +117,6 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Error options
   size_t maxErrors = 0;
   bool warnAsErr = false;
-  // Fortran Warning options
-  bool enableConformanceChecks = false;
-  bool enableUsageChecks = false;
-  bool disableWarnings = false;
 
   /// Used in e.g. unparsing to dump the analyzed rather than the original
   /// parse-tree objects.
@@ -203,18 +199,7 @@ public:
     return useAnalyzedObjectsForUnparse;
   }
 
-  bool &getEnableConformanceChecks() { return enableConformanceChecks; }
-  const bool &getEnableConformanceChecks() const {
-    return enableConformanceChecks;
-  }
-
   const char *getArgv0() { return argv0; }
-
-  bool &getEnableUsageChecks() { return enableUsageChecks; }
-  const bool &getEnableUsageChecks() const { return enableUsageChecks; }
-
-  bool &getDisableWarnings() { return disableWarnings; }
-  const bool &getDisableWarnings() const { return disableWarnings; }
 
   Fortran::parser::AnalyzedObjectsAsFortran &getAsFortran() {
     return asFortran;
@@ -240,15 +225,6 @@ public:
                              llvm::ArrayRef<const char *> commandLineArgs,
                              clang::DiagnosticsEngine &diags,
                              const char *argv0 = nullptr);
-
-  // Enables the std=f2018 conformance check
-  void setEnableConformanceChecks() { enableConformanceChecks = true; }
-
-  // Enables the usage checks
-  void setEnableUsageChecks() { enableUsageChecks = true; }
-
-  // Disables all Warnings
-  void setDisableWarnings() { disableWarnings = true; }
 
   /// Useful setters
   void setArgv0(const char *dir) { argv0 = dir; }

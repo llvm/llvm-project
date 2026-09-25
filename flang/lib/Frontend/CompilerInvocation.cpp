@@ -1120,9 +1120,31 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::options::OPT_pedantic)) {
     features.WarnOnAllNonstandard();
     features.WarnOnAllUsage();
-    res.setEnableConformanceChecks();
-    res.setEnableUsageChecks();
   }
+
+  // SystemClockStrict warning check
+  // Fortran 2023 introduced restrictions to the arguements of SYSTEM_CLOCK.
+  // Since violations of these restrictions can cause unexpected or incorrect
+  // runtime results, violations should be reported to users at compile time
+  // by default. However, since these restrictions are not in Fortran 2018,
+  // these reports should be warnings and not errors. There are two ways to
+  // enable/disable these warnings:
+  //  -W{no-}system-clock-strict
+  //  -std=f20{18,23,28}
+  // Scheme for setting the SystemClockStrict warning:
+  //  - If Fortran 2018 has been set as the Fortran standard to follow, that
+  //    is `-std=f2018` is the last `std` flag, then this warning is
+  //    disabled. Otherwise, the warning is enabled.
+  //  - Later, when the warning flags are parsed, if one or more of
+  //    `-W{no-}system-clock-strict` appear, then the last dictates whether
+  //    or not the warnings are enabled. In this case, whatever is set below
+  //    is overwritten by the last of those flags.
+  // Note: `-pedantic` does not enable this warning, if it is otherwise
+  // disabled.
+  const bool enableWarning = res.getLangOpts().getFortranStandard() !=
+                             Fortran::common::LangOptions::Fortran2018;
+  res.getFrontendOpts().features.EnableWarning(
+      Fortran::common::UsageWarning::SystemClockStrict, enableWarning);
 
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
@@ -1160,7 +1182,6 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -w
   if (args.hasArg(clang::options::OPT_w)) {
     features.DisableAllWarnings();
-    res.setDisableWarnings();
   }
 
   // Default to off for `flang -fc1`.
@@ -1262,22 +1283,30 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::OpenACC);
   }
 
-  // -std=f2018
-  // TODO: Set proper options when more fortran standards
-  // are supported.
+  // -std=f20**
   if (args.hasArg(clang::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::options::OPT_std_EQ);
-    // We only allow f2018 as the given standard
     if (standard == "f2018") {
-      res.setEnableConformanceChecks();
       res.getFrontendOpts().features.WarnOnAllNonstandard();
+      res.getLangOpts().setFortranStandard(
+          Fortran::common::LangOptions::Fortran2018);
+    } else if (standard == "f2023") {
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
+      res.getLangOpts().setFortranStandard(
+          Fortran::common::LangOptions::Fortran2023);
+    } else if (standard == "f2028") {
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
+      res.getLangOpts().setFortranStandard(
+          Fortran::common::LangOptions::Fortran2028);
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                "Only -std=f2018 is allowed currently.");
+                                "Only 'f2018', 'f2023', or 'f2028' are "
+                                "accepted to -std= currently.");
       diags.Report(diagID);
     }
   }
+
   // -fcoarray
   if (args.hasArg(clang::options::OPT_fcoarray)) {
     res.getFrontendOpts().features.Enable(
