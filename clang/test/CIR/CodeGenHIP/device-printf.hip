@@ -9,14 +9,6 @@
 // printf fell through to a library call, which does not exist on the device:
 // the reference survived to the device link and failed there as an undefined
 // symbol. AMDGPU implements it through the OpenCL printf runtime.
-//
-// CIRGen cannot build the sequence itself -- llvm::emitAMDGPUPrintfCall works
-// through an IRBuilder -- so it emits a marker call that is expanded once the
-// module has been translated to LLVM IR. It has to happen there rather than
-// later, because the __ockl_* calls are what make the device-library linker
-// pull in ockl.
-//
-// The checks are shared with the classic CodeGen run line.
 
 #define __device__ __attribute__((device))
 extern "C" __device__ int printf(const char *, ...);
