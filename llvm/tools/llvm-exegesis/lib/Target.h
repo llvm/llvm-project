@@ -252,6 +252,11 @@ public:
         "targets with target-specific operands should implement this");
   }
 
+  // Returns the number of bytes to reserve in the benchmark function frame so
+  // that stack-pointer-relative memory operands address memory owned by the
+  // snippet instead of the caller's frame. Zero reserves nothing.
+  virtual unsigned getStackScratchSpaceBytes() const { return 0; }
+
   // Returns true if this instruction is supported as a back-to-back
   // instructions.
   // FIXME: Eventually we should discover this dynamically.
