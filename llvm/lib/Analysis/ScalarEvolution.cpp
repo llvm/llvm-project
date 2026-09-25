@@ -5228,7 +5228,7 @@ struct BinaryOp {
 static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
                                              AssumptionCache &AC,
                                              const DominatorTree &DT,
-                                             const Instruction *CxtI) {
+                                             const Instruction *CtxI) {
   auto *Op = dyn_cast<Operator>(V);
   if (!Op)
     return std::nullopt;

@@ -199,7 +199,7 @@ LLVM_ABI Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
                                           const SimplifyQuery &Q);
 
 /// Given operands for an intrinsic, fold the result or return null. Context
-/// Function is passed as \p CxtF. \p ExBehavior and \p Rounding only apply to
+/// Function is passed as \p CtxF. \p ExBehavior and \p Rounding only apply to
 /// constrained FP intrinsics.
 LLVM_ABI Value *
 simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType, ArrayRef<Value *> Args,
