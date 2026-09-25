@@ -6,8 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Example clang plugin which simply prints the names of all the top-level decls
-// in the input file.
+// Example clang plugin which prints the names of all the top-level decls in the
+// input file, and, for each, any unrecognized C++ [[...]] attribute it carries.
+//
+// The latter illustrates what retaining unknown attributes in the AST unlocks
+// for a plugin: an attribute Clang does not implement is kept as an UnknownAttr
+// (after the -Wunknown-attributes diagnostic) instead of being dropped, so a
+// plugin can recover a vendor or domain-specific attribute from the AST and act
+// on it, rather than re-lexing the source. This example only reports them; a
+// real plugin would give the attribute meaning by reading its argument text.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,8 +41,18 @@ public:
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     for (DeclGroupRef::iterator i = DG.begin(), e = DG.end(); i != e; ++i) {
       const Decl *D = *i;
-      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-        llvm::errs() << "top-level-decl: \"" << ND->getNameAsString() << "\"\n";
+      const NamedDecl *ND = dyn_cast<NamedDecl>(D);
+      if (!ND)
+        continue;
+      llvm::errs() << "top-level-decl: \"" << ND->getNameAsString() << "\"\n";
+
+      // Recover any unrecognized [[...]] attribute that Clang retained on this
+      // declaration as an UnknownAttr. getNormalizedFullName() reproduces the
+      // scope::name, and getArgsText() the verbatim argument clause (or empty).
+      for (const Attr *A : ND->attrs())
+        if (const auto *UA = dyn_cast<UnknownAttr>(A))
+          llvm::errs() << "  unknown-attribute: \"" << UA->getNormalizedFullName()
+                       << UA->getArgsText() << "\"\n";
     }
 
     return true;

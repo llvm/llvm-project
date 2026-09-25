@@ -109,6 +109,12 @@ void TextNodeDumper::Visit(const Attr *A) {
   if (A->isImplicit())
     OS << " Implicit";
 
+  // A retained unknown attribute (UnknownAttr / UnknownTypeAttr) has no
+  // spelling, so show its name and scope to identify which attribute was kept.
+  if ((A->getKind() == attr::Unknown || A->getKind() == attr::UnknownType) &&
+      A->getAttrName())
+    OS << " " << A->getNormalizedFullName();
+
   ConstAttrVisitor<TextNodeDumper>::Visit(A);
 }
 
