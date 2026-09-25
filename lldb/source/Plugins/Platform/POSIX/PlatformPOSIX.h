@@ -81,6 +81,14 @@ protected:
            std::unique_ptr<lldb_private::OptionGroupOptions>>
       m_options;
 
+  /// Prevents multiple dlopen calls to the same target.
+  /// Running dlopen on the target can only be done by one thread at a time as
+  /// the dlopen call setup process requires the target to be stopped, and
+  /// calling dlopen runs the target for a brief moment.
+  /// While we could allow parallel dlopen calls on different processes, the
+  /// fact that we call dlopen at all is specific to this class.
+  std::mutex m_dlopen_mutex;
+
   lldb_private::Status
   EvaluateLibdlExpression(lldb_private::Process *process, const char *expr_cstr,
                           llvm::StringRef expr_prefix,
