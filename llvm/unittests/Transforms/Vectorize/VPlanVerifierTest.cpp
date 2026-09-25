@@ -66,6 +66,24 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 #endif
 }
 
+TEST_F(VPVerifierTest, MaskedCondUseBeforeDefSameBB) {
+  VPlan &Plan = getPlan();
+  auto *DefI = new VPInstruction(VPInstruction::MaskedCond, {Plan.getFalse()});
+  VPBasicBlock *Entry = Plan.getEntry();
+  Entry->appendRecipe(new VPInstruction(Instruction::Freeze, {DefI}));
+  Entry->appendRecipe(DefI);
+  VPBlockUtils::connectBlocks(Entry, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_TRUE(StringRef(::testing::internal::GetCapturedStderr())
+                  .starts_with("Use before def!\n"));
+#endif
+}
+
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
