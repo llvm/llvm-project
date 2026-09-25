@@ -893,9 +893,6 @@ public:
     return MemberSpecChains.acquire();
   }
 
-  // One release() name per type, dispatched by overload resolution --
-  // the caller doesn't need to know which internal pool a given pointer
-  // belongs to.
   void release(CXXClassDeclNode *N) { RecordNodes.release(N); }
   void release(VarDeclNode *N) { VarNodes.release(N); }
   void release(FunctionDeclNode *N) { FunctionNodes.release(N); }
@@ -1192,58 +1189,28 @@ public:
         HiddenMutationTracker(Tracker.getHiddenMutationTracker()),
         Reverter(Tracker.getPTUSlabCheckpoints()) {}
 
-  template <typename DeclStateProxyT>
-  void walkDecls(const DeclContext *DC, DeclStateProxyT &Proxy);
+  template <typename DeclStatePolicyT>
+  void walkDecls(const DeclContext *DC, DeclStatePolicyT &Proxy);
 
-  uint32_t kindsNeedingTracking(DeclShape S, const Decl *D);
+  uint32_t DeclNeedingTracking(DeclShape S, const Decl *D);
 
   uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
 
 private:
-  /// Every mutation this PTU recorded for a class-shaped decl, applied in
-  /// dependency order: definition data first (later steps read the completed
-  /// definition), then the type cache, then specialization footprints, then
-  /// lazily-completed members last (they can add members that the steps above
-  /// would otherwise have missed).
-  ///
-  /// Kinds are a bitmask, not alternatives -- one class can legitimately have
-  /// several set in a single PTU (e.g. a specialization that also had its
-  /// definition data completed), so these are sequential checks, not a switch.
-  void commitClassFamily(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec,
-                         bool IsNew);
+  void commitMembers(PTUID ID, const DeclContext *Members);
 
-  /// Every mutation this PTU recorded for a function-shaped decl, or -- when
-  /// CR is non-null -- the baseline seed for one this PTU created.
-  ///
-  /// Kinds are a bitmask, not alternatives: one function can have its
-  /// exception spec resolved AND its body instantiated in the same PTU, so
-  /// these are sequential checks rather than a switch.
-  ///
-  /// Order matters: type-affecting mutations (exception spec, deduced return)
-  /// come first because the specialization footprint below reads the
-  /// function's type; body instantiation comes last because it can only
-  /// happen once everything about the signature is settled.
-  void commitFunctionFamily(PTUID ID, const FunctionDecl *FD,
-                            MutationRecord &Rec, bool IsNew);
+  void commitClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec,
+                   bool IsNew);
+  void commitFunction(PTUID ID, const FunctionDecl *FD, MutationRecord &Rec,
+                      bool IsNew);
+  void commitVar(PTUID ID, const VarDecl *VD, MutationRecord &Rec, bool IsNew);
 
-  /// Every mutation this PTU recorded for a var-shaped decl, or -- when CR is
-  /// non-null -- the baseline seed for one this PTU created.
-  ///
-  /// Ordering: initializer instantiation first (it produces the expression
-  /// that constant evaluation later consumes), then the cached evaluated
-  /// value, then specialization/member footprints which read both.
-  void commitVarFamily(PTUID ID, const VarDecl *VD, MutationRecord &Rec,
-                       bool IsNew);
-
-  /// Every mutation this PTU recorded for an enum-shaped decl, or -- when CR
-  /// is non-null -- the baseline seed for one this PTU created.
-  ///
-  /// The smallest family: enums have no specialization category (there is no
-  /// such thing as an enum template), no deferred bodies, and no members with
-  /// independent mutable state -- EnumConstantDecls live and die with the
-  /// EnumDecl, so they are not separately tracked.
-  void commitEnumFamily(PTUID ID, const EnumDecl *ED, MutationRecord &Rec,
-                        bool IsNew);
+  void commitEnum(PTUID ID, const EnumDecl *ED, MutationRecord &Rec,
+                  bool IsNew);
+  void commitTemplate(PTUID ID, const RedeclarableTemplateDecl *ED,
+                      MutationRecord &Rec, bool IsNew);
+  void commitTypedef(PTUID ID, const TypedefNameDecl *ED, MutationRecord &Rec,
+                     bool IsNew);
 
   void restoreClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec);
 
