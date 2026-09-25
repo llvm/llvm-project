@@ -53,6 +53,7 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
+  bool SelectFrAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
 
   /// Return a target constant with the specified value of type i4.
   inline SDValue getI4Imm(int64_t Imm, const SDLoc &DL) {
@@ -101,28 +102,29 @@ bool SuperHDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
+
+
+
+//===----------------------------------------------------------------------===//
+//                             Operand Selection
+//===----------------------------------------------------------------------===//
+
 bool SuperHDAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
     std::vector<SDValue> &OutOps) {
   return false;
 }
 
+// Selects non-frame address operands.
 bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
                                     SDValue &Disp) {
   auto DL = CurDAG->getDataLayout();
   MVT PtrVT = getTargetLowering()->getPointerTy(DL);
 
-  // if the address is a frame index get the TargetFrameIndex.
-  if (const FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
-    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
-    return true;
-  }
-
   // if the address is a wrapper, get the underlying data.
   if (N.getOpcode() == SHISD::WRAPPER) {
-    Base = N.getOperand(0);
-    Disp = N;
+    Base = N;
+    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32);
     return true;
   }
 
@@ -150,6 +152,22 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
       }
     }
   }
+  return false;
+}
+
+// Selects frame address operands.
+bool SuperHDAGToDAGISel::SelectFrAddr(SDNode *Op, SDValue N, SDValue &Base,
+                                    SDValue &Disp) {
+  auto DL = CurDAG->getDataLayout();
+  MVT PtrVT = getTargetLowering()->getPointerTy(DL);
+
+  // if the address is a frame index get the TargetFrameIndex.
+  if (const FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
+    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32);
+    return true;
+  }
+
   return false;
 }
 
@@ -189,8 +207,9 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
     }
   }
 
-  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N0.getNode())) {
-    if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
+  // Global Addresses
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(GA, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
       ReplaceNode(N, Res);
@@ -198,9 +217,9 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
     }
   }
 
-  // Global Addresses
-  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0.getNode())) {
-    if (auto *CPV = SFI->tryGetConstant(GA, *CurDAG, SHCP::no_modifier)) {
+  // Constants
+  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
       ReplaceNode(N, Res);

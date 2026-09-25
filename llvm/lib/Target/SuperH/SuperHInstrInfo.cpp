@@ -178,6 +178,7 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 Register SuperHInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
+  dbgs() << "isStoreToStackSlot\n";
   if (MI.getOperand(0).isReg() && MI.getOperand(1).isFI() &&
       MI.getOperand(2).getImm() == 0) {
     FrameIndex = MI.getOperand(1).getIndex();
@@ -204,13 +205,13 @@ void SuperHInstrInfo::storeRegToStackSlot(
   default:
     llvm_unreachable("Cannot store this register into stack slot!");
   case 1:
-    Opc = SH::MOVBSPtr;
+    Opc = SH::MOVBSF;
     break;
   case 2:
-    Opc = SH::MOVWSPtr;
+    Opc = SH::MOVWSF;
     break;
   case 4:
-    Opc = SH::MOVLSPtr;
+    Opc = SH::MOVLSF;
     break;
   }
   BuildMI(MBB, II, DebugLoc(), get(Opc))
@@ -221,6 +222,7 @@ void SuperHInstrInfo::storeRegToStackSlot(
 
 Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
+  dbgs() << "isLoadFromStackSlot\n";
   if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
       MI.getOperand(1).getImm() == 0) {
     FrameIndex = MI.getOperand(0).getIndex();
@@ -249,13 +251,13 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Cannot load this register from stack slot!");
   case 1:
-    Opc = SH::MOVBLPtr;
+    Opc = SH::MOVBLF;
     break;
   case 2:
-    Opc = SH::MOVWLPtr;
+    Opc = SH::MOVWLF;
     break;
   case 4:
-    Opc = SH::MOVLLPtr;
+    Opc = SH::MOVLLF;
     break;
   }
 

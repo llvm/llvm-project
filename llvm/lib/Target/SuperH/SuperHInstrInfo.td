@@ -235,6 +235,10 @@ def IGPRDec : SHIndirectRegOp<GPR, "Dec">;
 let WantsRoot = true in
 def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
 
+// Addressing mode pattern reg+disp (Frame)
+let WantsRoot = true in
+def fraddr : ComplexPattern<iPTR, 2, "SelectFrAddr">;
+
 
 
 
@@ -1449,42 +1453,74 @@ def Select32    : SHSelectPseudo<(outs GPR:$dst),
 // Frame Load/Store
 //===--------------------------------------------------------------------------===//
 
-// LOAD FROM ADDRESS
 let mayLoad = 1, isReMaterializable = 1 in {
 
+// LOAD FROM ADDRESS
 let Defs = [R0, R1] in
-def MOVBLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
-                            "! MOVBLPtr $src, $Rn",
+def MOVBLP    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVBLP $src, $Rn",
                             []>;
 
 let Defs = [R0, R1] in
-def MOVWLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
-                            "! MOVWLPtr $src, $Rn",
+def MOVWLP    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVWLP $src, $Rn",
                             []>;
 
 let Defs = [R1] in
-def MOVLLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
-                            "! MOVLLPtr $src, $Rn",
+def MOVLLP    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVLLP $src, $Rn",
+                            []>;
+
+// LOAD FROM FRAME
+let Defs = [R0, R1] in
+def MOVBLF    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVBLF $src, $Rn",
+                            []>;
+
+let Defs = [R0, R1] in
+def MOVWLF    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVWLF $src, $Rn",
+                            []>;
+
+let Defs = [R1] in
+def MOVLLF    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVLLF $src, $Rn",
                             []>;
 }
 
-// STORE TO ADDRESS
 let mayStore = 1, isReMaterializable = 1 in {
 
+// STORE TO ADDRESS
 let Defs = [R0, R1] in
-def MOVBSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
-                             "! MOVBSPtr $src, $dst",
-                             [(truncstorei8 i32:$src, addr:$dst)]>;
+def MOVBSP    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVBSP $src, $dst",
+                             []>;
 
 let Defs = [R0, R1] in
-def MOVWSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
-                             "! MOVWSPtr $src, $dst",
+def MOVWSP    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVWSP $src, $dst",
                              [(truncstorei16 i32:$src, addr:$dst)]>;
 
 let Defs = [R1] in
-def MOVLSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
-                             "! MOVLSPtr $src, $dst",
+def MOVLSP    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVLSP $src, $dst",
                              [(store i32:$src, addr:$dst)]>;
+
+// STORE TO FRAME
+let Defs = [R0, R1] in
+def MOVBSF    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVBSF $src, $dst",
+                             []>;
+
+let Defs = [R0, R1] in
+def MOVWSF    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVWSF $src, $dst",
+                             []>;
+
+let Defs = [R1] in
+def MOVLSF    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVLSF $src, $dst",
+                             []>;
 
 }
 
@@ -1580,22 +1616,35 @@ def : Pat<(i32 (sra i32:$src1, i32:$src2)),         (SRArr GPR:$src1, GPR:$src2)
 // Loads
 //===--------------------------------------------------------------------------===//
 
-def : Pat<(i32 (load        addr:$src)),               (MOVLLPtr addr:$src)>;
-def : Pat<(i32 (sextloadi1  addr:$src)), (EXTSB (EXTUB (MOVBLPtr addr:$src)))>;
-def : Pat<(i32 (sextloadi8  addr:$src)), (EXTSB (EXTUB (MOVBLPtr addr:$src)))>;
-def : Pat<(i32 (sextloadi16 addr:$src)),        (EXTSW (MOVWLPtr addr:$src))>;
-def : Pat<(i32 (zextloadi1  addr:$src)),        (EXTUB (MOVBLPtr addr:$src))>;
-def : Pat<(i32 (zextloadi8  addr:$src)),        (EXTUB (MOVBLPtr addr:$src))>;
-def : Pat<(i32 (zextloadi16 addr:$src)),        (EXTUW (MOVWLPtr addr:$src))>;
-def : Pat<(i32 (load         i32:$src)),               (MOVLL i32:$src)>;
-def : Pat<(i32 (sextloadi1   i32:$src)), (EXTSB (EXTUB (MOVBL i32:$src)))>;
-def : Pat<(i32 (sextloadi8   i32:$src)), (EXTSB (EXTUB (MOVBL i32:$src)))>;
-def : Pat<(i32 (sextloadi16  i32:$src)),        (EXTSW (MOVWL i32:$src))>;
-def : Pat<(i32 (zextloadi1   i32:$src)),        (EXTUB (MOVBL i32:$src))>;
-def : Pat<(i32 (zextloadi8   i32:$src)),        (EXTUB (MOVBL i32:$src))>;
-def : Pat<(i32 (zextloadi16  i32:$src)),        (EXTUW (MOVWL i32:$src))>;
+def : Pat<(i32 (load          addr:$src)),               (MOVLLP   addr:$src)>;
+def : Pat<(i32 (sextloadi1    addr:$src)), (EXTSB (EXTUB (MOVBLP   addr:$src)))>;
+def : Pat<(i32 (sextloadi8    addr:$src)), (EXTSB (EXTUB (MOVBLP   addr:$src)))>;
+def : Pat<(i32 (sextloadi16   addr:$src)),        (EXTSW (MOVWLP   addr:$src))>;
+def : Pat<(i32 (zextloadi1    addr:$src)),        (EXTUB (MOVBLP   addr:$src))>;
+def : Pat<(i32 (zextloadi8    addr:$src)),        (EXTUB (MOVBLP   addr:$src))>;
+def : Pat<(i32 (zextloadi16   addr:$src)),        (EXTUW (MOVWLP   addr:$src))>;
+def : Pat<(i32 (load        fraddr:$src)),               (MOVLLF fraddr:$src)>;
+def : Pat<(i32 (sextloadi1  fraddr:$src)), (EXTSB (EXTUB (MOVBLF fraddr:$src)))>;
+def : Pat<(i32 (sextloadi8  fraddr:$src)), (EXTSB (EXTUB (MOVBLF fraddr:$src)))>;
+def : Pat<(i32 (sextloadi16 fraddr:$src)),        (EXTSW (MOVWLF fraddr:$src))>;
+def : Pat<(i32 (zextloadi1  fraddr:$src)),        (EXTUB (MOVBLF fraddr:$src))>;
+def : Pat<(i32 (zextloadi8  fraddr:$src)),        (EXTUB (MOVBLF fraddr:$src))>;
+def : Pat<(i32 (zextloadi16 fraddr:$src)),        (EXTUW (MOVWLF fraddr:$src))>;
+def : Pat<(i32 (load           i32:$src)),               (MOVLL     i32:$src)>;
+def : Pat<(i32 (sextloadi1     i32:$src)), (EXTSB (EXTUB (MOVBL     i32:$src)))>;
+def : Pat<(i32 (sextloadi8     i32:$src)), (EXTSB (EXTUB (MOVBL     i32:$src)))>;
+def : Pat<(i32 (sextloadi16    i32:$src)),        (EXTSW (MOVWL     i32:$src))>;
+def : Pat<(i32 (zextloadi1     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
+def : Pat<(i32 (zextloadi8     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
+def : Pat<(i32 (zextloadi16    i32:$src)),        (EXTUW (MOVWL     i32:$src))>;
 
 //===--------------------------------------------------------------------------===//
 // Stores
 //===--------------------------------------------------------------------------===//
-def : Pat<(store    i32:$src, i32:$dst),        (MOVLS i32:$src, i32:$dst)>;
+def : Pat<(store          i32:$src,    i32:$dst),      (MOVLS   i32:$src,    i32:$dst)>;
+def : Pat<(truncstorei8   i32:$src,   addr:$dst),      (MOVBSP  i32:$src,   addr:$dst)>;
+def : Pat<(truncstorei16  i32:$src,   addr:$dst),      (MOVWSP  i32:$src,   addr:$dst)>;
+def : Pat<(store          i32:$src,   addr:$dst),      (MOVLSP  i32:$src,   addr:$dst)>;
+def : Pat<(truncstorei8   i32:$src, fraddr:$dst),      (MOVBSF  i32:$src, fraddr:$dst)>;
+def : Pat<(truncstorei16  i32:$src, fraddr:$dst),      (MOVWSF  i32:$src, fraddr:$dst)>;
+def : Pat<(store          i32:$src, fraddr:$dst),      (MOVLSF  i32:$src, fraddr:$dst)>;

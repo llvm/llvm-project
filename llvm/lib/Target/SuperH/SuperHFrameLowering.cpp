@@ -401,9 +401,12 @@ public:
       BlockIt NII = std::next(II);
 
       switch (II->getOpcode()) {
-      case SH::MOVBLPtr:
-      case SH::MOVWLPtr:
-      case SH::MOVLLPtr:
+      case SH::MOVBLF:
+      case SH::MOVWLF:
+      case SH::MOVLLF:
+      case SH::MOVBLP:
+      case SH::MOVWLP:
+      case SH::MOVLLP:
       case SH::ADJCALLSTACKUP:
       case SH::NOP: {
         break;
