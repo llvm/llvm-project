@@ -57,6 +57,9 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitCXXThrowExpr(const CXXThrowExpr *TE);
+  void VisitGCCAsmStmt(const GCCAsmStmt *AS);
+  void VisitCXXTypeidExpr(const CXXTypeidExpr *TE);
   void VisitStmtExpr(const StmtExpr *SE);
 
 private:
@@ -138,12 +141,24 @@ private:
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
 
-  // Treats an expression as a use of the referenced object. It will be
-  // checked for use-after-free unless it is later marked as being written to
-  // (e.g. on the left-hand side of an assignment in the case of a DeclRefExpr).
-  void handleUse(const Expr *E);
+  /// Whether \p List's outer origin names a declaration's storage outright, so
+  /// it can never hold an expired loan (see Origin::NamesDeclStorage).
+  bool namesDeclStorage(const OriginList *List) const;
 
-  void markUseAsWrite(const DeclRefExpr *DRE);
+  /// Returns the origins of the value \p E evaluates to, recording the read of
+  /// a glvalue. Callers that write to \p E peel the outer origin themselves.
+  ///
+  /// Example: For `View& v`, returns the origin of what v points to, not v's
+  /// storage.
+  OriginList *readValue(const Expr *E);
+
+  /// Records an access (read or write) of the storage \p E designates, or that
+  /// a prvalue pointer \p E points to.
+  void handleAccess(const Expr *E);
+
+  /// Records that \p E's value is handed to opaque code, which may dereference
+  /// it to any depth.
+  void handleUse(const Expr *E);
 
   bool escapesViaReturn(OriginID OID) const;
 
@@ -155,12 +170,6 @@ private:
   // appended at the end of CurrentBlockFacts to ensure they appear after
   // ExpireFact entries.
   llvm::SmallVector<Fact *> EscapesInCurrentBlock;
-  // To distinguish between reads and writes for use-after-free checks, this map
-  // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
-  // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
-  // corresponding to the left-hand side is updated to be a "write", thereby
-  // exempting it from the check.
-  llvm::DenseMap<const Expr *, UseFact *> UseFacts;
   const CFGBlock *CurrentBlock;
   bool IsCMode = false;
 };

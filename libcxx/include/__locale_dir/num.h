@@ -302,30 +302,12 @@ extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<wchar_t>;
 #  endif
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, __locale::__get_c_locale());
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, __locale::__get_c_locale());
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, __locale::__get_c_locale());
-}
-
-template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err) {
   if (__a != __a_end) {
     __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
     errno                                                     = 0;
     char* __p2;
-    _Tp __ld                                                     = std::__do_strtod<_Tp>(__a, &__p2);
+    _Tp __ld                                                     = __locale::__str_to_float_c_locale<_Tp>(__a, &__p2);
     __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
     if (__current_errno == 0)
       errno = __save_errno;
