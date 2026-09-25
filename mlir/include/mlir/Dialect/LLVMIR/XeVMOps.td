@@ -130,7 +130,6 @@ def XeVM_LoadCacheControl
 def XeVM_LoadCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_LoadCacheControl, "load_cache_control"> {
   let summary = [{Describe the cache settings for load operators}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -195,7 +194,6 @@ def XeVM_StoreCacheControl
 def XeVM_StoreCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_StoreCacheControl, "store_cache_control"> {
   let summary = [{Describe the cache settings for store operators}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def XeVM_BlockLoadOp
@@ -409,7 +407,6 @@ def XeVM_MemScope
 }
 def XeVM_MemScopeAttr : EnumAttr<XeVM_Dialect, XeVM_MemScope, "mem_scope"> {
   let summary = [{Describe memory scopes}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def AddrSpacePrivate : I32EnumAttrCase<"PRIVATE", 0, "private">;
@@ -427,7 +424,6 @@ def XeVM_AddrSpace
 }
 def XeVM_AddrSpaceAttr : EnumAttr<XeVM_Dialect, XeVM_AddrSpace, "addr_space"> {
   let summary = [{Describe address spaces}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def XeVM_MemfenceOp
@@ -631,7 +627,7 @@ def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
 }
 
 def XeVM_TruncfOp
-    : XeVM_Op<"truncf">,
+    : XeVM_Op<"truncf", [Pure]>,
       Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,
                                I<4>]>:$dst)>,
       Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
@@ -648,6 +644,7 @@ def XeVM_TruncfOp
     $src ` ` `{` $src_etype `,` $dst_etype `}` attr-dict `:` functional-type(operands, results)
   }];
 
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
@@ -676,7 +673,7 @@ def XeVM_ExtfDstElemTypeAttr : XeVM_Attr<"ExtfDstElemType", "ext_dst_etype"> {
 }
 
 def XeVM_ExtfOp
-    : XeVM_Op<"extf">,
+    : XeVM_Op<"extf", [Pure]>,
       Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
                               BF16]>:$dst)>,
       Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,

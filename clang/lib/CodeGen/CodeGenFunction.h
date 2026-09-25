@@ -722,8 +722,6 @@ public:
   llvm::Instruction *CurrentFuncletPad = nullptr;
 
   class CallLifetimeEnd final : public EHScopeStack::Cleanup {
-    bool isRedundantBeforeReturn() override { return true; }
-
     llvm::Value *Addr;
 
   public:
@@ -1159,9 +1157,10 @@ public:
     /// Sets the address of the variable \p LocalVD to be \p TempAddr in
     /// function \p CGF.
     /// \return true if at least one variable was set already, false otherwise.
-    bool setVarAddr(CodeGenFunction &CGF, const VarDecl *LocalVD,
+    bool setVarAddr(CodeGenFunction &CGF, const ValueDecl *LocalVD,
                     Address TempAddr) {
-      LocalVD = LocalVD->getCanonicalDecl();
+      LocalVD = cast<ValueDecl>(LocalVD->getCanonicalDecl());
+
       // Only save it once.
       if (SavedLocals.count(LocalVD))
         return false;
@@ -1180,6 +1179,8 @@ public:
         CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
       }
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
+        CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
       SavedTempAddresses.try_emplace(LocalVD, TempAddr);
 
       return true;
@@ -1222,6 +1223,7 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
+    llvm::DenseMap<const BindingDecl *, Address> BindingChanges;
 
   public:
     /// Enter a new OpenMP private scope.
@@ -1232,8 +1234,14 @@ public:
     /// PrivateGen is the address of the generated private variable.
     /// \return true if the variable is registered as private, false if it has
     /// been privatized already.
-    bool addPrivate(const VarDecl *LocalVD, Address Addr) {
+    bool addPrivate(const ValueDecl *LocalVD, Address Addr) {
       assert(PerformCleanup && "adding private to dead scope");
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
+        auto It = CGF.OMPPrivatizedBindings.find(BD);
+        BindingChanges.insert({BD, It != CGF.OMPPrivatizedBindings.end()
+                                       ? It->second
+                                       : Address::invalid()});
+      }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
 
@@ -1256,6 +1264,17 @@ public:
     ~OMPPrivateScope() {
       if (PerformCleanup)
         ForceCleanup();
+      for (auto &Change : BindingChanges) {
+        if (Change.second.isValid()) {
+          auto It = CGF.OMPPrivatizedBindings.find(Change.first);
+          if (It != CGF.OMPPrivatizedBindings.end())
+            It->second = Change.second;
+          else
+            CGF.OMPPrivatizedBindings.insert({Change.first, Change.second});
+        } else {
+          CGF.OMPPrivatizedBindings.erase(Change.first);
+        }
+      }
     }
 
     /// Checks if the global variable is captured in current function.
@@ -1562,6 +1581,11 @@ private:
   /// LocalDeclMap - This keeps track of the LLVM allocas or globals for local C
   /// decls.
   DeclMapTy LocalDeclMap;
+
+  /// Lookup map for privatized BindingDecls.
+  /// Used when BindingDecls are remapped during OpenMP outlining, since the
+  /// remapped BindingDecl has a different pointer than the original.
+  llvm::SmallDenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
@@ -2246,6 +2270,17 @@ public:
 
   const TargetInfo &getTarget() const { return Target; }
   llvm::LLVMContext &getLLVMContext() { return CGM.getLLVMContext(); }
+
+  /// Accessors for LocalDeclMap.
+  DeclMapTy::iterator findLocalDecl(const Decl *D) {
+    return LocalDeclMap.find(D);
+  }
+  DeclMapTy::iterator localDeclMapEnd() { return LocalDeclMap.end(); }
+  std::pair<DeclMapTy::iterator, bool> insertLocalDecl(const Decl *D,
+                                                       Address Addr) {
+    return LocalDeclMap.insert({D, Addr});
+  }
+  void eraseLocalDecl(const Decl *D) { LocalDeclMap.erase(D); }
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }
@@ -3957,6 +3992,7 @@ public:
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFlattenDirective(const OMPFlattenDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
@@ -4155,6 +4191,9 @@ public:
 
   /// Emits the lvalue for the expression with possibly captured variable.
   LValue EmitOMPSharedLValue(const Expr *E);
+
+  /// Emits the original address for a structured binding.
+  Address EmitOMPBindingOriginalAddr(const BindingDecl *BD, SourceLocation Loc);
 
 private:
   /// Helpers for blocks.
@@ -4501,6 +4540,7 @@ public:
   // Note: only available for agg return types
   LValue EmitVAArgExprLValue(const VAArgExpr *E);
   LValue EmitDeclRefLValue(const DeclRefExpr *E);
+  LValue EmitOMPCapturedBindingLValue(const BindingDecl *BD);
   LValue EmitStringLiteralLValue(const StringLiteral *E);
   LValue EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E);
   LValue EmitPredefinedLValue(const PredefinedExpr *E);
@@ -5441,9 +5481,13 @@ public:
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
                      bool NoMerge = false, const TrapReason *TR = nullptr);
 
-  /// Emit a call to trap or debugtrap and attach function attribute
-  /// "trap-func-name" if specified.
-  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
+  /// Emit a call to trap or debugtrap. If 'EnsureInsertPoint' is false, the
+  /// IR builder need not have a valid insert point after this returns.
+  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                               bool EnsureInsertPoint = true);
+
+  /// Emit a call to '\@llvm.trap()' and clear the current insert point.
+  void EmitTrapCallAndMakeUnreachable();
 
   /// Emit a stub for the cross-DSO CFI check function.
   void EmitCfiCheckStub();

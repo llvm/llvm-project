@@ -10,4 +10,4 @@
 
 #include "src/math/dfmal.h"
 
-LIST_NARROWING_FMA_TESTS(double, long double, LIBC_NAMESPACE::dfmal)
+LIST_NARROWING_FMA_TESTS(Dfmal, double, long double, LIBC_NAMESPACE::dfmal)

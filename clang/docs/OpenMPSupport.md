@@ -15,9 +15,6 @@
 ```{role} good
 ```
 
-```{contents}
-:local:
-```
 
 # OpenMP Support
 
@@ -44,6 +41,19 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
   known at compile time. To prevent this conservative choice and use
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
+- C++20 structured bindings are now supported in OpenMP constructs.
+  Bindings from structured binding declarations can be used in data-sharing
+  clauses (``private``, ``firstprivate``, ``lastprivate``, ``shared``,
+  ``linear``), and in ``map`` clauses for target directives.
+  Limitations: tuple-like bindings (using the tuple protocol with ``get<N>()``)
+  are not yet supported; conditional lastprivate and reductions are not yet
+  supported.
+  Important restriction for target regions: if the original variable is
+  explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it,
+  and not the original variable itself, are used in the target region, the
+  compiler emits an error. Either use the original variable directly in the
+  target region, or map the bindings explicitly instead of the original
+  variable.
 
 ## GPU devices support
 
@@ -384,7 +394,7 @@ implementation.
 | Feature                                                               | C/C++ Status        | Fortran Status      | Reviews                                                                                                  |
 | --------------------------------------------------------------------- | ------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | dyn_groupprivate clause                                               | {part}`partial`     | {part}`In Progress` | C/C++: Host device support missing                                                                       |
-| loop flatten transformation                                           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
+| loop flatten transformation                                           | {part}`partial`     | {none}`unclaimed`   | Clang: @loopacino ([PR206977][PR206977]); non-rectangular loops are not supported yet |
 | loop grid/tile modifiers for sizes clause                             | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
 | attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370], [PR210213][PR210213]) |
 | need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
@@ -563,6 +573,7 @@ considered for standardization. Please post on the
 [PR194168]: https://github.com/llvm/llvm-project/pull/194168
 [PR195829]: https://github.com/llvm/llvm-project/pull/195829
 [PR196431]: https://github.com/llvm/llvm-project/pull/196431
+[PR206977]: https://github.com/llvm/llvm-project/pull/206977
 [PR210213]: https://github.com/llvm/llvm-project/pull/210213
 
 [discourse forums (runtimes - openmp category)]: https://discourse.llvm.org/c/runtimes/openmp/35

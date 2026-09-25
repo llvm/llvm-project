@@ -117,6 +117,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   const Function &F = *L->getHeader()->getParent();
   UP.Threshold =
       F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300);
+  UP.PartialThreshold =
+      F.getFnAttributeAsParsedInteger("amdgpu-partial-unroll-threshold", 150);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
@@ -544,6 +546,34 @@ static bool canFuseFMulWithFAddSub(const SITargetLowering &TLI, Type *Ty,
   return HasFMAD || (FAddSub->hasAllowContract() && FMul->hasAllowContract());
 }
 
+/// An fma holds one multiply, so only one fmul operand fuses with \p FAddSub.
+static const Instruction *getFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                                       const Instruction *FAddSub) {
+  for (const Value *Op : FAddSub->operands()) {
+    const auto *FMul = dyn_cast<Instruction>(Op);
+    if (FMul && FMul->getOpcode() == Instruction::FMul && FMul->hasOneUse() &&
+        canFuseFMulWithFAddSub(TLI, Ty, FMul, FAddSub))
+      return FMul;
+  }
+  return nullptr;
+}
+
+static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                        const Instruction *FMul, const Instruction *FAddSub) {
+  const Instruction *Fused = getFusedFMul(TLI, Ty, FAddSub);
+  if (Fused == FMul)
+    return true;
+  // (a * b + c * d) + e becomes fma(a, b, fma(c, d, e)) if the outer fadd has
+  // reassoc.
+  if (!Fused || FAddSub->getOpcode() != Instruction::FAdd ||
+      !FAddSub->hasOneUse())
+    return false;
+  const auto *Outer = dyn_cast<BinaryOperator>(*FAddSub->user_begin());
+  return Outer && Outer->getOpcode() == Instruction::FAdd &&
+         Outer->hasAllowReassoc() &&
+         canFuseFMulWithFAddSub(TLI, Ty, FMul, Outer);
+}
+
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -611,7 +641,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
            FAddSub->getOpcode() == Instruction::FSub) &&
-          canFuseFMulWithFAddSub(*TLI, Ty, CxtI, FAddSub))
+          isFusedFMul(*TLI, Ty, CxtI, FAddSub))
         return TargetTransformInfo::TCC_Free;
     }
     [[fallthrough]];
@@ -992,12 +1022,52 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
   return BaseT::getCFInstrCost(Opcode, CostKind, I);
 }
 
+// Measured packing cost of i1 for gfx9-12 is 4.0 to 4.8, up to 5.4 with
+// true16; unpacking is 2.6 to 2.9.
+static constexpr unsigned MaskPackCostPerElt = 4;
+static constexpr unsigned MaskUnpackCostPerElt = 3;
+
+static std::optional<unsigned> getNumberOfPackedMaskElts(Type *Ty) {
+  auto *FVT = dyn_cast<FixedVectorType>(Ty);
+  if (FVT && FVT->getElementType()->isIntegerTy(1) && FVT->getNumElements() > 1)
+    return FVT->getNumElements();
+  return std::nullopt;
+}
+
+InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                             Type *Src,
+                                             TTI::CastContextHint CCH,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) const {
+  // A bitcast between a vector of i1 and an integer packs or unpacks a mask.
+  if (Opcode == Instruction::BitCast) {
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Src);
+        Elts && Dst->isIntegerTy(*Elts))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Dst);
+        Elts && Src->isIntegerTy(*Elts))
+      return InstructionCost(MaskUnpackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
+
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+}
+
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) const {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+
+  // An add or xor reduction over a vector of i1 becomes a bit count over the
+  // packed mask; the generic model prices a shuffle tree and misses that.
+  if (Opcode == Instruction::Add || Opcode == Instruction::Xor) {
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Ty))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
 
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
@@ -1158,14 +1228,6 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     switch (IID) {
     case Intrinsic::read_register:
       return isReadRegisterSourceOfDivergence(Intrinsic);
-    case Intrinsic::amdgcn_addrspacecast_nonnull: {
-      unsigned SrcAS =
-          Intrinsic->getOperand(0)->getType()->getPointerAddressSpace();
-      unsigned DstAS = Intrinsic->getType()->getPointerAddressSpace();
-      return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
-             DstAS == AMDGPUAS::FLAT_ADDRESS &&
-             ST->hasGloballyAddressableScratch();
-    }
     case Intrinsic::amdgcn_workitem_id_y:
     case Intrinsic::amdgcn_workitem_id_z: {
       const Function *F = Intrinsic->getFunction();
@@ -1347,13 +1409,11 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
-InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost GCNTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   if (!isa<FixedVectorType>(SrcTy))
     return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
@@ -1501,17 +1561,9 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
   // so this stays a move.
   if (I->getOpcode() == Instruction::FAdd ||
       I->getOpcode() == Instruction::FSub) {
-    for (Use &Op : I->operands()) {
-      auto *FMul = dyn_cast<Instruction>(Op.get());
-      if (!FMul || FMul->getOpcode() != Instruction::FMul ||
-          !FMul->hasOneUse() ||
-          !canFuseFMulWithFAddSub(*TLI, I->getType(), FMul, I))
-        continue;
-      // The fused operand. Sink it when it sits in another block, then stop.
-      if (FMul->getParent() != I->getParent())
-        Ops.push_back(&Op);
-      break;
-    }
+    const Instruction *FMul = getFusedFMul(*TLI, I->getType(), I);
+    if (FMul && FMul->getParent() != I->getParent())
+      Ops.push_back(&I->getOperandUse(I->getOperand(0) == FMul ? 0 : 1));
   }
 
   for (auto &Op : I->operands()) {

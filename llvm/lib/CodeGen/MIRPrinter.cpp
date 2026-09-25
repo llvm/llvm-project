@@ -323,6 +323,18 @@ static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
+
+    // Print the anti-hints.
+    const auto &AntiHints = RegInfo.getRegAllocationAntiHints(Reg);
+    if (!AntiHints.empty()) {
+      std::vector<yaml::FlowStringValue> AntiHintStrings;
+      for (Register AntiHint : AntiHints) {
+        yaml::FlowStringValue AntiHintStr;
+        printRegMIR(AntiHint, AntiHintStr, TRI);
+        AntiHintStrings.push_back(std::move(AntiHintStr));
+      }
+      VReg.AntiHints = std::move(AntiHintStrings);
+    }
     if (VRM) {
       Register Orig = VRM->getPreSplitReg(Reg);
       if (Orig && Orig != Reg) {
@@ -894,6 +906,8 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "inbounds ";
   if (MI.getFlag(MachineInstr::LRSplit))
     OS << "lr-split ";
+  if (MI.getFlag(MachineInstr::NonNull))
+    OS << "nonnull ";
 
   // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
   // llvm/utils/UpdateTestChecks/mir.py.

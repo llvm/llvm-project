@@ -71,8 +71,6 @@ public:
     return TT.isOSBinFormatMachO();
   }
 
-  unsigned getMachineSoImmOpValue(unsigned SoImm) const;
-
   // getBinaryCodeForInstr - TableGen'erated function for getting the
   // binary encoding for an instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -379,10 +377,6 @@ public:
   unsigned getShiftRight64Imm(const MCInst &MI, unsigned Op,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
-
-  unsigned getThumbSRImmOpValue(const MCInst &MI, unsigned Op,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
 
   unsigned NEONThumb2DataIPostEncoder(const MCInst &MI,
                                       unsigned EncodedValue,

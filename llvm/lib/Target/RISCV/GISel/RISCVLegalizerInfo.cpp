@@ -82,6 +82,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
+  const LLT f16 = LLT::float16();
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
@@ -235,6 +236,17 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_CLMUL)
       .legalFor(ST.hasStdExtZbkc(), {sXLen})
+      .unsupported();
+
+  getActionDefinitionsBuilder(G_CLMULH)
+      .legalFor(ST.hasStdExtZbkc(), {sXLen})
+      .customFor(ST.is64Bit() && ST.hasStdExtZbkc(), {s32})
+      .unsupported();
+
+  // CLMULR is Zbc-only; Zbkc is a subset that has CLMUL/CLMULH but not CLMULR.
+  getActionDefinitionsBuilder(G_CLMULR)
+      .legalFor(ST.hasStdExtZbc(), {sXLen})
+      .customFor(ST.is64Bit() && ST.hasStdExtZbc(), {s32})
       .unsupported();
 
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
@@ -630,6 +642,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
       .widenScalarToNextPow2(0)
       .minScalar(0, s32)
+      // The magnitude of a half is at most 65504, so with Zfh use fcvt.w[u].h
+      // and extend the i32 result. Without Zfh, use the libcalls.
+      .libcallFor(!ST.hasStdExtZfh(), {{s64, f16}})
+      .narrowScalarFor({{s64, f16}}, changeTo(0, s32))
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
@@ -641,6 +657,19 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
       .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .libcallFor({{s32, s32},
+                   {s64, s32},
+                   {s32, s64},
+                   {s64, s64},
+                   {s32, s128},
+                   {s64, s128}});
+
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
+      .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .minScalar(0, sXLen)
       .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
       .libcallFor({{s32, s32},
                    {s64, s32},
@@ -845,6 +874,16 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   switch (IntrinsicID) {
   default:
     return false;
+  case Intrinsic::riscv_clmulh:
+    Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {MI.getOperand(0)},
+                                 {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  case Intrinsic::riscv_clmulr:
+    Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULR, {MI.getOperand(0)},
+                                 {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
   case Intrinsic::vacopy: {
     // vacopy arguments must be legal because of the intrinsic signature.
     // No need to check here.
@@ -1603,6 +1642,26 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
+  case TargetOpcode::G_CLMULH:
+  case TargetOpcode::G_CLMULR: {
+    assert(STI.is64Bit() &&
+           MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32) &&
+           "Unexpected custom legalization");
+    // Shift both inputs by 32 so the full product has 64 trailing zeros.
+    // Perform CLMULH or CLMULR on the shifted inputs, then extract the upper
+    // 32 bits of the result.
+    auto Shift = MIRBuilder.buildConstant(sXLen, 32);
+    auto LHS = MIRBuilder.buildAnyExt(sXLen, MI.getOperand(1));
+    auto RHS = MIRBuilder.buildAnyExt(sXLen, MI.getOperand(2));
+    auto ShiftedLHS = MIRBuilder.buildShl(sXLen, LHS, Shift);
+    auto ShiftedRHS = MIRBuilder.buildShl(sXLen, RHS, Shift);
+    auto Product = MIRBuilder.buildInstr(MI.getOpcode(), {sXLen},
+                                         {ShiftedLHS, ShiftedRHS});
+    auto High = MIRBuilder.buildLShr(sXLen, Product, Shift);
+    MIRBuilder.buildTrunc(MI.getOperand(0), High);
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_FCONSTANT: {
     const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
 

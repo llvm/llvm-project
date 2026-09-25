@@ -53,6 +53,16 @@ static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
   return cast<FunctionDecl>(R.getFoundDecl());
 }
 
+static NamespaceDecl *lookupBuiltinNamespace(Sema &S, StringRef Name,
+                                             DeclContext *DC) {
+  IdentifierInfo &II =
+      S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
+  LookupResult Result(S, &II, SourceLocation(), Sema::LookupNamespaceName);
+  S.LookupQualifiedName(Result, DC);
+  assert(!Result.empty() && "Builtin namespace not found");
+  return Result.getAsSingle<NamespaceDecl>();
+}
+
 static QualType lookupBuiltinType(Sema &S, StringRef Name, DeclContext *DC) {
   IdentifierInfo &II =
       S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
@@ -86,6 +96,12 @@ convertParamModifierToParamABI(HLSLParamModifierAttr::Spelling Modifier) {
   default:
     llvm_unreachable("Invalid HLSL parameter modifier");
   }
+}
+
+QualType getVectorOrScalarType(ASTContext &AST, QualType Ty,
+                               uint32_t NumElements) {
+  assert(NumElements > 0 && "Cannot create a zero-element type");
+  return NumElements > 1 ? AST.getExtVectorType(Ty, NumElements) : Ty;
 }
 
 QualType getInoutParameterType(ASTContext &AST, QualType Ty) {
@@ -689,26 +705,31 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
                                                            QualType ResultTy) {
   assert(ResultTy->isVectorType() && "The result type must be a vector type.");
   Expr *VecExpr = convertPlaceholder(Vec);
-  auto *VecTy = VecExpr->getType()->castAs<VectorType>();
   Expr *ScalarExpr = convertPlaceholder(Scalar);
-
-  // Save the vector to a local variable to avoid evaluating the placeholder
-  // multiple times or sharing the AST node.
-  LocalVar VecVar("vec_tmp", VecTy->desugar());
-  declareLocalVar(VecVar);
-  assign(VecVar, VecExpr);
-
-  QualType EltTy = VecTy->getElementType();
-  unsigned NumElts = VecTy->getNumElements();
 
   ASTContext &AST = getASTContext();
   SmallVector<Expr *, 4> Elts;
-  for (unsigned I = 0; I < NumElts; ++I) {
-    Elts.push_back(new (AST) ArraySubscriptExpr(
-        convertPlaceholder(VecVar), DeclBuilder.getConstantIntExpr(I), EltTy,
-        VK_PRValue, OK_Ordinary, SourceLocation()));
+  if (const auto *VecTy = VecExpr->getType()->getAs<VectorType>()) {
+    // Save the vector to a local variable to avoid evaluating the placeholder
+    // multiple times or sharing the AST node.
+    LocalVar VecVar("vec_tmp", VecTy->desugar());
+    declareLocalVar(VecVar);
+    assign(VecVar, VecExpr);
+
+    QualType EltTy = VecTy->getElementType();
+    unsigned NumElts = VecTy->getNumElements();
+
+    for (unsigned I = 0; I < NumElts; ++I) {
+      Elts.push_back(new (AST) ArraySubscriptExpr(
+          convertPlaceholder(VecVar), DeclBuilder.getConstantIntExpr(I), EltTy,
+          VK_PRValue, OK_Ordinary, SourceLocation()));
+    }
+  } else {
+    Elts.push_back(VecExpr);
   }
   Elts.push_back(ScalarExpr);
+  assert(ResultTy->castAs<VectorType>()->getNumElements() == Elts.size() &&
+         "The result type must have one element per concatenated value.");
 
   auto *InitList = new (AST) InitListExpr(
       AST, SourceLocation(), Elts, SourceLocation(), /*isExplicit=*/false);
@@ -1216,6 +1237,77 @@ BuiltinTypeDeclBuilder::addDefaultHandleConstructor(AccessSpecifier Access) {
       .finalize(Access);
 }
 
+// Adds constructor that takes hlsl::__detail::heap_resource_info:
+// Resource::Resource(hlsl::__detail::heap_resource_info info) {
+//   __handle = __builtin_hlsl_resource_handlefromheap(__handle, info.Index);
+// }
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHeapResourceInfoConstructor(bool HasCounter) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  NamespaceDecl *HLSLDetailNS =
+      lookupBuiltinNamespace(SemaRef, "__detail", Record->getDeclContext());
+  QualType HeapResInfoType =
+      lookupBuiltinType(SemaRef, "heap_resource_info", HLSLDetailNS);
+  CXXRecordDecl *HeapResInfoDecl = HeapResInfoType->getAsCXXRecordDecl();
+
+  FieldDecl *IndexField = *HeapResInfoDecl->field_begin();
+  assert(IndexField && IndexField->getType() == AST.UnsignedIntTy &&
+         "Index field not as expected");
+
+  auto MB = BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true);
+  MB.addParam("HeapResInfo", HeapResInfoType)
+      .callBuiltin("__builtin_hlsl_resource_handlefromheap", HandleType,
+                   PH::Handle, MB.createMemberExpr(PH::_0, IndexField))
+      .assign(PH::Handle, PH::LastStmt);
+
+  if (HasCounter) {
+    QualType CounterHandleType = getResourceCounterHandleField()->getType();
+    MB.callBuiltin("__builtin_hlsl_resource_counterhandlefromheap",
+                   CounterHandleType, PH::Handle)
+        .assign(PH::CounterHandle, PH::LastStmt);
+  }
+
+  return MB.finalize();
+}
+
+// Adds constructor that takes hlsl::__detail::heap_sampler_info:
+// Resource::Resource(hlsl::__detail::heap_sampler_info info) {
+//   __handle = __builtin_hlsl_resource_handlefromheap(__handle, info.Index);
+// }
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHeapSamplerInfoConstructor() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  NamespaceDecl *HLSLDetailNS =
+      lookupBuiltinNamespace(SemaRef, "__detail", Record->getDeclContext());
+  QualType HeapResInfoType =
+      lookupBuiltinType(SemaRef, "heap_sampler_info", HLSLDetailNS);
+  CXXRecordDecl *HeapResInfoDecl = HeapResInfoType->getAsCXXRecordDecl();
+
+  FieldDecl *IndexField = *HeapResInfoDecl->field_begin();
+  assert(IndexField && IndexField->getType() == AST.UnsignedIntTy &&
+         "Index field not as expected");
+
+  auto MB = BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true);
+  MB.addParam("HeapResInfo", HeapResInfoType);
+  MB.callBuiltin("__builtin_hlsl_resource_handlefromheap", HandleType,
+                 PH::Handle, MB.createMemberExpr(PH::_0, IndexField))
+      .assign(PH::Handle, PH::LastStmt);
+
+  return MB.finalize();
+}
+
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addStaticInitializationFunctions(bool HasCounter) {
   if (HasCounter) {
@@ -1456,9 +1548,7 @@ BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
   if (Dim != ResourceDimension::Unknown)
     VecSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
 
-  QualType IndexTy = VecSize > 1
-                         ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
-                         : AST.UnsignedIntTy;
+  QualType IndexTy = getVectorOrScalarType(AST, AST.UnsignedIntTy, VecSize);
 
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
@@ -1492,7 +1582,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   uint32_t VecSize =
       getResourceDimensions(Dim) + (getResourceAttrs().IsArray ? 1 : 0);
   QualType IntTy = AST.IntTy;
-  QualType IndexTy = VecSize > 1 ? AST.getExtVectorType(IntTy, VecSize) : IntTy;
+  QualType IndexTy = getVectorOrScalarType(AST, IntTy, VecSize);
   QualType CoordLevelTy = AST.getExtVectorType(IntTy, VecSize + 1);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
@@ -1606,8 +1696,8 @@ BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
-  QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
+  QualType LocationTy = getVectorOrScalarType(AST, IntTy, CoordSize);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1638,7 +1728,7 @@ BuiltinTypeDeclBuilder::addRWTextureLoadMethods(ResourceDimension Dim,
   ASTContext &AST = Record->getASTContext();
   // A UAV binds a single mip slice: no mip component, no offset overload.
   uint32_t CoordSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
-  QualType LocationTy = AST.getExtVectorType(AST.IntTy, CoordSize);
+  QualType LocationTy = getVectorOrScalarType(AST, AST.IntTy, CoordSize);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1662,8 +1752,8 @@ BuiltinTypeDeclBuilder::addTextureLoadMSMethods(ResourceDimension Dim,
   // Multisampled textures use a plain location (no mip/LOD component).
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
-  QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
+  QualType LocationTy = getVectorOrScalarType(AST, IntTy, CoordSize);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1747,9 +1837,22 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   ASTContext &AST = SemaRef.getASTContext();
 
   // This is a helper that declares two overloads with and without an out
-  // original-value parameter for each entry.
+  // original-value parameter for each entry, except where the original value
+  // is required.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
+  addByteAddressBufferInterlockedMethod("InterlockedAnd", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_and");
+  addByteAddressBufferInterlockedMethod(
+      "InterlockedExchange", AST.UnsignedIntTy,
+      "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
+  addByteAddressBufferInterlockedMethod("InterlockedExchangeFloat", AST.FloatTy,
+                                        "__builtin_hlsl_interlocked_exchange",
+                                        /*RequiresOriginalValue=*/true);
+  addByteAddressBufferInterlockedMethod("InterlockedMax", AST.IntTy,
+                                        "__builtin_hlsl_interlocked_max");
+  addByteAddressBufferInterlockedMethod("InterlockedMax", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_max");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.IntTy,
                                         "__builtin_hlsl_interlocked_min");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.UnsignedIntTy,
@@ -1769,6 +1872,17 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAdd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_add");
+    addByteAddressBufferInterlockedMethod("InterlockedAnd64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_and");
+    addByteAddressBufferInterlockedMethod(
+        "InterlockedExchange64", AST.UnsignedLongTy,
+        "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
+    addByteAddressBufferInterlockedMethod("InterlockedMax64", AST.LongTy,
+                                          "__builtin_hlsl_interlocked_max");
+    addByteAddressBufferInterlockedMethod("InterlockedMax64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_max");
     addByteAddressBufferInterlockedMethod("InterlockedMin64", AST.LongTy,
                                           "__builtin_hlsl_interlocked_min");
     addByteAddressBufferInterlockedMethod("InterlockedMin64",
@@ -1807,9 +1921,9 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T Sample(SamplerState s, float2 location)
@@ -1877,9 +1991,9 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleBias(SamplerState s, float2 location, float bias)
@@ -1952,10 +2066,10 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
-  QualType OffsetFloatTy = AST.getExtVectorType(FloatTy, OffsetSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
+  QualType OffsetFloatTy = getVectorOrScalarType(AST, FloatTy, OffsetSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy)
@@ -2032,9 +2146,9 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleLevel(SamplerState s, float2 location, float lod)
@@ -2078,9 +2192,9 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value)
@@ -2155,9 +2269,9 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
@@ -2248,7 +2362,7 @@ BuiltinTypeDeclBuilder::addCalculateLodMethods(ResourceDimension Dim) {
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType LocationTy = AST.getExtVectorType(FloatTy, VecSize);
+  QualType LocationTy = getVectorOrScalarType(AST, FloatTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // float CalculateLevelOfDetail(SamplerState s, float2 location)
@@ -2299,9 +2413,9 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType LocationTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(LocationTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, LocationTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Overloads for Gather, GatherRed, GatherGreen, GatherBlue, GatherAlpha
@@ -2357,9 +2471,9 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Overloads for GatherCmp, GatherCmpRed, GatherCmpGreen, GatherCmpBlue,
@@ -2652,7 +2766,8 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
-    StringRef MethodName, QualType ValueTy, StringRef BuiltinName) {
+    StringRef MethodName, QualType ValueTy, StringRef BuiltinName,
+    bool RequiresOriginalValue) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2681,7 +2796,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
     MMB.finalize();
   };
 
-  BuildOverload(/*WithOriginalValue=*/false);
+  if (!RequiresOriginalValue)
+    BuildOverload(/*WithOriginalValue=*/false);
   BuildOverload(/*WithOriginalValue=*/true);
   return *this;
 }

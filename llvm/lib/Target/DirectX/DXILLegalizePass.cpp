@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <functional>
@@ -356,55 +357,39 @@ static bool updateFnegToFsub(Instruction &I,
   return true;
 }
 
+// DXIL has no floating-point atomic operation. A float exchange only moves the
+// bit pattern, so exchange an integer of the same width instead. Opaque
+// pointers keep the pointer operand type-agnostic, so only the value and the
+// result need a cast. This matches what DXC emits for groupshared memory.
 static bool
-legalizeGetHighLowi64Bytes(Instruction &I,
-                           SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
-  if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
-    if (BitCast->getDestTy() ==
-            FixedVectorType::get(Type::getInt32Ty(I.getContext()), 2) &&
-        BitCast->getSrcTy()->isIntegerTy(64)) {
-      ToRemove.push_back(BitCast);
-      ReplacedValues[BitCast] = BitCast->getOperand(0);
-      return true;
-    }
-  }
+legalizeFloatAtomicExchange(Instruction &I,
+                            SmallVectorImpl<Instruction *> &ToRemove,
+                            DenseMap<Value *, Value *> &) {
+  auto *AI = dyn_cast<AtomicRMWInst>(&I);
+  if (!AI || AI->getOperation() != AtomicRMWInst::Xchg)
+    return false;
 
-  if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
-    if (!dyn_cast<BitCastInst>(Extract->getVectorOperand()))
-      return false;
-    auto *VecTy = dyn_cast<FixedVectorType>(Extract->getVectorOperandType());
-    if (VecTy && VecTy->getElementType()->isIntegerTy(32) &&
-        VecTy->getNumElements() == 2) {
-      if (auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand())) {
-        unsigned Idx = Index->getZExtValue();
-        IRBuilder<> Builder(&I);
+  Type *ValTy = AI->getValOperand()->getType();
+  if (!ValTy->isFloatingPointTy())
+    return false;
 
-        auto *Replacement = ReplacedValues[Extract->getVectorOperand()];
-        assert(Replacement && "The BitCast replacement should have been set "
-                              "before working on ExtractElementInst.");
-        if (Idx == 0) {
-          Value *LowBytes = Builder.CreateTrunc(
-              Replacement, Type::getInt32Ty(I.getContext()));
-          ReplacedValues[Extract] = LowBytes;
-        } else {
-          assert(Idx == 1);
-          Value *LogicalShiftRight = Builder.CreateLShr(
-              Replacement,
-              ConstantInt::get(
-                  Replacement->getType(),
-                  APInt(Replacement->getType()->getIntegerBitWidth(), 32)));
-          Value *HighBytes = Builder.CreateTrunc(
-              LogicalShiftRight, Type::getInt32Ty(I.getContext()));
-          ReplacedValues[Extract] = HighBytes;
-        }
-        ToRemove.push_back(Extract);
-        Extract->replaceAllUsesWith(ReplacedValues[Extract]);
-        return true;
-      }
-    }
-  }
-  return false;
+  // DXIL has 32-bit and 64-bit atomics only. A float of any other width has no
+  // integer exchange to lower to.
+  unsigned Width = ValTy->getPrimitiveSizeInBits();
+  if (Width != 32 && Width != 64)
+    reportFatalUsageError("DXIL atomic exchange requires a 32-bit or 64-bit "
+                          "floating-point value");
+
+  IRBuilder<> Builder(AI);
+  Type *IntTy = Builder.getIntNTy(Width);
+  Value *Val = Builder.CreateBitCast(AI->getValOperand(), IntTy);
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
+      AtomicRMWInst::Xchg, AI->getPointerOperand(), Val, AI->getAlign(),
+      AI->getOrdering(), AI->getSyncScopeID());
+  NewAI->copyMetadata(*AI);
+  AI->replaceAllUsesWith(Builder.CreateBitCast(NewAI, ValTy));
+  ToRemove.push_back(AI);
+  return true;
 }
 
 static bool
@@ -545,15 +530,10 @@ private:
   void initializeLegalizationPipeline() {
     LegalizationPipeline[Stage1].push_back(upcastI8AllocasAndUses);
     LegalizationPipeline[Stage1].push_back(fixI8UseChain);
-    LegalizationPipeline[Stage1].push_back(legalizeGetHighLowi64Bytes);
     LegalizationPipeline[Stage1].push_back(legalizeFreeze);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
-    // Note: legalizeGetHighLowi64Bytes and
-    // downcastI64toI32InsertExtractElements both modify extractelement, so they
-    // must run staggered stages. legalizeGetHighLowi64Bytes runs first b\c it
-    // removes extractelements, reducing the number that
-    // downcastI64toI32InsertExtractElements needs to handle.
-    LegalizationPipeline[Stage2].push_back(
+    LegalizationPipeline[Stage1].push_back(legalizeFloatAtomicExchange);
+    LegalizationPipeline[Stage1].push_back(
         downcastI64toI32InsertExtractElements);
     LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
     LegalizationPipeline[Stage2].push_back(resolveUnreachableSwitchDefault);

@@ -617,22 +617,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
         Actions.ActOnFinishInlineFunctionDef(FD);
   });
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-    return;
-  }
-  if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(LM.D);
-
-    // Error recovery.
-    if (!Tok.is(tok::l_brace)) {
-      FnScope.Exit();
-      Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-      return;
-    }
-  } else
-    Actions.ActOnDefaultCtorInitializers(LM.D);
-
   assert((Actions.getDiagnostics().hasErrorOccurred() ||
           !isa<FunctionTemplateDecl>(LM.D) ||
           cast<FunctionTemplateDecl>(LM.D)->getTemplateParameters()->getDepth()
@@ -640,7 +624,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "TemplateParameterDepth should be greater than the depth of "
          "current template being instantiated!");
 
-  ParseFunctionStatementBody(LM.D, FnScope);
+  ParseFunctionBody(LM.D, FnScope);
 }
 
 void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
@@ -734,22 +718,6 @@ void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
 void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                                  bool OnDefinition,
                                  ParsedAttributes *OutAttrs) {
-  // Create a fake EOF so that attribute parsing won't go off the end of the
-  // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LPA.Toks.data());
-  LPA.Toks.push_back(AttrEnd);
-
-  // Append the current token at the end of the new token stream so that it
-  // doesn't get lost.
-  LPA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LPA.Toks, true, /*IsReinject=*/true);
-  // Consume the previously pushed token.
-  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
-
   ParsedAttributes Attrs(AttrFactory);
 
   if (LPA.Decls.size() > 0) {
@@ -776,20 +744,14 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
       Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
 
-    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
-                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(),
-                          /*D=*/nullptr);
+    ParsedAttributes Parsed = ParseLexedAttributeTokens(LPA);
+    Attrs.takeAllAppendingFrom(Parsed);
 
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();
-  } else if (OutAttrs) {
-    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
-                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(),
-                          /*D=*/nullptr);
   } else {
-    Diag(Tok, diag::warn_attribute_no_decl) << LPA.AttrName.getName();
+    Diag(LPA.AttrNameLoc, diag::warn_attribute_no_decl)
+        << LPA.AttrName.getName();
   }
 
   if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
@@ -798,14 +760,6 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
 
   for (auto *D : LPA.Decls)
     Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
-
-  // Due to a parsing error, we either went over the cached tokens or
-  // there are still cached tokens left, so we skip the leftover tokens.
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
-    ConsumeAnyToken();
 
   if (OutAttrs)
     OutAttrs->takeAllAppendingFrom(Attrs);

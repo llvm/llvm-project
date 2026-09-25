@@ -24,6 +24,7 @@ namespace interp {
 class Context;
 class Function;
 class InterpStack;
+class FrameAllocator;
 class Program;
 enum Opcode : uint32_t;
 
@@ -61,9 +62,11 @@ public:
   SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
+              FrameAllocator &FrameAlloc);
 
-  virtual ~EvalEmitter();
+  EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -126,11 +129,11 @@ private:
   std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
-  llvm::SmallVector<std::unique_ptr<char[]>> Locals;
+  llvm::SmallVector<char *> Locals;
 
   Block *getLocal(unsigned Index) const {
     assert(Index < Locals.size());
-    return reinterpret_cast<Block *>(Locals[Index].get());
+    return reinterpret_cast<Block *>(Locals[Index]);
   }
 
   void updateGlobalTemporaries();

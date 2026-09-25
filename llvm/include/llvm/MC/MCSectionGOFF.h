@@ -44,8 +44,8 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   unsigned IsBSS : 1;
 
   // Indicates that the PR symbol needs to set the length of the section to a
-  // non-zero value. This is only a problem with the ADA PR - the binder will
-  // generate an error in this case.
+  // non-zero value. The binder rejects zero-length PR sections. This applies
+  // to the ADA PR and to BSS PRs for zero-size symbols.
   unsigned RequiresNonZeroLength : 1;
 
   // Set to true if the section definition was already emitted.
@@ -123,6 +123,7 @@ public:
   }
 
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
+  void setRequiresNonZeroLength() { RequiresNonZeroLength = true; }
 
   bool isEmitted() const { return Emitted; }
   void setEmitted() const { Emitted = true; }

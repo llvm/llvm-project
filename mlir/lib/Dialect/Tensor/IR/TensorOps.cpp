@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
@@ -2055,9 +2056,11 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
   auto resultType =
       RankedTensorType::get(collapsedType.getShape(), srcType.getElementType(),
                             srcType.getEncoding());
-  result.addAttribute(getReassociationAttrStrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-  build(b, result, resultType, src, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().reassociation =
+      getReassociationIndicesAttribute(b, reassociation);
+  result.addOperands(src);
+  result.addTypes(resultType);
 }
 
 template <typename TensorReshapeOp, bool isExpansion = std::is_same<
@@ -2089,6 +2092,9 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   RankedTensorType srcType = getSrc().getType();
   RankedTensorType resultType = getResult().getType();
 
@@ -2124,10 +2130,9 @@ LogicalResult ExpandShapeOp::verify() {
 
 LogicalResult CollapseShapeOp::verify() {
   CollapseShapeOp op = *this;
-  if (llvm::any_of(op.getReassociationIndices(),
-                   [](ReassociationIndices group) { return group.empty(); })) {
-    return op.emitOpError("reassociation indices must not be empty");
-  }
+  if (failed(verifyReassociationIndicesNotEmpty(op)))
+    return failure();
+
   RankedTensorType srcType = op.getSrc().getType();
   RankedTensorType resultType = op.getResult().getType();
 

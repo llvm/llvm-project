@@ -71,8 +71,22 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
   if (const auto *CT = Ty->getAs<ComplexType>())
     return classifyComplexType(CT, /*IsRet=*/true);
 
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    uint64_t Size = getContext().getTypeSize(Ty);
+    // Return float vectors and larger integer vectors indirectly.
+    if (VT->getElementType()->isRealFloatingType() || Size > 64)
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+    // Return smaller integer vectors via float registers.
+    llvm::Type *FloatTy = llvm::Type::getFloatTy(getVMContext());
+    llvm::Type *DoubleTy = llvm::Type::getDoubleTy(getVMContext());
+    llvm::Type *CoerceTy = Size <= 32 ? FloatTy : DoubleTy;
+    return ABIArgInfo::getDirect(CoerceTy);
+  }
+
   if (const auto *BT = Ty->getAs<BuiltinType>();
-      BT && BT->getKind() == BuiltinType::LongDouble)
+      BT && BT->getKind() == BuiltinType::LongDouble &&
+      getContext().getTypeSize(Ty) > 64)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    /*ByVal=*/false);
 
@@ -83,8 +97,16 @@ ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
   if (const auto *CT = Ty->getAs<ComplexType>())
     return classifyComplexType(CT, /*IsRet=*/false);
 
+  // Pass floating-point vectors and vectors larger than 64 bits by reference.
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    uint64_t SizeInBits = getContext().getTypeSize(Ty);
+    if (VT->getElementType()->isRealFloatingType() || SizeInBits > 64)
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+  }
+
   const auto *BT = Ty->getAs<BuiltinType>();
-  if (BT && BT->getKind() == BuiltinType::LongDouble)
+  if (BT && BT->getKind() == BuiltinType::LongDouble &&
+      getContext().getTypeSize(Ty) > 64)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   return DefaultABIInfo::classifyArgumentType(Ty);
@@ -184,7 +206,7 @@ private:
   bool IsComplexGnuABI;
 
   ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit,
-                          unsigned &RegOffset) const;
+                          unsigned &RegOffset, bool IsVarArg) const;
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -206,9 +228,11 @@ private:
     SmallVector<llvm::Type*, 8> Elems;
     uint64_t Size;
     bool InReg;
+    bool IsVarArg;
 
-    CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl)
-      : Context(c), DL(dl), Size(0), InReg(false) {}
+    CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl,
+                  bool IsVarArg)
+        : Context(c), DL(dl), Size(0), InReg(false), IsVarArg(IsVarArg) {}
 
     // Pad Elems with integers until Size is ToSize.
     void pad(uint64_t ToSize) {
@@ -238,6 +262,9 @@ private:
 
     // Add a floating point element at Offset.
     void addFloat(uint64_t Offset, llvm::Type *Ty, unsigned Bits) {
+      // Varargs are treated as integers.
+      if (IsVarArg)
+        return;
       // Unaligned floats are treated as integers.
       if (Offset % Bits)
         return;
@@ -298,7 +325,8 @@ private:
 } // end anonymous namespace
 
 ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
-                                        unsigned &RegOffset) const {
+                                        unsigned &RegOffset,
+                                        bool IsVarArg) const {
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
@@ -390,7 +418,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
     return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
   }
 
-  CoerceBuilder CB(VMContext, getDataLayout());
+  CoerceBuilder CB(VMContext, getDataLayout(), IsVarArg);
   CB.addStruct(0, StrTy);
   // All structs, even empty ones, should take up a register argument slot,
   // so pin the minimum struct size to one bit.
@@ -427,13 +455,16 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned RetOffset = 0;
-  ABIArgInfo RetType = classifyType(FI.getReturnType(), 32 * 8, RetOffset);
+  ABIArgInfo RetType =
+      classifyType(FI.getReturnType(), 32 * 8, RetOffset, /*IsVarArg=*/false);
   FI.getReturnInfo() = RetType;
 
   // Indirect returns will have its pointer passed as an argument.
   unsigned ArgOffset = RetType.isIndirect() ? RetOffset : 0;
-  for (auto &I : FI.arguments())
-    I.info = classifyType(I.type, 16 * 8, ArgOffset);
+  for (auto [ArgNo, I] : llvm::enumerate(FI.arguments())) {
+    bool IsVarArg = ArgNo >= FI.getNumRequiredArgs();
+    I.info = classifyType(I.type, 16 * 8, ArgOffset, IsVarArg);
+  }
 }
 
 namespace {

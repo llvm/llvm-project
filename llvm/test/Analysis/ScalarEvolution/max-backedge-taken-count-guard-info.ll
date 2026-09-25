@@ -133,9 +133,9 @@ define void @test_guard_eq_12(ptr nocapture %a, i64 %N) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %N) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %N)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,14) S: [1,14) Exits: (1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,14) S: [1,14) Exits: (1 + %N)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_eq_12
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 12
@@ -164,9 +164,9 @@ define void @test_guard_ule_12(ptr nocapture %a, i64 %N) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %N) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %N)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,14) S: [1,14) Exits: (1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,14) S: [1,14) Exits: (1 + %N)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 12
@@ -195,9 +195,9 @@ define void @test_guard_ule_12_step2(ptr nocapture %a, i64 %N) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * (%N /u 2)) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * (%N /u 2))<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,15) S: [2,15) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,15) S: [2,15) Exits: (2 + (2 * (%N /u 2))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
@@ -227,9 +227,9 @@ define void @test_multiple_var_guards_cycle(ptr nocapture %a, i64 %i, i64 %N) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %N) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %N)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: (1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: (1 + %N)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_cycle
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -3
@@ -738,7 +738,7 @@ define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
 ; CHECK-NEXT:    %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
 ; CHECK-NEXT:    --> %init U: [2,4) S: [2,4)
 ; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
-; CHECK-NEXT:    --> {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10) Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10) Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 2
 ; CHECK-NEXT:    --> {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,12) S: [4,12) Exits: (2 + (2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis_step2
@@ -1121,7 +1121,7 @@ define void @optimized_range_check_unsigned(ptr %pred, i32 %N) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned
@@ -1156,7 +1156,7 @@ define void @optimized_range_check_unsigned_icmp_ops_swapped(ptr %pred, i32 %N) 
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned_icmp_ops_swapped
@@ -1193,7 +1193,7 @@ define void @optimized_range_check_unsigned2(ptr %pred, i32 %N) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,21) S: [0,21) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,22) S: [1,22) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned2
@@ -1231,7 +1231,7 @@ define void @optimized_range_check_unsigned3(ptr %pred, i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,3) S: [0,3) Exits: (-1 + %N)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((zext i32 (-2 + (2 * %N)<nuw><nsw>)<nsw> to i64) + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((zext i32 (-2 + (2 * %N)<nuw><nsw>)<nsw> to i64) + %pred)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4) S: [1,4) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned3
@@ -1268,7 +1268,7 @@ define void @not_optimized_range_check_unsigned1(ptr %pred, i32 %N) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @not_optimized_range_check_unsigned1
@@ -1361,7 +1361,7 @@ define void @ptr_induction_eq_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8))<nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
 ; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_eq_1
@@ -2037,6 +2037,36 @@ loop:
   store i8 0, ptr %gep
   %iv.next = add nuw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @guard_on_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: 'guard_on_ptrtoaddr'
+; CHECK-NEXT:  Classifying expressions for: @guard_on_ptrtoaddr
+; CHECK-NEXT:    %n = ptrtoaddr ptr %p to i64
+; CHECK-NEXT:    --> (ptrtoaddr ptr %p to i64) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1001) S: [0,1001) Exits: (ptrtoaddr ptr %p to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,1002) S: [1,1002) Exits: (1 + (ptrtoaddr ptr %p to i64))<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_on_ptrtoaddr
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (ptrtoaddr ptr %p to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1000
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (ptrtoaddr ptr %p to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = ptrtoaddr ptr %p to i64
+  %c = icmp ugt i64 %n, 1000
+  br i1 %c, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %n
   br i1 %ec, label %exit, label %loop
 
 exit:

@@ -273,6 +273,20 @@ You can also refer to the source declarations in the LLVM repository under
 and `compiler-rt/lib/sanitizer_common/sanitizer_flags.inc` (common sanitizer
 flags).
 
+Flags passed via the `TSAN_OPTIONS` environment variable take precedence over
+compile-time default options.
+
+Default options can also be specified at compile/link time by defining
+`__tsan_default_options`:
+
+```c++
+#include <sanitizer/tsan_interface.h>
+
+extern "C" const char *__tsan_default_options() {
+  return "report_atomic_races=0:halt_on_error=1";
+}
+```
+
 ## Suppressions
 
 If you have a data race or thread leak that you are already aware of but cannot
@@ -286,6 +300,18 @@ Specify the suppressions file path via the `suppressions` flag in the
 $ TSAN_OPTIONS="suppressions=/path/to/suppressions.supp" ./myprogram
 ```
 
+Alternatively, you can provide default suppressions at compile time by defining
+the `__tsan_default_suppressions` function in your source code:
+
+```c++
+#include <sanitizer/tsan_interface.h>
+
+extern "C" const char *__tsan_default_suppressions() {
+  return "race:foobar\n"
+         "race:NuclearRocket::Launch\n";
+}
+```
+
 Each non-empty line of the suppressions file represents one suppression of the
 form:
 
@@ -297,8 +323,12 @@ The supported `suppression_type` values are:
 
 - `race`: Suppresses data race reports. The pattern is matched against function
   names, source file names, or global variable names in the stacks of the report.
+- `race_top`: Suppresses data race reports only when matching the top frame of the stack trace.
+- `mutex`: Suppresses mutex-related invalid operations (double lock, invalid unlock, unlock from wrong thread, etc.).
 - `thread`: Suppresses thread leak reports. The pattern is matched against the
   name of the leaked thread.
+- `signal`: Suppresses signal-unsafe handler warnings and errno usage in signal handlers.
+- `deadlock`: Suppresses lock inversion / deadlock reports.
 - `called_from_lib`: Suppresses reports if the call originated from a specific
   non-instrumented library.
 
@@ -312,6 +342,8 @@ Example of a suppressions file:
 ```text
 # Suppress data races in a third-party library 'foobar'
 race:foobar
+# Suppress data races matching the top stack frame
+race_top:MyFrame
 # Suppress data races in a specific function
 race:NuclearRocket::Launch
 # Suppress data races in a specific source file
@@ -320,6 +352,12 @@ race:src/surgery/laser_scalpel.cc
 race:global_var
 # Suppress a leaked thread by name
 thread:MonitoringThread
+# Suppress mutex misuse in a specific function
+mutex:bad_mutex_fn
+# Suppress signal-unsafe handler warnings
+signal:signal_handler
+# Suppress lock inversion / deadlock in a function
+deadlock:potential_deadlock_fn
 # Suppress warnings called from an uninstrumented library
 called_from_lib:libzmq.so
 ```

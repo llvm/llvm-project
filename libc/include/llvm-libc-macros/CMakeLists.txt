@@ -124,6 +124,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  glob_macros
+  HDR
+    glob-macros.h
+)
+
+add_macro_header(
   file_seek_macros
   HDR
     file-seek-macros.h
@@ -259,6 +265,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_file_macros
+  HDR
+    sys-file-macros.h
+)
+
+add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
@@ -369,6 +381,12 @@ add_macro_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h
+)
+
+add_macro_header(
+  sys_xattr_macros
+  HDR
+    sys-xattr-macros.h
 )
 
 add_macro_header(

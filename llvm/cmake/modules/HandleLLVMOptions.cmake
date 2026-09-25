@@ -247,7 +247,7 @@ if(WIN32)
   set(LLVM_ON_UNIX 0)
 elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX|Emscripten")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
@@ -578,7 +578,7 @@ endif()
 
 # set stack reserved size to ~10MB
 set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
-if(MSVC)
+if(MSVC OR (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
@@ -919,6 +919,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     # that is cleaned up in the destructor).
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
       append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Silence a false positive GCC -Wunused-but-set-parameter warning in
+    # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
+    # for details
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+      append("-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
     endif()
   endif()
 
@@ -1362,6 +1369,9 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+# This option is handled below and is defined here as it impacts the PCH status.
+set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
+
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
   if(LLVM_ENABLE_MODULES)
     # PCH with modules is difficult to get right and modules should make PCH
@@ -1421,16 +1431,28 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     message(NOTICE "Precompiled headers are disabled by default with clang-cache. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
-  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # ccache with PCH can lead to false-positives when only a macro
-    # definition changes with non-Clang compilers, because macro definitions
-    # are not compared in preprocessed mode.
-    # See: https://github.com/ccache/ccache/issues/1668
-    message(WARNING "Using ccache with precompiled headers with non-Clang "
-      "compilers is not supported and may lead to false positives. "
-      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+  elseif(LLVM_CCACHE_BUILD OR CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache")
+    if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      # ccache with PCH can lead to false-positives when only a macro
+      # definition changes with non-Clang compilers, because macro definitions
+      # are not compared in preprocessed mode.
+      # See: https://github.com/ccache/ccache/issues/1668
+      message(WARNING "Using ccache with precompiled headers with non-Clang "
+        "compilers is not supported and may lead to false positives. "
+        "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+      set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+    endif()
+    if (CMAKE_HOST_WIN32)
+      # Until a way to reliably configure ccache on Windows is found,
+      # disable precompiled headers for Windows + ccache builds
+      message(WARNING "Using ccache with precompiled headers on Windows is "
+        "currently not supported. "
+        "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+      set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+    endif()
   endif()
 endif()
+
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   message(STATUS "Precompiled headers enabled.")
   # CMake weirdly marks all PCH as system headers. This undocumented variable
@@ -1446,6 +1468,62 @@ if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   endif()
 else()
   message(STATUS "Precompiled headers disabled.")
+endif()
+
+# Support for ccache builds. This must be placed after we determined whether PCH
+# is enabled.
+if(LLVM_CCACHE_BUILD)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
+    set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
+    set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
+        CACHE STRING "Parameters to pass through to ccache")
+
+    if(NOT CMAKE_HOST_WIN32)
+      set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
+      if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+        # ccache's preprocessor mode yields false postives for changes in macro
+        # definitions, as changes in macro definitions are not captured. While
+        # ccache _usually_ disables the preprocessor mode for Clang+PCH, there
+        # are rare (but no less annoying) circumstances where this is not
+        # enough. Therefore enable "depend mode" where instead of preprocessing
+        # dependencies are tracked as emitted by the compiler. This might
+        # slightly increase false negatives for .cpp files that don't use a PCH
+        # when PCH is enabled.
+        # See: https://github.com/ccache/ccache/issues/1668
+        # See: https://github.com/llvm/llvm-project/issues/225047
+        #
+        # Prepend the option so that users can override this default by adding
+        # "CCACHE_NODEPEND=1" to LLVM_CCACHE_PARAMS. We don't store this in a
+        # cache variable so that changes to CMAKE_DISABLE_PRECOMPILE_HEADERS (in
+        # particular changing from ON to OFF) updates the default.
+        #
+        # Note that this is currently not relevant on Windows, as we disable PCH
+        # there by default (see above).
+        set(CCACHE_PROGRAM "CCACHE_DEPEND=1 ${CCACHE_PROGRAM}")
+      endif()
+      if (LLVM_CCACHE_MAXSIZE)
+        set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
+      endif()
+      if (LLVM_CCACHE_DIR)
+        set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
+      endif()
+      set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+    else()
+      if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
+         NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros")
+        message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
+      endif()
+      # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
+      # with cmd.exe and some MSVC tools other than cl.exe
+      set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    endif()
+    message(STATUS "ccache program: ${CCACHE_PROGRAM}")
+  else()
+    message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
+  endif()
 endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")

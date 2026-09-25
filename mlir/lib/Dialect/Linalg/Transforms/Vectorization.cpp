@@ -37,6 +37,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -88,22 +89,6 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 /// a scalar and static/fixed for all the padded values. Returns an empty value
 /// otherwise.
 static Value getStaticPadVal(Operation *op);
-
-/// Return the unique instance of OpType in `block` if it is indeed unique.
-/// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
-  OpType res;
-  block.walk([&](OpType op) {
-    if (res) {
-      res = nullptr;
-      return WalkResult::interrupt();
-    }
-    res = op;
-    return WalkResult::advance();
-  });
-  return res;
-}
 
 /// Helper function to extract the input slices after filter is unrolled along
 /// kw.
@@ -650,10 +635,12 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
       .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
       .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MaximumNumFOp op) { return CombiningKind::MAXIMUMNUMF; })
       .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
       .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
       .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
       .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::MinimumNumFOp op) { return CombiningKind::MINIMUMNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
@@ -977,39 +964,52 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
                           [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
          "n-D vectors are not yet supported");
 
-  // Blocks outside _this_ linalg.generic are effectively loop invariant.
-  // However, analysing block arguments for _this_ linalg.generic Op is a bit
-  // tricky. Just bail out in the latter case.
-  // TODO: We could try analysing the corresponding affine map here.
   auto *block = linalgOp.getBlock();
-  if (isa<BlockArgument>(val))
-    return !llvm::is_contained(block->getArguments(), val);
 
-  Operation *defOp = val.getDefiningOp();
-  assert(defOp && "This is neither a block argument nor an operation result");
+  // A shared DAG has exponentially many paths; a revisit adds nothing.
+  SmallPtrSet<Operation *, 8> visited;
+  SmallVector<Value> worklist{val};
 
-  // IndexOp is loop invariant as long as its result remains constant across
-  // iterations. Note that for dynamic shapes, the corresponding dim will also
-  // be conservatively treated as != 1.
-  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
-    return linalgOp.getStaticLoopRanges()[indexOp.getDim()] == 1;
+  while (!worklist.empty()) {
+    Value v = worklist.pop_back_val();
+
+    // Blocks outside _this_ linalg.generic are effectively loop invariant.
+    // However, analysing block arguments for _this_ linalg.generic Op is a bit
+    // tricky. Just bail out in the latter case.
+    // TODO: We could try analysing the corresponding affine map here.
+    if (isa<BlockArgument>(v)) {
+      if (llvm::is_contained(block->getArguments(), v))
+        return false;
+      continue;
+    }
+
+    Operation *defOp = v.getDefiningOp();
+    assert(defOp && "This is neither a block argument nor an operation result");
+
+    // IndexOp is loop invariant as long as its result remains constant across
+    // iterations. Note that for dynamic shapes, the corresponding dim will also
+    // be conservatively treated as != 1.
+    if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
+      if (linalgOp.getStaticLoopRanges()[indexOp.getDim()] != 1)
+        return false;
+      continue;
+    }
+
+    auto *ancestor = block->findAncestorOpInBlock(*defOp);
+
+    // Values define outside `linalgOp` are loop invariant.
+    if (!ancestor)
+      continue;
+
+    // Values defined inside `linalgOp`, which are constant, are loop invariant.
+    if (isa<arith::ConstantOp>(ancestor))
+      continue;
+
+    if (visited.insert(ancestor).second)
+      llvm::append_range(worklist, ancestor->getOperands());
   }
 
-  auto *ancestor = block->findAncestorOpInBlock(*defOp);
-
-  // Values define outside `linalgOp` are loop invariant.
-  if (!ancestor)
-    return true;
-
-  // Values defined inside `linalgOp`, which are constant, are loop invariant.
-  if (isa<arith::ConstantOp>(ancestor))
-    return true;
-
-  bool result = true;
-  for (auto op : ancestor->getOperands())
-    result &= isLoopInvariantIdx(linalgOp, op, resType);
-
-  return result;
+  return true;
 }
 
 /// Check whether `val` could be used for calculating the trailing index for a
@@ -2071,6 +2071,45 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
     vecOperands.push_back(read);
   }
 
+  // Preserve the contraction's cast semantics when converting operands to the
+  // integer accumulator type. vector.contract provides an implicit signed
+  // integer promotion; the cases below materialize explicit casts as needed.
+  auto castAttr = linalgOp->getAttrOfType<TypeFnAttr>("cast");
+  bool hasUnsignedCast =
+      castAttr && castAttr.getValue() == TypeFn::cast_unsigned;
+  auto accType = dyn_cast<VectorType>(vecOperands[2].getType());
+  auto accElementType =
+      accType ? dyn_cast<IntegerType>(accType.getElementType()) : nullptr;
+  if (accElementType && accElementType.isSignless()) {
+    for (Value &operand : MutableArrayRef(vecOperands).take_front(2)) {
+      auto operandType = cast<VectorType>(operand.getType());
+      Type operandElementType = operandType.getElementType();
+      VectorType castType = operandType.clone(accElementType);
+
+      if (isa<FloatType>(operandElementType)) {
+        operand =
+            hasUnsignedCast
+                ? arith::FPToUIOp::create(rewriter, loc, castType, operand)
+                      .getResult()
+                : arith::FPToSIOp::create(rewriter, loc, castType, operand)
+                      .getResult();
+        continue;
+      }
+
+      auto operandIntegerType = dyn_cast<IntegerType>(operandElementType);
+      if (!operandIntegerType || !operandIntegerType.isSignless())
+        continue;
+      if (operandIntegerType.getWidth() >= accElementType.getWidth())
+        continue;
+      if (!hasUnsignedCast)
+        continue;
+
+      // vector.contract implicitly sign-extends integer operands. Unsigned
+      // promotion therefore requires an explicit zero extension.
+      operand = arith::ExtUIOp::create(rewriter, loc, castType, operand);
+    }
+  }
+
   // Remap iterators from linalg to vector.
   SmallVector<Attribute> iterAttrs;
   auto iterators = linalgOp.getIteratorTypesArray();
@@ -2166,10 +2205,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;
@@ -2981,20 +3022,30 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   }
 
   // 2. Get the vector shape
+  // Map each source dim to its corresponding (non-dropped) result dim: for a
+  // rank-reducing slice, dropped dims need not be the trailing ones.
+  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+  SmallVector<int64_t> resultDimsForSourceDims;
+  resultDimsForSourceDims.reserve(sourceType.getRank());
+  for (int64_t resultDim = 0, end = resultType.getRank(); resultDim < end;
+       ++resultDim)
+    if (!droppedDims[resultDim])
+      resultDimsForSourceDims.push_back(resultDim);
+  assert(resultDimsForSourceDims.size() ==
+             static_cast<size_t>(sourceType.getRank()) &&
+         "expected one non-dropped result dim per source dim");
+
   SmallVector<int64_t> vecShape;
-  size_t rankDiff = resultType.getRank() - sourceType.getRank();
   for (int64_t i = 0, end = sourceType.getRank(); i < end; ++i) {
     if (!inputVectorSizes.empty()) {
       vecShape.push_back(inputVectorSizes[i]);
     } else if (!sourceType.isDynamicDim(i)) {
       vecShape.push_back(sourceType.getDimSize(i));
-    } else if (!resultType.isDynamicDim(i)) {
+    } else if (!resultType.isDynamicDim(resultDimsForSourceDims[i])) {
       // Source shape is not statically known, but result shape is.
       // Vectorize with size of result shape. This may be larger than the
       // source size.
-      // FIXME: Using rankDiff implies that the source tensor is inserted at
-      // the end of the destination tensor. However, that's not required.
-      vecShape.push_back(resultType.getDimSize(rankDiff + i));
+      vecShape.push_back(resultType.getDimSize(resultDimsForSourceDims[i]));
     } else {
       // Neither source nor result dim of padOp is static. Cannot vectorize
       // the copy.
@@ -3672,10 +3723,10 @@ public:
     else
       dstType = dstElementType;
 
-    return rewriter
-        .create(loc, castOp->getName().getIdentifier(), val, dstType,
-                castOp->getAttrs())
-        ->getResult(0);
+    OperationState state(loc, castOp->getName().getIdentifier(), val, dstType,
+                         castOp->getDiscardableAttrDictionary().getValue());
+    state.propertiesAttr = castOp->getPropertiesAsAttribute();
+    return rewriter.create(state)->getResult(0);
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}

@@ -89,6 +89,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -3639,10 +3640,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(FuncInfo.ExceptionModel, PersonalityFn) ==
+          0 &&
+      TLI.getExceptionSelectorRegister(FuncInfo.ExceptionModel,
+                                       PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -4176,8 +4177,12 @@ void SelectionDAGBuilder::visitAddrSpaceCast(const User &I) {
   unsigned SrcAS = SV->getType()->getPointerAddressSpace();
   unsigned DestAS = I.getType()->getPointerAddressSpace();
 
-  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS))
-    N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS);
+  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
+    SDNodeFlags Flags;
+    if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+      Flags.setNonNull(ASC->hasNonNull());
+    N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS, Flags);
+  }
 
   setValue(&I, N);
 }
@@ -5194,6 +5199,38 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   if (AddToChain)
     PendingLoads.push_back(Load.getValue(1));
   setValue(&I, Res);
+}
+
+void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
+  SDLoc sdl = getCurSDLoc();
+  Value *PtrOperand = I.getArgOperand(0);
+  // The remaining arguments (num_accessible_bytes or oracle function + args)
+  // are IR-level semantics only; they are not needed at codegen.
+  SDValue Ptr = getValue(PtrOperand);
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  Align Alignment = I.getParamAlign(0).valueOrOne();
+  AAMDNodes AAInfo = I.getAAMetadata();
+
+  SDValue InChain = DAG.getRoot();
+
+  // Use MOLoad but NOT MODereferenceable - the memory may not be
+  // fully dereferenceable.
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  MMOFlags |= TLI.getTargetMMOFlags(I);
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    MMOFlags |= MachineMemOperand::MOInvariant;
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MMOFlags,
+      LocationSize::precise(VT.getStoreSize()), Alignment, AAInfo);
+
+  SDValue Load = DAG.getLoad(VT, sdl, InChain, Ptr, MMO);
+  PendingLoads.push_back(Load.getValue(1));
+  setValue(&I, Load);
 }
 
 void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
@@ -7004,6 +7041,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::masked_compressstore:
     visitMaskedStore(I, true /* IsCompressing */);
     return;
+  case Intrinsic::speculative_load:
+    visitSpeculativeLoad(I);
+    return;
   case Intrinsic::powi:
     setValue(&I, ExpandPowI(sdl, getValue(I.getArgOperand(0)),
                             getValue(I.getArgOperand(1)), DAG));
@@ -7229,8 +7269,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::fmuladd: {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
-        TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       setValue(&I, DAG.getNode(ISD::FMA, sdl,
                                getValue(I.getArgOperand(0)).getValueType(),
                                getValue(I.getArgOperand(0)),
@@ -7529,6 +7568,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
     return;
   }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    auto Opc = Intrinsic == Intrinsic::smulh ? ISD::MULHS : ISD::MULHU;
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(Opc, sdl, X.getValueType(), X, Y));
+    return;
+  }
   case Intrinsic::sadd_sat: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
@@ -7735,7 +7782,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
     // Drop the intrinsic, but forward the value
     setValue(&I, getValue(I.getOperand(0)));
     return;
@@ -8724,8 +8770,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case Intrinsic::experimental_constrained_fmuladd: {
     Opcode = ISD::STRICT_FMA;
     // Break fmuladd into fmul and fadd.
-    if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
-        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+    if (!TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       Opers.pop_back();
       SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushFPOpOutChain(Mul, EB);
@@ -9090,6 +9135,13 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
                                           MCSymbol *&BeginLabel) {
   MachineFunction &MF = DAG.getMachineFunction();
 
+  // Skip emitting EH_LABEL on targets whose exception tables don't reference
+  // them (32-bit x86 SEH, Wasm).
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+    BeginLabel = nullptr;
+    return Chain;
+  }
+
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
   BeginLabel = MF.getContext().createTempSymbol();
@@ -9111,7 +9163,9 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
                                         const BasicBlock *EHPadBB,
                                         MCSymbol *BeginLabel) {
-  assert(BeginLabel && "BeginLabel should've been set");
+  // No labels were emitted.
+  if (!BeginLabel)
+    return Chain;
 
   MachineFunction &MF = DAG.getMachineFunction();
 

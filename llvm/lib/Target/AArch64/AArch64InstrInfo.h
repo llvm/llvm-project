@@ -16,6 +16,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -188,6 +189,11 @@ public:
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   const AArch64RegisterInfo &getRegisterInfo() const { return RI; }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AArch64::GPR64spRegClass;
+  }
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -417,6 +423,14 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  /// Inserts the compare instruction needed to un-fuse a fused conditional
+  /// branch instruction and returns the condition code of the original fused
+  /// branch.
+  AArch64CC::CondCode insertCmpForCondBr(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MI,
+                                         const DebugLoc &DL,
+                                         ArrayRef<MachineOperand> Cond) const;
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;

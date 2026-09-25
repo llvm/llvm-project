@@ -2745,7 +2745,15 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
 
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   AtomicOrdering AO = AtomicOrdering(I.getOperand(0).getImm());
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
+  uint32_t ScSem = STI.isShader()
+                       ? SPIRV::MemorySemantics::UniformMemory |
+                             SPIRV::MemorySemantics::WorkgroupMemory |
+                             SPIRV::MemorySemantics::ImageMemory
+                       : SPIRV::MemorySemantics::WorkgroupMemory |
+                             SPIRV::MemorySemantics::CrossWorkgroupMemory |
+                             SPIRV::MemorySemantics::ImageMemory;
+  uint32_t MemSem = getMemSemanticsWithStorageClass(
+      STI.getTargetTriple(), static_cast<uint32_t>(getMemSemantics(AO)), ScSem);
   Register MemSemReg = buildI32ConstantInEntryBlock(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
   uint32_t Scope = static_cast<uint32_t>(getMemScope(
@@ -5872,8 +5880,8 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   assert(MainHandleDef->getIntrinsicID() ==
          Intrinsic::spv_resource_handlefrombinding);
 
-  uint32_t Set = getIConstVal(Intr.getOperand(4).getReg(), MRI);
-  uint32_t Binding = getIConstVal(Intr.getOperand(3).getReg(), MRI);
+  uint32_t Set = getIConstVal(Intr.getOperand(3).getReg(), MRI);
+  uint32_t Binding = getIConstVal(Intr.getOperand(4).getReg(), MRI);
   uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
   Register IndexReg = MainHandleDef->getOperand(5).getReg();
   std::string CounterName =
@@ -7092,6 +7100,40 @@ static bool isConcreteSPIRVType(SPIRVTypeInst Ty,
   return true;
 }
 
+static bool containsStorageBufferPointer(SPIRVTypeInst Ty,
+                                         const SPIRVGlobalRegistry &GR,
+                                         SmallSet<Register, 8> &Visited) {
+  Register TypeReg = Ty->getOperand(0).getReg();
+  if (!Visited.insert(TypeReg).second)
+    return false;
+
+  switch (Ty->getOpcode()) {
+  case SPIRV::OpTypePointer:
+    if (Ty->getOperand(1).getImm() == SPIRV::StorageClass::StorageBuffer)
+      return true;
+    return containsStorageBufferPointer(
+        GR.getSPIRVTypeForVReg(Ty->getOperand(2).getReg()), GR, Visited);
+  case SPIRV::OpTypeArray:
+  case SPIRV::OpTypeRuntimeArray:
+    return containsStorageBufferPointer(
+        GR.getSPIRVTypeForVReg(Ty->getOperand(1).getReg()), GR, Visited);
+  case SPIRV::OpTypeStruct:
+    for (unsigned I = 1; I < Ty->getNumOperands(); ++I)
+      if (containsStorageBufferPointer(
+              GR.getSPIRVTypeForVReg(Ty->getOperand(I).getReg()), GR, Visited))
+        return true;
+    return false;
+  default:
+    return false;
+  }
+}
+
+static bool containsStorageBufferPointer(SPIRVTypeInst Ty,
+                                         const SPIRVGlobalRegistry &GR) {
+  SmallSet<Register, 8> Visited;
+  return containsStorageBufferPointer(Ty, GR, Visited);
+}
+
 bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
   assert(I.getNumExplicitOperands() == 2);
 
@@ -7150,6 +7192,15 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
       ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
   unsigned Opcode =
       UseUntypedPointers ? SPIRV::OpUntypedVariableKHR : SPIRV::OpVariable;
+
+  if (!UseUntypedPointers && containsStorageBufferPointer(ResType, GR)) {
+    MachineIRBuilder MIRBuilder(I);
+    if (!STI.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+      MIRBuilder.buildInstr(SPIRV::OpExtension)
+          .addImm(SPIRV::Extension::SPV_KHR_variable_pointers);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::VariablePointersStorageBuffer);
+  }
 
   auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
@@ -7639,7 +7690,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     SC = GR.getPointerStorageClass(ResType);
   }
 
-  if (ResType->getOpcode() == SPIRV::OpTypeImage && ArraySize == 0)
+  // ArraySize 0 means an unbounded array and we need to set to required
+  // capability.
+  if (ArraySize == 0)
     MIRBuilder.buildInstr(SPIRV::OpCapability)
         .addImm(SPIRV::Capability::RuntimeDescriptorArrayEXT);
 
