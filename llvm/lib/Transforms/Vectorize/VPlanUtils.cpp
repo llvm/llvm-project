@@ -1222,6 +1222,10 @@ getSuccessorProbabilities(const VPBasicBlock *VPBB) {
     auto [Succ, Weight] = SuccWeight;
     if (Total == 0)
       return std::make_pair(Succ, BranchProbability::getUnknown());
+    // Like BlockFrequencyInfo, treat zero branch weights cold, not as never
+    // taken.
+    if (Weight == 0)
+      return std::make_pair(Succ, BranchProbability::getRaw(1));
     return std::make_pair(Succ,
                           getBranchProbabilityKeepingPartial(Weight, Total));
   });
