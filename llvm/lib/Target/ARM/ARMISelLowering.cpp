@@ -198,6 +198,8 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   }
   setOperationAction(ISD::BUILD_VECTOR,      VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE,    VT, Custom);
+  setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+                            {2, 3}, VT, Custom);
   setOperationAction(ISD::CONCAT_VECTORS,    VT, Legal);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
   setOperationAction(ISD::SELECT,            VT, Expand);
@@ -9067,6 +9069,103 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
   return ConcatOps[0];
 }
 
+static SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG,
+                                      const ARMSubtarget *ST) {
+  if (!ST->hasNEON())
+    return SDValue();
+  unsigned Factor = Op->getNumOperands();
+  EVT OpVT = Op.getValueType();
+  SDLoc DL(Op);
+
+  if (Factor == 2) {
+    SDValue Zip = DAG.getNode(ARMISD::VZIP, DL, DAG.getVTList(OpVT, OpVT),
+                              Op.getOperand(0), Op.getOperand(1));
+    return DAG.getMergeValues({Zip, Zip.getValue(1)}, DL);
+  }
+
+  if (Factor == 3) {
+    Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
+    MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(), cast<FrameIndexSDNode>(StackPtr)->getIndex());
+    SmallVector<SDValue, 6> Ops;
+    Ops.push_back(DAG.getEntryNode());
+    Ops.push_back(
+        DAG.getTargetConstant(Intrinsic::arm_neon_vst3, DL, MVT::i64));
+    Ops.push_back(StackPtr);
+
+    for (SDValue V : Op->ops())
+      Ops.push_back(V);
+    Ops.push_back(DAG.getConstant(Alignment.value(), DL, MVT::i32));
+    EVT TripleOpVT =
+        EVT::getVectorVT(*DAG.getContext(), OpVT.getVectorElementType(),
+                         OpVT.getVectorNumElements() * 3);
+    SDValue Chain = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TripleOpVT,
+        StackPtrInfo, Alignment, MachineMemOperand::MOStore);
+
+    SmallVector<SDValue, 3> Results;
+    for (unsigned I = 0; I < 3; ++I) {
+      SDValue Ptr =
+          DAG.getMemBasePlusOffset(StackPtr, OpVT.getStoreSize() * I, DL);
+      Results.push_back(
+          DAG.getLoad(OpVT, DL, Chain, Ptr, MachinePointerInfo()));
+    }
+    return DAG.getMergeValues(Results, DL);
+  }
+
+  return SDValue();
+}
+
+static SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG,
+                                        const ARMSubtarget *ST) {
+  if (!ST->hasNEON())
+    return SDValue();
+  unsigned Factor = Op->getNumOperands();
+  EVT OpVT = Op.getValueType();
+  SDLoc DL(Op);
+
+  if (Factor == 2) {
+    SDValue Unzip = DAG.getNode(ARMISD::VUZP, DL, DAG.getVTList(OpVT, OpVT),
+                                Op.getOperand(0), Op.getOperand(1));
+    return DAG.getMergeValues({Unzip, Unzip.getValue(1)}, DL);
+  }
+
+  if (Factor == 3) {
+    Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
+
+    SmallVector<SDValue, 3> Chains;
+    for (unsigned I = 0; I < 3; ++I) {
+      SDValue Ptr =
+          DAG.getMemBasePlusOffset(StackPtr, OpVT.getStoreSize() * I, DL);
+      Chains.push_back(DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(I),
+                                    Ptr, MachinePointerInfo()));
+    }
+
+    SmallVector<SDValue, 3> Ops;
+    Ops.push_back(DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains));
+    Ops.push_back(
+        DAG.getTargetConstant(Intrinsic::arm_neon_vld3, DL, MVT::i64));
+    Ops.push_back(StackPtr);
+
+    EVT TripleOpVT =
+        EVT::getVectorVT(*DAG.getContext(), OpVT.getVectorElementType(),
+                         OpVT.getVectorNumElements() * 3);
+    SDVTList VTs = DAG.getVTList(OpVT, OpVT, OpVT, MVT::Other);
+    SDValue LD3 = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                                          TripleOpVT, MachinePointerInfo(),
+                                          Alignment, MachineMemOperand::MOLoad);
+
+    return DAG.getMergeValues(
+        {LD3.getValue(0), LD3.getValue(1), LD3.getValue(2)}, DL);
+  }
+
+  return SDValue();
+}
+
 static SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
                                    const ARMSubtarget *ST) {
   EVT VT = Op->getValueType(0);
@@ -10589,6 +10688,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INSERT_VECTOR_ELT: return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG, Subtarget);
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG, Subtarget);
+  case ISD::VECTOR_INTERLEAVE:
+    return LowerVECTOR_INTERLEAVE(Op, DAG, Subtarget);
+  case ISD::VECTOR_DEINTERLEAVE:
+    return LowerVECTOR_DEINTERLEAVE(Op, DAG, Subtarget);
   case ISD::TRUNCATE:      return LowerTruncate(Op.getNode(), DAG, Subtarget);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:   return LowerVectorExtend(Op.getNode(), DAG, Subtarget);
