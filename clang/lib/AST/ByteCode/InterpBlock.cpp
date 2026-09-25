@@ -55,6 +55,16 @@ void Block::removePointer(Pointer *P) {
 #endif
 }
 
+bool Block::isWeak() const {
+  if (!(AccessFlags & WeakFlag))
+    return false;
+
+  // Sema might have dropped the weak attribute after this block was created.
+  if (const ValueDecl *VD = Desc->asValueDecl())
+    return VD->isWeak();
+  return true;
+}
+
 void Block::cleanup() {
   if (Pointers == nullptr && !isDynamic() && isDead())
     (reinterpret_cast<DeadBlock *>(this + 1) - 1)->free();
