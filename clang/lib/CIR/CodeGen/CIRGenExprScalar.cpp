@@ -899,8 +899,11 @@ public:
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
 
-    if (cir::isFPOrVectorOfFPType(operand.getType()))
-      return builder.createOrFold<cir::FNegOp>(loc, operand);
+    if (cir::isFPOrVectorOfFPType(operand.getType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createOrFold<cir::FNegOp>(loc, operand,
+                                               builder.getFastMathFlagsAttr());
+    }
 
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
@@ -1281,6 +1284,9 @@ public:
       BinOpInfo boInfo = emitBinOps(e);
       mlir::Value lhs = boInfo.lhs;
       mlir::Value rhs = boInfo.rhs;
+      std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOpts;
+      if (cir::isFPOrVectorOfFPType(lhs.getType()))
+        fpOpts.emplace(cgf, boInfo.fpFeatures);
 
       if (lhsTy->isVectorType()) {
         if (!e->getType()->isVectorType()) {
@@ -1290,9 +1296,15 @@ public:
         } else {
           // Other kinds of vectors. Element-wise comparison returning
           // a vector.
-          result = cir::VecCmpOp::create(builder, cgf.getLoc(boInfo.loc),
-                                         cgf.convertType(boInfo.fullType), kind,
-                                         boInfo.lhs, boInfo.rhs);
+          result = cir::VecCmpOp::create(
+              builder, cgf.getLoc(boInfo.loc), cgf.convertType(boInfo.fullType),
+              kind, boInfo.lhs, boInfo.rhs,
+              cir::isFPOrVectorOfFPType(boInfo.lhs.getType())
+                  ? builder.getConstrainedFPAttr()
+                  : cir::FenvAttr{},
+              cir::isFPOrVectorOfFPType(boInfo.lhs.getType())
+                  ? builder.getFastMathFlagsAttr()
+                  : cir::FastMathFlagsAttr{});
         }
       } else if (boInfo.isFixedPointOp()) {
         result = emitFixedPointBinOp(boInfo);
@@ -2069,9 +2081,9 @@ static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
 
   // Carry the mul's fenv attribute so a constrained fmul yields a constrained
   // fmuladd; the builder is under the add's FP options, not the mul's.
-  mlir::Value fmuladd =
-      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
-                             addend, mulOp.getFenvAttr());
+  mlir::Value fmuladd = cir::FMulAddOp::create(
+      builder, loc, addend.getType(), mulOp0, mulOp1, addend,
+      mulOp.getFenvAttr(), cir::FastMathFlagsAttr{});
   mulOp.erase();
   return fmuladd;
 }
@@ -2090,8 +2102,8 @@ static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
          "Only fadd/fsub can be the root of an fmuladd.");
 
   // Check whether this op is fusable, i.e. -ffp-contract=on. -ffp-contract=fast
-  // needs fast-math flags on the fmul/fadd, which CIR does not model yet, so it
-  // fuses nowhere for now.
+  // is not a cir.fmuladd: the builder stamps `contract` on the fmul and fadd,
+  // which is what the backend fuses when it is no longer in Fast mode.
   assert(!cir::MissingFeatures::fastMathFlags());
   if (!op.fpFeatures.allowFPContractWithinStatement())
     return nullptr;

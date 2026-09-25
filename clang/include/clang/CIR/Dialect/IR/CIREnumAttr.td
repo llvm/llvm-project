@@ -47,6 +47,36 @@ class CIR_EnumAttr<EnumInfo info, string name = "", list<Trait> traits = []>
   let assemblyFormat = "`<` $value `>`";
 }
 
+// Bit positions match `mlir::LLVM::FastmathFlags`. Only `contract` is set by
+// CIRGen today; the other bits exist so the attribute can round-trip.
+def CIR_FastMathFlags : CIR_I32BitEnum<
+    "FastMathFlags", "fast-math flags", [
+  I32BitEnumCaseNone<"none">,
+  I32BitEnumCaseBit<"nnan", 0>,
+  I32BitEnumCaseBit<"ninf", 1>,
+  I32BitEnumCaseBit<"nsz", 2>,
+  I32BitEnumCaseBit<"arcp", 3>,
+  I32BitEnumCaseBit<"contract", 4>,
+  I32BitEnumCaseBit<"afn", 5>,
+  I32BitEnumCaseBit<"reassoc", 6>
+]> {
+  let description = [{
+    Per-operation fast-math flags. These are the LLVM fast-math bits, carried
+    on CIR floating-point operations and lowered onto the corresponding LLVM
+    dialect operation's `fastmathFlags`.
+
+    `contract` allows the backend to fuse this operation with another
+    floating-point operation, including across statements. It is what
+    `-ffp-contract=fast` records. `-ffp-contract=on` is represented separately
+    by `cir.fmuladd`.
+  }];
+  let separator = ", ";
+}
+
+def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath"> {
+  let summary = "Fast-math flags for a floating-point operation";
+}
+
 def CIR_LangAddressSpace : CIR_I32Enum<
   "LangAddressSpace", "language address space kind", [
   I32EnumCase<"Default", 0, "default">,

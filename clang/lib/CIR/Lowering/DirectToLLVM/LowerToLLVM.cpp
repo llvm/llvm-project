@@ -550,6 +550,58 @@ static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
   return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
 }
 
+// CIR fast-math bits use the same positions as `mlir::LLVM::FastmathFlags`.
+static mlir::LLVM::FastmathFlags
+toLLVMFastMathFlags(cir::FastMathFlags flags) {
+  using CirFlags = cir::FastMathFlags;
+  using LLVMFlags = mlir::LLVM::FastmathFlags;
+  static_assert(static_cast<uint32_t>(CirFlags::nnan) ==
+                    static_cast<uint32_t>(LLVMFlags::nnan),
+                "CIR nnan bit must match LLVM fastmath");
+  static_assert(static_cast<uint32_t>(CirFlags::ninf) ==
+                    static_cast<uint32_t>(LLVMFlags::ninf),
+                "CIR ninf bit must match LLVM fastmath");
+  static_assert(static_cast<uint32_t>(CirFlags::nsz) ==
+                    static_cast<uint32_t>(LLVMFlags::nsz),
+                "CIR nsz bit must match LLVM fastmath");
+  static_assert(static_cast<uint32_t>(CirFlags::arcp) ==
+                    static_cast<uint32_t>(LLVMFlags::arcp),
+                "CIR arcp bit must match LLVM fastmath");
+  static_assert(static_cast<uint32_t>(CirFlags::contract) ==
+                    static_cast<uint32_t>(LLVMFlags::contract),
+                "CIR contract bit must match LLVM fastmath");
+  static_assert(static_cast<uint32_t>(CirFlags::afn) ==
+                    static_cast<uint32_t>(LLVMFlags::afn),
+                "CIR afn bit must match LLVM fastmath");
+  static_assert(static_cast<uint32_t>(CirFlags::reassoc) ==
+                    static_cast<uint32_t>(LLVMFlags::reassoc),
+                "CIR reassoc bit must match LLVM fastmath");
+  return static_cast<LLVMFlags>(static_cast<uint32_t>(flags));
+}
+
+// Not inlined into lowerConstrainableFPOp. In that template, a local null
+// check on the attribute is dropped and getValue() crashes when `fastmath`
+// is absent (cir.fmuladd has no such property).
+__attribute__((noinline)) static mlir::LLVM::FastmathFlags
+readFastMathFlags(mlir::Operation *cirOp) {
+  auto cirFlags = cirOp->getAttrOfType<cir::FastMathFlagsAttr>("fastmath");
+  if (!cirFlags.getAsOpaquePointer() ||
+      cirFlags.getValue() == cir::FastMathFlags::none)
+    return mlir::LLVM::FastmathFlags::none;
+  return toLLVMFastMathFlags(cirFlags.getValue());
+}
+
+void propagateFastMathFlags(mlir::Operation *cirOp, mlir::Operation *llvmOp) {
+  mlir::LLVM::FastmathFlags flags = readFastMathFlags(cirOp);
+  if (flags == mlir::LLVM::FastmathFlags::none)
+    return;
+  auto fmfOp = dyn_cast<mlir::LLVM::FastmathFlagsInterface>(llvmOp);
+  if (!fmfOp)
+    return;
+  fmfOp.setFastmathAttr(
+      mlir::LLVM::FastmathFlagsAttr::get(llvmOp->getContext(), flags));
+}
+
 static mlir::Value
 createFenvMetadataValue(mlir::ConversionPatternRewriter &rewriter,
                         mlir::Location loc, llvm::StringRef str) {
@@ -588,14 +640,17 @@ mlir::LogicalResult lowerConstrainableFPOp(
     return op->emitError("expected LLVM result type for floating-point op");
 
   if (!fenv) {
-    rewriter.replaceOpWithNewOp<LLVMOp>(
-        op, mlir::TypeRange{llvmResTy}, operands,
+    LLVMOp llvmOp = LLVMOp::create(
+        rewriter, op->getLoc(), mlir::TypeRange{llvmResTy}, operands,
         cir::getDefaultProperties<LLVMOp>(op->getContext()));
+    propagateFastMathFlags(op, llvmOp);
+    rewriter.replaceOp(op, llvmOp.getResult());
     return mlir::success();
   }
 
   return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
-                                       constrainedMnemonic, hasRoundingMode);
+                                       constrainedMnemonic, hasRoundingMode,
+                                       readFastMathFlags(op));
 }
 
 static mlir::LLVM::FastmathFlags
@@ -2091,13 +2146,15 @@ mlir::LogicalResult CIRToLLVMFMaxNumOpLowering::matchAndRewrite(
     cir::FMaxNumOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
+  mlir::LLVM::FastmathFlags flags = static_cast<mlir::LLVM::FastmathFlags>(
+      static_cast<uint32_t>(mlir::LLVM::FastmathFlags::nsz) |
+      static_cast<uint32_t>(readFastMathFlags(op)));
   if (cir::FenvAttr fenv = op.getFenvAttr())
     return lowerToConstrainedFPIntrinsic(
         op, adaptor.getOperands(), fenv, resTy, rewriter, "maxnum",
-        /*hasRoundingMode=*/false, mlir::LLVM::FastmathFlags::nsz);
+        /*hasRoundingMode=*/false, flags);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MaxNumOp>(
-      op, resTy, adaptor.getLhs(), adaptor.getRhs(),
-      mlir::LLVM::FastmathFlags::nsz);
+      op, resTy, adaptor.getLhs(), adaptor.getRhs(), flags);
   return mlir::success();
 }
 
@@ -2105,13 +2162,15 @@ mlir::LogicalResult CIRToLLVMFMinNumOpLowering::matchAndRewrite(
     cir::FMinNumOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
+  mlir::LLVM::FastmathFlags flags = static_cast<mlir::LLVM::FastmathFlags>(
+      static_cast<uint32_t>(mlir::LLVM::FastmathFlags::nsz) |
+      static_cast<uint32_t>(readFastMathFlags(op)));
   if (cir::FenvAttr fenv = op.getFenvAttr())
     return lowerToConstrainedFPIntrinsic(
         op, adaptor.getOperands(), fenv, resTy, rewriter, "minnum",
-        /*hasRoundingMode=*/false, mlir::LLVM::FastmathFlags::nsz);
+        /*hasRoundingMode=*/false, flags);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MinNumOp>(
-      op, resTy, adaptor.getLhs(), adaptor.getRhs(),
-      mlir::LLVM::FastmathFlags::nsz);
+      op, resTy, adaptor.getLhs(), adaptor.getRhs(), flags);
   return mlir::success();
 }
 
@@ -3613,7 +3672,8 @@ static mlir::LLVM::CallIntrinsicOp
 createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                           mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                           cir::CmpOpKind kind, cir::FenvAttr fenv,
-                          mlir::Type llvmResTy) {
+                          mlir::Type llvmResTy,
+                          mlir::LLVM::FastmathFlags fastmathFlags = {}) {
   llvm::SmallVector<mlir::Value, 4> callOperands = {
       lhs, rhs,
       createFenvMetadataValue(rewriter, loc,
@@ -3624,7 +3684,7 @@ createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                                       ? "llvm.experimental.constrained.fcmps"
                                       : "llvm.experimental.constrained.fcmp";
   return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
-                                   callOperands);
+                                   callOperands, fastmathFlags);
 }
 
 mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
@@ -3659,14 +3719,16 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     if (cir::FenvAttr fenv = cmpOp.getFenvAttr()) {
       mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
           rewriter, cmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-          cmpOp.getKind(), fenv, llvmResTy);
+          cmpOp.getKind(), fenv, llvmResTy, readFastMathFlags(cmpOp));
       rewriter.replaceOp(cmpOp, call.getResult(0));
       return mlir::success();
     }
     mlir::LLVM::FCmpPredicate kind =
         convertCmpKindToFCmpPredicate(cmpOp.getKind());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
-        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+    auto fcmp = mlir::LLVM::FCmpOp::create(
+        rewriter, cmpOp.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
+    propagateFastMathFlags(cmpOp, fcmp);
+    rewriter.replaceOp(cmpOp, fcmp.getResult());
     return mlir::success();
   }
 
@@ -3702,6 +3764,8 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
           rewriter, loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
       auto imagCmp = mlir::LLVM::FCmpOp::create(
           rewriter, loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
+      propagateFastMathFlags(cmpOp, realCmp);
+      propagateFastMathFlags(cmpOp, imagCmp);
       rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmpOp, realCmp, imagCmp);
       return mlir::success();
     }
@@ -3720,6 +3784,8 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
           rewriter, loc, mlir::LLVM::FCmpPredicate::une, lhsReal, rhsReal);
       auto imagCmp = mlir::LLVM::FCmpOp::create(
           rewriter, loc, mlir::LLVM::FCmpPredicate::une, lhsImag, rhsImag);
+      propagateFastMathFlags(cmpOp, realCmp);
+      propagateFastMathFlags(cmpOp, imagCmp);
       rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmpOp, realCmp, imagCmp);
       return mlir::success();
     }
@@ -5054,14 +5120,16 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     if (cir::FenvAttr fenv = op.getFenvAttr()) {
       auto i1VecTy = mlir::VectorType::get(op.getLhs().getType().getSize(),
                                            rewriter.getI1Type());
-      bitResult = createConstrainedFCmpCall(rewriter, op.getLoc(),
-                                            adaptor.getLhs(), adaptor.getRhs(),
-                                            op.getKind(), fenv, i1VecTy)
+      bitResult = createConstrainedFCmpCall(
+                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
+                      op.getKind(), fenv, i1VecTy, readFastMathFlags(op))
                       .getResult(0);
     } else {
-      bitResult = mlir::LLVM::FCmpOp::create(
+      auto fcmp = mlir::LLVM::FCmpOp::create(
           rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
           adaptor.getLhs(), adaptor.getRhs());
+      propagateFastMathFlags(op, fcmp);
+      bitResult = fcmp.getResult();
     }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;

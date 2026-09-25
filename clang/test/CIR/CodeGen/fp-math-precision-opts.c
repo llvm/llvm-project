@@ -57,10 +57,10 @@ float test_fast(float f) {
   // Should produce an intrinsic at -O1
   return __builtin_cosf(f);
   // ALL: test_fast
-  // CIR-ERRNO-O1: cir.cos
-  // CIR-NO-ERRNO-O1: cir.cos
-  // LLVM-ERRNO-O1: call float @llvm.cos.f32
-  // LLVM-NO-ERRNO-O1: call float @llvm.cos.f32
+  // CIR-ERRNO-O1: cir.cos {{.*}} {fastmath = #cir.fastmath<contract>}
+  // CIR-NO-ERRNO-O1: cir.cos {{.*}} {fastmath = #cir.fastmath<contract>}
+  // LLVM-ERRNO-O1: call contract float @llvm.cos.f32
+  // LLVM-NO-ERRNO-O1: call contract float @llvm.cos.f32
   // OGCG-ERRNO-O1: call {{.*}} float @llvm.cos.f32
   // OGCG-NO-ERRNO-O1: call {{.*}} float @llvm.cos.f32
 }

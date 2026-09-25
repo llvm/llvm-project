@@ -44,6 +44,16 @@ static bool functionMightHaveBypass(const Stmt *s) {
   return false;
 }
 
+static cir::FastMathFlags fastMathFlagsFromFPOptions(clang::FPOptions fpFeatures) {
+  // Other fast-math bits (nnan, ninf, reassoc, ...) are not modeled yet.
+  // `contract` is the bit `-ffp-contract=fast` needs so a later backend in
+  // Standard fusion mode can still form an FMA.
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (fpFeatures.allowFPContractAcrossStatement())
+    flags = flags | cir::FastMathFlags::contract;
+  return flags;
+}
+
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
@@ -51,6 +61,7 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   ehStack.setCGF(this);
   shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
+  builder.setFastMathFlags(fastMathFlagsFromFPOptions(curFPFeatures));
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -1436,6 +1447,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
 
   oldExcept = cgf.builder.getDefaultConstrainedExcept();
   oldRounding = cgf.builder.getDefaultConstrainedRounding();
+  oldFastMathFlags = cgf.builder.getFastMathFlags();
 
   if (oldFPFeatures == fpFeatures)
     return;
@@ -1449,8 +1461,10 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
 
   cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
   cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
+  cgf.builder.setFastMathFlags(fastMathFlagsFromFPOptions(fpFeatures));
+  restoredFastMathFlags = true;
 
-  // TODO(cir): override FP flags once FM configs are guarded.
+  // nnan/ninf/reassoc/arcp/afn are still missing. `contract` is applied above.
   assert(!cir::MissingFeatures::fastMathFlags());
 
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
@@ -1468,6 +1482,8 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.curFPFeatures = oldFPFeatures;
   cgf.builder.setDefaultConstrainedExcept(oldExcept);
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
+  if (restoredFastMathFlags)
+    cgf.builder.setFastMathFlags(oldFastMathFlags);
 }
 
 // TODO(cir): should be shared with LLVM codegen.

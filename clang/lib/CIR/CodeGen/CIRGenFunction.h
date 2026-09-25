@@ -337,6 +337,8 @@ public:
     clang::FPOptions oldFPFeatures;
     LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
+    cir::FastMathFlags oldFastMathFlags = cir::FastMathFlags::none;
+    bool restoredFastMathFlags = false;
   };
   clang::FPOptions curFPFeatures;
 

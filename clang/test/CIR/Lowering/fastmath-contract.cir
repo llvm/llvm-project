@@ -1,0 +1,47 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s -check-prefix=CIR
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target nvptx64-nvidia-cuda --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+!f32 = !cir.float
+
+module {
+  cir.func @contract(%a: !f32, %b: !f32, %c: !f32) -> !f32 {
+    %m = cir.fmul %a, %b : !f32 {fastmath = #cir.fastmath<contract>}
+    %n = cir.fneg %c : !f32 {fastmath = #cir.fastmath<contract>}
+    %s = cir.fadd %m, %n : !f32 {fastmath = #cir.fastmath<contract>}
+    cir.return %s : !f32
+  }
+
+  cir.func @plain(%a: !f32, %b: !f32, %c: !f32) -> !f32 {
+    %m = cir.fmul %a, %b : !f32
+    %s = cir.fadd %m, %c : !f32
+    cir.return %s : !f32
+  }
+}
+
+// CIR-LABEL: cir.func @contract
+// CIR: cir.fmul {{.*}} {fastmath = #cir.fastmath<contract>}
+// CIR: cir.fneg {{.*}} {fastmath = #cir.fastmath<contract>}
+// CIR: cir.fadd {{.*}} {fastmath = #cir.fastmath<contract>}
+// CIR-LABEL: cir.func @plain
+// CIR: cir.fmul {{.*}} : !cir.float
+// CIR-NOT: #cir.fastmath
+// CIR: cir.fadd {{.*}} : !cir.float
+
+// MLIR-LABEL: llvm.func @contract
+// MLIR: llvm.fmul {{.*}} {fastmathFlags = #llvm.fastmath<contract>}
+// MLIR: llvm.fneg {{.*}} {fastmathFlags = #llvm.fastmath<contract>}
+// MLIR: llvm.fadd {{.*}} {fastmathFlags = #llvm.fastmath<contract>}
+// MLIR-LABEL: llvm.func @plain
+// MLIR: llvm.fmul {{.*}} : f32
+// MLIR-NOT: fastmathFlags
+// MLIR: llvm.fadd {{.*}} : f32
+
+// LLVM-LABEL: @contract
+// LLVM: fmul contract float
+// LLVM: fneg contract float
+// LLVM: fadd contract float
+// LLVM-LABEL: @plain
+// LLVM: fmul float
+// LLVM-NOT: contract
+// LLVM: fadd float
