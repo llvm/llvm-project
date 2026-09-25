@@ -10755,6 +10755,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
   }
 
+  if (ST->getCPU() == "gfx1250" || ST->getCPU() == "gfx1251")
+    return diagnoseUnsupportedImage(
+        DAG, Op, OrigResultTypes, DL,
+        "requested image instruction is not supported on this GPU");
+
   unsigned CPol = Op.getConstantOperandVal(ArgOffset + Intr->CachePolicyIndex);
   // Keep GLC only when the atomic's result is actually used.
   if (BaseOpcode->Atomic && !BaseOpcode->NoReturn)

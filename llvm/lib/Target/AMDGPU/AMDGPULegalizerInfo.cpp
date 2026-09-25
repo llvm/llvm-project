@@ -7433,6 +7433,17 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     }
   }
 
+  if (ST.getCPU() == "gfx1250" || ST.getCPU() == "gfx1251") {
+    const Function &Fn = MF.getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "requested image instruction is not supported on this GPU",
+        MI.getDebugLoc()));
+    for (const MachineOperand &Def : MI.defs())
+      B.buildUndef(Def.getReg());
+    MI.eraseFromParent();
+    return true;
+  }
+
   Observer.changingInstr(MI);
   scope_exit ChangedInstr([&] { Observer.changedInstr(MI); });
 
