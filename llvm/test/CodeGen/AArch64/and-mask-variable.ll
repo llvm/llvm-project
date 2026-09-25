@@ -58,16 +58,14 @@ define i128 @mask_pair_128(i128 %x, i128 %y) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #64 // =0x40
 ; CHECK-GI-NEXT:    mov x9, #-1 // =0xffffffffffffffff
-; CHECK-GI-NEXT:    sub x10, x2, #64
-; CHECK-GI-NEXT:    sub x8, x8, x2
-; CHECK-GI-NEXT:    lsl x11, x9, x2
 ; CHECK-GI-NEXT:    cmp x2, #64
+; CHECK-GI-NEXT:    sub x8, x8, x2
+; CHECK-GI-NEXT:    lsl x10, x9, x2
 ; CHECK-GI-NEXT:    lsr x8, x9, x8
-; CHECK-GI-NEXT:    lsl x9, x9, x10
-; CHECK-GI-NEXT:    csel x10, x11, xzr, lo
-; CHECK-GI-NEXT:    orr x8, x8, x11
-; CHECK-GI-NEXT:    and x0, x10, x0
-; CHECK-GI-NEXT:    csel x8, x8, x9, lo
+; CHECK-GI-NEXT:    csel x9, x10, xzr, lo
+; CHECK-GI-NEXT:    orr x8, x8, x10
+; CHECK-GI-NEXT:    and x0, x9, x0
+; CHECK-GI-NEXT:    csel x8, x8, x10, lo
 ; CHECK-GI-NEXT:    cmp x2, #0
 ; CHECK-GI-NEXT:    csinv x8, x8, xzr, ne
 ; CHECK-GI-NEXT:    and x1, x8, x1
