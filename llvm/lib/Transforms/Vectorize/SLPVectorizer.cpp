@@ -849,8 +849,22 @@ public:
     auto [It, Inserted] =
         NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
     if (Inserted)
-      It->second = slpvectorizer::getNumberOfParts(*TTI, VecTy, ScalarTy,
-                                                   SLPReVec, Limit);
+      It->second = slpvectorizer::getNumberOfPartsOrRegs(
+          /*QueryNumParts=*/true, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
+    return It->second;
+  }
+
+  /// \returns the number of parts, the type \p VecTy is split at the codegen
+  /// phase. The type legalization queries are repeated for the very same types
+  /// during the analysis, so the results are cached for the function.
+  unsigned getRegUsageForType(
+      Type *VecTy, Type *ScalarTy,
+      unsigned Limit = std::numeric_limits<unsigned>::max()) const {
+    auto [It, Inserted] =
+        NumberOfRegsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
+    if (Inserted)
+      It->second = slpvectorizer::getNumberOfPartsOrRegs(
+          /*QueryNumParts=*/false, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
     return It->second;
   }
 
@@ -3786,6 +3800,10 @@ private:
   /// Cache of the number of parts for the types and the parts limit.
   mutable SmallDenseMap<std::tuple<Type *, Type *, unsigned>, unsigned>
       NumberOfPartsCache;
+
+  /// Cache of the number of regs for the types and the parts limit.
+  mutable SmallDenseMap<std::tuple<Type *, Type *, unsigned>, unsigned>
+      NumberOfRegsCache;
 
   /// Values already analyzed for minimal bitwidth and found to be
   /// non-profitable, mapped to the size of the tree used for the analysis.
@@ -32489,24 +32507,24 @@ public:
 
       unsigned ReduxWidth = NumReducedVals;
       auto GetVectorFactor = [&, &TTI = *TTI](unsigned ReduxWidth) {
-        unsigned NumParts, NumRegs;
+        unsigned NumRegs, NumAvailRegs;
         Type *ScalarTy = Candidates.front()->getType();
         ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy,
                                                         ReduxWidth, SLPReVec);
         VectorType *Tp = cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-        NumParts = V.getNumberOfParts(Tp, ScalarTy);
-        NumRegs =
+        NumRegs = V.getRegUsageForType(Tp, ScalarTy);
+        NumAvailRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
-        while (NumParts > NumRegs) {
+        while (NumRegs > NumAvailRegs) {
           assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
           ReduxWidth = bit_floor(ReduxWidth - 1);
           VectorType *Tp =
               cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-          NumParts = V.getNumberOfParts(Tp, ScalarTy);
-          NumRegs =
+          NumRegs = V.getRegUsageForType(Tp, ScalarTy);
+          NumAvailRegs =
               TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         }
-        if (NumParts > NumRegs / 2)
+        if (NumRegs > NumAvailRegs / 2)
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
