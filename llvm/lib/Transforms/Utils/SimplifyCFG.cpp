@@ -1181,13 +1181,14 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       continue;
 
     Instruction *NewBonusInst = BonusInst.clone();
+    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
 
     if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
       // Unless the instruction has the same !dbg location as the original
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
       // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc::getDropped());
+      NewBonusInst->dropLocation();
     } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
       mapAtomInstance(DL, VMap);
     }
@@ -1202,7 +1203,6 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     // location the call is moved to.
     NewBonusInst->dropUBImplyingAttrsAndMetadata();
 
-    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
     RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -4206,13 +4206,12 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
-  if (!ProfcheckDisableMetadataFixes)
-    if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
-      if (!MDWeights.empty()) {
-        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
-        setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
-                               /*IsExpected=*/false, /*ElideAllZero=*/true);
-      }
+  if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+    if (!MDWeights.empty()) {
+      assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+      setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
+                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4302,7 +4301,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
   const unsigned PredCount = Preds.size();
   // Speculated instructions will be inserted before the terminator of the
   // predecessor. Only handle the simple case of one predecessor.
-  const Instruction *CxtI =
+  const Instruction *CtxI =
       PredCount == 1 ? Preds[0]->getTerminator() : nullptr;
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
@@ -4315,7 +4314,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     if (isa<PseudoProbeInst>(I))
       continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I, CxtI, AC))
+    if (!isSafeToSpeculativelyExecute(&I, CtxI, AC))
       return false;
     SawVectorOp |= isVectorOp(I);
 
@@ -4558,8 +4557,7 @@ static bool mergeConditionalStoreToAddress(
   auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
-  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch) &&
-      !ProfcheckDisableMetadataFixes) {
+  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch)) {
     SmallVector<uint32_t, 2> PWeights, QWeights;
     extractBranchWeights(*PBranch, PWeights);
     extractBranchWeights(*QBranch, QWeights);
@@ -4945,16 +4943,15 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
                            /*ElideAllZero=*/true);
     // Cond may be a select instruction with the first operand set to "true", or
     // the second to "false" (see how createLogicalOp works for `and` and `or`)
-    if (!ProfcheckDisableMetadataFixes)
-      if (auto *SI = dyn_cast<SelectInst>(Cond)) {
-        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
-        // The select is predicated on PBICond
-        assert(SI->getCondition() == PBICond);
-        // The corresponding probabilities are what was referred to above as
-        // PredCommon and PredOther.
-        setFittedBranchWeights(*SI, {PredCommon, PredOther},
-                               /*IsExpected=*/false, /*ElideAllZero=*/true);
-      }
+    if (auto *SI = dyn_cast<SelectInst>(Cond)) {
+      assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+      // The select is predicated on PBICond
+      assert(SI->getCondition() == PBICond);
+      // The corresponding probabilities are what was referred to above as
+      // PredCommon and PredOther.
+      setFittedBranchWeights(*SI, {PredCommon, PredOther},
+                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    }
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -5103,6 +5100,10 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
   BasicBlock *OldDest = CaseC->getCaseSuccessor();
   BasicBlock *BB = SI->getParent();
 
+  // Switch on X first: removePredecessor() below may fold X away if it is a
+  // PHI in OldDest, and the RAUW must update the switch condition too.
+  SI->setCondition(X);
+
   if (OldDest != DestFork) {
     if (!IsDefault)
       OldDest->removePredecessor(BB);
@@ -5179,8 +5180,7 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
     }
   }
 
-  // X replaces the condition so compare/select are now dead.
-  SI->setCondition(X);
+  // The compare/select are now dead.
   RecursivelyDeleteTriviallyDeadInstructions(Select);
   return true;
 }
@@ -5251,8 +5251,7 @@ bool SimplifyCFGOpt::simplifyIndirectBrOnSelect(IndirectBrInst *IBI,
   // The select's profile becomes the profile of the conditional branch that
   // replaces the indirect branch.
   SmallVector<uint32_t> SelectBranchWeights(2);
-  if (!ProfcheckDisableMetadataFixes)
-    extractBranchWeights(*SI, SelectBranchWeights);
+  extractBranchWeights(*SI, SelectBranchWeights);
   // Perform the actual simplification.
   return simplifyTerminatorOnSelect(IBI, SI->getCondition(), TrueBB, FalseBB,
                                     SelectBranchWeights[0],
@@ -5506,8 +5505,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     return false;
 
   SmallVector<uint32_t> BranchWeights;
-  const bool HasProfile = !ProfcheckDisableMetadataFixes &&
-                          extractBranchWeights(*BI, BranchWeights);
+  const bool HasProfile = extractBranchWeights(*BI, BranchWeights);
 
   // Figure out which block is which destination.
   BasicBlock *DefaultBB = BI->getSuccessor(1);
@@ -6643,7 +6641,7 @@ static bool
 getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
                BasicBlock **CommonDest,
                SmallVectorImpl<std::pair<PHINode *, Constant *>> &Res,
-               const DataLayout &DL, const TargetTransformInfo &TTI) {
+               const DataLayout &DL) {
   // The block from which we enter the common destination.
   BasicBlock *Pred = SI->getParent();
 
@@ -6699,10 +6697,6 @@ getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
     if (!ConstVal)
       return false;
 
-    // Be conservative about which kinds of constants we support.
-    if (!validLookupTableConstant(ConstVal, TTI))
-      return false;
-
     Res.push_back(std::make_pair(&PHI, ConstVal));
   }
 
@@ -6734,7 +6728,6 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
                                   SwitchCaseResultVectorTy &UniqueResults,
                                   Constant *&DefaultResult,
                                   const DataLayout &DL,
-                                  const TargetTransformInfo &TTI,
                                   uintptr_t MaxUniqueResults) {
   for (const auto &I : SI->cases()) {
     ConstantInt *CaseVal = I.getCaseValue();
@@ -6742,7 +6735,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
     // Resulting value at phi nodes for this case value.
     SwitchCaseResultsTy Results;
     if (!getCaseResults(SI, CaseVal, I.getCaseSuccessor(), &CommonDest, Results,
-                        DL, TTI))
+                        DL))
       return false;
 
     // Only one value per case is permitted.
@@ -6770,7 +6763,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
   // Find the default result value.
   SmallVector<std::pair<PHINode *, Constant *>, 1> DefaultResults;
   getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest, DefaultResults,
-                 DL, TTI);
+                 DL);
   // If the default value is not found abort unless the default destination
   // is unreachable.
   DefaultResult =
@@ -6797,8 +6790,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
   //   default: return 4;          %3 = select i1 %2, i32 2, i32 %1
   // }
 
-  const bool HasBranchWeights =
-      !BranchWeights.empty() && !ProfcheckDisableMetadataFixes;
+  const bool HasBranchWeights = !BranchWeights.empty();
 
   if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
@@ -6978,8 +6970,7 @@ static void removeSwitchAfterSelectFold(SwitchInst *SI, PHINode *PHI,
 /// successor block with only two different constant values, try to replace the
 /// switch with a select. Returns true if the fold was made.
 static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
-                              DomTreeUpdater *DTU, const DataLayout &DL,
-                              const TargetTransformInfo &TTI) {
+                              DomTreeUpdater *DTU, const DataLayout &DL) {
   Value *const Cond = SI->getCondition();
   PHINode *PHI = nullptr;
   BasicBlock *CommonDest = nullptr;
@@ -6987,17 +6978,15 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   SwitchCaseResultVectorTy UniqueResults;
   // Collect all the cases that will deliver the same value from the switch.
   if (!initializeUniqueCases(SI, PHI, CommonDest, UniqueResults, DefaultResult,
-                             DL, TTI, /*MaxUniqueResults*/ 2))
+                             DL, /*MaxUniqueResults*/ 2))
     return false;
 
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
   SmallVector<uint32_t, 4> BranchWeights;
-  if (!ProfcheckDisableMetadataFixes) {
-    [[maybe_unused]] auto HasWeights =
-        extractBranchWeights(getBranchWeightMDNode(*SI), BranchWeights);
-    assert(!HasWeights == (BranchWeights.empty()));
-  }
+  [[maybe_unused]] auto HasWeights =
+      extractBranchWeights(getBranchWeightMDNode(*SI), BranchWeights);
+  assert(!HasWeights == (BranchWeights.empty()));
   assert(BranchWeights.empty() ||
          (BranchWeights.size() >=
           UniqueResults.size() + (DefaultResult != nullptr)));
@@ -7020,6 +7009,7 @@ public:
   /// Create a helper for optimizations to use as a switch replacement.
   /// Find a better representation for the content of Values,
   /// using DefaultValue to fill any holes in the table.
+  /// If no representation is possible, isValid() returns false.
   SwitchReplacement(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
@@ -7045,9 +7035,15 @@ public:
   /// Return true if the replacement is a bit map.
   bool isBitMap();
 
+  /// Return true if a suitable switch replacement was found.
+  bool isValid() const { return Kind != InvalidKind; }
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
+    // No suitable replacement was found.
+    InvalidKind,
+
     // For switches where each case contains the same value, we just have to
     // store that single value and return it for each lookup.
     SingleValueKind,
@@ -7165,8 +7161,7 @@ SwitchReplacement::SwitchReplacement(
       }
 
       if (!ConstVal) {
-        // This is an undef. We could deal with it, but undefs in lookup tables
-        // are very seldom. It's probably not worth the additional complexity.
+        // We only handle literal integers when checking for a linear mapping.
         LinearMappingPossible = false;
         break;
       }
@@ -7197,8 +7192,10 @@ SwitchReplacement::SwitchReplacement(
     }
   }
 
-  // If the type is integer and the table fits in a register, build a bitmap.
-  if (wouldFitInRegister(DL, TableSize, ValueType)) {
+  // If the values are integer constants and the table fits in a register,
+  // build a bitmap.
+  if (wouldFitInRegister(DL, TableSize, ValueType) &&
+      all_of(TableContents, IsaPred<ConstantInt, UndefValue>)) {
     IntegerType *IT = cast<IntegerType>(ValueType);
     APInt TableInt(TableSize * IT->getBitWidth(), 0);
     for (uint64_t I = TableSize; I > 0; --I) {
@@ -7212,6 +7209,13 @@ SwitchReplacement::SwitchReplacement(
     BitMap = ConstantInt::get(M.getContext(), TableInt);
     BitMapElementTy = IT;
     Kind = BitMapKind;
+    return;
+  }
+
+  // The remaining representation needs a global initializer.
+  if (!all_of(TableContents,
+              [&](Constant *C) { return validLookupTableConstant(C, TTI); })) {
+    Kind = InvalidKind;
     return;
   }
 
@@ -7241,6 +7245,8 @@ SwitchReplacement::SwitchReplacement(
 Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
                                         const DataLayout &DL, Function *Func) {
   switch (Kind) {
+  case InvalidKind:
+    llvm_unreachable("Cannot use an invalid switch replacement");
   case SingleValueKind:
     return SingleValue;
   case LinearMapKind: {
@@ -7606,7 +7612,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     using ResultsTy = SmallVector<std::pair<PHINode *, Constant *>, 4>;
     ResultsTy Results;
     if (!getCaseResults(SI, CaseVal, CI->getCaseSuccessor(), &CommonDest,
-                        Results, DL, TTI))
+                        Results, DL))
       return false;
 
     // Append the result and result types from this case to the list for each
@@ -7625,9 +7631,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   // If the table has holes, we need a constant result for the default case
   // or a bitmask that fits in a register.
   SmallVector<std::pair<PHINode *, Constant *>, 4> DefaultResultsList;
-  bool HasDefaultResults =
-      getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest,
-                     DefaultResultsList, DL, TTI);
+  bool HasDefaultResults = getCaseResults(SI, nullptr, SI->getDefaultDest(),
+                                          &CommonDest, DefaultResultsList, DL);
   for (const auto &I : DefaultResultsList) {
     PHINode *PHI = I.first;
     Constant *Result = I.second;
@@ -7721,6 +7726,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     StringRef FuncName = Fn->getName();
     SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
                                   ResultList, DefaultVal, DL, TTI, FuncName);
+    if (!Replacement.isValid())
+      return false;
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 
@@ -7874,8 +7881,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
 
   SmallVector<uint32_t> BranchWeights;
-  const bool HasBranchWeights = CondBranch && !ProfcheckDisableMetadataFixes &&
-                                extractBranchWeights(*SI, BranchWeights);
+  const bool HasBranchWeights =
+      CondBranch && extractBranchWeights(*SI, BranchWeights);
   uint64_t ToLookupWeight = 0;
   uint64_t ToDefaultWeight = 0;
 
@@ -8078,10 +8085,10 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
   // in the default block, we can make some nice simplifications to the
   // switch.
   BasicBlock *Default = SI->getDefaultDest();
-  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  const Instruction *CtxI = &*Default->getFirstNonPHIIt();
   const KnownBits Known = computeKnownBits(
       SI->getCondition(),
-      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CtxI).allowEphemerals(true));
   if (!Known.isConstant())
     return false;
 
@@ -8175,8 +8182,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
     SmallVector<uint32_t> Weights;
-    auto HasWeights =
-        !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
+    auto HasWeights = extractBranchWeights(*SI, Weights);
     auto *BI = CondBrInst::Create(IsPow2, SplitBB, DefaultCaseBB, It);
     if (HasWeights && any_of(Weights, not_equal_to(0))) {
       // IsPow2 covers a subset of the cases in which we'd go to the default
@@ -8617,7 +8623,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifySwitchOfCmpIntrinsic(SI, Builder, DTU))
     return requestResimplify();
 
-  if (trySwitchToSelect(SI, Builder, DTU, DL, TTI))
+  if (trySwitchToSelect(SI, Builder, DTU, DL))
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
@@ -8659,8 +8665,7 @@ bool SimplifyCFGOpt::simplifyIndirectBr(IndirectBrInst *IBI) {
   BasicBlock *BB = IBI->getParent();
   bool Changed = false;
   SmallVector<uint32_t> BranchWeights;
-  const bool HasBranchWeights = !ProfcheckDisableMetadataFixes &&
-                                extractBranchWeights(*IBI, BranchWeights);
+  const bool HasBranchWeights = extractBranchWeights(*IBI, BranchWeights);
 
   DenseMap<const BasicBlock *, uint64_t> TargetWeight;
   if (HasBranchWeights)

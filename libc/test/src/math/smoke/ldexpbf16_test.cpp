@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/ldexpbf16.h"
 
-LIST_LDEXP_TESTS(bfloat16, LIBC_NAMESPACE::ldexpbf16);
+LIST_LDEXP_TESTS(Ldexpbf16, bfloat16, LIBC_NAMESPACE::ldexpbf16);

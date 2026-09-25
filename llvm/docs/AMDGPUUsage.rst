@@ -956,8 +956,7 @@ Module Flags
 ------------
 
 AMDGPU-specific behaviour can be controlled via LLVM module flags (see
-`Module Flags Metadata
-<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+:ref:`Module Flags Metadata <module-flags-metadata>` in the language
 reference). These flags are set by frontends and are
 consumed by the AMDGPU backend during code generation.
 
@@ -1145,7 +1144,7 @@ supported for the ``amdgcn`` target.
      *reserved for future use*             10
      *reserved for future use*             11
      *reserved for downstream use (LLPC)*  12
-     *reserved for future use*             13
+     VGPR                                  13              N/A         VGPR             32      0xFFFFFFFF
      *reserved for future use*             14
      Barrier                               15              N/A         N/A              32      0
      *reserved for future use*             16
@@ -1363,6 +1362,23 @@ supported for the ``amdgcn`` target.
   constrains the stride of the pointer. That is, if you do an ``align 4`` load from
   a buffer strided pointer, this means that the base pointer is ``align(4)``, that
   the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
+
+**VGPR**
+  The VGPR address space presents a memory view of the wave's vector registers.
+  The 32-bit address is a byte address into the thread's view of vector
+  registers. For example, loading 4 bytes from address ``12`` reads the contents
+  of ``v3``. Storing 8 bytes to address ``32`` overwrites the contents of
+  ``v[8:9]``.
+
+  Use of this address space by frontends is strongly discouraged. It has unusual
+  and subtle lifetime rules due to the potential for interaction with normal
+  register allocation. It exists primarily for internal purposes of the backend,
+  such as promoting ``alloca`` instructions from the private address space into
+  VGPRs.
+
+  In particular, memory in this address space that was allocated by an
+  ``alloca`` is not visible while in a called function. Attempting to dereference
+  a pointer to such memory in a called function is undefined behavior.
 
 **Barrier**
   This address space represents barrier IDs (introduced in GFX12) as addresses.
@@ -2519,24 +2535,27 @@ cases. This will typically be used in conjunction with
 
 .. _amdgpu_no_remote_memory_access:
 
-'``amdgpu.ignore.denormal.mode``' Metadata
+'``atomic.ignore.denormal.mode``' Metadata
 ------------------------------------------
 
-For use with :ref:`atomicrmw <i_atomicrmw>` floating-point
-operations. Indicates the handling of denormal inputs and results is
-insignificant and may be inconsistent with the expected floating-point
-mode. This is necessary to emit a native atomic instruction on some
-targets for some address spaces where float denormals are
-unconditionally flushed. This is typically used in conjunction with
+This is generic IR metadata for floating-point :ref:`atomicrmw
+<i_atomicrmw>` operations; see `'atomic.ignore.denormal.mode' Metadata
+<https://llvm.org/docs/LangRef.html#atomic-ignore-denormal-mode-metadata>`_
+in the language reference for its definition. It is required to emit a
+native atomic instruction for AMDGPU global memory, which
+unconditionally flushes float denormals.
+
+On AMDGPU this is typically used in conjunction with
 :ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`
 and
-:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`
+:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`.
 
+This metadata was previously named ``amdgpu.ignore.denormal.mode``.
 
 .. code-block:: llvm
 
-  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
-  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
 
   !0 = !{}
 
@@ -2738,6 +2757,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-unroll-threshold"                        Set base cost threshold preference for loop unrolling within this function,
                                                       default is 300. Actual threshold may be varied by per-loop metadata or
                                                       reduced by heuristics.
+
+     "amdgpu-partial-unroll-threshold"                Set base cost threshold preference for partial and runtime loop unrolling
+                                                      within this function, default is 150. This is independent of
+                                                      ``amdgpu-unroll-threshold``, which controls the threshold used for full
+                                                      unrolling.
 
      "amdgpu-max-num-workgroups"="x,y,z"              Specify the maximum number of work groups for the kernel dispatch in the
                                                       X, Y, and Z dimensions. Each number must be >= 1. Generated by the

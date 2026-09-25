@@ -448,9 +448,7 @@ def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
                                        FeatureStdExtZicfilp,
                                        FeatureStdExtZvdot4a8i,
                                        FeatureStdExtZvfbfa],
-                                       SiFiveIntelligenceTuneFeatures> {
-  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
-}
+                                       SiFiveIntelligenceTuneFeatures>;
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
@@ -763,45 +761,6 @@ def TENSTORRENT_ASCALON_X : RISCVProcessorModel<"tt-ascalon-x",
                                                  TuneOptimizedNF8SegmentLoadStore,
                                                  TuneOptimizedZeroStrideLoad,
                                                  TunePostRAScheduler]>;
-
-def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
-                                            NoSchedModel,
-                                            [Feature64Bit,
-                                             FeatureStdExtI,
-                                             FeatureStdExtZifencei,
-                                             FeatureStdExtZicsr,
-                                             FeatureStdExtZicntr,
-                                             FeatureStdExtZihpm,
-                                             FeatureStdExtZihintpause,
-                                             FeatureStdExtM,
-                                             FeatureStdExtA,
-                                             FeatureStdExtF,
-                                             FeatureStdExtD,
-                                             FeatureStdExtC,
-                                             FeatureStdExtZba,
-                                             FeatureStdExtZbb,
-                                             FeatureStdExtZbc,
-                                             FeatureStdExtZbs,
-                                             FeatureStdExtZicbom,
-                                             FeatureStdExtZicbop,
-                                             FeatureStdExtZicboz,
-                                             FeatureVendorXVentanaCondOps],
-                                             [TuneVentanaVeyron,
-                                              TuneDisableMISchedLoadClustering,
-                                              TuneDisablePostMISchedLoadClustering,
-                                              TuneDisablePostMISchedStoreClustering,
-                                              TuneLUIADDIFusion,
-                                              TuneAUIPCADDIFusion,
-                                              TuneZExtHFusion,
-                                              TuneZExtWFusion,
-                                              TuneShiftedZExtWFusion,
-                                              TuneADDLoadFusion,
-                                              TuneAUIPCLoadFusion,
-                                              TuneLUILoadFusion]> {
-  let MVendorID = 0x61f;
-  let MArchID = 0x8000000000010000;
-  let MImpID = 0x111;
-}
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
@@ -1147,4 +1106,35 @@ def XUANTIE_C920V2 : RISCVProcessorModel<"xt-c920v2",
                                             FeatureUnalignedScalarMem]),
                                          [TuneVXRMPipelineFlush,
                                           TunePostRAScheduler]>;
+
+def GAISLER_GR765 : RISCVProcessorModel<"gaisler-gr765",
+                                        NoSchedModel,
+                                        [Feature64Bit,
+                                         FeatureStdExtI,
+                                         FeatureStdExtZifencei,
+                                         FeatureStdExtZicsr,
+                                         FeatureStdExtZicntr,
+                                         FeatureStdExtZihpm,
+                                         FeatureStdExtM,
+                                         FeatureStdExtA,
+                                         FeatureStdExtF,
+                                         FeatureStdExtD,
+                                         FeatureStdExtC,
+                                         FeatureStdExtB,
+                                         FeatureStdExtZbc,
+                                         FeatureStdExtZcb,
+                                         FeatureStdExtZcmop,
+                                         FeatureStdExtZfa,
+                                         FeatureStdExtZfbfmin,
+                                         FeatureStdExtZfh,
+                                         FeatureStdExtZfhmin,
+                                         FeatureStdExtZic64b,
+                                         FeatureStdExtZicbom,
+                                         FeatureStdExtZicfiss,
+                                         FeatureStdExtZicond,
+                                         FeatureStdExtZimop,
+                                         FeatureStdExtZkn,
+                                         FeatureStdExtZkt],
+                                        [TunePostRAScheduler]>;
+
 // clang-format on

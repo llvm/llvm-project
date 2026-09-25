@@ -726,7 +726,7 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
 Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
                                             Value *LHS1, CmpPredicate PredR,
                                             Value *RHS0, Value *RHS1,
-                                            Instruction *CxtI, bool Inverted) {
+                                            Instruction *CtxI, bool Inverted) {
   // Check the lower range comparison, e.g. x >= 0
   // InstCombine already ensured that if there is a constant it's on the RHS.
   ConstantInt *RangeStart = dyn_cast<ConstantInt>(LHS1);
@@ -772,7 +772,7 @@ Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
   }
 
   // This simplification is only valid if the upper range is not negative.
-  KnownBits Known = computeKnownBits(RangeEnd, CxtI);
+  KnownBits Known = computeKnownBits(RangeEnd, CtxI);
   if (!Known.isNonNegative())
     return nullptr;
 
@@ -856,9 +856,9 @@ static Value *foldAndOrOfICmpsWithPow2AndWithZero(
 static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
                                         Value *LHS1, CmpPredicate PredR,
                                         Value *RHS0, Value *RHS1,
-                                        Instruction &CxtI,
+                                        Instruction &CtxI,
                                         InstCombiner::BuilderTy &Builder) {
-  assert(CxtI.getOpcode() == Instruction::And);
+  assert(CtxI.getOpcode() == Instruction::And);
 
   // Match  icmp ult (add %arg, C01), C1   (C1 == C01 << 1; powers of two)
   auto tryToMatchSignedTruncationCheck = [](CmpPredicate Pred, Value *LHS,
@@ -943,7 +943,7 @@ static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
 
   // %r = icmp ult %X, SignBit
   return Builder.CreateICmpULT(X, ConstantInt::get(X->getType(), HighestBit),
-                               CxtI.getName() + ".simplified");
+                               CtxI.getName() + ".simplified");
 }
 
 /// Fold (icmp eq ctpop(X) 1) | (icmp eq X 0) into (icmp ult ctpop(X) 2) and
@@ -1326,8 +1326,7 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
     SubstituteCmp = Builder.CreateICmp(PredR, Y, LHS1);
   }
   if (IsLogical) {
-    Instruction *MDFrom =
-        ProfcheckDisableMetadataFixes && isa<SelectInst>(I) ? nullptr : &I;
+    Instruction *MDFrom = isa<SelectInst>(I) ? &I : nullptr;
     return IsAnd ? Builder.CreateLogicalAnd(LHS, SubstituteCmp, "", MDFrom)
                  : Builder.CreateLogicalOr(LHS, SubstituteCmp, "", MDFrom);
   }
@@ -2458,8 +2457,7 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   else if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
     Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
                           : Builder.CreateBinOp(Opcode, X, Res);
-  if (SelectInst *SI = dyn_cast_or_null<SelectInst>(Folded);
-      SI != nullptr && !ProfcheckDisableMetadataFixes)
+  if (SelectInst *SI = dyn_cast_or_null<SelectInst>(Folded); SI != nullptr)
     // If the bop I was originally a lop, we could recover branch weight
     // information using that lop's weights. However, InstCombine usually
     // replaces the lop with a bop by the time we get here, deleting the branch
@@ -3449,8 +3447,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
                                           bool IsLogical) {
   CmpPredicate PredL, PredR;
   Value *LHS0, *LHS1, *RHS0, *RHS1;
-  if (!match(LHS, m_ICmp(PredL, m_Value(LHS0), m_Value(LHS1))) ||
-      !match(RHS, m_ICmp(PredR, m_Value(RHS0), m_Value(RHS1))))
+  if (!match(LHS, m_ICmpLike(PredL, m_Value(LHS0), m_Value(LHS1))) ||
+      !match(RHS, m_ICmpLike(PredR, m_Value(RHS0), m_Value(RHS1))))
     return nullptr;
 
   bool LHSOneUse = LHS->hasOneUse();
@@ -3494,17 +3492,20 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     return V;
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
-  if (Value *V = foldAndOrOfICmpsWithConstEq(
-          PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
-          /*IsLogical=*/false, Builder, Q, I)) {
-    // If RHS is still used, we should drop samesign flag.
-    if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
-      auto *CmpR = cast<ICmpInst>(RHS);
-      CmpR->setSameSign(false);
-      addToWorklist(CmpR);
+  // Can not handle RHS = trunc nuw as it is not same as icmp ne 0 for all
+  // values
+  if (isa<ICmpInst>(RHS))
+    if (Value *V = foldAndOrOfICmpsWithConstEq(
+            PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
+            /*IsLogical=*/false, Builder, Q, I)) {
+      // If RHS is still used, we should drop samesign flag.
+      if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
+        auto *CmpR = cast<ICmpInst>(RHS);
+        CmpR->setSameSign(false);
+        addToWorklist(CmpR);
+      }
+      return V;
     }
-    return V;
-  }
 
   if (Value *V = foldIsPowerOf2OrZero(PredL, LHS0, LHS1, PredR, RHS0, RHS1,
                                       IsAnd, Builder, *this))
@@ -4374,6 +4375,29 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           return BinaryOperator::CreateAnd(Or, C01);
         }
       }
+
+      // ((trunc (lshr X, S)) & C0) | ((lshr (trunc X), S) & C1)
+      // --> ((trunc (lshr X, S)) & (C0 | C1)) (and similar cases)
+      // A = trunc (lshr X, S) B = lshr (trunc X), S
+      const APInt *ShiftAmt;
+      if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->ult(A->getType()->getScalarSizeInBits()) &&
+          C1->isIntN(A->getType()->getScalarSizeInBits() -
+                     ShiftAmt->getZExtValue())) {
+        return BinaryOperator::CreateAnd(
+            A, ConstantInt::get(I.getType(), *C0 | *C1));
+      }
+      // A = lshr (trunc X), S
+      // B = trunc (lshr X, S)
+      if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->ult(A->getType()->getScalarSizeInBits()) &&
+          C0->isIntN(A->getType()->getScalarSizeInBits() -
+                     ShiftAmt->getZExtValue())) {
+        return BinaryOperator::CreateAnd(
+            B, ConstantInt::get(I.getType(), *C0 | *C1));
+      }
     }
 
     // Don't try to form a select if it's unlikely that we'll get rid of at
@@ -5151,8 +5175,7 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
   } else {
     NewLogicOp =
-        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
-                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not", &I);
     if (SelectInst *SI = dyn_cast<SelectInst>(NewLogicOp))
       SI->swapProfMetadata();
   }
@@ -5233,9 +5256,8 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
   if (match(NotOp, m_OneUse(m_LogicalAnd(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-    SelectInst *SI = SelectInst::Create(
-        X, ConstantInt::getTrue(Ty), NotY, "", nullptr,
-        ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(NotOp));
+    SelectInst *SI = SelectInst::Create(X, ConstantInt::getTrue(Ty), NotY, "",
+                                        nullptr, cast<Instruction>(NotOp));
     SI->swapProfMetadata();
     return SI;
   }
@@ -5248,9 +5270,8 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
   if (match(NotOp, m_OneUse(m_LogicalOr(m_Not(m_Value(X)), m_Value(Y))))) {
     Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-    SelectInst *SI = SelectInst::Create(
-        X, NotY, ConstantInt::getFalse(Ty), "", nullptr,
-        ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(NotOp));
+    SelectInst *SI = SelectInst::Create(X, NotY, ConstantInt::getFalse(Ty), "",
+                                        nullptr, cast<Instruction>(NotOp));
     SI->swapProfMetadata();
     return SI;
   }
@@ -5732,7 +5753,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       if (NeedFreeze)
         A = Builder.CreateFreeze(A);
       Value *NotB = Builder.CreateNot(B);
-      return MDFrom == nullptr || ProfcheckDisableMetadataFixes
+      return MDFrom == nullptr
                  ? createSelectInstWithUnknownProfile(A, NotB, C)
                  : SelectInst::Create(A, NotB, C, "", nullptr, MDFrom);
     }

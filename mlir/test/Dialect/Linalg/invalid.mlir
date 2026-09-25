@@ -2423,16 +2423,6 @@ func.func @pooling_nwc_min_unsigned_i1(
 // correctly.
 //===----------------------------------------------------------------------===//
 
-module {
-  func.func @add_invalid_mixed_types(%in_f32: memref<3xf32>, %in_i32 : memref< 3xi32>, %out_f32: memref<3xf32>, %arg3: memref<3xf32>) {
-    // expected-error @below {{Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'f32' and 'i32'}}
-    linalg.add ins(%in_f32, %in_i32 : memref<3xf32>, memref< 3xi32>) outs(%out_f32 : memref<3xf32>)
-    return
-  }
-}
-
-// -----
-
 func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   -> (tensor<?xf16>, vector<4xf16>)
 {

@@ -18,9 +18,34 @@
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
-#define ORC_RT_SPS_WRAPPER(Name, SPSSig, Handle)                               \
-  static void Name(orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes, \
-                   orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {     \
+// The signature shared by ORC_RT_SPS_WRAPPER_DECL and _IMPL. Writing it once
+// keeps the declaration and definition from drifting apart.
+#define ORC_RT_SPS_WRAPPER_SIG(Name)                                           \
+  void Name(orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,        \
+            orc_rt_WrapperFunctionReturn Return, uint64_t CallId)
+
+/// Declare an SPS wrapper function. The name has C linkage, so it is the same
+/// function regardless of which namespace the declaration appears in.
+#define ORC_RT_SPS_WRAPPER_DECL(Name)                                          \
+  extern "C" ORC_RT_C_EXPORT ORC_RT_SPS_WRAPPER_SIG(Name);
+
+/// Define an SPS wrapper function with the given Name that uses SPS to
+/// deserialize its arguments, dispatches to Handle, and serializes the result
+/// that Handle passes to its Return continuation.
+///
+/// SPSSig is the SPS function signature to serialize against:
+///
+///     void call_main(move_only_function<void(int64_t)> Return, MainFn Main,
+///                    std::vector<std::string> Args);
+///     ORC_RT_SPS_WRAPPER_IMPL(
+///         orc_rt_ci_sps_call_main,
+///         int64_t(SPSExecutorAddr, SPSSequence<SPSString>),
+///         call_main)
+///
+/// Also emits the declaration, so the definition is checked against it.
+#define ORC_RT_SPS_WRAPPER_IMPL(Name, SPSSig, Handle)                          \
+  ORC_RT_SPS_WRAPPER_DECL(Name)                                                \
+  extern "C" ORC_RT_SPS_WRAPPER_SIG(Name) {                                    \
     orc_rt::SPSWrapperFunction<SPSSig>::handle(S, ArgBytes, Return, CallId,    \
                                                Handle);                        \
   }

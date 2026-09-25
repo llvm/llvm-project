@@ -79,9 +79,9 @@ protected:
     A6 = findInstructionByNameOrNull(F, "A6");
     A7 = findInstructionByNameOrNull(F, "A7");
 
-    CxtI = findInstructionByNameOrNull(F, "CxtI");
-    CxtI2 = findInstructionByNameOrNull(F, "CxtI2");
-    CxtI3 = findInstructionByNameOrNull(F, "CxtI3");
+    CtxI = findInstructionByNameOrNull(F, "CtxI");
+    CtxI2 = findInstructionByNameOrNull(F, "CtxI2");
+    CtxI3 = findInstructionByNameOrNull(F, "CtxI3");
   }
 
   LLVMContext Context;
@@ -93,7 +93,7 @@ protected:
               *A6 = nullptr, *A7 = nullptr;
 
   // Context instructions (optional)
-  Instruction *CxtI = nullptr, *CxtI2 = nullptr, *CxtI3 = nullptr;
+  Instruction *CtxI = nullptr, *CtxI2 = nullptr, *CtxI3 = nullptr;
 };
 
 class MatchSelectPatternTest : public ValueTrackingTest {
@@ -126,7 +126,7 @@ protected:
       TestVal = A;
 
     KnownFPClass Known = computeKnownFPClass(TestVal, M->getDataLayout());
-    EXPECT_EQ(KnownTrue, Known.KnownFPClasses);
+    EXPECT_EQ(KnownTrue, Known.getKnownFPClasses());
     EXPECT_EQ(SignBitKnown, Known.getSignBit());
   }
 };
@@ -1253,24 +1253,24 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
                 "define void @test() {\n"
                 "  %A = call i32 @f_i32()\n"
                 "  %cond = call i1 @f_i1()\n"
-                "  %CxtI = add i32 0, 0\n"
+                "  %CtxI = add i32 0, 0\n"
                 "  br i1 %cond, label %BB1, label %EXIT\n"
                 "BB1:\n"
-                "  %CxtI2 = add i32 0, 0\n"
+                "  %CtxI2 = add i32 0, 0\n"
                 "  %cond2 = call i1 @f_i1()\n"
                 "  call void @llvm.assume(i1 true) [ \"noundef\"(i32 %A) ]\n"
                 "  br i1 %cond2, label %BB2, label %EXIT\n"
                 "BB2:\n"
-                "  %CxtI3 = add i32 0, 0\n"
+                "  %CtxI3 = add i32 0, 0\n"
                 "  ret void\n"
                 "EXIT:\n"
                 "  ret void\n"
                 "}");
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
-  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI, &DT));
-  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI2, &DT));
-  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI3, &DT));
+  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI, &DT));
+  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI2, &DT));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI3, &DT));
 }
 
 TEST_F(ValueTrackingTest, canCreatePoisonOrUndef) {
@@ -1413,15 +1413,15 @@ TEST_F(ValueTrackingTest, computePtrAlignment) {
                 "define void @test() {\n"
                 "  %A = call ptr @f_i8p()\n"
                 "  %cond = call i1 @f_i1()\n"
-                "  %CxtI = add i32 0, 0\n"
+                "  %CtxI = add i32 0, 0\n"
                 "  br i1 %cond, label %BB1, label %EXIT\n"
                 "BB1:\n"
-                "  %CxtI2 = add i32 0, 0\n"
+                "  %CtxI2 = add i32 0, 0\n"
                 "  %cond2 = call i1 @f_i1()\n"
                 "  call void @llvm.assume(i1 true) [ \"align\"(ptr %A, i64 16) ]\n"
                 "  br i1 %cond2, label %BB2, label %EXIT\n"
                 "BB2:\n"
-                "  %CxtI3 = add i32 0, 0\n"
+                "  %CtxI3 = add i32 0, 0\n"
                 "  ret void\n"
                 "EXIT:\n"
                 "  ret void\n"
@@ -1429,9 +1429,9 @@ TEST_F(ValueTrackingTest, computePtrAlignment) {
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
-  EXPECT_EQ(getKnownAlignment(A, DL, CxtI, &AC, &DT), Align(1));
-  EXPECT_EQ(getKnownAlignment(A, DL, CxtI2, &AC, &DT), Align(1));
-  EXPECT_EQ(getKnownAlignment(A, DL, CxtI3, &AC, &DT), Align(16));
+  EXPECT_EQ(getKnownAlignment(A, DL, CtxI, &AC, &DT), Align(1));
+  EXPECT_EQ(getKnownAlignment(A, DL, CtxI2, &AC, &DT), Align(1));
+  EXPECT_EQ(getKnownAlignment(A, DL, CtxI3, &AC, &DT), Align(16));
 }
 
 TEST_F(ValueTrackingTest, MatchBinaryIntrinsicRecurrenceUMax) {
@@ -1756,6 +1756,18 @@ TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
   expectKnownFPClass(fcPosZero | fcPosNormal | fcNan, false);
 }
 
+TEST_F(ComputeKnownFPClassTest, LogDeduceSubnormalOrNegativeZero) {
+  parseAssembly("declare float @llvm.log.f32(float)\n"
+                "define float @test(float %x) {\n"
+                "  %A = call float @llvm.log.f32(float %x)\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass Known =
+      computeKnownFPClass(A, M->getDataLayout(), fcNegZero | fcSubnormal);
+  EXPECT_EQ(~(fcNegZero | fcSubnormal), Known.getKnownFPClasses());
+}
+
 TEST_F(ComputeKnownFPClassTest, UIToFP) {
   parseAssembly(
       "define float @test(i32 %arg0, i16 %arg1) {\n"
@@ -1794,7 +1806,7 @@ TEST_F(ComputeKnownFPClassTest, FAdd) {
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(~fcSNan, std::nullopt, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FSub) {
@@ -1811,7 +1823,7 @@ TEST_F(ComputeKnownFPClassTest, FSub) {
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(~fcSNan, std::nullopt, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FMul) {
@@ -1825,8 +1837,8 @@ TEST_F(ComputeKnownFPClassTest, FMul) {
       "  ret float %A\n"
       "}\n");
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcSNan, std::nullopt, A2);
+  expectKnownFPClass(~fcSNan, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
   expectKnownFPClass(fcPositive, false, A5);
 }
@@ -1845,11 +1857,11 @@ TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
       "}\n");
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
   expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcSNan, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A6);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+  expectKnownFPClass(~fcSNan, std::nullopt, A6);
+  expectKnownFPClass(~fcSNan, std::nullopt, A7);
 }
 
 TEST_F(ComputeKnownFPClassTest, MinimumNumSignBit) {
@@ -1917,7 +1929,8 @@ TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {
                 "}\n");
 
   KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcNegative);
-  EXPECT_EQ(~(fcNegNormal | fcNegSubnormal | fcNegZero), Known.KnownFPClasses);
+  EXPECT_EQ(~(fcNegNormal | fcNegSubnormal | fcNegZero),
+            Known.getKnownFPClasses());
 }
 
 TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
@@ -2008,7 +2021,7 @@ TEST_F(ComputeKnownFPClassTest, Atan2DemandXSign) {
   // requires us to pass more than just InterestedClasses, which is the purpose
   // of this test.
   KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcPosZero);
-  EXPECT_EQ(fcNan | fcNormal, Known.KnownFPClasses);
+  EXPECT_EQ(fcNan | fcNormal, Known.getKnownFPClasses());
 }
 
 TEST_F(ComputeKnownFPClassTest, Phi) {
@@ -2354,13 +2367,13 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfo =
         computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, nullptr, nullptr,
                             nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(SqrtMask, UseInstrInfo.KnownFPClasses);
+    EXPECT_EQ(SqrtMask, UseInstrInfo.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfo.getSignBit());
 
     KnownFPClass NoUseInstrInfo =
         computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, nullptr, nullptr,
                             nullptr, nullptr, /*UseInstrInfo=*/false);
-    EXPECT_EQ(SqrtMask, NoUseInstrInfo.KnownFPClasses);
+    EXPECT_EQ(SqrtMask, NoUseInstrInfo.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, NoUseInstrInfo.getSignBit());
   }
 
@@ -2368,13 +2381,13 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNSZ =
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.KnownFPClasses);
+    EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZ =
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
-    EXPECT_EQ(SqrtMask, NoUseInstrInfoNSZ.KnownFPClasses);
+    EXPECT_EQ(SqrtMask, NoUseInstrInfoNSZ.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.getSignBit());
   }
 
@@ -2383,14 +2396,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
-              UseInstrInfoNoNan.KnownFPClasses);
+              UseInstrInfoNoNan.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.getSignBit());
 
     KnownFPClass NoUseInstrInfoNoNan =
         computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(fcPosNormal | fcPosInf | fcZero | fcQNan,
-              NoUseInstrInfoNoNan.KnownFPClasses);
+              NoUseInstrInfoNoNan.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.getSignBit());
   }
 
@@ -2399,14 +2412,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcPosZero | fcQNan,
-              UseInstrInfoNSZNoNan.KnownFPClasses);
+              UseInstrInfoNSZNoNan.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
-              NoUseInstrInfoNSZNoNan.KnownFPClasses);
+              NoUseInstrInfoNSZNoNan.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.getSignBit());
   }
 }
@@ -2425,7 +2438,7 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     KnownFPClass ConstAggZero = computeKnownFPClass(
         ConstantAggregateZero::get(V4F32), M->getDataLayout(), fcAllFlags);
 
-    EXPECT_EQ(fcPosZero, ConstAggZero.KnownFPClasses);
+    EXPECT_EQ(fcPosZero, ConstAggZero.getKnownFPClasses());
     ASSERT_TRUE(ConstAggZero.getSignBit());
     EXPECT_FALSE(*ConstAggZero.getSignBit());
   }
@@ -2433,14 +2446,14 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
   {
     KnownFPClass Undef = computeKnownFPClass(UndefValue::get(F32),
                                              M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcAllFlags, Undef.KnownFPClasses);
+    EXPECT_EQ(fcAllFlags, Undef.getKnownFPClasses());
     EXPECT_FALSE(Undef.getSignBit());
   }
 
   {
     KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(F32),
                                               M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcNone, Poison.KnownFPClasses);
+    EXPECT_EQ(fcNone, Poison.getKnownFPClasses());
     ASSERT_TRUE(Poison.getSignBit());
     EXPECT_FALSE(*Poison.getSignBit());
   }
@@ -2453,7 +2466,7 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     KnownFPClass PartiallyPoison =
         computeKnownFPClass(ConstantVector::get({ZeroF32, PoisonF32}),
                             M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcPosZero, PartiallyPoison.KnownFPClasses);
+    EXPECT_EQ(fcPosZero, PartiallyPoison.getKnownFPClasses());
     ASSERT_TRUE(PartiallyPoison.getSignBit());
     EXPECT_FALSE(*PartiallyPoison.getSignBit());
   }
@@ -2466,7 +2479,7 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     KnownFPClass PartiallyPoison =
         computeKnownFPClass(ConstantVector::get({NegZeroF32, PoisonF32}),
                             M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.getKnownFPClasses());
     ASSERT_TRUE(PartiallyPoison.getSignBit());
     EXPECT_TRUE(*PartiallyPoison.getSignBit());
   }
@@ -2479,7 +2492,7 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     KnownFPClass PartiallyPoison =
         computeKnownFPClass(ConstantVector::get({PoisonF32, NegZeroF32}),
                             M->getDataLayout(), fcAllFlags);
-    EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
+    EXPECT_EQ(fcNegZero, PartiallyPoison.getKnownFPClasses());
     EXPECT_TRUE(PartiallyPoison.getSignBit());
   }
 }
@@ -2531,13 +2544,13 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
       br i1 %cmp1, label %exit, label %loop
     exit:
       %A = or i8 %p, %r
-      %CxtI = icmp eq i8 %A, 0
-      ret i1 %CxtI
+      %CtxI = icmp eq i8 %A, 0
+      ret i1 %CtxI
     }
   )");
   const DataLayout &DL = M->getDataLayout();
   AssumptionCache AC(*F);
-  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
+  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(DL, /*DT=*/nullptr, &AC, CtxI)));
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
@@ -2550,10 +2563,10 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
       %cond = and i1 %c1, %c
       br i1 %cond, label %T, label %Q
     T:
-      %CxtI = add i32 0, 0
+      %CtxI = add i32 0, 0
       ret void
     Q:
-      %CxtI2 = add i32 0, 0
+      %CtxI2 = add i32 0, 0
       ret void
     }
   )");
@@ -2561,8 +2574,8 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
   const SimplifyQuery SQ(DL, &DT, &AC);
-  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
-  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CtxI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CtxI2)), false);
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
@@ -2575,10 +2588,10 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
       %cond = select i1 %c, i1 %c1, i1 false
       br i1 %cond, label %T, label %Q
     T:
-      %CxtI = add i32 0, 0
+      %CtxI = add i32 0, 0
       ret void
     Q:
-      %CxtI2 = add i32 0, 0
+      %CtxI2 = add i32 0, 0
       ret void
     }
   )");
@@ -2586,8 +2599,8 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
   const SimplifyQuery SQ(DL, &DT, &AC);
-  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
-  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CtxI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CtxI2)), false);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
@@ -3184,6 +3197,27 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
   EXPECT_EQ(0, Known.One);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIFabs) {
+  // fptosi(fabs(x)) is never negative.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %fabs = call float @llvm.fabs.f32(float %a)\n"
+                "  %A = fptosi float %fabs to i32\n"
+                "  ret i32 %A\n"
+                "}\n"
+                "declare float @llvm.fabs.f32(float)\n");
+  expectKnownBits(/*Zero*/ 0x80000000u, /*One*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIUnknownSign) {
+  // Without any knowledge of the sign of the source, nothing is known about
+  // the sign of the result.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %A = fptosi float %a to i32\n"
+                "  ret i32 %A\n"
+                "}\n");
+  expectKnownBits(/*Zero*/ 0u, /*One*/ 0u);
+}
+
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
@@ -3680,7 +3714,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/I);
     ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(5, CR2.getLower());
     EXPECT_EQ(0, CR2.getUpper());
@@ -3706,7 +3740,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/I);
     ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(6, CR2.getLower());
     EXPECT_EQ(0, CR2.getUpper());
@@ -3732,7 +3766,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/I);
     ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(5, CR2.getLower());
     EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
@@ -3758,7 +3792,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     Value *Stride = &*F->arg_begin();
 
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/I);
     ConstantRange CR2 = computeConstantRange(Stride, false, SQ);
     EXPECT_EQ(6, CR2.getLower());
     EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
@@ -3789,7 +3823,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     AssumptionCache AC(*F);
     Value *Stride = &*F->arg_begin();
     Instruction *I = &findInstructionByName(F, "stride.plus.one");
-    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CxtI=*/I);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/I);
     ConstantRange CR = computeConstantRange(Stride, /*ForSigned=*/false, SQ);
     EXPECT_EQ(99, *CR.getSingleElement());
   }

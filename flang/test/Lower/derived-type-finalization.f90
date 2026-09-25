@@ -55,18 +55,18 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_lhs() {
-! CHECK: %[[LHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "lhs", uniq_name = "_QMderived_type_finalizationFtest_lhsElhs"}
+! CHECK: %[[LHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> <{bindc_name = "lhs", uniq_name = "_QMderived_type_finalizationFtest_lhsElhs"}>
 ! CHECK: %[[LHS_DECL:.*]]:2 = hlfir.declare %[[LHS]]
-! CHECK: %[[RHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "rhs", uniq_name = "_QMderived_type_finalizationFtest_lhsErhs"}
+! CHECK: %[[RHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> <{bindc_name = "rhs", uniq_name = "_QMderived_type_finalizationFtest_lhsErhs"}>
 ! CHECK: %[[RHS_DECL:.*]]:2 = hlfir.declare %[[RHS]]
 ! CHECK: hlfir.assign %[[RHS_DECL]]#0 to %[[LHS_DECL]]#0
 ! CHECK: fir.call @_FortranADestroy
 ! CHECK: fir.call @_FortranADestroy
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_lhs_allocatable() {
-! CHECK: %[[LHS:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = "lhs", uniq_name = "_QMderived_type_finalizationFtest_lhs_allocatableElhs"}
+! CHECK: %[[LHS:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> <{bindc_name = "lhs", uniq_name = "_QMderived_type_finalizationFtest_lhs_allocatableElhs"}>
 ! CHECK: %[[LHS_DECL:.*]]:2 = hlfir.declare %[[LHS]]
-! CHECK: %[[RHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "rhs", uniq_name = "_QMderived_type_finalizationFtest_lhs_allocatableErhs"}
+! CHECK: %[[RHS:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> <{bindc_name = "rhs", uniq_name = "_QMderived_type_finalizationFtest_lhs_allocatableErhs"}>
 ! CHECK: %[[RHS_DECL:.*]]:2 = hlfir.declare %[[RHS]]
 ! CHECK: hlfir.assign %[[RHS_DECL]]#0 to %[[LHS_DECL]]#0 realloc
 ! CHECK: fir.call @_FortranADestroy
@@ -118,7 +118,7 @@ contains
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_end_finalization2(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "a"}) {
 ! CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
-! CHECK:   %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = "t", uniq_name = "_QMderived_type_finalizationFtest_end_finalization2Et"}
+! CHECK:   %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> <{bindc_name = "t", uniq_name = "_QMderived_type_finalizationFtest_end_finalization2Et"}>
 ! CHECK:   %[[T_DECL:.*]]:2 = hlfir.declare %[[T]]
 ! CHECK:   cf.cond_br
 ! CHECK:   hlfir.assign
@@ -137,7 +137,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_fct_ref() {
-! CHECK: %[[RES:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> {bindc_name = ".result"}
+! CHECK: %[[RES:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> <{bindc_name = ".result"}>
 ! CHECK: %[[TY:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
 ! CHECK: %[[TY_DECL:.*]]:2 = hlfir.declare %[[TY]]
 ! CHECK: %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES]]
@@ -168,7 +168,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_nonpointer_function() {
-! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = ".result"}
+! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> <{bindc_name = ".result"}>
 ! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput
 ! CHECK: %[[RES:.*]] = fir.call @_QMderived_type_finalizationPget_t1(%{{.*}})
 ! CHECK: fir.save_result %[[RES]] to %[[TMP]] : !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>
@@ -184,7 +184,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_finalization(
-! CHECK: %[[b:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}> {bindc_name = "b", uniq_name = "_QMderived_type_finalizationFtest_avoid_double_finalizationEb"}
+! CHECK: %[[b:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}> <{bindc_name = "b", uniq_name = "_QMderived_type_finalizationFtest_avoid_double_finalizationEb"}>
 ! CHECK: %[[b_DECL:.*]]:2 = hlfir.declare %[[b]]
 ! CHECK: hlfir.assign %{{.*}} to %[[b_DECL]]#0
 ! CHECK-NOT: fir.call @_FortranADestroy

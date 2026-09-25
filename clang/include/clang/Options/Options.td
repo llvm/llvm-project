@@ -236,7 +236,8 @@ def m_wasm_Features_Group : OptionGroup<"<wasm features group>">,
 def m_wasm_Features_Driver_Group : OptionGroup<"<wasm driver features group>">,
                                    Group<m_Group>, DocName<"WebAssembly Driver">;
 def m_x86_Features_Group : OptionGroup<"<x86 features group>">,
-                           Group<m_Group>, Visibility<[ClangOption, CLOption]>,
+                           Group<m_Group>,
+                           Visibility<[ClangOption, CLOption, FlangOption]>,
                            DocName<"X86">;
 def m_x86_AVX10_Features_Group : OptionGroup<"<x86 AVX10 features group>">,
                                  Group<m_Group>, Visibility<[ClangOption, CLOption]>,
@@ -2120,12 +2121,11 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
-defm experimental_lifetime_safety_c : BoolFOption<
-    "experimental-lifetime-safety-c",
-    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
-    PosFlag<SetTrue, [], [CC1Option], "Enable">,
-    NegFlag<SetFalse, [], [CC1Option], "Disable">,
-    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
+defm lifetime_safety_c : BoolFOption<
+    "lifetime-safety-c",
+    LangOpts<"EnableLifetimeSafetyInC">, DefaultTrue,
+    NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
+    PosFlag<SetTrue, [], [ClangOption], "Enable lifetime safety analysis for C">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -2454,12 +2454,15 @@ def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
   HelpText<"Use SEH style exceptions">;
 def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
   HelpText<"Use WebAssembly style exceptions">;
+def femscripten_exceptions : Flag<["-"], "femscripten-exceptions">,
+  Group<f_Group>,
+  HelpText<"Use Emscripten JavaScript-based C++ exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
-  Values<"dwarf,sjlj,seh,wasm,none">,
+  Values<"dwarf,sjlj,seh,wasm,emscripten,none">,
   NormalizedValuesScope<"CodeGenOptions::ExceptionHandlingKind">,
-  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "None"]>,
-  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "None">;
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "Emscripten", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "Default">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Visibility<[CC1Option]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,
@@ -2595,6 +2598,12 @@ defm keep_persistent_storage_variables : BoolFOption<"keep-persistent-storage-va
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [],
           " keeping all variables that have a persistent storage duration, including global, static and thread-local variables, to guarantee that they can be directly addressed">>;
+defm keep_inline_functions : BoolFOption<"keep-inline-functions",
+  CodeGenOpts<"KeepInlineFunctions">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption], "Keep">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Don't keep">,
+  BothFlags<[], [],
+          " inline functions whose definition is owned by this translation unit, even if they are inlined into all callers.">>;
 defm fixed_point : BoolFOption<"fixed-point",
   LangOpts<"FixedPoint">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
@@ -4385,11 +4394,12 @@ def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">,
   Flags<[HelpHidden]>, Alias<offload_new_driver>;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
   Flags<[HelpHidden]>, Alias<no_offload_new_driver>;
-def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
   MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
-def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
+def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">,
+  Group<f_Group>, Visibility<[ClangOption, FlangOption]>;
 defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
   CodeGenOpts<"NoEscapingBlockTailCalls">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -5078,10 +5088,10 @@ defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-
   NegFlag<SetFalse>>;
 defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names",
   CodeGenOpts<"UniqueInternalLinkageNames">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Uniqueify Internal Linkage Symbol Names by appending"
             " the MD5 hash of the module path">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption]>>;
 defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -6260,9 +6270,10 @@ defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
-def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
+def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>,
+  Visibility<[ClangOption, FlangOption]>, HelpText<"Keep the frame pointer in leaf functions">;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
-  HelpText<"Omit frame pointer setup for leaf functions">;
+  Visibility<[ClangOption, FlangOption]>, HelpText<"Omit frame pointer setup for leaf functions">;
 def mno_reserve_frame_pointer_reg : Flag<["-"], "mno-reserve-frame-pointer-reg">, Group<m_Group>;
 def mreserve_frame_pointer_reg : Flag<["-"], "mreserve-frame-pointer-reg">, Group<m_Group>,
   HelpText<"Reserve the frame pointer register even if the function doesn't have a frame">;
@@ -7398,6 +7409,8 @@ def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_Features_Group>;
 def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_Features_Group>;
 def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_Features_Group>;
+def mavx10v2aux : Flag<["-"], "mavx10v2aux">, Group<m_x86_Features_Group>;
+def mno_avx10v2aux : Flag<["-"], "mno-avx10v2aux">, Group<m_x86_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -7569,9 +7582,11 @@ def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, 
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
 def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
-                 HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
+                 Visibility<[ClangOption, CLOption, FlangOption]>,
+                 HelpText<"Disable generation of gather instructions in auto-vectorization (x86 only)">;
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
-                  HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
+                  Visibility<[ClangOption, CLOption, FlangOption]>,
+                  HelpText<"Disable generation of scatter instructions in auto-vectorization (x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
@@ -7637,7 +7652,6 @@ multiclass BooleanFFlag<string name> {
   def fno_#NAME : Flag<["-"], "fno-"#name>;
 }
 
-defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimization_f_Group>;
 
 def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<f_Group>;
 

@@ -661,6 +661,7 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
+  IdentifierInfo *Ident_except;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -669,7 +670,7 @@ private:
   /// function call.
   bool CalledSignatureHelp = false;
 
-  IdentifierInfo *getSEHExceptKeyword();
+  bool isTokenSEHExcept();
 
   /// Whether to skip parsing of function bodies.
   ///
@@ -1524,9 +1525,9 @@ private:
                                ParsedAttributes &OutAttrs);
 
   /// Parse cached tokens for a late-parsed attribute and return the parsed
-  /// attributes. Shared implementation used by both ParseLexedCAttribute and
+  /// attributes. Shared implementation used by both ParseLexedAttribute and
   /// ParseLexedTypeAttribute.
-  ParsedAttributes ParseLexedCAttributeTokens(LateParsedAttribute &LA);
+  ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
 
   /// Helper function to move LateParsedTypeAttribute pointers from one list
   /// to another. Filters type attributes from \p From and appends them to \p
@@ -4740,6 +4741,9 @@ private:
   /// expression.
   ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);
 
+  /// Whether the current token can begin a lambda specifier sequence.
+  bool isLambdaSpecifier();
+
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Casts
 
@@ -5710,7 +5714,8 @@ private:
     LateParsedObjCMethodContainer LateParsedObjCMethods;
 
     ObjCImplParsingDataRAII(Parser &parser, Decl *D)
-        : P(parser), Dcl(D), HasCFunction(false) {
+        : P(parser), Dcl(D), HasCFunction(false),
+          PrevParsedObjCImpl(parser.CurParsedObjCImpl) {
       P.CurParsedObjCImpl = this;
       Finished = false;
     }
@@ -5720,6 +5725,12 @@ private:
     bool isFinished() const { return Finished; }
 
   private:
+    /// The \@implementation that was still open when this one started; made
+    /// current again once this one finishes. Only invalid code has one: an
+    /// \@implementation that starts while a previous \@implementation is
+    /// still open (e.g. through an intervening namespace). For valid code
+    /// this is always null.
+    ObjCImplParsingDataRAII *PrevParsedObjCImpl;
     bool Finished;
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
@@ -9053,6 +9064,10 @@ private:
   /// Try to skip a possibly empty sequence of 'attribute-specifier's without
   /// full validation of the syntactic structure of attributes.
   bool TrySkipAttributes();
+
+  /// Whether tentative lookahead from the current '[' finds a lambda-like
+  /// continuation. This does not parse or validate a lambda.
+  bool hasLambdaLikeContinuation();
 
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]

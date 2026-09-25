@@ -62,19 +62,12 @@ static const char *const odsBuilder = "odsBuilder";
 static const char *const builderOpState = "odsState";
 static const char *const builderOpStateProperties =
     "odsState.getOrAddProperties<Properties>()";
+static constexpr StringLiteral legacyBuilderDeprecation =
+    "use the overload taking Properties and discardableAttributes instead";
 static const char *const propertyStorage = "propStorage";
 static const char *const propertyValue = "propValue";
 static const char *const propertyAttr = "propAttr";
 static const char *const propertyDiag = "emitError";
-
-/// The names of the implicit attributes that contain variadic operand and
-/// result segment sizes.
-static const char *const operandSegmentAttrName = "operandSegmentSizes";
-static const char *const resultSegmentAttrName = "resultSegmentSizes";
-static constexpr StringLiteral legacyOperandSegmentAttrName =
-    "operand_segment_sizes";
-static constexpr StringLiteral legacyResultSegmentAttrName =
-    "result_segment_sizes";
 
 /// The logic to calculate the actual value range for a declared operand/result
 /// of an op with variadic operands/results. Note that this logic is not for
@@ -382,16 +375,7 @@ public:
 
   /// Returns whether the operation will have a non-empty `Properties` struct.
   bool hasNonEmptyPropertiesStruct() const {
-    if (!op.getProperties().empty())
-      return true;
-    if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") ||
-        op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-      return true;
-    return llvm::any_of(getAttrMetadata(),
-                        [](const std::pair<StringRef, AttributeMetadata> &it) {
-                          return !it.second.constraint ||
-                                 !it.second.constraint->isDerivedAttr();
-                        });
+    return op.hasNonEmptyProperties();
   }
 
   std::optional<NamedProperty> &getOperandSegmentsSize() {
@@ -626,7 +610,8 @@ private:
   // Generates the build() method that takes each operand/attribute
   // as a stand-alone parameter.
   void genSeparateArgParamBuilder();
-  void genInlineCreateBody(const SmallVector<MethodParameter> &paramList);
+  void genInlineCreateBody(const SmallVector<MethodParameter> &paramList,
+                           bool deprecated = false);
 
   // Generates the build() method that takes each operand/attribute as a
   // stand-alone parameter. The generated build() method uses first operand's
@@ -1414,17 +1399,10 @@ void OpEmitter::genPropertiesSupport() {
 
       setPropMethod << formatv(R"decl(
   {{
-    auto &propStorage = prop.{0};
     {1}
-    if (attr) {{
-      auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
-      if (convertedAttr) {{
-        propStorage = convertedAttr;
-      } else {{
-        emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
-        return ::mlir::failure();
-      }
-    }
+    if (::mlir::failed(::mlir::detail::setAttributeProperty(
+            prop.{0}, attr, "{0}", emitError)))
+      return ::mlir::failure();
   }
 )decl",
                                name, getAttr);
@@ -1461,15 +1439,10 @@ void OpEmitter::genPropertiesSupport() {
     const auto *namedAttr =
         llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
-    getPropMethod << formatv(R"decl(
-    {{
-      const auto &propStorage = prop.{0};
-      if (propStorage)
-        attrs.push_back(odsBuilder.getNamedAttr("{0}",
-                                       propStorage));
-    }
-)decl",
-                             name);
+    getPropMethod << formatv(
+        "    ::mlir::detail::appendAttributeProperty(attrs, \"{0}\", "
+        "prop.{0});\n",
+        name);
   }
   getPropMethod << R"decl(
   if (!attrs.empty())
@@ -2123,8 +2096,13 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                                     MethodParameter("unsigned", "index"));
   ERROR_IF_PRUNED(m, "getODSOperands", op);
   auto &body = m->body();
-  body << formatv(valueRangeReturnCode, rangeBeginCall,
-                  "getODSOperandIndexAndLength(index)");
+  if (isGenericAdaptorBase) {
+    body << formatv(valueRangeReturnCode, rangeBeginCall,
+                    "getODSOperandIndexAndLength(index)");
+  } else {
+    body << "  auto [start, length] = getODSOperandIndexAndLength(index);\n"
+            "  return getOperation()->getOperands().slice(start, length);\n";
+  }
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
@@ -2418,7 +2396,7 @@ static bool canInferType(const Operator &op) {
 }
 
 void OpEmitter::genInlineCreateBody(
-    const SmallVector<MethodParameter> &paramList) {
+    const SmallVector<MethodParameter> &paramList, bool deprecated) {
   SmallVector<MethodParameter> createParamListOpBuilder;
   SmallVector<MethodParameter> createParamListImplicitLocOpBuilder;
   SmallVector<llvm::StringRef, 4> nonBuilderStateArgsList;
@@ -2449,6 +2427,12 @@ void OpEmitter::genInlineCreateBody(
                                            createParamListOpBuilder);
   auto *cImplicitLoc = opClass.addStaticMethod(
       opClass.getClassName(), "create", createParamListImplicitLocOpBuilder);
+  if (deprecated) {
+    if (cWithLoc)
+      cWithLoc->setDeprecated(legacyBuilderDeprecation);
+    if (cImplicitLoc)
+      cImplicitLoc->setDeprecated(legacyBuilderDeprecation);
+  }
   std::string nonBuilderStateArgs = "";
   if (!nonBuilderStateArgsList.empty()) {
     llvm::raw_string_ostream nonBuilderStateArgsOS(nonBuilderStateArgs);
@@ -2494,6 +2478,15 @@ void OpEmitter::genSeparateArgParamBuilder() {
     genInlineCreateBody(paramList);
 
     auto &body = m->body();
+    // The no-result builder can reuse the collective builder. Both forms
+    // otherwise emit identical operand, attribute, and region handling.
+    if (paramKind == TypeParamKind::Separate && op.getNumResults() == 0) {
+      body << "  build(odsBuilder, odsState, ::mlir::TypeRange{}";
+      for (const MethodParameter &param : llvm::drop_begin(paramList, 2))
+        body << ", " << param.getName();
+      body << ");\n";
+      return;
+    }
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
                                                AttrParamKind::UnwrappedValue);
@@ -2588,21 +2581,7 @@ void OpEmitter::genLegacyPropertiesBuilderHelper() {
   if (!emitHelper.hasNonEmptyPropertiesStruct())
     return;
 
-  SmallVector<StringRef> inherentNames;
-  for (const ConstArgument &attrOrProperty : getAttrOrProperties()) {
-    if (const auto *namedAttr =
-            dyn_cast_if_present<const AttributeMetadata *>(attrOrProperty))
-      inherentNames.push_back(namedAttr->attrName);
-    else
-      inherentNames.push_back(
-          cast<const NamedProperty *>(attrOrProperty)->name);
-  }
-  if (emitHelper.getOperandSegmentsSize()) {
-    inherentNames.push_back(legacyOperandSegmentAttrName);
-  }
-  if (emitHelper.getResultSegmentsSize()) {
-    inherentNames.push_back(legacyResultSegmentAttrName);
-  }
+  SmallVector<StringRef> inherentNames = op.getInherentAttrNames();
 
   auto *method = opClass.addStaticMethod<Method::Private>(
       "void", "buildPropertiesAndDiscardableAttributes",
@@ -2613,33 +2592,22 @@ void OpEmitter::genLegacyPropertiesBuilderHelper() {
   MethodBody &body = method->body();
   body << "  Properties &properties = " << builderOpStateProperties << ";\n"
        << "  populateDefaultProperties(" << builderOpState
-       << ".name, properties);\n"
-       << "  ::llvm::SmallVector<::mlir::NamedAttribute> "
-          "inherentAttributes;\n"
-       << "  for (const ::mlir::NamedAttribute &attr : attributes) {\n"
-       << "    ::llvm::StringRef name = attr.getName().getValue();\n"
-       << "    if (";
-  llvm::interleave(
-      inherentNames,
-      [&](StringRef name) { body << "name == \"" << name << "\""; },
-      [&] { body << " || "; });
-  body << ")\n"
-       << "      inherentAttributes.push_back(attr);\n"
-       << "    else\n"
-       << "      " << builderOpState << ".addAttribute(attr.getName(), "
-       << "attr.getValue());\n"
-       << "  }\n"
-       << "  if (inherentAttributes.empty())\n"
-       << "    return;\n";
-  // TODO: Use `PropertyKind<T>::unfreeze` to populate properties directly once
-  // it is available systematically, avoiding the DictionaryAttr conversion.
-  body << "  if (::mlir::failed(setPropertiesFromAttr(\n"
-       << "          properties,\n"
-       << "          ::mlir::DictionaryAttr::get(" << builderOpState
-       << ".getContext(), inherentAttributes),\n"
-       << "          [&]() { return ::mlir::emitError(" << builderOpState
-       << ".location); })))\n"
-       << "    ::llvm::report_fatal_error(\"Property conversion failed.\");\n";
+       << ".name, properties);\n";
+  if (!inherentNames.empty()) {
+    body << "  const ::llvm::StringRef inherentNames[] = {";
+    llvm::interleaveComma(inherentNames, body,
+                          [&](StringRef name) { body << '"' << name << '"'; });
+    body << "};\n";
+  }
+  body << "  ::mlir::detail::splitPropertiesAndDiscardableAttributes(\n"
+       << "      " << builderOpState << ", attributes, "
+       << (inherentNames.empty() ? "::llvm::ArrayRef<::llvm::StringRef>{}"
+                                 : "inherentNames")
+       << ", [&](::mlir::DictionaryAttr inherentAttrs) {\n"
+       << "        return setPropertiesFromAttr(properties, inherentAttrs,\n"
+       << "            [&]() { return ::mlir::emitError(" << builderOpState
+       << ".location); });\n"
+       << "      });\n";
 }
 
 void OpEmitter::genCodeForAddingPropertiesAndAttributes(
@@ -2685,7 +2653,11 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder(
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
-  genInlineCreateBody(paramList);
+  bool deprecated = kind == CollectiveBuilderKind::AttrDict &&
+                    emitHelper.hasNonEmptyPropertiesStruct();
+  if (deprecated)
+    m->setDeprecated(legacyBuilderDeprecation);
+  genInlineCreateBody(paramList, deprecated);
   auto &body = m->body();
 
   // Operands
@@ -2759,7 +2731,11 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
-  genInlineCreateBody(paramList);
+  bool deprecated = kind == CollectiveBuilderKind::AttrDict &&
+                    emitHelper.hasNonEmptyPropertiesStruct();
+  if (deprecated)
+    m->setDeprecated(legacyBuilderDeprecation);
+  genInlineCreateBody(paramList, deprecated);
   auto &body = m->body();
 
   int numResults = op.getNumResults();
@@ -2863,7 +2839,11 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
-  genInlineCreateBody(paramList);
+  bool deprecated = kind == CollectiveBuilderKind::AttrDict &&
+                    emitHelper.hasNonEmptyPropertiesStruct();
+  if (deprecated)
+    m->setDeprecated(legacyBuilderDeprecation);
+  genInlineCreateBody(paramList, deprecated);
 
   auto &body = m->body();
 
@@ -3029,7 +3009,11 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
-  genInlineCreateBody(paramList);
+  bool deprecated = kind == CollectiveBuilderKind::AttrDict &&
+                    emitHelper.hasNonEmptyPropertiesStruct();
+  if (deprecated)
+    m->setDeprecated(legacyBuilderDeprecation);
+  genInlineCreateBody(paramList, deprecated);
   auto &body = m->body();
 
   // Operands
@@ -3152,10 +3136,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
   // Check if parameters besides default valued one are enough to distinguish
   // between builders with wrapped and unwrapped arguments.
   bool hasBuilderAmbiguity = true;
-  for (const auto &arg : op.getArgs()) {
-    auto *namedAttr = dyn_cast<NamedAttribute *>(arg);
-    if (!namedAttr)
-      continue;
+  for (auto *namedAttr : llvm::make_isa_range<NamedAttribute *>(op.getArgs())) {
     Attribute attr = namedAttr->attr;
     if (attr.hasDefaultValue() || attr.isDerivedAttr())
       continue;
@@ -3275,6 +3256,17 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     MethodBody &body, llvm::StringSet<> &inferredAttributes,
     bool isRawValueAttr) {
+  bool needsProperties =
+      !op.getProperties().empty() ||
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
+  for (const NamedTypeConstraint &operand : op.getOperands())
+    needsProperties |= operand.isVariadicOfVariadic();
+  for (const NamedAttribute &attr : op.getAttributes())
+    needsProperties |=
+        !attr.attr.isDerivedAttr() && !inferredAttributes.contains(attr.name);
+  if (needsProperties)
+    body << "  auto &odsProperties = " << builderOpStateProperties << ";\n";
+
   // Push all operands to the result.
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     std::string argName = getArgumentName(op, i);
@@ -3290,7 +3282,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
            << "      rangeSegments.push_back(range.size());\n"
            << "    auto rangeAttr = " << odsBuilder
            << ".getDenseI32ArrayAttr(rangeSegments);\n";
-      body << "    " << builderOpStateProperties << "."
+      body << "    odsProperties."
            << operand.constraint.getVariadicOfVariadicSegmentSizeAttr()
            << " = rangeAttr;";
       body << "  }\n";
@@ -3328,7 +3320,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
     body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
     emitSegment();
-    body << "}), " << builderOpStateProperties
+    body << "}), odsProperties"
          << ".operandSegmentSizes.begin());\n";
   }
 
@@ -3338,8 +3330,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     // interface type (used in the builder argument) to the storage type (used
     // in the state) is not necessarily trivial.
     std::string setterName = op.getSetterName(namedProp.name);
-    body << formatv("  {0}.{1}({2});\n", builderOpStateProperties, setterName,
-                    namedProp.name);
+    body << formatv("  odsProperties.{0}({1});\n", setterName, namedProp.name);
   }
   // Push all attributes to the result.
   for (const auto &namedAttr : op.getAttributes()) {
@@ -3363,12 +3354,10 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
       // instance.
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      body << formatv("  {0}.{1} = {2};\n", builderOpStateProperties,
-                      namedAttr.name,
+      body << formatv("  odsProperties.{0} = {1};\n", namedAttr.name,
                       constBuildAttrFromParam(attr, fctx, namedAttr.name));
     } else {
-      body << formatv("  {0}.{1} = {1};\n", builderOpStateProperties,
-                      namedAttr.name);
+      body << formatv("  odsProperties.{0} = {0};\n", namedAttr.name);
     }
     if (emitNotNullCheck)
       body.unindent() << "  }\n";

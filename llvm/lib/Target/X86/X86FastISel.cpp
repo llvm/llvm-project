@@ -138,6 +138,8 @@ private:
 
   bool handleConstantAddresses(const Value *V, X86AddressMode &AM);
 
+  Register emitMOV32r0();
+
   Register X86MaterializeInt(const ConstantInt *CI, MVT VT);
   Register X86MaterializeFP(const ConstantFP *CFP, MVT VT);
   Register X86MaterializeGV(const GlobalValue *GV, MVT VT);
@@ -922,8 +924,9 @@ redo_gep:
       uint64_t S = GTI.getSequentialElementStride(DL);
       for (;;) {
         if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
-          // Constant-offset addressing.
-          Disp += CI->getSExtValue() * S;
+          // Constant-offset addressing. The index may be wider than 64 bits;
+          // it is truncated to the pointer width like any other GEP index.
+          Disp += CI->getValue().sextOrTrunc(64).getSExtValue() * S;
           break;
         }
         if (canFoldAddIntoGEP(U, Op)) {
@@ -1455,9 +1458,7 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
   switch (Predicate) {
   default: break;
   case CmpInst::FCMP_FALSE: {
-    ResultReg = createResultReg(&X86::GR32RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::MOV32r0),
-            ResultReg);
+    ResultReg = emitMOV32r0();
     ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultReg, X86::sub_8bit);
     if (!ResultReg)
       return false;
@@ -1971,9 +1972,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(OpEntry.OpSignExtend));
     else {
-      Register Zero32 = createResultReg(&X86::GR32RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(X86::MOV32r0), Zero32);
+      Register Zero32 = emitMOV32r0();
 
       // Copy the zero into the appropriate sub/super/identical physical
       // register. Unfortunately the operations needed are not uniform enough
@@ -3358,7 +3357,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackDown))
-    .addImm(NumBytes).addImm(0).addImm(0);
+      .addImm(NumBytes)
+      .addImm(0)
+      .addImm(0)
+      .setOperandDead(4); // eflags
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
@@ -3588,7 +3590,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
           : computeBytesPoppedByCalleeForSRet(Subtarget, CC, CLI.CB);
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
-    .addImm(NumBytes).addImm(NumBytesForCalleeToPop);
+      .addImm(NumBytes)
+      .addImm(NumBytesForCalleeToPop)
+      .setOperandDead(3); // eflags
 
   // Now handle call return values.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -3714,13 +3718,21 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
   return false;
 }
 
+Register X86FastISel::emitMOV32r0() {
+  Register ResultReg = createResultReg(&X86::GR32RegClass);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::MOV32r0),
+          ResultReg)
+      .setOperandDead(1);
+  return ResultReg;
+}
+
 Register X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   if (VT > MVT::i64)
     return Register();
 
   uint64_t Imm = CI->getZExtValue();
   if (Imm == 0) {
-    Register SrcReg = fastEmitInst_(X86::MOV32r0, &X86::GR32RegClass);
+    Register SrcReg = emitMOV32r0();
     switch (VT.SimpleTy) {
     default: llvm_unreachable("Unexpected value type");
     case MVT::i1:

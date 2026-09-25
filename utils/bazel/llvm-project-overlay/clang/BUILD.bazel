@@ -2086,6 +2086,7 @@ cc_library(
         ":ast",
         ":basic",
         ":codegen",
+        ":config",
         ":driver",
         ":edit",
         ":frontend",
@@ -2131,11 +2132,16 @@ cc_library(
 
 cc_library(
     name = "codegen",
-    srcs = glob([
-        "lib/CodeGen/**/*.cpp",
-        "lib/CodeGen/**/*.h",
-    ]),
-    hdrs = glob(["include/clang/CodeGen/*.h"]),
+    srcs = glob(
+        [
+            "lib/CodeGen/**/*.cpp",
+            "lib/CodeGen/**/*.h",
+        ],
+        exclude = ["lib/CodeGen/QualTypeMapper.h"],
+    ),
+    hdrs = glob(["include/clang/CodeGen/*.h"]) + [
+        "lib/CodeGen/QualTypeMapper.h",
+    ],
     copts = ["$(STACK_FRAME_UNLIMITED)"],
     includes = [
         "include",
@@ -2312,6 +2318,7 @@ cc_library(
     hdrs = glob([
         "include/clang/Serialization/*.h",
     ]),
+    features = ["-layering_check"],
     includes = ["include"],
     textual_hdrs = glob([
         "include/clang/Serialization/*.def",
@@ -2451,6 +2458,10 @@ cc_binary(
     copts = [
         "-Wno-uninitialized",
     ],
+    local_defines = select({
+        "//third-party:llvm_libxml2_enabled": ["CLANG_HAVE_LIBXML=1"],
+        "//conditions:default": [],
+    }),
     stamp = 0,
     deps = [
         ":ast",
@@ -2467,6 +2478,7 @@ cc_binary(
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
+        "//third-party:libxml2",
     ],
 )
 
@@ -3144,6 +3156,7 @@ cc_library(
         ":cir_dialect",
         "//llvm:Support",
         "//mlir:Analysis",
+        "//mlir:DataLayoutInterfaces",
         "//mlir:IR",
         "//mlir:SideEffectInterfaces",
     ],
@@ -3384,6 +3397,7 @@ cc_library(
         ":codegen",
         ":frontend",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",

@@ -673,7 +673,7 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? (X - Y) : 0
   if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
       match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CtxI, SQ.DT)) {
     Value *SMin =
         Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
     return Builder.CreateNSWSub(CmpLHS, SMin);
@@ -776,13 +776,12 @@ static Instruction *foldSelectICmpAndAnd(Type *SelType, const Value *Cond,
   if (!match(TVal, m_And(m_Value(A), m_One())))
     return nullptr;
 
+  APInt BitWidth(SelType->getScalarSizeInBits(),
+                 SelType->getScalarSizeInBits());
   auto TValPattern = m_CombineOr(
       m_Deferred(X),
-      m_LShr(m_Deferred(X),
-             m_Value(Z, m_SpecificInt_ICMP_ForbidPoison(
-                            CmpInst::ICMP_ULT,
-                            APInt(SelType->getScalarSizeInBits(),
-                                  SelType->getScalarSizeInBits())))));
+      m_LShr(m_Deferred(X), m_Value(Z, m_SpecificInt_ICMP_ForbidPoison(
+                                           CmpInst::ICMP_ULT, BitWidth))));
 
   if (!match(A, TValPattern)) {
     std::swap(X, Y);
@@ -3869,18 +3868,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select a, false, b -> select !a, b, false
   if (match(TrueVal, m_Specific(Zero))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
-    SelectInst *NewSI =
-        SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr, MDFrom);
+    SelectInst *NewSI = SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr,
+                                           /*MDFrom=*/&SI);
     NewSI->swapProfMetadata();
     return NewSI;
   }
   // select a, b, true -> select !a, true, b
   if (match(FalseVal, m_Specific(One))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, MDFrom);
+        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, /*MDFrom=*/&SI);
     NewSI->swapProfMetadata();
     return NewSI;
   }
@@ -3890,9 +3887,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(&SI, m_LogicalAnd(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || TrueVal->hasOneUse()) &&
       !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", MDFrom));
+        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", /*MDFrom=*/&SI));
     NewSI->swapProfMetadata();
     return BinaryOperator::CreateNot(NewSI);
   }
@@ -3902,9 +3898,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(&SI, m_LogicalOr(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || FalseVal->hasOneUse()) &&
       !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
-    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", MDFrom));
+        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", /*MDFrom=*/&SI));
     NewSI->swapProfMetadata();
     return BinaryOperator::CreateNot(NewSI);
   }
@@ -5060,23 +5055,19 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         // select(C0, select(C1, a, b), b) -> select(C0&&C1, a, b)
         if (TrueSI->getFalseValue() == FalseVal) {
           And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition(), "",
-                                         ProfcheckDisableMetadataFixes ? nullptr
-                                                                       : &SI);
+                                         &SI);
           OtherVal = TrueSI->getTrueValue();
         }
         // select(C0, select(C1, b, a), b) -> select(C0&&!C1, a, b)
         else if (TrueSI->getTrueValue() == FalseVal) {
           Value *InvertedCond = Builder.CreateNot(TrueSI->getCondition());
-          And = Builder.CreateLogicalAnd(CondVal, InvertedCond, "",
-                                         ProfcheckDisableMetadataFixes ? nullptr
-                                                                       : &SI);
+          And = Builder.CreateLogicalAnd(CondVal, InvertedCond, "", &SI);
           OtherVal = TrueSI->getFalseValue();
         }
         if (And && OtherVal) {
           replaceOperand(SI, 0, And);
           replaceOperand(SI, 1, OtherVal);
-          if (!ProfcheckDisableMetadataFixes)
-            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+          setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
       }
@@ -5095,23 +5086,19 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         // select(C0, a, select(C1, a, b)) -> select(C0||C1, a, b)
         if (FalseSI->getTrueValue() == TrueVal) {
           Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition(), "",
-                                       ProfcheckDisableMetadataFixes ? nullptr
-                                                                     : &SI);
+                                       &SI);
           OtherVal = FalseSI->getFalseValue();
         }
         // select(C0, a, select(C1, b, a)) -> select(C0||!C1, a, b)
         else if (FalseSI->getFalseValue() == TrueVal) {
           Value *InvertedCond = Builder.CreateNot(FalseSI->getCondition());
-          Or = Builder.CreateLogicalOr(CondVal, InvertedCond, "",
-                                       ProfcheckDisableMetadataFixes ? nullptr
-                                                                     : &SI);
+          Or = Builder.CreateLogicalOr(CondVal, InvertedCond, "", &SI);
           OtherVal = FalseSI->getTrueValue();
         }
         if (Or && OtherVal) {
           replaceOperand(SI, 0, Or);
           replaceOperand(SI, 2, OtherVal);
-          if (!ProfcheckDisableMetadataFixes)
-            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+          setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
           return &SI;
         }
       }
@@ -5286,8 +5273,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // metadata of the original select as the net effect of this change is to
       // simplify the conditional.
       Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
-          !ProfcheckDisableMetadataFixes) {
+      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
         MDFrom = &SI;
       }
       return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,

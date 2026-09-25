@@ -95,10 +95,10 @@ static cl::opt<double> ProfileDensityThreshold(
     "profile-density-threshold", cl::init(50),
     cl::desc("If the profile density is below the given threshold, it "
              "will be suggested to increase the sampling rate."),
-    cl::Optional, cl::cat(ProfGenCategory));
+    cl::cat(ProfGenCategory));
 static cl::opt<bool> ShowDensity("show-density", cl::init(false),
                                  cl::desc("show profile density details"),
-                                 cl::Optional, cl::cat(ProfGenCategory));
+                                 cl::cat(ProfGenCategory));
 static cl::opt<int> ProfileDensityCutOffHot(
     "profile-density-cutoff-hot", cl::init(990000),
     cl::desc("Total samples cutoff for functions used to calculate "
@@ -108,7 +108,7 @@ static cl::opt<int> ProfileDensityCutOffHot(
 static cl::opt<bool> UpdateTotalSamples(
     "update-total-samples", cl::init(false),
     cl::desc("Update total samples by accumulating all its body samples."),
-    cl::Optional, cl::cat(ProfGenCategory));
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool> GenCSNestedProfile(
     "gen-cs-nested-profile", cl::Hidden, cl::init(true),
@@ -118,7 +118,7 @@ cl::opt<bool> InferMissingFrames(
     "infer-missing-frames", cl::init(true),
     cl::desc(
         "Infer missing call frames due to compiler tail call elimination."),
-    cl::Optional, cl::cat(ProfGenCategory));
+    cl::cat(ProfGenCategory));
 
 namespace sampleprof {
 

@@ -576,8 +576,8 @@ static Constant *foldOrCommuteConstant(Instruction::BinaryOps Opcode,
       case Instruction::FMul:
       case Instruction::FDiv:
       case Instruction::FRem:
-        if (Q.CxtI != nullptr)
-          return ConstantFoldFPInstOperands(Opcode, CLHS, CRHS, Q.DL, Q.CxtI);
+        if (Q.CtxI != nullptr)
+          return ConstantFoldFPInstOperands(Opcode, CLHS, CRHS, Q.DL, Q.CtxI);
       }
       return ConstantFoldBinaryOpOperands(Opcode, CLHS, CRHS, Q.DL);
     }
@@ -716,7 +716,7 @@ static Value *simplifyByDomEq(unsigned Opcode, Value *Op0, Value *Op1,
     return nullptr;
 
   std::optional<bool> Imp =
-      isImpliedByDomCondition(CmpInst::ICMP_EQ, Op0, Op1, Q.CxtI, Q.DL);
+      isImpliedByDomCondition(CmpInst::ICMP_EQ, Op0, Op1, Q.CtxI, Q.DL);
   if (Imp && *Imp) {
     Type *Ty = Op0->getType();
     switch (Opcode) {
@@ -1495,7 +1495,7 @@ static Value *simplifyAShrInst(Value *Op0, Value *Op1, bool IsExact,
     return X;
 
   // Arithmetic shifting an all-sign-bit value is a no-op.
-  unsigned NumSignBits = ComputeNumSignBits(Op0, Q.DL, Q.AC, Q.CxtI, Q.DT);
+  unsigned NumSignBits = ComputeNumSignBits(Op0, Q.DL, Q.AC, Q.CtxI, Q.DT);
   if (NumSignBits == Op0->getType()->getScalarSizeInBits())
     return Op0;
 
@@ -2041,13 +2041,13 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
 
   // -A & A = A if A is a power of two or zero.
   if (match(Op0, m_Neg(m_Specific(Op1))) &&
-      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, Q.AC, Q.CxtI, Q.DT))
+      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, Q.AC, Q.CtxI, Q.DT))
     return Op1;
 
   // This is a similar pattern used for checking if a value is a power-of-2:
   // (A - 1) & A --> 0 (if A is a power-of-2 or 0)
   if (match(Op0, m_Add(m_Specific(Op1), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, Q.AC, Q.CxtI, Q.DT))
+      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, Q.AC, Q.CtxI, Q.DT))
     return Constant::getNullValue(Op1->getType());
 
   // (x << N) & ((x << M) - 1) --> 0, where x is known to be a power of 2 and
@@ -2055,7 +2055,7 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
   const APInt *Shift1, *Shift2;
   if (match(Op0, m_Shl(m_Value(X), m_APInt(Shift1))) &&
       match(Op1, m_Add(m_Shl(m_Specific(X), m_APInt(Shift2)), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, Q.AC, Q.CxtI) &&
+      isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, Q.AC, Q.CtxI) &&
       Shift1->uge(*Shift2))
     return Constant::getNullValue(Op0->getType());
 
@@ -2124,7 +2124,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   Value *Shift;
   if (match(Op1, m_Power2(PowerC)) &&
       match(Op0, m_Add(m_Value(Shift), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Shift, Q.DL, /*OrZero*/ false, Q.AC, Q.CxtI,
+      isKnownToBeAPowerOfTwo(Shift, Q.DL, /*OrZero*/ false, Q.AC, Q.CtxI,
                              Q.DT)) {
     KnownBits Known = computeKnownBits(Shift, Q);
     // Use getActiveBits() to make use of the additional power of two knowledge
@@ -3812,7 +3812,7 @@ static Value *simplifyICmpWithDominatingAssume(CmpPredicate Predicate,
                                                Value *LHS, Value *RHS,
                                                const SimplifyQuery &Q) {
   // Gracefully handle instructions that have not been inserted yet.
-  if (!Q.AC || !Q.CxtI)
+  if (!Q.AC || !Q.CtxI)
     return nullptr;
 
   for (Value *AssumeBaseOp : {LHS, RHS}) {
@@ -4164,7 +4164,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     return V;
 
   if (std::optional<bool> Res =
-          isImpliedByDomCondition(Pred, LHS, RHS, Q.CxtI, Q.DL))
+          isImpliedByDomCondition(Pred, LHS, RHS, Q.CtxI, Q.DL))
     return ConstantInt::getBool(ITy, *Res);
 
   // Simplify comparisons of related pointers using a powerful, recursive
@@ -4203,8 +4203,8 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
       // if the folding isn't successfull, fall back to the rest of the logic
-      if (auto *Result = ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL,
-                                                         Q.TLI, Q.CxtI))
+      if (auto *Result = ConstantFoldCompareInstOperands(
+              Pred, CLHS, CRHS, Q.DL, Q.TLI, Q.getFunction()))
         return Result;
     } else {
       // If we have a constant, make sure it is on the RHS.
@@ -4258,7 +4258,7 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   }
 
   if (std::optional<bool> Res =
-          isImpliedByDomCondition(Pred, LHS, RHS, Q.CxtI, Q.DL))
+          isImpliedByDomCondition(Pred, LHS, RHS, Q.CtxI, Q.DL))
     return ConstantInt::getBool(RetTy, *Res);
 
   const APFloat *C = nullptr;
@@ -4274,19 +4274,15 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     return computeKnownFPClass(LHS, FMF, InterestedFlags, Q);
   };
 
-  if (C && Q.CxtI) {
+  if (C && Q.getFunction()) {
     // Fold out compares that express a class test.
-    //
-    // FIXME: Should be able to perform folds without context
-    // instruction. Always pass in the context function?
-
-    const Function *ParentF = Q.CxtI->getFunction();
-    auto [ClassVal, ClassTest] = fcmpToClassTest(Pred, *ParentF, LHS, C);
+    auto [ClassVal, ClassTest] =
+        fcmpToClassTest(Pred, *Q.getFunction(), LHS, C);
     if (ClassVal) {
       FullKnownClassLHS = computeLHSClass();
-      if ((FullKnownClassLHS->KnownFPClasses & ClassTest) == fcNone)
+      if ((FullKnownClassLHS->getKnownFPClasses() & ClassTest) == fcNone)
         return getFalse(RetTy);
-      if ((FullKnownClassLHS->KnownFPClasses & ~ClassTest) == fcNone)
+      if ((FullKnownClassLHS->getKnownFPClasses() & ~ClassTest) == fcNone)
         return getTrue(RetTy);
     }
   }
@@ -5282,7 +5278,7 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
           simplifySelectWithFCmp(Cond, TrueVal, FalseVal, FMF, Q, MaxRecurse))
     return V;
 
-  std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
+  std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CtxI, Q.DL);
   if (Imp)
     return *Imp ? TrueVal : FalseVal;
   // Look for same PHIs in the true and false values.
@@ -5425,13 +5421,15 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   if (!isa<Constant>(Ptr) || !all_of(Indices, IsaPred<Constant>))
     return nullptr;
 
-  if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
+  ArrayRef<Constant *> ConstIdxs =
+      ArrayRef((Constant *const *)Indices.data(), Indices.size());
+  auto *ConstGEP = ConstantExpr::getGetElementPtr(
+      Q.DL, SrcTy, cast<Constant>(Ptr), ConstIdxs, NW);
+  if (!ConstGEP)
     return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), std::nullopt,
                                      Indices);
 
-  auto *CE =
-      ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices, NW);
-  return ConstantFoldConstant(CE, Q.DL);
+  return ConstantFoldConstant(ConstGEP, Q.DL);
 }
 
 Value *llvm::simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
@@ -5663,7 +5661,7 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
 
     // Make sure we do not replace an undef value with poison.
     if (HasUndefInput &&
-        !isGuaranteedNotToBePoison(CommonValue, Q.AC, Q.CxtI, Q.DT))
+        !isGuaranteedNotToBePoison(CommonValue, Q.AC, Q.CtxI, Q.DT))
       return nullptr;
     return CommonValue;
   }
@@ -5730,8 +5728,8 @@ Value *llvm::simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 static Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
                                         const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.CxtI &&
-      !NullPointerIsDefined(Q.CxtI->getFunction(),
+  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.getFunction() &&
+      !NullPointerIsDefined(Q.getFunction(),
                             Op->getType()->getPointerAddressSpace()))
     return PoisonValue::get(Ty);
 
@@ -6452,6 +6450,8 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return simplifyFMulInst(LHS, RHS, FMF, Q, MaxRecurse);
   case Instruction::FDiv:
     return simplifyFDivInst(LHS, RHS, FMF, Q, MaxRecurse);
+  case Instruction::FRem:
+    return simplifyFRemInst(LHS, RHS, FMF, Q, MaxRecurse);
   default:
     return simplifyBinOp(Opcode, LHS, RHS, Q, MaxRecurse);
   }
@@ -6666,7 +6666,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
     break;
   case Intrinsic::ctpop: {
     // ctpop(X) -> 1 iff X is non-zero power of 2.
-    if (isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ false, Q.AC, Q.CxtI, Q.DT))
+    if (isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ false, Q.AC, Q.CtxI, Q.DT))
       return ConstantInt::get(Op0->getType(), 1);
     // If everything but the lowest bit is zero, that bit is the pop-count. Ex:
     // ctpop(and X, 1) --> and X, 1
@@ -6956,10 +6956,10 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    if (!Q.CxtI)
+    const Function *F = Q.getFunction();
+    if (!F)
       break;
 
-    const Function *F = Q.CxtI->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
@@ -7376,7 +7376,7 @@ static Value *simplifyIdentityInterleave(Intrinsic::ID IID,
 
 Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                ArrayRef<Value *> Args, FastMathFlags FMF,
-                               const SimplifyQuery &Q, Function *CxtF,
+                               const SimplifyQuery &Q,
                                fp::ExceptionBehavior ExBehavior,
                                RoundingMode Rounding) {
   unsigned NumOperands = Args.size();
@@ -7388,7 +7388,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (all_of(Args, IsaPred<Constant>))
     if (Constant *C = ConstantFoldIntrinsic(
             IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
-            ReturnType, Q.DL, CxtF))
+            ReturnType, Q.DL, Q.getFunction()))
       return C;
 
   // Most of the intrinsics with no operands have some kind of side effect.
@@ -7396,9 +7396,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      if (!CxtF)
+      if (!Q.getFunction())
         return nullptr;
-      ConstantRange CR = getVScaleRange(CxtF, 64);
+      ConstantRange CR = getVScaleRange(Q.getFunction(), 64);
       if (const APInt *C = CR.getSingleElement())
         return ConstantInt::get(ReturnType, C->getZExtValue());
       return nullptr;
@@ -7540,8 +7540,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     ConstantRange NumElts(
         APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
     if (Ty->isScalableTy())
-      NumElts = NumElts.multiply(CxtF ? getVScaleRange(CxtF, BitWidth)
-                                      : ConstantRange::getFull(BitWidth));
+      NumElts = NumElts.multiply(Q.getFunction()
+                                     ? getVScaleRange(Q.getFunction(), BitWidth)
+                                     : ConstantRange::getFull(BitWidth));
 
     // If we know Offset > NumElts, simplify to poison.
     ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
@@ -7623,9 +7624,9 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
       ExBehavior = Constrained->getExceptionBehavior().value_or(ExBehavior);
       Rounding = Constrained->getRoundingMode().value_or(Rounding);
     }
-    return simplifyIntrinsic(IID, ReturnType, Args,
-                             Call->getFastMathFlagsOrNone(), Q,
-                             Call->getFunction(), ExBehavior, Rounding);
+    return simplifyIntrinsic(
+        IID, ReturnType, Args, Call->getFastMathFlagsOrNone(),
+        Q.getWithFunction(Call->getFunction()), ExBehavior, Rounding);
   }
   }
 }
@@ -7690,7 +7691,7 @@ Value *llvm::simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q) {
 /// Given operands for a Freeze, see if we can fold the result.
 static Value *simplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   // Use a utility function defined in ValueTracking.
-  if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0, Q.AC, Q.CxtI, Q.DT))
+  if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0, Q.AC, Q.CtxI, Q.DT))
     return Op0;
   // We have room for improvement.
   return nullptr;
@@ -7744,10 +7745,10 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse) {
   assert(I->getFunction() && "instruction should be inserted in a function");
-  assert((!SQ.CxtI || SQ.CxtI->getFunction() == I->getFunction()) &&
+  assert((!SQ.getFunction() || SQ.getFunction() == I->getFunction()) &&
          "context instruction should be in the same function");
 
-  const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
+  const SimplifyQuery Q = SQ.CtxI ? SQ : SQ.getWithInstruction(I);
 
   switch (I->getOpcode()) {
   default:
