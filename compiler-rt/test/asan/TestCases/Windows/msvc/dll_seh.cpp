@@ -14,6 +14,8 @@
 // Should just "#include <sanitizer/asan_interface.h>" when C++ exceptions are
 // supported and we don't need to use CL.
 extern "C" bool __asan_address_is_poisoned(void *p);
+extern "C" void *__asan_get_current_fake_stack();
+extern "C" void *__asan_addr_is_in_fake_stack(void *, void *, void **, void **);
 
 void ThrowAndCatch();
 
@@ -43,8 +45,10 @@ int test_function() {
   ThrowAndCatch();
   fprintf(stderr, "After:  %p poisoned: %d\n",  &x,
           __asan_address_is_poisoned(x + 32));
-  // FIXME: Invert this assertion once we fix
-  // https://code.google.com/p/address-sanitizer/issues/detail?id=258
-  assert(!__asan_address_is_poisoned(x + 32));
+  // Exception handling currently clears real-stack redzones (issue 258).
+  // A live fake-stack allocation must retain its redzones.
+  bool on_fake_stack = __asan_addr_is_in_fake_stack(
+      __asan_get_current_fake_stack(), x, nullptr, nullptr) != nullptr;
+  assert(__asan_address_is_poisoned(x + 32) == on_fake_stack);
   return 0;
 }
