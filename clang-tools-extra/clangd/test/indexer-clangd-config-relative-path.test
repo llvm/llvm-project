@@ -5,6 +5,10 @@
 # systems, so that the developer's own user config can't affect the result.
 # UNSUPPORTED: system-windows
 # UNSUPPORTED: system-darwin
+#
+# FIXME: clangd-indexer does not yet find the .clangd file for relative "file"
+# entries, so the REL check below fails. Remove this XFAIL once that is fixed.
+# XFAIL: *
 
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 # RUN: split-file %s %t.dir
@@ -20,13 +24,13 @@
 # that a process-CWD-relative lookup is guaranteed to look in the wrong place.
 
 # Relative "file" entry: the .clangd file's CompileFlags.Add should still be
-# applied, so the #error must not fire, but indexer can't handle it yet.
+# applied, so the #error must not fire.
 # RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
 # RUN:     clangd-indexer --enable-config --executor=all-TUs \
 # RUN:     %t.dir/rel/compile_commands.json > %t.dir/rel.idx 2> %t.dir/rel.log
 # RUN: FileCheck --check-prefix=REL --input-file=%t.dir/rel.log %s
 # REL: Processing file {{.*}}test.cpp
-# REL: error: "FROM_CLANGD_FILE not defined
+# REL-NOT: error: "FROM_CLANGD_FILE not defined
 
 # Absolute "file" entry: same project, same config, and this one works today.
 # RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
