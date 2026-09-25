@@ -47,7 +47,7 @@ contains
   ! CHECK:           %[[VAL_1:.*]] = fir.address_of(@_QFFinit_with_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>
   ! CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
   ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-  ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {uniq_name = "_QFFinit_with_sliceEy"} : (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>)
+  ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) uniq_name("_QFFinit_with_sliceEy") : (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>)
   ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
   ! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
   ! CHECK:           %[[VAL_7:.*]] = arith.constant 2 : index
@@ -69,7 +69,7 @@ contains
   ! CHECK:           %[[VAL_1:.*]] = fir.address_of(@_QFFinit_no_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>
   ! CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
   ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-  ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {uniq_name = "_QFFinit_no_sliceEy"} : (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>)
+  ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) uniq_name("_QFFinit_no_sliceEy") : (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>)
   ! CHECK:           %[[VAL_5:.*]] = hlfir.designate %[[VAL_4]]#0{"p"}   shape %[[VAL_3]] : (!fir.ref<!fir.array<2x!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.copy_in %[[VAL_5]] to %[[VAL_0]] : (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>, !fir.ref<!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>>) -> (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>, i1, i1)
   ! CHECK:           %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]]#0 : (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
@@ -108,7 +108,7 @@ contains
 
   ! CHECK-LABEL: func.func private @_QFPinit_scalar()
   ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFFinit_scalarEs) : !fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>
-  ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFFinit_scalarEs"} : (!fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>) -> (!fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>, !fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>)
+  ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFFinit_scalarEs") : (!fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>) -> (!fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>, !fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>)
   ! CHECK:           %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"p"}   : (!fir.ref<!fir.type<_QFTc{p:!fir.type<_QFTp{a:i32}>,b:i32}>>) -> !fir.ref<!fir.type<_QFTp{a:i32}>>
   ! CHECK:           fir.call @_QFPprint_scalar(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.type<_QFTp{a:i32}>>) -> ()
 

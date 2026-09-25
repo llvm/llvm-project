@@ -16,13 +16,13 @@ program test_default_implicit_firstprivate
   integer :: i,j,k
   integer :: arr(10,10,10)
   integer, allocatable :: allocarr(:,:,:)
-!CHECK:           %[[VAL_0:.*]] = fir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEallocarr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-!CHECK:           %[[VAL_1:.*]] = fir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFEarr"} : (!fir.ref<!fir.array<10x10x10xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<10x10x10xi32>>
-!CHECK:           %[[VAL_2:.*]] = fir.declare %{{.*}} {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-!CHECK:           %[[VAL_3:.*]] = fir.declare %{{.*}} {uniq_name = "_QFEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
-!CHECK:           %[[VAL_4:.*]] = fir.declare %{{.*}} {uniq_name = "_QFEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
-!CHECK:           %[[VAL_5:.*]] = fir.declare %{{.*}} {uniq_name = "_QFExdgfx"} : (!fir.ref<i32>) -> !fir.ref<i32>
-!CHECK:           %[[VAL_6:.*]] = fir.declare %{{.*}} {uniq_name = "_QFExfpvx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:           %[[VAL_0:.*]] = fir.declare %{{.*}} uniq_name("_QFEallocarr") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+!CHECK:           %[[VAL_1:.*]] = fir.declare %{{.*}}(%{{.*}}) uniq_name("_QFEarr") : (!fir.ref<!fir.array<10x10x10xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<10x10x10xi32>>
+!CHECK:           %[[VAL_2:.*]] = fir.declare %{{.*}} uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:           %[[VAL_3:.*]] = fir.declare %{{.*}} uniq_name("_QFEj") : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:           %[[VAL_4:.*]] = fir.declare %{{.*}} uniq_name("_QFEk") : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:           %[[VAL_5:.*]] = fir.declare %{{.*}} uniq_name("_QFExdgfx") : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:           %[[VAL_6:.*]] = fir.declare %{{.*}} uniq_name("_QFExfpvx") : (!fir.ref<i32>) -> !fir.ref<i32>
 !CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !fir.ref<i32>
 !CHECK:           %[[VAL_8:.*]] = omp.map.info var_ptr(%[[VAL_3]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("j") -> !fir.ref<i32>
 !CHECK:           %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("k") -> !fir.ref<i32>

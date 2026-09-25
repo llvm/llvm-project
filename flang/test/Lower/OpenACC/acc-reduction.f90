@@ -1784,7 +1784,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_add_with_section(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_add_dynamic_extent_add_with_sectionEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) strideInBytes(true)
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_section_lb1.ub3_box_Uxi32) name("a(2:4)") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?xi32>>)
@@ -1797,7 +1797,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_reduction_add_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_add_allocatableEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) recipe(@reduction_max_ref_box_heap_Uxf32) name("a") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 
@@ -1809,7 +1809,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_reduction_add_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_add_pointer_arrayEa") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) recipe(@reduction_max_ref_box_ptr_Uxf32) name("a") -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 
@@ -1822,7 +1822,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_dynamic_extent_max(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"})
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_max_dynamic_extent_maxEa") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) recipe(@reduction_max_box_UxUxf32) name("a") -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?x?xf32>>)
 

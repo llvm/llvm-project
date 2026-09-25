@@ -55,9 +55,9 @@ subroutine test_char_scalar_explicit_call(n)
   character(10), allocatable :: x
   character(n), allocatable :: x2
   ! CHECK: %[[alloca:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,10>>> <{{{.*}}uniq_name = "_QFtest_char_scalar_explicit_callEx"}>
-  ! CHECK: %[[box:.*]]:2 = hlfir.declare %[[alloca]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_char_scalar_explicit_callEx"}
+  ! CHECK: %[[box:.*]]:2 = hlfir.declare %[[alloca]] typeparams %{{.*}} uniq_name("_QFtest_char_scalar_explicit_callEx") fortran_attrs<allocatable>
   ! CHECK: %[[alloca2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{{{.*}}uniq_name = "_QFtest_char_scalar_explicit_callEx2"}>
-  ! CHECK: %[[box2:.*]]:2 = hlfir.declare %[[alloca2]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_char_scalar_explicit_callEx2"}
+  ! CHECK: %[[box2:.*]]:2 = hlfir.declare %[[alloca2]] typeparams %{{.*}} uniq_name("_QFtest_char_scalar_explicit_callEx2") fortran_attrs<allocatable>
   call test_char_scalar_explicit(x)
   ! CHECK: fir.call @_QPtest_char_scalar_explicit(%[[box]]#0) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>) -> ()
   call test_char_scalar_explicit(x2)
@@ -90,9 +90,9 @@ subroutine test_char_array_explicit_call(n)
   character(10), allocatable :: x(:)
   character(n), allocatable :: x2(:)
   ! CHECK: %[[alloca:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> <{{{.*}}uniq_name = "_QFtest_char_array_explicit_callEx"}>
-  ! CHECK: %[[box:.*]]:2 = hlfir.declare %[[alloca]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_char_array_explicit_callEx"}
+  ! CHECK: %[[box:.*]]:2 = hlfir.declare %[[alloca]] typeparams %{{.*}} uniq_name("_QFtest_char_array_explicit_callEx") fortran_attrs<allocatable>
   ! CHECK: %[[alloca2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{{{.*}}uniq_name = "_QFtest_char_array_explicit_callEx2"}>
-  ! CHECK: %[[box2:.*]]:2 = hlfir.declare %[[alloca2]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_char_array_explicit_callEx2"}
+  ! CHECK: %[[box2:.*]]:2 = hlfir.declare %[[alloca2]] typeparams %{{.*}} uniq_name("_QFtest_char_array_explicit_callEx2") fortran_attrs<allocatable>
   call test_char_array_explicit(x)
   ! CHECK: fir.call @_QPtest_char_array_explicit(%[[box]]#0) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) -> ()
   call test_char_array_explicit(x2)

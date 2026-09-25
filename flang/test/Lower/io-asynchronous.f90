@@ -11,7 +11,7 @@ subroutine test(x, iounit, idvar, pending)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}idvar
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}iounit
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}pending
-! CHECK:           hlfir.declare %{{.*}}fir.var_attrs<asynchronous>{{.*}}x
+! CHECK:           hlfir.declare %{{.*}}uniq_name({{.*}}x") fortran_attrs<asynchronous>
 
   open(unit=iounit, asynchronous='yes')
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>

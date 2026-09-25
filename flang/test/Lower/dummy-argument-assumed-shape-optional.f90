@@ -23,7 +23,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_assumed_shape_to_contiguous(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_to_contiguousEx"{{.*}}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_assumed_shape_to_contiguousEx"){{.*}}
 ! CHECK:  %[[VAL_3:.*]]:3 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
 ! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_3]]#0) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  hlfir.copy_out %[[VAL_1]], %[[VAL_3]]#1, %[[VAL_3]]#2 to %[[VAL_2]]#0 : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1, !fir.box<!fir.array<?xf32>>) -> ()
@@ -39,7 +39,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_2:.*]]:3 = fir.box_dims %[[VAL_0]], %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_3:.*]] = fir.shape_shift %c1, %[[VAL_2]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_contiguous_to_contiguousEx"{{.*}}
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {{.*}}uniq_name("_QMtestsFtest_assumed_shape_contiguous_to_contiguousEx"){{.*}}
 ! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_4]]#0) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  return
 ! CHECK:}
@@ -51,7 +51,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_assumed_shape_opt_to_contiguous(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_opt_to_contiguousEx"{{.*}}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_assumed_shape_opt_to_contiguousEx"){{.*}}
 ! CHECK:  %[[VAL_3:.*]]:3 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
 ! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_3]]#0) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  hlfir.copy_out %[[VAL_1]], %[[VAL_3]]#1, %[[VAL_3]]#2 to %[[VAL_2]]#0 : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1, !fir.box<!fir.array<?xf32>>) -> ()
@@ -64,7 +64,7 @@ subroutine test_assumed_shape_contiguous_opt_to_contiguous(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_assumed_shape_contiguous_opt_to_contiguous(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.contiguous, fir.optional}) {
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_contiguous_opt_to_contiguousEx"{{.*}}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_assumed_shape_contiguous_opt_to_contiguousEx"){{.*}}
 ! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_1]]#0) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  return
 ! CHECK:}
@@ -82,7 +82,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_assumed_shape_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_assumed_shape_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_3:.*]]:3 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
 ! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_3]]#0) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  hlfir.copy_out %[[VAL_1]], %[[VAL_3]]#1, %[[VAL_3]]#2 to %[[VAL_2]]#0 : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1, !fir.box<!fir.array<?xf32>>) -> ()
@@ -98,7 +98,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_2:.*]]:3 = fir.box_dims %[[VAL_0]], %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_3:.*]] = fir.shape_shift %c1, %[[VAL_2]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_contiguous_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {{.*}}uniq_name("_QMtestsFtest_assumed_shape_contiguous_to_contiguous_optEx"){{.*}}
 ! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_4]]#0) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  return
 ! CHECK:}
@@ -110,7 +110,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_assumed_shape_opt_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_opt_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_assumed_shape_opt_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_3:.*]] = fir.is_present %[[VAL_2]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
 ! CHECK:  %[[VAL_4:.*]]:4 = fir.if %[[VAL_3]] -> (!fir.box<!fir.array<?xf32>>, i1, i1, !fir.box<!fir.array<?xf32>>) {
 ! CHECK:    %[[VAL_5:.*]]:3 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
@@ -133,7 +133,7 @@ subroutine test_assumed_shape_contiguous_opt_to_contiguous_opt(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_assumed_shape_contiguous_opt_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.contiguous, fir.optional}) {
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_assumed_shape_contiguous_opt_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_assumed_shape_contiguous_opt_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
 ! CHECK:  %[[VAL_3:.*]] = fir.if %[[VAL_2]] -> (!fir.box<!fir.array<?xf32>>) {
 ! CHECK:    fir.result %[[VAL_1]]#0 : !fir.box<!fir.array<?xf32>>
@@ -159,7 +159,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_pointer_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_pointer_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_pointer_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
@@ -187,7 +187,7 @@ subroutine test_pointer_contiguous_to_contiguous_opt(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_pointer_contiguous_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "x", fir.contiguous}) {
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_pointer_contiguous_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_pointer_contiguous_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
@@ -211,7 +211,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_pointer_opt_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "x", fir.optional}) {
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_pointer_opt_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_pointer_opt_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
@@ -239,7 +239,7 @@ subroutine test_pointer_contiguous_opt_to_contiguous_opt(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QMtestsPtest_pointer_contiguous_opt_to_contiguous_opt(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "x", fir.contiguous, fir.optional}) {
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMtestsFtest_pointer_contiguous_opt_to_contiguous_optEx"{{.*}}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMtestsFtest_pointer_contiguous_opt_to_contiguous_optEx"){{.*}}
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?xf32>>) -> i64

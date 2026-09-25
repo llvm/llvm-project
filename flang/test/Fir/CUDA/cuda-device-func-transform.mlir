@@ -7,7 +7,7 @@ func.func @_QPsub_device1() attributes {cuf.proc_attr = #cuf.cuda_proc<device>} 
 }
 
 func.func @_QPsub_device2(%arg0: !fir.ref<f32> {fir.bindc_name = "i", cuf.proc_attr = #cuf.cuda_proc<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>} {
-  %0 = fir.declare %arg0 {uniq_name = "_QFsub1Ei"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %0 = fir.declare %arg0 uniq_name("_QFsub1Ei") : (!fir.ref<f32>) -> !fir.ref<f32>
   %cst = arith.constant 2.000000e+00 : f32
   fir.store %cst to %0 : !fir.ref<f32>
   return
@@ -37,7 +37,7 @@ func.func private @_QMmod1Psub1(!fir.ref<!fir.array<10xi32>> {cuf.data_attr = #c
 // CHECK: gpu.func @_QPsub_device1()
 
 // CHECK: gpu.func @_QPsub_device2(%[[ARG0:.*]]: !fir.ref<f32>
-// CHECK:   %[[DECL:.*]] = fir.declare %[[ARG0]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:   %[[DECL:.*]] = fir.declare %[[ARG0]] uniq_name("_QFsub1Ei") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:   %[[CST:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK:   fir.store %[[CST]] to %[[DECL]] : !fir.ref<f32>
 // CHECK:   gpu.return
@@ -124,17 +124,17 @@ func.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>> {cuf.data_
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca i32
   fir.store %arg1 to %1 : !fir.ref<i32>
-  %2 = fir.declare %1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QFpartialsumshflshflr8En"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFpartialsumshflshflr8En") fortran_attrs<intent_in, value> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %9 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFpartialsumshflshflr8Ei"}
-  %10 = fir.declare %9 {uniq_name = "_QFpartialsumshflshflr8Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %10 = fir.declare %9 uniq_name("_QFpartialsumshflshflr8Ei") : (!fir.ref<i32>) -> !fir.ref<i32>
   %13 = fir.alloca i32 {bindc_name = "__builtin_warpsize", uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"}
-  %14 = fir.declare %13 {uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %14 = fir.declare %13 uniq_name("_QM__fortran_builtinsEC__builtin_warpsize") : (!fir.ref<i32>) -> !fir.ref<i32>
   %15 = fir.load %2 : !fir.ref<i32>
   %16 = fir.convert %15 : (i32) -> index
   %17 = arith.cmpi sgt, %16, %c0 : index
   %18 = arith.select %17, %16, %c0 : index
   %19 = fir.shape %18 : (index) -> !fir.shape<1>
-  %20 = fir.declare %arg0(%19) dummy_scope %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFpartialsumshflshflr8Ea"} : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf64>>
+  %20 = fir.declare %arg0(%19) dummy_scope %0 uniq_name("_QFpartialsumshflshflr8Ea") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf64>>
   cf.br ^bb1
 ^bb1:  // 2 preds: ^bb0, ^bb2
   %21 = fir.load %10 : !fir.ref<i32>
@@ -163,8 +163,8 @@ func.func @_QPldg_attrs(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"
   %c10 = arith.constant 10 : index
   %scope = fir.dummy_scope : !fir.dscope
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %0 = fir.declare %arg0(%shape) dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFldg_attrsEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
-  %1 = fir.declare %arg1(%shape) dummy_scope %scope arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFldg_attrsEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %0 = fir.declare %arg0(%shape) dummy_scope %scope arg 1 uniq_name("_QFldg_attrsEa") fortran_attrs<intent_out> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %1 = fir.declare %arg1(%shape) dummy_scope %scope arg 2 uniq_name("_QFldg_attrsEb") fortran_attrs<intent_in> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
   return
 }
 
@@ -177,7 +177,7 @@ func.func @_QPvalue_in(%arg0: i32 {fir.bindc_name = "n"}) attributes {cuf.proc_a
   %scope = fir.dummy_scope : !fir.dscope
   %0 = fir.alloca i32
   fir.store %arg0 to %0 : !fir.ref<i32>
-  %1 = fir.declare %0 dummy_scope %scope {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QPvalue_inEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %0 dummy_scope %scope uniq_name("_QPvalue_inEn") fortran_attrs<intent_in, value> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   return
 }
 

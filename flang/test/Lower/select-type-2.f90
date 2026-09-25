@@ -30,7 +30,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_2Pselect_type1(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
-! CHECK:      %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMselect_type_2Fselect_type1Ea"}
+! CHECK:      %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} uniq_name("_QMselect_type_2Fselect_type1Ea") fortran_attrs<intent_in>
 ! CHECK:      %[[TDESC_P3_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_2Tp3
 ! CHECK:      %[[TDESC_P3_CONV:.*]] = fir.convert %[[TDESC_P3_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CHECK:      %[[BOX_NONE:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.type<_QMselect_type_2Tp1{a:i32,b:i32}>>) -> !fir.box<none>

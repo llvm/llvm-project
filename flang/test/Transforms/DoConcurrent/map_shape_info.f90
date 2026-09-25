@@ -55,7 +55,7 @@ end program do_concurrent_shape
 ! CHECK-DAG:    %[[DIM1_EXT_DEV:.*]] = fir.load %[[DIM1_EXT_ARG]]
 
 ! CHECK:        %[[SHAPE:.*]] = fir.shape %[[DIM0_EXT_DEV]], %[[DIM1_EXT_DEV]]
-! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) {uniq_name = "_QFEa"}
+! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) uniq_name("_QFEa")
 
 subroutine do_concurrent_shape_shift
     implicit none
@@ -100,5 +100,5 @@ end subroutine do_concurrent_shape_shift
 ! CHECK-DAG:    %[[DIM0_EXT_DEV:.*]] = fir.load %[[DIM0_EXT_ARG]]
 
 ! CHECK:        %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIM0_STRT_DEV]], %[[DIM0_EXT_DEV]]
-! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE_SHIFT]]) {uniq_name = "_QF{{.*}}Ea"}
+! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE_SHIFT]]) uniq_name("_QF{{.*}}Ea")
 

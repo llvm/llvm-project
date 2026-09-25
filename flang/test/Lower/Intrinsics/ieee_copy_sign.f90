@@ -6,11 +6,11 @@ real(4) :: x = -2.0, y = huge(y)
 real(8) :: z = 2.0
 
 ! CHECK-DAG: %[[X_ADDR:.*]] = fir.address_of(@_QFEx) : !fir.ref<f32>
-! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ADDR]] {uniq_name = "_QFEx"}
+! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ADDR]] uniq_name("_QFEx")
 ! CHECK-DAG: %[[Y_ADDR:.*]] = fir.address_of(@_QFEy) : !fir.ref<f32>
-! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_ADDR]] {uniq_name = "_QFEy"}
+! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_ADDR]] uniq_name("_QFEy")
 ! CHECK-DAG: %[[Z_ADDR:.*]] = fir.address_of(@_QFEz) : !fir.ref<f64>
-! CHECK-DAG: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_ADDR]] {uniq_name = "_QFEz"}
+! CHECK-DAG: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_ADDR]] uniq_name("_QFEz")
 
 ! CHECK-DAG: %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
 ! CHECK-DAG: %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f32>

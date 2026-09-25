@@ -3,17 +3,17 @@
 // RUN: fir-opt %s -convert-hlfir-to-fir | FileCheck %s
 
 func.func @test_scalar(%arg0: !fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>) -> (!fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>, !fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>) -> (!fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>, !fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>)
   %1 = hlfir.designate %0#0{"scalar_x"}   : (!fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>) -> !fir.ref<f32>
   return
 }
 // CHECK-LABEL:   func.func @test_scalar(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "a"}
+// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("a")
 // CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], scalar_x : (!fir.ref<!fir.type<t1{scalar_i:i32,scalar_x:f32}>>) -> !fir.ref<f32>
 
 func.func @test_array_char_comp_1(%arg0: !fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>) -> (!fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>, !fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>) -> (!fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>, !fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>)
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %1 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
@@ -23,7 +23,7 @@ func.func @test_array_char_comp_1(%arg0: !fir.ref<!fir.type<t_array_char{scalar_
 }
 // CHECK-LABEL:   func.func @test_array_char_comp_1(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "a"}
+// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("a")
 // CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 // CHECK:  %[[VAL_3:.*]] = arith.constant 20 : index
 // CHECK:  %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
@@ -31,7 +31,7 @@ func.func @test_array_char_comp_1(%arg0: !fir.ref<!fir.type<t_array_char{scalar_
 // CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], array_char_comp : (!fir.ref<!fir.type<t_array_char{scalar_i:i32,array_char_comp:!fir.array<10x20x!fir.char<1,5>>}>>) -> !fir.ref<!fir.array<10x20x!fir.char<1,5>>>
 
 func.func @test_array(%arg0: !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>) -> (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>) -> (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>)
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %0#0, %c0 : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
@@ -40,7 +40,7 @@ func.func @test_array(%arg0: !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,sca
 }
 // CHECK-LABEL:   func.func @test_array(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "a"}
+// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("a")
 // CHECK:  %[[VAL_2:.*]] = fir.rebox %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>) -> !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>
 // CHECK:  %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:  %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, index) -> (index, index, index)
@@ -55,7 +55,7 @@ func.func @test_array(%arg0: !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,sca
 
 func.func @test_array_char(%arg0: !fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, %n : index) {
   %5 = fir.shape %n : (index) -> !fir.shape<1>
-  %6:2 = hlfir.declare %arg0(%5) {uniq_name = "a"} : (!fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>)
+  %6:2 = hlfir.declare %arg0(%5) uniq_name("a") : (!fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>)
   %c5 = arith.constant 5 : index
   %10 = hlfir.designate %6#0{"scalar_char"}   shape %5 typeparams %c5 : (!fir.box<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
   return
@@ -64,7 +64,7 @@ func.func @test_array_char(%arg0: !fir.ref<!fir.array<?x!fir.type<t_char{scalar_
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: index) {
 // CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_9:.*]] = fir.declare %[[VAL_0]](%[[VAL_8]]) {uniq_name = "a"}
+// CHECK:  %[[VAL_9:.*]] = fir.declare %[[VAL_0]](%[[VAL_8]]) uniq_name("a")
 // CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_9]](%[[VAL_8]]) : (!fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>
 // CHECK:  %[[VAL_11:.*]] = arith.constant 5 : index
 // CHECK:  %[[VAL_12:.*]] = fir.field_index scalar_char, !fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>
@@ -76,7 +76,7 @@ func.func @test_array_char(%arg0: !fir.ref<!fir.array<?x!fir.type<t_char{scalar_
 func.func @test_array_char_substring(%arg0: !fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>) {
   %c100 = arith.constant 100 : index
   %0 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "a"} : (!fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, !fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>)
   %c3 = arith.constant 3 : index
   %c5 = arith.constant 5 : index
   %c3_0 = arith.constant 3 : index
@@ -87,7 +87,7 @@ func.func @test_array_char_substring(%arg0: !fir.ref<!fir.array<100x!fir.type<t_
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>) {
 // CHECK:  %[[VAL_1:.*]] = arith.constant 100 : index
 // CHECK:  %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) {uniq_name = "a"}
+// CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) uniq_name("a")
 // CHECK:  %[[VAL_4:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_5:.*]] = arith.constant 5 : index
 // CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
@@ -102,7 +102,7 @@ func.func @test_array_char_substring(%arg0: !fir.ref<!fir.array<100x!fir.type<t_
 func.func @test_array_array_comp_1(%arg0: !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>) {
   %c100 = arith.constant 100 : index
   %0 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "a"} : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>)
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %5 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
@@ -115,7 +115,7 @@ func.func @test_array_array_comp_1(%arg0: !fir.ref<!fir.array<100x!fir.type<t_ar
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>) {
 // CHECK:  %[[VAL_1:.*]] = arith.constant 100 : index
 // CHECK:  %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) {uniq_name = "a"}
+// CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_0]](%[[VAL_2]]) uniq_name("a")
 // CHECK:  %[[VAL_4:.*]] = arith.constant 10 : index
 // CHECK:  %[[VAL_5:.*]] = arith.constant 20 : index
 // CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
@@ -134,7 +134,7 @@ func.func @test_array_array_comp_1(%arg0: !fir.ref<!fir.array<100x!fir.type<t_ar
 func.func @test_array_array_comp_1_with_lbs(%arg0: !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>) {
   %c100 = arith.constant 100 : index
   %0 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "a"} : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("a") : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>)
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %c42 = arith.constant 42 : index
@@ -148,7 +148,7 @@ func.func @test_array_array_comp_1_with_lbs(%arg0: !fir.ref<!fir.array<100x!fir.
 // CHECK-LABEL:   func.func @test_array_array_comp_1_with_lbs(
 // CHECK:           %[[VAL_1:.*]] = arith.constant 100 : index
 // CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_3:.*]] = fir.declare %{{.*}}(%[[VAL_2]]) {uniq_name = "a"} : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %{{.*}}(%[[VAL_2]]) uniq_name("a") : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>
 // CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 20 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 42 : index
@@ -166,7 +166,7 @@ func.func @test_array_array_comp_1_with_lbs(%arg0: !fir.ref<!fir.array<100x!fir.
 
 
 func.func @test_array_comp_slice(%arg0: !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "ga"} : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>, !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("ga") : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>, !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>)
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %1 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
@@ -179,7 +179,7 @@ func.func @test_array_comp_slice(%arg0: !fir.ref<!fir.type<t_array{scalar_i:i32,
 }
 // CHECK-LABEL:   func.func @test_array_comp_slice(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "ga"} : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>
+// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("ga") : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>
 // CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 // CHECK:  %[[VAL_3:.*]] = arith.constant 20 : index
 // CHECK:  %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
@@ -193,7 +193,7 @@ func.func @test_array_comp_slice(%arg0: !fir.ref<!fir.type<t_array{scalar_i:i32,
 
 
 func.func @test_array_comp_non_contiguous_slice(%arg0: !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "ga"} : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>, !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("ga") : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>, !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>)
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %4 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
@@ -207,7 +207,7 @@ func.func @test_array_comp_non_contiguous_slice(%arg0: !fir.ref<!fir.type<t_arra
 }
 // CHECK-LABEL:   func.func @test_array_comp_non_contiguous_slice(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "ga"} : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>
+// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("ga") : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>
 // CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 // CHECK:  %[[VAL_3:.*]] = arith.constant 20 : index
 // CHECK:  %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_3]] : (index, index) -> !fir.shape<2>

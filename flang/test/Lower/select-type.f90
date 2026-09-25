@@ -116,7 +116,7 @@ contains
 ! CHECK: %[[RESULT:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> <{bindc_name = ".result"}>
 ! CHECK: %[[FCTCALL:.*]] = fir.call @_QMselect_type_lower_testPget_class() {{.*}}: () -> !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK: fir.save_result %[[FCTCALL]] to %[[RESULT]] : !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[RESULT]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[RESULT]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
 ! CHECK: %[[SELECTOR:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CHECK: fir.select_type %[[SELECTOR]] : !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK-SAME: [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^[[TYPE_IS_BLK:.*]], #fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^[[CLASS_IS_BLK:.*]], unit, ^[[DEFAULT_BLK:.*]]]
@@ -127,7 +127,7 @@ contains
 ! CFG: %[[CLASS_ALLOCA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> <{bindc_name = ".result"}>
 ! CFG: %[[GET_CLASS:.*]] = fir.call @_QMselect_type_lower_testPget_class() {{.*}} : () -> !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CFG: fir.save_result %[[GET_CLASS]] to %[[CLASS_ALLOCA]] : !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
-! CFG: %[[DECL:.*]]:2 = hlfir.declare %[[CLASS_ALLOCA]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
+! CFG: %[[DECL:.*]]:2 = hlfir.declare %[[CLASS_ALLOCA]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
 ! CFG: %[[LOAD_CLASS:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CFG: %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
 ! CFG: %[[CLASS_TDESC:.*]] = fir.box_tdesc %[[LOAD_CLASS]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.tdesc<{{.*}}>
@@ -167,7 +167,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type3(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "a", fir.read_only})
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in, pointer>, uniq_name = "_QMselect_type_lower_testFselect_type3Ea"}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMselect_type_lower_testFselect_type3Ea") fortran_attrs<intent_in, pointer>
 ! CHECK: %[[ARG0_LOAD:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[SELECTOR:.*]] = hlfir.designate %[[ARG0_LOAD]] (%{{.*}})  : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, index) -> !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
 ! CHECK: fir.select_type %[[SELECTOR]] : !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
@@ -216,7 +216,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type4(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"})
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMselect_type_lower_testFselect_type4Ea"}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} uniq_name("_QMselect_type_lower_testFselect_type4Ea") fortran_attrs<intent_in>
 ! CHECK: fir.select_type %[[A]]#1 : !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
 ! CHECK-SAME: [#fir.type_is<!fir.type<_QMselect_type_lower_testTp3K8{{.*}}>>, ^[[P3_8:.*]], #fir.type_is<!fir.type<_QMselect_type_lower_testTp3K4{{.*}}>>, ^[[P3_4:.*]], #fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^[[P1:.*]], unit, ^[[EXIT:.*]]]
 ! CHECK: ^[[P3_8]]
@@ -226,7 +226,7 @@ contains
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type4(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
-! CFG:      %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMselect_type_lower_testFselect_type4Ea"}
+! CFG:      %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}} uniq_name("_QMselect_type_lower_testFselect_type4Ea") fortran_attrs<intent_in>
 ! CFG:      %[[TDESC_P3_8_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp3K8
 ! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[A]]#1 : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<{{.*}}>
 ! CFG:      %[[TDESC_P3_8_CONV:.*]] = fir.convert %[[TDESC_P3_8_ADDR]] : (!fir.tdesc{{.*}}>) -> index
@@ -279,7 +279,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type5(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"})
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMselect_type_lower_testFselect_type5Ea"} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type5Ea") fortran_attrs<intent_in> : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
 ! CHECK: fir.select_type %[[A]]#1 : !fir.class<none>
 ! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], #fir.type_is<!fir.char<1,?>>, ^[[CHAR_BLK:.*]], unit, ^[[DEFAULT:.*]]]
 ! CHECK: ^[[I8_BLK]]
@@ -291,7 +291,7 @@ contains
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type5(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"}) {
-! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMselect_type_lower_testFselect_type5Ea"} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type5Ea") fortran_attrs<intent_in> : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
 ! CFG: %[[INT8_TC:.*]] = arith.constant 7 : i8
 ! CFG: %[[TYPE_CODE:.*]] = fir.box_typecode %[[A]]#1 : (!fir.class<none>) -> i8
 ! CFG: %[[IS_INT8:.*]] = arith.cmpi eq, %[[TYPE_CODE]], %[[INT8_TC]] : i8
@@ -413,7 +413,7 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type7(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"})
 ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DSCOPE]] arg 1 {{.*}}uniq_name = "_QMselect_type_lower_testFselect_type7Ea"{{.*}} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DSCOPE]] arg 1 {{.*}}uniq_name("_QMselect_type_lower_testFselect_type7Ea"){{.*}} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
 ! CHECK: fir.select_type %[[DECL]]#1 :
 ! CHECK-SAME: !fir.class<none> [#fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb1, #fir.class_is<!fir.type<_QMselect_type_lower_testTp2{{.*}}>>, ^bb2, #fir.class_is<!fir.type<_QMselect_type_lower_testTp4{{.*}}>>, ^bb3, unit, ^bb4]
 
@@ -478,23 +478,23 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type8(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]]{{.*}} {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]]{{.*}} uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
 ! CHECK: fir.select_type %[[A]]#1 : !fir.class<!fir.array<?xnone>> [#fir.type_is<i32>, ^bb{{.*}}, #fir.type_is<f32>, ^bb{{.*}}, #fir.type_is<!fir.char<1,?>>, ^bb{{.*}}, #fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb{{.*}}, #fir.class_is<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, ^bb{{.*}}, unit, ^bb{{.*}}]
 ! CHECK: ^bb{{.*}}:
 ! CHECK:   %[[BOX_I32:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:   %[[DECL_I32:.*]]:2 = hlfir.declare %[[BOX_I32]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:   %[[DECL_I32:.*]]:2 = hlfir.declare %[[BOX_I32]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK:   %[[C100:.*]] = arith.constant 100 : i32
 ! CHECK:   hlfir.assign %[[C100]] to %[[DECL_I32]]#0 : i32, !fir.box<!fir.array<?xi32>>
 ! CHECK:   cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:   %[[BOX_F32:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:   %[[DECL_F32:.*]]:2 = hlfir.declare %[[BOX_F32]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:   %[[DECL_F32:.*]]:2 = hlfir.declare %[[BOX_F32]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:   %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
 ! CHECK:   hlfir.assign %[[CST2]] to %[[DECL_F32]]#0 : f32, !fir.box<!fir.array<?xf32>>
 ! CHECK:   cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:   %[[BOX_CHR:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:   %[[DECL_CHR:.*]]:2 = hlfir.declare %[[BOX_CHR]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
+! CHECK:   %[[DECL_CHR:.*]]:2 = hlfir.declare %[[BOX_CHR]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CHECK:   %[[CHR_C:.*]] = fir.address_of(@_QQclX63) : !fir.ref<!fir.char<1>>
 ! CHECK:   %[[DESIG1:.*]] = hlfir.designate %[[DECL_CHR]]#0 (%{{.*}})  typeparams %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:   hlfir.assign %{{.*}} to %[[DESIG1]] : !fir.ref<!fir.char<1>>, !fir.boxchar<1>
@@ -504,7 +504,7 @@ contains
 ! CHECK:   cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:   %[[BOX_P1:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
-! CHECK:   %[[DECL_P1:.*]]:2 = hlfir.declare %[[BOX_P1]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CHECK:   %[[DECL_P1:.*]]:2 = hlfir.declare %[[BOX_P1]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[FIELD_A:.*]] = hlfir.designate %[[DECL_P1]]#0{"a"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:   hlfir.assign %[[C1_I32]] to %[[FIELD_A]] : i32, !fir.box<!fir.array<?xi32>>
@@ -514,7 +514,7 @@ contains
 ! CHECK:   cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:   %[[CLASS_P2:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>
-! CHECK:   %[[DECL_P2:.*]]:2 = hlfir.declare %[[CLASS_P2]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>)
+! CHECK:   %[[DECL_P2:.*]]:2 = hlfir.declare %[[CLASS_P2]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>)
 ! CHECK:   %[[C1_I32_P2:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[P1_PARENT_A:.*]] = hlfir.designate %[[DECL_P2]]#0{"p1"}   shape %{{.*}} : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK:   %[[P2_A:.*]] = hlfir.designate %[[P1_PARENT_A]]{"a"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
@@ -531,7 +531,7 @@ contains
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type8(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "a"}) {
 ! CFG: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]]{{.*}} {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
+! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]]{{.*}} uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
 ! CFG: %[[TC_I32:.*]] = arith.constant 9 : i8
 ! CFG: %[[CODE_I32:.*]] = fir.box_typecode %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> i8
 ! CFG: %[[CMP_I32:.*]] = arith.cmpi eq, %[[CODE_I32]], %[[TC_I32]] : i8
@@ -543,7 +543,7 @@ contains
 ! CFG: cf.cond_br %[[CMP_F32]], ^bb4, ^bb3
 ! CFG: ^bb2:
 ! CFG:   %[[BOX_I32:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xi32>>
-! CFG:   %[[DECL_I32:.*]]:2 = hlfir.declare %[[BOX_I32]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CFG:   %[[DECL_I32:.*]]:2 = hlfir.declare %[[BOX_I32]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CFG:   %[[C100:.*]] = arith.constant 100 : i32
 ! CFG:   hlfir.assign %[[C100]] to %[[DECL_I32]]#0 : i32, !fir.box<!fir.array<?xi32>>
 ! CFG:   cf.br ^bb12
@@ -554,7 +554,7 @@ contains
 ! CFG: cf.cond_br %[[CMP_CHR]], ^bb6, ^bb5
 ! CFG: ^bb4:
 ! CFG:   %[[BOX_F32:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xf32>>
-! CFG:   %[[DECL_F32:.*]]:2 = hlfir.declare %[[BOX_F32]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CFG:   %[[DECL_F32:.*]]:2 = hlfir.declare %[[BOX_F32]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CFG:   %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
 ! CFG:   hlfir.assign %[[CST2]] to %[[DECL_F32]]#0 : f32, !fir.box<!fir.array<?xf32>>
 ! CFG:   cf.br ^bb12
@@ -565,7 +565,7 @@ contains
 ! CFG: cf.cond_br %[[CMP_P1]], ^bb8, ^bb7
 ! CFG: ^bb6:
 ! CFG:   %[[BOX_CHR:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CFG:   %[[DECL_CHR:.*]]:2 = hlfir.declare %[[BOX_CHR]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
+! CFG:   %[[DECL_CHR:.*]]:2 = hlfir.declare %[[BOX_CHR]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CFG:   %[[CHR_C:.*]] = fir.address_of(@_QQclX63) : !fir.ref<!fir.char<1>>
 ! CFG:   %[[DESIG1:.*]] = hlfir.designate %[[DECL_CHR]]#0 (%{{.*}})  typeparams %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CFG:   hlfir.assign %{{.*}} to %[[DESIG1]] : !fir.ref<!fir.char<1>>, !fir.boxchar<1>
@@ -579,7 +579,7 @@ contains
 ! CFG: cf.cond_br %{{.*}}, ^bb10, ^bb9
 ! CFG: ^bb8:
 ! CFG:   %[[BOX_P1:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
-! CFG:   %[[DECL_P1:.*]]:2 = hlfir.declare %[[BOX_P1]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CFG:   %[[DECL_P1:.*]]:2 = hlfir.declare %[[BOX_P1]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CFG:   %[[C1_I32:.*]] = arith.constant 1 : i32
 ! CFG:   %[[FIELD_A:.*]] = hlfir.designate %[[DECL_P1]]#0{"a"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CFG:   hlfir.assign %[[C1_I32]] to %[[FIELD_A]] : i32, !fir.box<!fir.array<?xi32>>
@@ -591,7 +591,7 @@ contains
 ! CFG:   cf.br ^bb11
 ! CFG: ^bb10:
 ! CFG:   %[[CLASS_P2:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?xnone>>) -> !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>
-! CFG:   %[[DECL_P2:.*]]:2 = hlfir.declare %[[CLASS_P2]] {uniq_name = "_QMselect_type_lower_testFselect_type8Ea"} : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>)
+! CFG:   %[[DECL_P2:.*]]:2 = hlfir.declare %[[CLASS_P2]] uniq_name("_QMselect_type_lower_testFselect_type8Ea") : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>)
 ! CFG:   %[[C1_I32_P2:.*]] = arith.constant 1 : i32
 ! CFG:   %[[P1_PARENT_A:.*]] = hlfir.designate %[[DECL_P2]]#0{"p1"}   shape %{{.*}} : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CFG:   %[[P2_A:.*]] = hlfir.designate %[[P1_PARENT_A]]{"a"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
@@ -629,11 +629,11 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type9(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QMselect_type_lower_testFselect_type9Ea"} : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]] arg 1 uniq_name("_QMselect_type_lower_testFselect_type9Ea") : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CHECK: fir.select_type %[[A]]#1 : !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb{{[0-9]+}}, #fir.type_is<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, ^bb{{[0-9]+}}, unit, ^bb{{[0-9]+}}]
 ! CHECK: ^bb{{[0-9]+}}:
 ! CHECK: %[[BOX_P1:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
-! CHECK: %[[DECL_P1:.*]]:2 = hlfir.declare %[[BOX_P1]] {uniq_name = "_QMselect_type_lower_testFselect_type9Ea"} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CHECK: %[[DECL_P1:.*]]:2 = hlfir.declare %[[BOX_P1]] uniq_name("_QMselect_type_lower_testFselect_type9Ea") : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CHECK: %[[C1_A:.*]] = arith.constant 1 : i32
 ! CHECK: %[[FIELD_A_P1:.*]] = hlfir.designate %[[DECL_P1]]#0{"a"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK: hlfir.assign %[[C1_A]] to %[[FIELD_A_P1]] : i32, !fir.box<!fir.array<?xi32>>
@@ -643,7 +643,7 @@ contains
 ! CHECK: cf.br ^bb{{[0-9]+}}
 ! CHECK: ^bb{{[0-9]+}}:
 ! CHECK: %[[BOX_P2:.*]] = fir.convert %[[A]]#1 : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>
-! CHECK: %[[DECL_P2:.*]]:2 = hlfir.declare %[[BOX_P2]] {uniq_name = "_QMselect_type_lower_testFselect_type9Ea"} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>)
+! CHECK: %[[DECL_P2:.*]]:2 = hlfir.declare %[[BOX_P2]] uniq_name("_QMselect_type_lower_testFselect_type9Ea") : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>)
 ! CHECK: %[[C1_PA:.*]] = arith.constant 1 : i32
 ! CHECK: %[[PARENT_A:.*]] = hlfir.designate %[[DECL_P2]]#0{"p1"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK: %[[FIELD_A_P2:.*]] = hlfir.designate %[[PARENT_A]]{"a"}   shape %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
@@ -660,7 +660,7 @@ contains
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type9(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "a"}) {
 ! CFG: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QMselect_type_lower_testFselect_type9Ea"}
+! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[SCOPE]] arg 1 uniq_name("_QMselect_type_lower_testFselect_type9Ea")
 ! CFG: %[[TD1:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
 ! CFG: %[[BTD1:.*]] = fir.box_tdesc %[[A]]#1
 ! CFG: %[[CMP1:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}} : index
@@ -711,25 +711,25 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type10(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>> {fir.bindc_name = "a"}) {
-! CHECK:  %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
+! CHECK:  %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
 ! CHECK:  %[[SELECTOR:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CHECK:  fir.select_type %[[SELECTOR]] : !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb{{.*}}, #fir.type_is<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, ^bb{{.*}}, #fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb{{.*}}, unit, ^bb{{.*}}]
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX_P1:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
-! CHECK:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[EXACT_BOX_P1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>)
+! CHECK:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[EXACT_BOX_P1]] uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<target> : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>)
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:  %[[DES_A1:.*]] = hlfir.designate %[[P1_DECL]]#0{"a"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CHECK:  hlfir.assign %[[C1]] to %[[DES_A1]] : i32, !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX_P2:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>
-! CHECK:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[EXACT_BOX_P2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>)
+! CHECK:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[EXACT_BOX_P2]] uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<target> : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>)
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
 ! CHECK:  %[[DES_C:.*]] = hlfir.designate %[[P2_DECL]]#0{"c"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<i32>
 ! CHECK:  hlfir.assign %[[C3]] to %[[DES_C]] : i32, !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[CL_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"} : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>)
+! CHECK:  %[[CL_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]] uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<target> : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>)
 ! CHECK:  %[[C5:.*]] = arith.constant 5 : i32
 ! CHECK:  %[[DES_A5:.*]] = hlfir.designate %[[CL_DECL]]#0{"a"}   : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CHECK:  hlfir.assign %[[C5]] to %[[DES_A5]] : i32, !fir.ref<i32>
@@ -737,7 +737,7 @@ contains
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type10(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>> {fir.bindc_name = "a"}) {
-! CFG:  %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"}
+! CFG:  %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<pointer>
 ! CFG:  %[[SELECTOR:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CFG:  %[[TDESC_P1:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
 ! CFG:  %[[BTDESC_P1:.*]] = fir.box_tdesc %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.tdesc<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
@@ -750,7 +750,7 @@ contains
 ! CFG:  cf.cond_br %[[CMP_P2]], ^bb[[P2_BODY:[0-9]+]], ^bb[[CLASS_TEST:[0-9]+]]
 ! CFG: ^bb[[P1_BODY]]:
 ! CFG:  %[[BA_P1:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
-! CFG:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[BA_P1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"}
+! CFG:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[BA_P1]] uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<target>
 ! CFG:  %[[C1:.*]] = arith.constant 1 : i32
 ! CFG:  %[[DES_A1:.*]] = hlfir.designate %[[P1_DECL]]#0{"a"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CFG:  hlfir.assign %[[C1]] to %[[DES_A1]] : i32, !fir.ref<i32>
@@ -763,7 +763,7 @@ contains
 ! CFG:  cf.cond_br %[[CLASS_IS]], ^bb[[CLASS_BODY:[0-9]+]], ^bb[[UNIT_BODY:[0-9]+]]
 ! CFG: ^bb[[P2_BODY]]:
 ! CFG:  %[[BA_P2:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>
-! CFG:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[BA_P2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"}
+! CFG:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[BA_P2]] uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<target>
 ! CFG:  %[[C3:.*]] = arith.constant 3 : i32
 ! CFG:  %[[DES_C:.*]] = hlfir.designate %[[P2_DECL]]#0{"c"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<i32>
 ! CFG:  hlfir.assign %[[C3]] to %[[DES_C]] : i32, !fir.ref<i32>
@@ -771,7 +771,7 @@ contains
 ! CFG: ^bb[[UNIT_BODY]]:
 ! CFG:  cf.br ^bb[[MERGE]]
 ! CFG: ^bb[[CLASS_BODY]]:
-! CFG:  %[[CL_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type10Ea"}
+! CFG:  %[[CL_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]] uniq_name("_QMselect_type_lower_testFselect_type10Ea") fortran_attrs<target>
 ! CFG:  %[[C5:.*]] = arith.constant 5 : i32
 ! CFG:  %[[DES_A5:.*]] = hlfir.designate %[[CL_DECL]]#0{"a"}   : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CFG:  hlfir.assign %[[C5]] to %[[DES_A5]] : i32, !fir.ref<i32>
@@ -792,19 +792,19 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type11(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>> {fir.bindc_name = "a"}) {
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMselect_type_lower_testFselect_type11Ea"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type11Ea") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>)
 ! CHECK: %[[SELECTOR:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CHECK: fir.select_type %[[SELECTOR]] : !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb1, #fir.type_is<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, ^bb2, unit, ^bb3]
 ! CHECK: ^bb1:
 ! CHECK:  %[[EXACT_BOX_P1:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
-! CHECK:  %[[DECL_P1:.*]]:2 = hlfir.declare %[[EXACT_BOX_P1]] {uniq_name = "_QMselect_type_lower_testFselect_type11Ea"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>)
+! CHECK:  %[[DECL_P1:.*]]:2 = hlfir.declare %[[EXACT_BOX_P1]] uniq_name("_QMselect_type_lower_testFselect_type11Ea") : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>)
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:  %[[DES_A:.*]] = hlfir.designate %[[DECL_P1]]#0{"a"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CHECK:  hlfir.assign %[[C1]] to %[[DES_A]] : i32, !fir.ref<i32>
 ! CHECK:  cf.br ^bb3
 ! CHECK: ^bb2:
 ! CHECK:  %[[EXACT_BOX_P2:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>
-! CHECK:  %[[DECL_P2:.*]]:2 = hlfir.declare %[[EXACT_BOX_P2]] {uniq_name = "_QMselect_type_lower_testFselect_type11Ea"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>)
+! CHECK:  %[[DECL_P2:.*]]:2 = hlfir.declare %[[EXACT_BOX_P2]] uniq_name("_QMselect_type_lower_testFselect_type11Ea") : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>)
 ! CHECK:  %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:  %[[DES_P1:.*]] = hlfir.designate %[[DECL_P2]]#0{"p1"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
 ! CHECK:  %[[DES_P1_A:.*]] = hlfir.designate %[[DES_P1]]{"a"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
@@ -818,7 +818,7 @@ contains
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type11(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>> {fir.bindc_name = "a"}) {
-! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMselect_type_lower_testFselect_type11Ea"}
+! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type11Ea") fortran_attrs<allocatable>
 ! CFG: %[[SELECTOR:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CFG: %[[TDESC_P1:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
 ! CFG: %[[BOX_TDESC_P1:.*]] = fir.box_tdesc %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.tdesc<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
@@ -835,7 +835,7 @@ contains
 ! CFG: cf.cond_br %[[CMP_P2]], ^bb4, ^bb3
 ! CFG: ^bb2:
 ! CFG: %[[BA_P1:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
-! CFG: %[[D_P1:.*]]:2 = hlfir.declare %[[BA_P1]] {uniq_name = "_QMselect_type_lower_testFselect_type11Ea"}
+! CFG: %[[D_P1:.*]]:2 = hlfir.declare %[[BA_P1]] uniq_name("_QMselect_type_lower_testFselect_type11Ea")
 ! CFG: %[[C1:.*]] = arith.constant 1 : i32
 ! CFG: %[[DES_A:.*]] = hlfir.designate %[[D_P1]]#0{"a"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CFG: hlfir.assign %[[C1]] to %[[DES_A]] : i32, !fir.ref<i32>
@@ -844,7 +844,7 @@ contains
 ! CFG: cf.br ^bb5
 ! CFG: ^bb4:
 ! CFG: %[[BA_P2:.*]] = fir.box_addr %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>
-! CFG: %[[D_P2:.*]]:2 = hlfir.declare %[[BA_P2]] {uniq_name = "_QMselect_type_lower_testFselect_type11Ea"}
+! CFG: %[[D_P2:.*]]:2 = hlfir.declare %[[BA_P2]] uniq_name("_QMselect_type_lower_testFselect_type11Ea")
 ! CFG: %[[C2:.*]] = arith.constant 2 : i32
 ! CFG: %[[DES_P1:.*]] = hlfir.designate %[[D_P2]]#0{"p1"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
 ! CFG: %[[DES_P1_A:.*]] = hlfir.designate %[[DES_P1]]{"a"}   : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
@@ -870,7 +870,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type12(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "a"}) {
-! CHECK:  %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"}
+! CHECK:  %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<pointer>
 ! CHECK:  %[[SELECTOR:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>>
 ! CHECK:  %[[LOAD_DIMS:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>>
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
@@ -879,24 +879,24 @@ contains
 ! CHECK: ^bb1:
 ! CHECK:  %[[P1_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CHECK:  %[[P1_SHIFT:.*]] = fir.shift %[[BOX_DIMS]]#0 : (index) -> !fir.shift<1>
-! CHECK:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[P1_BOX]](%[[P1_SHIFT]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"} : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CHECK:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[P1_BOX]](%[[P1_SHIFT]]) uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<target> : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CHECK:  hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.box<!fir.array<?xi32>>
 ! CHECK:  cf.br ^bb4
 ! CHECK: ^bb2:
 ! CHECK:  %[[P2_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>>
 ! CHECK:  %[[P2_SHIFT:.*]] = fir.shift %[[BOX_DIMS]]#0 : (index) -> !fir.shift<1>
-! CHECK:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[P2_BOX]](%[[P2_SHIFT]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"}
+! CHECK:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[P2_BOX]](%[[P2_SHIFT]]) uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<target>
 ! CHECK:  cf.br ^bb4
 ! CHECK: ^bb3:
 ! CHECK:  %[[CLS_SHIFT:.*]] = fir.shift %[[BOX_DIMS]]#0 : (index) -> !fir.shift<1>
-! CHECK:  %[[CLS_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]](%[[CLS_SHIFT]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CHECK:  %[[CLS_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]](%[[CLS_SHIFT]]) uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<target> : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CHECK:  cf.br ^bb4
 ! CHECK: ^bb4:
 ! CHECK:  return
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type12(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "a"}) {
-! CFG:  %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"}
+! CFG:  %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<pointer>
 ! CFG:  %[[SELECTOR:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>>
 ! CFG:  %[[LOAD_DIMS:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>>
 ! CFG:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[LOAD_DIMS]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, index) -> (index, index, index)
@@ -912,7 +912,7 @@ contains
 ! CFG: ^bb2:
 ! CFG:  %[[P1_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CFG:  %[[P1_SHIFT:.*]] = fir.shift %[[BOX_DIMS]]#0 : (index) -> !fir.shift<1>
-! CFG:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[P1_BOX]](%[[P1_SHIFT]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"}
+! CFG:  %[[P1_DECL:.*]]:2 = hlfir.declare %[[P1_BOX]](%[[P1_SHIFT]]) uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<target>
 ! CFG:  cf.br ^bb7
 ! CFG: ^bb3:
 ! CFG:  %[[CLS_TDESC:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
@@ -921,13 +921,13 @@ contains
 ! CFG: ^bb4:
 ! CFG:  %[[P2_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>>>
 ! CFG:  %[[P2_SHIFT:.*]] = fir.shift %[[BOX_DIMS]]#0 : (index) -> !fir.shift<1>
-! CFG:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[P2_BOX]](%[[P2_SHIFT]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"}
+! CFG:  %[[P2_DECL:.*]]:2 = hlfir.declare %[[P2_BOX]](%[[P2_SHIFT]]) uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<target>
 ! CFG:  cf.br ^bb7
 ! CFG: ^bb5:
 ! CFG:  cf.br ^bb7
 ! CFG: ^bb6:
 ! CFG:  %[[CLS_SHIFT:.*]] = fir.shift %[[BOX_DIMS]]#0 : (index) -> !fir.shift<1>
-! CFG:  %[[CLS_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]](%[[CLS_SHIFT]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMselect_type_lower_testFselect_type12Ea"} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
+! CFG:  %[[CLS_DECL:.*]]:2 = hlfir.declare %[[SELECTOR]](%[[CLS_SHIFT]]) uniq_name("_QMselect_type_lower_testFselect_type12Ea") fortran_attrs<target> : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>)
 ! CFG:  cf.br ^bb7
 ! CFG: ^bb7:
 ! CFG:  return
@@ -955,7 +955,7 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type13(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "a"})
 ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DSCOPE]] arg 1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMselect_type_lower_testFselect_type13Ea"}
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QMselect_type_lower_testFselect_type13Ea") fortran_attrs<pointer>
 ! CHECK: fir.select_type %{{.*}} : !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>> [#fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb2, unit, ^bb1]
 ! CHECK: ^bb1:
 ! CHECK: ^bb2:
@@ -1010,22 +1010,22 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type14(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"},
 ! CHECK-SAME:    %[[ARG1:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "b"})
-! CHECK:  %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} arg 1 {uniq_name = "_QMselect_type_lower_testFselect_type14Ea"}
-! CHECK:  %[[B:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} arg 2 {uniq_name = "_QMselect_type_lower_testFselect_type14Eb"}
+! CHECK:  %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type14Ea")
+! CHECK:  %[[B:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} arg 2 uniq_name("_QMselect_type_lower_testFselect_type14Eb")
 ! CHECK:  fir.select_type %[[A]]#1 : !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, ^bb[[OUTER_TI:[0-9]+]], unit, ^bb[[OUTER_DEFAULT:[0-9]+]]]
 ! CHECK:  ^bb[[OUTER_TI]]:
 ! CHECK:    %[[A_ADDR:.*]] = fir.box_addr %[[A]]#1
-! CHECK:    %[[A_P2:.*]]:2 = hlfir.declare %[[A_ADDR]] {uniq_name = "_QMselect_type_lower_testFselect_type14Ea"}
+! CHECK:    %[[A_P2:.*]]:2 = hlfir.declare %[[A_ADDR]] uniq_name("_QMselect_type_lower_testFselect_type14Ea")
 ! CHECK:    fir.select_type %[[B]]#1 : !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>>, ^bb[[INNER_TI:[0-9]+]], unit, ^bb{{[0-9]+}}]
 ! CHECK:  ^bb[[INNER_TI]]:
 ! CHECK:    %[[B_ADDR:.*]] = fir.box_addr %[[B]]#1
-! CHECK:    %[[B_P2:.*]]:2 = hlfir.declare %[[B_ADDR]] {uniq_name = "_QMselect_type_lower_testFselect_type14Eb"}
+! CHECK:    %[[B_P2:.*]]:2 = hlfir.declare %[[B_ADDR]] uniq_name("_QMselect_type_lower_testFselect_type14Eb")
 ! CHECK:    %[[AC:.*]] = hlfir.designate %[[A_P2]]#0{"c"}
 ! CHECK:    fir.load %[[AC]]
 ! CHECK:    %[[BC:.*]] = hlfir.designate %[[B_P2]]#0{"c"}
 ! CHECK:    fir.load %[[BC]]
 ! CHECK:  ^bb[[OUTER_DEFAULT]]:
-! CHECK:    %[[A_DEFAULT:.*]]:2 = hlfir.declare %[[A]]#1 {uniq_name = "_QMselect_type_lower_testFselect_type14Ea"}
+! CHECK:    %[[A_DEFAULT:.*]]:2 = hlfir.declare %[[A]]#1 uniq_name("_QMselect_type_lower_testFselect_type14Ea")
 ! CHECK:    %[[AA:.*]] = hlfir.designate %[[A_DEFAULT]]#0{"a"}
 ! CHECK:    fir.load %[[AA]]
 ! CHECK:  return
@@ -1033,8 +1033,8 @@ contains
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type14(
 ! CFG-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"},
 ! CFG-SAME:    %[[ARG1:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "b"})
-! CFG:   %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} arg 1 {uniq_name = "_QMselect_type_lower_testFselect_type14Ea"}
-! CFG:   %[[B:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} arg 2 {uniq_name = "_QMselect_type_lower_testFselect_type14Eb"}
+! CFG:   %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type14Ea")
+! CFG:   %[[B:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} arg 2 uniq_name("_QMselect_type_lower_testFselect_type14Eb")
 ! CFG:   %[[OUTER_TDESC:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>
 ! CFG:   %[[OUTER_BOX_TDESC:.*]] = fir.box_tdesc %[[A]]#1
 ! CFG:   %[[OUTER_LHS:.*]] = fir.convert %[[OUTER_TDESC]]
@@ -1045,7 +1045,7 @@ contains
 ! CFG:   cf.br ^bb[[OUTER_DEFAULT:[0-9]+]]
 ! CFG: ^bb[[OUTER_TI]]:
 ! CFG:   %[[A_ADDR:.*]] = fir.box_addr %[[A]]#1
-! CFG:   %[[A_P2:.*]]:2 = hlfir.declare %[[A_ADDR]] {uniq_name = "_QMselect_type_lower_testFselect_type14Ea"}
+! CFG:   %[[A_P2:.*]]:2 = hlfir.declare %[[A_ADDR]] uniq_name("_QMselect_type_lower_testFselect_type14Ea")
 ! CFG:   %[[INNER_TDESC:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp2{p1:!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>,c:i32}>
 ! CFG:   %[[INNER_BOX_TDESC:.*]] = fir.box_tdesc %[[B]]#1
 ! CFG:   %[[INNER_LHS:.*]] = fir.convert %[[INNER_TDESC]]
@@ -1056,7 +1056,7 @@ contains
 ! CFG:   cf.br ^bb[[INNER_MERGE:[0-9]+]]
 ! CFG: ^bb[[INNER_TI]]:
 ! CFG:   %[[B_ADDR:.*]] = fir.box_addr %[[B]]#1
-! CFG:   %[[B_P2:.*]]:2 = hlfir.declare %[[B_ADDR]] {uniq_name = "_QMselect_type_lower_testFselect_type14Eb"}
+! CFG:   %[[B_P2:.*]]:2 = hlfir.declare %[[B_ADDR]] uniq_name("_QMselect_type_lower_testFselect_type14Eb")
 ! CFG:   %[[AC:.*]] = hlfir.designate %[[A_P2]]#0{"c"}
 ! CFG:   fir.load %[[AC]]
 ! CFG:   %[[BC:.*]] = hlfir.designate %[[B_P2]]#0{"c"}
@@ -1065,7 +1065,7 @@ contains
 ! CFG: ^bb[[INNER_MERGE]]:
 ! CFG:   cf.br ^bb[[OUTER_MERGE:[0-9]+]]
 ! CFG: ^bb[[OUTER_DEFAULT]]:
-! CFG:   %[[A_DEFAULT:.*]]:2 = hlfir.declare %[[A]]#1 {uniq_name = "_QMselect_type_lower_testFselect_type14Ea"}
+! CFG:   %[[A_DEFAULT:.*]]:2 = hlfir.declare %[[A]]#1 uniq_name("_QMselect_type_lower_testFselect_type14Ea")
 ! CFG:   %[[AA:.*]] = hlfir.designate %[[A_DEFAULT]]#0{"a"}
 ! CFG:   fir.load %[[AA]]
 ! CFG:   cf.br ^bb[[OUTER_MERGE]]
@@ -1084,26 +1084,26 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type15(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> <{bindc_name = ".result"}>
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {uniq_name = "_QMselect_type_lower_testFselect_type15Ea"} : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>)
-! CHECK: %[[TMP_RES:.*]] = fir.dispatch "negate"(%[[A]]#0 : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) (%[[A]]#0 : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> {pass_arg_pos = 0 : i32}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type15Ea") : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>)
+! CHECK: %[[TMP_RES:.*]] = fir.dispatch "negate"(%[[A]]#0 : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) (%[[A]]#0 : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> pass_arg_pos(0)
 ! CHECK: fir.save_result %[[TMP_RES]] to %[[RES]] : !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>>
 ! CHECK: %[[LOAD_RES:.*]] = fir.load %[[RES]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>>
-! CHECK: %[[DECL_RES:.*]]:2 = hlfir.declare %[[LOAD_RES]] {uniq_name = ".tmp.func_result"} : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>) -> (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>)
+! CHECK: %[[DECL_RES:.*]]:2 = hlfir.declare %[[LOAD_RES]] uniq_name(".tmp.func_result") : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>) -> (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>)
 ! CHECK: fir.select_type %[[DECL_RES]]#1 : !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, ^bb1, unit, ^bb2]
 ! CHECK: ^bb1:
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[DECL_RES]]#1 : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>
-! CHECK: %[[X:.*]]:2 = hlfir.declare %[[ADDR]] {uniq_name = "_QMselect_type_lower_testFselect_type15Ex"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>)
+! CHECK: %[[X:.*]]:2 = hlfir.declare %[[ADDR]] uniq_name("_QMselect_type_lower_testFselect_type15Ex") : (!fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> (!fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>, !fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>)
 ! CHECK: hlfir.designate %[[X]]#0{"a"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.ref<i32>
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type15(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>> {fir.bindc_name = "a"}) {
 ! CFG: %[[RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>> <{bindc_name = ".result"}>
-! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 {uniq_name = "_QMselect_type_lower_testFselect_type15Ea"}
+! CFG: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg 1 uniq_name("_QMselect_type_lower_testFselect_type15Ea")
 ! CFG: %[[TDESC_A:.*]] = fir.box_tdesc %[[A]]#0 : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.tdesc<none>
 ! CFG: %[[CALL:.*]] = fir.call %{{.*}}(%[[A]]#0) : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>
 ! CFG: fir.save_result %[[CALL]] to %[[RES]] : !fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>>
 ! CFG: %[[LOAD_RES:.*]] = fir.load %[[RES]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>>>
-! CFG: %[[DECL_RES:.*]]:2 = hlfir.declare %[[LOAD_RES]] {uniq_name = ".tmp.func_result"}
+! CFG: %[[DECL_RES:.*]]:2 = hlfir.declare %[[LOAD_RES]] uniq_name(".tmp.func_result")
 ! CFG: %[[TD_P5:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp5{a:i32}>
 ! CFG: %[[TD_DYN:.*]] = fir.box_tdesc %[[DECL_RES]]#1 : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.tdesc<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>
 ! CFG: %[[CONV1:.*]] = fir.convert %[[TD_P5]] : (!fir.tdesc<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> index
@@ -1114,7 +1114,7 @@ contains
 ! CFG: cf.br ^bb3
 ! CFG: ^bb2:
 ! CFG: %[[ADDR:.*]] = fir.box_addr %[[DECL_RES]]#1 : (!fir.class<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>
-! CFG: %[[X:.*]]:2 = hlfir.declare %[[ADDR]] {uniq_name = "_QMselect_type_lower_testFselect_type15Ex"}
+! CFG: %[[X:.*]]:2 = hlfir.declare %[[ADDR]] uniq_name("_QMselect_type_lower_testFselect_type15Ex")
 ! CFG: hlfir.designate %[[X]]#0{"a"} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp5{a:i32}>>) -> !fir.ref<i32>
 ! CFG: cf.br ^bb3
 ! CFG: ^bb3:

@@ -66,12 +66,12 @@ end program
 
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "REDUCE_POINTER"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "v", uniq_name = "_QFEv"}>
 ! CHECK:           %[[VAL_3:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFEv"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFEv") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant false
 ! CHECK:           %[[VAL_7:.*]] = fir.absent !fir.box<none>
 ! CHECK:           %[[VAL_8:.*]] = fir.address_of(
@@ -92,8 +92,8 @@ end program
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_18:.*]] : !fir.ref<i32>) reduction(byref @add_reduction_byref_box_ptr_i32 %[[VAL_5]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_24:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
-! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFEv"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]] uniq_name("_QFEv") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:                 hlfir.assign %[[VAL_24]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_26:.*]] = fir.load %[[VAL_25]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:                 %[[VAL_27:.*]] = fir.box_addr %[[VAL_26]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>

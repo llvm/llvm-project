@@ -22,7 +22,7 @@
 ! CHECK-LABEL: func @_QPomp_scope_basic
 subroutine omp_scope_basic()
   integer :: x
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_basicEx"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFomp_scope_basicEx")
   x = 10
 
   ! CHECK: omp.scope {
@@ -36,7 +36,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPomp_scope_nowait
 subroutine omp_scope_nowait()
   integer :: x
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_nowaitEx"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFomp_scope_nowaitEx")
   x = 10
 
   ! CHECK: omp.scope nowait {
@@ -50,11 +50,11 @@ end subroutine
 ! CHECK-LABEL: func @_QPomp_scope_private
 subroutine omp_scope_private()
   integer :: i
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_privateEi"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFomp_scope_privateEi")
   i = 10
 
   ! CHECK: omp.scope private(@_QFomp_scope_privateEi_private_i32 %{{.*}}#0 -> %[[PRIV:.*]] : !fir.ref<i32>) {
-  ! CHECK: %[[PDECL:.*]]:2 = hlfir.declare %[[PRIV]] {uniq_name = "_QFomp_scope_privateEi"}
+  ! CHECK: %[[PDECL:.*]]:2 = hlfir.declare %[[PRIV]] uniq_name("_QFomp_scope_privateEi")
   !$omp scope private(i)
   ! CHECK: fir.load %[[PDECL]]#0 : !fir.ref<i32>
   print *, "omp scope", i
@@ -66,11 +66,11 @@ end subroutine
 ! CHECK-LABEL: func @_QPomp_scope_reduction
 subroutine omp_scope_reduction()
   integer :: sum
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_reductionEsum"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFomp_scope_reductionEsum")
   sum = 0
 
   ! CHECK: omp.scope reduction(@add_reduction_i32 %{{.*}}#0 -> %[[REDUC:.*]] : !fir.ref<i32>) {
-  ! CHECK: %[[RDECL:.*]]:2 = hlfir.declare %[[REDUC]] {uniq_name = "_QFomp_scope_reductionEsum"}
+  ! CHECK: %[[RDECL:.*]]:2 = hlfir.declare %[[REDUC]] uniq_name("_QFomp_scope_reductionEsum")
   ! CHECK: fir.load %[[RDECL]]#0 : !fir.ref<i32>
   ! CHECK: arith.addi %{{.*}}, %{{.*}} : i32
   ! CHECK: hlfir.assign %{{.*}} to %[[RDECL]]#0 : i32, !fir.ref<i32>
@@ -84,11 +84,11 @@ end subroutine
 ! CHECK-LABEL: func @_QPomp_scope_firstprivate
 subroutine omp_scope_firstprivate()
   integer :: i
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_firstprivateEi"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFomp_scope_firstprivateEi")
   i = 42
 
   ! CHECK: omp.scope private(@_QFomp_scope_firstprivateEi_firstprivate_i32 %{{.*}}#0 -> %[[FP:.*]] : !fir.ref<i32>) {
-  ! CHECK: %[[FPDECL:.*]]:2 = hlfir.declare %[[FP]] {uniq_name = "_QFomp_scope_firstprivateEi"}
+  ! CHECK: %[[FPDECL:.*]]:2 = hlfir.declare %[[FP]] uniq_name("_QFomp_scope_firstprivateEi")
   !$omp scope firstprivate(i)
   ! CHECK: fir.load %[[FPDECL]]#0 : !fir.ref<i32>
   print *, "omp scope", i
@@ -100,11 +100,11 @@ end subroutine
 ! CHECK-LABEL: func @_QPomp_scope_allocate
 subroutine omp_scope_allocate()
   integer :: i
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_allocateEi"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFomp_scope_allocateEi")
   i = 0
 
   ! CHECK: omp.scope allocate(%{{.*}} : i32 -> %{{.*}}#0 : !fir.ref<i32>) private(@_QFomp_scope_allocateEi_private_i32 %{{.*}}#0 -> %[[APRIV:.*]] : !fir.ref<i32>) {
-  ! CHECK: %[[ADECL:.*]]:2 = hlfir.declare %[[APRIV]] {uniq_name = "_QFomp_scope_allocateEi"}
+  ! CHECK: %[[ADECL:.*]]:2 = hlfir.declare %[[APRIV]] uniq_name("_QFomp_scope_allocateEi")
   !$omp scope private(i) allocate(i)
   ! CHECK: hlfir.assign %{{.*}} to %[[ADECL]]#0 : i32, !fir.ref<i32>
   i = 1

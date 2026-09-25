@@ -11,7 +11,7 @@ module {
     %c0 = arith.constant 0 : index
     %c10 = arith.constant 10 : i32
     %addr = fir.address_of(@_QMtestEarr) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-    %decl:2 = hlfir.declare %addr {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMtestEarr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+    %decl:2 = hlfir.declare %addr uniq_name("_QMtestEarr") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
     %idx = fir.convert %c10 : (i32) -> index
     %cond = arith.cmpi sgt, %idx, %c0 : index
     %n = arith.select %cond, %idx, %c0 : index
