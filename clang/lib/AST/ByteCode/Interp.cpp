@@ -607,7 +607,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
   if (!Ptr.block()->isStatic())
-    return true;
+    return CheckConstexprVar(S, OpPC, Ptr.getDeclDesc());
   if (!Ptr.block()->getDeclID())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
