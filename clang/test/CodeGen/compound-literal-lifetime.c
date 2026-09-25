@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -emit-llvm -O1 %s -o - | FileCheck %s --check-prefixes=CHECK,LIFETIME
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O1 %s -o - | FileCheck %s
+
 struct foo {
   int x;
   int y;
@@ -101,17 +102,4 @@ int test_musttail(int cond) {
   struct foo s;
   s = cond ? (struct foo){.x = 1} : (struct foo){.x = 2};
   [[clang::musttail]] return callee(s.x);
-}
-
-int f1(const int *);
-
-// LIFETIME-LABEL: define dso_local void @f2(
-// LIFETIME: call void @llvm.lifetime.start.p0(ptr nonnull %[[LITERAL:.*]])
-// LIFETIME: call i32 @f1(ptr noundef nonnull %[[LITERAL]])
-// LIFETIME-NOT: @llvm.lifetime.end
-// LIFETIME: call void @side_effect3()
-// LIFETIME-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[LITERAL]])
-// LIFETIME-NEXT: ret void
-void f2(int a[f1(&(constexpr int){1})]) {
-  side_effect3();
 }

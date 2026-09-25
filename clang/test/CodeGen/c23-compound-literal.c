@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -emit-llvm -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=LIFETIME
 
 struct S { int a; int b; };
 
@@ -263,6 +264,13 @@ int f27(int (*a(void))[((void)(int){f21()}, 1)]) {
 
 int f28(const int *);
 
+// LIFETIME-LABEL: define dso_local i32 @f29(
+// LIFETIME: call void @llvm.lifetime.start.p0(ptr %.compoundliteral)
+// LIFETIME: call i32 @f28(ptr noundef %.compoundliteral)
+// LIFETIME-NOT: @llvm.lifetime.end
+// LIFETIME: %[[RESULT:.*]] = load i32, ptr %{{.*}}, align 4
+// LIFETIME-NEXT: call void @llvm.lifetime.end.p0(ptr %.compoundliteral)
+// LIFETIME-NEXT: ret i32 %[[RESULT]]
 // CHECK-LABEL: define dso_local i32 @f29(
 // CHECK: %.compoundliteral = alloca i32
 // CHECK: store i32 3, ptr %.compoundliteral
