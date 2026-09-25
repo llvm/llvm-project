@@ -26,10 +26,10 @@ function:
 
 # RELAX: auipc	a0, 0
 # RELAX: R_RISCV_PCREL_HI20	local_function
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 # RELAX: addi	a1, a0, 0
 # RELAX: R_RISCV_PCREL_LO12_I	.Lpcrel_label1
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 
 	.p2align	2   # Cause a new fragment be emitted here
 .Lpcrel_label2:
@@ -42,10 +42,10 @@ function:
 
 # RELAX: auipc	a0, 0
 # RELAX: R_RISCV_PCREL_HI20	local_function
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 # RELAX: addi	a1, a0, 0
 # RELAX: R_RISCV_PCREL_LO12_I	.Lpcrel_label2
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 
 	.type	local_function,@function
 local_function:
@@ -64,10 +64,10 @@ local_function:
 
 # RELAX: auipc	a0, 0
 # RELAX: R_RISCV_PCREL_HI20	local_function
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 # RELAX: addi	a1, a0, 0
 # RELAX: R_RISCV_PCREL_LO12_I	.Lpcrel_label3
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 
 # Check handling of symbol binding.
 
@@ -81,10 +81,10 @@ local_function:
 
 # RELAX: auipc	a0, 0
 # RELAX: R_RISCV_PCREL_HI20	global_function
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 # RELAX: addi	a1, a0, 0
 # RELAX: R_RISCV_PCREL_LO12_I	.Lpcrel_label4
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 
 .Lpcrel_label5:
 	auipc	a0, %pcrel_hi(weak_function)
@@ -96,10 +96,10 @@ local_function:
 
 # RELAX: auipc	a0, 0
 # RELAX: R_RISCV_PCREL_HI20	weak_function
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 # RELAX: addi	a1, a0, 0
 # RELAX: R_RISCV_PCREL_LO12_I	.Lpcrel_label5
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 
 .Lpcrel_label6:
 	auipc	a0, %pcrel_hi(ifunc)
@@ -108,7 +108,7 @@ local_function:
 
 # RELAX: auipc	a0, 0
 # RELAX: R_RISCV_PCREL_HI20	ifunc
-# RELAX: R_RISCV_RELAX	*ABS*
+# RELAX: R_RISCV_RELAX	{{.*}}
 
 	.global	global_function
 	.type	global_function,@function

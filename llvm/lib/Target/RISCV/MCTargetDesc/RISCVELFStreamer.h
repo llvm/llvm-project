@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H
 
 #include "RISCVTargetStreamer.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCELFStreamer.h"
 
@@ -19,7 +20,7 @@ class RISCVELFStreamer : public MCELFStreamer {
   void reset() override;
   void emitDataMappingSymbol();
   void emitInstructionsMappingSymbol();
-  void emitMappingSymbol(StringRef Name);
+  MCSymbol *emitMappingSymbol(StringRef Name);
 
   enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
 
@@ -38,6 +39,10 @@ class RISCVELFStreamer : public MCELFStreamer {
   std::string LastEmittedArch;
   DenseMap<const MCSection *, std::string> LastEmittedArchInSection;
 
+  MCSymbol *CurrentISARelaxSym = nullptr;
+  DenseMap<const MCFragment *, MCSymbol *> FragmentISASym;
+  DenseMap<const MCSection *, MCSymbol *> LastISARelaxSymInSection;
+
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
                    std::unique_ptr<MCObjectWriter> MOW,
@@ -50,6 +55,12 @@ public:
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 
   void setMappingSymbolArch(StringRef Arch);
+
+  // Returns the ISA mapping symbol for the given fragment, or nullptr if the
+  // fragment precedes any ISA-changing directive.
+  MCSymbol *getFragmentISASym(const MCFragment &F) const {
+    return FragmentISASym.lookup(&F);
+  }
 };
 
 class RISCVTargetELFStreamer : public RISCVTargetStreamer {

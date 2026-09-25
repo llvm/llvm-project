@@ -6,13 +6,13 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -riscv-align-rvc=0 %s -o %t0
 # RUN: llvm-objdump -dr -M no-aliases %t0 | FileCheck %s --check-prefix=CHECK0
 
-# CHECK:               00000000: R_RISCV_RELAX        *ABS*
+# CHECK:               00000000: R_RISCV_RELAX        {{.*}}
 # CHECK-NEXT:       4: 0001      <unknown>
 # CHECK-NEXT:          00000004: R_RISCV_ALIGN        *ABS*+0x6
 # CHECK-NEXT:       6: 00000013  addi zero, zero, 0x0
 # CHECK-NEXT:       a: 00000537  lui a0, 0x0
 
-# CHECK0:              00000000: R_RISCV_RELAX        *ABS*
+# CHECK0:              00000000: R_RISCV_RELAX        {{.*}}
 # CHECK0-NEXT:      4: 00000013  addi zero, zero, 0x0
 # CHECK0-NEXT:         00000004: R_RISCV_ALIGN        *ABS*+0x4
 # CHECK0-NEXT:      8: 00000537  lui a0, 0x0
