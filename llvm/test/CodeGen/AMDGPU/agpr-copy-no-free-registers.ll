@@ -242,16 +242,16 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #5 {
 ; GFX908-LABEL: no_agpr_no_reserve:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX908-NEXT:    v_lshlrev_b32_e32 v33, 7, v0
+; GFX908-NEXT:    v_lshlrev_b32_e32 v34, 7, v0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[1:4], v33, s[0:1] offset:16
-; GFX908-NEXT:    global_load_dwordx4 v[5:8], v33, s[0:1]
-; GFX908-NEXT:    global_load_dwordx4 v[9:12], v33, s[0:1] offset:48
-; GFX908-NEXT:    global_load_dwordx4 v[13:16], v33, s[0:1] offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[17:20], v33, s[0:1] offset:80
-; GFX908-NEXT:    global_load_dwordx4 v[21:24], v33, s[0:1] offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[25:28], v33, s[0:1] offset:112
-; GFX908-NEXT:    global_load_dwordx4 v[29:32], v33, s[0:1] offset:96
+; GFX908-NEXT:    global_load_dwordx4 v[1:4], v34, s[0:1] offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[5:8], v34, s[0:1]
+; GFX908-NEXT:    global_load_dwordx4 v[9:12], v34, s[0:1] offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[13:16], v34, s[0:1] offset:32
+; GFX908-NEXT:    global_load_dwordx4 v[17:20], v34, s[0:1] offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[21:24], v34, s[0:1] offset:64
+; GFX908-NEXT:    global_load_dwordx4 v[25:28], v34, s[0:1] offset:112
+; GFX908-NEXT:    global_load_dwordx4 v[29:32], v34, s[0:1] offset:96
 ; GFX908-NEXT:    s_waitcnt vmcnt(7)
 ; GFX908-NEXT:    v_add_u32_e32 v4, v4, v4
 ; GFX908-NEXT:    v_add_u32_e32 v3, v3, v3
@@ -287,14 +287,14 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #5 {
 ; GFX908-NEXT:    v_add_u32_e32 v27, v27, v27
 ; GFX908-NEXT:    v_add_u32_e32 v26, v26, v26
 ; GFX908-NEXT:    v_add_u32_e32 v25, v25, v25
-; GFX908-NEXT:    global_store_dwordx4 v33, v[29:32], s[0:1] offset:96
-; GFX908-NEXT:    global_store_dwordx4 v33, v[25:28], s[0:1] offset:112
-; GFX908-NEXT:    global_store_dwordx4 v33, v[21:24], s[0:1] offset:64
-; GFX908-NEXT:    global_store_dwordx4 v33, v[17:20], s[0:1] offset:80
-; GFX908-NEXT:    global_store_dwordx4 v33, v[13:16], s[0:1] offset:32
-; GFX908-NEXT:    global_store_dwordx4 v33, v[9:12], s[0:1] offset:48
-; GFX908-NEXT:    global_store_dwordx4 v33, v[5:8], s[0:1]
-; GFX908-NEXT:    global_store_dwordx4 v33, v[1:4], s[0:1] offset:16
+; GFX908-NEXT:    global_store_dwordx4 v34, v[29:32], s[0:1] offset:96
+; GFX908-NEXT:    global_store_dwordx4 v34, v[25:28], s[0:1] offset:112
+; GFX908-NEXT:    global_store_dwordx4 v34, v[21:24], s[0:1] offset:64
+; GFX908-NEXT:    global_store_dwordx4 v34, v[17:20], s[0:1] offset:80
+; GFX908-NEXT:    global_store_dwordx4 v34, v[13:16], s[0:1] offset:32
+; GFX908-NEXT:    global_store_dwordx4 v34, v[9:12], s[0:1] offset:48
+; GFX908-NEXT:    global_store_dwordx4 v34, v[5:8], s[0:1]
+; GFX908-NEXT:    global_store_dwordx4 v34, v[1:4], s[0:1] offset:16
 ; GFX908-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: no_agpr_no_reserve:

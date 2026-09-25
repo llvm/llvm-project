@@ -2081,10 +2081,10 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing(ptr addrspace(1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v2, v0
+; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v2, v0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v3, v1, vcc
-; GFX12-GISEL-NEXT:    global_load_b32 v0, v[4:5], off
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc
+; GFX12-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(1) %voffset.ptr
@@ -2262,10 +2262,10 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v2, v0
+; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v2, v0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v3, v1, vcc
-; GFX12-GISEL-NEXT:    global_load_b32 v0, v[4:5], off
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc
+; GFX12-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !1, !noundef !{}

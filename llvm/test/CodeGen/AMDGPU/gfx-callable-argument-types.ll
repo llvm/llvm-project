@@ -8492,18 +8492,18 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX10-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX10-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX10-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v38, 0
+; GFX10-NEXT:    v_mov_b32_e32 v34, 0
 ; GFX10-NEXT:    global_load_dword v33, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x7
-; GFX10-NEXT:    global_load_dwordx4 v[34:37], v38, s[34:35]
-; GFX10-NEXT:    global_load_dwordx4 v[4:7], v38, s[34:35] offset:16
-; GFX10-NEXT:    global_load_dwordx4 v[8:11], v38, s[34:35] offset:32
-; GFX10-NEXT:    global_load_dwordx4 v[12:15], v38, s[34:35] offset:48
-; GFX10-NEXT:    global_load_dwordx4 v[16:19], v38, s[34:35] offset:64
-; GFX10-NEXT:    global_load_dwordx4 v[20:23], v38, s[34:35] offset:80
-; GFX10-NEXT:    global_load_dwordx4 v[24:27], v38, s[34:35] offset:96
-; GFX10-NEXT:    global_load_dwordx4 v[28:31], v38, s[34:35] offset:112
+; GFX10-NEXT:    global_load_dwordx4 v[0:3], v34, s[34:35]
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v34, s[34:35] offset:16
+; GFX10-NEXT:    global_load_dwordx4 v[8:11], v34, s[34:35] offset:32
+; GFX10-NEXT:    global_load_dwordx4 v[12:15], v34, s[34:35] offset:48
+; GFX10-NEXT:    global_load_dwordx4 v[16:19], v34, s[34:35] offset:64
+; GFX10-NEXT:    global_load_dwordx4 v[20:23], v34, s[34:35] offset:80
+; GFX10-NEXT:    global_load_dwordx4 v[24:27], v34, s[34:35] offset:96
+; GFX10-NEXT:    global_load_dwordx4 v[28:31], v34, s[34:35] offset:112
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s35, external_void_func_v32i32_i32@abs32@hi
 ; GFX10-NEXT:    s_mov_b32 s34, external_void_func_v32i32_i32@abs32@lo
@@ -8577,18 +8577,18 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX10-SCRATCH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX10-SCRATCH-NEXT:    v_mov_b32_e32 v38, 0
+; GFX10-SCRATCH-NEXT:    v_mov_b32_e32 v34, 0
 ; GFX10-SCRATCH-NEXT:    global_load_dword v33, v[0:1], off
 ; GFX10-SCRATCH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_clause 0x7
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[34:37], v38, s[0:1]
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[4:7], v38, s[0:1] offset:16
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[8:11], v38, s[0:1] offset:32
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[12:15], v38, s[0:1] offset:48
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[16:19], v38, s[0:1] offset:64
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[20:23], v38, s[0:1] offset:80
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[24:27], v38, s[0:1] offset:96
-; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[28:31], v38, s[0:1] offset:112
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[0:3], v34, s[0:1]
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[4:7], v34, s[0:1] offset:16
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[8:11], v34, s[0:1] offset:32
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[12:15], v34, s[0:1] offset:48
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[16:19], v34, s[0:1] offset:64
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[20:23], v34, s[0:1] offset:80
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[24:27], v34, s[0:1] offset:96
+; GFX10-SCRATCH-NEXT:    global_load_dwordx4 v[28:31], v34, s[0:1] offset:112
 ; GFX10-SCRATCH-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s1, external_void_func_v32i32_i32@abs32@hi
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, external_void_func_v32i32_i32@abs32@lo
