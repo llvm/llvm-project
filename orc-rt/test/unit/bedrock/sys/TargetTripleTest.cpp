@@ -46,10 +46,13 @@ TEST(TargetTripleTest, ArchMatchesCompileTarget) {
 
 TEST(TargetTripleTest, OSMatchesCompileTarget) {
   auto Triple = sys::detectTargetTriple();
+
 #if defined(__APPLE__)
   EXPECT_NE(Triple.find("-apple-"), std::string::npos);
 #elif defined(__linux__)
   EXPECT_NE(Triple.find("-linux-"), std::string::npos);
+#elif defined(_WIN32)
+  EXPECT_NE(Triple.find("-windows-"), std::string::npos);
 #endif
 }
 

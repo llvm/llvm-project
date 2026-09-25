@@ -44,9 +44,9 @@ define amdgpu_kernel void @example() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP20:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.example, align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_EXAMPLE_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.example.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.example.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.example, i32 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_EXAMPLE_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.example.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.example.md, i64 24), align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.example, i32 [[TMP23]]
 ; CHECK-NEXT:    [[VEC_LDS_PTRS:%.*]] = insertelement <2 x ptr addrspace(3)> poison, ptr addrspace(3) [[TMP22]], i32 0
 ; CHECK-NEXT:    [[VEC_LDS_PTRS1:%.*]] = insertelement <2 x ptr addrspace(3)> [[VEC_LDS_PTRS]], ptr addrspace(3) [[TMP24]], i32 1
