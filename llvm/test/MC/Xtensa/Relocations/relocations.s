@@ -9,7 +9,7 @@
 # INSTR - Check the instruction is handled properly by the ASMPrinter
 
 .long func
-# RELOC: R_XTENSA_32 func
+# RELOC: R_XTENSA_32_ABS func
 
 ball a1, a3, func
 # RELOC: R_XTENSA_SLOT0_OP
