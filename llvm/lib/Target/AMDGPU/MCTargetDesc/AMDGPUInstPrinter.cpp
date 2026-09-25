@@ -598,7 +598,7 @@ void AMDGPUInstPrinter::printImmediateBF16(uint32_t Imm,
   if (printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
     return;
 
-  O << formatHex(static_cast<uint64_t>(Imm));
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
 void AMDGPUInstPrinter::printImmediateF16(uint32_t Imm,
