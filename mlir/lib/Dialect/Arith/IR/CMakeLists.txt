@@ -23,6 +23,10 @@ add_mlir_dialect_library(MLIRArithDialect
   MLIRArithOpsIncGen
   MLIRArithOpsInterfacesIncGen
 
+  # ArithDialect.cpp includes generated Bufferization interfaces.
+  HEADER_LIBS
+  MLIRBufferizationDialect
+
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
   MLIRDialect

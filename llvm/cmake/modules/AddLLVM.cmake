@@ -633,7 +633,10 @@ function(_llvm_generated_header_target output provider)
   # Only a provider's interface is transitive. PRIVATE implementation links
   # have already contributed to the provider's own compilation ordering.
   get_property(links TARGET "${provider}" PROPERTY INTERFACE_LINK_LIBRARIES)
-  foreach(item ${links})
+  # MLIR uses this property for generated headers included without a link.
+  # Both kinds of edges belong to the same header interface graph.
+  get_property(header_libraries TARGET "${provider}" PROPERTY LLVM_HEADER_LIBS)
+  foreach(item ${links} ${header_libraries})
     _llvm_link_item_targets(link_targets "${item}")
     foreach(link_target ${link_targets})
       _llvm_generated_header_target(child_headers "${link_target}")
