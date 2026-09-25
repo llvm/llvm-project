@@ -14784,8 +14784,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       SmallVector<SmallVector<SDValue, 4>, 8> Parts(Factor);
       MVT ChunkVT = MVT::getVectorVT(ElemVT, ChunkElts);
       MVT ChunkContainer = getContainerForFixedLengthVector(ChunkVT);
-      MVT WideVT =
-          MVT::getVectorVT(ElemVT, ChunkElts * PowerOf2Ceil(Factor));
+      MVT WideVT = MVT::getVectorVT(ElemVT, ChunkElts * PowerOf2Ceil(Factor));
       assert(WideVT.isValid() && WideVT.isFixedLengthVector() &&
              "expected legal wide passthru VT for chunked vlseg");
       MVT WideContainer = getContainerForFixedLengthVector(WideVT);
@@ -14816,9 +14815,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
             ChunkPtr,
             Mask,
             VL,
-            DAG.getTargetConstant(
-                RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL,
-                XLenVT),
+            DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC |
+                                      RISCVVType::MASK_AGNOSTIC,
+                                  DL, XLenVT),
             DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL,
                                   XLenVT)};
 
@@ -14836,8 +14835,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
           SDValue FieldRes =
               DAG.getNode(RISCVISD::TUPLE_EXTRACT, DL, ChunkContainer, Load,
                           DAG.getTargetConstant(i, DL, MVT::i32));
-          SDValue Fixed = convertFromScalableVector(ChunkVT, FieldRes, DAG,
-                                                    Subtarget);
+          SDValue Fixed =
+              convertFromScalableVector(ChunkVT, FieldRes, DAG, Subtarget);
           if (ThisChunkElts != ChunkElts) {
             EVT NarrowVT =
                 EVT::getVectorVT(*DAG.getContext(), ElemVT, ThisChunkElts);
