@@ -1027,7 +1027,7 @@ def : InstRW<[V1Write_4c_1V], (instregex "^FCADD(v[48]f16|v[24]f32|v2f64)$")>;
 def : InstRW<[V1Wr_FCMA, V1Rd_FCMA], (instregex "^FCMLAv")>;
 
 // ASIMD FP multiply
-def : InstRW<[V1Wr_FPM], (instregex "^FMULX?v")>;
+def : InstRW<[V1Wr_FPM], (instregex "^FMULX?v", "^FMULX(16|32|64)$")>;
 
 // ASIMD FP multiply accumulate
 def : InstRW<[V1Wr_FPMA, V1Rd_FPMA], (instregex "^FML[AS]v")>;
