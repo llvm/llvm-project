@@ -1061,15 +1061,18 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
+  // Compute ID intrinsics return i32 components, but the semantic may use
+  // 16-bit integers. Narrow each component before assembling the input.
   if (const auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Value *Result = PoisonValue::get(Ty);
     for (unsigned I = 0; I < VT->getNumElements(); ++I) {
       Value *Elt = B.CreateCall(F, {B.getInt32(I)});
+      Elt = B.CreateTrunc(Elt, VT->getElementType());
       Result = B.CreateInsertElement(Result, Elt, I);
     }
     return Result;
   }
-  return B.CreateCall(F, {B.getInt32(0)});
+  return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
