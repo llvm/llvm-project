@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes='function(instsimplify),strip' -instnamer-after-each-pass %s | FileCheck %s --check-prefix=FINAL
-; RUN: opt -disable-output -passes='function(instsimplify),strip' -instnamer-after-each-pass -print-changed=diff %s 2>&1 | FileCheck %s --check-prefix=DIFF
+; RUN: opt -disable-output -passes='function(instsimplify),strip' -instnamer-after-each-pass -print-changed %s 2>&1 | FileCheck %s --check-prefix=CHANGED
 
 ; InstSimplify removes i.1. Strip removes the remaining names, so the
 ; instrumentation must assign fresh names before the next snapshot. In
@@ -16,9 +16,13 @@ entry:
 ; FINAL-NEXT: %i.5 = mul i32 %arg.3, 3
 ; FINAL-NEXT: ret i32 %i.5
 
-; DIFF: *** IR Dump At Start ***
-; DIFF: define i32 @f(i32 %arg.0)
-; DIFF: %i.1 = add i32 %arg.0, 0
-; DIFF: %i.2 = mul i32 %i.1, 3
-; DIFF: *** IR Dump After InstSimplifyPass on f ***
-; DIFF: *** IR Dump After StripSymbolsPass on [module] ***
+; CHANGED: *** IR Dump At Start ***
+; CHANGED: define i32 @f(i32 %arg.0)
+; CHANGED: %i.1 = add i32 %arg.0, 0
+; CHANGED: %i.2 = mul i32 %i.1, 3
+; CHANGED: *** IR Dump After InstSimplifyPass on f ***
+; CHANGED: %i.2 = mul i32 %arg.0, 3
+; CHANGED: *** IR Dump After StripSymbolsPass on [module] ***
+; CHANGED: define i32 @f(i32 %arg.3)
+; CHANGED: bb.4:
+; CHANGED: %i.5 = mul i32 %arg.3, 3
