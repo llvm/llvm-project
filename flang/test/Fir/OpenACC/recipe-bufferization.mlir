@@ -270,7 +270,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]]#1 : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_5:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_3]]#1 {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_5:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_3]]#1 <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]](%[[VAL_4]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
 // CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]](%[[VAL_4]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
@@ -291,7 +291,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 200 : i32
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFfooEi"}
+// CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFfooEi"}>
 // CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_5:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_2]] {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
