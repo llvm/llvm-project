@@ -1529,11 +1529,11 @@ namespace tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
   return Platform->Plugin.get();
 }
-} // namespace tmp
 
-extern "C" int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
   return Device->DeviceNum;
 }
+} // namespace tmp
 
 } // namespace offload
 } // namespace llvm
