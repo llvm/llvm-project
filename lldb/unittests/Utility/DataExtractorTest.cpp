@@ -158,7 +158,7 @@ TEST(DataExtractorTest, PeekCStr) {
   EXPECT_EQ("", E.PeekCStr(4));
   EXPECT_EQ(std::nullopt, E.PeekCStr(5));
 
-  // The result is NULL terminated, so data() is a valid C string.
+  // The result is null-terminated, so data() is a valid C string.
   EXPECT_STREQ("foo", E.PeekCStr(1)->data());
 }
 

@@ -1378,6 +1378,7 @@ Currently, only the following parameter attributes are defined:
     interpreted as a call to memcpy with the allocation size of the specified type,
     instead of loading from the pointee and storing back into the copy in the type.
     In particular, the padding between field types of a struct type is still copied.
+    The type's allocation size must be known at compile time.
 
     The byval attribute also supports specifying an alignment with the
     `align` attribute. It indicates the alignment of the stack slot to
@@ -2529,6 +2530,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 
+    If the annotated function has observable behavior (such as I/O or a volatile
+    access), note that the annotation can cause UB to time-travel around such
+    behavior, i.e., code that is after the function can cause UB to occur before
+    the observable behavior of the function. See the {doc}`UB documentation
+    <UndefinedBehavior>` for further details.
+
 `nosync`
 :   This function attribute indicates that the function does not introduce any
     *synchronizes-with* edges in the sense of the memory model.
@@ -2741,7 +2748,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `speculative_load_hardening`
 :   This attribute indicates that
-    [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
+    [Speculative Load Hardening](SpeculativeLoadHardening.md)
     should be enabled for the function body.
 
     Speculative Load Hardening is a best-effort mitigation against
@@ -9266,6 +9273,8 @@ This defines a global with type `SHT_LLVM_CFI_JUMP_TABLE` and entry
 size 8.
 
 
+(module-flags-metadata)=
+
 ## Module Flags Metadata
 
 Information about the module as a whole is difficult to convey to LLVM's
@@ -9555,7 +9564,8 @@ lowered. The value is a string and must be one of:
 
 When the flag is absent, the target's default thread model is used. The flag
 must use the `error` merge behavior. For example:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"thread-model", !"single"}
 ```
@@ -9568,15 +9578,18 @@ interpretation target-specific.
 
 For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
 `"lp64d"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"lp64d"}
 ```
 while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
 ...
+```
 
 ### Exception Model Module Flags Metadata
 
@@ -20798,6 +20811,28 @@ runtime, then the result vector is a {ref}`poison value <poisonvalues>`. The
 `idx` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
 
+#### '`llvm.vector.repeat`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %vec)
+```
+
+##### Overview:
+
+The '`llvm.vector.repeat.*`' intrinsic repeatedly copies the elements of the
+source fixed-length vector, in order, until the result scalable vector is
+filled. For example, repeating `<A, B>` produces a scalable vector containing
+`vscale` copies of `<A, B>`.
+
+##### Arguments:
+
+The argument must be a fixed-length vector (i.e. `<N x Ty>`) and the result a
+scalable vector that is exactly `vscale` times longer (i.e.
+`<vscale x N x Ty>`).
+
 #### '`llvm.vector.reverse`' Intrinsic
 
 ##### Syntax:
@@ -24371,36 +24406,6 @@ to the memory.
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of `load`/`store` `invariant.group` metadata.
 It does not read any accessible memory and the execution can be speculated.
-
-#### '`llvm.strip.invariant.group`' Intrinsic
-
-##### Syntax:
-This is an overloaded intrinsic. The {ref}`allocated object<allocatedobjects>`
-can belong to any address space. The returned pointer must belong to the same
-address space as the argument.
-
-```
-declare ptr @llvm.strip.invariant.group.p0(ptr <ptr>)
-```
-
-##### Overview:
-
-The '`llvm.strip.invariant.group`' intrinsic can be used when an invariant
-established by `invariant.group` metadata no longer holds, to obtain a new pointer
-value that does not carry the invariant information. It is an experimental
-intrinsic, which means that its semantics might change in the future.
-
-
-##### Arguments:
-
-The `llvm.strip.invariant.group` takes only one argument, which is a pointer
-to the memory.
-
-##### Semantics:
-
-Returns another pointer that aliases its argument but which has no associated
-`invariant.group` metadata.
-It does not read any memory and can be speculated.
 
 
 

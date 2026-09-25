@@ -130,6 +130,14 @@ static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";
 }
 
+/// Attribute naming the submodule that defines a separate module procedure.
+/// Such a procedure is mangled with the module that declares its interface, so
+/// this is the only record of where it is really defined. It is only set when
+/// full debug information is requested.
+static constexpr llvm::StringRef getDefiningSubmoduleAttrName() {
+  return "fir.defining_submodule";
+}
+
 /// Attribute containing the original name of a function from before the
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {

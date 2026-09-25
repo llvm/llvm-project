@@ -41,6 +41,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -1991,6 +1992,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
 
+    // Direct patterns exist for quad broadcasts.
+    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64,
+                    MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Legal);
+
+    // VECTOR_REPEAT to legal unpacked SVE types require explicit unpacking to
+    // add spacing between elements.
+    for (auto VT : {MVT::nxv4f16, MVT::nxv2f32, MVT::nxv4bf16})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
+
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
@@ -2542,10 +2553,14 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
-  // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
-      ResVT.getVectorElementType() != MVT::i1)
-    return true;
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      ResVT.isFixedLengthVector()) {
+    // Without SVE support only allow promotable result types.
+    if (!is_contained({2u, 4u, 8u, 16u}, ResVT.getVectorNumElements()))
+      return true;
+    if (OpVT != MVT::i32 && OpVT != MVT::i64)
+      return true;
+  }
 
   // Expand 1 length fixed length vector.
   if (ResVT.isFixedLengthVector() && ResVT.getVectorNumElements() == 1)
@@ -6918,18 +6933,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(AArch64ISD::PMULL, DL, Op.getValueType(), LHS, RHS);
   }
-  case Intrinsic::aarch64_neon_smax:
-    return DAG.getNode(ISD::SMAX, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
-  case Intrinsic::aarch64_neon_umax:
-    return DAG.getNode(ISD::UMAX, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
-  case Intrinsic::aarch64_neon_smin:
-    return DAG.getNode(ISD::SMIN, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
-  case Intrinsic::aarch64_neon_umin:
-    return DAG.getNode(ISD::UMIN, DL, Op.getValueType(), Op.getOperand(1),
-                       Op.getOperand(2));
   case Intrinsic::aarch64_neon_scalar_sqxtn:
   case Intrinsic::aarch64_neon_scalar_sqxtun:
   case Intrinsic::aarch64_neon_scalar_uqxtn: {
@@ -8881,6 +8884,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
+  case ISD::VECTOR_REPEAT:
+    return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
@@ -10367,8 +10372,9 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
     // The SVE vector length can change when entering/leaving streaming mode.
     // FPMR is set to 0 when entering/leaving streaming mode.
-    if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
-        MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
+    if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 &&
+        (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
+         MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA)) {
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
                                               /*IsImplicit=*/true));
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
@@ -10599,6 +10605,19 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(CLI);
+
+    // If we have a tail-call, it's safe to drop ZAMarkerNode since
+    // 1. INOUT_ZA_USE is the only marker node that can reach this point
+    // (otherwise, the call is not elegible for tail call optimization at all),
+    // and
+    // 2. INOUT_ZA_USE is redunant on a tail call, since a tail call is a return
+    // for which MachineSMEABIPass requires an acitve ZA state anyway, the
+    // marker node doesn't add anything.
+    if (IsTailCall && ZAMarkerNode) {
+      assert(ZAMarkerNode == AArch64ISD::INOUT_ZA_USE &&
+             "Unexpected SME ZA marker node");
+      ZAMarkerNode = std::nullopt;
+    }
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
@@ -16977,6 +16996,8 @@ static SDValue NormalizeBuildVector(SDValue Op,
     } else if (Lane.getOpcode() == ISD::UNDEF) {
       Lane = DAG.getUNDEF(MVT::i32);
     } else {
+      if (Lane.getValueType() == MVT::i64)
+        Lane = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Lane);
       assert(Lane.getValueType() == MVT::i32 &&
              "Unexpected BUILD_VECTOR operand type");
     }
@@ -17372,6 +17393,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (!isConstant) {
       LLVM_DEBUG(
           dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
+      if (Value.getValueType() == MVT::i64 && VT.getScalarSizeInBits() <= 32)
+        Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Value);
       return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
     }
 
@@ -17825,6 +17848,23 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   }
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_REPEAT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+  EVT SrcVT = Src.getValueType();
+  assert(SrcVT.is64BitVector() && "Expected 64bit source!");
+
+  // Repeat into a packed container before extracting the low lanes, which
+  // places the result elements at the spacing required by the unpacked type.
+  SDValue SrcAsScalar =
+      DAG.getExtractVectorElt(DL, MVT::i64, DAG.getBitcast(MVT::v1i64, Src), 0);
+  SDValue Splat = DAG.getSplat(MVT::nxv2i64, DL, SrcAsScalar);
+  EVT PackedVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  return DAG.getExtractSubvector(DL, VT, DAG.getBitcast(PackedVT, Splat), 0);
 }
 
 SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
@@ -34067,6 +34107,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+
+  // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
+  // TODO: Remove this and handle atomic store hints in GISel once supported.
+  if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
+    if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
+      return true;
+  }
+
   return false;
 }
 

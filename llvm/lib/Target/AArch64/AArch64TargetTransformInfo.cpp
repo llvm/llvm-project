@@ -183,6 +183,10 @@ public:
     }
   }
 
+  bool isDisabled(TailFoldingOpts DefaultBits) const {
+    return getBits(DefaultBits) == TailFoldingOpts::Disabled;
+  }
+
   bool satisfies(TailFoldingOpts DefaultBits, TailFoldingOpts Required) const {
     return (getBits(DefaultBits) & Required) == Required;
   }
@@ -613,9 +617,12 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
+  // Only allow masked ld/st to pass through to getMemIntrinsicInstrCost().
   auto *RetTy = ICA.getReturnType();
   if (auto *VTy = dyn_cast<ScalableVectorType>(RetTy))
-    if (VTy->getElementCount() == ElementCount::getScalable(1))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) &&
+        !is_contained({Intrinsic::masked_load, Intrinsic::masked_store},
+                      ICA.getID()))
       return InstructionCost::getInvalid();
 
   switch (ICA.getID()) {
@@ -3888,46 +3895,69 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   assert(ISD && "Invalid opcode");
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
-  if (I && I->hasOneUser()) {
-    auto *SingleUser = cast<Instruction>(*I->user_begin());
-    SmallVector<const Value *, 4> Operands(SingleUser->operand_values());
-    if (Type *ExtTy = isBinExtWideningInstruction(
-            SingleUser->getOpcode(), Dst, Operands,
-            Src != I->getOperand(0)->getType() ? Src : nullptr)) {
-      // The cost from Src->Src*2 needs to be added if required, the cost from
-      // Src*2->ExtTy is free.
-      if (ExtTy->getScalarSizeInBits() > Src->getScalarSizeInBits() * 2) {
-        Type *DoubleSrcTy =
-            Src->getWithNewBitWidth(Src->getScalarSizeInBits() * 2);
-        return getCastInstrCost(Opcode, DoubleSrcTy, Src,
-                                TTI::CastContextHint::None, CostKind);
-      }
+  if (I && !I->users().empty()) {
+    // Determine whether Usr can absorb the cast from Src to Dst into a
+    // widening instruction (e.g. uaddl, saddw, urhadd), making the cast free
+    // with respect to that user.
+    auto GetUserAbsorbedCastCost =
+        [&](const Instruction *Usr) -> std::optional<InstructionCost> {
+      SmallVector<const Value *, 4> Operands(Usr->operand_values());
 
-      return 0;
-    }
+      if (Type *ExtTy = isBinExtWideningInstruction(
+              Usr->getOpcode(), Dst, Operands,
+              Src != I->getOperand(0)->getType() ? Src : nullptr)) {
+        // The cost from Src->Src*2 needs to be added if required, the cost
+        // from Src*2->ExtTy is free.
+        if (ExtTy->getScalarSizeInBits() > Src->getScalarSizeInBits() * 2) {
+          Type *DoubleSrcTy =
+              Src->getWithNewBitWidth(Src->getScalarSizeInBits() * 2);
+          return getCastInstrCost(Opcode, DoubleSrcTy, Src,
+                                  TTI::CastContextHint::None, CostKind);
+        }
 
-    if (isSingleExtWideningInstruction(
-            SingleUser->getOpcode(), Dst, Operands,
-            Src != I->getOperand(0)->getType() ? Src : nullptr)) {
-      // For adds only count the second operand as free if both operands are
-      // extends but not the same operation. (i.e both operands are not free in
-      // add(sext, zext)).
-      if (SingleUser->getOpcode() == Instruction::Add) {
-        if (I == SingleUser->getOperand(1) ||
-            (isa<CastInst>(SingleUser->getOperand(1)) &&
-             cast<CastInst>(SingleUser->getOperand(1))->getOpcode() == Opcode))
-          return 0;
-      } else {
-        // Others are free so long as isSingleExtWideningInstruction
-        // returned true.
         return 0;
       }
+
+      if (isSingleExtWideningInstruction(
+              Usr->getOpcode(), Dst, Operands,
+              Src != I->getOperand(0)->getType() ? Src : nullptr)) {
+        // For adds only count the second operand as free if both operands
+        // are extends but not the same operation. (i.e both operands are
+        // not free in add(sext, zext)).
+        if (Usr->getOpcode() == Instruction::Add) {
+          if (I == Usr->getOperand(1) ||
+              (isa<CastInst>(Usr->getOperand(1)) &&
+               cast<CastInst>(Usr->getOperand(1))->getOpcode() == Opcode))
+            return 0;
+        } else {
+          // Others are free so long as isSingleExtWideningInstruction
+          // returned true.
+          return 0;
+        }
+      }
+
+      // The cast will be free for the s/urhadd instructions
+      if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
+          isExtPartOfAvgExpr(Usr, Dst, Src))
+        return 0;
+
+      return std::nullopt;
+    };
+
+    InstructionCost MaxAbsorbedCost = 0;
+    bool AllUsersAbsorbCast = true;
+    for (const User *U : I->users()) {
+      auto *Usr = cast<Instruction>(U);
+      std::optional<InstructionCost> UserCost = GetUserAbsorbedCastCost(Usr);
+      if (!UserCost) {
+        AllUsersAbsorbCast = false;
+        break;
+      }
+      MaxAbsorbedCost = std::max(MaxAbsorbedCost, *UserCost);
     }
 
-    // The cast will be free for the s/urhadd instructions
-    if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
-        isExtPartOfAvgExpr(SingleUser, Dst, Src))
-      return 0;
+    if (AllUsersAbsorbCast)
+      return MaxAbsorbedCost;
   }
 
   EVT SrcTy = TLI->getValueType(DL, Src);
@@ -4899,26 +4929,26 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // it until all instructions are vetted.
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
     if (VTy->getElementCount() == ElementCount::getScalable(1))
-      return InstructionCost::getInvalid();
+      if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
+        return InstructionCost::getInvalid();
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // TODO: Handle more cost kinds for floating point operations.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CxtI);
+                                           Op2Info, Args, CtxI);
 
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {
@@ -5257,10 +5287,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
     if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
          (Ty->isHalfTy() && ST->hasFullFP16())) &&
-        CxtI &&
-        ((CxtI->hasOneUse() &&
-          match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
-         match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
+        CtxI &&
+        ((CtxI->hasOneUse() &&
+          match(*CtxI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
+         match(CtxI->getOperand(0), m_FMul(m_Value(), m_Value()))))
       return 0;
     [[fallthrough]];
   case ISD::FADD:
@@ -5523,12 +5553,13 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
-  // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // <vscale x 1 x eltty> operations require mask adaptation.
+  // Allow it for normal masked ld/st
   if (VT->getElementCount() == ElementCount::getScalable(1))
-    return InstructionCost::getInvalid();
+    return is_contained({Intrinsic::masked_load, Intrinsic::masked_store},
+                        MICA.getID())
+               ? LT.first + 1
+               : InstructionCost::getInvalid();
 
   InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
@@ -5650,17 +5681,24 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
-  // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
-  // We also only support full register predicate loads and stores.
-  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
-    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
-        (VTy->getElementType()->isIntegerTy(1) &&
-         !VTy->getElementCount().isKnownMultipleOf(
-             ElementCount::getScalable(16))))
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty)) {
+
+    // We only support full register predicate loads and stores.
+    if (VTy->getElementType()->isIntegerTy(1) &&
+        !VTy->getElementCount().isKnownMultipleOf(
+            ElementCount::getScalable(16)))
       return InstructionCost::getInvalid();
+
+    // <vscale x 1 x eltty> operations require crafting a new mask.
+    if (VTy->getElementCount() == ElementCount::getScalable(1)) {
+      Intrinsic::ID IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                      : Intrinsic::masked_store;
+      return getMaskedMemoryOpCost(
+                 MemIntrinsicCostAttributes(IID, Ty, Alignment, AddressSpace),
+                 CostKind) +
+             1;
+    }
+  }
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
@@ -6948,12 +6986,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
                                         BinOp, CostKind, FMF);
 }
 
-InstructionCost
-AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -6980,7 +7017,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     // store(interleaving-shuffle). The shuffle cost could potentially be free,
     // but we model it with a cost of LT.first so that ST3/ST4 have a higher
     // cost than just the store.
-    if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+    if (CtxI && CtxI->hasOneUse() && isa<StoreInst>(*CtxI->user_begin()) &&
         (ShuffleVectorInst::isInterleaveMask(
              Mask, 4, SrcTy->getElementCount().getKnownMinValue() * 2) ||
          ShuffleVectorInst::isInterleaveMask(
@@ -7048,7 +7085,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
               ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NTp, CostKind, NMask, 0, nullptr, Args,
-                               CxtI)
+                               CtxI)
               : LTNumElts;
       Result.first->second = NCost;
       Cost += NCost;
@@ -7311,7 +7348,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
-                               Args, CxtI);
+                               Args, CtxI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
@@ -7350,7 +7387,8 @@ unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
 }
 
 bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
-  if (!ST->hasSVE())
+  TailFoldingOpts DefaultOpts = ST->getSVETailFoldingDefaultOpts();
+  if (!ST->hasSVE() || TailFoldingOptionLoc.isDisabled(DefaultOpts))
     return false;
 
   // We don't currently support vectorisation with interleaving for SVE - with
@@ -7375,8 +7413,7 @@ bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (Required == TailFoldingOpts::Disabled)
     Required |= TailFoldingOpts::Simple;
 
-  if (!TailFoldingOptionLoc.satisfies(ST->getSVETailFoldingDefaultOpts(),
-                                      Required))
+  if (!TailFoldingOptionLoc.satisfies(DefaultOpts, Required))
     return false;
 
   // Don't tail-fold for tight loops where we would be better off interleaving
@@ -8012,4 +8049,38 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   return false;
+}
+
+bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
+                                                Align Alignment) const {
+  if (!(ST->isSVEAvailable() ||
+        (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
+    return false;
+
+  if (isa<FixedVectorType>(DataType) &&
+      DataType->getPrimitiveSizeInBits().getFixedValue() < 128)
+    return false;
+
+  if (!isa<VectorType>(DataType))
+    return isElementTypeLegalForScalableVector(DataType);
+
+  auto LT = getTypeLegalizationCost(DataType);
+  if (!LT.first.isValid())
+    return false;
+
+  // Use the i32 or i64 compact instructions for f16/bf16 unpacked types.
+  LLVMContext &Ctx = DataType->getContext();
+  switch (LT.second.SimpleTy) {
+  case MVT::nxv2f16:
+  case MVT::nxv2bf16:
+    return isElementTypeLegalForCompressStore(Type::getInt64Ty(Ctx));
+  case MVT::nxv4f16:
+  case MVT::nxv4bf16:
+    return isElementTypeLegalForCompressStore(Type::getInt32Ty(Ctx));
+  default:
+    break;
+  }
+
+  return isElementTypeLegalForCompressStore(
+      EVT(LT.second.getScalarType()).getTypeForEVT(Ctx));
 }

@@ -324,12 +324,9 @@ struct DataRecordHandle {
                     getDataSize());
   }
 
-  static DataRecordHandle create(function_ref<char *(size_t Size)> Alloc,
-                                 const Input &I);
   static Expected<DataRecordHandle>
   createWithError(function_ref<Expected<char *>(size_t Size)> Alloc,
                   const Input &I);
-  static DataRecordHandle construct(char *Mem, const Input &I);
 
   static DataRecordHandle get(const char *Mem) {
     return DataRecordHandle(

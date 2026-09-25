@@ -1918,11 +1918,6 @@ def int_launder_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                     [IntrInaccessibleMemOnly,
                                      IntrSpeculatable]>;
 
-
-def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                                          [LLVMMatchType<0>],
-                                          [IntrSpeculatable, IntrNoMem]>;
-
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
@@ -2820,6 +2815,12 @@ foreach n = 2...8 in {
                               [llvm_anyvector_ty],
                               [IntrNoMem, IntrSpeculatable]>;
 }
+
+// vector_repeat( SrcVector )
+// Repeat a fixed-length vector to fill its "vscale x" equivalent.
+def int_vector_repeat : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [llvm_anyvector_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
 
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 

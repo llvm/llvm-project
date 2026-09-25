@@ -952,10 +952,9 @@ void TargetLoweringBase::initActions() {
 
     // Only some target support these vector operations. Default them to Expand.
     setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
-
-    // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
+    setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
 
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
