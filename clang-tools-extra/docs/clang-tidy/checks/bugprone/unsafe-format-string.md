@@ -66,12 +66,12 @@ The check detects unsafe format strings in these functions:
 
 ```{option} CustomPrintfFunctions
 The user can specify own printf-like functions with dangerous format string
-parameter. Default is `""`.
+parameter. Default is an empty string.
 ```
 
 ```{option} CustomScanfFunctions
 The user can specify own scanf-like functions with dangerous format string
-parameter. Default is `""`.
+parameter. Default is an empty string.
 ```
 
 Both options have the following format:

@@ -78,14 +78,32 @@ void test_vsnprintf(int count, ...) {
 
 void test_scanf() {
   char buffer[100];
+  char buffer2[100];
+  int i;
 
   /* Positive: unsafe %s without field width */
   scanf("%s", buffer);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without field width may cause buffer overflow; consider using '%Ns' where N limits input length [bugprone-unsafe-format-string]
 
+  scanf("%99s %s", buffer, buffer2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without field width may cause buffer overflow; consider using '%Ns' where N limits input length [bugprone-unsafe-format-string]
+
+  scanf("%*s %s", buffer);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without field width may cause buffer overflow; consider using '%Ns' where N limits input length [bugprone-unsafe-format-string]
+
+  scanf("%%%s", buffer);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without field width may cause buffer overflow; consider using '%Ns' where N limits input length [bugprone-unsafe-format-string]
+
   /*Negative: safe %s with field width */
   scanf("%99s", buffer);
-  /* no-warning */
+
+  /*Negative: safe %*s does not write into buffer */
+  scanf("%*s %99s", buffer);
+
+  scanf("%%%99s", buffer);
+
+  scanf("%ds", &i);
+
 }
 
 void test_fscanf() {
