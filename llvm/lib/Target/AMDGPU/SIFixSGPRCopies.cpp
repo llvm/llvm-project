@@ -1214,7 +1214,8 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       if (DstReg == AMDGPU::SCC) {
         MachineBasicBlock::iterator InsPt =
             std::next(MachineBasicBlock::iterator(MI));
-        if (HasCmp && !Src.getSubReg() && TII->isMaskedByExec(SrcReg, MI, *MRI)) {
+        if (HasCmp && !Src.getSubReg() &&
+            TII->isMaskedByExec(SrcReg, MI, *MRI)) {
           // The source already has 0 in the bits of all inactive lanes, so
           // SCC is just "source is non-zero". S_CMP computes that without
           // needing a destination register.
