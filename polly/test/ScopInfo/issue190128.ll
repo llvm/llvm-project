@@ -13,7 +13,9 @@
 ;     }
 ; }
 ;
-; The constraint -58 <= shl < 32768 (ignorable trunc range) must be checked in an RTC (here: InvalidConstant).
+; The latch condition is only modeled correctly if the start value 0 <= trunc1 + 56 <= 32766
+; (unsigned comparison, nsw increment), i.e. -56 <= shl <= 32710. This must be checked in an RTC
+; (here: Invalid Context) instead of assuming the loop to be bounded.
 ; Alternatively, %conv6 could be used as a parameter, instead of %shl.
 
 ; CHECK:      Context:
