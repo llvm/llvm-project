@@ -72,3 +72,153 @@ body: |
     %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
     S_ENDPGM 0, implicit %3
 ...
+
+# EXEC itself is trivially masked by EXEC.
+---
+name: exec_to_scc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: exec_to_scc
+    ; GFX9: S_CMP_LG_U64 $exec, 0, implicit-def $scc
+    ; GFX7: {{%[0-9]+}}:sreg_64 = S_AND_B64 $exec, $exec, implicit-def $scc
+    $scc = COPY $exec
+    %0:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %0
+...
+
+# Negative test: the V_CMP is in a different block from the copy to SCC, so it
+# may have executed under a different EXEC mask.
+---
+name: vcmp_other_block
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: vcmp_other_block
+  ; CHECK: [[CMP:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+  ; CHECK: bb.1:
+  ; CHECK-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[CMP]], $exec, implicit-def $scc
+  bb.0:
+    successors: %bb.1
+    liveins: $vgpr0, $vgpr1
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $scc = COPY %0
+    %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %1
+...
+
+# The walk looks through a chain of COPYs.
+---
+name: copy_chain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: copy_chain
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY %4
+    ; GFX9-NEXT: S_CMP_LG_U64 [[COPY]], 0, implicit-def $scc
+    ; GFX7-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[COPY]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %1:sreg_64 = COPY %0
+    %2:sreg_64 = COPY %1
+    %3:sreg_64 = COPY %2
+    %4:sreg_64 = COPY %3
+    %5:sreg_64 = COPY %4
+    $scc = COPY %5
+    %6:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %6
+...
+
+# OR needs both operands to be masked.
+---
+name: or_both_masked
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: or_both_masked
+    ; CHECK: [[OR:%[0-9]+]]:sreg_64 = S_OR_B64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def dead $scc
+    ; GFX9-NEXT: S_CMP_LG_U64 [[OR]], 0, implicit-def $scc
+    ; GFX7-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[OR]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %1:sreg_64_xexec = V_CMP_EQ_U32_e64 $vgpr0, $vgpr1, implicit $exec
+    %2:sreg_64 = S_OR_B64 %0, %1, implicit-def dead $scc
+    $scc = COPY %2
+    %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %3
+...
+
+# Negative test: OR with only one masked operand.
+---
+name: or_one_masked
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    ; CHECK-LABEL: name: or_one_masked
+    ; CHECK: [[OR:%[0-9]+]]:sreg_64 = S_OR_B64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def dead $scc
+    ; CHECK-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[OR]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %1:sreg_64 = COPY $sgpr0_sgpr1
+    %2:sreg_64 = S_OR_B64 %0, %1, implicit-def dead $scc
+    $scc = COPY %2
+    %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %3
+...
+
+# Negative test: XOR with only one masked operand.
+---
+name: xor_one_masked
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    ; CHECK-LABEL: name: xor_one_masked
+    ; CHECK: [[XOR:%[0-9]+]]:sreg_64 = S_XOR_B64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def dead $scc
+    ; CHECK-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[XOR]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %1:sreg_64 = COPY $sgpr0_sgpr1
+    %2:sreg_64 = S_XOR_B64 %1, %0, implicit-def dead $scc
+    $scc = COPY %2
+    %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %3
+...
+
+# ANDN2 only needs its first operand to be masked.
+---
+name: andn2_first_masked
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    ; CHECK-LABEL: name: andn2_first_masked
+    ; CHECK: [[ANDN2:%[0-9]+]]:sreg_64 = S_ANDN2_B64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def dead $scc
+    ; GFX9-NEXT: S_CMP_LG_U64 [[ANDN2]], 0, implicit-def $scc
+    ; GFX7-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[ANDN2]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %1:sreg_64 = COPY $sgpr0_sgpr1
+    %2:sreg_64 = S_ANDN2_B64 %0, %1, implicit-def dead $scc
+    $scc = COPY %2
+    %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %3
+...
+
+# Negative test: ANDN2 with only its second operand masked.
+---
+name: andn2_second_masked
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    ; CHECK-LABEL: name: andn2_second_masked
+    ; CHECK: [[ANDN2:%[0-9]+]]:sreg_64 = S_ANDN2_B64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def dead $scc
+    ; CHECK-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[ANDN2]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %1:sreg_64 = COPY $sgpr0_sgpr1
+    %2:sreg_64 = S_ANDN2_B64 %1, %0, implicit-def dead $scc
+    $scc = COPY %2
+    %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %3
+...
