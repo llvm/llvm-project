@@ -1022,10 +1022,9 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
   Columns.emplace_back(Op1.begin(), Op1.end());
   // The chain link of a commutative lane may sit in the second column;
   // normalize so every lane's link leads.
-  for (unsigned Lane :
-       make_filter_range(seq<unsigned>(NumLanes), [&](unsigned Lane) {
-         return !GetChainLink(Lane, Columns[0][Lane]);
-       })) {
+  for (unsigned Lane : seq<unsigned>(NumLanes)) {
+    if (GetChainLink(Lane, Columns[0][Lane]))
+      continue;
     Instruction *Link = GetChainLink(Lane, Columns[1][Lane]);
     if (!Link || !Link->isCommutative())
       return {};

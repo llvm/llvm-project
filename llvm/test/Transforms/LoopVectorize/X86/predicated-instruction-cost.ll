@@ -299,4 +299,58 @@ exit:
   ret i32 0
 }
 
+; %then is only entered via an edge with zero branch weight. The cost of its
+; replicate region must be scaled by the minimal possible execution probability.
+define void @predicated_sdiv_zero_weight(ptr noalias %a, ptr noalias %b, i64 %n) {
+; CHECK-LABEL: define void @predicated_sdiv_zero_weight(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LATCH]], !prof [[PROF4:![0-9]+]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 1000, [[L]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[D]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %l = load i32, ptr %gep.a, align 4
+  %c = icmp sgt i32 %l, 0
+  br i1 %c, label %then, label %latch, !prof !0
+
+then:
+  %d = sdiv i32 1000, %l
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 %d, ptr %gep.b, align 4
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !llvm.loop !1
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-cpu"="skylake-avx512" }
+
+!0 = !{!"branch_weights", i32 0, i32 1000}
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.interleave.count", i32 1}

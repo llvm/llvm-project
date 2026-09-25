@@ -910,10 +910,9 @@ SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
                                unsigned Opcode0, unsigned Opcode1) {
   unsigned ScalarTyNumElements = getNumElements(ScalarTy);
   SmallBitVector OpcodeMask(VL.size() * ScalarTyNumElements, false);
-  for (unsigned Lane :
-       make_filter_range(seq<unsigned>(VL.size()), [&](unsigned Lane) {
-         return !isa<PoisonValue>(VL[Lane]);
-       })) {
+  for (unsigned Lane : seq<unsigned>(VL.size())) {
+    if (isa<PoisonValue>(VL[Lane]))
+      continue;
     if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
       OpcodeMask.set(Lane * ScalarTyNumElements,
                      Lane * ScalarTyNumElements + ScalarTyNumElements);

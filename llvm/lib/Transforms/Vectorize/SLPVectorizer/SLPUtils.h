@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -49,37 +48,6 @@ namespace llvm::slpvectorizer {
 /// Limit of the number of uses for potentially transformed instructions/values,
 /// used in checks to avoid compile-time explode.
 inline constexpr int UsesLimit = 64;
-
-/// Lazily yields each element of a pointer range once, in first-occurrence
-/// order. Borrows the range, same lifetime rules as make_filter_range.
-template <typename RangeT> class DedupRange {
-  using IterT = decltype(adl_begin(std::declval<RangeT &>()));
-  using T = std::remove_cv_t<
-      std::remove_reference_t<decltype(*std::declval<IterT>())>>;
-  static_assert(std::is_pointer_v<T>, "Only ranges of pointers are supported.");
-
-  struct InsertAndTest {
-    SmallPtrSet<T, 8> *Seen;
-    bool operator()(T V) const { return Seen->insert(V).second; }
-  };
-
-  IterT BeginIt, EndIt;
-  SmallPtrSet<T, 8> Seen;
-
-public:
-  DedupRange(RangeT &&R) : BeginIt(adl_begin(R)), EndIt(adl_end(R)) {}
-
-  auto begin() {
-    return filter_iterator<IterT, InsertAndTest>(BeginIt, EndIt, {&Seen});
-  }
-  auto end() {
-    return filter_iterator<IterT, InsertAndTest>(EndIt, EndIt, {&Seen});
-  }
-};
-
-template <typename RangeT> DedupRange<RangeT> dedup(RangeT &&R) {
-  return std::forward<RangeT>(R);
-}
 
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
