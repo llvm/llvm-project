@@ -4408,6 +4408,9 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
           .Case([&](linalg::Conv2DNchwFchwOp op) {
             return rewriteInIm2Col(rewriter, op);
           })
+          .Case([&](linalg::Conv2DNchwFchwQOp op) {
+            return rewriteInIm2Col(rewriter, op);
+          })
           .Default([&](Operation *op) {
             return rewriter.notifyMatchFailure(op, "not supported");
           });

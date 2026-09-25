@@ -410,8 +410,9 @@ rewriteInIm2Col(RewriterBase &rewriter,
                         transposedResult.getDefiningOp());
 }
 
-FailureOr<std::pair<Operation *, Operation *>>
-rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
+template <typename ConvOp>
+static FailureOr<std::pair<Operation *, Operation *>>
+rewriteNchwFchwInIm2col(RewriterBase &rewriter, ConvOp convOp) {
   auto inputType = cast<ShapedType>(convOp.getInputs()[0].getType());
   auto filterType = cast<ShapedType>(convOp.getInputs()[1].getType());
   auto outputType = cast<ShapedType>(convOp.getOutputs()[0].getType());
@@ -452,7 +453,7 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
 
   SmallVector<ReassociationIndices> filterReassocIndices = {{0}, {1, 2, 3}};
   auto reshapedFilterType =
-      RankedTensorType::get({oc, ic * fh * fw}, inputType.getElementType(),
+      RankedTensorType::get({oc, ic * fh * fw}, filterType.getElementType(),
                             tensorFilterType.getEncoding());
   Value reshapedFilter = tensor::CollapseShapeOp::create(
       rewriter, loc, reshapedFilterType, filter, filterReassocIndices);
@@ -488,8 +489,10 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
   i2cToOperExprs.ohIndex = mIndicesExprs[0];
   i2cToOperExprs.owIndex = mIndicesExprs[1];
   Im2ColToInputDimsExprs inExprs = getIm2ColInputExpressions(
-      i2cToOperExprs, llvm::to_vector(convOp.getStrides().getValues<int64_t>()),
-      llvm::to_vector(convOp.getDilations().getValues<int64_t>()), rewriter);
+      i2cToOperExprs,
+      llvm::to_vector(convOp.getStrides().template getValues<int64_t>()),
+      llvm::to_vector(convOp.getDilations().template getValues<int64_t>()),
+      rewriter);
   auto inMap =
       AffineMap::inferFromExprList({ArrayRef{inExprs.bIndex, inExprs.cIndex,
                                              inExprs.hIndex, inExprs.wIndex}},
@@ -506,6 +509,10 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
         linalg::YieldOp::create(nestedBuilder, nestedLoc, args[0]);
       });
 
+  SmallVector<Value> preparedInputs(convOp.getInputs());
+  preparedInputs[0] = img2ColTensor.getResult(0);
+  preparedInputs[1] = reshapedFilter;
+
   // Because the filter does not share the same batch dimension,
   // the batch dimension is only used in indexing the input and output. Thus
   // we cannot use existing linalg named ops like linalg.batch_matmul.
@@ -515,20 +522,28 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
   auto lhsMap = AffineMap::get(4, 0, {mDim, kDim}, context);
   auto rhsMap = AffineMap::get(4, 0, {bDim, kDim, nDim}, context);
   auto resultMap = AffineMap::get(4, 0, {bDim, mDim, nDim}, context);
+
+  SmallVector<AffineMap> map = {rhsMap, lhsMap};
+  for (unsigned i = 2; i < preparedInputs.size(); ++i) {
+    map.push_back(AffineMap::get(
+        /*dimCount=*/4,
+        /*symbolCount=*/0,
+        /*results=*/ArrayRef<AffineExpr>{}, context));
+  }
+  map.push_back(resultMap);
+
   SmallVector<utils::IteratorType> genericIterators = {parallel, parallel,
                                                        parallel, reduction};
+
   auto genericOp = linalg::GenericOp::create(
       rewriter, loc, reshapedOutputType,
-      /*inputs=*/ValueRange{reshapedFilter, img2ColTensor.getResult(0)},
-      /*outputs=*/ValueRange{reshapedOutput},
-      ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
-      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        Value mul =
-            createMul(loc, args[0], args[1], args[2].getType(), nestedBuilder);
-        Value add = createAdd(loc, mul, args[2], nestedBuilder);
-        linalg::YieldOp::create(nestedBuilder, nestedLoc, add);
-      });
-  Value result = genericOp.getResults().front();
+      /*inputs=*/preparedInputs,
+      /*outputs=*/ValueRange{reshapedOutput}, map, genericIterators);
+
+  rewriter.inlineRegionBefore(convOp->getRegion(0), genericOp.getRegion(),
+                              genericOp.getRegion().begin());
+
+  Value result = genericOp.getResult(0);
 
   auto reshapedResult = tensor::ExpandShapeOp::create(
       rewriter, loc, outputType, result, outputReassocIndices);
@@ -537,6 +552,16 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
 
   return std::make_pair(img2ColTensor.getOperation(),
                         reshapedResult.getOperation());
+}
+
+FailureOr<std::pair<Operation *, Operation *>>
+rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
+  return rewriteNchwFchwInIm2col(rewriter, convOp);
+}
+
+FailureOr<std::pair<Operation *, Operation *>>
+rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwQOp convOp) {
+  return rewriteNchwFchwInIm2col(rewriter, convOp);
 }
 
 FailureOr<std::pair<Operation *, Operation *>>
@@ -712,6 +737,19 @@ public:
   }
 };
 
+class ConvertConv2DNchwFchwQ final
+    : public OpRewritePattern<linalg::Conv2DNchwFchwQOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::Conv2DNchwFchwQOp convOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(rewriteInIm2Col(rewriter, convOp)))
+      return failure();
+    return success();
+  }
+};
+
 class ConvertConv2DNhwcFhwc final
     : public OpRewritePattern<linalg::Conv2DNhwcFhwcOp> {
 public:
@@ -729,7 +767,8 @@ public:
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.insert<ConvertConv2DNhwcHwcf, ConvertDepthwiseConv2DNhwcHwc,
-                  ConvertConv2DNchwFchw, ConvertConv2DNhwcFhwc>(context);
+                  ConvertConv2DNchwFchw, ConvertConv2DNchwFchwQ,
+                  ConvertConv2DNhwcFhwc>(context);
 }
 } // end namespace linalg
 } // end namespace mlir
