@@ -5138,7 +5138,7 @@ bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
 /// a lane mask with one bit per lane, and zeroes the bits of lanes that were
 /// inactive when it executed.
 ///
-/// TODO: Also handle the sdst result of V_ADD_CO_U32 and V_SUB_CO_U32 amd
+/// TODO: Also handle the sdst result of V_ADD_CO_U32 and V_SUB_CO_U32 and
 /// V_DIV_SCALE_F32.
 static bool isVCmp(const SIInstrInfo &TII, const MachineInstr &MI) {
   if (TII.isVOPC(MI))
