@@ -2,6 +2,8 @@
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,ERR %s performance-noexcept-move-constructor %t \
 // RUN:                   -- --fix-errors -- -fexceptions -DENABLE_ERROR
 
+#include <utility>
+
 namespace std
 {
   template <typename T>
@@ -180,6 +182,25 @@ struct O : virtual IntWrapper, ThrowOnAnything {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
   // CHECK-FIXES: O &operator=(O &&)  noexcept = default;
 };
+
+struct P {
+  P() = default;
+
+  P(P &&) = default;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
+  // CHECK-FIXES: P(P &&)  noexcept = default;
+  P &operator=(P &&) = default;
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
+  // CHECK-FIXES: P &operator=(P &&)  noexcept = default;
+
+  InheritFromThrowOnAnything IFF;
+};
+
+void p() {
+  P P1{};
+  P P2{std::move(P1)};
+  P P3 = std::move(P2);
+}
 
 class OK {};
 
