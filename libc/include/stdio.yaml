@@ -353,6 +353,15 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: renameat
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: const char *
+      - type: int
+      - type: const char *
   - name: scanf
     standards:
       - stdc

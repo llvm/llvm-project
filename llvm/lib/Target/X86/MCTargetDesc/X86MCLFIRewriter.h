@@ -25,6 +25,8 @@ class MCSubtargetInfo;
 
 namespace X86 {
 
+constexpr unsigned LFIBundleSize = 32;
+
 class X86MCLFIRewriter : public MCLFIRewriter {
 public:
   X86MCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RI,
@@ -43,6 +45,18 @@ private:
 
   void rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
                       const MCSubtargetInfo &STI);
+
+  /// Emit the mask sequence that turns an arbitrary value in Reg into a
+  /// bundle-aligned address inside the sandbox.
+  void emitSandboxBranchReg(MCRegister Reg, MCStreamer &Out,
+                            const MCSubtargetInfo &STI);
+
+  void rewriteIndirectBranch(const MCInst &Inst, MCStreamer &Out,
+                             const MCSubtargetInfo &STI);
+  void rewriteDirectCall(const MCInst &Inst, MCStreamer &Out,
+                         const MCSubtargetInfo &STI);
+  void rewriteReturn(const MCInst &Inst, MCStreamer &Out,
+                     const MCSubtargetInfo &STI);
 
   bool isFSAccess(const MCInst &Inst);
   void rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,

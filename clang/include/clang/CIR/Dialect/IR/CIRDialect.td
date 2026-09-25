@@ -101,6 +101,9 @@ def CIR_Dialect : Dialect {
     // CIRGen so a reloaded .cir module is self-describing without a live
     // clang::LangOptions. See #cir.lowering_lang_options.
     static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // Platform SDK version from -target-sdk-version, as printed by
+    // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
+    static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 

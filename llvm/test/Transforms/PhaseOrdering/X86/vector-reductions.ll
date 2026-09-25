@@ -263,7 +263,6 @@ for.end:
 
 ; PR43745 - https://bugs.llvm.org/show_bug.cgi?id=43745
 
-; FIXME: this should be vectorized
 define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-LABEL: @cmp_lt_gt(
 ; CHECK-NEXT:  entry:

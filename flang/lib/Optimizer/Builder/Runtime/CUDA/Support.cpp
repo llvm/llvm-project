@@ -8,13 +8,9 @@
 
 #include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Runtime/CUDA/allocatable.h"
 
 static constexpr llvm::StringRef kCudaDeviceSynchronizeName =
     "_QPcudadevicesynchronize";
-
-using namespace Fortran::runtime::cuda;
 
 void fir::runtime::cuda::genCUDADeviceSynchronize(fir::FirOpBuilder &builder,
                                                   mlir::Location loc) {
@@ -33,12 +29,4 @@ void fir::runtime::cuda::genCUDADeviceSynchronize(fir::FirOpBuilder &builder,
   auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
   call.setProcedureAttrsAttr(fir::FortranProcedureFlagsEnumAttr::get(
       builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic));
-}
-
-mlir::Value fir::runtime::cuda::genDeviceIsActive(fir::FirOpBuilder &builder,
-                                                  mlir::Location loc) {
-  mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(CUFDeviceIsActive)>(loc, builder);
-  auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
-  return builder.createConvert(loc, builder.getI1Type(), call.getResult(0));
 }
