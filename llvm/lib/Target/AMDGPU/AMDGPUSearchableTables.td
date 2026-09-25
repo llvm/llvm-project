@@ -439,10 +439,6 @@ def LDSDMAIntrinsicTable : GenericTable {
   let PrimaryKeyName = "lookupLDSDMAIntrinsic";
 }
 
-//===----------------------------------------------------------------------===//
-// V_LOAD/STORE_IDX opcode mapping table.
-//===----------------------------------------------------------------------===//
-
 def VLdStIdxOpcodeInfoTable : GenericTable {
   let FilterClass = "VLdStIdxOpcodeInfo";
   let CppTypeName = "VLdStIdxOpcodeInfo";

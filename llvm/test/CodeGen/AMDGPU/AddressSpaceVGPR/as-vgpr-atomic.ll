@@ -2,9 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12,GFX12-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
 
-; Only the executing lane can access its view of the VGPRs, so, as for the
-; private address space, atomics on the VGPR "as memory" address space (13) are
-; performed as ordinary loads and stores.
+; Only the executing lane can reach its VGPRs, so, as for private memory,
+; atomics on address space 13 are ordinary loads and stores.
 
 define i32 @atomicrmw_add(ptr addrspace(13) inreg %p, i32 %v) {
 ; GFX12-LABEL: atomicrmw_add:

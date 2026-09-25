@@ -1393,7 +1393,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
             {{VgprV2S16},
              {VgprV2S16, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
-  // The data is a VGPR value; the dword index is waterfalled into an SGPR.
   addRulesForGOpcs({G_AMDGPU_REG_LOAD}).Any({{BRC}, {{VgprBRC}, {Sgpr32_WF}}});
 
   addRulesForGOpcs({G_AMDGPU_REG_STORE})
