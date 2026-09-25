@@ -326,14 +326,7 @@ math_mpfr_test(
     ],
 )
 
-math_mpfr_test(
-    name = "dfmal",
-    hdrs = ["FmaTest.h"],
-    deps = [
-        "//libc:rand",
-        "//libc:srand",
-    ],
-)
+# TODO: Add dfmal tests. Missing stdlib/rand dependency.
 
 math_mpfr_test(
     name = "fmul",
@@ -353,14 +346,7 @@ math_mpfr_test(
     ],
 )
 
-math_mpfr_test(
-    name = "dmull",
-    hdrs = ["MulTest.h"],
-    deps = [
-        "//libc:rand",
-        "//libc:srand",
-    ],
-)
+# TODO: Add dmull tests. Missing stdlib/rand dependency.
 
 math_mpfr_test(
     name = "f16mul",
@@ -442,9 +428,15 @@ math_mpfr_test(
     hdrs = ["FrexpTest.h"],
 )
 
-math_mpfr_test(name = "fmaxl")
+math_mpfr_test(
+    name = "fmaxl",
+    hdrs = ["FMaxTest.h"],
+)
 
-math_mpfr_test(name = "fminl")
+math_mpfr_test(
+    name = "fminl",
+    hdrs = ["FMinTest.h"],
+)
 
 math_mpfr_test(
     name = "frexpf16",
