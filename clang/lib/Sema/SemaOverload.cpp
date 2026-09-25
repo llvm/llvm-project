@@ -196,7 +196,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_Conversion,
       ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
-      ICR_HLSL_Dimension_Reduction,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -2357,8 +2357,12 @@ static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
   if (S.Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
-  bool FromPacked = FromType->isHLSLBuiltinPackedType();
-  bool ToPacked = ToType->isHLSLBuiltinPackedType();
+  QualType UIntTy = S.Context.UnsignedIntTy;
+
+  const bool FromPacked = FromType->isHLSLBuiltinPackedType();
+  const bool ToPacked = ToType->isHLSLBuiltinPackedType();
+  const bool FromIsUint = S.Context.hasSameUnqualifiedType(FromType, UIntTy);
+  const bool ToIsUint = S.Context.hasSameUnqualifiedType(ToType, UIntTy);
 
   if (FromPacked && ToPacked) {
     ICK = ICK_Integral_Conversion;
@@ -2366,17 +2370,14 @@ static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
     return true;
   }
 
-  // Only convert to and from scalars to packed types
-  if (FromPacked && !ToType->isScalarType())
+  // Only convert packed types to and from uint
+  if (FromPacked && !ToIsUint)
     return false;
-  if (ToPacked && !FromType->isScalarType())
+  if (ToPacked && !FromIsUint)
     return false;
-
-  QualType UIntTy = S.Context.UnsignedIntTy;
 
   // Converting to or from uint
-  if (S.Context.hasSameUnqualifiedType(UIntTy, FromType) ||
-      S.Context.hasSameUnqualifiedType(UIntTy, ToType)) {
+  if (FromIsUint || ToIsUint) {
     ICK = ICK_HLSL_Packed_Type_Conversion;
     DimensionICK = ICK_Identity;
     return true;

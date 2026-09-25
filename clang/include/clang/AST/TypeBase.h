@@ -3268,7 +3268,7 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
-// HLSL intangible Types
+// HLSL packed types
 #define HLSL_PACKED_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLPackedTypes.def"
 // SPIRV types

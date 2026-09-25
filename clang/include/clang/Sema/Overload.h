@@ -210,7 +210,7 @@ class Sema;
     /// HLSL matrix splat from scalar or boolean type.
     ICK_HLSL_Matrix_Splat,
 
-    /// HLSL packed type conversion to uint
+    /// HLSL packed type conversion to and from uint
     ICK_HLSL_Packed_Type_Conversion,
 
     /// The number of conversion kinds

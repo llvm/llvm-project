@@ -2977,11 +2977,12 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
     return true;
   }
 
-  // HLSL includes packed data types that can be converted directly to uint
-  if (Self.HLSL().CanPerformPackedToUintCast(SrcExpr.get(), DestType)) {
-    SrcExpr = Self.ImpCastExprToType(
-        SrcExpr.get(), SrcExpr.get()->getType(), CK_IntegralCast,
-        SrcExpr.get()->getValueKind(), nullptr, CCK);
+  // HLSL includes packed data types that can be converted directly to and from
+  // uint, and with each other
+  if (Self.HLSL().CanPerformPackedTypeCast(SrcExpr.get(), DestType)) {
+    SrcExpr =
+        Self.ImpCastExprToType(SrcExpr.get(), DestType, CK_IntegralCast,
+                               SrcExpr.get()->getValueKind(), nullptr, CCK);
     Kind = CK_IntegralCast;
     return true;
   }

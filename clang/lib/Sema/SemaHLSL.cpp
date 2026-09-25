@@ -5184,13 +5184,18 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
   return true;
 }
 
-bool SemaHLSL::CanPerformPackedToUintCast(Expr *Src, QualType DestTy) {
+bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  QualType UIntTy = Ctx.UnsignedIntTy;
   QualType SrcTy = Src->getType();
-  if (SrcTy->isHLSLBuiltinPackedType()) {
-    if (DestTy->isScalarType() || DestTy->isHLSLBuiltinPackedType())
-      return true;
-  }
-  return false;
+
+  const bool SrcIsUint = Ctx.hasSameUnqualifiedType(SrcTy, UIntTy);
+  const bool DestIsUint = Ctx.hasSameUnqualifiedType(DestTy, UIntTy);
+
+  return (SrcTy->isHLSLBuiltinPackedType() &&
+          DestTy->isHLSLBuiltinPackedType()) ||
+         (SrcTy->isHLSLBuiltinPackedType() && DestIsUint) ||
+         (DestTy->isHLSLBuiltinPackedType() && SrcIsUint);
 }
 
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
