@@ -493,31 +493,21 @@ void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
     applyTypeToDecl(Context, D, Parsed->Type, Parsed->TypeInfo);
 }
 
-void Sema::ApplyNullability(Decl *D, NullabilityKind Nullability) {
-  auto GetModified =
-      [&](class Decl *D, QualType QT,
-          NullabilityKind Nullability) -> std::optional<QualType> {
+static void applyNullabilityToDecl(ASTContext &Context, Decl *D,
+                                   NullabilityKind Nullability) {
+  auto GetModified = [&](QualType QT) -> std::optional<QualType> {
     QualType Original = QT;
-    CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
-                                          isa<ParmVarDecl>(D),
-                                          /*OverrideExisting=*/true);
+    Sema::OverrideImplicitNullability(Context, QT, Nullability,
+                                      isa<ParmVarDecl>(D));
     return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
                                                       : std::nullopt;
   };
 
-  if (auto Function = dyn_cast<FunctionDecl>(D)) {
-    if (auto Modified =
-            GetModified(D, Function->getReturnType(), Nullability)) {
-      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
-      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
-        Function->setType(Context.getFunctionType(
-            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
-      else
-        Function->setType(
-            Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
-    }
-  } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
+  if (auto *Function = dyn_cast<FunctionDecl>(D)) {
+    if (auto Modified = GetModified(Function->getReturnType()))
+      rebuildFunctionType(Context, Function, *Modified);
+  } else if (auto *Method = dyn_cast<ObjCMethodDecl>(D)) {
+    if (auto Modified = GetModified(Method->getReturnType())) {
       Method->setReturnType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
@@ -525,19 +515,19 @@ void Sema::ApplyNullability(Decl *D, NullabilityKind Nullability) {
         Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
             Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
     }
-  } else if (auto Value = dyn_cast<ValueDecl>(D)) {
-    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
+  } else if (auto *Value = dyn_cast<ValueDecl>(D)) {
+    if (auto Modified = GetModified(Value->getType())) {
       Value->setType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
-      if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
+      if (auto *Parm = dyn_cast<ParmVarDecl>(D)) {
         if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
           Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
               Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
       }
     }
-  } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
+  } else if (auto *Property = dyn_cast<ObjCPropertyDecl>(D)) {
+    if (auto Modified = GetModified(Property->getType())) {
       Property->setType(*Modified, Property->getTypeSourceInfo());
 
       // Make it a property attribute if we can.
@@ -546,6 +536,10 @@ void Sema::ApplyNullability(Decl *D, NullabilityKind Nullability) {
             ObjCPropertyAttribute::kind_null_resettable);
     }
   }
+}
+
+void Sema::ApplyNullability(Decl *D, NullabilityKind Nullability) {
+  applyNullabilityToDecl(Context, D, Nullability);
 }
 
 /// Process API notes for a variable or property.
