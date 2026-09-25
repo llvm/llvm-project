@@ -1,5 +1,5 @@
-; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00-- -filetype=null %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00-- -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00-- -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00-- -filetype=null < %s 2>&1 | FileCheck %s
 
 ; Accesses of the VGPR "as memory" address space (13) that are not implemented
 ; must be rejected with a clean diagnostic on both SelectionDAG and GlobalISel,
