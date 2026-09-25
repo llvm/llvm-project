@@ -2671,7 +2671,7 @@ def fcopyprof_static_size_threshold_EQ
     : Joined<["-"], "fcopyprof-static-size-threshold=">,
       Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
       MetaVarName<"<N>">,
-      HelpText<"Minimum C++ object size to enable CopyProf instrumentation (default: 16).">,
+      HelpText<"Minimum C++ object size in bytes to enable CopyProf instrumentation (default: 16).">,
       MarshallingInfoInt<CodeGenOpts<"CopyProfStaticSizeThreshold">, "16">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver

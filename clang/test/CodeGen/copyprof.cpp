@@ -1,6 +1,7 @@
 // Test that CopyProf instrumentation passes are invoked at -O0 and -O2,
 // and are not re-run during ThinLTO postlink backend compilation.
 
+// REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -fcopyprof %s -fdebug-pass-manager -emit-llvm -o /dev/null 2>&1 | FileCheck %s --check-prefix=INSTRUMENT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcopyprof %s -fdebug-pass-manager -emit-llvm -o /dev/null 2>&1 | FileCheck %s --check-prefix=INSTRUMENT
 
