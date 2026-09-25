@@ -3392,7 +3392,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
 
   unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
   // Don't use RVV for types that don't fit.
-  if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
+  if (LMul > 8)
     return false;
 
   // TODO: Perhaps an artificial restriction, but worth having whilst getting
@@ -15484,7 +15484,10 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     // If index vector is an i8 vector and the element count exceeds 256, we
     // should change the element type of index vector to i16 to avoid
     // overflow.
-    if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
+    uint64_t MaxEltCount = VT.getVectorMinNumElements();
+    if (VT.isScalableVector())
+      MaxEltCount *= Subtarget.getRealMaxVLen() / RISCV::RVVBitsPerBlock;
+    if (IndexEltVT == MVT::i8 && MaxEltCount > 256) {
       // FIXME: We need to do vector splitting manually for LMUL=8 cases.
       assert(getLMUL(IndexVT) != RISCVVType::LMUL_8);
       IndexVT = IndexVT.changeVectorElementType(MVT::i16);
@@ -20516,9 +20519,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   unsigned OpSize = OpVT.getSizeInBits();
   // The size should be larger than XLen and smaller than the maximum vector
   // size.
-  if (OpSize <= Subtarget.getXLen() ||
-      OpSize > Subtarget.getRealMinVLen() *
-                   Subtarget.getMaxLMULForFixedLengthVectors())
+  if (OpSize <= Subtarget.getXLen() || OpSize > Subtarget.getRealMinVLen() * 8)
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
@@ -27723,12 +27724,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
     if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
-    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      Func.getContext().diagnose(DiagnosticInfoUnsupported{
-          Func,
-          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
-          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

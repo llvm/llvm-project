@@ -4015,7 +4015,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
   CheckArgumentObjectKind(x);
-  VerifyModifiers(x);
+  VerifyModifierSyntax(x);
 }
 
 // Restrictions specific to each clause are implemented apart from the

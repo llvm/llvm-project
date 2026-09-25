@@ -11448,6 +11448,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_str_to_integer",
         ":hdr_inet_address_macros",
+        ":hdr_stdint_proxy",
         ":string_memory_utils",
         ":types_in_addr_t",
         ":types_struct_in6_addr",

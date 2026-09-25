@@ -16,12 +16,12 @@ define i32 @foo(i32 %v2, ptr byval(%struct.S2) align 8 %v5, i1 %cmp3644) {
 ; CHECK-NEXT:    [[F1783:%.*]] = getelementptr i8, ptr [[V5]], i64 108
 ; CHECK-NEXT:    [[F2354:%.*]] = getelementptr i8, ptr [[V5]], i64 88
 ; CHECK-NEXT:    [[F2882:%.*]] = getelementptr i8, ptr [[V5]], i64 100
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F1783]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[F2354]], align 8
 ; CHECK-NEXT:    [[DOTFR5727:%.*]] = freeze i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[F2882]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <2 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F1783]], align 4
 ; CHECK-NEXT:    [[DOTFR5726:%.*]] = freeze i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[DOTFR5727]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

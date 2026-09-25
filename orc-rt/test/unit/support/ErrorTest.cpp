@@ -484,6 +484,28 @@ TEST(ErrorTest, ExpectedExpected) {
   }
 }
 
+// Test that Expected<T>'s move operations are noexcept iff T's move
+// constructor is.
+namespace {
+struct ThrowingMove {
+  ThrowingMove(ThrowingMove &&) noexcept(false);
+  ThrowingMove &operator=(ThrowingMove &&) noexcept(false);
+};
+} // namespace
+
+static_assert(std::is_nothrow_move_constructible_v<Expected<int>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<int>>);
+static_assert(std::is_nothrow_move_constructible_v<Expected<int &>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<int &>>);
+static_assert(std::is_nothrow_move_constructible_v<Expected<Error>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<Error>>);
+static_assert(std::is_nothrow_move_constructible_v<Expected<Expected<int>>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<Expected<int>>>);
+static_assert(!std::is_nothrow_move_constructible_v<Expected<ThrowingMove>>);
+static_assert(!std::is_nothrow_move_assignable_v<Expected<ThrowingMove>>);
+static_assert(
+    !std::is_nothrow_move_constructible_v<Expected<Expected<ThrowingMove>>>);
+
 // Test that the ExitOnError utility works as expected.
 TEST(ErrorTest, CantFailSuccess) {
   cantFail(Error::success());

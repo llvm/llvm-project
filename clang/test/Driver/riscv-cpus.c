@@ -761,3 +761,8 @@
 // COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c920v2.c`
 // MCPU-XT-C920V2: "-target-cpu" "xt-c920v2"
 // MCPU-XT-C920V2-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=gaisler-gr765 | FileCheck -check-prefix=MCPU-GAISLER-GR765 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-gaisler-gr765.c`
+// MCPU-GAISLER-GR765: "-target-cpu" "gaisler-gr765"
+// MCPU-GAISLER-GR765-SAME: "-target-abi" "lp64d"

@@ -9,22 +9,23 @@
 define i32 @splat_subtree_loop_extracts(double %div.i) {
 ; CHECK-LABEL: @splat_subtree_loop_extracts(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> <double 0.000000e+00, double -0.000000e+00>, <2 x double> zeroinitializer)
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[DIV_I1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    br label [[FOR_BODY46_I:%.*]]
 ; CHECK:       for.body46.i:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[DIV_I:%.*]] = fdiv double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[DIV_I1:%.*]] = fdiv double 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[ARRAYIDX19_US63_I_3_1:%.*]] = getelementptr i8, ptr poison, i64 328
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[TMP14]], [[TMP4]]
-; CHECK-NEXT:    [[MUL5_I471:%.*]] = fmul double [[TMP0]], [[DIV_I]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP2]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[MUL5_I471:%.*]] = fmul double [[TMP0]], [[DIV_I:%.*]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL5_I471]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[MUL6_I:%.*]] = fmul double [[TMP1]], [[DIV_I1]]
+; CHECK-NEXT:    [[MUL21_4_I541:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> poison, double [[MUL6_I]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> zeroinitializer, <2 x double> [[TMP7]])
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[MUL21_4_I541]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x double> [[TMP14]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP7]], <2 x double> zeroinitializer, <2 x double> [[TMP16]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> [[TMP10]])
