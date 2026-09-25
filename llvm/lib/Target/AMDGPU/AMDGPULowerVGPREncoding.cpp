@@ -393,7 +393,6 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
 
   // $data is operand 0 of both the load (def) and store (use) pseudos.
   Register Data = LdSt.getDataOp().getReg();
-  MachineOperand &IdxOp = LdSt.getIdxOp();
   unsigned Offset = LdSt.getOffsetOp().getImm();
   unsigned NumDwords = LdSt.getBitWidth() / 32;
 
@@ -407,21 +406,18 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
          "out of bounds VGPR 'as memory' (address space 13) access");
 #endif
 
-  // With movrel the index is in M0, put there by the custom inserter. The rest
-  // use the VGPR indexing mode, which reads it from its SGPR.
-  const bool UseGPRIdxMode = ST->useVGPRIndexMode();
+  // The movrel form reads its index from M0; the VGPR indexing mode form from
+  // its SGPR operand.
+  const bool UseGPRIdxMode = LdSt.isGPRIdx();
 
   MachineInstr *SetOn = nullptr;
   if (UseGPRIdxMode) {
     SetOn = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
-                .add(IdxOp)
+                .add(LdSt.getIdxOp())
                 .addImm(IsStore ? AMDGPU::VGPRIndexMode::DST_ENABLE
                                 : AMDGPU::VGPRIndexMode::SRC0_ENABLE)
                 .getInstr();
     SetOn->getOperand(3).setIsUndef();
-  } else {
-    assert(IdxOp.isReg() && IdxOp.getReg() == AMDGPU::M0 &&
-           "movrel index should have been copied into M0");
   }
 
   unsigned Opcode;

@@ -67,6 +67,7 @@
 #include "SIFixSGPRCopies.h"
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
@@ -900,6 +901,21 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
   return true;
 }
 
+// Whether the value \p Copy writes to M0 is the index of a VGPR "as memory"
+// access.
+static bool isReadByM0IndexedAccess(const MachineInstr &Copy,
+                                    const SIRegisterInfo *TRI) {
+  MachineBasicBlock::const_iterator I(Copy), E = Copy.getParent()->end();
+  while (++I != E) {
+    auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*I);
+    if (LdSt && !LdSt->isGPRIdx())
+      return true;
+    if (I->definesRegister(AMDGPU::M0, TRI))
+      return false;
+  }
+  return false;
+}
+
 bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
                                        MachineBasicBlock::iterator &I) {
   Register DstReg = MI.getOperand(0).getReg();
@@ -911,6 +927,11 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
     // the first lane. Insert a readfirstlane and hope for the best.
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
     if (DstReg == AMDGPU::M0 && TRI->hasVectorRegisters(SrcRC)) {
+      // A VGPR "as memory" access uses it in every lane, so moveToVALU
+      // waterfalls it instead.
+      if (isReadByM0IndexedAccess(MI, TRI))
+        return false;
+
       Register TmpReg =
           MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
