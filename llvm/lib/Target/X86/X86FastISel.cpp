@@ -1864,7 +1864,8 @@ bool X86FastISel::X86SelectShift(const Instruction *I) {
 
   Register ResultReg = createResultReg(RC);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(OpReg), ResultReg)
-    .addReg(Op0Reg);
+      .addReg(Op0Reg)
+      .setOperandDead(2);
   updateValueMap(I, ResultReg);
   return true;
 }
