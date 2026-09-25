@@ -14753,9 +14753,8 @@ static SDValue vlsegDeinterleaveFields(
       Ptr,
       Mask,
       VL,
-      DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC |
-                                RISCVVType::MASK_AGNOSTIC,
-                            DL, XLenVT),
+      DAG.getTargetConstant(
+          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
       DAG.getTargetConstant(Log2_64(MemEltVT.getScalarSizeInBits()), DL,
                             XLenVT)};
 
@@ -14835,10 +14834,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       SmallVector<SmallVector<SDValue, 4>, 8> Parts(Factor);
       for (unsigned Offset = 0; Offset < NumElts; Offset += ChunkElts) {
         unsigned ThisChunkElts = std::min(ChunkElts, NumElts - Offset);
-        uint64_t ByteOff =
-            static_cast<uint64_t>(Offset) * Factor * ElemBytes;
-        SDValue ChunkPtr = DAG.getObjectPtrOffset(
-            DL, StackPtr, TypeSize::getFixed(ByteOff));
+        uint64_t ByteOff = static_cast<uint64_t>(Offset) * Factor * ElemBytes;
+        SDValue ChunkPtr =
+            DAG.getObjectPtrOffset(DL, StackPtr, TypeSize::getFixed(ByteOff));
         MachinePointerInfo ChunkPI = PtrInfo.getWithOffset(ByteOff);
 
         SDValue Mask, VL;
