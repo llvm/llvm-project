@@ -33,6 +33,7 @@ PluginManager *PM = nullptr;
 
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 } // namespace llvm::offload::tmp
 
 void PluginManager::init() {
@@ -96,8 +97,10 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
     return false;
   }
 
-  GenericPluginTy &Plugin = *__ol_tgt_GetPluginFromPlatform(PlatformHandle);
-  int32_t DeviceId = __ol_tgt_GetPluginDeviceId(DeviceHandle);
+  GenericPluginTy &Plugin =
+      *llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(PlatformHandle);
+  int32_t DeviceId =
+      llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
 
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
   // Initialize the device information for the RTL we are about to use.
