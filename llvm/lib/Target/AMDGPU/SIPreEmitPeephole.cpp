@@ -78,8 +78,8 @@ private:
   // unpacking can lead to such a situation.
   bool canUnpackingClobberRegister(const MachineInstr &MI);
   bool canSourceClobberRegister(const MachineInstr &MI, Register UnpackedDstReg,
-                                AMDGPU::OpName SrcName,
-                                AMDGPU::OpName ModsName) const;
+                                AMDGPU::OpName SrcName, AMDGPU::OpName ModsName,
+                                unsigned OpSelModifier) const;
   bool hasUnsupportedVPKMovModifiers(const MachineInstr &MI) const;
   // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
   // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
@@ -603,16 +603,18 @@ bool SIPreEmitPeephole::removeRedundantModeWrites(
 // If support is extended to new operations, add tests in
 // llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir.
 
-bool SIPreEmitPeephole::canSourceClobberRegister(
-    const MachineInstr &MI, Register UnpackedDstReg, AMDGPU::OpName SrcName,
-    AMDGPU::OpName ModsName) const {
+bool SIPreEmitPeephole::canSourceClobberRegister(const MachineInstr &MI,
+                                                 Register UnpackedDstReg,
+                                                 AMDGPU::OpName SrcName,
+                                                 AMDGPU::OpName ModsName,
+                                                 unsigned OpSelModifier) const {
   const MachineOperand *SrcMO = TII->getNamedOperand(MI, SrcName);
   if (!SrcMO || !SrcMO->isReg())
     return false;
 
   Register SrcReg = SrcMO->getReg();
   unsigned SrcMods = TII->getNamedOperand(MI, ModsName)->getImm();
-  Register HiSrcReg = (SrcMods & SISrcMods::OP_SEL_1)
+  Register HiSrcReg = (SrcMods & OpSelModifier)
                           ? TRI->getSubReg(SrcReg, AMDGPU::sub1)
                           : TRI->getSubReg(SrcReg, AMDGPU::sub0);
   return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
@@ -641,6 +643,11 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   // op_sel_hi modifiers.
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
 
+  if (OpCode == AMDGPU::V_PK_MOV_B32)
+    return canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src1,
+                                    AMDGPU::OpName::src1_modifiers,
+                                    SISrcMods::OP_SEL_0);
+
   // Src1 should be checked before src0 to avoid false positives.
   // For example, the following unpacked sequence is legal:
   // $vgpr0_vgpr1 = V_PK_MUL_F32 8, $vgpr0_vgpr1, 8, $vgpr2_vgpr3
@@ -660,18 +667,21 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   // updated in the previous instruction. This behavior does not occur with the
   // packed instruction. As a result, it is unsafe to unpack this sequence.
   if (canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src1,
-                               AMDGPU::OpName::src1_modifiers))
+                               AMDGPU::OpName::src1_modifiers,
+                               SISrcMods::OP_SEL_1))
     return true;
 
   if (canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src0,
-                               AMDGPU::OpName::src0_modifiers))
+                               AMDGPU::OpName::src0_modifiers,
+                               SISrcMods::OP_SEL_1))
     return true;
 
   // Applicable for packed instructions with 3 source operands, such as
   // V_PK_FMA.
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
     if (canSourceClobberRegister(MI, UnpackedDstReg, AMDGPU::OpName::src2,
-                                 AMDGPU::OpName::src2_modifiers))
+                                 AMDGPU::OpName::src2_modifiers,
+                                 SISrcMods::OP_SEL_1))
       return true;
   }
   return false;
@@ -707,7 +717,10 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
   unsigned NewOpCode = NewMI->getOpcode();
   unsigned NewSrcMods = 0;
   unsigned NegModifier = IsHiBits ? SISrcMods::NEG_HI : SISrcMods::NEG;
-  unsigned OpSelModifier = IsHiBits ? SISrcMods::OP_SEL_1 : SISrcMods::OP_SEL_0;
+  unsigned OpSelModifier =
+      NewOpCode == AMDGPU::V_MOV_B32_e32
+          ? SISrcMods::OP_SEL_0
+          : (IsHiBits ? SISrcMods::OP_SEL_1 : SISrcMods::OP_SEL_0);
   // Packed instructions (VOP3P) do not support ABS. Hence, no checks are done
   // for ABS modifiers.
   // If NEG or NEG_HI is true, we need to negate the corresponding 32 bit
