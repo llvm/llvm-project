@@ -82,11 +82,10 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
 
-Value *LoadStoreVec::createConstantVector(BndlRef<Value *> Operands) {
+Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Operands) {
   SmallVector<Constant *, 8> Constants;
   Constants.reserve(Operands.size());
-  for (Value *Op : Operands) {
-    auto *COp = cast<Constant>(Op);
+  for (Constant *COp : Operands) {
     if (auto *AggrCOp = dyn_cast<ConstantAggregate>(COp)) {
       // If the operand is a constant aggregate, then append all its elements.
       for (Value *Elm : AggrCOp->operands())
@@ -156,9 +155,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   // profitable on some targets, so save state here.
   saveIR(Rgn);
   Value *VecOp = nullptr;
+  SmallVector<Instruction *, 8> Loads;
   if (AllLoads) {
-    // TODO: Try to avoid the extra copy to an instruction vector.
-    SmallVector<Instruction *, 8> Loads;
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
@@ -168,7 +166,11 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
       return false;
     }
   } else if (AllConstants) {
-    VecOp = createConstantVector(Operands);
+    SmallVector<Constant *, 8> Constants;
+    Constants.reserve(Operands.size());
+    for (Value *Op : Operands)
+      Constants.push_back(cast<Constant>(Op));
+    VecOp = createConstantVector(Constants);
   }
 
   // Generate vector store.
@@ -180,7 +182,7 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
-    DeadInstrMorgue.collectPotentiallyDeadInstrs<Value>(Operands);
+    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
 
   return acceptOrRevert();
