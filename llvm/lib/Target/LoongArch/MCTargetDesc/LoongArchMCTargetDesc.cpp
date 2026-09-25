@@ -93,6 +93,10 @@ createLoongArchAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new LoongArchTargetAsmStreamer(S, OS);
 }
 
+static MCTargetStreamer *createLoongArchNullTargetStreamer(MCStreamer &S) {
+  return new LoongArchTargetStreamer(S);
+}
+
 namespace {
 
 class LoongArchMCInstrAnalysis : public MCInstrAnalysis {
@@ -301,5 +305,7 @@ LLVMInitializeLoongArchTargetMC() {
         *T, createLoongArchObjectTargetStreamer);
     TargetRegistry::RegisterAsmTargetStreamer(*T,
                                               createLoongArchAsmTargetStreamer);
+    TargetRegistry::RegisterNullTargetStreamer(
+        *T, createLoongArchNullTargetStreamer);
   }
 }
