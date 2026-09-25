@@ -134,6 +134,35 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_FORMAT_PRINTF(1, 2);
   ((void)sizeof("" __VA_ARGS__, 0),                                            \
    ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__))
 
+/*
+ * ORC_RT_LOG_ENABLED(Level) is true (1) if log sites at the given level are
+ * compiled in, and false (0) if they're compiled out, either because the
+ * backend is none or because the level is below the ORC_RT_LOG_LEVEL floor. It
+ * takes the same level token as ORC_RT_LOG, and can be used in preprocessor
+ * conditionals:
+ *
+ *   #if ORC_RT_LOG_ENABLED(Error)
+ *   ...
+ *   #endif
+ *
+ * Code that relies on logging to surface something important (e.g. an error
+ * reporter that logs) can use this to pick an alternative when logging is
+ * compiled out. Note that a compiled-in level may still be suppressed at
+ * runtime (e.g. by the printf backend's runtime threshold).
+ *
+ * The ORC_RT_LOG_LEVEL_VALUE_<Level> aliases map ORC_RT_LOG's level tokens to
+ * the ORC_RT_LOG_LEVEL_<LEVEL> values from config.h. An unrecognized level
+ * token pastes to an undefined identifier, which evaluates to 0 in #if.
+ */
+#define ORC_RT_LOG_LEVEL_VALUE_Debug ORC_RT_LOG_LEVEL_DEBUG
+#define ORC_RT_LOG_LEVEL_VALUE_Info ORC_RT_LOG_LEVEL_INFO
+#define ORC_RT_LOG_LEVEL_VALUE_Warning ORC_RT_LOG_LEVEL_WARNING
+#define ORC_RT_LOG_LEVEL_VALUE_Error ORC_RT_LOG_LEVEL_ERROR
+
+#define ORC_RT_LOG_ENABLED(Level)                                              \
+  (ORC_RT_LOG_BACKEND != ORC_RT_LOG_BACKEND_NONE &&                            \
+   ORC_RT_LOG_LEVEL_VALUE_##Level >= ORC_RT_LOG_LEVEL)
+
 /**
  * \def ORC_RT_LOG_PUB_S
  * Conversion specifier for publishing a runtime (non-literal) C string.
