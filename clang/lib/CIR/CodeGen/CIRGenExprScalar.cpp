@@ -901,8 +901,7 @@ public:
 
     if (cir::isFPOrVectorOfFPType(operand.getType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
-      return builder.createOrFold<cir::FNegOp>(loc, operand,
-                                               builder.getFastMathFlagsAttr());
+      return builder.createOrFold<cir::FNegOp>(loc, operand);
     }
 
     // TODO(cir): We might have to change this to support overflow trapping.

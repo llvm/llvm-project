@@ -66,8 +66,15 @@ class CIRBaseBuilderTy : public mlir::OpBuilder {
 
 public:
   CIRBaseBuilderTy(mlir::MLIRContext &mlirContext)
-      : mlir::OpBuilder(&mlirContext) {}
-  CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {}
+      : mlir::OpBuilder(&mlirContext) {
+    registerFPDefaults();
+  }
+  CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {
+    registerFPDefaults();
+  }
+  CIRBaseBuilderTy(const CIRBaseBuilderTy &other);
+  CIRBaseBuilderTy &operator=(const CIRBaseBuilderTy &other);
+  ~CIRBaseBuilderTy() { cir::unregisterCIRBuilderFPDefaults(this); }
 
   bool isFPConstrained = false;
   clang::LangOptions::FPExceptionModeKind defaultConstrainedExcept =
@@ -75,7 +82,8 @@ public:
   llvm::RoundingMode defaultConstrainedRounding =
       llvm::RoundingMode::NearestTiesToEven;
   // Fast-math flags applied to floating-point ops created by this builder.
-  // CIRGen currently populates `contract` only.
+  // CIRGen currently populates `contract` only. FP op builders read these via
+  // fenvForBuilder / fastMathForBuilder, so create sites omit the attributes.
   cir::FastMathFlags fastMathFlags = cir::FastMathFlags::none;
 
   void setFastMathFlags(cir::FastMathFlags flags) { fastMathFlags = flags; }
@@ -87,6 +95,19 @@ public:
     return cir::FastMathFlagsAttr::get(getContext(), fastMathFlags);
   }
 
+private:
+  static cir::FenvAttr fetchFenv(void *self) {
+    return static_cast<CIRBaseBuilderTy *>(self)->getConstrainedFPAttr();
+  }
+  static cir::FastMathFlagsAttr fetchFastMath(void *self) {
+    return static_cast<CIRBaseBuilderTy *>(self)->getFastMathFlagsAttr();
+  }
+  void registerFPDefaults() {
+    cir::registerCIRBuilderFPDefaults(this, &CIRBaseBuilderTy::fetchFenv,
+                                      &CIRBaseBuilderTy::fetchFastMath, this);
+  }
+
+public:
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
     return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(typ, val));
@@ -860,39 +881,34 @@ public:
 
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    // `contract` is applied via getFastMathFlagsAttr(). The other fast-math
-    // bits are still unimplemented.
+    // `contract` is applied by FAddOp's builder. The other fast-math bits are
+    // still unimplemented.
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FAddOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
-                               getFastMathFlagsAttr());
+    return cir::FAddOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FSubOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
-                               getFastMathFlagsAttr());
+    return cir::FSubOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FMulOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
-                               getFastMathFlagsAttr());
+    return cir::FMulOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FDivOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
-                               getFastMathFlagsAttr());
+    return cir::FDivOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FRemOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
-                               getFastMathFlagsAttr());
+    return cir::FRemOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
@@ -902,7 +918,7 @@ public:
     assert(!cir::MissingFeatures::fastMathFlags());
     // fneg does not raise FP exceptions or depend on the rounding mode, so it
     // never carries an fenv attribute.
-    return cir::FNegOp::create(*this, loc, operand, getFastMathFlagsAttr());
+    return cir::FNegOp::create(*this, loc, operand);
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -936,10 +952,13 @@ public:
     VectorType integralVecTy =
         cir::VectorType::get(integralTy, vecCast.getSize());
     cir::FenvAttr fenv;
-    if (cir::isFPOrVectorOfFPType(lhs.getType()))
+    cir::FastMathFlagsAttr fastmath;
+    if (cir::isFPOrVectorOfFPType(lhs.getType())) {
       fenv = getConstrainedFPAttr();
+      fastmath = getFastMathFlagsAttr();
+    }
     return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs,
-                                 fenv, getFastMathFlagsAttr());
+                                 fenv, fastmath);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
@@ -1091,6 +1110,26 @@ public:
     return {op.getCallee(), op.getAdjustedThis()};
   }
 };
+
+inline CIRBaseBuilderTy::CIRBaseBuilderTy(const CIRBaseBuilderTy &other)
+    : mlir::OpBuilder(other), isFPConstrained(other.isFPConstrained),
+      defaultConstrainedExcept(other.defaultConstrainedExcept),
+      defaultConstrainedRounding(other.defaultConstrainedRounding),
+      fastMathFlags(other.fastMathFlags) {
+  registerFPDefaults();
+}
+
+inline CIRBaseBuilderTy &
+CIRBaseBuilderTy::operator=(const CIRBaseBuilderTy &other) {
+  if (this == &other)
+    return *this;
+  mlir::OpBuilder::operator=(other);
+  isFPConstrained = other.isFPConstrained;
+  defaultConstrainedExcept = other.defaultConstrainedExcept;
+  defaultConstrainedRounding = other.defaultConstrainedRounding;
+  fastMathFlags = other.fastMathFlags;
+  return *this;
+}
 
 } // namespace cir
 

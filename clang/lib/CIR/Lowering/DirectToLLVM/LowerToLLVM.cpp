@@ -550,44 +550,32 @@ static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
   return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
 }
 
-// CIR fast-math bits use the same positions as `mlir::LLVM::FastmathFlags`.
-static mlir::LLVM::FastmathFlags toLLVMFastMathFlags(cir::FastMathFlags flags) {
-  using CirFlags = cir::FastMathFlags;
-  using LLVMFlags = mlir::LLVM::FastmathFlags;
-  static_assert(static_cast<uint32_t>(CirFlags::nnan) ==
-                    static_cast<uint32_t>(LLVMFlags::nnan),
-                "CIR nnan bit must match LLVM fastmath");
-  static_assert(static_cast<uint32_t>(CirFlags::ninf) ==
-                    static_cast<uint32_t>(LLVMFlags::ninf),
-                "CIR ninf bit must match LLVM fastmath");
-  static_assert(static_cast<uint32_t>(CirFlags::nsz) ==
-                    static_cast<uint32_t>(LLVMFlags::nsz),
-                "CIR nsz bit must match LLVM fastmath");
-  static_assert(static_cast<uint32_t>(CirFlags::arcp) ==
-                    static_cast<uint32_t>(LLVMFlags::arcp),
-                "CIR arcp bit must match LLVM fastmath");
-  static_assert(static_cast<uint32_t>(CirFlags::contract) ==
-                    static_cast<uint32_t>(LLVMFlags::contract),
-                "CIR contract bit must match LLVM fastmath");
-  static_assert(static_cast<uint32_t>(CirFlags::afn) ==
-                    static_cast<uint32_t>(LLVMFlags::afn),
-                "CIR afn bit must match LLVM fastmath");
-  static_assert(static_cast<uint32_t>(CirFlags::reassoc) ==
-                    static_cast<uint32_t>(LLVMFlags::reassoc),
-                "CIR reassoc bit must match LLVM fastmath");
-  return static_cast<LLVMFlags>(static_cast<uint32_t>(flags));
+static mlir::LLVM::FastmathFlags
+convertFastMathFlags(cir::FastMathFlags cirFlags) {
+  mlir::LLVM::FastmathFlags llvmFlags{};
+  const std::pair<cir::FastMathFlags, mlir::LLVM::FastmathFlags> flags[] = {
+      {cir::FastMathFlags::nnan, mlir::LLVM::FastmathFlags::nnan},
+      {cir::FastMathFlags::ninf, mlir::LLVM::FastmathFlags::ninf},
+      {cir::FastMathFlags::nsz, mlir::LLVM::FastmathFlags::nsz},
+      {cir::FastMathFlags::arcp, mlir::LLVM::FastmathFlags::arcp},
+      {cir::FastMathFlags::contract, mlir::LLVM::FastmathFlags::contract},
+      {cir::FastMathFlags::afn, mlir::LLVM::FastmathFlags::afn},
+      {cir::FastMathFlags::reassoc, mlir::LLVM::FastmathFlags::reassoc},
+  };
+
+  for (auto [cirFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(cirFlags, cirFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+
+  return llvmFlags;
 }
 
-// Not inlined into lowerConstrainableFPOp. In that template, a local null
-// check on the attribute is dropped and getValue() crashes when `fastmath`
-// is absent (cir.fmuladd has no such property).
-__attribute__((noinline)) static mlir::LLVM::FastmathFlags
-readFastMathFlags(mlir::Operation *cirOp) {
+static mlir::LLVM::FastmathFlags readFastMathFlags(mlir::Operation *cirOp) {
   auto cirFlags = cirOp->getAttrOfType<cir::FastMathFlagsAttr>("fastmath");
-  if (!cirFlags.getAsOpaquePointer() ||
-      cirFlags.getValue() == cir::FastMathFlags::none)
-    return mlir::LLVM::FastmathFlags::none;
-  return toLLVMFastMathFlags(cirFlags.getValue());
+  if (!cirFlags)
+    return {};
+  return convertFastMathFlags(cirFlags.getValue());
 }
 
 void propagateFastMathFlags(mlir::Operation *cirOp, mlir::Operation *llvmOp) {
@@ -650,27 +638,6 @@ mlir::LogicalResult lowerConstrainableFPOp(
   return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
                                        constrainedMnemonic, hasRoundingMode,
                                        readFastMathFlags(op));
-}
-
-static mlir::LLVM::FastmathFlags
-convertFastMathFlags(cir::FastMathFlags cirFlags) {
-  mlir::LLVM::FastmathFlags llvmFlags{};
-  const std::pair<cir::FastMathFlags, mlir::LLVM::FastmathFlags> flags[] = {
-      {cir::FastMathFlags::nnan, mlir::LLVM::FastmathFlags::nnan},
-      {cir::FastMathFlags::ninf, mlir::LLVM::FastmathFlags::ninf},
-      {cir::FastMathFlags::nsz, mlir::LLVM::FastmathFlags::nsz},
-      {cir::FastMathFlags::arcp, mlir::LLVM::FastmathFlags::arcp},
-      {cir::FastMathFlags::contract, mlir::LLVM::FastmathFlags::contract},
-      {cir::FastMathFlags::afn, mlir::LLVM::FastmathFlags::afn},
-      {cir::FastMathFlags::reassoc, mlir::LLVM::FastmathFlags::reassoc},
-  };
-
-  for (auto [cirFlag, llvmFlag] : flags) {
-    if (bitEnumContainsAny(cirFlags, cirFlag))
-      llvmFlags = llvmFlags | llvmFlag;
-  }
-
-  return llvmFlags;
 }
 
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(

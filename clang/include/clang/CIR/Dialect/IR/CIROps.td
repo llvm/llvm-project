@@ -97,6 +97,24 @@ class LoweringBuilders<dag p> {
   dag dagParams = p;
 }
 
+// Shorter builder for floating-point ops. Omitted `fenv` and `fastmath`
+// attributes come from the active CIR builder (null for any other builder).
+class CIR_DefaultFPAttrsBuilder<dag params, string forwarded>
+    : OpBuilder<params> {
+  let body = !strconcat(
+      "build($_builder, $_state, ", forwarded,
+      ", ::cir::fenvForBuilder($_builder), ::cir::fastMathForBuilder($_builder));");
+}
+
+// Same as CIR_DefaultFPAttrsBuilder for ops that carry fast-math flags but
+// not an fenv attribute.
+class CIR_DefaultFastMathBuilder<dag params, string forwarded>
+    : OpBuilder<params> {
+  let body = !strconcat(
+      "build($_builder, $_state, ", forwarded,
+      ", ::cir::fastMathForBuilder($_builder));");
+}
+
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo {
   // Should we generate an ABI lowering pattern for this op?
@@ -2180,9 +2198,7 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
                        (ins OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath));
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$input), [{
-      build($_builder, $_state, input, cir::FastMathFlagsAttr{});
-    }]>
+    CIR_DefaultFastMathBuilder<(ins "mlir::Value":$input), "input">
   ];
 
   let hasFolder = 1;
@@ -2975,10 +2991,8 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
   let constrainedLLVMIntrinsic = mnemonic;
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
-    }]>
+    CIR_DefaultFPAttrsBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs),
+                              "lhs, rhs">
   ];
 }
 
@@ -7482,10 +7496,7 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = "$src `:` type($src) attr-dict";
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$src), [{
-      build($_builder, $_state, src, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
-    }]>
+    CIR_DefaultFPAttrsBuilder<(ins "mlir::Value":$src), "src">
   ];
 
   let llvmOp = llvmOpName;
@@ -7814,10 +7825,8 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$src), [{
-      build($_builder, $_state, result, src, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
-    }]>
+    CIR_DefaultFPAttrsBuilder<(ins "mlir::Type":$result, "mlir::Value":$src),
+                              "result, src">
   ];
 
   let llvmOp = llvmOpName;
@@ -7882,11 +7891,9 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
-                   "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
-    }]>
+    CIR_DefaultFPAttrsBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
+                                   "mlir::Value":$rhs),
+                              "result, lhs, rhs">
   ];
 
   let llvmOp = llvmOpName;
@@ -8035,11 +8042,9 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
-                   "mlir::Value":$c), [{
-      build($_builder, $_state, result, a, b, c, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
-    }]>
+    CIR_DefaultFPAttrsBuilder<(ins "mlir::Type":$result, "mlir::Value":$a,
+                                   "mlir::Value":$b, "mlir::Value":$c),
+                              "result, a, b, c">
   ];
 
   let llvmOp = llvmOpName;
