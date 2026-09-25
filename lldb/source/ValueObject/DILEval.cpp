@@ -459,6 +459,22 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
   m_allow_globals = !disallow_globals;
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateTree(const ASTNodeUP &tree) {
+  assert(tree && "ASTNodeUP must not contain a nullptr");
+
+  auto value_or_error = Interpreter::Evaluate(*tree);
+  if (!value_or_error) {
+    auto error = value_or_error.takeError();
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "[Interpreter::Evaluate] DIL interpreter failed:\n{0}",
+             llvm::toStringWithoutConsuming(error));
+    return error;
+  }
+
+  return value_or_error;
+}
+
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
   // Evaluate an AST.
   auto value_or_error = node.Accept(this);

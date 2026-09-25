@@ -40,9 +40,9 @@ module m_firstprivate_derived_alloc_comp
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>> {fir.bindc_name = "a"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEi"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEi"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEn"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEn"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = acc.firstprivate varPtr(%[[VAL_1]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derived_alloc_compTpoint) name("a") -> !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
 ! CHECK:           acc.parallel combined(loop) firstprivate(%[[VAL_6]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) {

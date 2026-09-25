@@ -155,6 +155,35 @@ constexpr auto DecodeGPRNoX31RegisterClass =
 constexpr auto DecodeGPRX1X5RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredX1OrX5>;
 
+static DecodeStatus decodeTHMemIdxRs1Operand(MCInst &Inst, uint32_t RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  const DecodeStatus Result =
+      DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  if (Result != MCDisassembler::Success)
+    return Result;
+  const MCRegister Rd = Inst.getOperand(0).getReg();
+  const MCRegister Rs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+  if (Rd == Rs1)
+    return MCDisassembler::Fail;
+  return Result;
+}
+
+static DecodeStatus decodeTHMemPairRs1Operand(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  const DecodeStatus Result =
+      DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  if (Result != MCDisassembler::Success)
+    return Result;
+  const MCRegister Rd1 = Inst.getOperand(0).getReg();
+  const MCRegister Rd2 = Inst.getOperand(1).getReg();
+  const MCRegister Rs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+  if (Rs1 == Rd1 || Rs1 == Rd2 || Rd1 == Rd2)
+    return MCDisassembler::Fail;
+  return Result;
+}
+
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {

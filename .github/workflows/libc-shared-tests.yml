@@ -51,7 +51,7 @@ jobs:
     name: libc-shared-tests on ${{ matrix.arch }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'
     strategy:
@@ -124,7 +124,7 @@ jobs:
     name: libc-shared-tests with ${{ matrix.name }}
     if: github.repository_owner == 'llvm'
     timeout-minutes: 20
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'
     strategy:

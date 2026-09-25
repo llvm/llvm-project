@@ -99,5 +99,5 @@ end program
 ! The module global carries no CUDA data attribute, but its descriptor is created
 ! with the unified allocator index so runtime allocations use managed memory.
 ! CHECK:     fir.global @_QMmEmod_arr : !fir.box<!fir.heap<!fir.array<?xf32>>>
-! CHECK-NOT: fir.global @_QMmEmod_arr {data_attr
+! CHECK-NOT: fir.global @_QMmEmod_arr <{data_attr
 ! CHECK:     fir.embox {{.*}} {allocator_idx = 4 : i32}
