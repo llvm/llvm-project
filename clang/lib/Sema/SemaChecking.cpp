@@ -3062,6 +3062,74 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
   return QualType();
 }
 
+static bool BuiltinElementwiseConvertFromFP8(Sema &S, CallExpr *TheCall,
+                                             QualType ResultEltTy) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+
+  // The integer is a bit container. In particular, do not promote narrow
+  // integers or apply user-defined conversions to the operand.
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return true;
+
+  ASTContext &Context = S.Context;
+  QualType ArgTy = Arg.get()->getType();
+  const auto *VecTy = ArgTy->getAs<VectorType>();
+  if (ArgTy->isSizelessType() ||
+      (VecTy && VecTy->getVectorKind() != VectorKind::Generic)) {
+    S.Diag(Arg.get()->getBeginLoc(),
+           diag::err_builtin_elementwise_convert_from_fp8_vector_type)
+        << Context.BuiltinInfo.getQuotedName(TheCall->getBuiltinCallee())
+        << ArgTy << Arg.get()->getSourceRange();
+    return true;
+  }
+
+  QualType EltTy = VecTy ? VecTy->getElementType() : ArgTy;
+  if (const auto *OBT = EltTy->getAs<OverflowBehaviorType>())
+    EltTy = OBT->getUnderlyingType();
+  bool IsInteger = EltTy->isIntegerType() && !EltTy->isBooleanType() &&
+                   !EltTy->isEnumeralType() && Context.getIntWidth(EltTy) == 8;
+  if (!IsInteger && !ArgTy->isMFloat8Type()) {
+    S.Diag(Arg.get()->getBeginLoc(),
+           diag::err_builtin_elementwise_convert_from_fp8_arg_type)
+        << Context.BuiltinInfo.getQuotedName(TheCall->getBuiltinCallee())
+        << !Context.MFloat8Ty.isNull() << ArgTy << Arg.get()->getSourceRange();
+    return true;
+  }
+
+  // These result types are implicit, so apply the availability checks that
+  // would normally be performed when spelling them in a declaration.
+  const TargetInfo &TI = Context.getTargetInfo();
+  const LangOptions &LangOpts = S.getLangOpts();
+  bool IsOpenMPDevice = LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice;
+  if (ResultEltTy->isFloat16Type() && !TI.hasFloat16Type() && !LangOpts.CUDA &&
+      !IsOpenMPDevice) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_type_unsupported) << "_Float16";
+    return true;
+  }
+  if (ResultEltTy->isBFloat16Type() && !TI.hasBFloat16Type() &&
+      !IsOpenMPDevice && !LangOpts.SYCLIsDevice) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_type_unsupported) << "__bf16";
+    return true;
+  }
+  // Check the element type explicitly: checkTypeSupport does not look through
+  // vector types. It also handles deferred diagnostics in offloading modes.
+  S.checkTypeSupport(ResultEltTy, TheCall->getBeginLoc());
+
+  QualType ResultTy = ResultEltTy;
+  if (VecTy) {
+    if (isa<ExtVectorType>(VecTy))
+      ResultTy = Context.getExtVectorType(ResultEltTy, VecTy->getNumElements());
+    else
+      ResultTy = Context.getVectorType(ResultEltTy, VecTy->getNumElements(),
+                                       VecTy->getVectorKind());
+  }
+  TheCall->setArg(0, Arg.get());
+  TheCall->setType(ResultTy);
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3770,6 +3838,25 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   }
+
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m2_f16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e4m3fn_f16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m3fnu_f16:
+    if (BuiltinElementwiseConvertFromFP8(*this, TheCall, Context.Float16Ty))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m2_bf16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e4m3fn_bf16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m3fnu_bf16:
+    if (BuiltinElementwiseConvertFromFP8(*this, TheCall, Context.BFloat16Ty))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m2_f32:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e4m3fn_f32:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m3fnu_f32:
+    if (BuiltinElementwiseConvertFromFP8(*this, TheCall, Context.FloatTy))
+      return ExprError();
+    break;
 
   // __builtin_elementwise_abs restricts the element type to signed integers or
   // floating point types only.
