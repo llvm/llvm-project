@@ -422,16 +422,17 @@ llvm::StringRef Debugger::GetPrompt() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
-llvm::StringRef Debugger::GetPromptAnsiPrefix() const {
-  const uint32_t idx = ePropertyPromptAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetColorProperty(uint32_t prefix_idx,
+                                        uint32_t suffix_idx) const {
+  return {
+      GetPropertyAtIndexAs<llvm::StringRef>(
+          prefix_idx, g_debugger_properties[prefix_idx].default_cstr_value),
+      GetPropertyAtIndexAs<llvm::StringRef>(
+          suffix_idx, g_debugger_properties[suffix_idx].default_cstr_value)};
 }
 
-llvm::StringRef Debugger::GetPromptAnsiSuffix() const {
-  const uint32_t idx = ePropertyPromptAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetPromptColor() const {
+  return GetColorProperty(ePropertyPromptAnsiPrefix, ePropertyPromptAnsiSuffix);
 }
 
 void Debugger::SetPrompt(llvm::StringRef p) {
@@ -566,16 +567,9 @@ bool Debugger::SetShowProgress(bool show_progress) {
   return SetPropertyAtIndex(idx, show_progress);
 }
 
-llvm::StringRef Debugger::GetShowProgressAnsiPrefix() const {
-  const uint32_t idx = ePropertyShowProgressAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
-}
-
-llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
-  const uint32_t idx = ePropertyShowProgressAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetShowProgressColor() const {
+  return GetColorProperty(ePropertyShowProgressAnsiPrefix,
+                          ePropertyShowProgressAnsiSuffix);
 }
 
 bool Debugger::GetShowStatusline() const {
@@ -602,16 +596,9 @@ llvm::StringRef Debugger::GetSeparator() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
-llvm::StringRef Debugger::GetDisabledAnsiPrefix() const {
-  const uint32_t idx = ePropertyShowDisabledAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
-}
-
-llvm::StringRef Debugger::GetDisabledAnsiSuffix() const {
-  const uint32_t idx = ePropertyShowDisabledAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetDisabledColor() const {
+  return GetColorProperty(ePropertyShowDisabledAnsiPrefix,
+                          ePropertyShowDisabledAnsiSuffix);
 }
 
 bool Debugger::SetSeparator(llvm::StringRef s) {
@@ -628,28 +615,14 @@ AutosuggestionMode Debugger::GetAutosuggestionMode() const {
                g_debugger_properties[idx].default_uint_value));
 }
 
-llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
-  const uint32_t idx = ePropertyShowAutosuggestionAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetAutosuggestionColor() const {
+  return GetColorProperty(ePropertyShowAutosuggestionAnsiPrefix,
+                          ePropertyShowAutosuggestionAnsiSuffix);
 }
 
-llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
-  const uint32_t idx = ePropertyShowAutosuggestionAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
-}
-
-llvm::StringRef Debugger::GetRegexMatchAnsiPrefix() const {
-  const uint32_t idx = ePropertyShowRegexMatchAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
-}
-
-llvm::StringRef Debugger::GetRegexMatchAnsiSuffix() const {
-  const uint32_t idx = ePropertyShowRegexMatchAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetRegexMatchColor() const {
+  return GetColorProperty(ePropertyShowRegexMatchAnsiPrefix,
+                          ePropertyShowRegexMatchAnsiSuffix);
 }
 
 bool Debugger::GetShowDontUsePoHint() const {
@@ -692,28 +665,14 @@ StopShowColumn Debugger::GetStopShowColumn() const {
                g_debugger_properties[idx].default_uint_value));
 }
 
-llvm::StringRef Debugger::GetStopShowColumnAnsiPrefix() const {
-  const uint32_t idx = ePropertyStopShowColumnAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetStopShowColumnColor() const {
+  return GetColorProperty(ePropertyStopShowColumnAnsiPrefix,
+                          ePropertyStopShowColumnAnsiSuffix);
 }
 
-llvm::StringRef Debugger::GetStopShowColumnAnsiSuffix() const {
-  const uint32_t idx = ePropertyStopShowColumnAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
-}
-
-llvm::StringRef Debugger::GetStopShowLineMarkerAnsiPrefix() const {
-  const uint32_t idx = ePropertyStopShowLineMarkerAnsiPrefix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
-}
-
-llvm::StringRef Debugger::GetStopShowLineMarkerAnsiSuffix() const {
-  const uint32_t idx = ePropertyStopShowLineMarkerAnsiSuffix;
-  return GetPropertyAtIndexAs<llvm::StringRef>(
-      idx, g_debugger_properties[idx].default_cstr_value);
+ColorSetting Debugger::GetStopShowLineMarkerColor() const {
+  return GetColorProperty(ePropertyStopShowLineMarkerAnsiPrefix,
+                          ePropertyStopShowLineMarkerAnsiSuffix);
 }
 
 uint64_t Debugger::GetStopSourceLineCount(bool before) const {

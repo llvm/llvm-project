@@ -30,6 +30,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/SupportFile.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -272,11 +273,10 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
 
       auto debugger_sp = m_debugger_wp.lock();
       if (should_show_stop_line_with_ansi(debugger_sp)) {
-        current_line_highlight = ansi::FormatAnsiTerminalCodes(
-            (debugger_sp->GetStopShowLineMarkerAnsiPrefix() +
-             current_line_highlight +
-             debugger_sp->GetStopShowLineMarkerAnsiSuffix())
-                .str());
+        StreamString highlight_stream;
+        debugger_sp->GetStopShowLineMarkerColor().render(
+            highlight_stream, current_line_highlight);
+        current_line_highlight = highlight_stream.GetString().str();
       }
 
       s->Printf("%s%s %-4u\t", prefix.c_str(), current_line_highlight.c_str(),
@@ -714,9 +714,10 @@ size_t SourceManager::File::DisplaySourceLines(
 
   // If we should mark the stop column with color codes, then copy the prefix
   // and suffix to our color style.
-  if (should_show_stop_column_with_ansi(debugger_sp))
-    style.selected.Set(debugger_sp->GetStopShowColumnAnsiPrefix(),
-                       debugger_sp->GetStopShowColumnAnsiSuffix());
+  if (should_show_stop_column_with_ansi(debugger_sp)) {
+    ColorSetting color = debugger_sp->GetStopShowColumnColor();
+    style.selected.Set(color.GetPrefix(), color.GetSuffix());
+  }
 
   HighlighterManager mgr;
   std::string path =

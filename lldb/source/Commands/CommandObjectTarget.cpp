@@ -1595,9 +1595,8 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     DumpFullpath(strm, &module->GetFileSpec(), 0);
     strm.PutCString(":\n");
     strm.IndentMore();
-    Stream::HighlightSettings settings(
-        name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
-        interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
+    ColorSetting regex_color = interpreter.GetDebugger().GetRegexMatchColor();
+    Stream::HighlightSettings settings(name, regex_color);
     for (uint32_t i = 0; i < num_matches; ++i) {
       const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
