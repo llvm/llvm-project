@@ -540,9 +540,8 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
-- Fix a crash when using ``__builtin_assume_aligned`` with dynamic allocations during
-  constant evaluation. Also correct the behavior with the new constant interpreter, so
-  that both apply alignment guarantees made by the standard. (#GH173767)
+- Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
+  during constant evaluation. (#GH173767)
 
 #### Bug Fixes to Attribute Support
 

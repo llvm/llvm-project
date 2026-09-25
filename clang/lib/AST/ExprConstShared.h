@@ -40,8 +40,8 @@ enum class DynAllocKind {
   BuiltinOperatorNew // __operator_builtin_new call
 };
 
-uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
-                                DynAllocKind AllocKind);
+CharUnits GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
+                                 DynAllocKind AllocKind);
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values

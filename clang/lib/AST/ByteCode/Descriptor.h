@@ -280,7 +280,7 @@ public:
   bool isDynAlloc() const { return getDynAllocKind() != DynAllocKind::None; }
 
   /// Compute the alignment for a dynamic allocation.
-  uint64_t computeAlignForDynamicAlloc(const ASTContext &Ctx) const;
+  CharUnits computeAlignForDynamicAlloc(const ASTContext &Ctx) const;
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;

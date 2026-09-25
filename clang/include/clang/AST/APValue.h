@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_APVALUE_H
 #define LLVM_CLANG_AST_APVALUE_H
 
+#include "clang/AST/CharUnits.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
@@ -77,15 +78,23 @@ private:
 
 public:
   DynamicAllocLValue() : Align(0), Index(0) {}
-  explicit DynamicAllocLValue(unsigned Idx, uint64_t Align)
-      : Align(llvm::countr_zero(Align)), Index(Idx + 1) {
-    assert(Align > 0 && "Invalid alignment for DynamicAllocLValue constructor");
+  explicit DynamicAllocLValue(unsigned Idx, CharUnits Align)
+      : Align(llvm::countr_zero(static_cast<uint64_t>(Align.getQuantity()))),
+        Index(Idx + 1) {
+    assert(Align.isPositive() &&
+           "Invalid alignment for DynamicAllocLValue constructor");
+    assert(Align.isPowerOfTwo() && "Alignment has to be a power of two");
+    assert(llvm::countr_zero(static_cast<uint64_t>(Align.getQuantity())) <
+               (1 << NumAlignmentBits) &&
+           "Alignment is too big to be stored");
     assert(Idx <= getMaxIndex() && "Index is out of range");
   }
   unsigned getIndex() const { return Index - 1; }
-  uint64_t getAlign() const { return uint64_t{1} << Align; }
+  CharUnits getAlign() const {
+    return CharUnits::fromQuantity(uint64_t{1} << Align);
+  }
 
-  explicit operator bool() const { return Index != 0 && Align != 0; }
+  explicit operator bool() const { return Index != 0; }
 
   const void *getOpaqueValue() const {
     return reinterpret_cast<const void *>((Index << NumAlignmentBits | Align)

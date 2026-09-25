@@ -1447,8 +1447,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
     CharUnits BaseAlignment;
     if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
-      BaseAlignment = ASTCtx.toCharUnitsFromBits(
-          Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx));
+      BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
     else if (const auto *VD = Ptr.getRootVarDecl())
       BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())

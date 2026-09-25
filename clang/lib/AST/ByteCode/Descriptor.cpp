@@ -523,7 +523,7 @@ DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
   return DynAllocKind::None;
 }
 
-uint64_t Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
+CharUnits Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
   return GetAlignOfDynamicAlloc(Ctx, getDataType(Ctx),
                                 getDynAllocKindForExpr(asExpr()));
 }

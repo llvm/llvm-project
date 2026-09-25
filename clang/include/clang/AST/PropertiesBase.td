@@ -77,6 +77,7 @@ def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def Attr : PropertyType<"const Attr *">;
+def CharUnits : PropertyType<"CharUnits">;
 def DeducedKind : EnumPropertyType;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
@@ -537,7 +538,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Conditional = [{ hasBase && isDynamicAlloc }];
     let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
   }
-  def : Property<"dynamicAlign", UInt64> {
+  def : Property<"dynamicAlign", CharUnits> {
     let Conditional = [{ hasBase && isDynamicAlloc }];
     let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getAlign() }];
   }

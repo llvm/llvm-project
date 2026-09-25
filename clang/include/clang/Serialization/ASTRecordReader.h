@@ -320,6 +320,8 @@ public:
     return readInt();
   }
 
+  CharUnits readCharUnits() { return CharUnits::fromQuantity(readInt()); }
+
   UnsignedOrNone readUnsignedOrNone() {
     return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }

@@ -189,6 +189,10 @@ public:
     Record->push_back(Value);
   }
 
+  void writeCharUnits(CharUnits Value) {
+    Record->push_back(Value.getQuantity());
+  }
+
   void writeUnsignedOrNone(UnsignedOrNone Value) {
     Record->push_back(Value.toInternalRepresentation());
   }

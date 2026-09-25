@@ -1852,9 +1852,9 @@ APValue &CallStackFrame::createLocal(APValue::LValueBase Base, const void *Key,
   return Result;
 }
 
-uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
-                                       QualType AllocType,
-                                       DynAllocKind AllocKind) {
+CharUnits clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
+                                        QualType AllocType,
+                                        DynAllocKind AllocKind) {
   assert((AllocKind != DynAllocKind::None) &&
          "should only be called on dynamically allocated blocks");
   assert((AllocKind != DynAllocKind::BuiltinOperatorNew) &&
@@ -1863,8 +1863,6 @@ uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
 
   const TargetInfo &TI = Ctx.getTargetInfo();
   uint64_t DefaultNewAlign = TI.getNewAlign();
-  uint64_t MaxFundamentalAlign =
-      std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
 
   uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
   assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
@@ -1877,13 +1875,13 @@ uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
     // any alignment guarantees.
     case DynAllocKind::ArrayNew:
     case DynAllocKind::StdAllocator:
-      return TI.getCharWidth();
+      return CharUnits::One();
 
     // Flexible array members are allowed as only member as an extension.
     // In this case the size of the type will be zero, but the allocation
     // should still be suitable for the array element type.
     case DynAllocKind::New:
-      return TypeAlignment;
+      return Ctx.toCharUnitsFromBits(TypeAlignment);
 
     default:
       llvm_unreachable("Unhandled DynAllocKind");
@@ -1899,14 +1897,14 @@ uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
   // according to the requested alignment. No stricter guarantees are
   // made.
   if (TypeAlignment > DefaultNewAlign)
-    return TypeAlignment;
+    return Ctx.toCharUnitsFromBits(TypeAlignment);
 
   switch (AllocKind) {
   // According to C++ [allocator.members]p5 it is unspecified how the
   // memory obtained from ::operator new is used by
   // std::allocator::allocate, therefore be conservative here.
   case DynAllocKind::StdAllocator:
-    return TypeAlignment;
+    return Ctx.toCharUnitsFromBits(TypeAlignment);
 
   // The non-array form of new does not permit allocation overhead and
   // therefore provides alignment as guaranteed by ::operator new.
@@ -1916,8 +1914,8 @@ uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
   // AllocSize can have alignment of at most the lowest bit set in
   // AllocSize.
   case DynAllocKind::New:
-    return std::min(DefaultNewAlign,
-                    uint64_t{1} << llvm::countr_zero(AllocSize));
+    return Ctx.toCharUnitsFromBits(
+        std::min(DefaultNewAlign, uint64_t(1) << llvm::countr_zero(AllocSize)));
 
   case DynAllocKind::ArrayNew: {
     const Type *ET = AllocType.getTypePtr()
@@ -1932,15 +1930,17 @@ uint64_t clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
     if (!ET->isSpecificBuiltinType(BuiltinType::UChar) &&
         !ET->isSpecificBuiltinType(BuiltinType::Char_U) &&
         !ET->isSpecificBuiltinType(BuiltinType::Char_S) && !ET->isStdByteType())
-      return TypeAlignment;
+      return Ctx.toCharUnitsFromBits(TypeAlignment);
 
     // Otherwise, the allocation is offset from the result of ::operator
     // new[] by a multiple of the strictest fundamental alignment.
     // According C++ [basic.stc.dynamic.allocation]p3.2 the allocation
     // returned by ::operator new[] is suitably aligned for all objects
     // without new-extended alignment and size up to the allocated size.
-    return std::min(
-        {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)});
+    uint64_t MaxFundamentalAlign =
+        std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
+    return Ctx.toCharUnitsFromBits(std::min(
+        {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)}));
   }
 
   default:
@@ -10664,7 +10664,7 @@ static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
   if (const auto *E = Value.Base.dyn_cast<const Expr *>())
     return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
   if (const auto &DA = Value.Base.dyn_cast<DynamicAllocLValue>())
-    return Info.Ctx.toCharUnitsFromBits(DA.getAlign());
+    return DA.getAlign();
   return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
 }
 
