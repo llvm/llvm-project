@@ -67,6 +67,9 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
     3. A scalar variable will be treated as if it appears in:
        - A copy clause if the compute construct is a kernels construct.
        - A firstprivate clause otherwise (parallel, serial).
+       By default, that firstprivate is attached to the combined acc.loop
+       rather than the compute construct
+       (enable-combined-loop-implicit-firstprivate).
   }];
   let dependentDialects = ["mlir::memref::MemRefDialect",
       "mlir::arith::ArithDialect"];
@@ -85,7 +88,15 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
            "implicit data is generated even with default(none). This is useful "
            "when the frontend has robust default(none) verification: user "
            "variables are already verified, so any remaining live-ins are "
-           "variables that still need mapping handling.">
+           "variables that still need mapping handling.">,
+    Option<"enableCombinedLoopImplicitFirstprivate",
+           "enable-combined-loop-implicit-firstprivate", "bool", "true",
+           "Enabled by default. On combined parallel loop / serial loop, "
+           "attach implicit firstprivate of scalars to the combined acc.loop "
+           "instead of the compute construct so each lane gets its own "
+           "initialized copy. Disable to keep spec behavior (compute "
+           "firstprivate only). Non-combined parallel/serial keep compute "
+           "firstprivate.">
   ];
 }
 

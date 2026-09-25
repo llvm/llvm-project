@@ -25,6 +25,9 @@
 // 3. A scalar variable will be treated as if it appears in:
 //    - A copy clause if the compute construct is a kernels construct.
 //    - A firstprivate clause otherwise (parallel, serial).
+//    On a combined parallel loop / serial loop, that firstprivate is attached
+//    to the combined acc.loop rather than the compute construct by default
+//    (enable-combined-loop-implicit-firstprivate).
 //
 // Requirements:
 // -------------
@@ -209,6 +212,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -703,6 +707,20 @@ static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
   }
 }
 
+/// Combined `parallel loop` / `serial loop` carry `combined(loop)` on the
+/// compute op and `combined(parallel|serial)` on the inner `acc.loop`.
+static acc::LoopOp findCombinedInnerLoop(Operation *computeOp) {
+  acc::LoopOp combinedLoop;
+  computeOp->walk([&](acc::LoopOp loop) {
+    if (loop.getCombinedAttr()) {
+      combinedLoop = loop;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return combinedLoop;
+}
+
 template <typename OpT>
 void ACCImplicitData::generateImplicitDataOps(
     ModuleOp &module, OpT computeConstructOp,
@@ -732,7 +750,17 @@ void ACCImplicitData::generateImplicitDataOps(
     return;
 
   // 3) Generate data clauses for the variables.
+  // On combined parallel/serial loop, implicit firstprivate of scalars is
+  // attached to the combined acc.loop (per-lane copy) rather than the compute
+  // construct (gang-shared copy).
+  acc::LoopOp combinedLoop;
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>) {
+    if (enableCombinedLoopImplicitFirstprivate &&
+        computeConstructOp.getCombined())
+      combinedLoop = findCombinedInnerLoop(computeConstructOp.getOperation());
+  }
   SmallVector<Value> newPrivateOperands;
+  SmallVector<Value> newLoopFirstprivateOperands;
   SmallVector<Value> newDataClauseOperands;
   OpBuilder builder(computeConstructOp);
   if (!candidateVars.empty()) {
@@ -750,8 +778,10 @@ void ACCImplicitData::generateImplicitDataOps(
     fillInBoundsForUnknownDimensions(newDataClauseOp, builder);
     LLVM_DEBUG(llvm::dbgs() << "Generated data clause for " << var << ":\n"
                             << "\t" << *newDataClauseOp << "\n");
-    if (isa_and_nonnull<acc::PrivateOp, acc::FirstprivateOp, acc::ReductionOp>(
-            newDataClauseOp)) {
+    if (isa_and_nonnull<acc::FirstprivateOp>(newDataClauseOp) && combinedLoop) {
+      newLoopFirstprivateOperands.push_back(acc::getAccVar(newDataClauseOp));
+    } else if (isa_and_nonnull<acc::PrivateOp, acc::FirstprivateOp,
+                               acc::ReductionOp>(newDataClauseOp)) {
       newPrivateOperands.push_back(acc::getAccVar(newDataClauseOp));
     } else if (isa_and_nonnull<ACC_DATA_CLAUSE_OPS>(newDataClauseOp)) {
       newDataClauseOperands.push_back(acc::getAccVar(newDataClauseOp));
@@ -759,14 +789,17 @@ void ACCImplicitData::generateImplicitDataOps(
     }
   }
 
+  SmallVector<Value> allPrivateOperands = newPrivateOperands;
+  llvm::append_range(allPrivateOperands, newLoopFirstprivateOperands);
+
   // 4) Legalize values in region (aka the uses in the region are the result
   // of the data clause ops)
-  legalizeValuesInRegion(accRegion, newPrivateOperands, newDataClauseOperands);
+  legalizeValuesInRegion(accRegion, allPrivateOperands, newDataClauseOperands);
 
   // 5) Generate private recipes which are required for properly attaching
   // private operands.
   if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
-    generateRecipes(module, builder, computeConstructOp, newPrivateOperands);
+    generateRecipes(module, builder, computeConstructOp, allPrivateOperands);
 
   // 6) Figure out insertion order for the new data clause operands.
   SmallVector<Value> sortedDataClauseOperands(
@@ -777,9 +810,13 @@ void ACCImplicitData::generateImplicitDataOps(
   // 7) Generate the data exit operations.
   generateDataExitOperations(builder, computeConstructOp, newDataClauseOperands,
                              sortedDataClauseOperands);
-  // 8) Add all of the new operands to the compute construct op.
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
+  // 8) Add all of the new operands to the compute construct op, and implicit
+  // firstprivates to the combined loop when applicable.
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>) {
     addNewPrivateOperands(computeConstructOp, newPrivateOperands);
+    if (combinedLoop)
+      addNewPrivateOperands(combinedLoop, newLoopFirstprivateOperands);
+  }
   computeConstructOp.getDataClauseOperandsMutable().assign(
       sortedDataClauseOperands);
 }
