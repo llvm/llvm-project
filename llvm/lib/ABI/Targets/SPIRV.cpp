@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ABI/DefaultTargetInfo.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/Support/Casting.h"
 
 namespace llvm::abi {
 
-class SPIRVTargetInfo : public TargetInfo {
+// Mirrors Clang's SPIRVABIInfo: the default classification applies, except
+// for SPIR_KERNEL arguments.
+class SPIRVTargetInfo : public DefaultTargetInfo {
 private:
   ABICompatInfo CompatInfo;
 
@@ -23,47 +25,17 @@ private:
   // compilations, matching classic CodeGen's isTargetDevice() gate.
   bool KernelPassAggregatesIndirect;
 
-  ArgInfo classifyReturnType(const Type *RetTy) const {
-    if (RetTy->isVoid())
-      return ArgInfo::getIgnore();
-
-    if (isAggregateTypeForABI(RetTy))
-      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
-
-    if (const auto *IntTy = dyn_cast<IntegerType>(RetTy))
-      if (IntTy->isBitInt() && IntTy->getSizeInBits().getFixedValue() > 128)
-        return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
-
-    if (const auto *IntTy = dyn_cast<IntegerType>(RetTy))
-      if (isPromotableInteger(IntTy))
-        return ArgInfo::getExtend(RetTy);
-
-    return ArgInfo::getDirect();
-  }
-
-  ArgInfo classifyArgumentType(const Type *ArgTy) const {
-    ArgTy = useFirstFieldIfTransparentUnion(ArgTy);
-
-    if (isAggregateTypeForABI(ArgTy))
-      return getNaturalAlignIndirect(ArgTy, /*ByVal=*/true);
-
-    if (const auto *IntTy = dyn_cast<IntegerType>(ArgTy)) {
-      if (IntTy->isBitInt() && IntTy->getSizeInBits().getFixedValue() > 128)
-        return getNaturalAlignIndirect(ArgTy, /*ByVal=*/true);
-
-      if (isPromotableInteger(IntTy))
-        return ArgInfo::getExtend(ArgTy);
-    }
-
-    return ArgInfo::getDirect();
-  }
-
   ArgInfo classifyKernelArgumentType(const Type *ArgTy) const {
-    // Aggregate kernel arguments are forced byval so the callee gets its own
-    // copy, which is required for the object to be valid on the device, like
-    // Clang's SPIR-V CodeGen.
+    // TODO: Clang also coerces default address space pointer arguments to
+    // CrossWorkGroup pointers, which needs the target's language address space
+    // mapping.
+
+    // Force copying aggregate type in kernel arguments by value. This is
+    // required for the object copied to be valid on the device. TODO:
+    // hardcoding to 0 should be revisited if HIPSPV / byval starts making use
+    // of the AS of an indirect arg.
     if (KernelPassAggregatesIndirect && isAggregateTypeForABI(ArgTy))
-      return getNaturalAlignIndirect(ArgTy, /*ByVal=*/true);
+      return getNaturalAlignIndirect(ArgTy, /*AddrSpace=*/0, /*ByVal=*/true);
 
     return classifyArgumentType(ArgTy);
   }
@@ -71,13 +43,16 @@ private:
 public:
   SPIRVTargetInfo(TypeBuilder &Builder, const ABICompatInfo &Info,
                   bool KernelPassAggregatesIndirect)
-      : TargetInfo(Builder), CompatInfo(Info),
+      : DefaultTargetInfo(Builder), CompatInfo(Info),
         KernelPassAggregatesIndirect(KernelPassAggregatesIndirect) {}
 
   const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
 
   void computeInfo(FunctionInfo &FI) const override {
-    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    // The logic is the same as in DefaultTargetInfo, except for kernel
+    // arguments.
+    if (!maybeCommonClassifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
     bool IsKernel = FI.getCallingConvention() == CallingConv::SPIR_KERNEL;
     for (auto &I : FI.arguments())
