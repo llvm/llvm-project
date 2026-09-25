@@ -17,6 +17,8 @@ void f2() {
 
   l2: defer defer defer {} // expected-warning 2 {{redundant use of defer}}
 
+  l3: l4: defer defer {} // expected-warning {{redundant use of defer}}
+
   defer [[clang::likely]] defer {} // expected-warning {{redundant use of defer}}
 
   defer
@@ -25,7 +27,7 @@ void f2() {
 
   [[clang::likely]] defer defer {} // expected-warning {{redundant use of defer}}
 
-  l3:
+  l5:
   [[clang::likely]] defer
     defer {} // expected-warning {{redundant use of defer}}
 
@@ -35,7 +37,7 @@ void f2() {
   __attribute__((suppress)) defer
     defer {} // expected-warning {{redundant use of defer}}
 
-  l4:
+  l6:
   __attribute__((unknown)) defer // expected-warning {{unknown attribute}}
     defer {} // expected-warning {{redundant use of defer}}
 
@@ -107,17 +109,17 @@ void f2() {
   for (;;) {
     defer {} // OK
     f1();
-    l5: break;
+    l7: break;
   }
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
-    l6: break;
+    l8: break;
   }
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
-    l7: l8: break;
+    l9: l10: break;
   }
 
   for (;;) {
@@ -143,7 +145,7 @@ void f2() {
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
-    l9: [[clang::likely]] break;
+    l11: [[clang::likely]] break;
   }
 
   for (;;) {
@@ -160,17 +162,17 @@ void f2() {
   for (;;) {
     defer {} // OK
     f1();
-    l10: continue;
+    l12: continue;
   }
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
-    l11: continue;
+    l13: continue;
   }
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
-    l12: l13: continue;
+    l14: l15: continue;
   }
 
   for (;;) {
@@ -196,7 +198,7 @@ void f2() {
 
   for (;;) {
     defer {} // expected-warning {{redundant use of defer}}
-    l14: [[clang::likely]] continue;
+    l16: [[clang::likely]] continue;
   }
 
   while (true) {
@@ -285,7 +287,7 @@ void f5() {
 
 void f6() {
   defer {} // expected-warning {{redundant use of defer}}
-  l15: return;
+  l17: return;
 }
 
 void f7() {
@@ -295,5 +297,5 @@ void f7() {
 
 void f8() {
   defer {} // expected-warning {{redundant use of defer}}
-  l16: l17: [[clang::likely]] [[clang::suppress]] return;
+  l18: l19: [[clang::likely]] [[clang::suppress]] return;
 }
