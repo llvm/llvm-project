@@ -172,7 +172,6 @@ def SPIRV_AtomicCompareExchangeOp : SPIRV_Op<"AtomicCompareExchange", [
   }];
 
   let hasCustomAssemblyFormat = 0;
-  let hasVerifier = 0;
 }
 
 // -----
@@ -226,7 +225,6 @@ def SPIRV_AtomicCompareExchangeWeakOp : SPIRV_Op<"AtomicCompareExchangeWeak", [
   }];
 
   let hasCustomAssemblyFormat = 0;
-  let hasVerifier = 0;
 }
 
 // -----
@@ -272,7 +270,6 @@ def SPIRV_AtomicLoadOp : SPIRV_Op<"AtomicLoad", [
   }];
 
   let hasCustomAssemblyFormat = 0;
-  let hasVerifier = 0;
 }
 
 // -----
@@ -315,7 +312,6 @@ def SPIRV_AtomicStoreOp : SPIRV_Op<"AtomicStore", [
   }];
 
   let hasCustomAssemblyFormat = 0;
-  let hasVerifier = 0;
 }
 
 // -----
@@ -371,7 +367,6 @@ def SPIRV_AtomicExchangeOp : SPIRV_Op<"AtomicExchange", [
   }];
 
   let hasCustomAssemblyFormat = 0;
-  let hasVerifier = 0;
 }
 
 // -----
