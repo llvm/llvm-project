@@ -20,6 +20,30 @@
 // CHECK-GFX10: gpu.module @kernels {
 gpu.module @kernels {
 
+  // CHECK-SUB-LABEL: gpu.func @minimum_number
+  // CHECK-SUB: gpu.subgroup_reduce minimumnumf
+  // CHECK-SHFL-LABEL: gpu.func @minimum_number
+  // CHECK-SHFL: arith.minimumnumf
+  // CHECK-GFX-LABEL: gpu.func @minimum_number
+  // CHECK-GFX: arith.minimumnumf
+  gpu.func @minimum_number(%arg0: f32) kernel {
+    %result = gpu.subgroup_reduce minimumnumf %arg0 : (f32) -> f32
+    "test.consume"(%result) : (f32) -> ()
+    gpu.return
+  }
+
+  // CHECK-SUB-LABEL: gpu.func @maximum_number
+  // CHECK-SUB: gpu.subgroup_reduce maximumnumf
+  // CHECK-SHFL-LABEL: gpu.func @maximum_number
+  // CHECK-SHFL: arith.maximumnumf
+  // CHECK-GFX-LABEL: gpu.func @maximum_number
+  // CHECK-GFX: arith.maximumnumf
+  gpu.func @maximum_number(%arg0: vector<2xf32>) kernel {
+    %result = gpu.subgroup_reduce maximumnumf %arg0 : (vector<2xf32>) -> vector<2xf32>
+    "test.consume"(%result) : (vector<2xf32>) -> ()
+    gpu.return
+  }
+
   // CHECK-SUB-LABEL:  gpu.func @kernel0(
   // CHECK-SUB-SAME:     %[[ARG0:.+]]: vector<5xf16>)
   //
