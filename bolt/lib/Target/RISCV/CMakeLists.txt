@@ -21,6 +21,7 @@ endif()
 add_llvm_library(LLVMBOLTTargetRISCV
   RISCVMCPlusBuilder.cpp
   RISCVMCSymbolizer.cpp
+  RISCVRelocationHandler.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB

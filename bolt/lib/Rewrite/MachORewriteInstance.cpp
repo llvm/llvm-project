@@ -71,7 +71,6 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
                                            StringRef ToolPath, Error &Err)
     : InputFile(InputFile), ToolPath(ToolPath) {
   ErrorAsOutParameter EAO(&Err);
-  Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       InputFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
       InputFile->getFileName(), nullptr,
@@ -82,6 +81,8 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
     return;
   }
   BC = std::move(BCOrErr.get());
+  BC->initializeRelocationHandler(
+      createRelocationHandler(BC->TheTriple->getArch()));
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
       createMCPlusBuilder(BC->TheTriple->getArch(), BC->MIA.get(),
                           BC->MII.get(), BC->MRI.get(), BC->STI.get())));

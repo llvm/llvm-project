@@ -20,6 +20,7 @@ endif()
 add_llvm_library(LLVMBOLTTargetX86
   X86MCPlusBuilder.cpp
   X86MCSymbolizer.cpp
+  X86RelocationHandler.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
