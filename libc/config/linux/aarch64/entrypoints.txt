@@ -322,6 +322,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
+    libc.src.sys.random.getentropy
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getpriority

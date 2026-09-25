@@ -19,6 +19,7 @@ functions:
   - name: getentropy
     standards:
       - gnu
+      - posix
     return_type: int
     arguments:
       - type: void *
