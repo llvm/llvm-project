@@ -2016,6 +2016,23 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
 using ExtractedTypeTraitInfo =
     std::optional<std::pair<TypeTrait, llvm::SmallVector<QualType, 1>>>;
 
+// Synthesize args for std::is_trivially_copy_constructible<T>, which wraps
+// __is_trivially_constructible but is not in the StdName table because it
+// fixes its own argument list.
+static ExtractedTypeTraitInfo
+SynthesizeTriviallyConstructibleArgs(ASTContext &Ctx, StringRef Name,
+                                     ArrayRef<QualType> TemplateArgs) {
+  if (TemplateArgs.size() != 1)
+    return std::nullopt;
+  if (Name != "is_trivially_copy_constructible")
+    return std::nullopt;
+  // std::is_trivially_copy_constructible<T> == __is_trivially_constructible(T,
+  // const T&)
+  QualType T = TemplateArgs[0];
+  QualType ConstTRef = Ctx.getLValueReferenceType(T.withConst());
+  return {{TT_IsTriviallyConstructible, {T, ConstTRef}}};
+}
+
 // Recognize type traits that are builting type traits, or known standard
 // type traits in <type_traits>. Note that at this point we assume the
 // trait evaluated to false, so we need only to recognize the shape of the
@@ -2023,6 +2040,21 @@ using ExtractedTypeTraitInfo =
 static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
   llvm::SmallVector<QualType, 1> Args;
   std::optional<TypeTrait> Trait;
+
+  // Collect type arguments from a template argument list into Args.
+  // Packs are flattened; non-type arguments are silently skipped (they can
+  // appear in library templates whose argument lists we don't control).
+  auto CollectTypeArgs = [&Args](auto Range) {
+    for (const auto &Arg : Range) {
+      if (Arg.getKind() == TemplateArgument::ArgKind::Pack) {
+        for (const auto &Inner : Arg.pack_elements())
+          if (Inner.getKind() == TemplateArgument::ArgKind::Type)
+            Args.push_back(Inner.getAsType());
+      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type) {
+        Args.push_back(Arg.getAsType());
+      }
+    }
+  };
 
   // builtins
   if (const auto *TraitExpr = dyn_cast<TypeTraitExpr>(E)) {
@@ -2043,20 +2075,14 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     StringRef Name = VD->getIdentifier()->getName();
     if (!Name.consume_back("_v"))
       return std::nullopt;
+    // First try the direct StdName mapping.
     Trait = StdNameToTypeTrait(Name);
-    if (!Trait)
-      return std::nullopt;
-    for (const auto &Arg : VD->getTemplateArgs().asArray()) {
-      if (Arg.getKind() == TemplateArgument::ArgKind::Pack) {
-        for (const auto &InnerArg : Arg.pack_elements())
-          Args.push_back(InnerArg.getAsType());
-      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type) {
-        Args.push_back(Arg.getAsType());
-      } else {
-        llvm_unreachable("Unexpected kind");
-      }
-    }
-    return {{Trait.value(), std::move(Args)}};
+    CollectTypeArgs(VD->getTemplateArgs().asArray());
+    if (Trait)
+      return {{Trait.value(), std::move(Args)}};
+    // Fall back to traits that synthesize their own arg list.
+    return SynthesizeTriviallyConstructibleArgs(VD->getASTContext(), Name,
+                                                Args);
   }
 
   // std::is_xxx<>::value
@@ -2071,12 +2097,14 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     const TemplateDecl *D = Ts->getTemplateName().getAsTemplateDecl();
     if (!D || !D->isInStdNamespace())
       return std::nullopt;
-    Trait = StdNameToTypeTrait(D->getIdentifier()->getName());
-    if (!Trait)
-      return std::nullopt;
-    for (const auto &Arg : Ts->template_arguments())
-      Args.push_back(Arg.getAsType());
-    return {{Trait.value(), std::move(Args)}};
+    StringRef Name = D->getIdentifier()->getName();
+    // First try the direct StdName mapping.
+    Trait = StdNameToTypeTrait(Name);
+    CollectTypeArgs(Ts->template_arguments());
+    if (Trait)
+      return {{Trait.value(), std::move(Args)}};
+    // Fall back to traits that synthesize their own arg list.
+    return SynthesizeTriviallyConstructibleArgs(D->getASTContext(), Name, Args);
   }
   return std::nullopt;
 }
@@ -2309,6 +2337,78 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   if (D->hasDefinition())
     DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
 
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void
+DiagnoseNonTriviallyCopyConstructibleReason(Sema &SemaRef, SourceLocation Loc,
+                                            const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.isVirtual())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    const CXXRecordDecl *BD = B.getType()->getAsCXXRecordDecl();
+    if (BD && BD->hasNonTrivialCopyConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCCBase << B.getType()
+          << B.getSourceRange();
+  }
+
+  for (const FieldDecl *F : D->fields()) {
+    // Use getBaseElementType to see through array types (e.g. NTBase arr[2]).
+    // Print the declared field type so the note matches the source.
+    QualType ElemTy = SemaRef.Context.getBaseElementType(F->getType());
+    const CXXRecordDecl *FD = ElemTy->getAsCXXRecordDecl();
+    if (FD && FD->hasNonTrivialCopyConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCCField << F << F->getType()
+          << F->getSourceRange();
+  }
+
+  if (D->isPolymorphic())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PolymorphicType;
+
+  for (const CXXConstructorDecl *Ctor : D->ctors()) {
+    if (!Ctor->isCopyConstructor())
+      continue;
+    if (Ctor->isDeleted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+    else if (Ctor->isUserProvided())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::UserProvidedCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+    else if (Ctor->getAccess() != AS_public)
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::InaccessibleCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+  }
+}
+
+static void DiagnoseNonTriviallyCopyConstructibleReason(Sema &SemaRef,
+                                                        SourceLocation Loc,
+                                                        QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyCopyConstructible;
+
+  if (T->isVoidType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+  else if (T->isFunctionType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+  else if (T->isIncompleteArrayType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl() || !D->hasDefinition())
+    return;
+
+  DiagnoseNonTriviallyCopyConstructibleReason(SemaRef, Loc, D);
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
@@ -2793,6 +2893,18 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   }
   case UTT_IsAbstract:
     DiagnoseNonAbstractReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case TT_IsTriviallyConstructible:
+    if (Args.size() == 2) {
+      // Check that the second arg is `cv T &` (copy-construction shape).
+      // Args[1] is the source type as it appears in
+      // __is_trivially_constructible.
+      if (const auto *LVRef = Args[1]->getAs<LValueReferenceType>()) {
+        if (Context.hasSameUnqualifiedType(Args[0], LVRef->getPointeeType()))
+          DiagnoseNonTriviallyCopyConstructibleReason(*this, E->getBeginLoc(),
+                                                      Args[0]);
+      }
+    }
     break;
   default:
     break;

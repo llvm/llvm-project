@@ -73,6 +73,14 @@ struct is_abstract {
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct is_trivially_copy_constructible {
+    static constexpr bool value = __is_trivially_constructible(T, const T&);
+};
+template <typename T>
+constexpr bool is_trivially_copy_constructible_v =
+    __is_trivially_constructible(T, const T&);
+
 #endif
 
 #ifdef STD2
@@ -167,6 +175,16 @@ using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct __details_is_trivially_copy_constructible {
+    static constexpr bool value = __is_trivially_constructible(T, const T&);
+};
+template <typename T>
+using is_trivially_copy_constructible = __details_is_trivially_copy_constructible<T>;
+template <typename T>
+constexpr bool is_trivially_copy_constructible_v =
+    __is_trivially_constructible(T, const T&);
+
 #endif
 
 
@@ -252,6 +270,16 @@ using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = is_abstract<T>::value;
 
+template <typename T>
+struct __details_is_trivially_copy_constructible
+    : bool_constant<__is_trivially_constructible(T, const T&)> {};
+template <typename T>
+using is_trivially_copy_constructible =
+    __details_is_trivially_copy_constructible<T>;
+template <typename T>
+constexpr bool is_trivially_copy_constructible_v =
+    is_trivially_copy_constructible<T>::value;
+
 #endif
 }
 
@@ -277,6 +305,32 @@ static_assert(std::is_trivially_copyable_v<int&>);
 // expected-note@-1 {{'int &' is not trivially copyable}} \
 // expected-note@-1 {{because it is a reference type}}
 
+struct UserProvidedCopyCtor { // #tcc-std-UserProvided
+    UserProvidedCopyCtor(const UserProvidedCopyCtor&) {}
+};
+
+// std::is_trivially_copy_constructible<T>::value path
+static_assert(std::is_trivially_copy_constructible<int>::value);
+
+static_assert(std::is_trivially_copy_constructible<UserProvidedCopyCtor>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_trivially_copy_constructible<{{.*}}UserProvidedCopyCtor>::value'}} \
+// expected-note@-1 {{'UserProvidedCopyCtor' is not trivially copy constructible}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@#tcc-std-UserProvided {{'UserProvidedCopyCtor' defined here}}
+
+// std::is_trivially_copy_constructible_v<T> path
+static_assert(std::is_trivially_copy_constructible_v<int>);
+
+static_assert(std::is_trivially_copy_constructible_v<UserProvidedCopyCtor>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_trivially_copy_constructible_v<UserProvidedCopyCtor>'}} \
+// expected-note@-1 {{'UserProvidedCopyCtor' is not trivially copy constructible}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@#tcc-std-UserProvided {{'UserProvidedCopyCtor' defined here}}
+
+
+// Positive: references are trivially copy constructible (must produce no diagnostic)
+static_assert(std::is_trivially_copy_constructible<int&>::value);
+static_assert(std::is_trivially_copy_constructible_v<int&>);
 
  // Direct tests
  static_assert(std::is_standard_layout<int>::value);
@@ -493,6 +547,14 @@ concept C2 = std::is_trivially_copyable_v<T>; // #concept4
 
 template <C2 T> void g2();  // #cand4
 
+template <typename T>
+requires std::is_trivially_copy_constructible<T>::value void f6();  // #cand11
+
+template <typename T>
+concept C6 = std::is_trivially_copy_constructible_v<T>; // #concept11
+
+template <C6 T> void g6();  // #cand12
+
 template <typename T, typename U>
 requires std::is_assignable<T, U>::value void f4();  // #cand7
 
@@ -548,6 +610,23 @@ void test() {
     // expected-note@#concept4 {{because 'std::is_trivially_copyable_v<int &>' evaluated to false}} \
     // expected-note@#concept4 {{'int &' is not trivially copyable}} \
     // expected-note@#concept4 {{because it is a reference type}}
+
+    f6<UserProvidedCopyCtor>();
+    // expected-error@-1 {{no matching function for call to 'f6'}} \
+    // expected-note@#cand11 {{candidate template ignored: constraints not satisfied [with T = UserProvidedCopyCtor]}} \
+    // expected-note-re@#cand11 {{because '{{.*}}is_trivially_copy_constructible<{{.*}}UserProvidedCopyCtor>::value' evaluated to false}} \
+    // expected-note@#cand11 {{'UserProvidedCopyCtor' is not trivially copy constructible}} \
+    // expected-note@#cand11 {{because it has a user provided copy constructor}} \
+    // expected-note@#tcc-std-UserProvided {{'UserProvidedCopyCtor' defined here}}
+
+    g6<UserProvidedCopyCtor>();
+    // expected-error@-1 {{no matching function for call to 'g6'}} \
+    // expected-note@#cand12 {{candidate template ignored: constraints not satisfied [with T = UserProvidedCopyCtor]}} \
+    // expected-note@#cand12 {{because 'UserProvidedCopyCtor' does not satisfy 'C6'}} \
+    // expected-note@#concept11 {{because 'std::is_trivially_copy_constructible_v<UserProvidedCopyCtor>' evaluated to false}} \
+    // expected-note@#concept11 {{'UserProvidedCopyCtor' is not trivially copy constructible}} \
+    // expected-note@#concept11 {{because it has a user provided copy constructor}} \
+    // expected-note@#tcc-std-UserProvided {{'UserProvidedCopyCtor' defined here}}
 
     f4<int&, void>();
     // expected-error@-1 {{no matching function for call to 'f4'}} \

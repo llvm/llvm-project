@@ -892,3 +892,141 @@ static_assert(__is_abstract(U));
 // expected-note@-1 {{because it is not a struct or class type}}
 
 }
+
+namespace trivially_copy_constructible {
+
+// Case 1: user-provided copy constructor
+struct UserProvided { // #tcc-UserProvided
+    UserProvided(const UserProvided&) {}
+};
+static_assert(__is_trivially_constructible(UserProvided, const UserProvided&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::UserProvided, const trivially_copy_constructible::UserProvided &)'}} \
+// expected-note@-1  {{'UserProvided' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a user provided copy constructor}} \
+// expected-note@#tcc-UserProvided {{'UserProvided' defined here}}
+
+// Case 2: deleted copy constructor
+struct DeletedCopy { // #tcc-DeletedCopy
+    DeletedCopy(const DeletedCopy&) = delete;
+};
+static_assert(__is_trivially_constructible(DeletedCopy, const DeletedCopy&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::DeletedCopy, const trivially_copy_constructible::DeletedCopy &)'}} \
+// expected-note@-1  {{'DeletedCopy' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a deleted copy constructor}} \
+// expected-note@#tcc-DeletedCopy {{'DeletedCopy' defined here}}
+
+// Case 3: polymorphic type (virtual function introduces non-trivial copy)
+struct Polymorphic { // #tcc-Polymorphic
+    virtual void f();
+};
+static_assert(__is_trivially_constructible(Polymorphic, const Polymorphic&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::Polymorphic, const trivially_copy_constructible::Polymorphic &)'}} \
+// expected-note@-1  {{'Polymorphic' is not trivially copy constructible}} \
+// expected-note@-1  {{because it is a polymorphic type}} \
+// expected-note@#tcc-Polymorphic {{'Polymorphic' defined here}}
+
+// Case 4: virtual base
+struct VBase {}; // #tcc-VBase
+struct WithVBase : virtual VBase { // #tcc-WithVBase
+};
+static_assert(__is_trivially_constructible(WithVBase, const WithVBase&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::WithVBase, const trivially_copy_constructible::WithVBase &)'}} \
+// expected-note@-1  {{'WithVBase' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a virtual base 'VBase'}} \
+// expected-note@#tcc-WithVBase {{'WithVBase' defined here}}
+
+// Case 5: base with non-trivial copy constructor
+struct NTBase { // #tcc-NTBase
+    NTBase(const NTBase&) {}
+};
+struct WithNTBase : NTBase { // #tcc-WithNTBase
+};
+static_assert(__is_trivially_constructible(WithNTBase, const WithNTBase&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::WithNTBase, const trivially_copy_constructible::WithNTBase &)'}} \
+// expected-note@-1  {{'WithNTBase' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a non-trivially-copy-constructible base 'NTBase'}} \
+// expected-note@#tcc-WithNTBase {{'WithNTBase' defined here}}
+
+// Case 6: member with non-trivial copy constructor
+struct WithNTMember { // #tcc-WithNTMember
+    NTBase m;
+};
+static_assert(__is_trivially_constructible(WithNTMember, const WithNTMember&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::WithNTMember, const trivially_copy_constructible::WithNTMember &)'}} \
+// expected-note@-1  {{'WithNTMember' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a non-trivially-copy-constructible member 'm' of type 'NTBase'}} \
+// expected-note@#tcc-WithNTMember {{'WithNTMember' defined here}}
+
+// Case 7: array member with non-trivial copy constructor
+struct WithArrayMember { // #tcc-WithArrayMember
+    NTBase arr[2];
+};
+static_assert(__is_trivially_constructible(WithArrayMember, const WithArrayMember&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::WithArrayMember, const trivially_copy_constructible::WithArrayMember &)'}} \
+// expected-note@-1  {{'WithArrayMember' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a non-trivially-copy-constructible member 'arr' of type 'NTBase[2]'}} \
+// expected-note@#tcc-WithArrayMember {{'WithArrayMember' defined here}}
+
+// Case 8: inaccessible (private) copy constructor
+struct PrivateCopy { // #tcc-PrivateCopy
+private:
+    PrivateCopy(const PrivateCopy&) = default;
+};
+static_assert(__is_trivially_constructible(PrivateCopy, const PrivateCopy&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::PrivateCopy, const trivially_copy_constructible::PrivateCopy &)'}} \
+// expected-note@-1  {{'PrivateCopy' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has an inaccessible copy constructor}} \
+// expected-note@#tcc-PrivateCopy {{'PrivateCopy' defined here}}
+
+// Case 9: non-const lvalue reference shape — also recognised as copy construction
+struct NonConstRef { // #tcc-NonConstRef
+    NonConstRef(NonConstRef&) {}
+};
+static_assert(__is_trivially_constructible(NonConstRef, NonConstRef&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::NonConstRef, trivially_copy_constructible::NonConstRef &)'}} \
+// expected-note@-1  {{'NonConstRef' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a user provided copy constructor}} \
+// expected-note@#tcc-NonConstRef {{'NonConstRef' defined here}}
+
+// Case 10: multiple reasons at once
+struct Multi : virtual VBase, NTBase { // #tcc-Multi
+    NTBase m;
+};
+static_assert(__is_trivially_constructible(Multi, const Multi&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::Multi, const trivially_copy_constructible::Multi &)'}} \
+// expected-note@-1  {{'Multi' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a virtual base 'VBase'}} \
+// expected-note@-1  {{because it has a non-trivially-copy-constructible base 'NTBase'}} \
+// expected-note@-1  {{because it has a non-trivially-copy-constructible member 'm' of type 'NTBase'}} \
+// expected-note@#tcc-Multi {{'Multi' defined here}}
+
+// Case 11: presence of a non-copy constructor must not confuse the walk
+struct MultiCtor { // #tcc-MultiCtor
+    MultiCtor(int) {}
+    MultiCtor(const MultiCtor&) = delete;
+};
+static_assert(__is_trivially_constructible(MultiCtor, const MultiCtor&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::MultiCtor, const trivially_copy_constructible::MultiCtor &)'}} \
+// expected-note@-1  {{'MultiCtor' is not trivially copy constructible}} \
+// expected-note@-1  {{because it has a deleted copy constructor}} \
+// expected-note@#tcc-MultiCtor {{'MultiCtor' defined here}}
+
+// Positive cases — must produce no diagnostic
+struct Trivial { int x; };
+static_assert(__is_trivially_constructible(Trivial, const Trivial&));
+static_assert(__is_trivially_constructible(int, const int&));
+// References are trivially copy constructible
+static_assert(__is_trivially_constructible(int&, int&));
+
+// Misclassification guard: 2-arg non-copy shape must NOT trigger copy diagnostic
+struct HasIntCtor { HasIntCtor(int) {} };
+static_assert(__is_trivially_constructible(HasIntCtor, int));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_constructible(trivially_copy_constructible::HasIntCtor, int)'}}
+
+// Dependent context — must not crash
+template <typename T>
+void dependent() {
+  static_assert(__is_trivially_constructible(T, const T&));
+}
+
+}
