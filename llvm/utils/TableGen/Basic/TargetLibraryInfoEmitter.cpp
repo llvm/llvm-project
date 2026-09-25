@@ -61,12 +61,12 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoEnum(
   OS << "enum LibFunc : unsigned {\n";
   OS.indent(2) << "NotLibFunc = 0,\n";
   for (const auto *R : AllTargetLibcalls)
-    OS.indent(2) << "LibFunc_" << R->getName() << ",\n";
+    OS.indent(2) << "LibFunc_" << R->getName().drop_front(4) << ",\n";
   OS.indent(2) << "NumLibFuncs,\n";
   OS.indent(2) << "End_LibFunc = NumLibFuncs,\n";
   if (AllTargetLibcalls.size()) {
     OS.indent(2) << "Begin_LibFunc = LibFunc_"
-                 << AllTargetLibcalls[0]->getName() << ",\n";
+                 << AllTargetLibcalls[0]->getName().drop_front(4) << ",\n";
   } else {
     OS.indent(2) << "Begin_LibFunc = NotLibFunc,\n";
   }
@@ -78,11 +78,17 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoEnum(
 // the string.
 void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
     raw_ostream &OS) const {
+
+  auto getFuncName = [](const Record *R) -> StringRef {
+    R = R->getValueAsDef("RTLibcallImpl");
+    return R->getValueAsString("LibCallFuncName");
+  };
+
   llvm::StringToOffsetTable Table(
       /*AppendZero=*/true,
       "TargetLibraryInfoImpl::", /*UsePrefixForStorageMember=*/false);
   for (const auto *R : AllTargetLibcalls)
-    Table.GetOrAddStringOffset(R->getValueAsString("String"));
+    Table.GetOrAddStringOffset(getFuncName(R));
 
   size_t NumEl = AllTargetLibcalls.size() + 1;
 
@@ -97,7 +103,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
           "{\n";
     OS.indent(2) << "0, //\n";
     for (const auto *R : AllTargetLibcalls) {
-      StringRef Str = R->getValueAsString("String");
+      StringRef Str = getFuncName(R);
       OS.indent(2) << Table.GetStringOffset(Str) << ", // " << Str << "\n";
     }
     OS << "};\n";
@@ -105,7 +111,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
        << NumEl << "] = {\n";
     OS << "  0,\n";
     for (const auto *R : AllTargetLibcalls)
-      OS.indent(2) << R->getValueAsString("String").size() << ",\n";
+      OS.indent(2) << getFuncName(R).size() << ",\n";
     OS << "};\n";
   }
 
@@ -133,11 +139,12 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   using Signature = std::vector<StringRef>;
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
   auto GetSignature = [](const Record *R) -> Signature {
+    R = R->getValueAsDef("RTLibcallImpl")->getValueAsDef("Provides");
     const auto *Tys = R->getValueAsListInit("ArgumentTypes");
     Signature Sig;
     Sig.reserve(Tys->size() + 1);
     const Record *RetType = R->getValueAsOptionalDef("ReturnType");
-    if (RetType)
+    if (RetType && (RetType->getName() != "NoneType"))
       Sig.push_back(RetType->getName());
     for (unsigned I = 0, E = Tys->size(); I < E; ++I) {
       Sig.push_back(Tys->getElementAsRecord(I)->getName());
@@ -153,8 +160,11 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   IfDefEmitter IfDef(OS, "GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE");
   OS << "enum FuncArgTypeID : char {\n";
   OS.indent(2) << "NoFuncArgType = 0,\n";
-  for (const auto *R : FuncTypeArgs)
+  for (const auto *R : FuncTypeArgs) {
+    if (R->getName() == "NoneType")
+      continue;
     OS.indent(2) << R->getName() << ",\n";
+  }
   OS << "};\n";
   OS << "static const FuncArgTypeID SignatureTable[] = {\n";
   SignatureTable.emit(OS, [](raw_ostream &OS, StringRef E) { OS << E; });
@@ -163,7 +173,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   OS.indent(2) << SignatureTable.get(NoFuncSig) << ", //\n";
   for (const auto *R : AllTargetLibcalls) {
     OS.indent(2) << SignatureTable.get(GetSignature(R)) << ", // "
-                 << R->getName() << "\n";
+                 << R->getName().drop_front(4) << "\n";
   }
   OS << "};\n";
 }
