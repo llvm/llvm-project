@@ -1254,6 +1254,43 @@ Value *llvm::concatenateVectors(IRBuilderBase &Builder,
   return ResList[0];
 }
 
+Value *llvm::repeatVector(IRBuilderBase &Builder, Value *Vec,
+                          ElementCount Factor) {
+  assert(isa<FixedVectorType>(Vec->getType()));
+  assert(Factor.isScalable() || Factor.getKnownMinValue() > 1);
+
+  // If the vector was already a constant splat, just recreate it with a
+  // bigger element count.
+  auto *InVTy = cast<FixedVectorType>(Vec->getType());
+  if (auto *VectorConstant = dyn_cast<Constant>(Vec);
+      VectorConstant && VectorConstant->getSplatValue()) {
+    ElementCount NewEC = Factor * InVTy->getNumElements();
+    return Builder.CreateVectorSplat(NewEC, VectorConstant->getSplatValue());
+  }
+
+  if (Factor.getKnownMinValue() > 1) {
+    unsigned NumFixedElts = InVTy->getNumElements() * Factor.getKnownMinValue();
+    SmallVector<int, 16> Mask(NumFixedElts);
+    for (unsigned Idx = 0; Idx != NumFixedElts; ++Idx)
+      Mask[Idx] = Idx % InVTy->getNumElements();
+    Vec = Builder.CreateShuffleVector(Vec, Mask);
+  }
+
+  if (Factor.isScalable()) {
+    auto *WideTy = toVectorTy(InVTy, Factor);
+    return Builder.CreateIntrinsic(Intrinsic::vector_repeat,
+                                   {WideTy, Vec->getType()}, {Vec});
+  }
+  return Vec;
+}
+
+Value *llvm::broadcastOrRepeatValue(IRBuilderBase &Builder, Value *V,
+                                    ElementCount Factor) {
+  if (V->getType()->isVectorTy())
+    return repeatVector(Builder, V, Factor);
+  return Builder.CreateVectorSplat(Factor, V, "broadcast");
+}
+
 bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
   assert(isa<VectorType>(Mask->getType()) &&
          isa<IntegerType>(Mask->getType()->getScalarType()) &&
