@@ -91,13 +91,8 @@ RISCVMachineFunctionInfo::ShadowStackKind
 RISCVMachineFunctionInfo::getShadowStackKind(const MachineFunction &MF) const {
   // Prefer HW Shadow Stack
   //
-  // We check Zimop instead of (Zimop || Zcmop) to determine whether HW shadow
-  // stack is available despite the fact that sspush/sspopchk both have a
-  // compressed form, because if only Zcmop is available, we would need to
-  // reserve X5 due to c.sspopchk only takes X5 and we currently do not support
-  // using X5 as the return address register.
-  //
-  // However, we can still aggressively use c.sspush x1 if zcmop is available.
+  // Zicfiss is encoded using a Zimop, so that's the only extension we have to
+  // check here. MOPs will be compressed if they have the right structure to.
   if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZimop() &&
       MF.getFunction().hasFnAttribute("hw-shadow-stack"))
     return ShadowStackKind::Hardware;

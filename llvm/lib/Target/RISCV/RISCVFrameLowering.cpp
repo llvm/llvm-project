@@ -195,6 +195,9 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     ++MI;
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (SSK == RISCVMachineFunctionInfo::ShadowStackKind::Hardware) {
+    // `sspopchk x5` is the only compressible form, but this would require using
+    // `x5` as the return address everywhere, which would also mean reserving
+    // it. We prefer to just use `x1` to avoid that complexity.
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK))
         .addReg(RAReg)
         .setMIFlag(MachineInstr::FrameDestroy);
