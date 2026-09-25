@@ -289,6 +289,15 @@ Symbols:
 
 # ERR-READ-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
 
+## Check warning when a relocation in SHT_LLVM_CALL_GRAPH references an invalid symbol index.
+# RUN: yaml2obj --docnum=7 -DLINK=.symtab -DINFO=.llvm_call_graph -DSYM=255 %s -o %t15
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t15 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15 --check-prefix=INVALID-REL-SYM
+# RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t15 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15 --check-prefix=INVALID-REL-SYM
+
+# INVALID-REL-SYM: warning: '[[FILE]]': unable to read an entry with index 255 from SHT_SYMTAB section with index 3: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+
 --- !ELF
 FileHeader:
   Class:    ELFCLASS64
@@ -310,7 +319,7 @@ Sections:
     Info: [[INFO]]
     Relocations:
       - Offset: 0x2
-        Symbol: foo
+        Symbol: [[SYM=foo]]
         Type:   R_X86_64_64
 Symbols:
   - Name: foo
