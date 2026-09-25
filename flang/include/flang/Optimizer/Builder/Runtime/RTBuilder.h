@@ -843,9 +843,9 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// Get (or generate) the MLIR FuncOp for a given runtime function. Its template
 /// argument is intended to be of the form: <mkRTKey(runtime function name)>.
 template <typename RuntimeEntry>
-static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         bool isIO = false) {
+mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
+                                  fir::FirOpBuilder &builder,
+                                  bool isIO = false) {
   using namespace Fortran::runtime;
   auto name = RuntimeEntry::name;
   auto func = builder.getNamedFunction(name);
@@ -857,8 +857,8 @@ static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
 
 /// Get (or generate) the MLIR FuncOp for a given IO runtime function.
 template <typename E>
-static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
-                                           fir::FirOpBuilder &builder) {
+mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
+                                    fir::FirOpBuilder &builder) {
   return getRuntimeFunc<E>(loc, builder, /*isIO=*/true);
 }
 
