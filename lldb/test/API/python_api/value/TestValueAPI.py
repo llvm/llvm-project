@@ -311,6 +311,13 @@ class ValueAPITestCase(TestBase):
                     # the ABI name "sp", which LLDB resolves to "rsp", not to the
                     # architectural register "sp".
                     # See https://github.com/llvm/llvm-project/issues/212778.
+                    #
+                    # Some targets expose the architectural "sp" in a different
+                    # set than "rsp" (on Windows, "supplementary registers"),
+                    # leaving nothing to compare against here.
+                    if not reg_set.GetChildMemberWithName("rsp").IsValid():
+                        continue
+
                     sp_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
                     self.assertTrue(sp_with_name_index < num_registers)
                     rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
