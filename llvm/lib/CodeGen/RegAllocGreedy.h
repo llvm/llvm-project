@@ -142,7 +142,7 @@ public:
   LiveRegMatrix *getInterferenceMatrix() const { return Matrix; }
   LiveIntervals *getLiveIntervals() const { return LIS; }
   VirtRegMap *getVirtRegMap() const { return VRM; }
-  const RegisterClassInfo &getRegClassInfo() const { return RegClassInfo; }
+  const RegisterClassInfo &getRegClassInfo() const { return *RegClassInfo; }
   const ExtraRegInfo &getExtraInfo() const { return *ExtraInfo; }
   size_t getQueueSize() const { return Queue.size(); }
   // end (interface to eviction advisers)
