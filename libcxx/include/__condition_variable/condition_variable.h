@@ -97,16 +97,7 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
 
 template <class _Duration>
 _LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
-  using namespace chrono;
-  if (__rel_time <= _Duration::zero())
-    return steady_clock::time_point::min();
-
-  steady_clock::time_point __now = steady_clock::now();
-  nanoseconds __d_ns             = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__rel_time));
-  if (__d_ns > nanoseconds::max() - __now.time_since_epoch())
-    return steady_clock::time_point::max();
-
-  return __now + __d_ns;
+  return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
 }
 
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED condition_variable {
