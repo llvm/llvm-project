@@ -21,6 +21,14 @@
 
 namespace clang {
 
+#define PTU_SHAPES                                                             \
+  PTU_SHAPE(Class, CXXRecordDecl)                                              \
+  PTU_SHAPE(Function, FunctionDecl)                                            \
+  PTU_SHAPE(Var, VarDecl)                                                      \
+  PTU_SHAPE(Enum, EnumDecl)                                                    \
+  PTU_SHAPE(Template, RedeclarableTemplateDecl)                                \
+  PTU_SHAPE(Typedef, TypedefNameDecl)
+
 /// -----------------------------------------------------------------------
 //////////////////////// PTUMutationActions::Helpers ///////////////////////
 /// -----------------------------------------------------------------------
@@ -177,11 +185,6 @@ void DeclStateReverter::detachFromDCLookup(Decl *D, PTUID ID) {
       }
     }
   } while (DC->isTransparentContext() && (DC = DC->getParent()));
-
-  //   DeclContext *Lexical = const_cast<DeclContext
-  //   *>(ND->getLexicalDeclContext()); if
-  //   (RepairedLexicalContexts.insert(Lexical).second)
-  //     repairLexicalChain(*Lexical);
 }
 
 // Walk D's redecl chain looking for the newest decl that predates this
@@ -254,17 +257,10 @@ NamedDecl *DeclStateReverter::tryDetachRedeclChain(Decl *D, PTUID ID) {
   } break;
 
   case Decl::FunctionTemplate:
-    unlinkRedeclChain(cast<RedeclarableTemplateDecl>(D));
-    break;
-
   case Decl::TypeAliasTemplate:
-    unlinkRedeclChain(cast<RedeclarableTemplateDecl>(D));
-    break;
-
   case Decl::VarTemplate:
     unlinkRedeclChain(cast<RedeclarableTemplateDecl>(D));
     break;
-
   case Decl::Namespace:
     unlinkRedeclChain(cast<NamespaceDecl>(D));
     break;
@@ -307,7 +303,7 @@ static DeclShape classifyShape(const Decl *D) {
 ///
 /// Explicit specializations are terminal, so their SpecInfo/MemberSpecInfo
 /// does not need to be tracked.
-uint32_t PTUMutationActions::kindsNeedingTracking(DeclShape S, const Decl *D) {
+uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
   switch (S) {
   case DeclShape::Class: {
     const auto *RD = cast<CXXRecordDecl>(D);
@@ -334,7 +330,6 @@ uint32_t PTUMutationActions::kindsNeedingTracking(DeclShape S, const Decl *D) {
       if (Spec->getSpecializationKind() != TSK_ExplicitSpecialization)
         Kinds |= uint32_t(MutationType::SpecInfo);
     } else if (const auto *MSI = RD->getMemberSpecializationInfo()) {
-      // Same terminal state, same enum, reused for MSI's own Kind/POI.
       if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
         Kinds |= uint32_t(MutationType::MemberSpecInfo);
     }
@@ -572,8 +567,7 @@ uint32_t PTUMutationActions::verifyMutationFor(const Decl *D, DeclShape S,
         Tracker.getHiddenMutationTracker().isTrackedFor(
             VD, uint32_t(MutationType::EvaluatedValue))) {
       // No chain to compare against -- write-once field, so presence of
-      // WasEvaluated=true right now IS the confirmation, same reasoning
-      // as Shape::Template's CommonCreated/CanonInjectedTSTCached above.
+      // WasEvaluated=true right now IS the confirmation.
       const EvaluatedStmt *Eval = VD->getEvaluatedStmt();
       if (Eval && Eval->WasEvaluated)
         Verified |= uint32_t(MutationType::EvaluatedValue);
@@ -624,8 +618,6 @@ uint32_t PTUMutationActions::verifyMutationFor(const Decl *D, DeclShape S,
   case DeclShape::Typedef: {
     const auto *TD = cast<TypedefNameDecl>(D);
     if (FlaggedKinds & uint32_t(MutationType::TypeForDecl) &&
-        // Defensive, on top of SweepTracker::sweep()'s own bookkeeping --
-        // same reasoning as the Var/Template cases above.
         Tracker.getHiddenMutationTracker().isTrackedFor(
             TD, uint32_t(MutationType::TypeForDecl))) {
       // No chain to compare against -- write-once field (unlike
@@ -644,18 +636,18 @@ uint32_t PTUMutationActions::verifyMutationFor(const Decl *D, DeclShape S,
 
 template <typename OnConfirmedFn>
 void SweepTracker::sweep(PTUMutationActions &Act, OnConfirmedFn OnConfirmed) {
-  llvm::SmallVector<std::pair<const Decl *, uint32_t>, 8> Confirmed;
+  //   llvm::SmallVector<std::pair<const Decl *, uint32_t>, 8> Confirmed;
   for (auto &Entry : Active) {
     const Decl *D = Entry.getFirst();
     uint32_t StillOpen = Entry.getSecond();
     DeclShape S = classifyShape(D);
     if (uint32_t Newly = Act.verifyMutationFor(D, S, StillOpen)) {
       OnConfirmed(D, S, Newly);
-      Confirmed.emplace_back(D, Newly);
+      //   Confirmed.emplace_back(D, Newly);
     }
   }
-  for (auto &[D, Newly] : Confirmed)
-    settle(D, Newly);
+  //   for (auto &[D, Newly] : Confirmed)
+  //     settle(D, Newly);
 }
 
 /// Verify recorded mutations and remove any spurious ones. If none of a
@@ -677,13 +669,6 @@ class DeclStateCommitPolicy {
 public:
   DeclStateCommitPolicy(PTUID ID, PTUMutationActions &Action)
       : ID(ID), Action(Action) {}
-  /// Everything shouldAct resolved, carried to the caller instead of
-  /// stashed. Empty means "skip this decl" -- there's no separate bool.
-  struct CommitAction {
-    DeclShape S;
-    uint32_t Kinds;
-    explicit operator bool() const { return Kinds != 0; }
-  };
 
   bool shouldRecurse(const Decl *D) const {
     if (isa<NamespaceDecl>(D))
@@ -693,27 +678,23 @@ public:
     return false;
   }
 
-  CommitAction actionFor(const Decl *D) const {
+  void process(const Decl *D) const {
     if (!D->isDefinedOutsideFunctionOrMethod())
-      return {};
+      return;
 
     DeclShape S = classifyShape(D);
     if (S == DeclShape::None)
-      return {};
+      return;
 
     // we have to handle every case that if a decl need to create baseline
     // info or if any decl has done all mutations already in this for exmpla
     // membe spec already properly done like this kind of case so we don't
     // create spec info blindly
-    uint32_t Kinds = Action.kindsNeedingTracking(S, D);
+    uint32_t Kinds = Action.DeclNeedingTracking(S, D);
     if (!Kinds)
-      return {}; // structurally immutable -- no baseline needed
+      return; // structurally immutable -- no baseline needed
 
-    return CommitAction{S, Kinds};
-  }
-
-  void runAction(const Decl *D, const CommitAction &A) {
-    MutationRecord Rec = MutationRecord{A.S, A.Kinds};
+    MutationRecord Rec{S, Kinds};
     Action.commitDecl(ID, D, Rec, /*IsNew=*/true);
   }
 };
@@ -731,21 +712,6 @@ public:
                         DeclStateReverter &Reverter)
       : ID(ID), Tracker(Tracker), Reverter(Reverter) {}
 
-  struct RestoreAction {
-    bool DetachFromLexicalChain = false;
-    bool DetachFromDC = false;
-    bool DetachFromRedecl = false;
-    bool DetachDefData = false;
-    // bool DetachCommonBase = false;
-    bool HasTemplated = false;
-    bool TemplatedDetachDefData = false;
-    explicit operator bool() const {
-      return DetachFromLexicalChain || DetachFromDC || DetachFromRedecl ||
-             DetachDefData || /*DetachCommonBase ||*/ HasTemplated ||
-             TemplatedDetachDefData;
-    }
-  };
-
   bool shouldRecurse(const Decl *D) const {
     // we don't care about the decl which complete chain is part belong to
     // current PTU.
@@ -754,68 +720,59 @@ public:
     return isa<NamespaceDecl>(D);
   }
 
-  RestoreAction actionFor(const Decl *D) const {
-    RestoreAction A;
+  void process(const Decl *D) {
     const Decl *Canon = D->getCanonicalDecl();
 
     /// Keyed on the canonical decl: every redeclaration shares one
     /// RedeclLink, so truncating twice would step past the intended survivor.
-    if (!RepairedChains.count(Canon) && D->getPreviousDecl() &&
-        !Tracker.isFromThisPTU(Canon, ID))
-      A.DetachFromRedecl = true;
+    bool DetachFromRedecl = !RepairedChains.count(Canon) &&
+                            D->getPreviousDecl() &&
+                            !Tracker.isFromThisPTU(Canon, ID);
 
     // Keyed on the primary context, a different granularity: a reopened
     // namespace's redeclarations all resolve to the same primary.
     const DeclContext *DC = D->getDeclContext()->getPrimaryContext();
-    if (TouchedDC.contains(DC))
-      A.DetachFromDC = true;
+    bool DetachFromDC = TouchedDC.contains(DC);
 
-    if (D->isImplicit() &&
-        !RepairedLexicalContexts.count(D->getLexicalDeclContext()))
-      A.DetachFromLexicalChain = true;
+    bool DetachFromLexicalChain =
+        D->isImplicit() &&
+        !RepairedLexicalContexts.count(D->getLexicalDeclContext());
 
+    bool DetachDefData = false;
+    bool HasTemplated = false;
+    bool TemplatedDetachDefData = false;
     if (const auto *RT = dyn_cast<RedeclarableTemplateDecl>(D)) {
-      // if (Tracker.isFromThisPTU(::needToDetachCommonPtr(CheckPoint, RT),
-      // ID))
-      //   A.DetachCommonBase = true;
-
       const NamedDecl *T = RT->getTemplatedDecl();
-      A.HasTemplated = true;
+      HasTemplated = true;
       if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(T)) {
         if (const CXXRecordDecl *Def = RD->getDefinition();
             Def && Tracker.isFromThisPTU(Def, ID))
-          A.TemplatedDetachDefData = true;
+          TemplatedDetachDefData = true;
       }
     } else if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
       if (const CXXRecordDecl *Def = RD->getDefinition();
           Def && Tracker.isFromThisPTU(Def, ID))
-        A.DetachDefData = true;
+        DetachDefData = true;
     }
 
-    return A;
-  }
-
-  void runAction(const Decl *D, const RestoreAction &A) {
-    if (A.DetachDefData)
+    if (DetachDefData)
       Reverter.detachDefData(D);
-    // if (A.DetachCommonBase)
-    //   Detacher.detachCommonBase(D);
-    if (A.DetachFromDC)
+    if (DetachFromDC)
       Reverter.detachFromDCLookup(const_cast<Decl *>(D), ID);
-    if (A.DetachFromRedecl) {
-      RepairedChains.insert(D->getCanonicalDecl());
+    if (DetachFromRedecl) {
+      RepairedChains.insert(Canon);
       Reverter.detachFromRedeclChain(D, ID);
     }
 
-    if (A.HasTemplated) {
+    if (HasTemplated) {
       const Decl *T = cast<RedeclarableTemplateDecl>(D)->getTemplatedDecl();
-      if (A.TemplatedDetachDefData)
+      if (TemplatedDetachDefData)
         Reverter.detachDefData(T);
-      if (A.DetachFromRedecl)
+      if (DetachFromRedecl)
         Reverter.detachFromRedeclChain(T, ID);
     }
 
-    if (A.DetachFromLexicalChain) {
+    if (DetachFromLexicalChain) {
       Reverter.repairLexicalChain(
           *const_cast<DeclContext *>(D->getLexicalDeclContext()), ID);
       RepairedLexicalContexts.insert(D->getLexicalDeclContext());
@@ -823,14 +780,95 @@ public:
   }
 };
 
-template <typename DeclStateProxyT>
+template <typename DeclStatePolicyT>
 void PTUMutationActions::walkDecls(const DeclContext *DC,
-                                   DeclStateProxyT &Proxy) {
+                                   DeclStatePolicyT &Policy) {
   for (const Decl *D : DC->decls()) {
-    if (Proxy.shouldRecurse(D))
-      walkDecls(cast<DeclContext>(D), Proxy);
-    if (auto Act = Proxy.actionFor(D))
-      Proxy.runAction(D, Act);
+    if (Policy.shouldRecurse(D))
+      walkDecls(cast<DeclContext>(D), Policy);
+    Policy.process(D);
+  }
+}
+
+/// -----------------------------------------------------------------------
+//////////////////////// PTUMutationActions::commit ///////////////////////
+/// -----------------------------------------------------------------------
+
+void PTUMutationActions::commitMembers(PTUID ID, const DeclContext *Members) {
+  DeclStateCommitPolicy Policy(ID, *this);
+  walkDecls(Members, Policy);
+}
+
+void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
+                                     MutationRecord &Rec, bool IsNew) {
+
+  // TypeForDecl is shared across the whole redeclaration chain – the Type
+  // object itself is owned by whichever redecl first materialized it, so
+  // every redecl’s cached pointer needs to be checked, not just RD’s.
+  if (Rec.has(MutationType::TypeForDecl)) {
+    // for (const TagDecl *Redecl : RD->redecls()) {
+    //   const Type *LastKnown =
+    //       Tracker.TagdeclInfos.mostRecent(Redecl).value_or(nullptr);
+    //    TODO: need to handle?
+    // }
+  }
+
+  // DefinitionArrived and DefinitionDataChanged are committed the same way –
+  // both mean “this record’s DefinitionData needs a fresh footprint.” They
+  // remain separate kinds because rollback and dependency-edge attribution
+  // treat them differently: an arrival means this PTU completed a record
+  // that predates it, while a data change may be either.
+  if (Rec.has(MutationType::DefinitionInstantiate) ||
+      Rec.has(MutationType::DefinitionData)) {
+    Tracker.chainFor(RD).commit(
+        ID, DeclStateReverter::createDefinitionDataFootprint(Tracker.Ctx, *RD));
+
+    /// SpecializationDecl can have lazy implicit generated body;
+    if (Rec.has(MutationType::DefinitionInstantiate)) {
+      if (RD->getMemberSpecializationInfo())
+        commitMembers(ID, cast<DeclContext>(RD));
+    }
+  }
+
+  if (Rec.has(MutationType::SpecInfo)) {
+    // Only a specialization can carry this kind; a plain CXXRecordDecl
+    // reaching here means a note*() wrapper passed the wrong kind.
+    const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD);
+    // assert(Spec && "SpecializationAdded noted on a non-specialization");
+    if (Spec) {
+      Tracker.chainFor(Spec).commit(
+          ID,
+          DeclStateReverter::createSpecializationFootprint(Tracker.Ctx, *Spec));
+      // Member declarations are instantiated eagerly with the class
+      // definition regardless of TSK; only their definitions defer. Walk
+      // them now so each member's MemberSpecializationInfo is tracked from
+      // the moment it exists.
+      if (IsNew && Spec->getSpecializationKind() == TSK_ImplicitInstantiation)
+        commitMembers(ID, cast<DeclContext>(Spec));
+    }
+  }
+
+  if (Rec.has(MutationType::MemberSpecInfo)) {
+    // A nested member of a class template -- its MSI's kind or
+    // point-of-instantiation changed.
+    if (RD->getMemberSpecializationInfo())
+      Tracker.memberSpecChainFor(RD).commit(
+          ID, DeclStateReverter::createMemberSpecializationFootprint(
+                  Tracker.Ctx, *RD));
+  }
+}
+
+void PTUMutationActions::commitDecl(PTUID ID, const Decl *D,
+                                    MutationRecord &Rec, bool IsNew) {
+  switch (Rec.S) {
+#define PTU_SHAPE(NAME, TYPE)                                                  \
+  case DeclShape::NAME:                                                        \
+    commit##NAME(ID, cast<TYPE>(D), Rec, IsNew);                               \
+    break;
+    PTU_SHAPES
+#undef PTU_SHAPE
+  case DeclShape::None:
+    break;
   }
 }
 
@@ -868,13 +906,11 @@ void PTUMutationActions::restoreClass(PTUID ID, const CXXRecordDecl *RD,
   // TypeForDecl is shared across the whole redeclaration chain -- revert all.
   if (Rec.has(MutationType::TypeForDecl)) {
     // CXXRecordDecl *RD = cast<CXXRecordDecl>(D);
-    for (const TagDecl *Redecl : RD->redecls()) {
-      const Type *LastKnown =
-          Tracker.getTagDeclTypeInfo().mostRecent(Redecl).value_or(nullptr);
-      const TypeDecl *TD = cast<TypeDecl>(Redecl);
-      if (LastKnown != TD->getTypeForDecl())
-        const_cast<TypeDecl *>(TD)->setTypeForDecl(LastKnown);
-    }
+    // for (const TagDecl *Redecl : RD->redecls()) {
+    //   const Type *LastKnown =
+    //       Tracker.getTagDeclTypeInfo().mostRecent(Redecl).value_or(nullptr);
+    //   TODO: need to handle?
+    // }
   }
 
   if (Rec.has(MutationType::SpecInfo)) {
@@ -999,7 +1035,7 @@ void PTUMutationActions::restoreVar(PTUID ID, const VarDecl *VD,
   if (Rec.has(VarMutation::EvaluatedValue)) {
     // VD itself survives this rollback (only its cached value was this
     // PTU's doing) -- reset the live field, and re-register with
-    // SweepTracker since kindsNeedingTracking will flag this as open
+    // SweepTracker since DeclNeedingTracking will flag this as open
     // again and some later PTU could re-trigger evaluation.
     if (EvaluatedStmt *Eval = VD->getEvaluatedStmt()) {
       Eval->WasEvaluated = false;
@@ -1040,13 +1076,11 @@ void PTUMutationActions::restoreEnum(PTUID ID, const EnumDecl *ED,
   // redeclaration chain (`enum class E : int;` forward-declared, then
   // defined later), so every redecl's cached pointer needs checking.
   if (Rec.has(MutationType::TypeForDecl)) {
-    for (const TagDecl *Redecl : ED->redecls()) {
-      const Type *LastKnown =
-          Tracker.getTagDeclTypeInfo().mostRecent(Redecl).value_or(nullptr);
-      const TypeDecl *TD = cast<TypeDecl>(Redecl);
-      if (LastKnown != TD->getTypeForDecl())
-        const_cast<TypeDecl *>(TD)->setTypeForDecl(LastKnown);
-    }
+    // for (const TagDecl *Redecl : ED->redecls()) {
+    //   const Type *LastKnown =
+    //       Tracker.getTagDeclTypeInfo().mostRecent(Redecl).value_or(nullptr);
+    //   TODO: need to handle?
+    // }
   }
 
   if (Rec.has(MutationType::DefinitionInstantiate))
@@ -1067,28 +1101,17 @@ void PTUMutationActions::restoreEnum(PTUID ID, const EnumDecl *ED,
 void PTUMutationActions::restoreDecl(PTUID ID, const Decl *D,
                                      MutationRecord &Rec) {
   switch (Rec.S) {
-  case DeclShape::Class:
-    restoreClass(ID, cast<CXXRecordDecl>(D), Rec);
+#define PTU_SHAPE(NAME, TYPE)                                                  \
+  case DeclShape::NAME:                                                        \
+    restore##NAME(ID, cast<TYPE>(D), Rec);                                     \
     break;
-  case DeclShape::Function:
-    restoreFunction(ID, cast<FunctionDecl>(D), Rec);
-    break;
-  case DeclShape::Var:
-    restoreVar(ID, cast<VarDecl>(D), Rec);
-    break;
-  case DeclShape::Enum:
-    restoreEnum(ID, cast<EnumDecl>(D), Rec);
-    break;
-  case DeclShape::Template:
-    restoreTemplate(ID, cast<RedeclarableTemplateDecl>(D), Rec);
-    break;
-  case DeclShape::Typedef:
-    restoreTypedef(ID, cast<TypedefNameDecl>(D), Rec);
-    break;
+    PTU_SHAPES
+#undef PTU_SHAPE
   case DeclShape::None:
     break;
   }
 }
+#undef PTU_SHAPES
 
 void PTUMutationActions::restore(TranslationUnitDecl *ThisTU) {
   PTUStateInfo &Cur = Tracker.current();
@@ -1110,13 +1133,12 @@ void PTUMutationActions::restore(TranslationUnitDecl *ThisTU) {
     restoreDecl(ID, D, Rec);
 
   DeclStateReverter Detacher(Tracker.getPTUSlabCheckpoints());
-  DeclStateUnlinkPolicy Proxy(ID, Tracker, Detacher);
+  DeclStateUnlinkPolicy Policy(ID, Tracker, Detacher);
 
   for (const Decl *D : Cur.ImplicitDecls)
-    if (auto A = Proxy.actionFor(D))
-      Proxy.runAction(D, A);
+    Policy.process(D);
 
-  walkDecls(ThisTU, Proxy);
+  walkDecls(ThisTU, Policy);
 
   // Sema::SpecialMemberCache (public) caches, per (RD, kind+qualifiers), the
   // CXXMethodDecl* a prior LookupSpecialMember() call resolved to -- and on
