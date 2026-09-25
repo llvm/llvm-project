@@ -10,7 +10,7 @@
 
 declare void @use(i32 noundef) local_unnamed_addr
 
-define dso_local void @merge_profile(i32 noundef %a, i32 noundef %cond) local_unnamed_addr !prof !47 {
+define dso_local void @merge_profile(i32 noundef %a, i32 noundef %cond) local_unnamed_addr !prof !13 {
 entry:
   %a.addr = alloca i32, align 4
   %cond.addr = alloca i32, align 4
@@ -21,48 +21,50 @@ entry:
   ret void
 }
 
-define internal void @merge_profile.omp_outlined(ptr noalias readnone captures(none) %0, ptr noalias readnone captures(none) %1, ptr noundef nonnull readonly align 4 dereferenceable(4) %cond, ptr noundef nonnull readonly align 4 dereferenceable(4) %a) !prof !48 {
+define internal void @merge_profile.omp_outlined(ptr noalias readnone captures(none) %0, ptr noalias readnone captures(none) %1, ptr noundef nonnull readonly align 4 dereferenceable(4) %cond, ptr noundef nonnull readonly align 4 dereferenceable(4) %a) !prof !14 {
 entry:
   %v = load i32, ptr %a, align 4
   tail call void @use(i32 noundef %v)
   ret void
 }
 
-define internal void @merge_profile.omp_outlined.1(ptr noalias readnone captures(none) %0, ptr noalias readnone captures(none) %1, ptr noundef nonnull readonly align 4 dereferenceable(4) %cond, ptr noundef nonnull readonly align 4 dereferenceable(4) %a) !prof !52 {
+define internal void @merge_profile.omp_outlined.1(ptr noalias readnone captures(none) %0, ptr noalias readnone captures(none) %1, ptr noundef nonnull readonly align 4 dereferenceable(4) %cond, ptr noundef nonnull readonly align 4 dereferenceable(4) %a) !prof !15 {
 entry:
   %c = load i32, ptr %cond, align 4
   %t = icmp eq i32 %c, 0
   %v = load i32, ptr %a, align 4
-  %off = select i1 %t, i32 3, i32 2, !prof !54
+  %off = select i1 %t, i32 3, i32 2, !prof !16
   %sum = add nsw i32 %v, %off
   tail call void @use(i32 noundef %sum)
   ret void
 }
 
-declare !callback !50 void @__kmpc_fork_call(ptr, i32, ptr, ...) local_unnamed_addr
+declare !callback !17 void @__kmpc_fork_call(ptr, i32, ptr, ...) local_unnamed_addr
+
 declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr
 declare void @__kmpc_barrier(ptr, i32) local_unnamed_addr
 
-!llvm.module.flags = !{!0, !4}
+!llvm.module.flags = !{!0, !1}
+
 !0 = !{i32 7, !"openmp", i32 51}
-!4 = !{i32 1, !"ProfileSummary", !5}
-!5 = !{!6, !7, !8, !9, !10, !11, !12, !13}
-!6 = !{!"ProfileFormat", !"InstrProf"}
-!7 = !{!"TotalCount", i64 827}
-!8 = !{!"MaxCount", i64 435}
-!9 = !{!"MaxInternalCount", i64 205}
-!10 = !{!"MaxFunctionCount", i64 435}
-!11 = !{!"NumCounts", i64 4}
-!12 = !{!"NumFunctions", i64 3}
-!13 = !{!"DetailedSummary", !14}
-!14 = !{!15}
-!15 = !{i32 10000, i64 435, i32 1}
-!47 = !{!"function_entry_count", i64 2}
-!48 = !{!"function_entry_count", i64 435}
-!50 = !{!51}
-!51 = !{i64 2, i64 -1, i64 -1, i1 true}
-!52 = !{!"function_entry_count", i64 392}
-!54 = !{!"branch_weights", i32 205, i32 187}
+!1 = !{i32 1, !"ProfileSummary", !2}
+!2 = !{!3, !4, !5, !6, !7, !8, !9, !10}
+!3 = !{!"ProfileFormat", !"InstrProf"}
+!4 = !{!"TotalCount", i64 827}
+!5 = !{!"MaxCount", i64 435}
+!6 = !{!"MaxInternalCount", i64 205}
+!7 = !{!"MaxFunctionCount", i64 435}
+!8 = !{!"NumCounts", i64 4}
+!9 = !{!"NumFunctions", i64 3}
+!10 = !{!"DetailedSummary", !11}
+!11 = !{!12}
+!12 = !{i32 10000, i64 435, i32 1}
+!13 = !{!"function_entry_count", i64 2}
+!14 = !{!"function_entry_count", i64 435}
+!15 = !{!"function_entry_count", i64 392}
+!16 = !{!"branch_weights", i32 205, i32 187}
+!17 = !{!18}
+!18 = !{i64 2, i64 -1, i64 -1, i1 true}
 
 ; CHECK-LABEL: define dso_local void @merge_profile(
 ; CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[COND:%.*]]) local_unnamed_addr !prof [[PROF13:![0-9]+]] {
@@ -111,8 +113,8 @@ declare void @__kmpc_barrier(ptr, i32) local_unnamed_addr
 ; CHECK:       [[OMP_PAR_PRE_FINALIZE]]:
 ; CHECK-NEXT:    br label %[[DOTFINI:.*]]
 ; CHECK:       [[DOTFINI]]:
-; CHECK-NEXT:    br [[OMP_PAR_EXIT_EXITSTUB:label %.*]]
-; CHECK:       [[_FINI:.*:]]
+; CHECK-NEXT:    br label %[[OMP_PAR_EXIT_EXITSTUB:.*]]
+; CHECK:       [[OMP_PAR_EXIT_EXITSTUB]]:
 ; CHECK-NEXT:    br label %[[OMP_PAR_EXIT_EXITSTUB1:.*]]
 ; CHECK:       [[OMP_PAR_EXIT_EXITSTUB1]]:
 ; CHECK-NEXT:    ret void
