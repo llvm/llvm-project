@@ -17910,8 +17910,31 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
     return ExprError();
   }
 
-  QualType exprResultType =
-      getDerived().TransformType(exprFunctionType->getReturnType());
+  TypeLoc resultTL;
+  if (TypeSourceInfo *SigTSI = oldBlock->getSignatureAsWritten()) {
+    resultTL = SigTSI->getTypeLoc();
+    // If there's no FunctionProtoTypeLoc, the typeloc is just the return type.
+    if (auto FTL = resultTL.getAsAdjusted<FunctionProtoTypeLoc>())
+      resultTL = FTL.getReturnLoc();
+  }
+  QualType exprResultType;
+  if (resultTL && resultTL.getType() == exprFunctionType->getReturnType()) {
+    // Preserve the source location for any elaborated-type keywords
+    // (e.g. 'typename')
+    TypeSourceInfo *ResultTSI = SemaRef.Context.CreateTypeSourceInfo(
+        resultTL.getType(), resultTL.getFullDataSize());
+    ResultTSI->getTypeLoc().initializeFullCopy(resultTL);
+    if (TypeSourceInfo *NewResultTSI = getDerived().TransformType(ResultTSI))
+      exprResultType = NewResultTSI->getType();
+  } else {
+    // Fallback for deduced return types, since they lack a source location.
+    exprResultType =
+        getDerived().TransformType(exprFunctionType->getReturnType());
+  }
+  if (exprResultType.isNull()) {
+    getSema().ActOnBlockError(E->getCaretLocation(), /*Scope=*/nullptr);
+    return ExprError();
+  }
 
   auto epi = exprFunctionType->getExtProtoInfo();
   epi.ExtParameterInfos = extParamInfos.getPointerOrNull(paramTypes.size());
