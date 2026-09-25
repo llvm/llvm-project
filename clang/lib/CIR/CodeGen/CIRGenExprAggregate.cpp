@@ -208,8 +208,7 @@ public:
       mlir::Value sizeVal = cgf.getBuilder().getConstInt(
           loc, cgf.sizeTy,
           cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
-      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
-                                    sourceAddress.getPointer(), sizeVal);
+      cgf.getBuilder().createMemCpy(loc, destAddress, sourceAddress, sizeVal);
 
       break;
     }

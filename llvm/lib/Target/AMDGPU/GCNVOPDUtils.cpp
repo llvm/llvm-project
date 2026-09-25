@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -105,6 +106,49 @@ static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
          getNamedOp(MI, AMDGPU::OpName::src2).getReg();
 }
 
+// In a VOPD3 whose OPX is a 64-bit operation, an OPY VGPR source operand reads
+// back the wrong value if it is the last VGPR the wave owns.
+// A wave always owns a whole number of VGPR allocation granules, so only a
+// register just below a granule boundary can be the last one. The wave also
+// owns at least as many VGPRs as this function uses, so a source which has a
+// register above it in use here cannot be the last one either.
+// The number of VGPRs the wave is actually given is not available until the
+// assembler has seen the whole module, but that can only come out above this
+// function's own usage, so this is conservatively correct.
+static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
+                                   const MachineInstr &MIX,
+                                   const MachineInstr &MIY) {
+  const MachineFunction &MF = *MIX.getMF();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasVOPD3F64OPYSrcHazard())
+    return false;
+
+  // Every 64-bit VOPD3 OPX opcode has a 64-bit vdst, and no 32-bit one has.
+  int VDstIdx =
+      AMDGPU::getNamedOperandIdx(MIX.getOpcode(), AMDGPU::OpName::vdst);
+  assert(VDstIdx != -1 && "VOPD3 OPX component must have a vdst");
+  if (TII.getOpSize(MIX, VDstIdx) != 8)
+    return false;
+
+  unsigned Granule =
+      AMDGPU::getVGPRAllocGranule(ST.getTargetID().getGPUKind(), ST.isWave32());
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  unsigned NumVGPRs = TRI->getNumUsedPhysRegs(
+      MF.getRegInfo(), AMDGPU::VGPR_32RegClass, /*IncludeCalls=*/false);
+  for (AMDGPU::OpName Name :
+       {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
+    const MachineOperand *Src = TII.getNamedOperand(MIY, Name);
+    // Every OPY source which can be a VGPR is 32 bits wide.
+    if (!Src || !Src->isReg() ||
+        !AMDGPU::VGPR_32RegClass.contains(Src->getReg()))
+      continue;
+    unsigned Idx = TRI->getHWRegIndex(Src->getReg());
+    if ((Idx + 1) % Granule == 0 && Idx + 1 >= NumVGPRs)
+      return true;
+  }
+  return false;
+}
+
 static bool canMaterializeVOPDLiterals(const MachineFunction &MF) {
   // A free register cannot be found without liveness. A move also makes the
   // code longer, so a function which asked for small code keeps its literals.
@@ -123,6 +167,8 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
 
   if (IsVOPD3 && !ST.hasVOPD3())
+    return false;
+  if (IsVOPD3 && isVOPD3F64OPYSrcHazard(TII, MIX, MIY))
     return false;
   if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
                    (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))

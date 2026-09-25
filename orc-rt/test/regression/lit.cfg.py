@@ -30,6 +30,86 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
+# %{jit} runs JIT'd code under ogre, with llvm-jitlink as the controller. Tests
+# that use it must be gated on the llvm-jitlink feature.
+ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
+config.substitutions.append(("%{ogre}", ogre))
+llvm_jitlink = llvm_config.use_llvm_tool("llvm-jitlink")
+if llvm_jitlink:
+    config.available_features.add("llvm-jitlink")
+    config.substitutions.append(
+        ("%{jit}", "{} -oop-launch={}".format(llvm_jitlink, ogre))
+    )
+
+
+# %{cc} and %{cxx} compile C and C++ for the runtime's target. They default to
+# clang and clang++ from the LLVM tools directory. Pass --param orc-rt-cc=<cc>
+# or --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
+# clang-style options and target the runtime's target without being told to
+# (use a wrapper script if necessary). Tests that use %{cc} or %{cxx} must be
+# gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+def add_compiler(name, clang_name):
+    override = lit_config.params.get(name)
+    if override:
+        compiler = lit.util.which(override)
+        if compiler is None:
+            lit_config.fatal("{} compiler '{}' not found".format(name, override))
+        lit_config.note("using {} override: {}".format(name, compiler))
+    else:
+        compiler = llvm_config.use_llvm_tool(clang_name)
+        if compiler:
+            compiler += " --target=" + config.target_triple
+    if compiler:
+        config.available_features.add(name)
+        substitution = "%{" + name[len("orc-rt-") :] + "}"
+        config.substitutions.append((substitution, compiler))
+
+
+add_compiler("orc-rt-cc", "clang")
+add_compiler("orc-rt-cxx", "clang++")
+
+# %{mc} assembles its input into an object file for the runtime's target.
+# Unlike %{cc}, it can't be overridden, so that object format tests always
+# check the runtime against the same assembler. Tests that use it must be
+# gated on the llvm-mc feature.
+llvm_mc = llvm_config.use_llvm_tool("llvm-mc")
+if llvm_mc:
+    config.available_features.add("llvm-mc")
+    config.substitutions.append(
+        (
+            "%{mc}",
+            "{} -triple={} -filetype=obj".format(llvm_mc, config.target_triple),
+        )
+    )
+
+# Describe the runtime's target architecture and object format, so that object
+# format tests can gate on them:
+#   target-arch=<arch>             (arm64 and aarch64 are aliases)
+#   target-object-format=<coff|elf|mach-o>
+# No object format feature is added for targets not recognized below.
+ELF_OS_NAMES = ("linux", "freebsd", "netbsd", "openbsd", "fuchsia", "none", "elf")
+
+
+def add_target_features():
+    arch, _, rest = config.target_triple.partition("-")
+    if arch in ("arm64", "aarch64"):
+        config.available_features.update(["target-arch=arm64", "target-arch=aarch64"])
+    else:
+        config.available_features.add("target-arch=" + arch)
+    components = rest.split("-")
+    if "apple" in components:
+        object_format = "mach-o"
+    elif any(c.startswith("windows") for c in components):
+        object_format = "coff"
+    elif any(c.startswith(n) for c in components for n in ELF_OS_NAMES):
+        object_format = "elf"
+    else:
+        return
+    config.available_features.add("target-object-format=" + object_format)
+
+
+add_target_features()
+
 
 def run_test_tool(name, *args):
     """Run a test-support tool from test/tools and return its stdout.

@@ -7423,7 +7423,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
           Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
           BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
               .addReg(CondReg)
-              .addReg(NewCondReg);
+              .addReg(NewCondReg)
+              .setOperandDead(3);
           CondReg = AndReg;
         }
       }
@@ -7494,7 +7495,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
             Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
             BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
                 .addReg(CondReg)
-                .addReg(NewCondReg);
+                .addReg(NewCondReg)
+                .setOperandDead(3);
             CondReg = AndReg;
           }
         }
@@ -7534,7 +7536,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
     // Update EXEC to matching lanes, saving original to SaveExec.
     BuildMI(LoopBB, I, DL, TII.get(LMC.AndSaveExecOpc), SaveExec)
-        .addReg(CondReg, RegState::Kill);
+        .addReg(CondReg, RegState::Kill)
+        .setOperandDead(3);
   }
 
   // The original instruction is here; we insert the terminators after it.
@@ -7548,14 +7551,16 @@ static void emitLoadScalarOpsFromVGPRLoop(
     MRI.setSimpleHint(NewExec, PhiExec);
     BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2Opc), NewExec)
         .addReg(PhiExec)
-        .addReg(LMC.ExecReg);
+        .addReg(LMC.ExecReg)
+        .setOperandDead(3);
     BuildMI(BodyBB, I, DL, TII.get(LMC.MovTermOpc), LMC.ExecReg)
         .addReg(NewExec);
   } else {
     // Update EXEC, switch all done bits to 0 and all todo bits to 1.
     BuildMI(BodyBB, I, DL, TII.get(LMC.XorTermOpc), LMC.ExecReg)
         .addReg(LMC.ExecReg)
-        .addReg(SaveExec);
+        .addReg(SaveExec)
+        .setOperandDead(3);
   }
 
   BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);

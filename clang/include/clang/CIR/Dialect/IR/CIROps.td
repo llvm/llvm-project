@@ -5250,10 +5250,15 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
     ```
   }];
 
-  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+  let arguments = !con(commonArgs, (ins
+    CIR_AnyFundamentalUIntType:$len,
+    OptionalAttr<I64Attr>:$dst_alignment,
+    OptionalAttr<I64Attr>:$src_alignment
+  ));
 
   let assemblyFormat = [{
-    $len `bytes` `from` $src `to` $dst attr-dict
+    $len `bytes` `from` $src (`align` `(` $src_alignment^ `)`)?
+    `to` $dst (`align` `(` $dst_alignment^ `)`)? attr-dict
     `:` type($len) `,` qualified(type($src)) `->` qualified(type($dst))
   }];
 

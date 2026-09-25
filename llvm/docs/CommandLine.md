@@ -58,8 +58,7 @@ CommandLine library to have the following features:
 
 1. Capable: The CommandLine library can handle lots of different forms of
    options often found in real programs.  For example, {ref}`positional <positional>` arguments,
-   `ls` style {ref}`grouping <grouping>` options (to allow processing '`ls -lad`'
-   naturally), `ld` style {ref}`prefix <prefix>` options (to parse '`-lmalloc
+   `ld` style {ref}`prefix <prefix>` options (to parse '`-lmalloc
    -L/usr/lib`'), and interpreter style options.
 
 This document will hopefully let you jump in and start using CommandLine in your
@@ -1154,55 +1153,6 @@ As usual, you can only specify one of these arguments at most.
   modifier added to allow the CommandLine library to recognize them.  Note that
   **cl::Prefix** options must not have the **cl::ValueDisallowed** modifier
   specified.
-
-(grouping)=
-(cl::Grouping)=
-
-#### Controlling options grouping
-
-The **cl::Grouping** modifier can be combined with any formatting types except
-for {ref}`cl::Positional <cl::Positional>`.  It is used to implement Unix-style tools (like `ls`)
-that have lots of single letter arguments, but only require a single dash.
-For example, the '`ls -labF`' command actually enables four different options,
-all of which are single letters.
-
-Note that **cl::Grouping** options can have values only if they are used
-separately or at the end of the groups.  For {ref}`cl::ValueRequired <cl::ValueRequired>`, it is
-a runtime error if such an option is used elsewhere in the group.
-
-The CommandLine library does not restrict how you use the **cl::Prefix** or
-**cl::Grouping** modifiers, but it is possible to specify ambiguous argument
-settings.  Thus, it is possible to have multiple letter options that are prefix
-or grouping options, and they will still work as designed.
-
-To do this, the CommandLine library uses a greedy algorithm to parse the input
-option into (potentially multiple) prefix and grouping options.  The strategy
-basically looks like this:
-
-```
-parse(string OrigInput) {
-
-1. string Input = OrigInput;
-2. if (isOption(Input)) return getOption(Input).parse();  // Normal option
-3. while (!Input.empty() && !isOption(Input)) Input.pop_back();  // Remove the last letter
-4. while (!Input.empty()) {
-     string MaybeValue = OrigInput.substr(Input.length())
-     if (getOption(Input).isPrefix())
-       return getOption(Input).parse(MaybeValue)
-     if (!MaybeValue.empty() && MaybeValue[0] == '=')
-       return getOption(Input).parse(MaybeValue.substr(1))
-     if (!getOption(Input).isGrouping())
-       return error()
-     getOption(Input).parse()
-     Input = OrigInput = MaybeValue
-     while (!Input.empty() && !isOption(Input)) Input.pop_back();
-     if (!Input.empty() && !getOption(Input).isGrouping())
-       return error()
-   }
-5. if (!OrigInput.empty()) error();
-
-}
-```
 
 #### Miscellaneous option modifiers
 
