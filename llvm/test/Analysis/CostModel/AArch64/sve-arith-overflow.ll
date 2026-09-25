@@ -5,103 +5,103 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @sadd_with_overflow() #0 {
 ; CHECK-LABEL: 'sadd_with_overflow'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.sadd.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.sadd.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.sadd.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.sadd.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.sadd.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.sadd.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.sadd.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.sadd.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.sadd.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.sadd.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.sadd.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.sadd.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.sadd.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.sadd.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.sadd.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.sadd.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
   ret void
 }
 
 define void @uadd_with_overflow() #0 {
 ; CHECK-LABEL: 'uadd_with_overflow'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.uadd.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.uadd.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.uadd.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.uadd.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.uadd.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.uadd.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.uadd.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.uadd.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.uadd.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.uadd.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.uadd.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.uadd.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.uadd.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.uadd.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.uadd.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.uadd.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.uadd.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.uadd.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.uadd.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.uadd.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
   ret void
 }
 
 define void @ssub_with_overflow() #0 {
 ; CHECK-LABEL: 'ssub_with_overflow'
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.ssub.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.ssub.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.ssub.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.ssub.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.ssub.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.ssub.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.ssub.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.ssub.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.ssub.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.ssub.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.ssub.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.ssub.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.ssub.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.ssub.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.ssub.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.ssub.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.ssub.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.ssub.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.ssub.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.ssub.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
   ret void
 }
 
 define void @usub_with_overflow() #0 {
 ; CHECK-LABEL: 'usub_with_overflow'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.usub.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.usub.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.usub.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.usub.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.usub.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.usub.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.usub.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.usub.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.usub.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.usub.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.usub.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.usub.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.usub.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.usub.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.usub.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.usub.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.usub.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.usub.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.usub.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.usub.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
   ret void
 }
 
 define void @smul_with_overflow() #0 {
 ; CHECK-LABEL: 'smul_with_overflow'
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
   ret void
 }
 
 define void @umul_with_overflow() #0 {
 ; CHECK-LABEL: 'umul_with_overflow'
-; CHECK-NEXT:  Cost Model: Found costs of 11 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.umul.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 11 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 11 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.umul.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.umul.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.umul.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.umul.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.umul.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.umul.with.overflow.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
-  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
-  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.umul.with.overflow.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
-  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
-  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.umul.with.overflow.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef)
+  %nxv16i8 = call { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.umul.with.overflow.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+  %nxv8i16 = call { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv4i32 = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.umul.with.overflow.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv2i64 = call { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.umul.with.overflow.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv1i64 = call { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.umul.with.overflow.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> poison)
   ret void
 }
 
