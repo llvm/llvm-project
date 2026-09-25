@@ -330,11 +330,13 @@ public:
             // FIXME: Diagnose invalidated return escapes separately.
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
-        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
+        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr,
+              getExprChain(
+                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
           bool IsCapturedByLambda =
               FactMgr.isFieldCapturedByLambda(FieldEscape->getFieldDecl());

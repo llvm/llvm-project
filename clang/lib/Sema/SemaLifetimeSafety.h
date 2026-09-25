@@ -158,7 +158,8 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr) override {
+                            const Expr *MovedExpr,
+                            llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_return_stack_addr_moved
                           : diag::warn_lifetime_safety_return_stack_addr;
@@ -169,6 +170,9 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
+
+    reportAliasingChain(ExprChain);
+
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
         << ReturnExpr->getSourceRange();
   }
