@@ -6543,12 +6543,14 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
   Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
+  Builder.restoreIP(std::prev(InsertBlock->end()));
   FunctionCallee RTLFn =
       getKmpcForStaticLoopForType(TripCountTy, OMPBuilder, LoopType);
   SmallVector<Value *, 8> RealArgs;
   RealArgs.push_back(Ident);
   RealArgs.push_back(&LoopBodyFn);
-  RealArgs.push_back(LoopBodyArg);
+  RealArgs.push_back(Builder.CreatePointerBitCastOrAddrSpaceCast(
+      LoopBodyArg, RTLFn.getFunctionType()->getParamType(2)));
   RealArgs.push_back(TripCount);
   if (LoopType == WorksharingLoopType::DistributeStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
@@ -8626,7 +8628,8 @@ Constant *OpenMPIRBuilder::emitKernelEnvironment(
   Constant *IsSPMDVal = ConstantInt::getSigned(Int8, Attrs.ExecFlags);
   Constant *UseGenericStateMachineVal = ConstantInt::getSigned(
       Int8, Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD &&
-                Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP);
+                Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP &&
+                Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_STRIDED_LOOP);
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
