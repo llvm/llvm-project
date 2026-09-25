@@ -3,7 +3,9 @@
 define i32 @removal_only_test(i32 %a) {
   ; CHECK-LABEL: define i32 @removal_only_test(
   ; CHECK-SAME: i32 [[A:%.*]]) {
-  ; CHECK: ret i32 [[A]]
+  ; CHECK: [[SHL:%.*]] = shl i32 [[A]], 24
+  ; CHECK: [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
+  ; CHECK: ret i32 [[SIGNED]]
   %1 = trunc nsw i32 %a to i8
   %3 = sext i8 %1 to i32
   ret i32 %3
@@ -11,21 +13,27 @@ define i32 @removal_only_test(i32 %a) {
 
 define i32 @i8trunc(float %0) #0 {
   ; CHECK-LABEL: define i32 @i8trunc(
-  ; CHECK-NOT: %4 = trunc nsw i32 %3 to i8
-  ; CHECK: add nsw i32
-  ; CHECK-NEXT: srem i32
-  ; CHECK-NEXT: sub i32
-  ; CHECK-NEXT: mul i32
-  ; CHECK-NEXT: udiv i32
-  ; CHECK-NEXT: sdiv i32
-  ; CHECK-NEXT: urem i32
-  ; CHECK-NEXT: and i32
-  ; CHECK-NEXT: or i32
-  ; CHECK-NEXT: xor i32
-  ; CHECK-NEXT: shl i32
-  ; CHECK-NEXT: lshr i32
-  ; CHECK-NEXT: ashr i32
-  ; CHECK-NOT: %7 = sext i8 %6 to i32
+  ; CHECK-NOT: i8
+  ; CHECK-NEXT: [[CONVERT:%.*]] = fptosi float %0 to i32
+  ; CHECK-NEXT: [[INITIAL_REM:%.*]] = srem i32 [[CONVERT]], 8
+  ; CHECK-NEXT: [[ADD:%.*]] = add nsw i32 [[INITIAL_REM]], 1
+  ; CHECK-NEXT: [[SREM:%.*]] = srem i32 [[ADD]], 8
+  ; CHECK-NEXT: [[SUB:%.*]] = sub i32 [[SREM]], 1
+  ; CHECK-NEXT: [[MUL:%.*]] = mul i32 [[SUB]], 1
+  ; CHECK-NEXT: [[MUL_UNSIGNED:%.*]] = and i32 [[MUL]], 255
+  ; CHECK-NEXT: [[UDIV:%.*]] = udiv i32 [[MUL_UNSIGNED]], 1
+  ; CHECK-NEXT: [[UDIV_SHL:%.*]] = shl i32 [[UDIV]], 24
+  ; CHECK-NEXT: [[UDIV_SIGNED:%.*]] = ashr i32 [[UDIV_SHL]], 24
+  ; CHECK-NEXT: [[SDIV:%.*]] = sdiv i32 [[UDIV_SIGNED]], 1
+  ; CHECK-NEXT: [[SDIV_UNSIGNED:%.*]] = and i32 [[SDIV]], 255
+  ; CHECK-NEXT: [[UREM:%.*]] = urem i32 [[SDIV_UNSIGNED]], 1
+  ; CHECK-NEXT: [[AND:%.*]] = and i32 [[UREM]], 1
+  ; CHECK-NEXT: [[OR:%.*]] = or i32 [[AND]], 1
+  ; CHECK-NEXT: [[XOR:%.*]] = xor i32 [[OR]], 1
+  ; CHECK-NEXT: [[SHL:%.*]] = shl i32 [[XOR]], 1
+  ; CHECK-NEXT: [[LSHR:%.*]] = lshr i32 [[SHL]], 1
+  ; CHECK-NEXT: [[ASHR:%.*]] = ashr i32 [[LSHR]], 1
+  ; CHECK-NEXT: ret i32 [[ASHR]]
   
   %2 = fptosi float %0 to i32
   %3 = srem i32 %2, 8
@@ -53,7 +61,10 @@ define i32 @cast_removal_test(i32 %a) {
   ; CHECK-NOT: trunc
   ; CHECK-NOT: zext i8
   ; CHECK-NOT: sext i8
-  ; CHECK: add i32 [[A]], [[A]]
+  ; CHECK: [[MASKED:%.*]] = and i32 [[A]], 255
+  ; CHECK: [[SHL:%.*]] = shl i32 [[A]], 24
+  ; CHECK: [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
+  ; CHECK: add i32 [[MASKED]], [[SIGNED]]
   %1 = trunc nsw i32 %a to i8
   %2 = zext i8 %1 to i32
   %3 = sext i8 %1 to i32
@@ -64,8 +75,12 @@ define i32 @cast_removal_test(i32 %a) {
 define i1 @trunc_cmp_test(i32 %a, i32 %b) {
   ; CHECK-LABEL: define i1 @trunc_cmp_test(
   ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-  ; CHECK: icmp slt i32 [[A]], [[B]]
-  ; CHECK: icmp sgt i32 [[A]], [[B]]
+  ; CHECK: [[ASHL:%.*]] = shl i32 [[A]], 24
+  ; CHECK: [[ASIGNED:%.*]] = ashr i32 [[ASHL]], 24
+  ; CHECK: [[BSHL:%.*]] = shl i32 [[B]], 24
+  ; CHECK: [[BSIGNED:%.*]] = ashr i32 [[BSHL]], 24
+  ; CHECK: icmp slt i32 [[ASIGNED]], [[BSIGNED]]
+  ; CHECK: icmp sgt i32
   %1 = trunc nsw i32 %a to i8
   %2 = trunc nsw i32 %b to i8
   %3 = icmp slt i8 %1, %2
@@ -89,8 +104,8 @@ define i32 @first_operand_imm_test(i32 %a) {
 define i16 @i16_test(i16 %a) {
   ; CHECK-LABEL: define i16 @i16_test(
   ; CHECK-SAME: i16 [[A:%.*]]) {
-  ; CHECK-NOT: trunc
-  ; CHECK: sub i16 0, [[A]]
+  ; CHECK: [[EXT:%.*]] = zext i16 [[A]] to i32
+  ; CHECK: sub i32 0, [[EXT]]
   ; CHECK-NOT: sext i8
   %1 = trunc nsw i16 %a to i8
   %2 = sub i8 0, %1
@@ -112,7 +127,9 @@ define i32 @scalar_i8_geps() {
   ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4
   ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [1 x i32], ptr [[ALLOCA]], i32 0, i32 0
   ; CHECK:         [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-  ; CHECK-NEXT:    ret i32 [[LOAD]]
+  ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[LOAD]], 24
+  ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
+  ; CHECK-NEXT:    ret i32 [[SIGNED]]
     %1 = alloca i8, align 4
     %2 = getelementptr inbounds nuw i8, ptr %1, i32 0
     %3 = load i8, ptr %2
@@ -125,7 +142,9 @@ define i32 @i8_geps_index0() {
   ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 8
   ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i32 0, i32 0
   ; CHECK:         [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-  ; CHECK-NEXT:    ret i32 [[LOAD]]
+  ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[LOAD]], 24
+  ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
+  ; CHECK-NEXT:    ret i32 [[SIGNED]]
   %1 = alloca [2 x i32], align 8
   %2 = load i8, ptr %1
   %3 = sext i8 %2 to i32
@@ -137,7 +156,9 @@ define i32 @i8_geps_index1() {
   ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i32], align 8
   ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i32 0, i32 1
   ; CHECK:         [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-  ; CHECK-NEXT:    ret i32 [[LOAD]]
+  ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[LOAD]], 24
+  ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
+  ; CHECK-NEXT:    ret i32 [[SIGNED]]
   %1 = alloca [2 x i32], align 8
   %2 = getelementptr inbounds nuw i8, ptr %1, i32 4
   %3 = load i8, ptr %2
@@ -153,7 +174,9 @@ define i32 @i8_gep_store() {
   ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i32], ptr [[ALLOCA]], i32 0, i32 1
   ; CHECK-NEXT:    store i32 1, ptr [[GEP]], align 4
   ; CHECK:         [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-  ; CHECK-NEXT:    ret i32 [[LOAD]]
+  ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[LOAD]], 24
+  ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
+  ; CHECK-NEXT:    ret i32 [[SIGNED]]
   %1 = alloca [2 x i32], align 8
   store i8 0, ptr %1
   %2 = getelementptr inbounds nuw i8, ptr %1, i32 4
