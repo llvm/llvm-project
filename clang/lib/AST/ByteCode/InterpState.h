@@ -27,6 +27,7 @@ namespace clang {
 namespace interp {
 class Context;
 class SourceMapper;
+struct EvalSettings;
 
 struct StdAllocatorCaller {
 
@@ -45,11 +46,11 @@ enum class EvaluationKind : uint8_t {
 /// Interpreter context.
 class InterpState final : public State {
 public:
-  InterpState(const State &Parent, Program &P, InterpStack &Stk,
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
               FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);
 
-  InterpState(const State &Parent, Program &P, InterpStack &Stk,
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
               FrameAllocator &FA, Context &Ctx, const Function *Func);
 
   InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
