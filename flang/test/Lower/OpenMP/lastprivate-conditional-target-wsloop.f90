@@ -8,13 +8,24 @@
 ! Case 5: non-unit positive step (host_eval step is a positive constant)
 ! Case 6: multiple list items of different types (real + logical)
 ! Case 7: firstprivate + conditional lastprivate on a target loop
-! Case 8: outlined orphaned do in a declare-target routine
+! Case 8: repeated encounter -- a surrounding loop inside the target wraps a
+!         combined parallel do; reset goes before omp.parallel (inside the loop)
+! Case 9: explicit parallel around a loop that repeats the do; reset goes in an
+!         omp.single at the construct site (inside the parallel)
+! Case 10: repeated encounter with multiple list items (integer + real); every
+!          packed value/index field is reset per encounter
+! Case 11: outlined orphaned do in a declare-target routine
 !
 ! Cases 1-7 place the conditional-LP struct (fir.alloca) at the start of the
 ! omp.target body -- or the omp.teams body when a teams is present, so each team
 ! gets its own copy.  In cases 1, 2 and 4 the copy-back is placed after
 ! omp.parallel; in case 3 there is no parallel, so it goes right after the
-! wsloop.  Case 8 is orphaned (no lexical target/parallel) and uses the
+! wsloop.  Cases 8 and 9 keep the struct alloca at the target-body start but
+! re-initialize the accumulator per encounter so a repeated construct does not
+! inherit a prior winner: case 8's omp.parallel is generated inside the
+! surrounding loop, so the reset goes before omp.parallel; case 9's parallel is
+! explicit and outside the loop, so the reset goes in an omp.single at the
+! construct site.  Case 10 is orphaned (no lexical target/parallel) and uses the
 ! module-scope global plus the omp_get_level/llvm.trap device-safe guard.
 
 ! RUN: bbc -fopenmp -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
@@ -53,7 +64,7 @@ end subroutine
 
 ! -- Struct alloca at beginning of omp.target body ----------------------------
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> {pinned}
+! CHECK:           %[[STRUCT:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
 
 ! -- Init: x=0, $x=-1 --------------------------------------------------------
 ! CHECK:           %[[XCOORD:.*]] = fir.coordinate_of %[[STRUCT]], x
@@ -113,7 +124,7 @@ end subroutine
 
 ! -- Same structure: alloca at target body, reduction on wsloop, guarded copy-back
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT2:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> {pinned}
+! CHECK:           %[[STRUCT2:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
 ! CHECK:           fir.coordinate_of %[[STRUCT2]], x
 ! CHECK:           fir.coordinate_of %[[STRUCT2]], $x
 ! CHECK:           omp.parallel {
@@ -151,7 +162,7 @@ end subroutine
 
 ! -- Struct alloca at beginning of omp.target body ----------------------------
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT3:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> {pinned}
+! CHECK:           %[[STRUCT3:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
 ! CHECK:           fir.coordinate_of %[[STRUCT3]], x
 ! CHECK:           fir.coordinate_of %[[STRUCT3]], $x
 ! -- No enclosing parallel: the wsloop is directly in the target body ---------
@@ -193,7 +204,7 @@ end subroutine
 ! CHECK:         omp.target
 ! CHECK:           omp.teams {
 ! -- Per-team struct alloca inside the teams body -----------------------------
-! CHECK:             %[[STRUCT4:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> {pinned}
+! CHECK:             %[[STRUCT4:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
 ! CHECK:             fir.coordinate_of %[[STRUCT4]], x
 ! CHECK:             fir.coordinate_of %[[STRUCT4]], $x
 ! CHECK:             omp.parallel {
@@ -228,7 +239,7 @@ end subroutine
 
 ! CHECK:         omp.target
 ! CHECK-SAME:      kernel_type(spmd)
-! CHECK:           %[[STRUCT5:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> {pinned}
+! CHECK:           %[[STRUCT5:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
 ! CHECK:           omp.parallel {
 ! CHECK:             omp.wsloop
 ! CHECK-SAME:          reduction(byref @lp_cond_byref_rec__lp_cond_t
@@ -267,7 +278,7 @@ end subroutine
 
 ! -- Struct packs r:f32, l:logical<4> plus $r,$l index fields -----------------
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT6:.*]] = fir.alloca !fir.type<{{.*}}{r:f32,l:!fir.logical<4>,$r:i64,$l:i64}> {pinned}
+! CHECK:           %[[STRUCT6:.*]] = fir.alloca !fir.type<{{.*}}{r:f32,l:!fir.logical<4>,$r:i64,$l:i64}> <{pinned}>
 ! CHECK:           fir.coordinate_of %[[STRUCT6]], r
 ! CHECK:           fir.coordinate_of %[[STRUCT6]], l
 ! CHECK:           fir.coordinate_of %[[STRUCT6]], $r
@@ -306,7 +317,7 @@ subroutine target_do_firstprivate(n, x)
 end subroutine
 
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT7:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> {pinned}
+! CHECK:           %[[STRUCT7:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
 ! CHECK:           omp.parallel {
 ! -- x is BOTH firstprivate (private copy) and carries the conditional reduction
 ! CHECK:             omp.wsloop
@@ -327,7 +338,131 @@ end subroutine
 ! CHECK:           omp.terminator
 
 ! =============================================================================
-! Case 8: OUTLINED orphaned do in a declare-target routine
+! Case 8: repeated encounter -- surrounding loop inside the target wraps the construct
+! =============================================================================
+! The struct alloca is placed once at the target-body start, but the accumulator
+! is reset on each encounter (inside the surrounding loop, before omp.parallel),
+! so a later encounter's equal- or lower-index winner is not blocked by a stale
+! one.
+! CHECK-LABEL: func @_QPtarget_repeated
+
+subroutine target_repeated(n, a, x, j)
+  implicit none
+  integer, intent(in) :: n, a(n)
+  integer :: x, i, j
+  !$omp target map(tofrom: x) map(to: a)
+  do j = 1, 2
+    !$omp parallel do lastprivate(conditional: x)
+    do i = 1, n
+      if (a(i) > 0) x = a(i)
+    end do
+  end do
+  !$omp end target
+end subroutine
+
+! -- Struct alloca is placed once, at the target-body start -------------------
+! CHECK:         omp.target
+! CHECK:           %[[STRUCTR:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
+! -- Per-encounter reset: inside the surrounding loop, BEFORE omp.parallel ----
+! -- Both fields are reset each encounter: value to 0, then index to -1.
+! CHECK:           fir.do_loop
+! CHECK:             fir.coordinate_of %[[STRUCTR]], x
+! CHECK:             %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:             fir.store %[[C0]] to %{{.*}} : !fir.ref<i32>
+! CHECK:             fir.coordinate_of %[[STRUCTR]], $x
+! CHECK:             %[[NEG1:.*]] = arith.constant -1 : i64
+! CHECK:             fir.store %[[NEG1]] to %{{.*}} : !fir.ref<i64>
+! CHECK:             omp.parallel {
+! CHECK:               omp.wsloop
+! CHECK-SAME:            reduction(byref @lp_cond_byref_rec__lp_cond_t
+
+! =============================================================================
+! Case 9: explicit parallel around a loop that repeats the worksharing do
+! =============================================================================
+! The parallel is entered once and a surrounding loop inside it repeats the
+! `omp do`.  A reset before the parallel would run only once, so the accumulator
+! is reset per encounter in an omp.single at the construct site (inside the loop,
+! before the wsloop); the single's exit barrier orders the reset before the
+! reduction.
+! CHECK-LABEL: func @_QPtarget_parallel_repeated_do
+
+subroutine target_parallel_repeated_do(n, a, x, j)
+  implicit none
+  integer, intent(in) :: n, a(n)
+  integer :: x, i, j
+  !$omp target map(tofrom: x) map(to: a)
+  !$omp parallel
+  do j = 1, 2
+    !$omp do lastprivate(conditional: x)
+    do i = 1, n
+      if (a(i) > 0) x = a(i)
+    end do
+    !$omp end do
+  end do
+  !$omp end parallel
+  !$omp end target
+end subroutine
+
+! CHECK:         omp.target
+! CHECK:           %[[SR:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,$x:i64}> <{pinned}>
+! CHECK:           omp.parallel
+! CHECK:             fir.do_loop
+! -- reset per encounter in omp.single at the construct site, before the wsloop
+! CHECK:               omp.single {
+! CHECK:                 fir.coordinate_of %[[SR]], x
+! CHECK:                 arith.constant 0 : i32
+! CHECK:                 fir.coordinate_of %[[SR]], $x
+! CHECK:                 %[[NEG:.*]] = arith.constant -1 : i64
+! CHECK:                 fir.store %[[NEG]] to %{{.*}} : !fir.ref<i64>
+! CHECK:                 omp.terminator
+! CHECK:               }
+! CHECK:               omp.wsloop
+! CHECK-SAME:            reduction(byref @lp_cond_byref_rec__lp_cond_t
+
+! =============================================================================
+! Case 10: repeated encounter with multiple list items (integer + real)
+! =============================================================================
+! Confirms every packed value and index field is reset per encounter, not just
+! the first list item's.
+! CHECK-LABEL: func @_QPtarget_repeated_multi
+
+subroutine target_repeated_multi(n, a, x, r)
+  implicit none
+  integer, intent(in) :: n, a(n)
+  integer :: x, i, j
+  real :: r
+  !$omp target map(tofrom: x, r) map(to: a)
+  do j = 1, 2
+    !$omp parallel do lastprivate(conditional: x, r)
+    do i = 1, n
+      if (a(i) > 0) x = a(i)
+      if (a(i) > 5) r = real(a(i))
+    end do
+  end do
+  !$omp end target
+end subroutine
+
+! CHECK:         omp.target
+! CHECK:           %[[SM:.*]] = fir.alloca !fir.type<_lp_cond_t.{{l[0-9]+\.[0-9]+}}{x:i32,r:f32,$x:i64,$r:i64}> <{pinned}>
+! -- All four fields (both values, both indices) are reset per encounter,
+! -- inside the loop, before omp.parallel.
+! CHECK:           fir.do_loop
+! CHECK:             fir.coordinate_of %[[SM]], x
+! CHECK:             arith.constant 0 : i32
+! CHECK:             fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
+! CHECK:             fir.coordinate_of %[[SM]], r
+! CHECK:             arith.constant 0.0{{.*}} : f32
+! CHECK:             fir.store %{{.*}} to %{{.*}} : !fir.ref<f32>
+! CHECK:             fir.coordinate_of %[[SM]], $x
+! CHECK:             arith.constant -1 : i64
+! CHECK:             fir.store %{{.*}} to %{{.*}} : !fir.ref<i64>
+! CHECK:             fir.coordinate_of %[[SM]], $r
+! CHECK:             arith.constant -1 : i64
+! CHECK:             fir.store %{{.*}} to %{{.*}} : !fir.ref<i64>
+! CHECK:             omp.parallel {
+
+! =============================================================================
+! Case 11: OUTLINED orphaned do in a declare-target routine
 ! =============================================================================
 ! No lexical enclosing target/parallel, so the struct is the module-scope global
 ! (shared by all threads that call the routine), guarded by omp_get_level /

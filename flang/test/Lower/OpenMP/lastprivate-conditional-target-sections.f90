@@ -39,7 +39,7 @@ end subroutine
 
 ! -- Per-target struct alloca at the start of the target body -----------------
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,y:i32,$x:i64,$y:i64}> {pinned}
+! CHECK:           %[[STRUCT:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,y:i32,$x:i64,$y:i64}> <{pinned}>
 ! CHECK:           fir.coordinate_of %[[STRUCT]], x
 ! CHECK:           fir.coordinate_of %[[STRUCT]], y
 ! CHECK:           omp.parallel {
@@ -79,7 +79,7 @@ end subroutine
 ! -- Struct alloca inside the omp.teams body (per team) -----------------------
 ! CHECK:         omp.target
 ! CHECK:           omp.teams {
-! CHECK:             %[[STRUCT2:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,y:i32,$x:i64,$y:i64}> {pinned}
+! CHECK:             %[[STRUCT2:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,y:i32,$x:i64,$y:i64}> <{pinned}>
 ! CHECK:             omp.parallel {
 ! CHECK:               omp.sections
 ! CHECK-SAME:            reduction(byref @lp_cond_byref_rec__lp_cond_t
@@ -113,7 +113,7 @@ end subroutine
 
 ! -- Struct alloca in the target body; sections directly in target (no parallel)
 ! CHECK:         omp.target
-! CHECK:           %[[STRUCT3:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,y:i32,$x:i64,$y:i64}> {pinned}
+! CHECK:           %[[STRUCT3:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,y:i32,$x:i64,$y:i64}> <{pinned}>
 ! CHECK-NOT:       omp.parallel
 ! CHECK:           omp.sections
 ! CHECK-SAME:        reduction(byref @lp_cond_byref_rec__lp_cond_t
@@ -150,7 +150,7 @@ end subroutine
 ! -- variable is declared, and the firstprivate seed loads it AFTER the declare
 ! -- (placing the seed after the declares is what avoids the earlier "does not
 ! -- dominate" verifier error).
-! CHECK:           %[[STRUCT4:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,$x:i64}> {pinned}
+! CHECK:           %[[STRUCT4:.*]] = fir.alloca !fir.type<{{.*}}{x:i32,$x:i64}> <{pinned}>
 ! CHECK:           %[[XDECL:.*]]:2 = hlfir.declare %{{.*}}Ex"
 ! -- default init writes the value field once ...
 ! CHECK:           fir.coordinate_of %[[STRUCT4]], x

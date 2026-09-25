@@ -5206,18 +5206,63 @@ static void placeConditionalLpStructOnHost(lower::AbstractConverter &converter,
 /// there is no teams) to give every team its own reduction target rather than
 /// racing on a single shared alloca.  The copy-back is likewise deferred until
 /// after the parallel region (see genStandaloneDo).
+///
+/// The struct is re-initialized per encounter so a construct repeated by a
+/// surrounding loop does not inherit a prior encounter's value/index.  The
+/// reset goes before the enclosing omp.parallel when it directly wraps the
+/// construct (also keeps an SPMD parallel body limited to the loop nest); in an
+/// omp.single at the construct site when a loop sits between the parallel and
+/// the construct (per encounter, and the single's barrier orders it before the
+/// reduction); or at the construct site when there is no enclosing parallel.
 static void placeConditionalLpStructInTarget(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              fir::RecordType lpType,
                                              mlir::omp::TargetOp targetOp,
                                              mlir::Value &lpAlloca) {
+  // Alloca once at the teams/target region start (per-team storage).
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    if (mlir::omp::TeamsOp teamsOp = findEnclosingTeamsOp(builder))
+      builder.setInsertionPointToStart(&teamsOp.getRegion().front());
+    else
+      builder.setInsertionPointToStart(&targetOp.getRegion().front());
+    lpAlloca = builder.createTemporary(loc, lpType);
+  }
+
   mlir::OpBuilder::InsertionGuard guard(builder);
-  if (mlir::omp::TeamsOp teamsOp = findEnclosingTeamsOp(builder))
-    builder.setInsertionPointToStart(&teamsOp.getRegion().front());
-  else
-    builder.setInsertionPointToStart(&targetOp.getRegion().front());
-  lpAlloca = builder.createTemporary(loc, lpType);
+  mlir::omp::ParallelOp enclosingParallel = findEnclosingParallelOp(builder);
+  if (!enclosingParallel) {
+    // No enclosing parallel: reset at the construct site.
+    initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+    return;
+  }
+
+  // A loop between the parallel and the construct means the parallel is entered
+  // once while the construct repeats, so a reset before the parallel runs once.
+  bool loopBetweenParallelAndConstruct = false;
+  for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp();
+       op && op != enclosingParallel.getOperation(); op = op->getParentOp()) {
+    if (mlir::isa<mlir::LoopLikeOpInterface>(op)) {
+      loopBetweenParallelAndConstruct = true;
+      break;
+    }
+  }
+
+  if (!loopBetweenParallelAndConstruct) {
+    // Parallel directly wraps the construct: reset once before it.
+    builder.setInsertionPoint(enclosingParallel);
+    initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+    return;
+  }
+
+  // Loop repeats the construct inside the parallel: reset per encounter in an
+  // omp.single (legal here since this is a generic, non-SPMD kernel).
+  mlir::omp::SingleOperands singleOps;
+  auto singleOp = mlir::omp::SingleOp::create(builder, loc, singleOps);
+  mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+  builder.setInsertionPointToStart(singleBlock);
   initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+  mlir::omp::TerminatorOp::create(builder, loc);
 }
 
 static mlir::omp::WsloopOp genStandaloneDo(
