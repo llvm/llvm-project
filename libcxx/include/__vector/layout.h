@@ -19,6 +19,7 @@
 #include <__memory/uninitialized_algorithms.h>
 #include <__split_buffer>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__utility/assume.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -159,19 +160,27 @@ public:
   /// `__begin_ptr()` is not called `data()` because `vector::data()` returns `T*`, but `__begin_`
   /// is allowed to be a fancy pointer.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __begin_ptr() _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, __begin_);
     return __begin_;
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __begin_ptr() const _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, __begin_);
     return __begin_;
   }
 
   /// Returns a built-in pointer to the beginning of the buffer.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp* __data() _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, __begin_);
     return std::__to_address(__begin_);
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const* __data() const _NOEXCEPT {
+    if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+      std::__assume_separate_storage(this, __begin_);
     return std::__to_address(__begin_);
   }
 

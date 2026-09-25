@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_ASSUME_H
 
 #include <__config>
+#include <__type_traits/is_constant_evaluated.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,6 +25,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // See https://discourse.llvm.org/t/llvm-assume-blocks-optimization/71609 for a discussion.
 
 _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void __assume(bool __cond) { [[__assume__(__cond)]]; }
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__assume_separate_storage([[__maybe_unused__]] const void* __a, [[__maybe_unused__]] const void* __b) {
+#if __has_builtin(__builtin_assume_separate_storage)
+  // __builtin_assume_separate_storage claims constexpr support, but it's broken. See https://llvm.org/PR225335.
+  if (!__libcpp_is_constant_evaluated())
+    __builtin_assume_separate_storage(__a, __b);
+#endif
+}
 
 _LIBCPP_END_NAMESPACE_STD
 
