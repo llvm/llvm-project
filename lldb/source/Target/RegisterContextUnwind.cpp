@@ -37,10 +37,12 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <cassert>
 #include <memory>
+#ifdef _AIX
+#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -423,8 +425,29 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   // pointer and trapped, so don't force the arch default unwind plan in that
   // case.
   ModuleSP pc_module_sp(m_current_pc.GetModule());
+
+#ifdef _AIX
+  // Check if this PC is a trap handler by address 
+  bool is_trap_handler_addr = false;
+  {
+    PlatformSP platform_sp = process->GetTarget().GetPlatform();
+    if (platform_sp && platform_sp->IsTrapHandlerAddress(pc)) {
+      is_trap_handler_addr = true;
+      m_frame_type = eTrapHandlerFrame;
+      UNWIND_LOG(log,
+                 "pc=0x{0:x} matched IsTrapHandlerAddress -- marking as "
+                 "eTrapHandlerFrame (no module, address-range path)",
+                 pc);
+    }
+  }
+#endif // _AIX
+
   if ((!m_current_pc.IsValid() || !pc_module_sp) &&
-      above_trap_handler == false) {
+      above_trap_handler == false
+#ifdef _AIX
+      && !is_trap_handler_addr
+#endif // _AIX
+      ) {
     UNWIND_LOG(log, "using architectural default unwind method");
 
     // Test the pc value to see if we know it's in an unmapped/non-executable
@@ -876,11 +899,14 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   }
 
   // No Module for the current pc, try using the architecture default unwind.
+  // Continue procesing if it is a TrapHandlerFrame (AIX specific)
   ModuleSP pc_module_sp(m_current_pc.GetModule());
   if (!m_current_pc.IsValid() || !pc_module_sp ||
       pc_module_sp->GetObjectFile() == nullptr) {
-    m_frame_type = eNormalFrame;
-    return arch_default_unwind_plan_sp;
+    if (m_frame_type != eTrapHandlerFrame) {
+      m_frame_type = eNormalFrame;
+      return arch_default_unwind_plan_sp;
+    }
   }
 
   // Function outlining is a clang feature where common blocks of instructions
@@ -918,6 +944,27 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   // .ARM.exidx tables have unwind information for this address, else fall back
   // to the architectural default unwind.
   if (!func_unwinders_sp) {
+#ifdef _AIX
+    if (m_frame_type == eTrapHandlerFrame && process) {
+      m_fast_unwind_plan_sp.reset();
+      lldb::PlatformSP platform = process->GetTarget().GetPlatform();
+      const ArchSpec arch = process->GetTarget().GetArchitecture();
+      addr_t pc_addr = m_current_pc.GetLoadAddress(&process->GetTarget());
+      UNWIND_LOG(log,
+                 "no FuncUnwinders for eTrapHandlerFrame pc=0x{0:x} "
+                 "(AIX address-range path): calling GetTrapHandlerUnwindPlan",
+                 pc_addr);
+      if (pc_addr != LLDB_INVALID_ADDRESS) {
+        if (auto unwind_plan_sp =
+                platform->GetTrapHandlerUnwindPlan(arch, pc_addr)) {
+          UNWIND_LOG(log, "AIX address-range path: returning plan \"{0}\"",
+                     unwind_plan_sp->GetSourceName().GetCString());
+          return unwind_plan_sp;
+        }
+      }
+    }
+#endif // _AIX
+
     m_frame_type = eNormalFrame;
 
     if (!pc_module_sp || !pc_module_sp->GetObjectFile() ||
@@ -1314,6 +1361,19 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
         return true;
       }
     }
+#ifdef _AIX
+    // Also check by address for platforms that detect trampolines by fixed
+    // address range rather than symbol name
+    addr_t pc = m_current_pc.GetLoadAddress(&process->GetTarget());
+    if (pc != LLDB_INVALID_ADDRESS && platform_sp->IsTrapHandlerAddress(pc)) {
+      Log *log = GetLog(LLDBLog::Unwind);
+      UNWIND_LOG(log,
+                 "IsTrapHandlerAddress matched pc=0x{0:x} -- marking frame as "
+                 "trap handler (AIX address-range path)",
+                 pc);
+      return true;
+    }
+#endif // _AIX
   }
   const std::vector<ConstString> user_specified_trap_handler_names(
       m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames());
@@ -1597,6 +1657,10 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
 // Answer the question: Where did THIS frame save the CALLER frame ("previous"
 // frame)'s register value?
 
+#ifdef _AIX
+extern bool UGLY_HACK_NULL_TOPFRAME;
+#endif
+
 enum UnwindLLDB::RegisterSearchResult
 RegisterContextUnwind::SavedLocationForRegister(
     uint32_t lldb_regnum,
@@ -1647,6 +1711,12 @@ RegisterContextUnwind::SavedLocationForRegister(
       regloc.type =
           UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext;
       regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
+#ifdef _AIX
+      // FIXME: hack - assign the LR register number
+      if (UGLY_HACK_NULL_TOPFRAME && regloc.location.register_number == 0x20) {
+        regloc.location.register_number = 0x23;
+      }
+#endif
       m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
       UNWIND_LOG(log,
                  "supplying caller's register {0} ({1}) from the live "
@@ -2534,3 +2604,38 @@ bool RegisterContextUnwind::ReadPC(addr_t &pc) {
     return false;
   }
 }
+
+#ifdef _AIX
+bool RegisterContextUnwind::ReadLR(addr_t &lr) {
+  if (!IsValid())
+    return false;
+
+  bool above_trap_handler = false;
+  if (GetNextFrame().get() && GetNextFrame()->IsValid() &&
+      GetNextFrame()->IsTrapHandlerFrame())
+    above_trap_handler = true;
+
+  if (ReadGPRValue(eRegisterKindLLDB, gpr_lr_ppc64le, lr)) {
+    // A lr value of 0 or 1 is impossible in the middle of the stack -- it
+    // indicates the end of a stack walk.
+    // On the currently executing frame (or such a frame interrupted
+    // asynchronously by sigtramp et al) this may occur if code has jumped
+    // through a NULL pointer -- we want to be able to unwind past that frame
+    // to help find the bug.
+
+    ProcessSP process_sp (m_thread.GetProcess());
+    if (process_sp)
+    {
+        ABI *abi = process_sp->GetABI().get();
+        if (abi)
+            lr = abi->FixCodeAddress(lr);
+    }
+
+    return !(m_all_registers_available == false &&
+             above_trap_handler == false && (lr == 0 || lr == 1));
+  } else {
+    return false;
+  }
+}
+#endif
+

@@ -308,6 +308,13 @@ void Target::DeleteCurrentProcess() {
     // the section load history that can mess up subsequent processes.
     m_section_load_history.Clear();
 
+#if defined(_AIX)
+    // On AIX, clear the loaded image list when the process is destroyed.
+    // This ensures that a subsequent rerun reloads the current set of
+    // modules and prevents stale image entries from previous runs
+    m_images.Clear();
+#endif
+
     CleanupProcess();
 
     m_process_sp.reset();
