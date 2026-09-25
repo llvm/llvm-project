@@ -69,9 +69,12 @@ class MapExtDefNamesConsumer : public ASTConsumer {
 public:
   MapExtDefNamesConsumer(ExtDefNameMap &NMap, ASTContext &Context,
                          StringRef astFilePath = StringRef())
-      : Ctx(Context), SM(Context.getSourceManager()), NameMap(NMap) {
-    CurrentFileName = astFilePath.str();
-  }
+      : Ctx(Context), SM(Context.getSourceManager()),
+        CurrentFileName(astFilePath.str()), NameMap(NMap),
+        MultipleDefDiagID(Context.getDiagnostics().getCustomDiagID(
+            DiagnosticsEngine::Warning, "multiple definitions are found for "
+                                        "the same key during generating index, "
+                                        "previous definition found in '%0'")) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     handleDecl(Context.getTranslationUnitDecl());
@@ -85,6 +88,7 @@ private:
   SourceManager &SM;
   std::string CurrentFileName;
   ExtDefNameMap &NameMap;
+  const unsigned int MultipleDefDiagID;
 };
 
 void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
@@ -128,8 +132,7 @@ void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
     if (SM.isInMainFile(defStart)) {
       if (!NameMap.addName(*LookupName, DD->hasAttr<WeakAttr>(),
                            CurrentFileName)) {
-        Ctx.getDiagnostics().Report(DD->getLocation(),
-                                    diag::warn_multiple_def_index)
+        Ctx.getDiagnostics().Report(DD->getLocation(), MultipleDefDiagID)
             << NameMap.lookupName(*LookupName);
       }
     }
