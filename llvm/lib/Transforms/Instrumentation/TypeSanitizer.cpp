@@ -349,12 +349,11 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
     if ((unsigned)i + 1 < MD->getNumOperands()) {
       Offset =
           mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
-    } else if (i == 1 && MD->getNumOperands() == 2) {
+    } else {
+     assert(i == 1 && MD->getNumOperands() == 2  && "Malformed TBAA MD.");
       // The third operand for a scalar tag is actually optional, its absence
       // indicating an offset of zero.
       Offset = 0;
-    } else {
-      assert(false && "Malformed TBAA MD.");
     }
 
     Members.push_back(std::make_pair(Member, Offset));
