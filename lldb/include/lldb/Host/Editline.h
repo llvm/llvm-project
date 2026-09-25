@@ -97,8 +97,17 @@ using IsInputCompleteCallbackType =
 using FixIndentationCallbackType =
     llvm::unique_function<int(Editline *, StringList &, int)>;
 
-using SuggestionCallbackType =
-    llvm::unique_function<std::optional<std::string>(llvm::StringRef)>;
+/// Computes the inline autosuggestion for the given \p line.
+///
+/// Returns the text that should be appended to \p line as a grayed-out inline
+/// suggestion, or std::nullopt if there is no suggestion. When a suggestion is
+/// returned, \p description is filled with an optional human-readable
+/// description of the suggestion (for example, what tab completion would
+/// insert). The description is only displayed to the user in parentheses after
+/// the suggestion and is never inserted into the line when the suggestion is
+/// accepted.
+using SuggestionCallbackType = llvm::unique_function<std::optional<std::string>(
+    llvm::StringRef line, std::string &description)>;
 
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
 

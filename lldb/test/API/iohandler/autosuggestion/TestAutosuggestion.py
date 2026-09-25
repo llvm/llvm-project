@@ -17,6 +17,7 @@ class TestCase(PExpectTest):
     ANSI_RESET = "\x1b[0m"
     ANSI_RED = "\x1b[31m"
     ANSI_CYAN = "\x1b[36m"
+    ANSI_CLEAR_RIGHT = "\x1b[K"
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
@@ -161,6 +162,10 @@ class TestCase(PExpectTest):
         tab completion would insert, instead of consulting command history."""
         self.launch(
             use_colors=True,
+            # Use a wide terminal so the full description fits on one line and
+            # is not truncated (see test_autosuggestion_tab_mode_description_
+            # truncation for the truncation behavior).
+            dimensions=(100, 500),
             extra_args=[
                 "-o",
                 "settings set show-autosuggestion tab-mode",
@@ -180,24 +185,73 @@ class TestCase(PExpectTest):
 
         self.child.send("hel")
         # Note that the ANSI_RESET color prevents us from accepting a longer
-        # suggestion as a valid test outcome.
+        # suggestion as a valid test outcome. Because 'hel' has a single
+        # completion ('help'), tab-mode also shows that command's description
+        # in parentheses after the suggested 'p'.
+        help_description = (
+            "Show a list of all debugger commands, "
+            "or give details about a specific command."
+        )
         self.child.expect_exact(
             cursor_horizontal_abs("(lldb) he")
             + "l"
             + self.ANSI_FAINT
-            + "p"
+            + "p (" + help_description + ")"
             + self.ANSI_RESET
         )
 
         # Applying the suggestion with Ctrl-F should leave the line as 'help'
-        # (not 'help frame'). Running it lists all commands.
+        # (not 'help frame', and without the parenthesized description). Running
+        # it lists all commands.
         self.child.send(ctrl_f + "\n")
         self.child.expect_exact("Debugger commands:")
 
         # Tab completion must still work in tab-mode. Pressing tab on 'hel'
-        # should complete to 'help'; running it lists all commands.
-        self.child.send("hel\t\n")
+        # should complete to 'help'; running it lists all commands. Accepting a
+        # completion must also clear the previously shown suggestion and its
+        # description from the line (rather than leaving the description behind).
+        self.child.send("hel")
+        self.child.expect_exact(
+            self.ANSI_FAINT + "p (" + help_description + ")" + self.ANSI_RESET
+        )
+        self.child.send("\t")
+        # The whole line is cleared (\r + erase-to-end-of-line) and redrawn as
+        # 'help ', so no part of the description is left on screen.
+        self.child.expect_exact(
+            "\r" + self.ANSI_CLEAR_RIGHT + "(lldb) help "
+        )
+        self.child.send("\n")
         self.child.expect_exact("Debugger commands:")
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_autosuggestion_tab_mode_description_truncation(self):
+        """Test that a tab-mode suggestion (including its description) that is
+        wider than the remaining space on the line is truncated with an
+        ellipsis, so it does not wrap and corrupt the terminal."""
+        # Use a narrow terminal so the 'help' description does not fit.
+        self.launch(
+            use_colors=True,
+            dimensions=(24, 40),
+            extra_args=[
+                "-o",
+                "settings set show-autosuggestion tab-mode",
+                "-o",
+                "settings set use-color true",
+            ],
+        )
+
+        # The suggestion for 'hel' starts at column 10 ('(lldb) hel'), leaving
+        # 30 columns on the 40-wide terminal. The suggestion is truncated to
+        # those 30 columns, the last three being the ellipsis.
+        self.child.send("hel")
+        self.child.expect_exact(
+            cursor_horizontal_abs("(lldb) he")
+            + "l"
+            + self.ANSI_FAINT
+            + "p (Show a list of all debug..."
+            + self.ANSI_RESET
+        )
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
