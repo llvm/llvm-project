@@ -221,8 +221,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   const MipsTargetMachine &TM;
 
-  Triple TargetTriple;
-
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   std::unique_ptr<const MipsInstrInfo> InstrInfo;
   std::unique_ptr<const MipsFrameLowering> FrameLowering;
@@ -314,8 +312,8 @@ public:
     return (HasSym32 && isABI_N64()) || isABI_N32() || isABI_O32();
   }
   bool isSingleFloat() const { return IsSingleFloat; }
-  bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
-  bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
+  bool isTargetCOFF() const { return getTargetTriple().isOSBinFormatCOFF(); }
+  bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
   bool hasVFPU() const { return HasVFPU; }
   bool inMips16Mode() const { return InMips16Mode; }
   // Hard float for mips16 means essentially to compile as soft float
@@ -361,7 +359,7 @@ public:
   bool hasExtractInsert() const { return !inMips16Mode() && hasMips32r2(); }
   bool hasMTHC1() const { return hasMips32r2(); }
 
-  bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetWindows() const { return getTargetTriple().isOSWindows(); }
 
   bool isXRaySupported() const override { return true; }
 
