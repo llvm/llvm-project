@@ -1788,28 +1788,24 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   if (ProfileRecord.UniformityBits.empty())
     return;
 
-  // Annotate uniformity on each instrumented IR basic block so later codegen
-  // passes (MachineFunction) can consume it without relying on fragile block
-  // numbering heuristics.
-  //
-  // Metadata kind: LLVMContext::MD_block_uniformity_profile
-  // Payload: i1 (true = uniform, false = divergent)
+  // Annotate each uniform instrumented IR basic block so later codegen passes
+  // (MachineFunction) can consume it without relying on fragile block numbering
+  // heuristics.
+  // Metadata presence on a terminator means uniform; divergent blocks have no
+  // terminator metadata.
 
   std::vector<BasicBlock *> InstrumentBBs;
   FuncInfo.getInstrumentBBs(InstrumentBBs);
 
   LLVMContext &Ctx = F.getContext();
-  Type *Int1Ty = Type::getInt1Ty(Ctx);
-
+  MDNode *UniformMD = MDNode::get(Ctx, {});
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
     if (!BB || !BB->getTerminator())
       continue;
     bool IsUniform = ProfileRecord.isBlockUniform(I);
-    auto *MD = MDNode::get(
-        Ctx, ConstantAsMetadata::get(ConstantInt::get(Int1Ty, IsUniform)));
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
-                                     MD);
+                                     IsUniform ? UniformMD : nullptr);
   }
 
   LLVM_DEBUG({
