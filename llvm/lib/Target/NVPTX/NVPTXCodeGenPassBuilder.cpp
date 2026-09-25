@@ -234,7 +234,7 @@ void NVPTXCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
                     PMW);
     addFunctionPass(NVPTXTagInvariantLoadsPass(), PMW);
     if (!DisableNVPTXIRPeephole)
-      addFunctionPass(NVPTXIRPeepholePass(), PMW);
+      addFunctionPass(NVPTXIRPeepholePass(TM), PMW);
   }
 
   if (ST.hasPTXASUnreachableBug()) {
