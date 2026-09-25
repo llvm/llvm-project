@@ -2425,42 +2425,50 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
   case X86::BI__builtin_ia32_reduce_fadd_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "vector.reduce.fadd", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], ops[1]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(cir::FastMathFlags::reassoc);
+    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[1],
+                                    ops[0], cir::VecReduceKind::FAdd, fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
   case X86::BI__builtin_ia32_reduce_fmul_ps512:
   case X86::BI__builtin_ia32_reduce_fmul_ph512:
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
   case X86::BI__builtin_ia32_reduce_fmul_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "vector.reduce.fmul", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], ops[1]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(cir::FastMathFlags::reassoc);
+    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[1],
+                                    ops[0], cir::VecReduceKind::FMul, fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
   case X86::BI__builtin_ia32_reduce_fmax_ps512:
   case X86::BI__builtin_ia32_reduce_fmax_ph512:
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
   case X86::BI__builtin_ia32_reduce_fmax_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), "vector.reduce.fmax",
-        vecTy.getElementType(), mlir::ValueRange{ops[0]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(cir::FastMathFlags::nnan);
+    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                    mlir::Value{}, cir::VecReduceKind::FMax,
+                                    fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
   case X86::BI__builtin_ia32_reduce_fmin_ps512:
   case X86::BI__builtin_ia32_reduce_fmin_ph512:
   case X86::BI__builtin_ia32_reduce_fmin_ph256:
   case X86::BI__builtin_ia32_reduce_fmin_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), "vector.reduce.fmin",
-        vecTy.getElementType(), mlir::ValueRange{ops[0]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(cir::FastMathFlags::nnan);
+    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                    mlir::Value{}, cir::VecReduceKind::FMin,
+                                    fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
