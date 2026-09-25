@@ -1103,8 +1103,11 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
+  /// Assumptions holds predicates which are applied to the exit conditions
+  /// before they are analyzed;
   LLVM_ABI const SCEV *getPredicatedBackedgeTakenCount(
-      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates,
+      const SCEVPredicate *Assumptions = nullptr);
 
   /// When successful, this returns a SCEVConstant that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
@@ -1133,8 +1136,11 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
+  /// Assumptions holds predicates which are applied to the exit conditions
+  /// before they are analyzed;
   LLVM_ABI const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
-      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates,
+      const SCEVPredicate *Assumptions = nullptr);
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
@@ -1922,6 +1928,8 @@ private:
   /// Cache the predicated backedge-taken count of the loops for this
   /// function as they are computed.
   DenseMap<const Loop *, BackedgeTakenInfo> PredicatedBackedgeTakenCounts;
+
+  const SCEVPredicate *AssumedPreds = nullptr;
 
   /// Loops whose backedge taken counts directly use this non-constant SCEV.
   DenseMap<const SCEV *, SmallPtrSet<PointerIntPair<const Loop *, 1, bool>, 4>>
@@ -2714,6 +2722,10 @@ public:
   /// Adds a new predicate.
   LLVM_ABI void addPredicate(const SCEVPredicate &Pred);
 
+  LLVM_ABI void addAssumption(const SCEVPredicate *Assumption);
+
+  ArrayRef<const SCEVPredicate *> getAssumptions() const { return Assumptions; }
+
   /// Adds all predicates in \p Preds.
   LLVM_ABI void addPredicates(ArrayRef<const SCEVPredicate *> Preds);
 
@@ -2780,6 +2792,10 @@ private:
 
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
+
+  SmallVector<const SCEVPredicate *, 2> Assumptions;
+
+  std::unique_ptr<SCEVUnionPredicate> UnionAssumptions;
 
   /// The constant max trip count for the loop.
   std::optional<unsigned> SmallConstantMaxTripCount;
