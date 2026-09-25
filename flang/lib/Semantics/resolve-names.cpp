@@ -46,6 +46,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <limits>
 #include <list>
 #include <map>
 #include <set>
@@ -1323,7 +1325,7 @@ private:
   // Info about current ENUM
   struct EnumeratorState {
     // Enum value must hold inside a C_INT (7.6.2).
-    std::optional<int> value{0};
+    std::optional<std::int64_t> value{0};
   } enumerationState_;
   // Set for OldParameterStmt processing
   bool inOldStyleParameterStmt_{false};
@@ -6435,6 +6437,10 @@ bool DeclarationVisitor::Pre(const parser::NamedConstant &x) {
 
 bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   const parser::Name &name{std::get<parser::NamedConstant>(enumerator.t).v};
+  constexpr std::int64_t minCInt{
+      std::numeric_limits<std::int32_t>::min()};
+  constexpr std::int64_t maxCInt{
+      std::numeric_limits<std::int32_t>::max()};
   Symbol *symbol{FindInScope(name)};
   if (symbol && !symbol->has<UnknownDetails>()) {
     // Contrary to named constants appearing in a PARAMETER statement,
@@ -6473,9 +6479,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
       value = EvaluateInt64(context(), *init);
     }
     if (value) {
-      // Cast all init expressions to C_INT so that they can then be
-      // safely incremented (see 7.6 Note 2).
-      enumerationState_.value = static_cast<int>(*value);
+      enumerationState_.value = *value;
     } else {
       Say(name,
           "Enumerator value could not be computed "
@@ -6485,10 +6489,20 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
     }
   }
 
+  if (enumerationState_.value &&
+      (*enumerationState_.value < minCInt ||
+          *enumerationState_.value > maxCInt)) {
+    Say(name, "Enumerator value is out of range for INTEGER(%d)"_err_en_US,
+        evaluate::CInteger::kind);
+    enumerationState_.value = std::nullopt;
+  }
+
   if (symbol) {
     if (enumerationState_.value) {
       symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{*enumerationState_.value}});
+          evaluate::Expr<evaluate::CInteger>{
+              static_cast<evaluate::CInteger::Scalar>(
+                  *enumerationState_.value)}});
     } else {
       context().SetError(*symbol);
     }
