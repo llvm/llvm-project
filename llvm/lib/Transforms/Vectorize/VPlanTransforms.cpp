@@ -879,7 +879,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 /// constant is also matched, and \p PostIncStart is set to the constant start
 /// value of the affine expression \p VPV computes.
 static VPWidenInductionRecipe *
-getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
+getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
                    VPValue **PostIncStart = nullptr) {
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
@@ -888,8 +888,6 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
     if (IntOrFpIV && IntOrFpIV->getTruncInst())
       return nullptr;
-    if (PostIncStart)
-      *PostIncStart = WideIV->getStartValue();
     return WideIV;
   }
 
@@ -939,27 +937,22 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
   if (!PostIncStart)
     return IsWideIVInc() ? WideIV : nullptr;
 
-  // start + C + i * step stays affine for any constant C, so both the step and
-  // any other constant offset can be folded into the start value.
+  // start + C + i * step stays affine for any constant C, including the step,
+  // so it can be folded into the start value.
   const APInt *C;
   APInt Offset;
-  if (IsWideIVInc()) {
-    if (!match(WideIV->getStepValue(), m_APInt(C)))
-      return nullptr;
+  if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
     Offset = *C;
-  } else if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C)))) {
-    Offset = *C;
-  } else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C)))) {
+  else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C))))
     Offset = -*C;
-  } else {
+  else
     return nullptr;
-  }
 
   const APInt *StartC;
-  if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
-      StartC->getBitWidth() != Offset.getBitWidth())
+  if (!match(WideIV->getStartValue(), m_APInt(StartC)))
     return nullptr;
-  *PostIncStart = Plan.getConstantInt(*StartC + Offset);
+  *PostIncStart =
+      WideIV->getParent()->getPlan()->getConstantInt(*StartC + Offset);
   return WideIV;
 }
 
@@ -972,7 +965,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
                                m_VPValue(Incoming))))
     return nullptr;
 
-  auto *WideIV = getOptimizableIVOf(Incoming, Plan, PSE);
+  auto *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -1054,7 +1047,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                            m_VPValue(Incoming)))))
     return nullptr;
 
-  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, Plan, PSE);
+  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -5983,11 +5976,12 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-      VPValue *Start;
-      VPWidenInductionRecipe *WideIV =
-          getOptimizableIVOf(Op, Plan, PSE, &Start);
+      VPValue *Start = nullptr;
+      VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Op, PSE, &Start);
       if (!WideIV)
         continue;
+      if (!Start)
+        Start = WideIV->getStartValue();
 
       // Replacing a free truncate would add an induction update instruction to
       // each iteration of the loop. The canonical induction is exempt, as it
