@@ -202,7 +202,10 @@ int main(int argc, const char **argv) {
             // That's harmless today since clangd-indexer doesn't consult
             // config during the parse, but a real fix would need libTooling
             // changes to keep the context alive for the whole invocation.
-            clang::clangd::WithContext WithCfg(ContextProvider(AbsFile));
+            std::optional<clang::clangd::WithContext> WithCfg;
+            if (llvm::sys::path::is_absolute(File)) {
+              WithCfg.emplace(ContextProvider(File));
+            }
 
             clang::tooling::CompileCommand Cmd;
             Cmd.CommandLine = Args;
