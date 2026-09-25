@@ -380,6 +380,7 @@
 ; GCN-O2-SDAG-NEXT:       tailduplication
 ; GCN-O2-SDAG-NEXT:       machine-cp
 ; GCN-O2-SDAG-NEXT:       post-ra-pseudos
+; GCN-O2-SDAG-NEXT:       amdgpu-break-load-cluster-deps
 ; GCN-O2-SDAG-NEXT:       si-shrink-instructions
 ; GCN-O2-SDAG-NEXT:       si-post-ra-bundler
 ; GCN-O2-SDAG-NEXT:       postmisched
@@ -574,6 +575,7 @@
 ; GCN-O2-GISEL-NEXT:       tailduplication
 ; GCN-O2-GISEL-NEXT:       machine-cp
 ; GCN-O2-GISEL-NEXT:       post-ra-pseudos
+; GCN-O2-GISEL-NEXT:       amdgpu-break-load-cluster-deps
 ; GCN-O2-GISEL-NEXT:       si-shrink-instructions
 ; GCN-O2-GISEL-NEXT:       si-post-ra-bundler
 ; GCN-O2-GISEL-NEXT:       postmisched
@@ -761,6 +763,7 @@
 ; GCN-O3-SDAG-NEXT:       tailduplication
 ; GCN-O3-SDAG-NEXT:       machine-cp
 ; GCN-O3-SDAG-NEXT:       post-ra-pseudos
+; GCN-O3-SDAG-NEXT:       amdgpu-break-load-cluster-deps
 ; GCN-O3-SDAG-NEXT:       si-shrink-instructions
 ; GCN-O3-SDAG-NEXT:       si-post-ra-bundler
 ; GCN-O3-SDAG-NEXT:       postmisched
@@ -955,6 +958,7 @@
 ; GCN-O3-GISEL-NEXT:       tailduplication
 ; GCN-O3-GISEL-NEXT:       machine-cp
 ; GCN-O3-GISEL-NEXT:       post-ra-pseudos
+; GCN-O3-GISEL-NEXT:       amdgpu-break-load-cluster-deps
 ; GCN-O3-GISEL-NEXT:       si-shrink-instructions
 ; GCN-O3-GISEL-NEXT:       si-post-ra-bundler
 ; GCN-O3-GISEL-NEXT:       postmisched

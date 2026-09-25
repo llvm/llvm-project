@@ -9,55 +9,55 @@
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 ; PREGFX10-LABEL: tbuffer_load:
 ; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v12, 0
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] idxen
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] idxen glc
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen slc
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[12:15], v12, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen glc
+; PREGFX10-NEXT:    v_mov_b32_e32 v16, 0
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v16, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] idxen
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v16, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] idxen glc
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v16, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen slc
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[12:15], v16, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen glc
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: tbuffer_load:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v16, 0
+; GFX10-NEXT:    v_mov_b32_e32 v17, 0
 ; GFX10-NEXT:    s_clause 0x3
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v16, s[0:3], 0 format:78 idxen
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v16, s[0:3], 0 format:[BUF_FMT_32_32_SINT] idxen glc
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v16, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen slc
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[12:15], v16, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen glc dlc
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v17, s[0:3], 0 format:78 idxen
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v17, s[0:3], 0 format:[BUF_FMT_32_32_SINT] idxen glc
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v17, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen slc
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[12:15], v17, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: tbuffer_load:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v12, 0
+; GFX11-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX11-NEXT:    s_clause 0x3
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], 0 format:78 idxen
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] idxen glc
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen slc
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[12:15], v12, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen glc dlc
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v16, s[0:3], 0 format:78 idxen
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[4:7], v16, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] idxen glc
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[8:11], v16, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen slc
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[12:15], v16, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: tbuffer_load:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v12, 0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX12-SDAG-NEXT:    s_clause 0x3
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], null format:78 idxen
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen th:TH_LOAD_NT
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_HT
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[12:15], v12, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_RT_NT
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[0:3], v16, s[0:3], null format:78 idxen
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[4:7], v16, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen th:TH_LOAD_NT
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[8:11], v16, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_HT
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[12:15], v16, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_RT_NT
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: tbuffer_load:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v12, 0
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX12-GISEL-NEXT:    s_clause 0x3
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], null format:78 idxen
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen th:TH_LOAD_NT
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_HT
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[12:15], v12, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_RT_NT
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[0:3], v16, s[0:3], null format:78 idxen
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[4:7], v16, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen th:TH_LOAD_NT
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[8:11], v16, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_HT
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[12:15], v16, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen th:TH_LOAD_RT_NT
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x3
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
@@ -147,52 +147,52 @@ main_body:
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_large(<4 x i32> inreg, i32 inreg %soffs) {
 ; PREGFX10-LABEL: tbuffer_load_immoffs_large:
 ; PREGFX10:       ; %bb.0:
-; PREGFX10-NEXT:    v_mov_b32_e32 v8, 0
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], 61 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] idxen offset:4095
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_SSCALED] idxen offset:73
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:1
+; PREGFX10-NEXT:    v_mov_b32_e32 v12, 0
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], 61 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] idxen offset:4095
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_SSCALED] idxen offset:73
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:1
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: tbuffer_load_immoffs_large:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v12, 0
+; GFX10-NEXT:    v_mov_b32_e32 v13, 0
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], 61 format:[BUF_FMT_10_10_10_2_SSCALED] idxen offset:4095
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], s4 format:[BUF_FMT_32_32_UINT] idxen offset:73
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], s4 format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:1
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v13, s[0:3], 61 format:[BUF_FMT_10_10_10_2_SSCALED] idxen offset:4095
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[4:7], v13, s[0:3], s4 format:[BUF_FMT_32_32_UINT] idxen offset:73
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[8:11], v13, s[0:3], s4 format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: tbuffer_load_immoffs_large:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
+; GFX11-NEXT:    v_mov_b32_e32 v12, 0
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], 61 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], s4 format:77 idxen offset:1
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], 61 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], s4 format:77 idxen offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: tbuffer_load_immoffs_large:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v12, 0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s5, 61
 ; GFX12-SDAG-NEXT:    s_clause 0x2
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
-; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], s4 format:77 idxen offset:1
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
+; GFX12-SDAG-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], s4 format:77 idxen offset:1
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: tbuffer_load_immoffs_large:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, 0
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v12, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, 61
 ; GFX12-GISEL-NEXT:    s_clause 0x2
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
-; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], s4 format:77 idxen offset:1
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[0:3], v12, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[4:7], v12, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
+; GFX12-GISEL-NEXT:    tbuffer_load_format_xyzw v[8:11], v12, s[0:3], s4 format:77 idxen offset:1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
