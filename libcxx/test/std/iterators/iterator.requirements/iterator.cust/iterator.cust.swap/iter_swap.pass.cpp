@@ -179,11 +179,7 @@ constexpr bool test()
   {
     auto arr = std::array<move_tracker, 2>();
     std::ranges::iter_swap(arr.begin(), arr.begin() + 1);
-    if (std::is_constant_evaluated()) {
-      assert(arr[0].moves() == 1 && arr[1].moves() == 3);
-    } else {
-      assert(arr[0].moves() == 1 && arr[1].moves() == 2);
-    }
+    assert(arr[0].moves() == 1 && arr[1].moves() == 2);
   }
   {
     int buff[2] = {1, 2};

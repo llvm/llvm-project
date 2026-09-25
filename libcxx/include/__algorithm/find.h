@@ -29,6 +29,7 @@
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
+#include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 #include <limits>
 
@@ -116,10 +117,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
 
 #ifndef _LIBCPP_CXX03_LANG
 // trivially equality comparable implementations
+// Note that we can't use any of the optimized implementations below for volatile types, since they read the range
+// through a non-volatile lvalue.
 template <class _Tp,
           class _Up,
           class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && __is_trivially_equality_comparable_v<_Tp, _Up>, int> = 0>
+          __enable_if_t<__is_identity<_Proj>::value && !is_volatile<_Tp>::value && !is_volatile<_Up>::value &&
+                            __is_trivially_equality_comparable_v<_Tp, _Up>,
+                        int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
   if constexpr (sizeof(_Tp) == 1) {
     if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
