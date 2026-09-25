@@ -3158,14 +3158,14 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     // Look for:
     //   add (add x, y), 1
     // And if the target does not like this form then turn into:
-    //   sub y, (xor x, -1)
+    //   sub x, (xor y, -1)
     if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.getOpcode() == ISD::ADD &&
         N0.hasOneUse() &&
         // Limit this to after legalization if the add has wrap flags
         (Level >= AfterLegalizeDAG || (!N->getFlags().hasNoUnsignedWrap() &&
                                        !N->getFlags().hasNoSignedWrap()))) {
-      SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
-      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(1), Not);
+      SDValue Not = DAG.getNOT(DL, N0.getOperand(1), VT);
+      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), Not);
     }
   }
 
@@ -3494,14 +3494,14 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
   // Look for:
   //   add (add x, 1), y
   // And if the target does not like this form then turn into:
-  //   sub y, (xor x, -1)
+  //   sub x, (xor y, -1)
   if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.getOpcode() == ISD::ADD &&
       N0.hasOneUse() && isOneOrOneSplat(N0.getOperand(1)) &&
       // Limit this to after legalization if the add has wrap flags
       (Level >= AfterLegalizeDAG || (!N0->getFlags().hasNoUnsignedWrap() &&
                                      !N0->getFlags().hasNoSignedWrap()))) {
-    SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
-    return DAG.getNode(ISD::SUB, DL, VT, N1, Not);
+    SDValue Not = DAG.getNOT(DL, N1, VT);
+    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), Not);
   }
 
   if (N0.getOpcode() == ISD::SUB && N0.hasOneUse()) {
