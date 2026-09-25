@@ -3982,6 +3982,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
+      case BundleAttr::Range:
         break;
 
       // This cannot be simplified

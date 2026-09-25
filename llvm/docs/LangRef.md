@@ -1942,6 +1942,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+(attr_range)=
+
 `range(<ty> <a>, <b>)`
 :   This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -3318,6 +3320,14 @@ The following attributes are currently accepted:
 `"separate_storage"(ptr %p1, ptr %p2)`
 :   This indicates that no pointer {ref}`based <pointeraliasing>` on one of its
     arguments can alias any pointer based on the other.
+
+`"range"(iN %val, iN %lower_bound, iN %upper_bound, i1 %inclusive)`
+:   Equivalent to {ref}`range(iN %lower_bound, %upper_bound) <attr_range>` on
+    `%val`, except that `%inclusive` determines whether the upper bound is
+    inclusive or exclusive and `%upper_bound` is always allowed to be equal to
+    `%lower_bound`. `%lower_bound == %upper_bound` and `%inclusive` being
+    false implies an empty range, while `%lower_bound == %upper_bound - 1` and
+    `%inclusive` being true implies a full range.
 
 For example:
 
@@ -13873,7 +13883,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -13882,7 +13892,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -13891,7 +13901,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -13907,14 +13917,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
