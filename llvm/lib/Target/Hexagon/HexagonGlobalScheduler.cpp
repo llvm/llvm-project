@@ -16,10 +16,8 @@
 //===----------------------------------------------------------------------===//
 #include "Hexagon.h"
 #include "HexagonGlobalRegion.h"
-#include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "HexagonVLIWPacketizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -27,7 +25,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
-#include "llvm/CodeGen/LatencyPriorityQueue.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -39,17 +36,14 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -113,11 +107,11 @@ static cl::opt<unsigned> SecondaryCandidateQueueSize("pull-up-sec-queue-size",
                                                      cl::Hidden, cl::init(2));
 
 static cl::opt<bool> PostPullUpOpt(
-    "post-pull-up-opt", cl::Hidden, cl::Optional, cl::init(true),
+    "post-pull-up-opt", cl::Hidden, cl::init(true),
     cl::desc("Enable opt. exposed by pull-up e.g., remove redundant jumps"));
 
 static cl::opt<bool> SpeculateNonPredInsn(
-    "speculate-non-pred-insn", cl::Hidden, cl::Optional, cl::init(true),
+    "speculate-non-pred-insn", cl::Hidden, cl::init(true),
     cl::desc("Speculate non-predicable instructions in parent BB"));
 
 static cl::opt<bool>
@@ -437,8 +431,6 @@ private:
   bool canAddMIToThisPacket(
       MachineInstr *MI,
       SmallVector<MachineInstr *, HEXAGON_PACKET_SIZE> &Bundle);
-
-  bool CanPromoteToDotNew(MachineInstr *MI, unsigned Reg);
 
   bool pullUpPeelBBLoop(MachineBasicBlock *PredBB, MachineBasicBlock *LoopBB);
 

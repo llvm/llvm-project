@@ -2545,8 +2545,7 @@ define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmal4xfloat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v0.2s, #1
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-GI-NEXT:    movi v0.4s, #1
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-NEXT:    ret
@@ -2583,19 +2582,10 @@ define <2 x i32> @fcmnv2xfloat(<2 x float> %A, <2 x float> %B) {
 }
 
 define <4 x i32> @fcmnv4xfloat(<4 x float> %A, <4 x float> %B) {
-; CHECK-SD-LABEL: fcmnv4xfloat:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcmnv4xfloat:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fcmnv4xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
   %tmp3 = fcmp false <4 x float> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4

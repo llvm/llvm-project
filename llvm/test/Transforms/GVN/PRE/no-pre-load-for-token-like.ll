@@ -11,24 +11,24 @@ define ptr @main() {
 ; CHECK:       [[ENTRY_IF_END_I_CRIT_EDGE]]:
 ; CHECK-NEXT:    br label %[[IF_END_I:.*]]
 ; CHECK:       [[IF_THEN_I]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) [[TMP0]], i32 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") poison)
+; CHECK-NEXT:    [[USE1:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") [[TMP0]])
 ; CHECK-NEXT:    br label %[[IF_END_I]]
 ; CHECK:       [[IF_END_I]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) [[TMP2]], i32 0)
-; CHECK-NEXT:    ret ptr [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") poison)
+; CHECK-NEXT:    [[USE2:%.*]] = call target("amdgpu.stridemark") @llvm.ssa.copy.tamdgpu.stridemarkt(target("amdgpu.stridemark") [[TMP2]])
+; CHECK-NEXT:    ret ptr null
 ;
 entry:
   br i1 false, label %if.end.i, label %if.then.i
 
 if.then.i:                                        ; preds = %entry
-  %0 = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-  %1 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) %0, i32 0)
+  %token1 = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") poison)
+  %use1 = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") %token1)
   br label %if.end.i
 
 if.end.i:                                         ; preds = %if.then.i, %entry
-  %2 = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-  %3 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) %2, i32 0)
-  ret ptr %3
+  %token2 = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") poison)
+  %use2 = call target("amdgpu.stridemark") @llvm.ssa.copy(target("amdgpu.stridemark") %token2)
+  ret ptr null
 }

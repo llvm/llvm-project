@@ -32,7 +32,7 @@ func.func @block_redundant_vector_no_predicate(%arg0: memref<32xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>, acc.gpu_block_redundant = #acc.gpu_block_redundant}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

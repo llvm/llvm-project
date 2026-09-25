@@ -15,7 +15,6 @@
 #include "AArch64MCAsmInfo.h"
 #include "AArch64MCLFIRewriter.h"
 #include "AArch64WinCOFFStreamer.h"
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"

@@ -61,7 +61,6 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <type_traits>
 
 using namespace llvm;
@@ -83,7 +82,7 @@ static cl::list<std::string>
     ConfigFiles("instrumentor-read-config-files",
                 cl::desc("Read the instrumentor configuration from the "
                          "specified JSON files (comma separated)"),
-                cl::ZeroOrMore, cl::CommaSeparated);
+                cl::CommaSeparated);
 
 /// The user option to specify an input file to read the configuration file
 /// paths from.
@@ -1174,7 +1173,7 @@ Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
   auto &AI = cast<AllocaInst>(V);
   const DataLayout &DL = AI.getDataLayout();
   Value *SizeValue = nullptr;
-  TypeSize TypeSize = DL.getTypeAllocSize(AI.getAllocatedType());
+  TypeSize TypeSize = AI.getAllocationBaseSize(DL);
   if (TypeSize.isFixed()) {
     SizeValue = getCI(&Ty, TypeSize.getFixedValue());
   } else {

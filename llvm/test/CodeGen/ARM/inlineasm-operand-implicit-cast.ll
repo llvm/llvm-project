@@ -70,7 +70,7 @@ define arm_aapcscc float @zerobits_float_convoluted_soft() #0 {
 }
 
 ; Check support for returning several double in GPR
-define double @zerobits_double_convoluted_soft() #0 {
+define arm_aapcscc double @zerobits_double_convoluted_soft() #0 {
 ; CHECK-LABEL: zerobits_double_convoluted_soft
 ; CHECK: mov r0, #0
 ; CHECK-NEXT: mov r1, #0

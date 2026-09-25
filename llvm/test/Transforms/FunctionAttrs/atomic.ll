@@ -142,6 +142,17 @@ define void @cmpxchg_acq_rel_arg(ptr %x) {
   ret void
 }
 
+define void @cmpxchg_monotonic_acquire_arg(ptr %x) {
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
+; CHECK-LABEL: define void @cmpxchg_monotonic_acquire_arg(
+; CHECK-SAME: ptr nofree captures(none) [[X:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i32 0, i32 1 monotonic acquire, align 4
+; CHECK-NEXT:    ret void
+;
+  cmpxchg ptr %x, i32 0, i32 1 monotonic acquire
+  ret void
+}
+
 define void @cmpxchg_monotonic_volatile_arg(ptr %x) {
 ; CHECK: Function Attrs: norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @cmpxchg_monotonic_volatile_arg(

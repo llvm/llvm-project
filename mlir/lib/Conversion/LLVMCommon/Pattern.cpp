@@ -55,12 +55,17 @@ Type ConvertToLLVMPattern::getPtrType(unsigned addressSpace) const {
 
 Type ConvertToLLVMPattern::getVoidPtrType() const { return getPtrType(); }
 
+Value mlir::LLVM::createIndexAttrConstant(OpBuilder &builder, Location loc,
+                                          Type resultType, int64_t value) {
+  return LLVM::ConstantOp::create(builder, loc, resultType,
+                                  builder.getIntegerAttr(resultType, value));
+}
+
 Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
                                                     Location loc,
                                                     Type resultType,
                                                     int64_t value) {
-  return LLVM::ConstantOp::create(builder, loc, resultType,
-                                  builder.getIndexAttr(value));
+  return LLVM::createIndexAttrConstant(builder, loc, resultType, value);
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
@@ -367,7 +372,19 @@ LogicalResult LLVM::detail::intrinsicRewrite(
   auto callIntrOp = LLVM::CallIntrinsicOp::create(
       rewriter, loc, resType, rewriter.getStringAttr(intrinsic), operands);
   // Propagate attributes.
-  callIntrOp->setAttrs(op->getAttrDictionary());
+  SmallVector<NamedAttribute> discardableAttrs;
+  auto copyAttr = [&](StringAttr name, Attribute attr) {
+    if (callIntrOp->getInherentAttr(name).has_value())
+      callIntrOp->setInherentAttr(name, attr);
+    else
+      discardableAttrs.emplace_back(name, attr);
+  };
+  for (NamedAttribute attr : op->getDiscardableAttrDictionary())
+    copyAttr(attr.getName(), attr.getValue());
+  op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+    copyAttr(rewriter.getStringAttr(name), attr);
+  });
+  callIntrOp->setDiscardableAttrs(discardableAttrs);
 
   if (numResults <= 1) {
     // Directly replace the original op.
@@ -628,11 +645,10 @@ Value mlir::LLVM::getStridedElementPtr(OpBuilder &builder, Location loc,
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride =
-          ShapedType::isDynamic(strides[i])
-              ? memRefDescriptor.stride(builder, loc, i)
-              : LLVM::ConstantOp::create(builder, loc, indexType,
-                                         builder.getIndexAttr(strides[i]));
+      Value stride = ShapedType::isDynamic(strides[i])
+                         ? memRefDescriptor.stride(builder, loc, i)
+                         : LLVM::createIndexAttrConstant(builder, loc,
+                                                         indexType, strides[i]);
       increment = LLVM::MulOp::create(builder, loc, increment, stride,
                                       intOverflowFlags);
     }

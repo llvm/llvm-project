@@ -117,6 +117,8 @@ private:
   std::optional<std::int64_t> getGangDimensionSize(
       DirectiveContext &dirContext);
   void CheckNotInSameOrSubLevelLoopConstruct();
+  void CheckLoopLevelClauseValue(llvm::StringRef clauseName);
+  void CheckLoopLevelClauseKernelsConflicts();
   void CheckRoutineCallInLoop(const Symbol &);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);

@@ -87,7 +87,7 @@ LLVM_ABI Constant *ConstantFoldInstOperands(
 /// Denormal inputs may be flushed based on the denormal handling mode.
 LLVM_ABI Constant *ConstantFoldCompareInstOperands(
     unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
-    const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, const Function *CxtF = nullptr);
 
 /// Attempt to constant fold a unary operation with the specified operand.
 /// Returns null on failure.
@@ -116,7 +116,7 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
 ///
 /// If the calling function's denormal_fpenv input mode is dynamic for the
 /// floating-point type, returns nullptr for denormal inputs.
-LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Function *CxtF,
                                    bool IsOutput);
 
 /// Attempt to constant fold a cast with the specified operand.  If it
@@ -160,7 +160,8 @@ LLVM_ABI Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
+LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F,
+                                    const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.
@@ -172,7 +173,7 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
 LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
                                          ArrayRef<Constant *> Ops, Type *Ty,
                                          const DataLayout &DL,
-                                         Function *CxtF = nullptr);
+                                         const Function *CxtF = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

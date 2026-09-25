@@ -46,7 +46,7 @@ define void @signed_iv_step_4(i64 %count) {
 ; CHECK-LABEL: define void @signed_iv_step_4(
 ; CHECK-SAME: i64 [[COUNT:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = shl nsw i64 [[COUNT]], 2
+; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i64 [[COUNT]], -1
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
@@ -130,7 +130,7 @@ define void @signed_iv_step_4_start_4(i64 %count) {
 ; CHECK-LABEL: define void @signed_iv_step_4_start_4(
 ; CHECK-SAME: i64 [[COUNT:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = shl nsw i64 [[COUNT]], 2
+; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i64 [[COUNT]], 0
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
@@ -171,7 +171,7 @@ define void @signed_iv_step_4_start_4_missing_precond(i64 %count) {
 ; CHECK-LABEL: define void @signed_iv_step_4_start_4_missing_precond(
 ; CHECK-SAME: i64 [[COUNT:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = shl nsw i64 [[COUNT]], 2
+; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i64 [[COUNT]], -1
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:

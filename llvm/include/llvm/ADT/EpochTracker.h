@@ -71,6 +71,15 @@ public:
     /// HandleBase instance.
     bool isHandleInSync() const { return *EpochAddress == EpochAtCreation; }
 
+    /// Returns true if this handle and RHS can be compared. Both must be either
+    /// default-constructed or point into the same container and no mutation
+    /// has occurred since they were created.
+    bool isComparableWith(const HandleBase &RHS) const {
+      return (!EpochAddress || isHandleInSync()) &&
+             (!RHS.EpochAddress || RHS.isHandleInSync()) &&
+             EpochAddress == RHS.EpochAddress;
+    }
+
     /// Returns a pointer to the epoch word stored in the data structure
     /// this handle points into.  Can be used to check if two iterators point
     /// into the same data structure.
@@ -94,6 +103,7 @@ public:
     HandleBase() = default;
     explicit HandleBase(const DebugEpochBase *) {}
     bool isHandleInSync() const { return true; }
+    bool isComparableWith(const HandleBase &) const { return true; }
     const void *getEpochAddress() const { return nullptr; }
   };
 };

@@ -30,7 +30,7 @@ func.func @alloc_tensor_dynamic(%d0: index) -> tensor<?x16xf32> {
 // CHECK-LABEL: @alloc_tensor_memory_space
 func.func @alloc_tensor_memory_space(%i: index) -> f32 {
   // CHECK: memref.alloc() alignment = 64 : memref<8x16xf32, 1>
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<8x16xf32>
+  %0 = bufferization.alloc_tensor() <{memory_space = 1 : i64}> : tensor<8x16xf32>
   %1 = tensor.extract %0[%i, %i] : tensor<8x16xf32>
   return %1 : f32
 }

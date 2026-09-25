@@ -238,9 +238,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExportBlock);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterNamespace);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterObjCDeclaration);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterRequiresExpression);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterStruct);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterUnion);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExternBlock);
@@ -272,6 +274,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, Enabled);
+  CHECK_PARSE_NESTED_BOOL(SortIncludes, FilesBeforeFolders);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreCase);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreExtension);
 }
@@ -1170,21 +1173,25 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SortIncludes: true", SortIncludes,
               FormatStyle::SortIncludesOptions(
                   {/*Enabled=*/true, /*IgnoreCase=*/false,
-                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
               FormatStyle::SortIncludesOptions{});
   CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
               FormatStyle::SortIncludesOptions(
                   {/*Enabled=*/true, /*IgnoreCase=*/true,
-                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
               FormatStyle::SortIncludesOptions(
                   {/*Enabled=*/true, /*IgnoreCase=*/false,
-                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: Natural", SortIncludes,
               FormatStyle::SortIncludesOptions(
                   {/*Enabled=*/true, /*IgnoreCase=*/false,
-                   /*IgnoreExtension=*/false, /*Natural=*/true}));
+                   /*IgnoreExtension=*/false, /*Natural=*/true,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
               FormatStyle::SortIncludesOptions{});
 

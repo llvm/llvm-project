@@ -7,7 +7,7 @@ attributes(global) subroutine testcdevloc(a)
 end
 
 ! CHECK-LABEL: func.func @_QPtestcdevloc(
-! CHECK-SAME: %[[A_ARG:.*]]: !fir.ref<!fir.array<10xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK-SAME: %[[A_ARG:.*]]: !fir.ref<!fir.array<10xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>{{.*}}}
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ARG]](%{{.*}}) dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtestcdevlocEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%c1{{.*}})  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[A1]] : (!fir.ref<i32>) -> !fir.box<i32>

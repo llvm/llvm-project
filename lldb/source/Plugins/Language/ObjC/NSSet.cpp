@@ -20,6 +20,8 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/Support/Error.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -444,10 +446,13 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(
       obj_at_idx = m_data_ptr + (test_idx * m_ptr_size);
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      obj_at_idx = process_sp->ReadPointerFromMemory(obj_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> obj_at_idx_or_err =
+          process_sp->ReadPointerFromMemory(obj_at_idx);
+      if (!obj_at_idx_or_err) {
+        llvm::consumeError(obj_at_idx_or_err.takeError());
         return lldb::ValueObjectSP();
+      }
+      obj_at_idx = *obj_at_idx_or_err;
 
       test_idx++;
 
@@ -543,7 +548,6 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
     if (!process_sp)
       return lldb::ValueObjectSP();
 
-    Status error;
     lldb::addr_t val_at_idx = 0;
 
     uint32_t tries = 0;
@@ -556,9 +560,13 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
     while (tries < num_children) {
       val_at_idx = m_values_ptr + (test_idx * m_ptr_size);
 
-      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> val_at_idx_or_err =
+          process_sp->ReadPointerFromMemory(val_at_idx);
+      if (!val_at_idx_or_err) {
+        llvm::consumeError(val_at_idx_or_err.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val_at_idx_or_err;
 
       test_idx++;
 
@@ -696,10 +704,13 @@ lldb_private::formatters::
       obj_at_idx = m_objs_addr + (test_idx * m_ptr_size);
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      obj_at_idx = process_sp->ReadPointerFromMemory(obj_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> obj_at_idx_or_err =
+          process_sp->ReadPointerFromMemory(obj_at_idx);
+      if (!obj_at_idx_or_err) {
+        llvm::consumeError(obj_at_idx_or_err.takeError());
         return lldb::ValueObjectSP();
+      }
+      obj_at_idx = *obj_at_idx_or_err;
 
       test_idx++;
 

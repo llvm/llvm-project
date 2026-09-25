@@ -12,15 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// Pattern Matching Support
-
-def GetLo32XForm : SDNodeXForm<imm, [{
-  // Transformation function: get the low 32 bits.
-  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
-}]>;
-
-
-//===----------------------------------------------------------------------===//
 // Random Pseudo Instructions.
 
 // PIC base construction.  This expands to code that looks like this:
@@ -1216,6 +1207,37 @@ def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
 def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
 
+// Flag-setting compares of an atomic load can fold the load into the
+// compare's memory operand like compares of a regular load: the folded form
+// still performs a single full-width load, which on x86 already provides
+// every ordering up to seq_cst.
+def : Pat<(X86cmp (i8 (atomic_load_nonext_8 addr:$src1)), imm:$src2),
+          (CMP8mi addr:$src1, imm:$src2)>;
+def : Pat<(X86cmp (i16 (atomic_load_nonext_16 addr:$src1)), imm:$src2),
+          (CMP16mi addr:$src1, imm:$src2)>;
+def : Pat<(X86cmp (i32 (atomic_load_nonext_32 addr:$src1)), imm:$src2),
+          (CMP32mi addr:$src1, imm:$src2)>;
+def : Pat<(X86cmp (i64 (atomic_load_nonext_64 addr:$src1)), i64immSExt32:$src2),
+          (CMP64mi32 addr:$src1, i64immSExt32:$src2)>;
+
+def : Pat<(X86cmp (i8 (atomic_load_nonext_8 addr:$src1)), GR8:$src2),
+          (CMP8mr addr:$src1, GR8:$src2)>;
+def : Pat<(X86cmp (i16 (atomic_load_nonext_16 addr:$src1)), GR16:$src2),
+          (CMP16mr addr:$src1, GR16:$src2)>;
+def : Pat<(X86cmp (i32 (atomic_load_nonext_32 addr:$src1)), GR32:$src2),
+          (CMP32mr addr:$src1, GR32:$src2)>;
+def : Pat<(X86cmp (i64 (atomic_load_nonext_64 addr:$src1)), GR64:$src2),
+          (CMP64mr addr:$src1, GR64:$src2)>;
+
+def : Pat<(X86cmp GR8:$src1, (i8 (atomic_load_nonext_8 addr:$src2))),
+          (CMP8rm GR8:$src1, addr:$src2)>;
+def : Pat<(X86cmp GR16:$src1, (i16 (atomic_load_nonext_16 addr:$src2))),
+          (CMP16rm GR16:$src1, addr:$src2)>;
+def : Pat<(X86cmp GR32:$src1, (i32 (atomic_load_nonext_32 addr:$src2))),
+          (CMP32rm GR32:$src1, addr:$src2)>;
+def : Pat<(X86cmp GR64:$src1, (i64 (atomic_load_nonext_64 addr:$src2))),
+          (CMP64rm GR64:$src1, addr:$src2)>;
+
 // load atomic <2 x i16>
 def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
   (MOVDI2PDIrm addr:$src)>, Requires<[UseSSE2]>;
@@ -1927,10 +1949,17 @@ def : Pat<(store (i8 (trunc_su (srl_su GR16:$src, (i8 8)))), addr:$dst),
 // we need to be more careful. We're using a NOREX instruction here in case
 // register allocation fails to keep the two registers together. So we need to
 // make sure we can't accidentally mix R8-R15 with an h-register.
-def : Pat<(X86xor_flag (i8 (trunc GR32:$src)),
-                       (i8 (trunc (srl_su GR32:$src, (i8 8))))),
+// We additionally require the (non-flags) result of the xor to be unused: the
+// GR8_NOREX result may end up in a high-byte register (AH/BH/CH/DH), and any
+// user that widens or otherwise consumes it (e.g. by zero/sign-extending it
+// into an R8-R15 register) could require a REX prefix, which cannot encode a
+// high-byte register. The encoder would then fail. So restrict the trick to the
+// case where the value result has no uses at all (see xor_flag_dead_result).
+def : Pat<(xor_flag_dead_result (i8 (trunc GR32:$src)),
+                                (i8 (trunc (srl_su GR32:$src, (i8 8))))),
           (XOR8rr_NOREX (EXTRACT_SUBREG GR32:$src, sub_8bit),
-                        (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
+                        (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>,
+      Requires<[In64BitMode]>;
 
 // (shl x, 1) ==> (add x, x)
 // Note that if x is undef (immediate or otherwise), we could theoretically

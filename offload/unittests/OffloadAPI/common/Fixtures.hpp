@@ -261,7 +261,8 @@ struct OffloadProgramTestWithParam : OffloadDeviceTestWithParam<T> {
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary(ProgramName, this->Device,
                                                   DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(this->Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(this->Context, this->Device,
+                                   DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
   }
 
@@ -346,7 +347,7 @@ struct LaunchKernelTestBase : OffloadQueueTest {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary(program, Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
 
     LaunchArgs.Dimensions = 1;

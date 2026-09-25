@@ -1,0 +1,39 @@
+# Two inputs with overlapping replacements (same offset, different text) —
+# drop-all removes both from the merged YAML, the tool emits a one-line
+# stderr cluster summary, AND writes a SARIF 2.1.0 document at the path
+# given by --sarif-conflicts-out= containing one error-level result with
+# two relatedLocations (one per dropped candidate).
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml %t.dir/b.yaml 2> %t.dir/stderr.txt
+
+# Drop-all unchanged: zero replacements survive at the conflict offset.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-NOT: ReplacementText:
+
+# SARIF doc has the expected top-level shape and exactly one result. Note:
+# llvm::json::Object emits its keys in alphabetical order, so within each
+# result the field order is level, locations, message, relatedLocations,
+# ruleId. Top-level keys are $schema, runs, version (alphabetical too).
+# RUN: FileCheck --input-file=%t.dir/conflicts.sarif --check-prefix=SARIF %s
+# SARIF: "$schema": "https://json.schemastore.org/sarif-2.1.0.json"
+# SARIF: "results":
+# SARIF: "level": "error"
+# SARIF: "uri": "file://{{.*}}/foo.cpp"
+# SARIF: "byteOffset": 10
+# SARIF: "relatedLocations":
+# SARIF: "id": 1
+# SARIF: "id": 2
+# SARIF: "ruleId": "clang-reforge-replacement-conflict"
+# SARIF: "name": "clang-ssaf-src-edit-merge"
+# SARIF: "version": "2.1.0"

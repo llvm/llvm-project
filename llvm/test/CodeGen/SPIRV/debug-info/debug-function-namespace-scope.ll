@@ -1,24 +1,27 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o %t.spt
 ; RUN: FileCheck %s --check-prefix=CHECK --input-file %t.spt
-; RUN: FileCheck %s --check-prefix=NO-DBG-FUNC --input-file %t.spt
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; DISubprogram definition scoped in a DINamespace. Namespace scopes are not yet
-; supported as DebugFunction Parent, so no DebugFunction is emitted.
+; DISubprogram definition scoped in a DINamespace. The namespace is emitted as
+; a DebugLexicalBlock (with a Name operand) and used as the DebugFunction
+; Parent.
 
 ; CHECK: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: OpString "ns_fn"
+; CHECK-DAG: [[NS:%[0-9]+]] = OpString "ns"
 ; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}tmp{{[/\\]}}namespace-scope-fn.c"
+; CHECK-DAG: [[EMPTY_PATH:%[0-9]+]] = OpString ""
 ; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32]] 100
 ; CHECK-DAG: [[C5:%[0-9]+]] = OpConstant [[I32]] 5
 ; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32]] 0
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit [[C100]] [[C5]] [[DS]] [[C0]]
+; CHECK-DAG: [[CU:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit [[C100]] [[C5]] [[DS]] [[C0]]
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypeFunction [[C0]] [[VOID]]
-
-; NO-DBG-FUNC-NOT: DebugFunction
+; CHECK-DAG: [[NS_SRC:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[EMPTY_PATH]]
+; CHECK-DAG: [[LB:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLexicalBlock [[NS_SRC]] [[C0]] [[C0]] [[CU]] [[NS]]
+; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugFunction {{%[0-9]+}} {{%[0-9]+}} [[DS]] {{%[0-9]+}} [[C0]] [[LB]]
 
 target triple = "spirv64-unknown-unknown"
 

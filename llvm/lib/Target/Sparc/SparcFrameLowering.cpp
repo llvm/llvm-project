@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -202,8 +201,8 @@ bool SparcFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 // allocas or if frame pointer elimination is disabled.
 bool SparcFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
+  return MF.disableFramePointerElim() || MFI.hasVarSizedObjects() ||
+         MFI.isFrameAddressTaken();
 }
 
 StackOffset

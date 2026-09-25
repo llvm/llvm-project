@@ -580,6 +580,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       }
     }
     if (converted) {
+      auto restorer{context.WithConstantContext()};
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
         InexactLiteralConversionFlagClearer{}(folded);

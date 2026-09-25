@@ -2044,7 +2044,7 @@ define void @addrec_gep_inbounds_nneg(ptr %p, ptr %end) {
 ; CHECK-LABEL: 'addrec_gep_inbounds_nneg'
 ; CHECK-NEXT:  Classifying expressions for: @addrec_gep_inbounds_nneg
 ; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%p,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %p to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%p,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %p to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %p)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr %iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %p)<nuw>,+,4}<nuw><%loop> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-4 + (-1 * (ptrtoaddr ptr %p to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_inbounds_nneg
@@ -2092,7 +2092,7 @@ define void @addrec_gep_nusw_nneg(ptr %p, ptr %end) {
 ; CHECK-LABEL: 'addrec_gep_nusw_nneg'
 ; CHECK-NEXT:  Classifying expressions for: @addrec_gep_nusw_nneg
 ; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%p,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %p to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%p,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %p to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %p)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr nusw i32, ptr %iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %p)<nuw>,+,4}<nuw><%loop> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-4 + (-1 * (ptrtoaddr ptr %p to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_nusw_nneg

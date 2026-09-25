@@ -216,7 +216,7 @@ define nofpclass(pinf) float @no_pinf_result_implies_no_pinf_source(i1 %cond, fl
 ; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
-  %select = select i1 %cond, float %unknown, float 0x7ff0000000000000
+  %select = select i1 %cond, float %unknown, float +inf
   %result = call float @llvm.sqrt.f32(float %select)
   ret float %result
 }

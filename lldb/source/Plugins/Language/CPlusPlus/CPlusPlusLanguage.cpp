@@ -67,9 +67,9 @@ void CPlusPlusLanguage::Terminate() {
 }
 
 std::unique_ptr<Language::MethodName>
-CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
+CPlusPlusLanguage::GetMethodName(llvm::StringRef full_name) const {
   std::unique_ptr<CxxMethodName> cpp_method =
-      std::make_unique<CxxMethodName>(full_name);
+      std::make_unique<CxxMethodName>(full_name.str());
   cpp_method->IsValid();
   return cpp_method;
 }
@@ -80,7 +80,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {eFunctionNameTypeFull, std::nullopt};
 
   FunctionNameType func_name_type = eFunctionNameTypeNone;
-  CxxMethodName method(name);
+  CxxMethodName method(name.GetStringRef().str());
   llvm::StringRef basename = method.GetBasename();
   if (basename.empty()) {
     llvm::StringRef context;
@@ -125,7 +125,7 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
                                         // eventually handle eSymbolTypeData,
                                         // we will want this back)
     {
-      CxxMethodName cxx_method(demangled_name);
+      CxxMethodName cxx_method(demangled_name.GetStringRef().str());
       if (!cxx_method.GetBasename().empty()) {
         std::string shortname;
         if (!cxx_method.GetContext().empty())
@@ -227,10 +227,10 @@ static bool IsTrivialContext(llvm::StringRef context) {
 /// but replaces each argument type with the variable name
 /// and the corresponding pretty-printed value
 static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
-                                            char const *full_name,
+                                            llvm::StringRef full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
-  CPlusPlusLanguage::CxxMethodName cpp_method{ConstString(full_name)};
+  CPlusPlusLanguage::CxxMethodName cpp_method{full_name.str()};
 
   if (!cpp_method.IsValid())
     return false;
@@ -474,7 +474,7 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // function don't have return types and templates in the name.
   // A::B::C::fun(std::vector<T> &) const
   size_t arg_start, arg_end;
-  llvm::StringRef full(m_full.GetCString());
+  llvm::StringRef full(m_full);
   llvm::StringRef parens("()", 2);
   if (ReverseFindMatchingChars(full, parens, arg_start, arg_end)) {
     m_arguments = full.substr(arg_start, arg_end - arg_start + 1);
@@ -511,11 +511,11 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
 }
 
 void CPlusPlusLanguage::CxxMethodName::Parse() {
-  if (!m_parsed && m_full) {
+  if (!m_parsed && !m_full.empty()) {
     if (TrySimplifiedParse()) {
       m_parse_error = false;
     } else {
-      CPlusPlusNameParser parser(m_full.GetStringRef());
+      CPlusPlusNameParser parser(m_full);
       if (auto function = parser.ParseAsFunctionDefinition()) {
         m_basename = function->name.basename;
         m_context = function->name.context;
@@ -555,14 +555,14 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
   // If we can't parse the incoming name, then just check that it contains path.
   if (m_parse_error)
-    return m_full.GetStringRef().contains(path);
+    return llvm::StringRef(m_full).contains(path);
 
   llvm::StringRef identifier;
   llvm::StringRef context;
   const bool success =
       CPlusPlusLanguage::ExtractContextAndIdentifier(path, context, identifier);
   if (!success)
-    return m_full.GetStringRef().contains(path);
+    return llvm::StringRef(m_full).contains(path);
 
   // Basename may include template arguments.
   // E.g.,
@@ -599,7 +599,7 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
-  CxxMethodName demangled_name(demangled);
+  CxxMethodName demangled_name(demangled.GetStringRef().str());
   return demangled_name.ContainsPath(path);
 }
 
@@ -699,7 +699,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
   if (!demangled)
     return ConstString();
 
-  CxxMethodName cpp_name(demangled);
+  CxxMethodName cpp_name(demangled.GetStringRef().str());
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
   if (!scope_qualified_name.size())
@@ -722,7 +722,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
     Mangled mangled(alternate_mangled_name);
     ConstString demangled = mangled.GetDemangledName();
 
-    CxxMethodName alternate_cpp_name(demangled);
+    CxxMethodName alternate_cpp_name(demangled.GetStringRef().str());
     if (!cpp_name.IsValid())
       continue;
 

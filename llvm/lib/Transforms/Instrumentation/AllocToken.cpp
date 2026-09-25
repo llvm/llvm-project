@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -43,11 +42,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SipHash.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>

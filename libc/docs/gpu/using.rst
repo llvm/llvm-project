@@ -27,8 +27,8 @@ file for both the host target and a list of offloading devices. In order to
 support standard compilation flows, the ``clang`` driver uses fat binaries,
 described in the `clang documentation
 <https://clang.llvm.org/docs/OffloadingDesign.html>`_. This linking mode is used
-by the OpenMP toolchain, but is currently opt-in for the CUDA and HIP toolchains
-through the ``--offload-new-driver``` and ``-fgpu-rdc`` flags.
+by the OpenMP toolchain, and is used for the CUDA and HIP toolchains when
+compiling with the ``-fgpu-rdc`` flag.
 
 In order to link the GPU runtime, we simply pass this library to the embedded
 device linker job. This can be done using the ``-Xoffload-linker`` option, which
@@ -39,8 +39,8 @@ this shouldn't be necessary.
 .. code-block:: sh
 
   $> clang openmp.c -fopenmp --offload-arch=gfx90a -Xoffload-linker -lc
-  $> clang cuda.cu --offload-arch=sm_80 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
-  $> clang hip.hip --offload-arch=gfx942 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
+  $> clang cuda.cu --offload-arch=sm_80 -fgpu-rdc -Xoffload-linker -lc
+  $> clang hip.hip --offload-arch=gfx942 -fgpu-rdc -Xoffload-linker -lc
 
 This will automatically link in the needed function definitions if they were
 required by the user's application. Normally using the ``-fgpu-rdc`` option

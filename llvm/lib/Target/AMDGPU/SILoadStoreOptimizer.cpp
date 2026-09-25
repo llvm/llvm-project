@@ -60,11 +60,9 @@
 #include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -1022,7 +1020,8 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   // Check other optional immediate operands for equality.
   AMDGPU::OpName OperandsToMatch[] = {
       AMDGPU::OpName::cpol, AMDGPU::OpName::d16,  AMDGPU::OpName::unorm,
-      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16};
+      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16,
+      AMDGPU::OpName::dim};
 
   for (AMDGPU::OpName op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);
@@ -1321,8 +1320,13 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
-  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
+    if (STM->hasNeedsAligned2addrDS() &&
+        (CI.I->memoperands_empty() ||
+         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
+      return nullptr;
     offsetsCanBeCombined(CI, *STM, Paired, true);
+  }
 
   if (CI.InstClass == DS_WRITE) {
     // Both data operands must be AGPR or VGPR, so the data registers needs to
@@ -1872,6 +1876,11 @@ static bool needsConstrainedOpcode(const GCNSubtarget &STM,
 unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
                                             const CombineInfo &Paired) {
   const unsigned Width = CI.Width + Paired.Width;
+  const CombineInfo &Leading = Paired < CI ? Paired : CI;
+  // If XNACK is enabled, use the constrained opcodes when the first load is
+  // under-aligned.
+  const bool NeedsConstrainedOpc =
+      needsConstrainedOpcode(*STM, Leading.I->memoperands(), Width);
 
   switch (getCommonInstClass(CI, Paired)) {
   default:
@@ -1887,10 +1896,6 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");
   case S_BUFFER_LOAD_IMM: {
-    // If XNACK is enabled, use the constrained opcodes when the first load is
-    // under-aligned.
-    bool NeedsConstrainedOpc =
-        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -1909,10 +1914,6 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     }
   }
   case S_BUFFER_LOAD_SGPR_IMM: {
-    // If XNACK is enabled, use the constrained opcodes when the first load is
-    // under-aligned.
-    bool NeedsConstrainedOpc =
-        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -1931,10 +1932,6 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     }
   }
   case S_LOAD_IMM: {
-    // If XNACK is enabled, use the constrained opcodes when the first load is
-    // under-aligned.
-    bool NeedsConstrainedOpc =
-        needsConstrainedOpcode(*STM, CI.I->memoperands(), Width);
     switch (Width) {
     default:
       return 0;
@@ -2272,7 +2269,7 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
 
   const MachineOperand *BaseOp = nullptr;
 
-  auto Offset = TII->getImmOrMaterializedImm(*Src1);
+  auto Offset = TII->getImmOrMaterializedImm(*MRI, *Src1);
 
   if (Offset) {
     BaseOp = Src0;
@@ -2336,11 +2333,11 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   MachineOperand *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
 
-  auto Offset0P = TII->getImmOrMaterializedImm(*Src0);
+  auto Offset0P = TII->getImmOrMaterializedImm(*MRI, *Src0);
   if (Offset0P)
     BaseLo = *Src1;
   else {
-    if (!(Offset0P = TII->getImmOrMaterializedImm(*Src1)))
+    if (!(Offset0P = TII->getImmOrMaterializedImm(*MRI, *Src1)))
       return;
     BaseLo = *Src0;
   }
@@ -2681,6 +2678,16 @@ SILoadStoreOptimizer::collectMergeableInsts(
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
         continue;
       }
+    } else if (InstClass == MIMG) {
+      // Do not merge MIMG instructions with tfe or lwe enabled.
+      // TFE/LWE add a status result that the image merge path does not model.
+      const auto *TFEOp = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
+      if (TFEOp && TFEOp->getImm())
+        continue;
+
+      const auto *LWEOp = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
+      if (LWEOp && LWEOp->getImm())
+        continue;
     }
 
     CombineInfo CI;

@@ -26,7 +26,6 @@ define half @add_v2HalfH(<2 x half> %bin.rdx)  {
 ;
 ; CHECK-SD-FP16-LABEL: add_v2HalfH:
 ; CHECK-SD-FP16:       // %bb.0:
-; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-FP16-NEXT:    faddp h0, v0.2h
 ; CHECK-SD-FP16-NEXT:    ret
 ;

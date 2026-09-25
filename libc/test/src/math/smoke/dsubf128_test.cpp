@@ -10,4 +10,4 @@
 
 #include "src/math/dsubf128.h"
 
-LIST_SUB_TESTS(double, float128, LIBC_NAMESPACE::dsubf128)
+LIST_SUB_TESTS(Dsubf128, double, float128, LIBC_NAMESPACE::dsubf128)

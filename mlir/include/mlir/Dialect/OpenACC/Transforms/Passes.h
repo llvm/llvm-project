@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES_H
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"

@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -134,13 +135,35 @@ void llvm::verifyAMDGPUFunctionMetadata(VerifierSupport &VS,
   verifyAMDGPUReqdWorkGroupSize(VS, F);
 }
 
+void llvm::verifyAMDGPUGlobalVariable(VerifierSupport &VS,
+                                      const GlobalVariable &GV) {
+  // This is not required for other targets so we only check for AMDGPU.
+  if (!VS.TT.isAMDGPU())
+    return;
+
+  // The VGPR address space is a view of one wave's own vector registers, which
+  // exist only while that wave runs. A global variable needs storage that
+  // outlives any particular wave, so there is nothing here for it to name.
+  if (GV.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("global variable on amdgpu must not be in addrspace(13)",
+                   &GV);
+}
+
 void llvm::verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI) {
   // This is not required for other targets so we only check for AMDGPU.
   if (!VS.TT.isAMDGPU())
     return;
 
-  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    VS.CheckFailed("alloca on amdgpu must be in addrspace(5)", &AI);
+  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS &&
+      AI.getAddressSpace() != AMDGPUAS::VGPR)
+    VS.CheckFailed("alloca on amdgpu must be in addrspace(5) or addrspace(13)",
+                   &AI);
+
+  // Only static allocas can live in VGPRs; a dynamically sized one has no
+  // register-file representation. (Other address spaces are already rejected
+  // above, so this only adds the more specific diagnostic for addrspace(13).)
+  if (!AI.isStaticAlloca() && AI.getAddressSpace() == AMDGPUAS::VGPR)
+    VS.CheckFailed("dynamic alloca on amdgpu must be in addrspace(5)", &AI);
 }
 
 bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {

@@ -192,7 +192,12 @@ public:
   /// environment variable replacement, and whatever other
   /// argument magic the platform defines as part of its typical
   /// user experience
-  static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
+  ///
+  /// \param[in] timeout
+  ///            The maximum time to wait for the shell expansion to
+  ///            complete. A value of std::nullopt means wait forever.
+  static Status ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                     const Timeout<std::micro> &timeout);
 
   /// Run a shell command.
   /// \param[in] command

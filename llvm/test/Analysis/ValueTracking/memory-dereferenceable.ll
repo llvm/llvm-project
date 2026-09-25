@@ -230,8 +230,8 @@ define void @byval(ptr byval(i8) %i8_byval,
 }
 
 ; CHECK-LABEL: 'f_0'
-; GLOBAL: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
-; POINT-NOT: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
+; GLOBAL: %ptr = inttoptr i32 %val to ptr, !dereferenceable !{{[0-9]+}}
+; POINT-NOT: %ptr = inttoptr i32 %val to ptr, !dereferenceable !{{[0-9]+}}
 define i32 @f_0(i32 %val) {
   %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
   call void @mayfree()

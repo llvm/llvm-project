@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -411,31 +410,6 @@ static void emitConstant(uint64_t Val, unsigned Size,
   }
 }
 
-/// Determine if this immediate can fit in a disp8 or a compressed disp8 for
-/// EVEX instructions. \p will be set to the value to pass to the ImmOffset
-/// parameter of emitImmediate.
-static bool isDispOrCDisp8(uint64_t TSFlags, int Value, int &ImmOffset) {
-  bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
-
-  unsigned CD8_Scale =
-      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
-  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
-  if (!HasEVEX || !CD8_Scale)
-    return isInt<8>(Value);
-
-  assert(isPowerOf2_32(CD8_Scale) && "Unexpected CD8 scale!");
-  if (Value & (CD8_Scale - 1)) // Unaligned offset
-    return false;
-
-  int CDisp8 = Value / static_cast<int>(CD8_Scale);
-  if (!isInt<8>(CDisp8))
-    return false;
-
-  // ImmOffset will be added to Value in emitImmediate leaving just CDisp8.
-  ImmOffset = CDisp8 - Value;
-  return true;
-}
-
 /// \returns the appropriate fixup kind to use for an immediate in an
 /// instruction with the specified TSFlags.
 static MCFixupKind getImmFixupKind(uint64_t TSFlags) {
@@ -814,7 +788,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
     // can't use disp8 if the {disp32} pseudo prefix is present.
     if (Disp.isImm() && AllowDisp8) {
       int ImmOffset = 0;
-      if (isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
+      if (X86II::isDispOrCDisp8(TSFlags, Disp.getImm(), &ImmOffset)) {
         emitByte(modRMByte(1, RegOpcodeField, BaseRegNo), CB);
         emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB,
                       Fixups, ImmOffset);
@@ -856,7 +830,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
     // Emit no displacement ModR/M byte
     emitByte(modRMByte(0, RegOpcodeField, 4), CB);
   } else if (Disp.isImm() && AllowDisp8 &&
-             isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
+             X86II::isDispOrCDisp8(TSFlags, Disp.getImm(), &ImmOffset)) {
     // Displacement fits in a byte or matches an EVEX compressed disp8, use
     // disp8 encoding. This also handles EBP/R13/R21/R29 base with 0
     // displacement unless {disp32} pseudo prefix was used.

@@ -16,12 +16,12 @@ on:
 jobs:
   code_linter:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     defaults:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint:latest@sha256:416874e477b33c1cb66a30e77e0b9942b7333a7bd304c2f1d51743e7adaedd54'
+      image: 'ghcr.io/llvm/ci-ubuntu-26.04-lint:latest@sha256:f323567151f2e8983bbce3d4447d78a74623a475256651ac8c52fa43552a903d'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}

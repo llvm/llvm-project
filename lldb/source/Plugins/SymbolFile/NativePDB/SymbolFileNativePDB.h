@@ -314,6 +314,8 @@ private:
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
 
+  bool m_parent_map_built = false;
+
   struct UdtDeclaration {
     /// This could either be an index into the `/names` section (string table,
     /// LF_UDT_MOD_SRC_LINE) or, this could be an index into the IPI stream to a

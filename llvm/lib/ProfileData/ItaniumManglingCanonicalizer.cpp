@@ -105,8 +105,8 @@ public:
     llvm::FoldingSetNodeID ID;
     profileCtor(ID, NodeKind<T>::Kind, As...);
 
-    void *InsertPos;
-    if (NodeHeader *Existing = Nodes.FindNodeOrInsertPos(ID, InsertPos))
+    FoldingSetInsertToken Token;
+    if (NodeHeader *Existing = Nodes.lookup(ID, Token))
       return {static_cast<T*>(Existing->getNode()), false};
 
     if (!CreateNewNodes)
@@ -118,7 +118,7 @@ public:
         RawAlloc.Allocate(sizeof(NodeHeader) + sizeof(T), alignof(NodeHeader));
     NodeHeader *New = new (Storage) NodeHeader;
     T *Result = new (New->getNode()) T(std::forward<Args>(As)...);
-    Nodes.InsertNode(New, InsertPos);
+    Nodes.insert(New, Token);
     return {Result, true};
   }
 

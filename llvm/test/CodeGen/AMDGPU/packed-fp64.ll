@@ -448,9 +448,9 @@ define amdgpu_kernel void @fadd_v2_v_v_vgpr_splat(ptr addrspace(1) %a) {
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1251-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset
@@ -1379,9 +1379,9 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1251-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset
@@ -1964,9 +1964,9 @@ define amdgpu_kernel void @fma_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1251-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset
@@ -2529,14 +2529,14 @@ define amdgpu_kernel void @fneg_v2f64_pkfma(ptr addrspace(1) %out) {
 ; GFX1251-SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-SDAG-NEXT:    v_nop
 ; GFX1251-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s0, 0x3ff
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_bitop2_b32 v1, s0, v0 bitop3:0x40
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX1251-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0x3ff00000, 0, vcc_lo
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
-; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_pk_fma_f64 v[2:5], v[0:3], 0, v[0:3] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-SDAG-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
@@ -2550,13 +2550,14 @@ define amdgpu_kernel void @fneg_v2f64_pkfma(ptr addrspace(1) %out) {
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1251-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0x3ff00000, 0, vcc_lo
+; GFX1251-GISEL-NEXT:    s_mov_b32 s2, 0x80000000
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX1251-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_bitop2_b32 v5, s2, v1 bitop3:0x14
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, v0
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v1
 ; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)

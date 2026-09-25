@@ -2,7 +2,7 @@
 ; RUN: opt < %s -S -passes=memcpyopt -verify-memoryssa | FileCheck %s
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) unnamed_addr nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) unnamed_addr nounwind
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; all bytes of %dst that are touch by the memset are dereferenceable
@@ -23,7 +23,6 @@ define void @must_remove_memcpy(ptr noalias nocapture writable dereferenceable(4
 define void @must_not_remove_memcpy(ptr noalias nocapture writable dereferenceable(1024) %dst) nofree nosync {
 ; CHECK-LABEL: @must_not_remove_memcpy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [4096 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[SRC]], i8 0, i64 4096, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 0, i64 4096, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -32,3 +31,71 @@ define void @must_not_remove_memcpy(ptr noalias nocapture writable dereferenceab
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 4096, i1 false) #2
   ret void
 }
+
+; enable copy elision when call has both willreturn and nounwind.
+define void @test_positive_willreturn_nounwind(ptr %val) {
+; CHECK-LABEL: @test_positive_willreturn_nounwind(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[VAL:%.*]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tmp = alloca [1024 x i32], align 4
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) willreturn nounwind memory(argmem: write)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
+  ret void
+}
+
+; missing willreturn attribute; optimization should not occur.
+define void @test_negative_missing_willreturn(ptr %val) {
+; CHECK-LABEL: @test_negative_missing_willreturn(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL:%.*]], ptr align 4 [[TMP]], i64 4096, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tmp = alloca [1024 x i32], align 4
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) nounwind memory(argmem: write)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
+  ret void
+}
+
+; missing nounwind attribute; optimization should not occur.
+define void @test_negative_missing_nounwind(ptr %val) {
+; CHECK-LABEL: @test_negative_missing_nounwind(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL:%.*]], ptr align 4 [[TMP]], i64 4096, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tmp = alloca [1024 x i32], align 4
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) willreturn memory(argmem: write)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
+  ret void
+}
+
+; willreturn nounwind attributes, but instruction between call and memcpy that may trap.
+define void @test_negative_may_trap_between(ptr %val, ptr %unknown) {
+; CHECK-LABEL: @test_negative_may_trap_between(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [1024 x i32], align 4
+; CHECK-NEXT:    call void @bar(ptr sret([1024 x i32]) align 4 [[TMP]]) #[[ATTR3]]
+; CHECK-NEXT:    [[VAL_LOADED:%.*]] = load volatile i32, ptr [[UNKNOWN:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL:%.*]], ptr align 4 [[TMP]], i64 4096, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tmp = alloca [1024 x i32], align 4
+  call void @bar(ptr sret([1024 x i32]) align 4 %tmp) willreturn nounwind memory(argmem: write)
+  ; A volatile load can trap and has side effects.
+  %val_loaded = load volatile i32, ptr %unknown
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val, ptr align 4 %tmp, i64 4096, i1 false)
+  ret void
+}
+
+declare void @bar(ptr nocapture sret([1024 x i32]) align 4)

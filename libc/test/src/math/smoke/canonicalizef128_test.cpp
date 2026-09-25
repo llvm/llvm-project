@@ -10,4 +10,5 @@
 
 #include "src/math/canonicalizef128.h"
 
-LIST_CANONICALIZE_TESTS(float128, LIBC_NAMESPACE::canonicalizef128)
+LIST_CANONICALIZE_TESTS(Canonicalizef128, float128,
+                        LIBC_NAMESPACE::canonicalizef128)

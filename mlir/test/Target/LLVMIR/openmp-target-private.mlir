@@ -37,7 +37,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
     llvm.store %11, %arg1 : i32, !llvm.ptr
     %12 = llvm.load %arg1 : !llvm.ptr -> i32
     %13 = llvm.sitofp %12 : i32 to f32
-    %14 = llvm.fadd %13, %8  {fastmathFlags = #llvm.fastmath<contract>} : f32
+    %14 = llvm.fadd %13, %8 fastmath<contract> : f32
     llvm.store %14, %arg2 : f32, !llvm.ptr
     omp.terminator
   }
@@ -102,11 +102,11 @@ llvm.func @target_boxchar_(%arg0: !llvm.ptr {fir.bindc_name = "l"}) attributes {
   llvm.store %12, %3 : !llvm.struct<(ptr, i64)>, !llvm.ptr
   %14 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) -> !llvm.ptr
   omp.target kernel_type(generic) map_entries(%13 -> %arg1, %14 -> %arg2 : !llvm.ptr, !llvm.ptr) private(@_QFtarget_boxcharEchar_var_private_boxchar_c8xU %12 -> %arg3 [map_idx=1] : !llvm.struct<(ptr, i64)>) {
-    %15 = llvm.mlir.constant(0 : index) : i64
+    %15 = llvm.mlir.constant(0 : i64) : i64
     %16 = llvm.mlir.constant(32 : i8) : i8
-    %17 = llvm.mlir.constant(1 : index) : i64
+    %17 = llvm.mlir.constant(1 : i64) : i64
     %18 = llvm.mlir.constant(false) : i1
-    %19 = llvm.mlir.constant(5 : index) : i64
+    %19 = llvm.mlir.constant(5 : i64) : i64
     %20 = llvm.mlir.constant(5 : i32) : i32
     %21 = llvm.extractvalue %arg3[0] : !llvm.struct<(ptr, i64)>
     %22 = llvm.extractvalue %arg3[1] : !llvm.struct<(ptr, i64)>
@@ -172,7 +172,7 @@ llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_fir
     llvm.store %11, %arg2 : i32, !llvm.ptr
     %12 = llvm.load %arg3 : !llvm.ptr -> f32
     %13 = llvm.fpext %12 : f32 to f64
-    %14 = llvm.fadd %13, %8 {fastmathFlags = #llvm.fastmath<contract>} : f64
+    %14 = llvm.fadd %13, %8 fastmath<contract> : f64
     %15 = llvm.fptrunc %14 : f64 to f32
     llvm.store %15, %arg3 : f32, !llvm.ptr
     omp.terminator

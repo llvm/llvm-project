@@ -8,6 +8,12 @@
 
 #include "FMinimumMagNumTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/fminimum_mag_numf128.h"
 
-LIST_FMINIMUM_MAG_NUM_TESTS(float128, LIBC_NAMESPACE::fminimum_mag_numf128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_FMINIMUM_MAG_NUM_TESTS(FminimumMagNumf128, float128,
+                            LIBC_NAMESPACE::fminimum_mag_numf128)

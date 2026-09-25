@@ -378,8 +378,7 @@ static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
                     cl::desc("prints out offsets for abbrev and debug_info of "
                              "Skeleton CUs that get patched."),
-                    cl::ZeroOrMore, cl::Hidden, cl::init(false),
-                    cl::cat(BoltCategory));
+                    cl::Hidden, cl::init(false), cl::cat(BoltCategory));
 
 static cl::opt<unsigned> BatchSize(
     "cu-processing-batch-size",
@@ -1027,6 +1026,11 @@ void DWARFRewriter::updateDebugInfo() {
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
   SmallVector<SmallVector<DWARFUnit *>> PartVec =
       partitionCUs(*BC.DwCtx, CUSize);
+  // Buckets below run in parallel, and with a .dwp package they all read the
+  // same split DWARF context. Create that context now to avoid a race
+  // (note this is a DWP-only issue, DWOs are safe since each thread operate
+  // on its own DWARF context).
+  BC.openSharedDWOContext();
   const unsigned int ThreadCount =
       std::min(opts::DebugThreadCount, opts::ThreadCount);
   llvm::ThreadPoolInterface &ThreadPool =

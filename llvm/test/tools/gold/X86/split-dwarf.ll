@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: opt -module-summary %s -o %t/split-dwarf.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext  \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext  \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=dwo_dir=%t/dwo_dir \
@@ -16,7 +16,7 @@
 
 ; RUN:rm -rf %t/dwo_dir
 ; RUN: opt  %s -o %t/split-dwarf.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext  \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext  \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=dwo_dir=%t/dwo_dir \

@@ -19,6 +19,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -149,6 +150,24 @@ public:
       else
         llvmFunc->removeFnAttr("uniform-work-group-size");
     }
+
+    bool isXnack =
+        dialect->getXnackAttrHelper().getName() == attribute.getName();
+    bool isSramecc =
+        dialect->getSrameccAttrHelper().getName() == attribute.getName();
+    if (isXnack || isSramecc) {
+      auto value = dyn_cast<BoolAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a boolean");
+      StringRef key = isXnack
+                          ? ROCDL::ROCDLDialect::getModuleFlagKeyXnackName()
+                          : ROCDL::ROCDLDialect::getModuleFlagKeySramEccName();
+      moduleTranslation.getLLVMModule()->addModuleFlag(
+          llvm::Module::Error, key,
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                                 value.getValue()));
+    }
     if (dialect->getUnsafeFpAtomicsAttrHelper().getName() ==
         attribute.getName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
@@ -195,8 +214,8 @@ public:
 
       StringRef flatAttrName =
           dialect->getFlatWorkGroupSizeAttrHelper().getName();
-      if (auto flatAttr =
-              dyn_cast_if_present<StringAttr>(op->getAttr(flatAttrName))) {
+      if (auto flatAttr = dyn_cast_if_present<StringAttr>(
+              op->getDiscardableAttr(flatAttrName))) {
         if (flatAttr.getValue() != expectedFlatWorkGroupSize)
           return op->emitOpError(Twine(flatAttrName) +
                                  " must match rocdl.reqd_work_group_size");
@@ -204,8 +223,8 @@ public:
 
       StringRef maxFlatAttrName =
           dialect->getMaxFlatWorkGroupSizeAttrHelper().getName();
-      if (auto maxFlatAttr =
-              dyn_cast_if_present<IntegerAttr>(op->getAttr(maxFlatAttrName))) {
+      if (auto maxFlatAttr = dyn_cast_if_present<IntegerAttr>(
+              op->getDiscardableAttr(maxFlatAttrName))) {
         llvm::SmallString<16> expectedMaxFlatWorkGroupSize;
         llvm::raw_svector_ostream maxAttrValueStream(
             expectedMaxFlatWorkGroupSize);
@@ -241,7 +260,7 @@ public:
     if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
         attribute.getName()) {
       for (llvm::Instruction *i : instructions)
-        i->setMetadata("amdgpu.ignore.denormal.mode",
+        i->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
                        llvm::MDNode::get(llvmContext, {}));
     }
 

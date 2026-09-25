@@ -709,7 +709,7 @@ def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
 // Note: This intrinsic requires SME or SVE2.1.
 def PselIntrOp : ArmSVE_IntrOp<"psel",
   /*traits=*/[Pure, TypeIs<"res", SVBool>],
-  /*overloadedOperands=*/[1]>,
+  /*overloadedOperands=*/[0,1]>,
   Arguments<(ins Arg<SVBool, "p1">:$p1,
                  Arg<SVEPredicate, "p2">:$p2,
                  Arg<I32, "index">:$index)>;

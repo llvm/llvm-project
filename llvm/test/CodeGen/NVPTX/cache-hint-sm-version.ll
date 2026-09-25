@@ -26,23 +26,39 @@
 define i32 @test_load_l1_first(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_l1_first(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_l1_first(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_l1_first(
 ; SM70:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_l1_first(
 ; SM75:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_l1_first(
 ; SM80PLUS:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM80PLUS:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_l1_first(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_l1_first(
+; SM100-PTX86:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM100-PTX86:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
+;
+; SM100-PTX88-LABEL: test_load_l1_first(
+; SM100-PTX88:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM100-PTX88:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !0
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !0
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
 }
 
 ;-----------------------------------------------------------------------------
@@ -51,30 +67,53 @@ define i32 @test_load_l1_first(ptr addrspace(1) %p) {
 
 define <8 x i32> @test_load_l2_last(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_l2_last(
-; SM60:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM60:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
+; SM60:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
+; SM60:    ld.volatile.global.b32 %r9, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_l2_last(
-; SM70-PTX73:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM70-PTX73:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
+; SM70-PTX73:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r9, [%rd1];
 ;
 ; SM70-LABEL: test_load_l2_last(
-; SM70:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM70:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
+; SM70:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
+; SM70:    ld.relaxed.sys.global.b32 %r9, [%rd1];
 ;
 ; SM75-LABEL: test_load_l2_last(
-; SM75:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM75:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
+; SM75:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
+; SM75:    ld.relaxed.sys.global.b32 %r9, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_l2_last(
-; SM80PLUS:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM80PLUS:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
+; SM80PLUS:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
+; SM80PLUS:    ld.relaxed.sys.global.b32 %r9, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_l2_last(
-; SM80-PTX70:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM80-PTX70:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
+; SM80-PTX70:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r9, [%rd1];
 ;
 ; SM100-PTX86-LABEL: test_load_l2_last(
-; SM100-PTX86:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-PTX86:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1+16];
+; SM100-PTX86:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1];
+; SM100-PTX86:    mov.b64 {%r1, %r2}, %rd4;
+; SM100-PTX86:    ld.relaxed.sys.global.b32 %r3, [%rd1];
+; SM100-PTX86:    mov.b64 %rd6, {%r4, %r2};
 ;
 ; SM100-PTX88-LABEL: test_load_l2_last(
 ; SM100-PTX88:    ld.global.L2::evict_last.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
+; SM100-PTX88:    mov.b64 {%r1, %r2}, %rd2;
+; SM100-PTX88:    ld.relaxed.sys.global.b32 %r3, [%rd1];
+; SM100-PTX88:    mov.b64 %rd6, {%r4, %r2};
   %v = load <8 x i32>, ptr addrspace(1) %p, align 32, !mem.cache_hint !1
-  ret <8 x i32> %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !1
+  %v0 = extractelement <8 x i32> %v, i64 0
+  %sum = add i32 %v0, %atomic
+  %result = insertelement <8 x i32> %v, i32 %sum, i64 0
+  ret <8 x i32> %result
 }
 
 ;-----------------------------------------------------------------------------
@@ -86,23 +125,39 @@ define <8 x i32> @test_load_l2_last(ptr addrspace(1) %p) {
 define i32 @test_load_prefetch_64(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_prefetch_64(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_prefetch_64(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_prefetch_64(
 ; SM70:    ld.global.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_prefetch_64(
 ; SM75:    ld.global.L2::64B.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.L2::64B.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_prefetch_64(
 ; SM80PLUS:    ld.global.L2::64B.b32 %r1, [%rd1];
+; SM80PLUS:    ld.relaxed.sys.global.L2::64B.b32 %r2, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_64(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_prefetch_64(
+; SM100-PTX86:    ld.global.L2::64B.b32 %r1, [%rd1];
+; SM100-PTX86:    ld.relaxed.sys.global.L2::64B.b32 %r2, [%rd1];
+;
+; SM100-PTX88-LABEL: test_load_prefetch_64(
+; SM100-PTX88:    ld.global.L2::64B.b32 %r1, [%rd1];
+; SM100-PTX88:    ld.relaxed.sys.global.L2::64B.b32 %r2, [%rd1];
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !6
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !6
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
 }
 
 ;-----------------------------------------------------------------------------
@@ -114,23 +169,39 @@ define i32 @test_load_prefetch_64(ptr addrspace(1) %p) {
 define i32 @test_load_prefetch_128(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_prefetch_128(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_prefetch_128(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_prefetch_128(
 ; SM70:    ld.global.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_prefetch_128(
 ; SM75:    ld.global.L2::128B.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.L2::128B.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_prefetch_128(
 ; SM80PLUS:    ld.global.L2::128B.b32 %r1, [%rd1];
+; SM80PLUS:    ld.relaxed.sys.global.L2::128B.b32 %r2, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_128(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_prefetch_128(
+; SM100-PTX86:    ld.global.L2::128B.b32 %r1, [%rd1];
+; SM100-PTX86:    ld.relaxed.sys.global.L2::128B.b32 %r2, [%rd1];
+;
+; SM100-PTX88-LABEL: test_load_prefetch_128(
+; SM100-PTX88:    ld.global.L2::128B.b32 %r1, [%rd1];
+; SM100-PTX88:    ld.relaxed.sys.global.L2::128B.b32 %r2, [%rd1];
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !2
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !2
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
 }
 
 ;-----------------------------------------------------------------------------
@@ -142,23 +213,39 @@ define i32 @test_load_prefetch_128(ptr addrspace(1) %p) {
 define i32 @test_load_prefetch_256(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_prefetch_256(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_prefetch_256(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_prefetch_256(
 ; SM70:    ld.global.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_prefetch_256(
 ; SM75:    ld.global.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_prefetch_256(
 ; SM80PLUS:    ld.global.L2::256B.b32 %r1, [%rd1];
+; SM80PLUS:    ld.relaxed.sys.global.L2::256B.b32 %r2, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_256(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_prefetch_256(
+; SM100-PTX86:    ld.global.L2::256B.b32 %r1, [%rd1];
+; SM100-PTX86:    ld.relaxed.sys.global.L2::256B.b32 %r2, [%rd1];
+;
+; SM100-PTX88-LABEL: test_load_prefetch_256(
+; SM100-PTX88:    ld.global.L2::256B.b32 %r1, [%rd1];
+; SM100-PTX88:    ld.relaxed.sys.global.L2::256B.b32 %r2, [%rd1];
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !7
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !7
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
 }
 
 ;-----------------------------------------------------------------------------
@@ -171,24 +258,73 @@ define i32 @test_load_prefetch_256(ptr addrspace(1) %p) {
 define i32 @test_load_cache_hint(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_cache_hint(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_cache_hint(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_cache_hint(
 ; SM70:    ld.global.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_cache_hint(
 ; SM75:    ld.global.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_cache_hint(
 ; SM80PLUS:    mov.b64 %rd2, 12345;
 ; SM80PLUS:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM80PLUS:    ld.relaxed.sys.global.L2::cache_hint.b32 %r2, [%rd1], %rd2;
 ;
 ; SM80-PTX70-LABEL: test_load_cache_hint(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_cache_hint(
+; SM100-PTX86:    mov.b64 %rd2, 12345;
+; SM100-PTX86:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM100-PTX86:    ld.relaxed.sys.global.L2::cache_hint.b32 %r2, [%rd1], %rd2;
+;
+; SM100-PTX88-LABEL: test_load_cache_hint(
+; SM100-PTX88:    mov.b64 %rd2, 12345;
+; SM100-PTX88:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM100-PTX88:    ld.relaxed.sys.global.L2::cache_hint.b32 %r2, [%rd1], %rd2;
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !3
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !3
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
+}
+
+define i32 @test_atomicrmw_cache_hint(ptr addrspace(1) %p, i32 %v) {
+; SM60-LABEL: test_atomicrmw_cache_hint(
+; SM60:    atom.sys.global.add.u32 %r2, [%rd1], %r1;
+;
+; SM70-PTX73-LABEL: test_atomicrmw_cache_hint(
+; SM70-PTX73:    atom.relaxed.sys.global.add.u32 %r2, [%rd1], %r1;
+;
+; SM70-LABEL: test_atomicrmw_cache_hint(
+; SM70:    atom.relaxed.sys.global.add.u32 %r2, [%rd1], %r1;
+;
+; SM75-LABEL: test_atomicrmw_cache_hint(
+; SM75:    atom.relaxed.sys.global.add.u32 %r2, [%rd1], %r1;
+;
+; SM80PLUS-LABEL: test_atomicrmw_cache_hint(
+; SM80PLUS:    mov.b64 %rd2, 12345;
+; SM80PLUS:    atom.relaxed.sys.global.add.L2::cache_hint.u32 %r2, [%rd1], %r1, %rd2;
+;
+; SM80-PTX70-LABEL: test_atomicrmw_cache_hint(
+; SM80-PTX70:    atom.relaxed.sys.global.add.u32 %r2, [%rd1], %r1;
+;
+; SM100-PTX86-LABEL: test_atomicrmw_cache_hint(
+; SM100-PTX86:    mov.b64 %rd2, 12345;
+; SM100-PTX86:    atom.relaxed.sys.global.add.L2::cache_hint.u32 %r2, [%rd1], %r1, %rd2;
+;
+; SM100-PTX88-LABEL: test_atomicrmw_cache_hint(
+; SM100-PTX88:    mov.b64 %rd2, 12345;
+; SM100-PTX88:    atom.relaxed.sys.global.add.L2::cache_hint.u32 %r2, [%rd1], %r1, %rd2;
+  %old = atomicrmw add ptr addrspace(1) %p, i32 %v monotonic, align 4, !mem.cache_hint !3
+  ret i32 %old
 }
 
 ;-----------------------------------------------------------------------------
@@ -201,24 +337,42 @@ define i32 @test_load_cache_hint(ptr addrspace(1) %p) {
 define i32 @test_load_cache_hint_with_l1(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_cache_hint_with_l1(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_cache_hint_with_l1(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_cache_hint_with_l1(
 ; SM70:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_cache_hint_with_l1(
 ; SM75:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_cache_hint_with_l1(
 ; SM80PLUS:    mov.b64 %rd2, 12345;
 ; SM80PLUS:    ld.global.L1::evict_first.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM80PLUS:    ld.relaxed.sys.global.L1::evict_first.L2::cache_hint.b32 %r2, [%rd1], %rd2;
 ;
 ; SM80-PTX70-LABEL: test_load_cache_hint_with_l1(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_cache_hint_with_l1(
+; SM100-PTX86:    mov.b64 %rd2, 12345;
+; SM100-PTX86:    ld.global.L1::evict_first.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM100-PTX86:    ld.relaxed.sys.global.L1::evict_first.L2::cache_hint.b32 %r2, [%rd1], %rd2;
+;
+; SM100-PTX88-LABEL: test_load_cache_hint_with_l1(
+; SM100-PTX88:    mov.b64 %rd2, 12345;
+; SM100-PTX88:    ld.global.L1::evict_first.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM100-PTX88:    ld.relaxed.sys.global.L1::evict_first.L2::cache_hint.b32 %r2, [%rd1], %rd2;
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !4
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !4
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
 }
 
 ;-----------------------------------------------------------------------------
@@ -231,23 +385,39 @@ define i32 @test_load_cache_hint_with_l1(ptr addrspace(1) %p) {
 define i32 @test_load_prefetch_with_l1(ptr addrspace(1) %p) {
 ; SM60-LABEL: test_load_prefetch_with_l1(
 ; SM60:    ld.global.b32 %r1, [%rd1];
+; SM60:    ld.volatile.global.b32 %r2, [%rd1];
 ;
 ; SM70-PTX73-LABEL: test_load_prefetch_with_l1(
 ; SM70-PTX73:    ld.global.b32 %r1, [%rd1];
+; SM70-PTX73:    ld.relaxed.sys.global.b32 %r2, [%rd1];
 ;
 ; SM70-LABEL: test_load_prefetch_with_l1(
 ; SM70:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM70:    ld.relaxed.sys.global.L1::evict_first.b32 %r2, [%rd1];
 ;
 ; SM75-LABEL: test_load_prefetch_with_l1(
 ; SM75:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
+; SM75:    ld.relaxed.sys.global.L1::evict_first.L2::128B.b32 %r2, [%rd1];
 ;
 ; SM80PLUS-LABEL: test_load_prefetch_with_l1(
 ; SM80PLUS:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
+; SM80PLUS:    ld.relaxed.sys.global.L1::evict_first.L2::128B.b32 %r2, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_with_l1(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
+; SM80-PTX70:    ld.relaxed.sys.global.b32 %r2, [%rd1];
+;
+; SM100-PTX86-LABEL: test_load_prefetch_with_l1(
+; SM100-PTX86:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
+; SM100-PTX86:    ld.relaxed.sys.global.L1::evict_first.L2::128B.b32 %r2, [%rd1];
+;
+; SM100-PTX88-LABEL: test_load_prefetch_with_l1(
+; SM100-PTX88:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
+; SM100-PTX88:    ld.relaxed.sys.global.L1::evict_first.L2::128B.b32 %r2, [%rd1];
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !8
-  ret i32 %v
+  %atomic = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !8
+  %sum = add i32 %v, %atomic
+  ret i32 %sum
 }
 
 ;-----------------------------------------------------------------------------
@@ -257,23 +427,40 @@ define i32 @test_load_prefetch_with_l1(ptr addrspace(1) %p) {
 define void @test_store_cache_hint(ptr addrspace(1) %p, i32 %v) {
 ; SM60-LABEL: test_store_cache_hint(
 ; SM60:    st.global.b32 [%rd1], %r1;
+; SM60:    st.volatile.global.b32 [%rd1], %r1;
 ;
 ; SM70-PTX73-LABEL: test_store_cache_hint(
 ; SM70-PTX73:    st.global.b32 [%rd1], %r1;
+; SM70-PTX73:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ;
 ; SM70-LABEL: test_store_cache_hint(
 ; SM70:    st.global.b32 [%rd1], %r1;
+; SM70:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ;
 ; SM75-LABEL: test_store_cache_hint(
 ; SM75:    st.global.b32 [%rd1], %r1;
+; SM75:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ;
 ; SM80PLUS-LABEL: test_store_cache_hint(
 ; SM80PLUS:    mov.b64 %rd2, 12345;
 ; SM80PLUS:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
+; SM80PLUS:    st.relaxed.sys.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
 ;
 ; SM80-PTX70-LABEL: test_store_cache_hint(
 ; SM80-PTX70:    st.global.b32 [%rd1], %r1;
+; SM80-PTX70:    st.relaxed.sys.global.b32 [%rd1], %r1;
+;
+; SM100-PTX86-LABEL: test_store_cache_hint(
+; SM100-PTX86:    mov.b64 %rd2, 12345;
+; SM100-PTX86:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
+; SM100-PTX86:    st.relaxed.sys.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
+;
+; SM100-PTX88-LABEL: test_store_cache_hint(
+; SM100-PTX88:    mov.b64 %rd2, 12345;
+; SM100-PTX88:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
+; SM100-PTX88:    st.relaxed.sys.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
   store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !5
+  store atomic i32 %v, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !5
   ret void
 }
 
@@ -284,22 +471,37 @@ define void @test_store_cache_hint(ptr addrspace(1) %p, i32 %v) {
 define void @test_store_l1_no_allocate(ptr addrspace(1) %p, i32 %v) {
 ; SM60-LABEL: test_store_l1_no_allocate(
 ; SM60:    st.global.b32 [%rd1], %r1;
+; SM60:    st.volatile.global.b32 [%rd1], %r1;
 ;
 ; SM70-PTX73-LABEL: test_store_l1_no_allocate(
 ; SM70-PTX73:    st.global.b32 [%rd1], %r1;
+; SM70-PTX73:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ;
 ; SM70-LABEL: test_store_l1_no_allocate(
 ; SM70:    st.global.L1::no_allocate.b32 [%rd1], %r1;
+; SM70:    st.relaxed.sys.global.L1::no_allocate.b32 [%rd1], %r1;
 ;
 ; SM75-LABEL: test_store_l1_no_allocate(
 ; SM75:    st.global.L1::no_allocate.b32 [%rd1], %r1;
+; SM75:    st.relaxed.sys.global.L1::no_allocate.b32 [%rd1], %r1;
 ;
 ; SM80PLUS-LABEL: test_store_l1_no_allocate(
 ; SM80PLUS:    st.global.L1::no_allocate.b32 [%rd1], %r1;
+; SM80PLUS:    st.relaxed.sys.global.L1::no_allocate.b32 [%rd1], %r1;
 ;
 ; SM80-PTX70-LABEL: test_store_l1_no_allocate(
 ; SM80-PTX70:    st.global.b32 [%rd1], %r1;
+; SM80-PTX70:    st.relaxed.sys.global.b32 [%rd1], %r1;
+;
+; SM100-PTX86-LABEL: test_store_l1_no_allocate(
+; SM100-PTX86:    st.global.L1::no_allocate.b32 [%rd1], %r1;
+; SM100-PTX86:    st.relaxed.sys.global.L1::no_allocate.b32 [%rd1], %r1;
+;
+; SM100-PTX88-LABEL: test_store_l1_no_allocate(
+; SM100-PTX88:    st.global.L1::no_allocate.b32 [%rd1], %r1;
+; SM100-PTX88:    st.relaxed.sys.global.L1::no_allocate.b32 [%rd1], %r1;
   store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !9
+  store atomic i32 %v, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !9
   ret void
 }
 

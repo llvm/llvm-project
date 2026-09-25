@@ -321,15 +321,6 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
 }
 
-std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
-  if (Version == "none")
-    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
-  std::pair<int, int> Ret;
-  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
-    Version.consumeInteger(10, Ret.second);
-  return Ret;
-}
-
 StringRef TargetMachine::getTargetABIName(const Module &M) const {
   if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     return MD->getString();

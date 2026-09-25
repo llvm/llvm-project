@@ -49,7 +49,7 @@ template <typename T> struct [[gnu::abi_tag("Quux", "Quuux")]] TaggedTemplate {
 };
 
 // clang-format off
-inline namespace [[gnu::abi_tag("Inline", "NS")]] v1 {
+inline namespace [[gnu::abi_tag("Inline", "NS")]] lldb_test_abi_tag_lookup_inline_ns {
 template <typename T> int withImplicitTag(T const &t) { return t.mem; }
 } // namespace
 // clang-format on

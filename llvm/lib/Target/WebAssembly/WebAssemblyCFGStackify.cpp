@@ -608,13 +608,6 @@ void WebAssemblyCFGStackifyImpl::placeTryMarker(MachineBasicBlock &MBB) {
         if (MI.isCall()) {
           AfterSet.insert(&MI);
           ThrowingCall = &MI;
-          // Possibly throwing calls are usually wrapped by EH_LABEL
-          // instructions. We don't want to split them and the call.
-          if (MI.getIterator() != Header->begin() &&
-              std::prev(MI.getIterator())->isEHLabel()) {
-            AfterSet.insert(&*std::prev(MI.getIterator()));
-            ThrowingCall = &*std::prev(MI.getIterator());
-          }
           break;
         }
       }
@@ -624,9 +617,9 @@ void WebAssemblyCFGStackifyImpl::placeTryMarker(MachineBasicBlock &MBB) {
   // Local expression tree should go after the TRY.
   // For BLOCK placement, we start the search from the previous instruction of a
   // BB's terminator, but in TRY's case, we should start from the previous
-  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
-  // because the return values of the call's previous instructions can be
-  // stackified and consumed by the throwing call.
+  // instruction of a call that can throw, because the return values of the
+  // call's previous instructions can be stackified and consumed by the throwing
+  // call.
   auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
                                     : Header->getFirstTerminator();
   for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
@@ -798,13 +791,6 @@ void WebAssemblyCFGStackifyImpl::placeTryTableMarker(MachineBasicBlock &MBB) {
         if (MI.isCall()) {
           AfterSet.insert(&MI);
           ThrowingCall = &MI;
-          // Possibly throwing calls are usually wrapped by EH_LABEL
-          // instructions. We don't want to split them and the call.
-          if (MI.getIterator() != Header->begin() &&
-              std::prev(MI.getIterator())->isEHLabel()) {
-            AfterSet.insert(&*std::prev(MI.getIterator()));
-            ThrowingCall = &*std::prev(MI.getIterator());
-          }
           break;
         }
       }
@@ -814,9 +800,9 @@ void WebAssemblyCFGStackifyImpl::placeTryTableMarker(MachineBasicBlock &MBB) {
   // Local expression tree should go after the TRY_TABLE.
   // For BLOCK placement, we start the search from the previous instruction of a
   // BB's terminator, but in TRY_TABLE's case, we should start from the previous
-  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
-  // because the return values of the call's previous instructions can be
-  // stackified and consumed by the throwing call.
+  // instruction of a call that can throw, because the return values of the
+  // call's previous instructions can be stackified and consumed by the throwing
+  // call.
   auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
                                     : Header->getFirstTerminator();
   for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
@@ -1048,7 +1034,7 @@ void WebAssemblyCFGStackifyImpl::removeUnnecessaryInstrs(MachineFunction &MF) {
 
     bool Analyzable = !TII.analyzeBranch(*EHPadLayoutPred, TBB, FBB, Cond);
     // This condition means either
-    // 1. This BB ends with a single unconditional branch whose destinaion is
+    // 1. This BB ends with a single unconditional branch whose destination is
     //    Cont.
     // 2. This BB ends with a conditional branch followed by an unconditional
     //    branch, and the unconditional branch's destination is Cont.
@@ -1837,7 +1823,7 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
   // invoke within a BB.)
 
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
-  // Range of intructions to be wrapped in a new nested try~delegate or
+  // Range of instructions to be wrapped in a new nested try~delegate or
   // try_table~end_try_table. A range exists in a single BB and does not span
   // multiple BBs.
   using TryRange = std::pair<MachineInstr *, MachineInstr *>;
@@ -1926,18 +1912,8 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
       if (EHPadStack.back() == UnwindDest)
         continue;
 
-      // Include EH_LABELs in the range before and after the invoke
-      MachineInstr *RangeBegin = &MI, *RangeEnd = &MI;
-      if (RangeBegin->getIterator() != MBB.begin() &&
-          std::prev(RangeBegin->getIterator())->isEHLabel())
-        RangeBegin = &*std::prev(RangeBegin->getIterator());
-      if (std::next(RangeEnd->getIterator()) != MBB.end() &&
-          std::next(RangeEnd->getIterator())->isEHLabel())
-        RangeEnd = &*std::next(RangeEnd->getIterator());
-
       // If not, record the range.
-      UnwindDestToTryRanges[UnwindDest].push_back(
-          TryRange(RangeBegin, RangeEnd));
+      UnwindDestToTryRanges[UnwindDest].push_back(TryRange(&MI, &MI));
       LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = " << getBBName(&MBB)
                         << "\nCall = " << MI
                         << "\nOriginal dest = " << getBBName(UnwindDest)
@@ -2053,7 +2029,7 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
       // the current range contains the invoke, now we are going to wrap the
       // invoke with try-delegate or try_table-end_try_table, making the
       // 'delegate' or 'end_try_table' BB the new successor instead, so remove
-      // the EH pad succesor here. The BB may not have an EH pad successor if
+      // the EH pad successor here. The BB may not have an EH pad successor if
       // calls in this BB throw to the caller.
       if (UnwindDest != getFakeCallerBlock(MF)) {
         MachineBasicBlock *EHPad = nullptr;

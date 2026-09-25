@@ -272,24 +272,6 @@ struct UnwindState {
     initFrameTrie(Sample->CallStack);
   }
 
-  bool validateInitialState() {
-    uint64_t LBRLeaf = LBRStack[LBRIndex].Target;
-    uint64_t LeafAddr = CurrentLeafFrame->Address;
-    assert((LBRLeaf != ExternalAddr || LBRLeaf == LeafAddr) &&
-           "External leading LBR should match the leaf frame.");
-
-    // When we take a stack sample, ideally the sampling distance between the
-    // leaf IP of stack and the last LBR target shouldn't be very large.
-    // Use a heuristic size (0x100) to filter out broken records.
-    if (LeafAddr < LBRLeaf || LeafAddr - LBRLeaf >= 0x100) {
-      WithColor::warning() << "Bogus trace: stack tip = "
-                           << format("%#010x", LeafAddr)
-                           << ", LBR tip = " << format("%#010x\n", LBRLeaf);
-      return false;
-    }
-    return true;
-  }
-
   void checkStateConsistency() {
     assert(InstPtr.Address == CurrentLeafFrame->Address &&
            "IP should align with context leaf");
@@ -716,6 +698,9 @@ public:
 private:
   // Unwind the hybrid samples after aggregration
   void unwindSamples();
+
+  uint64_t NumBogusTrace = 0;
+  uint64_t NumTotalHybridSample = 0;
 };
 
 /*

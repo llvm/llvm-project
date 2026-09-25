@@ -985,6 +985,22 @@ bool ClauseProcessor::processThreadLimit(
   return false;
 }
 
+bool ClauseProcessor::processThreadset(
+    mlir::omp::ThreadsetClauseOps &result) const {
+  using Threadset = omp::clause::Threadset;
+  if (auto *clause = findUniqueClause<Threadset>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::omp::ThreadsetPolicy policy =
+        clause->v == Threadset::ThreadsetPolicy::Omp_Pool
+            ? mlir::omp::ThreadsetPolicy::omp_pool
+            : mlir::omp::ThreadsetPolicy::omp_team;
+    result.threadset =
+        mlir::omp::ThreadsetPolicyAttr::get(firOpBuilder.getContext(), policy);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Untied>(result.untied);
 }
@@ -1850,7 +1866,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       std::optional<mlir::omp::LinearModifier> linearMod;
       if (explicitLinearMod)
         linearMod = *explicitLinearMod;
-      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+      else if (semaCtx.langOptions().getOpenMPVersion() >= 52)
         linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
                                   : mlir::omp::LinearModifier::val;
 
@@ -1998,10 +2014,10 @@ bool ClauseProcessor::processMap(
     // default value
     Map::MapType type;
     if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
-        semaCtx.langOptions().OpenMPVersion >= 52)
+        semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::To);
     else if (directive == llvm::omp::Directive::OMPD_target_exit_data &&
-             semaCtx.langOptions().OpenMPVersion >= 52)
+             semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::From);
     else
       type = mapType.value_or(Map::MapType::Tofrom);
@@ -2142,8 +2158,8 @@ bool ClauseProcessor::processMap(
                "clause is not implemented yet");
 
         mlir::Type fieldTy = recordType.getType(memberIndices[0]);
-        fir::IntOrValue idxConst = mlir::IntegerAttr::get(
-            firOpBuilder.getI32Type(), memberIndices[0]);
+        fir::IntOrValue idxConst =
+            mlir::IntegerAttr::get(firOpBuilder.getI32Type(), memberIndices[0]);
         baseAddr = fir::CoordinateOp::create(
             firOpBuilder, clauseLocation, firOpBuilder.getRefType(fieldTy),
             parentInfo.addr, llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
@@ -2158,8 +2174,8 @@ bool ClauseProcessor::processMap(
 
       mlir::Type elemRefTy =
           fir::ReferenceType::get(entity.getFortranElementType());
-      mlir::Type iterTy = mlir::omp::IteratedType::get(
-          &converter.getMLIRContext(), elemRefTy);
+      mlir::Type iterTy =
+          mlir::omp::IteratedType::get(&converter.getMLIRContext(), elemRefTy);
       mlir::FlatSymbolRefAttr mapperId =
           resolveMapperId(converter, clauseLocation, object, mapperIdName,
                           mapTypeBits, directive, hasParentObj);
@@ -2171,22 +2187,21 @@ bool ClauseProcessor::processMap(
               llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
             lower::StatementContext iterStmtCtx;
             std::optional<llvm::SmallVector<mlir::Value>> loweredIndices =
-                getIteratorElementIndices(converter, object, iterStmtCtx,
-                                          loc);
+                getIteratorElementIndices(converter, object, iterStmtCtx, loc);
             if (!loweredIndices)
               TODO(loc, "object type not supported by iterator modifier");
 
-            mlir::Value iteratedAddr = genIteratorCoordinate(
-                converter, entity, *loweredIndices, loc);
+            mlir::Value iteratedAddr =
+                genIteratorCoordinate(converter, entity, *loweredIndices, loc);
             auto location = mlir::NameLoc::get(
                 mlir::StringAttr::get(builder.getContext(), objName),
                 iteratedAddr.getLoc());
             return utils::openmp::createMapInfoOp(
                 builder, location, iteratedAddr,
                 /*varPtrPtr=*/mlir::Value{}, objName, /*bounds=*/{},
-                /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
-                mapTypeBits, mlir::omp::VariableCaptureKind::ByRef,
-                iteratedAddr.getType(), /*partialMap=*/false, mapperId);
+                /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{}, mapTypeBits,
+                mlir::omp::VariableCaptureKind::ByRef, iteratedAddr.getType(),
+                /*partialMap=*/false, mapperId);
           });
       result.mapIterated.push_back(iterHandle);
     }
@@ -2351,6 +2366,15 @@ bool ClauseProcessor::processEnter(
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> mappedCommonBlocks;
+  findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause, const parser::CharBlock &) {
+        for (const Object &object : std::get<ObjectList>(clause.t)) {
+          if (object.sym()->has<semantics::CommonBlockDetails>())
+            mappedCommonBlocks.insert(&object.sym()->GetUltimate());
+        }
+      });
+
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -2358,7 +2382,21 @@ bool ClauseProcessor::processUseDeviceAddr(
         mlir::Location location = converter.genLocation(source);
         mlir::omp::ClauseMapFlags mapTypeBits =
             mlir::omp::ClauseMapFlags::return_param;
-        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+        ObjectList objects;
+        // Keep the aggregate only when it pairs with a whole-COMMON map on
+        // this directive; otherwise preserve named-COMMON member equivalence.
+        for (const Object &object : clause.v) {
+          auto *details =
+              object.sym()->detailsIf<semantics::CommonBlockDetails>();
+          if (!details ||
+              mappedCommonBlocks.contains(&object.sym()->GetUltimate())) {
+            objects.push_back(object);
+            continue;
+          }
+          for (const auto &member : details->objects())
+            objects.push_back(Object{&*member, std::nullopt});
+        }
+        processMapObjects(stmtCtx, location, objects, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceObjects);
       });

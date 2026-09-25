@@ -55,18 +55,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i6
 ;      Dst:  store double %46, ptr %48, align 8
 ;
 ;
-; CHECK:       --- !Missed
-; CHECK-NEXT:  Pass:            loop-interchange
-; CHECK-NEXT:  Name:            UnsupportedLoopNestDepth
-; CHECK-NEXT:  Function:        test
-; CHECK-NEXT:  Args:
-; CHECK-NEXT:    - String:          'Unsupported depth of loop nest, the supported range is ['
-; CHECK-NEXT:    - String:          '2'
-; CHECK-NEXT:    - String:          ', '
-; CHECK-NEXT:    - String:          '10'
-; CHECK-NEXT:    - String:          "].\n"
-; CHECK-NEXT:  ...
-; CHECK-NEXT:  --- !Analysis
+; CHECK:       --- !Analysis
 ; CHECK-NEXT:  Pass:            loop-interchange
 ; CHECK-NEXT:  Name:            Dependence
 ; CHECK-NEXT:  Function:        test
@@ -82,14 +71,38 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i6
 ; CHECK-NEXT:  ...
 ; CHECK-NEXT:  --- !Missed
 ; CHECK-NEXT:  Pass:            loop-interchange
-; CHECK-NEXT:  Name:            UnsupportedLoopNestDepth
+; CHECK-NEXT:  Name:            Dependence
 ; CHECK-NEXT:  Function:        test
 ; CHECK-NEXT:  Args:
-; CHECK-NEXT:    - String:          'Unsupported depth of loop nest, the supported range is ['
-; CHECK-NEXT:    - String:          '2'
-; CHECK-NEXT:    - String:          ', '
-; CHECK-NEXT:    - String:          '10'
-; CHECK-NEXT:    - String:          "].\n"
+; CHECK-NEXT:    - String:          Cannot interchange loops due to dependences.
+; CHECK-NEXT:  ...
+; CHECK-NEXT:  --- !Missed
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            Dependence
+; CHECK-NEXT:  Function:        test
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          All loops have dependencies in all directions.
+; CHECK-NEXT:  ...
+; CHECK-NEXT:  --- !Analysis
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            Dependence
+; CHECK-NEXT:  Function:        test
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          Computed dependence info, invoking the transform.
+; CHECK-NEXT:  ...
+; CHECK-NEXT:  --- !Missed
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            Dependence
+; CHECK-NEXT:  Function:        test
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          Cannot interchange loops due to dependences.
+; CHECK-NEXT:  ...
+; CHECK-NEXT:  --- !Analysis
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            Dependence
+; CHECK-NEXT:  Function:        test
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          Computed dependence info, invoking the transform.
 ; CHECK-NEXT:  ...
 ; CHECK-NEXT:  --- !Analysis
 ; CHECK-NEXT:  Pass:            loop-interchange

@@ -31,6 +31,8 @@ public:
 
   bool matchLengthToDistance(MachineInstr &MI) const;
   void applySPIRVDistance(MachineInstr &MI) const;
+  bool matchFDivToNormalize(MachineInstr &MI) const;
+  void applySPIRVNormalize(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;
   void applySPIRVFaceForward(MachineInstr &MI) const;
   void applyMatrixTranspose(MachineInstr &MI) const;

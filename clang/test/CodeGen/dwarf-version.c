@@ -35,8 +35,10 @@
 // RUN: %clang -target i686-pc-windows-msvc -gdwarf -gcodeview -S -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=VER4,CODEVIEW
 
-// Check what version of dwarf is used for MinGW targets.
+// Check what version of dwarf is used for MinGW/Cygwin targets.
 // RUN: %clang -target i686-pc-windows-gnu -g -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefixes=VER4
+// RUN: %clang -target i686-pc-windows-cygnus -g -S -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefixes=VER4
 
 // RUN: %clang -target powerpc-ibm-aix-xcoff -g -S -emit-llvm -o - %s | \

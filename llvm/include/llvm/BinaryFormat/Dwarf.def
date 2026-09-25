@@ -26,6 +26,7 @@
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
       defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
       defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
+      defined HANDLE_DW_MSPACE ||                                              \
       defined HANDLE_DW_LLVM_LANG_DIALECT ||                                   \
       ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
 #error "Missing macro definition of HANDLE_DW*"
@@ -153,6 +154,10 @@
 #define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
 #endif
 
+#ifndef HANDLE_DW_MSPACE
+#define HANDLE_DW_MSPACE(ID, NAME)
+#endif
+
 #ifndef HANDLE_DW_LLVM_LANG_DIALECT
 #define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)
 #endif
@@ -237,6 +242,11 @@ HANDLE_DW_TAG(0x0048, call_site, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x0049, call_site_parameter, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004a, skeleton_unit, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004b, immutable_type, 5, DWARF, DW_KIND_TYPE)
+// New in DWARF v6:
+HANDLE_DW_TAG(0x004c, property, 6, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x004d, property_getter, 6, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x004e, property_setter, 6, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x004f, property_stored, 6, DWARF, DW_KIND_NONE)
 // Vendor extensions:
 HANDLE_DW_TAG(0x4081, MIPS_loop, 0, MIPS, DW_KIND_NONE)
 // Conflicting:
@@ -432,6 +442,7 @@ HANDLE_DW_AT(0x8c, loclists_base, 5, DWARF)
 // New in Dwarf v6:
 HANDLE_DW_AT(0x90, language_name, 6, DWARF)
 HANDLE_DW_AT(0x91, language_version, 6, DWARF)
+HANDLE_DW_AT(0x95, property_forward, 6, DWARF)
 
 // Vendor extensions:
 HANDLE_DW_AT(0x806, GHS_namespace_alias, 0, GHS)
@@ -654,6 +665,13 @@ HANDLE_DW_AT(0x3e12, LLVM_lane_pc, 0, LLVM)
 HANDLE_DW_AT(0x3e13, LLVM_vector_size, 0, LLVM)
 HANDLE_DW_AT(0x3e14, LLVM_virtual_call_origin, 0, LLVM)
 HANDLE_DW_AT(0x3e15, LLVM_language_dialect, 0, LLVM)
+
+// https://www.llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#a-7-15-memory-space-encodings
+HANDLE_DW_MSPACE(0x0, none)
+HANDLE_DW_MSPACE(0x1, global)
+HANDLE_DW_MSPACE(0x2, constant)
+HANDLE_DW_MSPACE(0x3, group)
+HANDLE_DW_MSPACE(0x4, private)
 
 // https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
 HANDLE_DW_ASPACE(0x0, none)
@@ -963,6 +981,16 @@ HANDLE_DW_OP_LLVM_USEROP(0x0009, aspace_bregx)
 HANDLE_DW_OP_LLVM_USEROP(0x000a, piece_end)
 HANDLE_DW_OP_LLVM_USEROP(0x000b, extend)
 HANDLE_DW_OP_LLVM_USEROP(0x000c, select_bit_piece)
+// The DW_OP_LLVM_NVIDIA_mux operation takes a single ULEB128 operand that
+// selects an NVIDIA-specific operation. It acts as a second-level multiplexer,
+// giving NVIDIA a private encoding space without requiring every NVIDIA
+// operation to be registered here.
+//
+// The number and type of the operands that follow the selector are implied by
+// it, so an unrecognized selector cannot be skipped. No NVIDIA operation is
+// known here, so an expression using one is reported as undecodable rather
+// than parsed from a guessed offset.
+HANDLE_DW_OP_LLVM_USEROP(0x000d, NVIDIA_mux)
 
 // DWARF languages.
 HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)
@@ -1457,6 +1485,7 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
 #undef HANDLE_DW_APPLE_ENUM_KIND
+#undef HANDLE_DW_MSPACE
 #undef HANDLE_DW_LLVM_LANG_DIALECT
 #undef HANDLE_DW_ASPACE
 #undef HANDLE_DW_ASPACE_PRED

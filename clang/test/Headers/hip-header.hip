@@ -92,8 +92,6 @@ __device__ void test_vf() {
 }
 // CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN7derived2pvEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
 // CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
-// CHECK: define{{.*}}void @__cxa_pure_virtual()
-// CHECK: define{{.*}}void @__cxa_deleted_virtual()
 
 struct Number {
   __device__ Number(float _x) : x(_x) {}
@@ -201,3 +199,6 @@ void test_malloc_host(void *a) {
   a = std::malloc(42);
   std::free(a);
 }
+
+// CHECK-DAG: define weak{{.*}} void @__cxa_pure_virtual()
+// CHECK-DAG: define weak{{.*}} void @__cxa_deleted_virtual()

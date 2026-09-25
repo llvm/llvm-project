@@ -536,6 +536,17 @@ define <vscale x 2 x i64> @uqsub_i64_high(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 8 x i32> @uqsub_i32_from_splat(<vscale x 8 x i32> %a) {
+; CHECK-LABEL: uqsub_i32_from_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.s, #1 // =0x1
+; CHECK-NEXT:    uqsub z0.s, z2.s, z0.s
+; CHECK-NEXT:    uqsub z1.s, z2.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.usub.sat.nxv8i32(<vscale x 8 x i32> splat (i32 1), <vscale x 8 x i32> %a)
+  ret <vscale x 8 x i32> %res
+}
+
 declare <vscale x 16 x i8> @llvm.sadd.sat.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.sadd.sat.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.sadd.sat.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
@@ -551,4 +562,5 @@ declare <vscale x 2 x i64> @llvm.ssub.sat.nxv2i64(<vscale x 2 x i64>, <vscale x 
 declare <vscale x 16 x i8> @llvm.usub.sat.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.usub.sat.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.usub.sat.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 8 x i32> @llvm.usub.sat.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>)
 declare <vscale x 2 x i64> @llvm.usub.sat.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>)

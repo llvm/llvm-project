@@ -264,8 +264,8 @@ define i64 @func2() {
   ret i64 0
 }
 
-; Check for the explicitly emitted .note.GNU-stack section (ELF only). Marking
-; it executable takes the "executable-stack" module flag.
+; Check for the explicitly emitted .note.GNU-stack section (ELF only) in the
+; presence of trampolines.
 ; UTC_ARGS: --disable
-; CHECK-LINUX:         .section        ".note.GNU-stack","",@progbits
+; CHECK-LINUX:         .section        ".note.GNU-stack","x",@progbits
 ; UTC_ARGS: --enable

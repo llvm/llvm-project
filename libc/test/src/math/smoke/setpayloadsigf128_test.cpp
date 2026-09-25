@@ -10,4 +10,5 @@
 
 #include "src/math/setpayloadsigf128.h"
 
-LIST_SETPAYLOADSIG_TESTS(float128, LIBC_NAMESPACE::setpayloadsigf128)
+LIST_SETPAYLOADSIG_TESTS(Setpayloadsigf128, float128,
+                         LIBC_NAMESPACE::setpayloadsigf128)

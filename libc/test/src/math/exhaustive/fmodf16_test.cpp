@@ -24,11 +24,11 @@ static constexpr uint16_t POS_STOP = 0x7c00U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xfc00U;
 
-TEST_F(LlvmLibcFmodf16ExhaustiveTest, PostivePositiveRange) {
+TEST_F(LlvmLibcFmodf16ExhaustiveTest, PositivePositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP, POS_START, POS_STOP);
 }
 
-TEST_F(LlvmLibcFmodf16ExhaustiveTest, PostiveNegativeRange) {
+TEST_F(LlvmLibcFmodf16ExhaustiveTest, PositiveNegativeRange) {
   test_full_range_all_roundings(POS_START, POS_STOP, NEG_START, NEG_STOP);
 }
 

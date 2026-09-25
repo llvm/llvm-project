@@ -57,6 +57,14 @@ namespace {
 
 /// This string is used to identify the Fortran-specific runtime FortranAAssign.
 static constexpr llvm::StringRef FortranAssignStr = "_FortranAAssign";
+static constexpr llvm::StringRef FortranAssignSimpleStr =
+    "_FortranAAssignSimple";
+
+/// Check if the function name is any variant of Fortran assignment runtime
+/// call.
+static bool isFortranAssignCall(llvm::StringRef funcName) {
+  return funcName == FortranAssignStr || funcName == FortranAssignSimpleStr;
+}
 
 /// The isRuntimeCall function is a utility designed to determine
 /// if a given operation is a call to a Fortran-specific runtime function.
@@ -76,11 +84,11 @@ static bool isRuntimeCall(Operation *op) {
 /// operation nested in an omp.workdistribute region.
 /// Parallelize here refers to dividing into units of work.
 static bool shouldParallelize(Operation *op) {
-  // True if the op is a runtime call to Assign
+  // True if the op is a runtime call to Assign (any variant)
   if (isRuntimeCall(op)) {
     fir::CallOp runtimeCall = cast<fir::CallOp>(op);
     auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-    if (funcName == FortranAssignStr) {
+    if (isFortranAssignCall(funcName)) {
       return true;
     }
   }
@@ -167,15 +175,13 @@ verifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
     if (auto callOp = dyn_cast<fir::CallOp>(op)) {
       if (isRuntimeCall(&op)) {
         auto funcName = (*callOp.getCallee()).getRootReference().getValue();
-        // _FortranAAssign is handled. Other runtime calls are not supported
-        // in omp.workdistribute yet.
-        if (funcName == FortranAssignStr)
+        // _FortranAAssign and _FortranAAssignSimple are handled.
+        // Other runtime calls are not supported in omp.workdistribute yet.
+        if (isFortranAssignCall(funcName))
           continue;
-        else {
-          emitError(loc, "Runtime call " + funcName +
-                             " lowering not supported for workdistribute yet.");
-          return failure();
-        }
+        emitError(loc, "Runtime call " + funcName +
+                           " lowering not supported for workdistribute yet.");
+        return failure();
       }
     }
   }
@@ -620,7 +626,7 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
       rewriter.setInsertionPoint(&op);
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-      if (funcName == FortranAssignStr) {
+      if (isFortranAssignCall(funcName)) {
         if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
           // Record the target ops to process later
           targetOpsToProcess.insert(targetOp);
@@ -1342,7 +1348,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     if (isRuntimeCall(clonedOp)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-      if (funcName == FortranAssignStr) {
+      if (isFortranAssignCall(funcName)) {
         opsToReplace.push_back(clonedOp);
       } else {
         emitError(runtimeCall->getLoc(), "Unhandled runtime call hoisting.");
@@ -1392,7 +1398,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     else if (isRuntimeCall(op)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
-      if (funcName == FortranAssignStr) {
+      if (isFortranAssignCall(funcName)) {
         rewriter.setInsertionPoint(op);
         fir::FirOpBuilder builder{rewriter, op};
 

@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
@@ -162,7 +163,7 @@ bubbleDownCastsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
   // Create the new op and results.
   auto newOp = ConcreteOpTy::create(
       builder, op.getLoc(), TypeRange(resTy), operands, op.getProperties(),
-      llvm::to_vector_of<NamedAttribute>(op->getDiscardableAttrs()));
+      op->getDiscardableAttrDictionary().getValue());
 
   // Insert a memory-space cast to the original memory space of the op.
   MemorySpaceCastOpInterface result = castOp.cloneMemorySpaceCastOp(
@@ -377,7 +378,7 @@ void AllocaScopeOp::print(OpAsmPrinter &p) {
   p.printRegion(getBodyRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 }
 
 ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1262,7 +1263,7 @@ void DmaStartOp::print(OpAsmPrinter &p) {
   if (isStrided())
     p << ", " << getStride() << ", " << getNumElementsPerStride();
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   p << " : " << getSrcMemRef().getType() << ", " << getDstMemRef().getType()
     << ", " << getTagMemRef().getType();
 }
@@ -1652,7 +1653,7 @@ void GenericAtomicRMWOp::print(OpAsmPrinter &p) {
   p << ' ' << getMemref() << "[" << getIndices()
     << "] : " << getMemref().getType() << ' ';
   p.printRegion(getRegion());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 }
 
 TypedValue<MemRefType> GenericAtomicRMWOp::getAccessedMemref() {
@@ -1941,7 +1942,7 @@ void PrefetchOp::print(OpAsmPrinter &p) {
   p << ", locality<" << getLocalityHint();
   p << ">, " << (getIsDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary(),
       /*elidedAttrs=*/{"localityHint", "isWrite", "isDataCache"});
   p << " : " << getMemRefType();
 }
@@ -2638,6 +2639,9 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
@@ -2895,12 +2899,17 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
   auto srcType = llvm::cast<MemRefType>(src.getType());
   MemRefType resultType =
       CollapseShapeOp::computeCollapsedType(srcType, reassociation);
-  result.addAttribute(::mlir::getReassociationAttrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-  build(b, result, resultType, src, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().reassociation =
+      getReassociationIndicesAttribute(b, reassociation);
+  result.addOperands(src);
+  result.addTypes(resultType);
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
@@ -3818,6 +3827,8 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
           StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
 }
 
+Value TransposeOp::getViewSource() { return getIn(); }
+
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
                         AffineMapAttr permutation,
                         ArrayRef<NamedAttribute> attrs) {
@@ -3828,14 +3839,17 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
   // Compute result type.
   MemRefType resultType = inferTransposeResultType(memRefType, permutationMap);
 
-  result.addAttribute(TransposeOp::getPermutationAttrStrName(), permutation);
-  build(b, result, resultType, in, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().permutation = permutation;
+  result.addOperands(in);
+  result.addTypes(resultType);
 }
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)
 void TransposeOp::print(OpAsmPrinter &p) {
   p << " " << getIn() << " " << getPermutation();
-  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrStrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getPermutationAttrStrName()});
   p << " : " << getIn().getType() << " to " << getType();
 }
 

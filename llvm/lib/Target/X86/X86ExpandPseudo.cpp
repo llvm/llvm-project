@@ -22,10 +22,8 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
@@ -401,6 +399,18 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
+    if (STI->hasSHSTK()) {
+      unsigned PopOpcode = STI->is64Bit() ? X86::POP64r : X86::POP32r;
+      unsigned JumpOpcode = X86::JMP32r;
+      if (Uses64BitFramePtr)
+        JumpOpcode = STI->isTargetWin64() || STI->isTargetUEFI64()
+                         ? X86::JMP64r_REX
+                         : X86::JMP64r;
+      BuildMI(MBB, MBBI, DL, TII->get(PopOpcode))
+          .addReg(DestAddr.getReg(), RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(JumpOpcode)).addReg(DestAddr.getReg());
+      MBB.erase(MBBI);
+    }
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }

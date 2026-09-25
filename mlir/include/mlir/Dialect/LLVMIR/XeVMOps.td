@@ -48,6 +48,8 @@ class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 class XeVM_Op<string mnemonic, list<Trait> traits = []>
     : LLVM_OpBase<XeVM_Dialect, mnemonic, traits> {
 
+  let hasCustomPropertiesPrinter = 1;
+
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,
             ::mlir::OpAsmPrinter &p, const Properties &prop,
@@ -128,7 +130,6 @@ def XeVM_LoadCacheControl
 def XeVM_LoadCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_LoadCacheControl, "load_cache_control"> {
   let summary = [{Describe the cache settings for load operators}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -193,7 +194,6 @@ def XeVM_StoreCacheControl
 def XeVM_StoreCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_StoreCacheControl, "store_cache_control"> {
   let summary = [{Describe the cache settings for store operators}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def XeVM_BlockLoadOp
@@ -407,7 +407,6 @@ def XeVM_MemScope
 }
 def XeVM_MemScopeAttr : EnumAttr<XeVM_Dialect, XeVM_MemScope, "mem_scope"> {
   let summary = [{Describe memory scopes}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def AddrSpacePrivate : I32EnumAttrCase<"PRIVATE", 0, "private">;
@@ -425,7 +424,6 @@ def XeVM_AddrSpace
 }
 def XeVM_AddrSpaceAttr : EnumAttr<XeVM_Dialect, XeVM_AddrSpace, "addr_space"> {
   let summary = [{Describe address spaces}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def XeVM_MemfenceOp

@@ -101,7 +101,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
@@ -120,7 +120,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
@@ -158,7 +158,7 @@ define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
@@ -1148,7 +1148,7 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) nounwi
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
@@ -1198,7 +1198,7 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
@@ -1248,7 +1248,7 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) noun
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
@@ -1298,7 +1298,7 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
@@ -1348,7 +1348,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) noun
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $31, %edi
@@ -1399,7 +1399,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) nounwin
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $63, %edi
@@ -1419,7 +1419,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    addb %dil, %dil
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    movzbl %dil, %eax
@@ -1663,7 +1663,7 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    movq %rsp, %rbp
 ; KNL-NEXT:    andq $-64, %rsp
-; KNL-NEXT:    subq $128, %rsp
+; KNL-NEXT:    addq $-128, %rsp
 ; KNL-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2

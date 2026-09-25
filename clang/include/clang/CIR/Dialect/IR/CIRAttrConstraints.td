@@ -48,6 +48,12 @@ def CIR_AnyCatchAllAttr
 def CIR_AnyUnwindAttr
     : CIR_AttrConstraint<"::cir::UnwindAttr", "unwind attribute">;
 
+def CIR_AnyEhFilterAttr
+    : CIR_AttrConstraint<"::cir::EhFilterAttr", "eh filter attribute">;
+
+def CIR_AnyEhUnexpectedAttr
+    : CIR_AttrConstraint<"::cir::EhUnexpectedAttr", "eh unexpected attribute">;
+
 //===----------------------------------------------------------------------===//
 // GlobalViewAttr constraints
 //===----------------------------------------------------------------------===//
@@ -62,8 +68,10 @@ def CIR_AnyIntOrGlobalViewAttr
 }
 
 def CIR_TryHandlerAttr
-    : AnyAttrOf<[CIR_AnyGlobalViewAttr, CIR_AnyCatchAllAttr, CIR_AnyUnwindAttr],
-                "catch all or unwind or global view attribute"> {
+    : AnyAttrOf<[CIR_AnyGlobalViewAttr, CIR_AnyCatchAllAttr, CIR_AnyUnwindAttr,
+                 CIR_AnyEhFilterAttr, CIR_AnyEhUnexpectedAttr],
+                "catch all, unwind, eh filter, eh unexpected or global view "
+                "attribute"> {
   string cppType = "::mlir::TypedAttr";
 }
 
@@ -99,6 +107,7 @@ def CIR_StringArrayAttrOrNull
     : CIR_TypedArrayAttrOrNullBase<StrAttr, "string array attribute or null">;
 
 def CIR_TryHandlerArrayAttr : CIR_TypedArrayAttrBase<CIR_TryHandlerAttr,
-                         "catch all or unwind or global view array attribute">;
+    "catch all, unwind, eh filter, eh unexpected or global view array "
+    "attribute">;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD

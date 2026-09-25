@@ -15,7 +15,6 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/FoldingSet.h"
 #include <numeric>
 
 namespace clang::ento::tagged_union_modeling {

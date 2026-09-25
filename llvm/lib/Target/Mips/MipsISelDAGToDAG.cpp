@@ -224,6 +224,55 @@ bool MipsDAGToDAGISel::selectVecAddAsVecSubIfProfitable(SDNode *Node) {
   return true;
 }
 
+void MipsDAGToDAGISel::PreprocessISelDAG() {
+  // The generic DAG combiner folds
+  //
+  //   select C, (add $gp, %gp_rel(A)), (add $gp, %gp_rel(B))
+  //
+  // into
+  //
+  //   add $gp, (select C, %gp_rel(A), %gp_rel(B)).
+  //
+  // A GP-relative relocation is only selectable as an operand of the add.
+  // Restore the original form before instruction selection so the relocation
+  // is never selected on its own.
+  bool MadeChange = false;
+  for (SDNode &Node : llvm::make_early_inc_range(CurDAG->allnodes())) {
+    if (Node.getOpcode() != ISD::ADD)
+      continue;
+
+    SDValue Base = Node.getOperand(0);
+    SDValue Sel = Node.getOperand(1);
+    if (Base.getOpcode() == ISD::SELECT)
+      std::swap(Base, Sel);
+
+    const auto *BaseReg = dyn_cast<RegisterSDNode>(Base);
+    if (!BaseReg ||
+        (BaseReg->getReg() != Mips::GP && BaseReg->getReg() != Mips::GP_64) ||
+        Sel.getOpcode() != ISD::SELECT)
+      continue;
+
+    SDValue TrueValue = Sel.getOperand(1);
+    SDValue FalseValue = Sel.getOperand(2);
+    if (TrueValue.getOpcode() != MipsISD::GPRel &&
+        FalseValue.getOpcode() != MipsISD::GPRel)
+      continue;
+
+    SDLoc DL(&Node);
+    EVT VT = Node.getValueType(0);
+    SDNodeFlags Flags = Node.getFlags();
+    TrueValue = CurDAG->getNode(ISD::ADD, DL, VT, Base, TrueValue, Flags);
+    FalseValue = CurDAG->getNode(ISD::ADD, DL, VT, Base, FalseValue, Flags);
+    SDValue NewSel =
+        CurDAG->getSelect(DL, VT, Sel.getOperand(0), TrueValue, FalseValue);
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(&Node, 0), NewSel);
+    MadeChange = true;
+  }
+
+  if (MadeChange)
+    CurDAG->RemoveDeadNodes();
+}
+
 /// Select instructions not customized! Used for
 /// expanded, promoted and normal instructions
 void MipsDAGToDAGISel::Select(SDNode *Node) {

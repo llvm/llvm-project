@@ -1,5 +1,6 @@
 executable("llc") {
   deps = [
+    "lib",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
@@ -20,7 +21,6 @@ executable("llc") {
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
-    "NewPMDriver.cpp",
     "llc.cpp",
   ]
 

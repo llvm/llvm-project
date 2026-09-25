@@ -14,7 +14,7 @@ define i8 @return_0_i8() {
 ; CHECK-LABEL: return_0_i8:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    rts
   ret i8 0
 }
@@ -23,7 +23,7 @@ define i16 @return_0_i16() {
 ; CHECK-LABEL: return_0_i16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    rts
   ret i16 0
 }

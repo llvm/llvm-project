@@ -2,14 +2,14 @@
 
 func.func @illegal_opaque_type_1() {
     // expected-error @+1 {{expected non empty string in !emitc.opaque type}}
-    %1 = "emitc.variable"(){value = "42" : !emitc.opaque<"">} : () -> !emitc.opaque<"mytype">
+    %1 = "emitc.variable"() <{value = "42" : !emitc.opaque<"">}> : () -> !emitc.opaque<"mytype">
 }
 
 // -----
 
 func.func @illegal_opaque_type_2() {
     // expected-error @+1 {{pointer not allowed as outer type with !emitc.opaque, use !emitc.ptr instead}}
-    %1 = "emitc.variable"(){value = "nullptr" : !emitc.opaque<"int32_t*">} : () -> !emitc.opaque<"int32_t*">
+    %1 = "emitc.variable"() <{value = "nullptr" : !emitc.opaque<"int32_t*">}> : () -> !emitc.opaque<"int32_t*">
 }
 
 // -----
@@ -102,7 +102,7 @@ func.func @illegal_float_type(%arg0: f80, %arg1: f80) {
 
 func.func @illegal_lvalue_type_1() {
     // expected-error @+1 {{!emitc.lvalue cannot wrap !emitc.array type}}
-    %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<!emitc.array<1xi32>>
+    %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.array<1xi32>>
     return
 }
 
@@ -110,7 +110,7 @@ func.func @illegal_lvalue_type_1() {
 
 func.func @illegal_lvalue_type_2() {
     // expected-error @+1 {{!emitc.lvalue must wrap supported emitc type, but got '!emitc.lvalue<i32>'}}
-    %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<!emitc.lvalue<i32>>
+    %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.lvalue<i32>>
     return
 }
 
@@ -118,7 +118,7 @@ func.func @illegal_lvalue_type_2() {
 
 func.func @illegal_lvalue_type_3() {
     // expected-error @+1 {{!emitc.lvalue must wrap supported emitc type, but got 'i17'}}
-    %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i17>
+    %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i17>
     return
 }
 
@@ -126,7 +126,7 @@ func.func @illegal_lvalue_type_3() {
 
 func.func @illegal_pointee_type_1() {
     // expected-error @+1 {{'emitc.constant' op result #0 must be type supported by EmitC, but got '!emitc.ptr<i11>'}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"{}">} : () -> !emitc.ptr<i11>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"{}">}> : () -> !emitc.ptr<i11>
     return
 }
 
@@ -134,7 +134,7 @@ func.func @illegal_pointee_type_1() {
 
 func.func @illegal_pointee_type_2() {
     // expected-error @+1 {{pointers to lvalues are not allowed}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"NULL">} : () -> !emitc.ptr<!emitc.lvalue<i32>>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"NULL">}> : () -> !emitc.ptr<!emitc.lvalue<i32>>
     return
 }
 
@@ -142,7 +142,7 @@ func.func @illegal_pointee_type_2() {
 
 func.func @illegal_non_static_tensor_shape_type() {
     // expected-error @+1 {{'emitc.constant' op result #0 must be type supported by EmitC, but got 'tensor<?xf32>'}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"{}">} : () -> tensor<?xf32>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"{}">}> : () -> tensor<?xf32>
     return
 }
 
@@ -150,7 +150,7 @@ func.func @illegal_non_static_tensor_shape_type() {
 
 func.func @illegal_tensor_array_element_type() {
     // expected-error @+1 {{'emitc.constant' op result #0 must be type supported by EmitC, but got 'tensor<!emitc.array<9xi16>>'}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"{}">} : () -> tensor<!emitc.array<9xi16>>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"{}">}> : () -> tensor<!emitc.array<9xi16>>
     return
 }
 
@@ -158,7 +158,7 @@ func.func @illegal_tensor_array_element_type() {
 
 func.func @illegal_tensor_integer_element_type() {
     // expected-error @+1 {{'emitc.constant' op result #0 must be type supported by EmitC, but got 'tensor<9xi11>'}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"{}">} : () -> tensor<9xi11>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"{}">}> : () -> tensor<9xi11>
     return
 }
 
@@ -166,7 +166,7 @@ func.func @illegal_tensor_integer_element_type() {
 
 func.func @illegal_tuple_array_element_type() {
     // expected-error @+1 {{'emitc.constant' op result #0 must be type supported by EmitC, but got 'tuple<!emitc.array<9xf32>, f32>'}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"{}">} : () -> tuple<!emitc.array<9xf32>, f32>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"{}">}> : () -> tuple<!emitc.array<9xf32>, f32>
     return
 }
 
@@ -174,6 +174,6 @@ func.func @illegal_tuple_array_element_type() {
 
 func.func @illegal_tuple_float_element_type() {
     // expected-error @+1 {{'emitc.constant' op result #0 must be type supported by EmitC, but got 'tuple<i32, f80>'}}
-    %v = "emitc.constant"(){value = #emitc.opaque<"{}">} : () -> tuple<i32, f80>
+    %v = "emitc.constant"() <{value = #emitc.opaque<"{}">}> : () -> tuple<i32, f80>
     return
 }

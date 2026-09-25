@@ -795,6 +795,78 @@ exit:
   ret i32 %retval
 }
 
+define i8 @loop_trunc_i1(i8 zeroext %x) {
+; CHECK-LABEL: @loop_trunc_i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = lshr i32 [[VALUE]], 1
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[VALUE]] to i1
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[NEXT]] to i8
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %value = phi i8 [ %x, %entry ], [ %next, %loop ]
+  %next = lshr i8 %value, 1
+  %cond = trunc i8 %value to i1
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i8 %next
+}
+
+define i1 @trunc_i1_nsw(i8 zeroext %a, i8 zeroext %b) {
+; CHECK-LABEL: @trunc_i1_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[OR]] to i1
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %or = or i8 %a, %b
+  %cond = trunc nsw i8 %or to i1
+  ret i1 %cond
+}
+
+define i1 @trunc_i1_nuw(i8 zeroext %a, i8 zeroext %b) {
+; CHECK-LABEL: @trunc_i1_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i32 [[OR]] to i1
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %or = or i8 %a, %b
+  %cond = trunc nuw i8 %or to i1
+  ret i1 %cond
+}
+
+define i1 @trunc_i1_nuw_nsw(i8 zeroext %a, i8 zeroext %b) {
+; CHECK-LABEL: @trunc_i1_nuw_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw nsw i32 [[OR]] to i1
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %or = or i8 %a, %b
+  %cond = trunc nuw nsw i8 %or to i1
+  ret i1 %cond
+}
+
 define void @search_back_through_trunc(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) {
 ; CHECK-LABEL: @search_back_through_trunc(
 ; CHECK-NEXT:  entry:

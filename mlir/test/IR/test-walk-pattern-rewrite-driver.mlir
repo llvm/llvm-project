@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --test-walk-pattern-rewrite-driver="dump-notifications=true" \
-// RUN:   --allow-unregistered-dialect --split-input-file | FileCheck %s
+// RUN:   --split-input-file | FileCheck %s
 
 // Check that newly created operations and blocks may be erased without
 // invalidating the walk, while still forwarding listener notifications.
@@ -116,13 +116,13 @@ func.func @replace_with_new_op() -> i32 {
 // Check that we can erase nested blocks.
 // CHECK-LABEL: func.func @erase_nested_block
 // CHECK:         %[[RES:.+]] = "test.erase_first_block"
-// CHECK-NEXT:    foo.bar
+// CHECK-NEXT:    test.bar
 // CHECK:         return %[[RES]]
 func.func @erase_nested_block() -> i32 {
   %a = "test.erase_first_block"() ({
-    "foo.foo"() : () -> ()
+    "test.foo"() : () -> ()
     ^bb1:
-    "foo.bar"() : () -> ()
+    "test.bar"() : () -> ()
   }): () -> (i32)
   return %a : i32
 }

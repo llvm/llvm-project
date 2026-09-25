@@ -980,7 +980,7 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
                    IsWindowsMSVC)) {
     // -fms-compatibility-version=19.33 is default, aka 2022, 17.3
     // NOTE: when changing this value, also update
-    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.md
+    // clang/docs/CommandGuide/clang.md and clang/docs/UsersManual.md
     // accordingly.
     MSVT = VersionTuple(19, 33);
   }

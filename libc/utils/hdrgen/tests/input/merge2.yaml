@@ -8,7 +8,7 @@ enums:
     value: value_2
 objects:
   - object_name: object_2
-    object_type: obj
+    object_type: obj[3]
 functions:
   - name: func_b
     return_type: float128

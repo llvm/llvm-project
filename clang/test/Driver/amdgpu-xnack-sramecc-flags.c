@@ -74,7 +74,7 @@
 // Test offload with target ID features synthesized from --offload-arch
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=gfx90a:xnack+:sramecc- \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-TARGETID %s
-// OMP-TARGETID: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-TARGETID: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-TARGETID-SAME: "-mxnack"
 // OMP-TARGETID-SAME: "-mno-sramecc"
 
@@ -82,7 +82,7 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack-:sramecc+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-MARCH %s
-// OMP-MARCH: "-cc1" "-triple" "amdgpu9.08-amd-amdhsa" {{.*}} "-target-cpu" "gfx908"
+// OMP-MARCH: "-cc1" "-triple" "amdgpu9.08-amd-amdhsa"
 // OMP-MARCH-SAME: "-mno-xnack"
 // OMP-MARCH-SAME: "-msramecc"
 
@@ -92,7 +92,7 @@
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mxnack \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mno-sramecc \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-FLAGS %s
-// OMP-FLAGS: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-FLAGS: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-FLAGS-SAME: "-mxnack"
 // OMP-FLAGS-SAME: "-mno-sramecc"
 
@@ -101,7 +101,7 @@
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a:xnack- \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mxnack \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-TARGETID-WINS %s
-// OMP-TARGETID-WINS: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-TARGETID-WINS: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-TARGETID-WINS-SAME: "-mno-xnack"
 
 // Test offload using base architecture gfx90a with -mxnack flag for xnack+
@@ -109,7 +109,7 @@
 // RUN:   --offload-arch=gfx90a \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mxnack \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-GFX90A-XNACK-ON %s
-// OMP-GFX90A-XNACK-ON: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-GFX90A-XNACK-ON: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-GFX90A-XNACK-ON-SAME: "-mxnack"
 
 // Test offload using base architecture gfx90a with -mno-xnack flag for xnack-
@@ -117,7 +117,7 @@
 // RUN:   --offload-arch=gfx90a \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mno-xnack \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-GFX90A-XNACK-OFF %s
-// OMP-GFX90A-XNACK-OFF: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-GFX90A-XNACK-OFF: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-GFX90A-XNACK-OFF-SAME: "-mno-xnack"
 
 // Test offload with multiple device compilations for same base architecture.
@@ -126,9 +126,9 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp \
 // RUN:   --offload-arch=gfx90a:xnack+ --offload-arch=gfx90a:xnack- -mxnack \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-MULTI-XNACK %s
-// OMP-MULTI-XNACK: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-MULTI-XNACK: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-MULTI-XNACK-SAME: "-mxnack"
-// OMP-MULTI-XNACK: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-MULTI-XNACK: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-MULTI-XNACK-SAME: "-mno-xnack"
 
 // Test that -Xopenmp-target flags apply to all targets with matching triple.
@@ -138,9 +138,9 @@
 // RUN:   --offload-arch=gfx906 --offload-arch=gfx90a \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mxnack \
 // RUN:   -nogpulib %s 2>&1 | FileCheck -check-prefix=OMP-MULTI-ARCH %s
-// OMP-MULTI-ARCH: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-target-cpu" "gfx906"
+// OMP-MULTI-ARCH: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
 // OMP-MULTI-ARCH-SAME: "-mxnack"
-// OMP-MULTI-ARCH: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a"
+// OMP-MULTI-ARCH: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 // OMP-MULTI-ARCH-SAME: "-mxnack"
 
 // Test that top-level -mxnack flags (not specified to the device are ignored).

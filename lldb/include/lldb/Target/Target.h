@@ -281,6 +281,10 @@ public:
 
   void SetUseDIL(ExecutionContext *exe_ctx, bool b);
 
+  bool GetUseDILForCreatingValues() const;
+
+  void SetUseDILForCreatingValues(bool b);
+
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
@@ -530,6 +534,10 @@ public:
 
   bool GetCppIgnoreContextQualifiers() const;
 
+  void SetTryDILFirst(bool b) { m_try_DIL_first = b; }
+
+  bool GetTryDILFirst() const { return m_try_DIL_first; }
+
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const;
 
@@ -556,6 +564,10 @@ private:
   /// True if the executed code should be treated as utility code that is only
   /// used by LLDB internally.
   bool m_running_utility_expression = false;
+  /// If enabled, Data Inspection Language (DIL) should attempt to evaluate the
+  /// expression first. If DIL is not called or fails, the evaluation falls
+  /// back to UserExpression.
+  bool m_try_DIL_first = false;
 
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   Timeout<std::micro> m_timeout = default_timeout;
@@ -1369,14 +1381,13 @@ public:
                                size_t dst_max_len, Status &result_error,
                                bool force_live_memory = false);
 
-  /// Read a NULL terminated string from memory
+  /// Read a null-terminated string from memory
   ///
-  /// This function will read a cache page at a time until a NULL string
-  /// terminator is found. It will stop reading if an aligned sequence of NULL
-  /// termination \a type_width bytes is not found before reading \a
-  /// cstr_max_len bytes.  The results are always guaranteed to be NULL
-  /// terminated, and that no more than (max_bytes - type_width) bytes will be
-  /// read.
+  /// This function will read a cache page at a time until a null terminator
+  /// is found. It will stop reading if an aligned null terminator of \a
+  /// type_width bytes is not found before reading \a cstr_max_len bytes. The
+  /// results are always guaranteed to be null-terminated, and that no more
+  /// than (max_bytes - type_width) bytes will be read.
   ///
   /// \param[in] addr
   ///     The address to start the memory read.

@@ -14,7 +14,7 @@ func.func @test_permlane_var_i32(%src : i32, %sel : i32) -> i32 {
 func.func @test_permlane_var_cross_i32(%src : i32, %sel : i32) -> i32 {
 // CHECK:  %[[RES:.*]] = rocdl.permlanex16.var %[[SRC]], %[[SRC]], %[[SEL]], false, false : (i32, i32, i32) -> i32
 // CHECK:  return %[[RES]] : i32
-  %0 = amdgpu.permlane_var %src, %sel { cross = true } : i32
+  %0 = amdgpu.permlane_var %src, %sel cross(true) : i32
   return %0 : i32
 }
 
@@ -51,7 +51,7 @@ func.func @test_permlane_var_cross_f16(%src : f16, %sel : i32) -> f16 {
 // CHECK:  %[[TRUNC:.*]] = llvm.trunc %[[RES]] : i32 to i16
 // CHECK:  %[[RES_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i16 to f16
 // CHECK:  return %[[RES_CAST]] : f16
-  %0 = amdgpu.permlane_var %src, %sel { cross = true } : f16
+  %0 = amdgpu.permlane_var %src, %sel cross(true) : f16
   return %0 : f16
 }
 
@@ -79,6 +79,6 @@ func.func @test_permlane_var_4xf16(%src : vector<4xf16>, %sel : i32) -> vector<4
 func.func @test_permlane_var_attrs(%src : i32, %sel : i32) -> i32 {
 // CHECK:  %[[RES:.*]] = rocdl.permlanex16.var %[[SRC]], %[[SRC]], %[[SEL]], true, true : (i32, i32, i32) -> i32
 // CHECK:  return %[[RES]] : i32
-  %0 = amdgpu.permlane_var %src, %sel { cross = true, fetch_inactive = true, bound_ctrl = true } : i32
+  %0 = amdgpu.permlane_var %src, %sel cross(true) fetch_inactive(true) bound_ctrl(true) : i32
   return %0 : i32
 }

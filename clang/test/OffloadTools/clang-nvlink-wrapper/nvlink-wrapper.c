@@ -47,6 +47,17 @@ int baz() { return y + x; }
 // ARGS: nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
 
 //
+// Check that GNU response files are expanded to nvlink.
+//
+// RUN: echo '-arch sm_52 %t-u.o -o a.out' > %t.rsp
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object @%t.rsp 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RSP
+// RUN: echo '"-arch" "sm_52" "%t-u.o" "-o" "a.out"' > %t.quoted.rsp
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object @%t.quoted.rsp 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RSP
+// RSP: nvlink{{.*}} -arch sm_52 -o a.out {{.*}}.cubin
+
+//
 // Check the symbol resolution for static archives. We expect to only link
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.

@@ -620,7 +620,21 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   auto parentFunction = op->getParentOfType<FunctionOpInterface>();
   if (!parentFunction)
     return {};
-  return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
+  Operation *parentOp = parentFunction.getOperation();
+  if (auto llvmFunc = dyn_cast<LLVMFuncOp>(parentOp))
+    return llvmFunc.getTargetFeaturesAttr();
+
+  // Dynamic operation definitions do not support direct inherent attribute
+  // lookup. Use the safe walker for other FunctionOpInterface implementations.
+  TargetFeaturesAttr targetFeatures;
+  parentOp->getName().walkInherentAttrs(
+      parentOp, [&](StringRef name, Attribute &attr) {
+        if (name == getAttributeName())
+          targetFeatures = dyn_cast<TargetFeaturesAttr>(attr);
+      });
+  if (targetFeatures)
+    return targetFeatures;
+  return parentOp->getDiscardableAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
 }
 

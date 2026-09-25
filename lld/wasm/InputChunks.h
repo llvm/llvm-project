@@ -352,13 +352,13 @@ public:
     return c->kind() == SyntheticDataSegment;
   }
 
-  void setSize(uint64_t s) { size = s; }
+  void setSize(uint32_t s) { size = s; }
   uint32_t getSize() const { return size; }
 
   void writeTo(uint8_t *buf) const;
 
 private:
-  uint64_t size = 0;
+  uint32_t size = 0;
 };
 
 // Represents a single Wasm Section within an input file.

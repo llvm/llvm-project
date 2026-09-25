@@ -45,26 +45,6 @@ parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value,
                   cir::FPTypeInterface fpType);
 
-//===----------------------------------------------------------------------===//
-// AddressSpaceAttr
-//===----------------------------------------------------------------------===//
-
-mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
-                                         cir::LangAddressSpace &addrSpace) {
-  llvm::SMLoc loc = p.getCurrentLocation();
-  mlir::FailureOr<cir::LangAddressSpace> result =
-      mlir::FieldParser<cir::LangAddressSpace>::parse(p);
-  if (mlir::failed(result))
-    return p.emitError(loc, "expected address space keyword");
-  addrSpace = result.value();
-  return mlir::success();
-}
-
-void printAddressSpaceValue(mlir::AsmPrinter &p,
-                            cir::LangAddressSpace addrSpace) {
-  p << cir::stringifyEnum(addrSpace);
-}
-
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 
@@ -195,6 +175,19 @@ LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// BitFieldDeclAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BitFieldDeclAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         mlir::Type declaredType, uint64_t width,
+                         bool isUnnamed) {
+  if (width == 0 && !isUnnamed)
+    return emitError() << "zero-width bit-field cannot be named";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
 
@@ -243,22 +236,33 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
       return emitError() << "union constant must have exactly one element, got "
                          << members.size();
     auto m = mlir::cast<mlir::TypedAttr>(members[0]);
-    if (!llvm::is_contained(sTy.getMembers(), m.getType()))
+    // A bit-field variant is initialized as the access unit it owns.
+    if (!llvm::any_of(sTy.getMembers(), [&](mlir::Type memberTy) {
+          return cir::memberStorageType(memberTy) == m.getType();
+        }))
       return emitError() << "union element type " << m.getType()
                          << " is not a member of " << sTy;
     return success();
   }
 
-  if (sTy.getMembers().size() != members.size())
+  // A member that owns no bytes is not stored, so it takes no element. A
+  // bit-field's bits are packed into the element of the member that owns its
+  // access unit, and a zero-width bit-field has no bits to store at all.
+  llvm::SmallVector<mlir::Type> storedMembers;
+  for (mlir::Type memberTy : sTy.getMembers())
+    if (cir::memberOwnsBytes(memberTy))
+      storedMembers.push_back(cir::memberStorageType(memberTy));
+
+  if (storedMembers.size() != members.size())
     return emitError() << "number of elements must match";
 
-  for (const auto &[attrIdx, member] : llvm::enumerate(sTy.getMembers())) {
+  for (const auto &[attrIdx, member] : llvm::enumerate(storedMembers)) {
     auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
 
     // As a special case, we allow a flexible array member. This can only be the
     // last element, the rest of the array type has to match (that is, the
     // element type has to match), and the array member must be size zero.
-    if (attrIdx == sTy.getMembers().size() - 1) {
+    if (attrIdx == storedMembers.size() - 1) {
       auto memArrayTy = dyn_cast<cir::ArrayType>(member);
       if (memArrayTy && memArrayTy.getSize() == 0) {
 
@@ -405,6 +409,93 @@ static ParseResult parseFloatLiteral(AsmParser &parser,
 
   value.emplace(parsedValue);
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr definitions
+//===----------------------------------------------------------------------===//
+
+MemoryEffectsAttr MemoryEffectsAttr::none(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::readOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Ref);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::writeOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Mod);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
+                                                ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleMemOnly(MLIRContext *ctx,
+                                                         ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*inaccessible_mem=*/mr,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/mr, /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgMemOnly(MLIRContext *ctx,
+                                                              ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/inaccessibleOrArgMr,
+             /*inaccessible_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr
+MemoryEffectsAttr::argumentOrErrnoMemOnly(MLIRContext *ctx, ModRefInfo argMr,
+                                          ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/argMr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 FPAttr FPAttr::getZero(Type type) {
@@ -889,29 +980,45 @@ std::string DynamicCastInfoAttr::getAlias() const {
   return alias;
 }
 
+// TODO: Give type_info a distinct CIR type so we can verify that a
+// FlatSymbolRefAttr actually names a type_info global.
+static bool isRttiPtr(mlir::Type ty) {
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  if (!ptrTy)
+    return false;
+
+  auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
+  if (!pointeeIntTy)
+    return false;
+
+  return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
+}
+
 LogicalResult DynamicCastInfoAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
     cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
     mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
-  auto isRttiPtr = [](mlir::Type ty) {
-    // RTTI pointers are !cir.ptr<!u8i>.
-
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
-    if (!ptrTy)
-      return false;
-
-    auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
-    if (!pointeeIntTy)
-      return false;
-
-    return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
-  };
-
   if (!isRttiPtr(srcRtti.getType()))
     return emitError() << "srcRtti must be an RTTI pointer";
 
   if (!isRttiPtr(destRtti.getType()))
     return emitError() << "destRtti must be an RTTI pointer";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhFilterAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult EhFilterAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                   mlir::ArrayAttr permittedTypes) {
+  for (mlir::Attribute typeAttr : permittedTypes) {
+    auto rtti = mlir::dyn_cast<cir::GlobalViewAttr>(typeAttr);
+    if (!rtti || !isRttiPtr(rtti.getType()))
+      return emitError() << "permitted type list must contain only type info "
+                            "symbols";
+  }
 
   return success();
 }

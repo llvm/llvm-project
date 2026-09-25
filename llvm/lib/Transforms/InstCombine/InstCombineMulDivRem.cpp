@@ -41,10 +41,6 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
@@ -1405,9 +1401,7 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
 
       // (X * C1) / C2 -> (X * (C1/D)) / (C2/D) if D = gcd(C1, C2) > 1.
       if (Op0->hasOneUse()) {
-        APInt GCD = IsSigned
-                        ? APIntOps::GreatestCommonDivisor(C1->abs(), C2->abs())
-                        : APIntOps::GreatestCommonDivisor(*C1, *C2);
+        APInt GCD = APIntOps::GreatestCommonDivisor(*C1, *C2, IsSigned);
         if (GCD.ugt(1)) {
           APInt NewC1 = IsSigned ? C1->sdiv(GCD) : C1->udiv(GCD);
           APInt NewC2 = IsSigned ? C2->sdiv(GCD) : C2->udiv(GCD);
@@ -1723,9 +1717,7 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
       if (Value *LogY =
               takeLog2(SI->getOperand(2), Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
-          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "",
-                                      ProfcheckDisableMetadataFixes ? nullptr
-                                                                    : SI);
+          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "", SI);
         });
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))

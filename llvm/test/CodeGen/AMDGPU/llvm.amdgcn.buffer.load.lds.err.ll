@@ -1,21 +1,21 @@
 ; RUN: split-file %s %t
 ;
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.ll 2>&1 | FileCheck --check-prefix=STRUCT %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.ll 2>&1 | FileCheck --check-prefix=STRUCT %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-ASYNC %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-ASYNC %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.ptr.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.ptr.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.ptr.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR-ASYNC %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/struct.ptr.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR-ASYNC %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.ll 2>&1 | FileCheck --check-prefix=RAW %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.ll 2>&1 | FileCheck --check-prefix=RAW %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.async.ll 2>&1 | FileCheck --check-prefix=RAW-ASYNC %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.async.ll 2>&1 | FileCheck --check-prefix=RAW-ASYNC %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.ptr.ll 2>&1 | FileCheck --check-prefix=RAW-PTR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.ptr.ll 2>&1 | FileCheck --check-prefix=RAW-PTR %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.ptr.async.ll 2>&1 | FileCheck --check-prefix=RAW-PTR-ASYNC %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -filetype=null < %t/raw.ptr.async.ll 2>&1 | FileCheck --check-prefix=RAW-PTR-ASYNC %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/struct.ll 2>&1 | FileCheck --check-prefix=STRUCT %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/struct.ll 2>&1 | FileCheck --check-prefix=STRUCT %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/struct.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-ASYNC %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/struct.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-ASYNC %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/struct.ptr.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/struct.ptr.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/struct.ptr.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR-ASYNC %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/struct.ptr.async.ll 2>&1 | FileCheck --check-prefix=STRUCT-PTR-ASYNC %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/raw.ll 2>&1 | FileCheck --check-prefix=RAW %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/raw.ll 2>&1 | FileCheck --check-prefix=RAW %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/raw.async.ll 2>&1 | FileCheck --check-prefix=RAW-ASYNC %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/raw.async.ll 2>&1 | FileCheck --check-prefix=RAW-ASYNC %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/raw.ptr.ll 2>&1 | FileCheck --check-prefix=RAW-PTR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/raw.ptr.ll 2>&1 | FileCheck --check-prefix=RAW-PTR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null < %t/raw.ptr.async.ll 2>&1 | FileCheck --check-prefix=RAW-PTR-ASYNC %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null < %t/raw.ptr.async.ll 2>&1 | FileCheck --check-prefix=RAW-PTR-ASYNC %s
 ;
 ; STRUCT: llvm.amdgcn.struct.buffer.load.lds requires target feature 'vmem-to-lds-load-insts'
 ; STRUCT-ASYNC: llvm.amdgcn.struct.buffer.load.async.lds requires target feature 'vmem-to-lds-load-insts'

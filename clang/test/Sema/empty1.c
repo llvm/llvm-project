@@ -85,3 +85,28 @@ int func_9(struct emp_1 (*x)[], struct emp_1 (*y)[]) {
 int func_10(int (*x)[0], int (*y)[0]) {
   return x - y; // expected-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 }
+
+// A variably modified type is modelled as having zero size because its size is
+// not known statically. It is not an empty type, so it must not be diagnosed.
+int func_11(int n) {
+  int v[n];
+  return &v + 1 - &v;
+}
+
+// Still provably zero-sized: zero-sized base element or a zero constant dimension.
+int func_12(int n) {
+  struct emp_1 v[n];
+  return &v + 1 - &v; // expected-warning {{subtraction of pointers to type 'struct emp_1[n]' of zero size has undefined behavior}}
+}
+
+int func_13(int n) {
+  int v[n][0];
+  return &v + 1 - &v; // expected-warning {{subtraction of pointers to type 'int[n][0]' of zero size has undefined behavior}}
+}
+
+// A variable bound that folds to a nonzero constant is not zero-sized.
+int func_14(void) {
+  const int four = 4;
+  int v[four];
+  return &v + 1 - &v;
+}

@@ -37,8 +37,8 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[6:7]
 ; SDAG-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    s_and_not1_wrexec_b32 s13, s13
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+; SDAG-NEXT:    s_and_not1_wrexec_b32 s13, s13
 ; SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; SDAG-NEXT:  ; %bb.2:
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s12
@@ -135,7 +135,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 bb:
   %descriptor = load <8 x i32>, ptr addrspace(1) %arg, align 32
   %needs.waterfall = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 0.0, float 0.0, float 0.0, <8 x i32> %descriptor, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
-  %i2 = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 0.0, float 0x7FF8000000000000, float 0.0, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
+  %i2 = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 0.0, float +qnan, float 0.0, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
   %i3 = fadd float %needs.waterfall, %i2
   %i4 = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 1.000000e+00, float 0.0, float 0.0, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
   %i5 = fadd float %i4, %i3

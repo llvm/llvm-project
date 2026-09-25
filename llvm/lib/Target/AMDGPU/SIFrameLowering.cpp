@@ -1089,8 +1089,9 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::SGPRSpill:
     return true;
   case TargetStackID::ScalableVector:
-  case TargetStackID::ScalablePredicateVector:
   case TargetStackID::WasmLocal:
+  case TargetStackID::ScalablePredicateVector:
+  case TargetStackID::AvrAlign:
     return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");
@@ -1442,8 +1443,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool HasFP = false;
   bool HasBP = false;
-  uint32_t NumBytes = MFI.getStackSize();
-  uint32_t RoundedSize = NumBytes;
+  int64_t NumBytes = MFI.getStackSize();
+  int64_t RoundedSize = NumBytes;
 
   // Functions that never return don't need to save and restore the FP or BP.
   const Function &F = MF.getFunction();
@@ -2481,8 +2482,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
-         mayReserveScratchForCWSR(MF) ||
-         MF.getTarget().Options.DisableFramePointerElim(MF);
+         mayReserveScratchForCWSR(MF) || MF.disableFramePointerElim();
 }
 
 bool SIFrameLowering::mayReserveScratchForCWSR(

@@ -699,7 +699,25 @@ func.func @static_loop_unroll_by_3_no_promote_epilogue(%arg0 : memref<?xf32>) {
 // PROMOTE-BY-3-NOT: scf.for
 //  PROMOTE-BY-3: memref.store
 
+// -----
 
+// Dynamic bounds with a constant zero step: splitForOpAtPoint fails the static
+// step check, so unrolling does not rewrite the loop.
+func.func @dynamic_unroll_zero_step(%lb: index, %ub: index,
+                                    %mem: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %step = arith.constant 0 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %mem[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @dynamic_unroll_zero_step
+//  UNROLL-BY-2-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index
+//       UNROLL-BY-2: scf.for %{{.*}} = %[[LB]] to %[[UB]] step %{{.*}}
+//  UNROLL-BY-2-NEXT:   memref.store
+//  UNROLL-BY-2-NEXT: }
+//  UNROLL-BY-2-NEXT: return
 
 // -----
 

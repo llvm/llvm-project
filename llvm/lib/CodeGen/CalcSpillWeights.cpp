@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -29,6 +30,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "calcspillweights"
+
+bool VirtRegAuxInfo::getCachedOptimizeForSize() {
+  if (!CachedOptForSize.has_value())
+    CachedOptForSize = PSI && llvm::shouldOptimizeForSize(&MF, PSI, &MBFI);
+  return *CachedOptForSize;
+}
 
 void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
   LLVM_DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
@@ -160,7 +167,8 @@ bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *MI,
     // We can't remat physreg uses, unless it is a constant or target wants
     // to ignore this use.
     if (MO.getReg().isPhysical()) {
-      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
+      if (MRI.isConstantPhysReg(MO.getReg()) ||
+          TII.isIgnorableUse(*MI, MI->getOperandNo(&MO)))
         continue;
       return false;
     }
@@ -318,7 +326,8 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
       // Calculate instr weight.
       bool Reads, Writes;
       std::tie(Reads, Writes) = MI->readsWritesVirtualRegister(LI.reg());
-      Weight = LiveIntervals::getSpillWeight(Writes, Reads, &MBFI, *MI, PSI);
+      Weight = LiveIntervals::getSpillWeight(Writes, Reads, &MBFI, *MI,
+                                             getCachedOptimizeForSize());
 
       // Give extra weight to what looks like a loop induction variable update.
       if (Writes && IsExiting && LIS.isLiveOutOfMBB(LI, MBB))

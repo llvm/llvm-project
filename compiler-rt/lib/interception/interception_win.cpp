@@ -676,6 +676,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xC084:  // 84 C0 : test al,al
     case 0xC984:  // 84 C9 : test cl,cl
     case 0xD284:  // 84 D2 : test dl,dl
+    case 0xD285:  // 85 D2 : test edx, edx
       return 2;
 
     case 0x3980:  // 80 39 XX : cmp BYTE PTR [rcx], XX
@@ -699,7 +700,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 
   switch (0x00FFFFFF & *(u32 *)address) {
+    case 0x24448D:  // 8D 44 24 XX : lea eax, [esp + XX]
     case 0x244C8D:  // 8D 4C 24 XX : lea ecx, [esp + XX]
+    case 0x3A8366:  // 66 83 3A XX : cmp word ptr [rdx], XX
     case 0x2474FF:  // FF 74 24 XX : push qword ptr [rsp + XX]
       return 4;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
@@ -708,7 +711,12 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
   switch (*(u32*)(address)) {
     case 0xc0ef0f66:  // 66 0f ef c0 : pxor xmm0, xmm0
+    case 0xFA1E0FF3:  // F3 0F 1E FA : endbr64
+    case 0xFB1E0FF3:  // F3 0F 1E FB : endbr32
       return 4;
+    case 0x2444B60F:  // 0F B6 44 24 XX : movzx eax, byte ptr [esp + XX]
+    case 0x244CB60F:  // 0F B6 4C 24 XX : movzx ecx, byte ptr [esp + XX]
+      return 5;
   }
 
   switch (0x000000FF & *(u32 *)address) {
@@ -885,6 +893,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x488d49:    // 49 8d 48 XX : lea rcx, [...]
     case 0x048d4c:    // 4c 8d 04 XX : lea r8, [...]
     case 0x148d4e:    // 4e 8d 14 XX : lea r10, [...]
+    case 0x0C8D4F:    // 4F 8D 0C XX : lea r9, [...]
     case 0x398366:    // 66 83 39 XX : cmp WORD PTR [rcx], XX
       return 4;
 
@@ -1003,11 +1012,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24748B:  // 8B 74 24 XX : mov esi, dword ptr [esp + XX]
     case 0x247C8B:  // 8B 7C 24 XX : mov edi, dword ptr [esp + XX]
       return 4;
-  }
-
-  switch (*(u32*)address) {
-    case 0x2444B60F:  // 0F B6 44 24 XX : movzx eax, byte ptr [esp + XX]
-      return 5;
   }
 #endif
 

@@ -13,7 +13,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -294,7 +293,11 @@ bool SMEPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  if (!MF.getSubtarget<AArch64Subtarget>().hasSME())
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
+
+  if (!MF.getSubtarget<AArch64Subtarget>().hasSME() &&
+      !SMEFnAttrs.hasStreamingCompatibleInterface())
     return false;
 
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
@@ -317,7 +320,6 @@ bool SMEPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   if (FunctionHasAllSMChangesRemoved)
     AFI->setHasStreamingModeChanges(false);
 

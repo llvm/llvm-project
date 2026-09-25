@@ -977,7 +977,8 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
+  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier,
+                                              /*count=*/nullptr)
       .getResult(0);
 }
 
@@ -1003,7 +1004,8 @@ void CUDAIntrinsicLibrary::genBarrierInit(
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
   mlir::NVVM::MBarrierInitOp::create(builder, loc, barrier,
-                                     fir::getBase(args[1]), {});
+                                     fir::getBase(args[1]), /*layout=*/0,
+                                     /*predicate=*/{});
   auto kind = mlir::NVVM::ProxyKindAttr::get(
       builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
   auto space = mlir::NVVM::SharedSpaceAttr::get(

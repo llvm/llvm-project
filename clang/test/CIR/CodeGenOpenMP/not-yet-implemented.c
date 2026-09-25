@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenmp -fclangir %s -verify -emit-cir -o -
+// RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir %s -verify -emit-cir -o -
 
 void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPCriticalDirective}}
@@ -7,10 +7,5 @@ void do_things() {
 
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPSingleDirective}}
 #pragma omp single
-  {}
-
-  int i;
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'if' clause}}
-#pragma omp parallel if(i)
   {}
 }

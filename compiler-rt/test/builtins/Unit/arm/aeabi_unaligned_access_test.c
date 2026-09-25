@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
-extern int __aeabi_uread4(void *);
+extern int __aeabi_uread4(const void *);
 extern int __aeabi_uwrite4(int, void *);
-extern long long __aeabi_uread8(void *);
+extern long long __aeabi_uread8(const void *);
 extern long long __aeabi_uwrite8(long long, void *);
 
 int test_unaligned(void) {

@@ -185,11 +185,11 @@ define amdgpu_ps <10 x float> @image_bvh_dual_intersect_ray_vvvvvv(i64 %node_ptr
 ; GFX12-SDAG-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[13:14]
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh_dual_intersect_ray v[0:9], [v[27:28], v[29:30], v[22:24], v[19:21], v[25:26]], s[0:3]
-; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr11_vgpr12_vgpr13_vgpr14
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr27_vgpr28
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr29_vgpr30
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr25_vgpr26
+; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-SDAG-NEXT:  ; %bb.2:
 ; GFX12-SDAG-NEXT:    s_mov_b32 exec_lo, s4

@@ -18,6 +18,7 @@
 // RUN:   --ssaf-src-edit-file=%t/missing-dir/edits.yaml \
 // RUN:   --ssaf-transformation-report-file=%t/report.sarif \
 // RUN:   --ssaf-compilation-unit-id=cu \
+// RUN:   --ssaf-link-unit-id=lu \
 // RUN:   -emit-obj -o %t/test.o %s 2>&1 | FileCheck --check-prefix=EDIT-FAIL %s
 // EDIT-FAIL: warning: failed to write source edits to '{{.*}}/missing-dir/edits.yaml'{{.*}}[-Wscalable-static-analysis-framework]
 // RUN: test -e %t/test.o
@@ -34,6 +35,7 @@
 // RUN:   --ssaf-src-edit-file=%t/edits.yaml \
 // RUN:   --ssaf-transformation-report-file=%t/missing-dir/report.sarif \
 // RUN:   --ssaf-compilation-unit-id=cu \
+// RUN:   --ssaf-link-unit-id=lu \
 // RUN:   -emit-obj -o %t/test.o %s 2>&1 | FileCheck --check-prefix=REPORT-FAIL %s
 // REPORT-FAIL: warning: failed to write transformation report to '{{.*}}/missing-dir/report.sarif'{{.*}}[-Wscalable-static-analysis-framework]
 // RUN: test -e %t/test.o

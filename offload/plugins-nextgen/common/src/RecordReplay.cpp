@@ -279,10 +279,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t UserThreads = std::max(LaunchArgs.UserThreadLimit[0], uint32_t(0));
-  uint32_t MaxThreads = UserThreads
-                            ? std::min(UserThreads, Kernel.getMaxThreads())
-                            : Kernel.getMaxThreads();
+  uint32_t MaxThreads = Kernel.getMaxThreads();
   json::Array JsonThreadsLimits;
   JsonThreadsLimits.push_back(1);
   JsonThreadsLimits.push_back(MaxThreads);

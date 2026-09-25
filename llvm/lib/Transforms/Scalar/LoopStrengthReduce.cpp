@@ -565,7 +565,7 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
     DoInitialMatch(Start, L, Good, Bad, SE);
     DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
                                     // FIXME: AR->getNoWrapFlags()
-                                    ARLoop, SCEV::FlagAnyWrap),
+                                    ARLoop, SCEV::FlagNone),
                    L, Good, Bad, SE);
     return;
   }
@@ -868,7 +868,7 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
       // FlagNW is independent of the start value, step direction, and is
       // preserved with smaller magnitude steps.
       // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-      return SE.getAddRecExpr(Start, Step, AR->getLoop(), SCEV::FlagAnyWrap);
+      return SE.getAddRecExpr(Start, Step, AR->getLoop(), SCEV::FlagNone);
     }
     return nullptr;
   }
@@ -988,7 +988,7 @@ static Immediate ExtractImmediate(SCEVUse &S, ScalarEvolution &SE,
     if (Result.isNonZero())
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-                           SCEV::FlagAnyWrap);
+                           SCEV::FlagNone);
     return Result;
   }
   return ExtractImmediateOperand({S}, SE, PreferScalable);
@@ -1014,7 +1014,7 @@ static GlobalValue *ExtractSymbol(SCEVUse &S, ScalarEvolution &SE) {
     if (Result)
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-                           SCEV::FlagAnyWrap);
+                           SCEV::FlagNone);
     return Result;
   }
   return nullptr;
@@ -3506,8 +3506,9 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
       // be signed.
       const SCEV *IncExpr = SE.getNoopOrSignExtend(Inc.IncExpr, IntTy);
       Accum = SE.getAddExpr(Accum, IncExpr);
-      LeftOverExpr = LeftOverExpr ?
-        SE.getAddExpr(LeftOverExpr, IncExpr) : IncExpr;
+      LeftOverExpr = LeftOverExpr
+                         ? SE.getAddExpr(LeftOverExpr, IncExpr).getPointer()
+                         : IncExpr;
     }
 
     // Look through each base to see if any can produce a nice addressing mode.
@@ -3915,7 +3916,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     for (const SCEV *S : Add->operands()) {
       const SCEV *Remainder = CollectSubexprs(S, C, Ops, L, SE, Depth+1);
       if (Remainder)
-        Ops.push_back(C ? SE.getMulExpr(C, Remainder) : Remainder);
+        Ops.push_back(C ? SE.getMulExpr(C, Remainder).getPointer() : Remainder);
     }
     return nullptr;
   }
@@ -3932,7 +3933,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     // does not pertain to this loop.
     if (Remainder && (cast<SCEVAddRecExpr>(S)->getLoop() == L ||
                       !isa<SCEVAddRecExpr>(Remainder))) {
-      Ops.push_back(C ? SE.getMulExpr(C, Remainder) : Remainder);
+      Ops.push_back(C ? SE.getMulExpr(C, Remainder).getPointer() : Remainder);
       Remainder = nullptr;
     }
     if (Remainder != Start) {
@@ -3941,7 +3942,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
       return SE.getAddRecExpr(Remainder, Step,
                               cast<SCEVAddRecExpr>(S)->getLoop(),
                               // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-                              SCEV::FlagAnyWrap);
+                              SCEV::FlagNone);
     }
   } else if (match(S, m_scev_Mul(m_SCEVConstant(Op0), m_SCEV(Op1)))) {
     // Break (C * (a + b + c)) into C*a + C*b + C*c.
@@ -5971,9 +5972,8 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   }
 
   // Emit instructions summing all the operands.
-  const SCEV *FullS = Ops.empty() ?
-                      SE.getConstant(IntTy, 0) :
-                      SE.getAddExpr(Ops);
+  const SCEV *FullS =
+      Ops.empty() ? SE.getConstant(IntTy, 0) : SE.getAddExpr(Ops).getPointer();
   Value *FullV = Rewriter.expandCodeFor(FullS, Ty);
 
   // We're done expanding now, so reset the rewriter.

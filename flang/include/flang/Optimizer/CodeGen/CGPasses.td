@@ -51,7 +51,11 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
            "allocations marked with the unified heap allocation mode.">,
     Option<"managedHeapAllocSuffix", "managed-heap-alloc-suffix", "std::string",
            /*default=*/"", "Suffix of the allocator entry points used for "
-           "allocations marked with the managed heap allocation mode.">
+           "allocations marked with the managed heap allocation mode.">,
+    Option<"unsafeFPConversion", "unsafe-fp-conversion", "bool",
+           /*default=*/"false",
+           "Use plain fptosi/fptoui instead of saturating intrinsics "
+           "for FP-to-integer conversions.">
   ];
 }
 
@@ -129,7 +133,6 @@ def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
            "for W^X compliance. When enabled, internal procedure pointers "
            "use a runtime-managed pool of executable trampolines with "
            "separate data region, avoiding the need for an executable stack.">];
-  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {

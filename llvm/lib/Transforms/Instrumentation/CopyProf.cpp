@@ -47,7 +47,7 @@ using namespace llvm;
 // Names for the module c'tor to initialize the runtime, and the runtime
 // initialization function itself.
 constexpr StringRef CopyProfModuleCtorName = "copyprof.module_ctor";
-constexpr StringRef CopyProfInitName = "__copyprof_init";
+constexpr StringRef CopyProfInitName = "__copyprof_init_once";
 
 // Runtime callback function names.
 constexpr StringRef CopyProfCtorEnterCallbackName =

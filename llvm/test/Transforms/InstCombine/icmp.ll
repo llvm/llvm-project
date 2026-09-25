@@ -2122,6 +2122,50 @@ define i1 @icmp_ule_offset_with_common_divisor(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
+; Ensure the identity icmp ult (A - B), Op1 to icmp ule A, Op1 does not occur
+; when the or disjoint is matched as an add, as nuw of add does not imply nowrap
+; of the unsigned subtraction.
+;
+; Note: by the time the first InstCombine iteration is completed, the %xor has been
+; sunk into the `if` block, and the first icmp ult has been canonicalized to an equality.
+; This exposes a constant-folding opportunity knowing that `%arg` is zero from the dominating
+; condition. However, %xor was already visited before the canonicalization, and not re-added
+; to the worklist (as it does not directly use the branch condition), thus we fail to reach a
+; fixpoint within the same iteration.
+define i1 @icmp_ult_neg_offset_or_disjoint(i16 %arg) "instcombine-no-verify-fixpoint" {
+; CHECK-LABEL: define i1 @icmp_ult_neg_offset_or_disjoint(
+; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i16 [[ARG]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ARG]], 0
+; CHECK-NEXT:    call void @use_i32(i32 [[ZEXT]])
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[ARG]], -32768
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT]], -32768
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i16 [[XOR]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = icmp ult i32 [[OR]], [[SEXT]]
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %zext = zext nneg i16 %arg to i32
+  %or = or i32 %zext, -32768
+  %xor = xor i16 %arg, -32768
+  %cmp = icmp ult i16 %arg, 1
+  call void @use_i32(i32 %zext)
+  br i1 %cmp, label %if, label %else
+
+if:
+  %sext = sext i16 %xor to i32
+  %res = icmp ult i32 %or, %sext
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
 ; TODO: Handle non-power-of-2 divisors
 define i1 @icmp_ule_offset_with_common_non_pow2_divisor(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @icmp_ule_offset_with_common_non_pow2_divisor(

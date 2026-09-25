@@ -351,39 +351,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   return MemDepResult::getNonLocal();
 }
 
-// Check if SI that may alias with MemLoc can be safely skipped. This is
-// possible in case if SI can only must alias or no alias with MemLoc (no
-// partial overlapping possible) and it writes the same value that MemLoc
-// contains now (it was loaded before this store and was not modified in
-// between).
-static bool canSkipClobberingStore(const StoreInst *SI,
-                                   const MemoryLocation &MemLoc,
-                                   Align MemLocAlign, BatchAAResults &BatchAA,
-                                   unsigned ScanLimit) {
-  if (!MemLoc.Size.hasValue())
-    return false;
-  if (MemoryLocation::get(SI).Size != MemLoc.Size)
-    return false;
-  if (MemLoc.Size.isScalable())
-    return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() <
-      MemLoc.Size.getValue().getKnownMinValue())
-    return false;
-
-  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || LI->getParent() != SI->getParent())
-    return false;
-  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
-    return false;
-  unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
-    if (++NumVisitedInsts > ScanLimit ||
-        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
-      return false;
-
-  return true;
-}
-
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
@@ -598,7 +565,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
       if (isInvariantLoad)
         continue;
-      if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
+      if (isStorePreservingMemoryLocation(SI, MemLoc, MemLocAlign, BatchAA,
+                                          *Limit))
         continue;
       return MemDepResult::getClobber(Inst);
     }
@@ -868,8 +836,9 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
     auto NonLocalDefIt = NonLocalDefsCache.find(QueryInst);
     if (NonLocalDefIt != NonLocalDefsCache.end()) {
       Result.push_back(NonLocalDefIt->second);
-      ReverseNonLocalDefsCache[NonLocalDefIt->second.getResult().getInst()]
-          .erase(QueryInst);
+      RemoveFromReverseMap<const Value *>(
+          ReverseNonLocalDefsCache, NonLocalDefIt->second.getResult().getInst(),
+          QueryInst);
       NonLocalDefsCache.erase(NonLocalDefIt);
       return;
     }
@@ -1504,8 +1473,10 @@ void MemoryDependenceResults::removeCachedNonLocalPointerDependencies(
     if (auto *I = dyn_cast<Instruction>(P.getPointer())) {
       auto toRemoveIt = ReverseNonLocalDefsCache.find(I);
       if (toRemoveIt != ReverseNonLocalDefsCache.end()) {
-        for (const auto *entry : toRemoveIt->second)
-          NonLocalDefsCache.erase(entry);
+        for (const auto *Entry : toRemoveIt->second) {
+          [[maybe_unused]] bool Removed = NonLocalDefsCache.erase(Entry);
+          assert(Removed && "Reverse non-local def map out of sync?");
+        }
         ReverseNonLocalDefsCache.erase(toRemoveIt);
       }
     }
@@ -1587,10 +1558,20 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
     if (toRemoveIt != NonLocalDefsCache.end()) {
       assert(isa<LoadInst>(RemInst) &&
              "only load instructions should be added directly");
-      const Instruction *DepV = toRemoveIt->second.getResult().getInst();
-      ReverseNonLocalDefsCache.find(DepV)->second.erase(RemInst);
+      Instruction *DepV = toRemoveIt->second.getResult().getInst();
+      RemoveFromReverseMap<const Value *>(ReverseNonLocalDefsCache, DepV,
+                                          RemInst);
       NonLocalDefsCache.erase(toRemoveIt);
     }
+  }
+
+  auto ReverseNonLocalDefIt = ReverseNonLocalDefsCache.find(RemInst);
+  if (ReverseNonLocalDefIt != ReverseNonLocalDefsCache.end()) {
+    for (const Value *QueryInst : ReverseNonLocalDefIt->second) {
+      [[maybe_unused]] bool Removed = NonLocalDefsCache.erase(QueryInst);
+      assert(Removed && "Reverse non-local def map out of sync?");
+    }
+    ReverseNonLocalDefsCache.erase(ReverseNonLocalDefIt);
   }
 
   // Loop over all of the things that depend on the instruction we're removing.

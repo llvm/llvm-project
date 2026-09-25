@@ -13,14 +13,11 @@ def MEMCPY : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 
-// Test default names.
-let IsDefault = true in {
-  def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
-  def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
+def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
+def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
 
-  def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
-  def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
-}
+def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
+def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
 
 // Ignore non-default in initDefaultLibCallNames.
 def bzero : RuntimeLibcallImpl<BZERO>;
@@ -210,7 +207,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
 // CHECK-NEXT: }
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::blah) {
 // CHECK-NEXT:     static constexpr LibcallImplBitset SystemAvailableImpls({

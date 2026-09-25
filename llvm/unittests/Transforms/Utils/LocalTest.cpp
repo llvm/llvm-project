@@ -1125,8 +1125,8 @@ TEST(Local, SimplifyCFGWithNullAC) {
 
 TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
   LLVMContext Ctx;
-  SmallVector<unsigned, 3> Ints = {};
-  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+  SmallVector<unsigned, 1> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "amdgpu.stridemark", {}, Ints);
 
   EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
 }
@@ -1367,5 +1367,5 @@ TEST(Local, ReplaceDbgVariableRecord) {
   EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
 
   // Teardown.
-  RetInst->DebugMarker->eraseFromParent();
+  RetInst->getDbgMarker()->eraseFromParent();
 }

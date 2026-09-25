@@ -99,10 +99,15 @@ DLWRAP_FINALIZE()
 static bool checkForHSA() {
   // return true if dlopen succeeded and all functions found
 
-  const char *HsaLib = DYNAMIC_HSA_PATH;
+  const char *HsaLib = DYNAMIC_HSA_PATH ".1";
   std::string ErrMsg;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    HsaLib = DYNAMIC_HSA_PATH;
+    DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  }
   if (!DynlibHandle->isValid()) {
     ODBG(OLDT_Init) << "Unable to load library '" << HsaLib << "': " << ErrMsg;
     return false;

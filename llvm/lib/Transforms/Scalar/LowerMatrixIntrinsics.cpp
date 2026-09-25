@@ -1592,6 +1592,8 @@ public:
     Type *ElementType = cast<FixedVectorType>(LHS->getType())->getElementType();
     bool IsIntVec = ElementType->isIntegerTy();
 
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
     // Floating point reductions require reassocation.
     if (!IsIntVec && !FMF.allowReassoc())
       return;
@@ -1609,7 +1611,8 @@ public:
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
-    auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+    auto GetCostForArg = [this, &CanBeFlattened, CostKind](Value *Op,
+                                                           unsigned N) {
       if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
@@ -1623,19 +1626,19 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost += TTI.getShuffleCost(
-              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+          EmbedCost +=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 FixedVectorType::get(EltTy, 1), CostKind);
         return EmbedCost;
       }
 
       if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
-                                       EltTy) *
+                                       EltTy, CostKind) *
             N;
         InstructionCost NewCost = TTI.getArithmeticInstrCost(
-            cast<Instruction>(Op)->getOpcode(), VecTy);
+            cast<Instruction>(Op)->getOpcode(), VecTy, CostKind);
         return NewCost - OriginalCost;
       }
 
@@ -1645,9 +1648,9 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -= TTI.getShuffleCost(
-              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+          EmbedCost -=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 FixedVectorType::get(EltTy, 1), CostKind);
         return EmbedCost;
       }
 
@@ -1655,8 +1658,10 @@ public:
       if (N == 1)
         return InstructionCost(0);
 
-      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
-             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
+      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0,
+                                 CostKind) -
+             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0,
+                                     CostKind);
     };
 
     // Iterate over LHS and operations feeding LHS and check if it is profitable
@@ -1688,12 +1693,12 @@ public:
     InstructionCost ReductionCost =
         TTI.getArithmeticReductionCost(
             AddOpCode, cast<FixedVectorType>(LHS->getType()),
-            IsIntVec ? std::nullopt : std::optional(FMF)) +
-        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType());
+            IsIntVec ? std::nullopt : std::optional(FMF), CostKind) +
+        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType(), CostKind);
     InstructionCost SequentialAddCost =
-        TTI.getArithmeticInstrCost(AddOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(AddOpCode, ElementType, CostKind) *
             (LShape.NumColumns - 1) +
-        TTI.getArithmeticInstrCost(MulOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(MulOpCode, ElementType, CostKind) *
             (LShape.NumColumns);
     if ((LHSCost + ReductionCost - SequentialAddCost) > InstructionCost(0))
       return;

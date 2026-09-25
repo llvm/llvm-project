@@ -287,7 +287,6 @@ private:
 
   SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;
 
-  void SelectADD_SUB_I64(SDNode *N);
   void SelectAddcSubb(SDNode *N);
   void SelectAddcSubbI64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);

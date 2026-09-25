@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir-c/Dialect/SCF.h"
 #include "mlir/CAPI/Registration.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(SCF, scf, mlir::scf::SCFDialect)

@@ -1,8 +1,6 @@
 ; RUN: llvm-as %s -o - | llvm-dis > %t1.ll
 ; RUN: llvm-as %t1.ll -o - | llvm-dis > %t2.ll
 ; RUN: diff %t1.ll %t2.ll
-; RUN: llvm-as < %s | lli -jit-kind=mcjit --force-interpreter=true | FileCheck %s
-; CHECK: -255
 
 @ARRAY   = global [ 20 x i17 ] zeroinitializer
 @FORMAT  = constant [ 4 x i8 ] c"%d\0A\00"
@@ -27,4 +25,3 @@ define i32 @main(i32 %argc, i8** %argv) {
   call i32 (i8*,...) @printf(i8* %fmt, i32 %result)
   ret i32 0
 }
-

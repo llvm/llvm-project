@@ -1,5 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
-// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
+// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=MINIMAL
+// RUN: fir-opt --add-debug-info="debug-level=DebugDirectivesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=MINIMAL
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
@@ -35,6 +36,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK: #llvm.di_local_variable<scope = #[[SP1]], name = "x"{{.*}}line = 7, type = #[[TY]]>
 // CHECK: #llvm.di_local_variable<scope = #[[SP1]], name = "y"{{.*}}line = 8, type = #[[TY]]>
 
-// LINETABLE: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
-// LINETABLE: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "__omp_offloading_{{.*}}_QQmain_l6"{{.*}}line = 6{{.*}}subprogramFlags = "LocalToUnit|Definition"{{.*}}>
-// LINETABLE-NOT: #llvm.di_local_variable
+// MINIMAL-NOT: #llvm.di_basic_type
+// MINIMAL-NOT: #llvm.di_composite_type
+// MINIMAL-NOT: #llvm.di_derived_type
+// MINIMAL-NOT: #llvm.di_string_type
+// MINIMAL-NOT: #llvm.di_null_type
+// MINIMAL: #[[SPTY:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+// MINIMAL: #[[SPTY1:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// MINIMAL: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}type = #[[SPTY]]>
+// MINIMAL: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "__omp_offloading_{{.*}}_QQmain_l6"{{.*}}line = 6{{.*}}subprogramFlags = "LocalToUnit|Definition", type = #[[SPTY1]]>
+// MINIMAL-NOT: #llvm.di_local_variable

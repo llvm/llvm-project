@@ -7,7 +7,7 @@ import sysconfig
 
 
 def relpath_nodots(path, base):
-    rel = os.path.normpath(os.path.relpath(path, base))
+    rel = os.path.normcase(os.path.normpath(os.path.relpath(path, base)))
     assert not os.path.isabs(rel)
     parts = rel.split(os.path.sep)
     if parts and parts[0] == "..":
@@ -34,6 +34,11 @@ def main():
         # lldb's python lib will be put in the correct place for python to find it.
         # If not, you'll have to use lldb -P or lldb -print-script-interpreter-info
         # to figure out where it is.
+        #
+        # On Windows, make sure we use lower-case, even though Python normally
+        # puts the libraries in "Lib/site-packages". LLVM installs other files
+        # to "lib/", and having both "Lib/" and "lib/" can make CPack produce a
+        # zip file containing paths spelled both ways.
         try:
             print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
         except ValueError:
@@ -42,7 +47,7 @@ def main():
             if os.name == "posix":
                 print("lib/python%d.%d/site-packages" % sys.version_info[:2])
             elif os.name == "nt":
-                print("Lib\\site-packages")
+                print("lib\\site-packages")
             else:
                 raise
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":

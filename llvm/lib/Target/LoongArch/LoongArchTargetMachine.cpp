@@ -15,7 +15,6 @@
 #include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchTargetObjectFile.h"
 #include "LoongArchTargetTransformInfo.h"
-#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -38,12 +37,14 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoPass(*PR);
+  initializeLoongArchLateBranchOptPass(*PR);
 }
 
 static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
@@ -96,7 +97,7 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
       TLOF(std::make_unique<LoongArchELFTargetObjectFile>()) {
@@ -156,6 +157,7 @@ public:
   void addPreRegAlloc() override;
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
+  void addMachineLateOptimization() override;
 };
 } // end namespace
 
@@ -201,6 +203,8 @@ void LoongArchPassConfig::addPreEmitPass2() {
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
   addPass(createLoongArchExpandAtomicPseudoPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchMemoryBarrierOptPass());
 }
 
 void LoongArchPassConfig::addMachineSSAOptimization() {
@@ -229,4 +233,10 @@ bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
+}
+
+void LoongArchPassConfig::addMachineLateOptimization() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchLateBranchOptPass());
+  TargetPassConfig::addMachineLateOptimization();
 }

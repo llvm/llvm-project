@@ -24,11 +24,11 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository_owner == 'llvm'
     strategy:
       matrix:
-        image_name: ['libcxx-linux-builder-base', 'libcxx-linux-builder', 'libcxx-android-builder']
+        image_name: ['libcxx-linux-builder', 'libcxx-android-builder']
     permissions:
       packages: write
 

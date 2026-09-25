@@ -437,7 +437,6 @@ void SymbolFileNativePDB::InitializeObject() {
   } else {
     if (auto ts = *ts_or_err)
       ts->SetSymbolFile(this);
-    BuildParentMap();
   }
 }
 
@@ -1291,12 +1290,25 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
       return;
 
     if (next && last_sym.Segment == next->Segment) {
-      assert(last_sym.Offset <= next->Offset);
+      if (next->Offset < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "greater than the following offset {3}",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 next->Offset);
+        return;
+      }
       last->SetByteSize(next->Offset - last_sym.Offset);
     } else {
       // the last symbol was the last in its section
-      assert(section_sp->GetByteSize() >= last_sym.Offset);
-      assert(!next || next->Segment > last_sym.Segment);
+      if (section_sp->GetByteSize() < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "past the end of section '{3}' (size {4})",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 section_sp->GetName(), section_sp->GetByteSize());
+        return;
+      }
       last->SetByteSize(section_sp->GetByteSize() - last_sym.Offset);
     }
   };
@@ -2293,6 +2305,8 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
+  BuildParentMap();
+
   // We can't query for the full name because the type might reside
   // in an anonymous namespace. Search for the basename in our map and check the
   // matching types afterwards.
@@ -2829,6 +2843,10 @@ uint64_t SymbolFileNativePDB::GetDebugInfoSize(bool load_all_debug_info) {
 }
 
 void SymbolFileNativePDB::BuildParentMap() {
+  if (m_parent_map_built)
+    return;
+  m_parent_map_built = true;
+
   LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
 
   llvm::DenseMap<TypeIndex, TypeIndex> forward_to_full;
@@ -3008,6 +3026,7 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
 
 std::optional<llvm::codeview::TypeIndex>
 SymbolFileNativePDB::GetParentType(llvm::codeview::TypeIndex ti) {
+  BuildParentMap();
   auto parent_iter = m_parent_types.find(ti);
   if (parent_iter == m_parent_types.end())
     return std::nullopt;

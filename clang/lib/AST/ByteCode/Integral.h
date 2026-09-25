@@ -205,6 +205,10 @@ public:
                      CharUnits::fromQuantity(Ptr.Offset),
                      APValue::NoLValuePath{});
     }
+    case IntegralKind::ExprAddress: {
+      return APValue((const Expr *)Ptr.P, CharUnits::fromQuantity(Ptr.Offset),
+                     APValue::NoLValuePath{});
+    }
     case IntegralKind::LabelAddress: {
       return APValue((const Expr *)Ptr.P, CharUnits::Zero(),
                      APValue::NoLValuePath{});
@@ -300,6 +304,9 @@ public:
     case IntegralKind::Address:
       OS << Ptr.P << " + " << Ptr.Offset << " (Address)";
       break;
+    case IntegralKind::ExprAddress:
+      OS << Ptr.P << " + " << Ptr.Offset << " (ExprAddress)";
+      break;
     case IntegralKind::BlockAddress:
       OS << Ptr.P << " + " << Ptr.Offset << " (BlockAddress)";
       break;
@@ -333,6 +340,7 @@ public:
     case IntegralKind::AddrLabelDiff:
       return Integral(V.getLabel1(), V.getLabel2());
     case IntegralKind::Address:
+    case IntegralKind::ExprAddress:
     case IntegralKind::BlockAddress:
     case IntegralKind::LabelAddress:
     case IntegralKind::FunctionAddress:

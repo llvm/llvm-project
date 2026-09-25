@@ -54,7 +54,6 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

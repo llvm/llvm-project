@@ -1799,7 +1799,7 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
 }
 
 LogicalResult BinaryOp::verify() {
-  NamedAttrList attrs = (*this)->getAttrs();
+  NamedAttrList attrs = (*this)->getDiscardableAttrDictionary().getValue();
   Type leftType = getX().getType();
   Type rightType = getY().getType();
   Type outputType = getOutput().getType();

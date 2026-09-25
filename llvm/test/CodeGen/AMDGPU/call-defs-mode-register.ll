@@ -54,8 +54,9 @@ define void @tail_call_changes_mode() #0 {
   ; GISEL: bb.1 (%ir-block.0):
   ; GISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]]
-  ; GISEL-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:ccr_sgpr_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @maybe_defs_mode, target-flags(amdgpu-rel32-hi) @maybe_defs_mode, implicit-def $scc
-  ; GISEL-NEXT:   SI_TCRETURN [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @maybe_defs_mode, target-flags(amdgpu-rel32-hi) @maybe_defs_mode, implicit-def $scc
+  ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[SI_PC_ADD_REL_OFFSET]]
+  ; GISEL-NEXT:   SI_TCRETURN [[COPY1]], @maybe_defs_mode, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   tail call void @maybe_defs_mode()
   ret void
 }

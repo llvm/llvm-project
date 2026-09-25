@@ -116,6 +116,11 @@ public:
   }
 
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(ty)) {
+      assert(bitFieldTy.ownsBytes() &&
+             "a zero-width bit-field takes no initializer");
+      return getZeroInitAttr(bitFieldTy.getStorageType());
+    }
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
@@ -126,6 +131,8 @@ public:
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
       return cir::ZeroAttr::get(vecTy);
+    if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(ty))
+      return cir::ZeroAttr::get(matrixTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
@@ -885,6 +892,10 @@ public:
 
   mlir::Value createMax(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return cir::MaxOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createMin(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::MinOp::create(*this, loc, lhs, rhs);
   }
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,

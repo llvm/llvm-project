@@ -32,6 +32,7 @@ class AssumptionCache;
 class BasicBlock;
 class CallInst;
 class DominatorTree;
+class Function;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
@@ -270,11 +271,6 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
-  /// and return the resulting value.
-  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
-                                       const VPLane &Lane);
-
   /// Add the backedge (latch) incoming value to the canonical, reduction and
   /// first-order recurrence phis in all loop headers state's plan, after
   /// the loop body has been generated.
@@ -356,12 +352,17 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of a predicated block should be divided by.
-  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
+  /// \returns how much the cost of a block executing with recorded frequency
+  /// \p Freq should be divided by.
+  uint64_t getCostDivisor(std::optional<VPExecutionFrequency> Freq) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;
+
+  /// Returns true if the vector loop body of \p Plan is known to execute at
+  /// most once at \p VF, i.e. its trip count is a constant not greater than
+  /// \p VF. Currently ignores UF.
+  static bool executesAtMostOnce(const VPlan &Plan, ElementCount VF);
 
   /// Forwards to LoopVectorizationCostModel::isMaskRequired.
   bool isMaskRequired(Instruction *I) const;
@@ -427,20 +428,25 @@ class VPSlotTracker {
   /// Cached metadata kind names from the Module's LLVMContext.
   SmallVector<StringRef> MDNames;
 
-  /// Cached Module pointer for printing metadata.
-  const Module *M = nullptr;
+  /// Cached Function pointer for printing names and metadata.
+  const Function *F = nullptr;
 
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
+  /// Lazily create the ModuleSlotTracker.
+  ModuleSlotTracker &getOrCreateMST();
+
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan) {
+      if (auto *ScalarHeader = Plan->getScalarHeader()) {
+        const BasicBlock *ScalarHeaderIRBB = ScalarHeader->getIRBasicBlock();
+        F = ScalarHeaderIRBB->getParent();
+      }
       assignNames(*Plan);
-      if (auto *ScalarHeader = Plan->getScalarHeader())
-        M = ScalarHeader->getIRBasicBlock()->getModule();
     }
   }
 
@@ -451,13 +457,14 @@ public:
 
   /// Returns the cached metadata kind names.
   ArrayRef<StringRef> getMDNames() {
+    const Module *M = getModule();
     if (MDNames.empty() && M)
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
 
-  /// Returns the cached Module pointer.
-  const Module *getModule() const { return M; }
+  /// Returns the module the plan operates on, if any.
+  const Module *getModule() const { return F ? F->getParent() : nullptr; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/TBAAForest.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -817,15 +818,23 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableLocalAllocs &&
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
-    mlir::Operation *sourceOp =
-        llvm::cast<mlir::Value>(source.origin.u).getDefiningOp();
-    bool unknownAllocOp = false;
-    if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
-      name = alloc.getUniqName();
-    else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
-      name = alloc.getUniqName();
-    else
-      unknownAllocOp = true;
+    mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
+    mlir::Operation *sourceOp = sourceVal.getDefiningOp();
+    bool unknownAllocOp =
+        !fir::isNewAllocationResult(mlir::dyn_cast<mlir::OpResult>(sourceVal))
+             .value_or(false);
+    if (!unknownAllocOp) {
+      // Non-FIR allocation operations may carry the uniq_name preserved when
+      // a FIR allocation was rewritten.
+      if (auto alloc = mlir::dyn_cast<fir::AllocaOp>(sourceOp))
+        name = alloc.getUniqName();
+      else if (auto alloc = mlir::dyn_cast<fir::AllocMemOp>(sourceOp))
+        name = alloc.getUniqName();
+      else if (mlir::StringAttr nameAttr =
+                   sourceOp->getDiscardableAttrOfType<mlir::StringAttr>(
+                       fir::getUniqNameAttrName()))
+        name = nameAttr.getValue();
+    }
 
     // Check if this allocation is a local copy of a VALUE dummy argument.
     // A VALUE dummy arg is lowered as a local alloca declared with the
@@ -837,7 +846,6 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     // which then incorrectly eliminates the copy stores.
     bool isValueDummyCopy = false;
     if (!unknownAllocOp) {
-      mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
       if (fir::DeclareOp declareOp = getDeclareOp(sourceVal)) {
         auto varIf = mlir::cast<fir::FortranVariableOpInterface>(
             declareOp.getOperation());
@@ -886,6 +894,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .allocatedDataTree.getTag(*name);
     } else if (state.attachLocalAllocTag()) {
+      // Recognized anonymous allocations, including allocations from other
+      // dialects, use the generic "allocated data" tag.
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
                  << "\n");

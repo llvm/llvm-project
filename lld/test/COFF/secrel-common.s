@@ -25,7 +25,7 @@
 # CHECK:     Number: 3
 # CHECK:     Name: .data (2E 64 61 74 61 00 00 00)
 # CHECK:     VirtualSize: 0x204
-# CHECK:     RawDataSize: 512
+# CHECK:     RawDataSize: 0x200
 # CHECK:   }
 # CHECK-NOT: Section
 # CHECK: ]

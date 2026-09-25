@@ -27,16 +27,13 @@ with worker.run(
                 "cmake",
                 f"-S{w.in_llvmsrc('llvm')}",
                 f"-B{llvmbuilddir}",
-                f"-C{w.in_llvmsrc('offload/cmake/caches/AMDGPUBot.cmake')}",
+                f"-C{w.in_llvmsrc('offload/cmake/caches/AMDGPULibcBot.cmake')}",
                 "-GNinja",
                 f"-DLLVM_LIT_ARGS=-vv --show-unsupported --show-xfail -j {w.jobs} --time-tests --timeout 100",
                 f"-DCMAKE_INSTALL_PREFIX={w.in_workdir(llvminstalldir)}",
                 "-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath",
                 "-DCMAKE_CXX_STANDARD=17",
                 "-DLIBOMPTARGET_PLUGINS_TO_BUILD=amdgpu;host",
-                "-DLLVM_RUNTIME_TARGETS=default;amdgpu-amd-amdhsa",
-                "-DRUNTIMES_amdgpu-amd-amdhsa_LLVM_ENABLE_RUNTIMES=compiler-rt;openmp",
-                f"-DRUNTIMES_amdgpu-amd-amdhsa_CACHE_FILES={w.in_llvmsrc('compiler-rt')}/cmake/caches/AMDGPU.cmake\;{w.in_llvmsrc('libcxx')}/cmake/caches/AMDGPU.cmake CACHE STRING '')",
             ]
         )
 

@@ -156,10 +156,6 @@ if(TARGET darwin-mte-launcher)
   set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
 endif()
 
-if (LLDB_CAN_USE_LLDB_RPC_SERVER)
-  add_lldb_test_dependency(lldb-rpc-generate-sources)
-endif()
-
 # Add dependencies that are not exported targets when building standalone.
 if(NOT LLDB_BUILT_STANDALONE)
   add_lldb_test_dependency(
@@ -294,7 +290,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
-  LLDB_ENABLE_LZMA
+  LLVM_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
   LLVM_ENABLE_DIA_SDK
@@ -304,7 +300,6 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC
   LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.

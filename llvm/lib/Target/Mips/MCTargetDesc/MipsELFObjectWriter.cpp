@@ -26,7 +26,6 @@
 #include <cstdint>
 #include <iterator>
 #include <list>
-#include <utility>
 
 #define DEBUG_TYPE "mips-elf-object-writer"
 

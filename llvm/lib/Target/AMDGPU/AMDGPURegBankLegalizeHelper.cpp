@@ -18,7 +18,6 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -535,10 +534,12 @@ std::pair<Register, Register> RegBankLegalizeHelper::unpackSExt(Register Reg) {
 }
 
 std::pair<Register, Register> RegBankLegalizeHelper::unpackAExt(Register Reg) {
-  auto PackedI32 = B.buildBitcast(SgprRB_I32, Reg);
-  auto Lo = PackedI32;
-  auto Hi = B.buildLShr(SgprRB_I32, PackedI32, B.buildConstant(SgprRB_I32, 16));
-  return {Lo.getReg(0), Hi.getReg(0)};
+  Register RegI32 = Reg;
+  if (MRI.getType(Reg) != I32)
+    RegI32 = B.buildBitcast(SgprRB_I32, Reg).getReg(0);
+
+  auto Hi = B.buildLShr(SgprRB_I32, RegI32, B.buildConstant(SgprRB_I32, 16));
+  return {RegI32, Hi.getReg(0)};
 }
 
 std::pair<Register, Register>
@@ -942,6 +943,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
   auto Op3 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(3).getReg());
   Register Cond = MI.getOperand(1).getReg();
+  Cond = B.buildFreeze(VccRB_S1, Cond).getReg(0);
   auto Flags = MI.getFlags();
   auto Lo =
       B.buildSelect({VgprRB, Ty}, Cond, Op2.getReg(0), Op3.getReg(0), Flags);

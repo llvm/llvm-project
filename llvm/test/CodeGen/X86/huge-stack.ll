@@ -36,21 +36,21 @@ define ptr @scavenge_spill() unnamed_addr #0 {
 ; CHECK-NEXT:    leaq (%rsp,%rax), %rdi
 ; CHECK-NEXT:    movabsq $17179869226, %rax # imm = 0x40000002A
 ; CHECK-NEXT:    leaq (%rsp,%rax), %rsi
-; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, 8(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movabsq $12884901931, %rax # imm = 0x30000002B
 ; CHECK-NEXT:    leaq (%rsp,%rax), %rdx
-; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdx, 16(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movabsq $8589934636, %rax # imm = 0x20000002C
 ; CHECK-NEXT:    leaq (%rsp,%rax), %rcx
-; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, 24(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    callq baz@PLT
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq 8(%rsp), %rsi # 8-byte Reload
+; CHECK-NEXT:    movq 16(%rsp), %rdx # 8-byte Reload
+; CHECK-NEXT:    movq 24(%rsp), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq %rax, 32(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    leaq 46(%rsp), %rdi
 ; CHECK-NEXT:    callq baz@PLT
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    movq 32(%rsp), %rax # 8-byte Reload
 ; CHECK-NEXT:    movabsq $25769803816, %rcx # imm = 0x600000028
 ; CHECK-NEXT:    addq %rcx, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

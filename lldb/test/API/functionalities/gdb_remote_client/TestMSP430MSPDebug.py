@@ -15,6 +15,9 @@ class MyResponder(MockGDBServerResponder):
     def setBreakpoint(self, packet):
         return "OK"
 
+    def clearBreakpoint(self, packet):
+        return "OK"
+
     def stopPackets():
         # Registers 3 to 15 are empty
         regs3to15 = "".join("%02x:%s;" % (i, "00000000") for i in range(3, 16))

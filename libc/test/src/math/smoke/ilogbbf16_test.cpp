@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/ilogbbf16.h"
 
-LIST_INTLOGB_TESTS(int, bfloat16, LIBC_NAMESPACE::ilogbbf16);
+LIST_INTLOGB_TESTS(Ilogbbf16, int, bfloat16, LIBC_NAMESPACE::ilogbbf16);

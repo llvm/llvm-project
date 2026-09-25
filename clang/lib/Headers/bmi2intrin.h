@@ -74,7 +74,7 @@ _bzhi_u32(unsigned int __X, unsigned int __Y) {
 /// \returns The 32-bit result.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _pdep_u32(unsigned int __X, unsigned int __Y) {
-  return __builtin_ia32_pdep_si(__X, __Y);
+  return __builtin_elementwise_pdep(__X, __Y);
 }
 
 /// Extract (gather) bits from the unsigned 32-bit integer \a __X into the
@@ -103,7 +103,7 @@ _pdep_u32(unsigned int __X, unsigned int __Y) {
 /// \returns The 32-bit result.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _pext_u32(unsigned int __X, unsigned int __Y) {
-  return __builtin_ia32_pext_si(__X, __Y);
+  return __builtin_elementwise_pext(__X, __Y);
 }
 
 /// Multiplies the unsigned 32-bit integers \a __X and \a __Y to form a
@@ -186,7 +186,7 @@ _bzhi_u64(unsigned long long __X, unsigned long long __Y) {
 /// \returns The 64-bit result.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _pdep_u64(unsigned long long __X, unsigned long long __Y) {
-  return __builtin_ia32_pdep_di(__X, __Y);
+  return __builtin_elementwise_pdep(__X, __Y);
 }
 
 /// Extract (gather) bits from the unsigned 64-bit integer \a __X into the
@@ -215,7 +215,7 @@ _pdep_u64(unsigned long long __X, unsigned long long __Y) {
 /// \returns The 64-bit result.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _pext_u64(unsigned long long __X, unsigned long long __Y) {
-  return __builtin_ia32_pext_di(__X, __Y);
+  return __builtin_elementwise_pext(__X, __Y);
 }
 
 /// Multiplies the unsigned 64-bit integers \a __X and \a __Y to form a

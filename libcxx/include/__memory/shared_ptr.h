@@ -474,7 +474,7 @@ public:
   }
 
   template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>& operator=(shared_ptr<_Yp>&& __r) {
+  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>& operator=(shared_ptr<_Yp>&& __r) _NOEXCEPT {
     shared_ptr(std::move(__r)).swap(*this);
     return *this;
   }

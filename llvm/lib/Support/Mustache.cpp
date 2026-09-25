@@ -9,7 +9,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
 #include <sstream>
 
 #define DEBUG_TYPE "mustache"
