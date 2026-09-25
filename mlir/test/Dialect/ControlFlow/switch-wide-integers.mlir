@@ -73,7 +73,7 @@ func.func @switch_i1(%flag: i1) {
   return
 }
 
-// Preserve ordinary small values and truncation to the declared width.
+// Accept both signed and unsigned values representable at the declared width.
 // CHECK-LABEL: func.func @switch_i8
 // CHECK:       42:
 // CHECK-NEXT:  -42:
@@ -90,8 +90,8 @@ func.func @switch_i8(%flag: i8) {
     -42: ^bb1,
     128: ^bb1,
     255: ^bb1,
-    256: ^bb1,
-    -129: ^bb1
+    0: ^bb1,
+    127: ^bb1
   ]
 ^bb1:
   return
@@ -128,6 +128,33 @@ func.func @switch_i65_boundaries(%flag: i65) {
     18446744073709551615: ^bb1,
     18446744073709551616: ^bb1,
     -1: ^bb1
+  ]
+^bb1:
+  return
+}
+
+// Signed narrow minima must also survive printing and reparsing.
+// CHECK-LABEL: func.func @switch_i8_signed_min
+// CHECK:       -128:
+// GENERIC-LABEL: sym_name = "switch_i8_signed_min"
+// GENERIC: case_values = dense<-128> : vector<1xi8>
+func.func @switch_i8_signed_min(%flag: i8) {
+  cf.switch %flag : i8, [
+    default: ^bb1,
+    -128: ^bb1
+  ]
+^bb1:
+  return
+}
+
+// CHECK-LABEL: func.func @switch_i128_unsigned_max
+// CHECK:       -1:
+// GENERIC-LABEL: sym_name = "switch_i128_unsigned_max"
+// GENERIC: case_values = dense<-1> : vector<1xi128>
+func.func @switch_i128_unsigned_max(%flag: i128) {
+  cf.switch %flag : i128, [
+    default: ^bb1,
+    340282366920938463463374607431768211455: ^bb1
   ]
 ^bb1:
   return

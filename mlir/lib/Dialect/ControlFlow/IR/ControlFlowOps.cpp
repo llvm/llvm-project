@@ -647,9 +647,14 @@ static ParseResult parseSwitchOpCases(
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
   while (succeeded(parser.parseOptionalComma())) {
+    SMLoc valueLoc = parser.getCurrentLocation();
     APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
+    if (value.isNegative() ? !value.isSignedIntN(bitWidth)
+                           : !value.isIntN(bitWidth))
+      return parser.emitError(valueLoc)
+             << "case value is out of range for " << flagType;
     values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *destination;
