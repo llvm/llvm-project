@@ -14,9 +14,9 @@ define amdgpu_ps void @i1_copy_from_loop(ptr addrspace(8) inreg %rsrc, i32 %tid)
 ; SI-NEXT:  .LBB0_2: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_and_b64 s[12:13], exec, s[8:9]
-; SI-NEXT:    s_or_b64 s[4:5], s[12:13], s[4:5]
 ; SI-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
+; SI-NEXT:    s_or_b64 s[4:5], s[12:13], s[4:5]
 ; SI-NEXT:    s_or_b64 s[6:7], s[6:7], s[10:11]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB0_7
