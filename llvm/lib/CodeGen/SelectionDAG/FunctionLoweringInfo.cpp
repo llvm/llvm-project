@@ -65,12 +65,17 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   // zero extension instruction, and eventually more machine CSE opportunities
   // can be exposed.
   ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
-  unsigned NumOfSigned = 0, NumOfUnsigned = 0;
+  unsigned NumOfSigned = 0, NumOfUnsigned = 0, NumOfUnsignedSameSign = 0;
+  bool HasPlainZExtUse = false;
   for (const Use &U : I->uses()) {
-    if (const auto *CI = dyn_cast<CmpInst>(U.getUser())) {
+    if (const auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
       NumOfSigned += CI->isSigned();
       NumOfUnsigned += CI->isUnsigned();
+      NumOfUnsignedSameSign += CI->isUnsigned() && CI->hasSameSign();
     }
+    // A zext nneg can use sign extension as well.
+    if (const auto *ZExt = dyn_cast<ZExtInst>(U.getUser()))
+      HasPlainZExtUse |= !ZExt->hasNonNeg();
     if (const auto *CallI = dyn_cast<CallBase>(U.getUser())) {
       if (!CallI->isArgOperand(&U))
         continue;
@@ -79,6 +84,11 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
       NumOfSigned += CallI->paramHasAttr(ArgNo, Attribute::SExt);
     }
   }
+  // Unsigned samesign comparisons do not establish a sign-extension preference
+  // on their own. Discount them unless the value has a plain zext use or is i1.
+  if (!HasPlainZExtUse && !I->getType()->isIntegerTy(1))
+    NumOfUnsigned -= NumOfUnsignedSameSign;
+
   if (NumOfSigned > NumOfUnsigned)
     ExtendKind = ISD::SIGN_EXTEND;
 
