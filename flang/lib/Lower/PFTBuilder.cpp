@@ -633,8 +633,7 @@ private:
     lower::pft::FunctionLikeUnit *owningProcedure = eval.getOwningProcedure();
     evaluationListStack.back()->emplace_back(std::move(eval));
     lower::pft::Evaluation *p = &evaluationListStack.back()->back();
-    if (p->isActionStmt() || p->isConstructStmt() || p->isEndStmt() ||
-        p->isExecutableDirective()) {
+    if (p->isLexicallyLinked()) {
       if (lastLexicalEvaluation) {
         lastLexicalEvaluation->lexicalSuccessor = p;
         p->printIndex = lastLexicalEvaluation->printIndex + 1;
@@ -676,6 +675,39 @@ private:
     assert(!evaluationListStack.empty() &&
            "trying to pop an empty evaluationListStack");
     evaluationListStack.pop_back();
+  }
+
+  /// Return the statement that opens an evaluation: the evaluation itself, or
+  /// its first nested statement if it is a construct.
+  static lower::pft::Evaluation *firstStmt(lower::pft::Evaluation *eval) {
+    return eval->isConstruct() ? &*eval->evaluationList->begin() : eval;
+  }
+
+  /// Return the last linked statement within an evaluation, descending
+  /// through nested evaluation lists, or nullptr if there is none.
+  static lower::pft::Evaluation *lastLinkedStmt(lower::pft::Evaluation *eval) {
+    if (eval->evaluationList)
+      for (lower::pft::Evaluation &nested :
+           llvm::reverse(*eval->evaluationList))
+        if (lower::pft::Evaluation *stmt = lastLinkedStmt(&nested))
+          return stmt;
+    return eval->isLexicallyLinked() ? eval : nullptr;
+  }
+
+  /// Return the evaluation that falls through to the evaluation at \p it.
+  /// Unlinked statements are skipped, and a preceding construct is descended
+  /// into to reach the last statement of its body.
+  static lower::pft::Evaluation *
+  fallthroughPredecessor(lower::pft::EvaluationList &evaluationList,
+                         lower::pft::EvaluationList::iterator it) {
+    lower::pft::Evaluation *predecessor = nullptr;
+    for (lower::pft::EvaluationList::iterator searchIt = it;
+         !predecessor && searchIt != evaluationList.begin();)
+      predecessor = lastLinkedStmt(&*--searchIt);
+    assert(predecessor && "no fallthrough predecessor");
+    assert(predecessor->lexicalSuccessor == firstStmt(&*it) &&
+           "expected fallthrough to the next evaluation");
+    return predecessor;
   }
 
   /// Delete a CycleStmt that is the last statement of the body of its own
@@ -720,13 +752,9 @@ private:
     std::string cycleName = getConstructName(*cycleStmt);
     if (!cycleName.empty() && cycleName != getConstructName(*doStmt))
       return; // cycle for an outer construct
-    // Relink the lexical predecessor of the CycleStmt to the EndDoStmt. That
-    // predecessor is the last statement reachable from the preceding
-    // evaluation, so descend through nested evaluation lists to find it.
-    lower::pft::Evaluation *predecessor = &*std::prev(cycleStmtIt);
-    while (predecessor->evaluationList && !predecessor->evaluationList->empty())
-      predecessor = &predecessor->evaluationList->back();
-    assert(predecessor->lexicalSuccessor == &*cycleStmtIt);
+    // Relink the lexical predecessor of the CycleStmt to the EndDoStmt.
+    lower::pft::Evaluation *predecessor =
+        fallthroughPredecessor(evaluationList, cycleStmtIt);
     predecessor->lexicalSuccessor = cycleStmtIt->lexicalSuccessor;
     evaluationList.erase(cycleStmtIt);
   }
@@ -778,6 +806,9 @@ private:
       lower::pft::EvaluationList::iterator ifConstructIt;
       parser::Label ifTargetLabel;
       bool isCycleStmt = false;
+      // Statements precede the branch, so the IF is rewritten as an IF/ELSE
+      // rather than by negating its condition.
+      bool hasLeadingStmts = false;
     };
     llvm::SmallVector<T> ifCandidateStack;
     const auto *doStmt =
@@ -790,9 +821,6 @@ private:
         ifCandidateStack.clear();
         continue;
       }
-      auto firstStmt = [](lower::pft::Evaluation *e) {
-        return e->isConstruct() ? &*e->evaluationList->begin() : e;
-      };
       const Fortran::lower::pft::Evaluation &targetEval = *firstStmt(&eval);
       bool targetEvalIsEndDoStmt = targetEval.isA<parser::EndDoStmt>();
       auto branchTargetMatch = [&]() {
@@ -810,7 +838,11 @@ private:
               ifCandidateStack.back().ifConstructIt;
           lower::pft::EvaluationList::iterator successorIt =
               std::next(ifConstructIt);
-          if (successorIt != it) {
+          if (successorIt != it && ifCandidateStack.back().hasLeadingStmts) {
+            rewriteIfCycleAsIfElse(evaluationList,
+                                   *ifConstructIt->evaluationList,
+                                   ifConstructIt, successorIt, it);
+          } else if (successorIt != it) {
             Fortran::lower::pft::EvaluationList &ifBodyList =
                 *ifConstructIt->evaluationList;
             lower::pft::EvaluationList::iterator branchStmtIt =
@@ -843,11 +875,113 @@ private:
             std::string cycleName = getConstructName(*cycleStmt);
             if (cycleName.empty() || cycleName == doName)
               // This candidate will match doStmt's EndDoStmt.
-              ifCandidateStack.push_back({it, {}, true});
+              ifCandidateStack.push_back({it, {}, /*isCycleStmt=*/true});
           }
+        }
+      } else if (doStmt && eval.isA<parser::IfConstruct>() &&
+                 eval.evaluationList->size() > 3) {
+        // An IF body whose last statement is a CYCLE.
+        lower::pft::EvaluationList &bodyList = *eval.evaluationList;
+        auto branchIt = std::prev(std::prev(bodyList.end()));
+        const auto *cycleStmt = branchIt->getIf<parser::CycleStmt>();
+        // A CYCLE ending an ELSE or ELSE IF branch sits in the same position
+        // but must not match.
+        bool hasElseBranch =
+            llvm::any_of(bodyList, [](const lower::pft::Evaluation &bodyEval) {
+              return bodyEval.isIntermediateConstructStmt();
+            });
+        if (cycleStmt && !hasElseBranch && !branchIt->label) {
+          std::string cycleName = getConstructName(*cycleStmt);
+          if (cycleName.empty() || cycleName == doName)
+            // This candidate will match doStmt's EndDoStmt.
+            ifCandidateStack.push_back({it,
+                                        {},
+                                        /*isCycleStmt=*/true,
+                                        /*hasLeadingStmts=*/true});
         }
       }
     }
+  }
+
+  /// Rewrite an IfConstruct whose body ends in a CycleStmt, with statements
+  /// ahead of it, as an IF/ELSE. The pre-branch-analysis code:
+  ///
+  ///       <<IfConstruct>>
+  ///         1 IfThenStmt: if(cond) then
+  ///         2 Statement: ...
+  ///         3 CycleStmt: cycle
+  ///         4 EndIfStmt
+  ///       <<End IfConstruct>>
+  ///       5 Statement: ...
+  ///       6 EndDoStmt
+  ///
+  /// becomes:
+  ///
+  ///       <<IfConstruct>>
+  ///         1 IfThenStmt: if(cond) then
+  ///         2 Statement: ...
+  ///         * ElseStmt
+  ///         5 Statement: ...
+  ///         4 EndIfStmt
+  ///       <<End IfConstruct>>
+  ///       6 EndDoStmt
+  ///
+  /// When the branch is the whole IF body there is nothing to keep, so
+  /// rewriteIfGotos deletes the branch and negates the condition. Here
+  /// statement 2 must still run when the condition holds, so the condition is
+  /// left as written and the statements that followed the construct go into an
+  /// ELSE branch instead.
+  ///
+  /// The synthesized ElseStmt has no source position and no index of its own.
+  void
+  rewriteIfCycleAsIfElse(lower::pft::EvaluationList &evaluationList,
+                         lower::pft::EvaluationList &ifBodyList,
+                         lower::pft::EvaluationList::iterator ifConstructIt,
+                         lower::pft::EvaluationList::iterator successorIt,
+                         lower::pft::EvaluationList::iterator it) {
+    lower::pft::EvaluationList::iterator branchStmtIt =
+        std::prev(std::prev(ifBodyList.end()));
+    assert(branchStmtIt->isA<parser::CycleStmt>() &&
+           "expected cycle statement");
+    lower::pft::EvaluationList::iterator endIfStmtIt =
+        std::prev(ifBodyList.end());
+
+    // The ELSE branch starts where the EndIfStmt currently falls through. If
+    // that is the branch target, nothing linked lies between, so nothing
+    // moves.
+    lower::pft::Evaluation *elseBranchStart = endIfStmtIt->lexicalSuccessor;
+    if (elseBranchStart == firstStmt(&*it))
+      return;
+
+    // The THEN branch tail, which currently falls through to the CycleStmt.
+    lower::pft::Evaluation *thenTail =
+        fallthroughPredecessor(ifBodyList, branchStmtIt);
+
+    ifBodyList.erase(branchStmtIt);
+
+    // A shared node is enough: ElseStmt only wraps an optional construct name,
+    // which is absent here, and genFIR for it is a nop.
+    static const parser::ElseStmt elseStmt{std::optional<parser::Name>{}};
+    lower::pft::EvaluationList::iterator elseStmtIt = ifBodyList.emplace(
+        endIfStmtIt,
+        lower::pft::Evaluation{
+            elseStmt, lower::pft::PftNode{*ifConstructIt}, {}, {}});
+    elseStmtIt->parentConstruct = &*ifConstructIt;
+
+    // The statement preceding the branch target falls through to the EndIfStmt
+    // once it has been moved inside the construct.
+    lower::pft::Evaluation *movedTail =
+        fallthroughPredecessor(evaluationList, it);
+
+    thenTail->lexicalSuccessor = &*elseStmtIt;
+    elseStmtIt->lexicalSuccessor = elseBranchStart;
+    movedTail->lexicalSuccessor = &*endIfStmtIt;
+    endIfStmtIt->lexicalSuccessor = firstStmt(&*it);
+
+    ifBodyList.splice(endIfStmtIt, evaluationList, successorIt, it);
+    for (lower::pft::EvaluationList::iterator movedIt = std::next(elseStmtIt);
+         movedIt != endIfStmtIt; ++movedIt)
+      movedIt->parentConstruct = &*ifConstructIt;
   }
 
   /// Mark IO statement ERR, EOR, and END specifier branch targets.
