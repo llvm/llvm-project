@@ -91,16 +91,16 @@ OptionCategory Retired("clangd flags no longer in use");
 const OptionCategory *ClangdCategories[] = {&Features, &Protocol,
                                             &CompileCommands, &Misc, &Retired};
 
+std::vector<const llvm::cl::Option *> RetiredOptions;
+
 template <typename T> class RetiredFlag {
   opt<T> Option;
 
 public:
   RetiredFlag(llvm::StringRef Name)
-      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden,
-               llvm::cl::callback([Name](const T &) {
-                 llvm::errs()
-                     << "The flag `-" << Name << "` is obsolete and ignored.\n";
-               })) {}
+      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden) {
+    RetiredOptions.push_back(&Option);
+  }
 };
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
@@ -798,6 +798,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
                                     /*VFS=*/nullptr, FlagsEnvVar);
+  for (const llvm::cl::Option *O : RetiredOptions)
+    if (O->getNumOccurrences())
+      llvm::errs() << "The flag `-" << O->ArgStr
+                   << "` is obsolete and ignored.\n";
   if (Test) {
     if (!Sync.getNumOccurrences())
       Sync = true;
