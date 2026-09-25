@@ -886,9 +886,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    if (IntOrFpIV && IntOrFpIV->getTruncInst())
-      return nullptr;
-    return WideIV;
+    return (IntOrFpIV && IntOrFpIV->getTruncInst()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
