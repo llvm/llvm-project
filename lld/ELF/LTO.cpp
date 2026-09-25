@@ -55,6 +55,7 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
+  c.FS = ctx.fs;
 
   // LLD supports the new relocations and address-significance tables.
   c.Options = initTargetOptionsFromCodeGenFlags();
@@ -82,7 +83,10 @@ static lto::Config createConfig(Ctx &ctx) {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-          MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
+          ctx.fs->getBufferForFile(ctx.arg.ltoBasicBlockSections,
+                                   /*FileSize=*/-1,
+                                   /*RequiresNullTerminator=*/true,
+                                   /*IsVolatile=*/false, /*IsText=*/false);
       if (!MBOrErr) {
         ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
                        << MBOrErr.getError().message();

@@ -5,6 +5,20 @@
 You can embed LLD to your program by linking against it and calling the linker's
 entry point function `lld::lldMain`.
 
+The ELF driver accepts an optional `llvm::vfs::FileSystem` as the last argument
+to `lld::lldMain`. It uses this filesystem for objects, bitcode, archives
+(including external members of thin archives), linker scripts, response files,
+library searches, and IR-level LTO profiles. Relative input paths are resolved
+against the filesystem's working directory. An `llvm::vfs::OverlayFileSystem`
+can combine in-memory inputs with files on disk.
+
+LLD retains the filesystem for the invocation. It must support concurrent reads
+when threading is enabled. Omitting it selects the real filesystem. Output
+files, the persistent LTO cache, native plugins, and machine-code profile
+loaders still use the real filesystem. Inputs passed to external tools, such as
+distributed ThinLTO backends, must be accessible to those tools. Other linker
+drivers currently reject an explicitly supplied filesystem.
+
 The current policy is that it is your responsibility to give trustworthy object
 files. The function is guaranteed to return as long as you do not pass corrupted
 or malicious object files. A corrupted file could cause a fatal error or SEGV.

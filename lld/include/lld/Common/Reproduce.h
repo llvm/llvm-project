@@ -15,6 +15,9 @@
 
 namespace llvm {
 namespace opt { class Arg; }
+namespace vfs {
+class FileSystem;
+}
 }
 
 namespace lld {
@@ -23,6 +26,7 @@ namespace lld {
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".
 std::string relativeToRoot(StringRef path);
+std::string relativeToRoot(StringRef path, llvm::vfs::FileSystem &fs);
 
 // Quote a given string if it contains a space character.
 std::string quote(StringRef s);

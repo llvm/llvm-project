@@ -2,10 +2,13 @@
 # This test covers a more singular case where only one LLD driver is used in the
 # target application executable.
 
+set(LLVM_LINK_COMPONENTS AsmParser)
+
 add_lld_unittests(LLDAsLibELFTests
   OutputStream.cpp
   ROCm.cpp
   SomeDrivers.cpp
+  VirtualFileSystem.cpp
 )
 
 target_link_libraries(LLDAsLibELFTests

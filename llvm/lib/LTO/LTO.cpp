@@ -375,12 +375,17 @@ std::string llvm::computeLTOCacheKey(
     AddUint64(V);
 
   if (!Conf.SampleProfile.empty()) {
-    auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
+    auto FileOrErr = Conf.FS->getBufferForFile(
+        Conf.SampleProfile, /*FileSize=*/-1, /*RequiresNullTerminator=*/true,
+        /*IsVolatile=*/false, /*IsText=*/false);
     if (FileOrErr) {
       Hasher.update(FileOrErr.get()->getBuffer());
 
       if (!Conf.ProfileRemapping.empty()) {
-        FileOrErr = MemoryBuffer::getFile(Conf.ProfileRemapping);
+        FileOrErr = Conf.FS->getBufferForFile(
+            Conf.ProfileRemapping, /*FileSize=*/-1,
+            /*RequiresNullTerminator=*/true, /*IsVolatile=*/false,
+            /*IsText=*/false);
         if (FileOrErr)
           Hasher.update(FileOrErr.get()->getBuffer());
       }
