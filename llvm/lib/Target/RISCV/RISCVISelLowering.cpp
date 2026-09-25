@@ -27445,6 +27445,20 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
+  if (!Subtarget.allowVectorIndexLoadOverlap()) {
+    const RISCVVPseudosTable::PseudoInfo *RVV =
+        RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+    if (RVV && (RVV->BaseInstr == RISCV::VLUXEI8_V ||
+                RVV->BaseInstr == RISCV::VLUXEI16_V ||
+                RVV->BaseInstr == RISCV::VLUXEI32_V ||
+                RVV->BaseInstr == RISCV::VLUXEI64_V ||
+                RVV->BaseInstr == RISCV::VLOXEI8_V ||
+                RVV->BaseInstr == RISCV::VLOXEI16_V ||
+                RVV->BaseInstr == RISCV::VLOXEI32_V ||
+                RVV->BaseInstr == RISCV::VLOXEI64_V))
+      MI.getOperand(0).setIsEarlyClobber(true);
+  }
+
   // If instruction defines FRM operand, conservatively set it as non-dead to
   // express data dependency with FRM users and prevent incorrect instruction
   // reordering.
