@@ -1795,37 +1795,16 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
 }
 
 SDValue VectorLegalizer::ExpandMASK_BEFOREFIRST(SDNode *N) {
-  // Expand to (setcc ult (step-vector), (cttz_elts x))
+  // Expand to (get_active_lane_mask 0, (cttz_elts x))
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-
-  // Try to expand via get_active_lane_mask if supported.
   EVT BoolVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i1);
   EVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
-  if (!TLI.shouldExpandGetActiveLaneMask(BoolVT, VecIdxVT)) {
-    // Perform cttz_elts in bool VT to get the custom target lowering.
-    SDValue CttzElts =
-        DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT,
-                    DAG.getNode(ISD::TRUNCATE, DL, BoolVT, N->getOperand(0)));
-    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
-                       DAG.getConstant(0, DL, VecIdxVT), CttzElts);
-  }
-
-  // Compute the type for the cttz_elts.
-  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Fixed length default.
-  if (VT.isScalableVector())
-    VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
-  uint64_t EltWidth = TLI.getBitWidthForCttzElements(
-      EVT(TLI.getVectorIdxTy(DAG.getDataLayout())), VT.getVectorElementCount(),
-      /*ZeroIsPoison=*/false, &VScaleRange);
-
-  EVT EltVT = EVT::getIntegerVT(*DAG.getContext(), EltWidth);
-  EVT CttzEltsVT =
-      EVT::getVectorVT(*DAG.getContext(), EltVT, VT.getVectorElementCount());
-  SDValue CttzElts = DAG.getSplatVector(
-      CttzEltsVT, DL, DAG.getNode(ISD::CTTZ_ELTS, DL, EltVT, N->getOperand(0)));
-  SDValue StepVector = DAG.getStepVector(DL, CttzEltsVT);
-  return DAG.getSetCC(DL, VT, StepVector, CttzElts, ISD::CondCode::SETULT);
+  SDValue CttzElts =
+      DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT,
+                  DAG.getNode(ISD::TRUNCATE, DL, BoolVT, N->getOperand(0)));
+  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
+                     DAG.getConstant(0, DL, VecIdxVT), CttzElts);
 }
 
 SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {
