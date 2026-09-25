@@ -47,9 +47,9 @@ body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: ptrtoint_s1_p0
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32_abcd = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (p0) from %fixed-stack.0, align 16)
-    ; CHECK: [[COPY:%[0-9]+]]:gr8 = COPY [[MOV32rm]].sub_8bit
-    ; CHECK: $al = COPY [[COPY]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY [[MOV32rm]].sub_8bit
+    ; CHECK-NEXT: $al = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
     %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
     %2:gpr(s1) = G_PTRTOINT %0(p0)
@@ -76,9 +76,9 @@ body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: ptrtoint_s8_p0
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32_abcd = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (p0) from %fixed-stack.0, align 16)
-    ; CHECK: [[COPY:%[0-9]+]]:gr8 = COPY [[MOV32rm]].sub_8bit
-    ; CHECK: $al = COPY [[COPY]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY [[MOV32rm]].sub_8bit
+    ; CHECK-NEXT: $al = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
     %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
     %2:gpr(s8) = G_PTRTOINT %0(p0)
@@ -104,9 +104,9 @@ body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: ptrtoint_s16_p0
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (p0) from %fixed-stack.0, align 16)
-    ; CHECK: [[COPY:%[0-9]+]]:gr16 = COPY [[MOV32rm]].sub_16bit
-    ; CHECK: $ax = COPY [[COPY]]
-    ; CHECK: RET 0, implicit $ax
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr16 = COPY [[MOV32rm]].sub_16bit
+    ; CHECK-NEXT: $ax = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $ax
     %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
     %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
     %2:gpr(s16) = G_PTRTOINT %0(p0)
@@ -132,8 +132,8 @@ body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: ptrtoint_s32_p0
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (p0) from %fixed-stack.0, align 16)
-    ; CHECK: $eax = COPY [[MOV32rm]]
-    ; CHECK: RET 0, implicit $eax
+    ; CHECK-NEXT: $eax = COPY [[MOV32rm]]
+    ; CHECK-NEXT: RET 0, implicit $eax
     %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
     %0:gpr(p0) = G_LOAD %1(p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
     %2:gpr(s32) = G_PTRTOINT %0(p0)

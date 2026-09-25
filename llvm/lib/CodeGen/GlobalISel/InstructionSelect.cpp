@@ -239,6 +239,8 @@ bool InstructionSelectImpl::selectMachineFunction(MachineFunction &MF) {
     }
   }
 
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())
       continue;
@@ -262,20 +264,38 @@ bool InstructionSelectImpl::selectMachineFunction(MachineFunction &MF) {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       unsigned SrcSubIdx = MI.getOperand(1).getSubReg();
-      if (!SrcReg.isVirtual() || !DstReg.isVirtual() || SrcSubIdx)
+      if (!SrcReg.isVirtual() || !DstReg.isVirtual())
         continue;
 
       const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
       const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
-      if (SrcRC == DstRC) {
-        MRI.replaceRegWith(DstReg, SrcReg);
+      const TargetRegisterClass *ConstrainRC =
+          SrcSubIdx ? TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSubIdx)
+                    : DstRC;
+
+      // SubstVirtReg pushes the subreg index onto every use of DstReg. If any
+      // such use is a COPY into a physical register, the result is a
+      // cross-class physreg COPY that copyPhysReg may not be able to lower
+      // (e.g. $al = COPY $eax). Restrict subreg propagation to the case where
+      // every use of DstReg is a COPY into a virtual register.
+      if (SrcSubIdx &&
+          !llvm::all_of(MRI.use_nodbg_instructions(DstReg),
+                        [](const MachineInstr &UseMI) {
+                          return UseMI.isCopy() &&
+                                 UseMI.getOperand(0).getReg().isVirtual();
+                        }))
+        continue;
+
+      if (ConstrainRC && MRI.constrainRegClass(SrcReg, ConstrainRC)) {
+        for (MachineOperand &MO :
+             llvm::make_early_inc_range(MRI.reg_operands(DstReg)))
+          MO.substVirtReg(SrcReg, SrcSubIdx, TRI);
         MI.eraseFromParent();
       }
     }
   }
 
 #ifndef NDEBUG
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   // Now that selection is complete, there are no more generic vregs.  Verify
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.

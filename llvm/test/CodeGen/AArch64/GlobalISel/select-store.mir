@@ -269,9 +269,8 @@ body:             |
     ; CHECK-LABEL: name: store_fi_s64_gpr
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
-    ; CHECK-NEXT: STRXui [[COPY1]], %stack.0.ptr0, 0 :: (store (p0))
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: STRXui [[COPY]], %stack.0.ptr0, 0 :: (store (p0))
     %0(p0) = COPY $x0
     %1(p0) = G_FRAME_INDEX %stack.0.ptr0
     G_STORE  %0, %1 :: (store (p0))
@@ -662,10 +661,9 @@ body:             |
     ; CHECK-LABEL: name: store_adrp_add_low
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr64all = COPY $x0
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
     ; CHECK-NEXT: %adrp:gpr64common = ADRP target-flags(aarch64-page) @x
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
-    ; CHECK-NEXT: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store (p0) into @x)
+    ; CHECK-NEXT: STRXui %copy, %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store (p0) into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x
@@ -683,10 +681,9 @@ body:             |
     ; CHECK-LABEL: name: store_adrp_add_low_foldable_offset
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr64all = COPY $x0
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
     ; CHECK-NEXT: %adrp:gpr64common = ADRP target-flags(aarch64-page) @x + 8
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
-    ; CHECK-NEXT: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x + 8 :: (store (p0) into @x)
+    ; CHECK-NEXT: STRXui %copy, %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x + 8 :: (store (p0) into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x + 8
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x + 8
@@ -704,10 +701,9 @@ body:             |
     ; CHECK-LABEL: name: store_adrp_add_low_unfoldable_offset
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr64all = COPY $x0
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
     ; CHECK-NEXT: %add_low:gpr64common = MOVaddr target-flags(aarch64-page) @x + 3, target-flags(aarch64-pageoff, aarch64-nc) @x + 3
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
-    ; CHECK-NEXT: STRXui [[COPY]], %add_low, 0 :: (store (p0) into @x)
+    ; CHECK-NEXT: STRXui %copy, %add_low, 0 :: (store (p0) into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x + 3
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x + 3

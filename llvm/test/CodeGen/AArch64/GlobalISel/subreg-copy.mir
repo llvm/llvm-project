@@ -14,9 +14,8 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK-NEXT:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRQui]].ssub
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-  ; CHECK-NEXT:   TBNZW [[COPY2]], 0, %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[LDRQui]].ssub
+  ; CHECK-NEXT:   TBNZW [[COPY1]], 0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -49,9 +48,8 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK-NEXT:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64all = COPY [[LDRQui]].dsub
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
-  ; CHECK-NEXT:   TBNZX [[COPY2]], 33, %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[LDRQui]].dsub
+  ; CHECK-NEXT:   TBNZX [[COPY1]], 33, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   RET_ReallyLR

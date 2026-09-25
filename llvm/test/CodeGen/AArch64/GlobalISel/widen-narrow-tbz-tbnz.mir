@@ -127,9 +127,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %wide:gpr64all = COPY $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %wide.sub_32
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK-NEXT:   TBNZW [[COPY1]], 0, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %wide.sub_32
+  ; CHECK-NEXT:   TBNZW [[COPY]], 0, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

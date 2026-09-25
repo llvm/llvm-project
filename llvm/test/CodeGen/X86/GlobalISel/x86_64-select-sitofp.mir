@@ -60,11 +60,11 @@ body:             |
 
     ; CHECK-LABEL: name: int32_to_float
     ; CHECK: liveins: $edi
-    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: %1:fr32 = nofpexcept CVTSI2SSrr [[COPY]], implicit $mxcsr
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %1
-    ; CHECK: $xmm0 = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $xmm0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: [[CVTSI2SSrr:%[0-9]+]]:vr128 = nofpexcept CVTSI2SSrr [[COPY]], implicit $mxcsr
+    ; CHECK-NEXT: $xmm0 = COPY [[CVTSI2SSrr]]
+    ; CHECK-NEXT: RET 0, implicit $xmm0
     %0:gpr(s32) = COPY $edi
     %1:vecr(s32) = G_SITOFP %0(s32)
     %2:vecr(s128) = G_ANYEXT %1(s32)
@@ -88,11 +88,11 @@ body:             |
 
     ; CHECK-LABEL: name: int64_to_float
     ; CHECK: liveins: $rdi
-    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: %1:fr32 = nofpexcept CVTSI642SSrr [[COPY]], implicit $mxcsr
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %1
-    ; CHECK: $xmm0 = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $xmm0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[CVTSI642SSrr:%[0-9]+]]:vr128 = nofpexcept CVTSI642SSrr [[COPY]], implicit $mxcsr
+    ; CHECK-NEXT: $xmm0 = COPY [[CVTSI642SSrr]]
+    ; CHECK-NEXT: RET 0, implicit $xmm0
     %0:gpr(s64) = COPY $rdi
     %1:vecr(s32) = G_SITOFP %0(s64)
     %2:vecr(s128) = G_ANYEXT %1(s32)
@@ -116,11 +116,11 @@ body:             |
 
     ; CHECK-LABEL: name: int32_to_double
     ; CHECK: liveins: $edi
-    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr [[COPY]]
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY [[CVTSI2SDrr]]
-    ; CHECK: $xmm0 = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $xmm0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: [[CVTSI2SDrr:%[0-9]+]]:vr128 = CVTSI2SDrr [[COPY]]
+    ; CHECK-NEXT: $xmm0 = COPY [[CVTSI2SDrr]]
+    ; CHECK-NEXT: RET 0, implicit $xmm0
     %0:gpr(s32) = COPY $edi
     %1:vecr(s64) = G_SITOFP %0(s32)
     %2:vecr(s128) = G_ANYEXT %1(s64)
@@ -144,11 +144,11 @@ body:             |
 
     ; CHECK-LABEL: name: int64_to_double
     ; CHECK: liveins: $rdi
-    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: %1:fr64 = nofpexcept CVTSI642SDrr [[COPY]], implicit $mxcsr
-    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %1
-    ; CHECK: $xmm0 = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $xmm0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[CVTSI642SDrr:%[0-9]+]]:vr128 = nofpexcept CVTSI642SDrr [[COPY]], implicit $mxcsr
+    ; CHECK-NEXT: $xmm0 = COPY [[CVTSI642SDrr]]
+    ; CHECK-NEXT: RET 0, implicit $xmm0
     %0:gpr(s64) = COPY $rdi
     %1:vecr(s64) = G_SITOFP %0(s64)
     %2:vecr(s128) = G_ANYEXT %1(s64)

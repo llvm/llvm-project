@@ -26,12 +26,12 @@ body:             |
 
     ; ALL-LABEL: name: test_unmerge_v128
     ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
-    ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY [[DEF]].sub_xmm
-    ; ALL: [[VEXTRACTF32X4Zrri:%[0-9]+]]:vr128x = VEXTRACTF32X4Zrri [[DEF]], 1
-    ; ALL: [[VEXTRACTF32X4Zrri1:%[0-9]+]]:vr128x = VEXTRACTF32X4Zrri [[DEF]], 2
-    ; ALL: [[VEXTRACTF32X4Zrri2:%[0-9]+]]:vr128x = VEXTRACTF32X4Zrri [[DEF]], 3
-    ; ALL: $xmm0 = COPY [[COPY]]
-    ; ALL: RET 0, implicit $xmm0
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:vr128x = COPY [[DEF]].sub_xmm
+    ; ALL-NEXT: [[VEXTRACTF32X4Zrri:%[0-9]+]]:vr128x = VEXTRACTF32X4Zrri [[DEF]], 1
+    ; ALL-NEXT: [[VEXTRACTF32X4Zrri1:%[0-9]+]]:vr128x = VEXTRACTF32X4Zrri [[DEF]], 2
+    ; ALL-NEXT: [[VEXTRACTF32X4Zrri2:%[0-9]+]]:vr128x = VEXTRACTF32X4Zrri [[DEF]], 3
+    ; ALL-NEXT: $xmm0 = COPY [[COPY]]
+    ; ALL-NEXT: RET 0, implicit $xmm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>), %2(<4 x s32>), %3(<4 x s32>), %4(<4 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
     $xmm0 = COPY %1(<4 x s32>)
@@ -52,10 +52,10 @@ body:             |
 
     ; ALL-LABEL: name: test_unmerge_v256
     ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
-    ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY [[DEF]].sub_ymm
-    ; ALL: [[VEXTRACTF64X4Zrri:%[0-9]+]]:vr256x = VEXTRACTF64X4Zrri [[DEF]], 1
-    ; ALL: $ymm0 = COPY [[COPY]]
-    ; ALL: RET 0, implicit $ymm0
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:vr256x = COPY [[DEF]].sub_ymm
+    ; ALL-NEXT: [[VEXTRACTF64X4Zrri:%[0-9]+]]:vr256x = VEXTRACTF64X4Zrri [[DEF]], 1
+    ; ALL-NEXT: $ymm0 = COPY [[COPY]]
+    ; ALL-NEXT: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>), %2(<8 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
     $ymm0 = COPY %1(<8 x s32>)

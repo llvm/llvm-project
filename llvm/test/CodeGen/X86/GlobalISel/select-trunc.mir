@@ -46,10 +46,12 @@ body:             |
     liveins: $edi
 
     ; CHECK-LABEL: name: trunc_i32toi1
-    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; CHECK: $al = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK: liveins: $edi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; CHECK-NEXT: $al = COPY [[COPY1]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
     %2(s8) = G_ANYEXT %1(s1)
@@ -70,10 +72,12 @@ body:             |
     liveins: $edi
 
     ; CHECK-LABEL: name: trunc_i32toi8
-    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; CHECK: $al = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK: liveins: $edi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; CHECK-NEXT: $al = COPY [[COPY1]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %0(s32) = COPY $edi
     %1(s8) = G_TRUNC %0(s32)
     $al = COPY %1(s8)
@@ -93,10 +97,12 @@ body:             |
     liveins: $edi
 
     ; CHECK-LABEL: name: trunc_i32toi16
-    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; CHECK: $ax = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $ax
+    ; CHECK: liveins: $edi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; CHECK-NEXT: $ax = COPY [[COPY1]]
+    ; CHECK-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %1(s16) = G_TRUNC %0(s32)
     $ax = COPY %1(s16)
@@ -116,10 +122,12 @@ body:             |
     liveins: $rdi
 
     ; CHECK-LABEL: name: trunc_i64toi8
-    ; CHECK: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; CHECK: $al = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $al
+    ; CHECK: liveins: $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; CHECK-NEXT: $al = COPY [[COPY1]]
+    ; CHECK-NEXT: RET 0, implicit $al
     %0(s64) = COPY $rdi
     %1(s8) = G_TRUNC %0(s64)
     $al = COPY %1(s8)
@@ -139,10 +147,12 @@ body:             |
     liveins: $rdi
 
     ; CHECK-LABEL: name: trunc_i64toi16
-    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; CHECK: $ax = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $ax
+    ; CHECK: liveins: $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; CHECK-NEXT: $ax = COPY [[COPY1]]
+    ; CHECK-NEXT: RET 0, implicit $ax
     %0(s64) = COPY $rdi
     %1(s16) = G_TRUNC %0(s64)
     $ax = COPY %1(s16)
@@ -162,10 +172,12 @@ body:             |
     liveins: $rdi
 
     ; CHECK-LABEL: name: trunc_i64toi32
-    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
-    ; CHECK: $eax = COPY [[COPY1]]
-    ; CHECK: RET 0, implicit $eax
+    ; CHECK: liveins: $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
+    ; CHECK-NEXT: $eax = COPY [[COPY1]]
+    ; CHECK-NEXT: RET 0, implicit $eax
     %0(s64) = COPY $rdi
     %1(s32) = G_TRUNC %0(s64)
     $eax = COPY %1(s32)

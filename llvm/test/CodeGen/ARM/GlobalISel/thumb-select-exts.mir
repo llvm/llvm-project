@@ -41,11 +41,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_zext_s1_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-    ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ANDri]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY]], 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2ANDri]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s1) = G_TRUNC %0(s32)
@@ -72,12 +72,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_sext_s1_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-    ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2RSBri]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY]], 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2RSBri]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s1) = G_TRUNC %0(s32)
@@ -104,9 +104,10 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_anyext_s1_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: $r0 = COPY [[COPY]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: $r0 = COPY [[COPY]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s1) = G_TRUNC %0(s32)
@@ -133,11 +134,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_zext_s8_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-    ; CHECK: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY1]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: $r0 = COPY [[t2UXTB]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY]], 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2UXTB]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s8) = G_TRUNC %0(s32)
@@ -164,11 +165,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_sext_s8_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-    ; CHECK: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY1]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: $r0 = COPY [[t2SXTB]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY]], 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2SXTB]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s8) = G_TRUNC %0(s32)
@@ -195,9 +196,10 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_anyext_s8_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: $r0 = COPY [[COPY]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: $r0 = COPY [[COPY]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s8) = G_TRUNC %0(s32)
@@ -224,11 +226,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_zext_s16_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-    ; CHECK: [[t2UXTH:%[0-9]+]]:rgpr = t2UXTH [[COPY1]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: $r0 = COPY [[t2UXTH]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[t2UXTH:%[0-9]+]]:rgpr = t2UXTH [[COPY]], 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2UXTH]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s16) = G_TRUNC %0(s32)
@@ -255,11 +257,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_sext_s16_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY [[COPY]]
-    ; CHECK: [[t2SXTH:%[0-9]+]]:rgpr = t2SXTH [[COPY1]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: $r0 = COPY [[t2SXTH]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-NEXT: [[t2SXTH:%[0-9]+]]:rgpr = t2SXTH [[COPY]], 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: $r0 = COPY [[t2SXTH]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s16) = G_TRUNC %0(s32)
@@ -286,9 +288,10 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_anyext_s16_to_s32
     ; CHECK: liveins: $r0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: $r0 = COPY [[COPY]]
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: $r0 = COPY [[COPY]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(s32) = COPY $r0
 
     %1(s16) = G_TRUNC %0(s32)
@@ -316,12 +319,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_zext_s1_to_s16
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRHi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: t2STRHi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -351,13 +354,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_sext_s1_to_s16
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRHi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: t2STRHi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -387,11 +390,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_anyext_s1_to_s16
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: t2STRHi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -421,12 +424,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_zext_s8_to_s16
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: t2STRHi12 [[t2UXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY1]], 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: t2STRHi12 [[t2UXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -456,12 +459,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_sext_s8_to_s16
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: t2STRHi12 [[t2SXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY1]], 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: t2STRHi12 [[t2SXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -491,11 +494,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_anyext_s8_to_s16
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: t2STRHi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -525,12 +528,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_zext_s1_to_s8
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRBi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: t2STRBi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -560,13 +563,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_sext_s1_to_s8
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRBi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: t2STRBi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1
@@ -596,11 +599,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_trunc_and_anyext_s1_to_s8
     ; CHECK: liveins: $r0, $r1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: t2STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
-    ; CHECK: BX_RET 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
+    ; CHECK-NEXT: t2STRBi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %1(s32) = COPY $r1

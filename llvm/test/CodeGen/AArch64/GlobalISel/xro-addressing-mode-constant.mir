@@ -196,9 +196,8 @@ body:             |
     ; CHECK-LABEL: name: dont_use_xro_add_lsl
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY %copy
-    ; CHECK-NEXT: %addr:gpr64sp = ADDXri [[COPY]], 273, 12
+    ; CHECK-NEXT: %copy:gpr64common = COPY $x0
+    ; CHECK-NEXT: %addr:gpr64sp = ADDXri %copy, 273, 12
     ; CHECK-NEXT: %load:gpr64 = LDRXui %addr, 0 :: (volatile load (s64))
     ; CHECK-NEXT: RET_ReallyLR
     %copy:gpr(p0) = COPY $x0

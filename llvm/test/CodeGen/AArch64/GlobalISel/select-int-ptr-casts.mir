@@ -70,9 +70,8 @@ body:             |
     ; CHECK-LABEL: name: ptrtoint_s32_p0
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:gpr64 = COPY $x0
-    ; CHECK-NEXT: %ptr2int:gpr64common = COPY %ptr
-    ; CHECK-NEXT: %int:gpr32sp = COPY %ptr2int.sub_32
+    ; CHECK-NEXT: %ptr:gpr64common = COPY $x0
+    ; CHECK-NEXT: %int:gpr32sp = COPY %ptr.sub_32
     ; CHECK-NEXT: $w0 = COPY %int
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:gpr(p0) = COPY $x0
@@ -97,8 +96,7 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64 = COPY $x0
-    ; CHECK-NEXT: %int:gpr32 = COPY %ptr.sub_32
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY %int
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY %ptr.sub_32
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
     ; CHECK-NEXT: $h0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
@@ -124,8 +122,7 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64 = COPY $x0
-    ; CHECK-NEXT: %int:gpr32 = COPY %ptr.sub_32
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY %int
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY %ptr.sub_32
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr8 = COPY [[COPY]].bsub
     ; CHECK-NEXT: $b0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $b0
@@ -150,9 +147,8 @@ body:             |
     ; CHECK-LABEL: name: ptrtoint_s1_p0
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:gpr64 = COPY $x0
-    ; CHECK-NEXT: %ptr2int:gpr64common = COPY %ptr
-    ; CHECK-NEXT: %trunc:gpr32common = COPY %ptr2int.sub_32
+    ; CHECK-NEXT: %ptr:gpr64common = COPY $x0
+    ; CHECK-NEXT: %trunc:gpr32common = COPY %ptr.sub_32
     ; CHECK-NEXT: %ext:gpr32sp = ANDWri %trunc, 0
     ; CHECK-NEXT: $w0 = COPY %ext
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
