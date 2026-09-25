@@ -120,7 +120,7 @@ define void @gt_end_is_start_minus_bounded_n(i8 %nraw, i8 %a) {
 ; CHECK-LABEL: 'gt_end_is_start_minus_bounded_n'
 ; CHECK-NEXT:  Determining loop execution counts for: @gt_end_is_start_minus_bounded_n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * (((-1 * (zext i3 (trunc i8 %nraw to i3) to i8))<nsw> + %a) umin %a)) + %a)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 7
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * (((-1 * (zext i3 (trunc i8 %nraw to i3) to i8))<nsw> + %a) umin %a)) + %a)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;

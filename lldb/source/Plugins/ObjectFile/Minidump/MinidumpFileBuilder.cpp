@@ -227,7 +227,7 @@ Status MinidumpFileBuilder::AddSystemInfo() {
 Status WriteString(const std::string &to_write,
                    lldb_private::DataBufferHeap *buffer) {
   Status error;
-  // let the StringRef eat also null termination char
+  // let the StringRef eat also the null terminator
   llvm::StringRef to_write_ref(to_write.c_str(), to_write.size() + 1);
   llvm::SmallVector<llvm::UTF16, 128> to_write_utf16;
 
@@ -239,8 +239,8 @@ Status WriteString(const std::string &to_write,
     return error;
   }
 
-  // size of the UTF16 string should be written without the null termination
-  // character that is stored in 2 bytes
+  // size of the UTF16 string should be written without the null terminator
+  // that is stored in 2 bytes
   llvm::support::ulittle32_t to_write_size(to_write_utf16.size_in_bytes() - 2);
 
   buffer->AppendData(&to_write_size, sizeof(llvm::support::ulittle32_t));

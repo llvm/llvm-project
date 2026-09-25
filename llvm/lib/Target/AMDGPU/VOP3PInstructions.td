@@ -502,6 +502,8 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixFP32Pats<fmad, V_MAD_MIX_F32>;
+
+let OtherPredicates = [NoFP32Denormals, NoFP16Denormals] in
 defm : MadFmaMixFP16Pats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 } // OtherPredicates = [NoFP32Denormals]
 } // End SubtargetPredicate = HasMadMixInsts
@@ -549,7 +551,7 @@ defm V_FMA_MIXHI_BF16 : VOP3_VOP3PInst<"v_fma_mixhi_bf16", VOP3P_Mix_Profile<VOP
 }
 
 // Pseudo true16 inst for v_fma_mixlo/hi_bf16
-defm V_FMA_MIX_BF16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_bf16_t16", VOP3P_Mix_Profile_t16<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
+defm V_FMA_MIX_BF16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_bf16_t16", VOP3P_Mix_Profile_t16<VOP_BF16_BF16_BF16_BF16, VOP3_OPSEL>>;
 } // End FPDPRounding = 1
 } // End isCommutable = 1
 

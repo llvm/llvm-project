@@ -257,8 +257,10 @@ bool isMaskedLoadCompress(
   // the span needs extra registers with no active lanes and is sparse, the
   // compress becomes a multi-register gather that costs more than the scalar
   // loads it replaces.
-  if (getNumberOfParts(TTI, LoadVecTy, ScalarTy, ReVec) >
-          2 * getNumberOfParts(TTI, VecTy, ScalarTy, ReVec) &&
+  if (getNumberOfPartsOrRegs(/*QueryNumParts=*/true, TTI, LoadVecTy, ScalarTy,
+                             ReVec) >
+          2 * getNumberOfPartsOrRegs(/*QueryNumParts=*/true, TTI, VecTy,
+                                     ScalarTy, ReVec) &&
       4 * Sz <= static_cast<size_t>(*Diff) + 1)
     return false;
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);

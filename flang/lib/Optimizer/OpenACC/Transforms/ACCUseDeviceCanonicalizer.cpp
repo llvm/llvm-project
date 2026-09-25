@@ -167,8 +167,8 @@ private:
         useDeviceOp.getAsyncOperandsDeviceTypeAttr(),
         useDeviceOp.getAsyncOnlyAttr(), useDeviceOp.getDataClauseAttr(),
         useDeviceOp.getStructuredAttr(), useDeviceOp.getImplicitAttr(),
-        useDeviceOp.getModifiersAttr(), useDeviceOp.getNameAttr(),
-        useDeviceOp.getRecipeAttr());
+        useDeviceOp.getSyntheticAttr(), useDeviceOp.getModifiersAttr(),
+        useDeviceOp.getNameAttr(), useDeviceOp.getRecipeAttr());
 
     LLVM_DEBUG(llvm::dbgs() << "Created new hoisted pattern for box access:\n"
                             << "  box_addr: " << *boxAddr << "\n"

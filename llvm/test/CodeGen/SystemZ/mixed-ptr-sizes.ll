@@ -376,3 +376,36 @@ declare ptr @__malloc31(i64)
 declare signext i32 @foo(...)
 
 declare ptr addrspace(1) @domalloc(i64)
+
+define void @f1(ptr %inp, ptr %outp) "target-features"="-vector" {
+; CHECK-LABEL: f1 DS 0H
+; CHECK:        iilf 0,2147483647
+; CHECK-NEXT:   iilf 3,2147483647
+; CHECK-NEXT:   n 0,12(1)
+; CHECK-NEXT:   n 3,4(1)
+; CHECK-NEXT:   st 0,4(2)
+; CHECK-NEXT:   st 3,0(2)
+; CHECK-NEXT:   b 2(7)
+  %in = load <2 x ptr>, ptr %inp, align 8
+  %out = addrspacecast <2 x ptr> %in to <2 x ptr addrspace(1)>
+  store <2 x ptr addrspace(1)> %out, ptr %outp, align 4
+  ret void
+}
+
+define void @f1_v(ptr %inp, ptr %outp) "target-features"="+vector" {
+; CHECK-LABEL: f1_v DS 0H
+; CHECK:        vl 0,0(1),3
+; CHECK-NEXT:   vlgvg 0,0,1
+; CHECK-NEXT:   llgtr 0,0
+; CHECK-NEXT:   lghi 1,0
+; CHECK-NEXT:   vlvgp 1,0,1
+; CHECK-NEXT:   vlgvg 0,0,0
+; CHECK-NEXT:   nilh 0,32767
+; CHECK-NEXT:   vlvgf 1,0,0
+; CHECK-NEXT:   vsteg 1,0(2),0
+; CHECK-NEXT:   b 2(7)
+  %in = load <2 x ptr>, ptr %inp, align 8
+  %out = addrspacecast <2 x ptr> %in to <2 x ptr addrspace(1)>
+  store <2 x ptr addrspace(1)> %out, ptr %outp, align 4
+  ret void
+}

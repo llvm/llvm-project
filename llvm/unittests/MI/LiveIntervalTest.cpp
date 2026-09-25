@@ -68,7 +68,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!M)
     return nullptr;
 
-  M->setDataLayout(TM.createDataLayout());
+  M->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(&TM);
   if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

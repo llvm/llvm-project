@@ -28,6 +28,7 @@
 #include <vector>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 
@@ -48,6 +49,7 @@ public:
   using SimpleRemoteCA::takeAllCalls;
   using SimpleRemoteCA::takeCall;
 
+  using MsgHeader = SimpleRemoteCA::MsgHeader;
   using Opcode = SimpleRemoteCA::Opcode;
   using ResultKind = SimpleRemoteCA::ResultKind;
 
@@ -131,7 +133,38 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
   // controller would be left to interpret.
   EXPECT_EQ(static_cast<size_t>(IB.data() - Payload.data()), Payload.size());
 
-  S.detach([] {});
+  S.detach();
+}
+
+TEST(SimpleRemoteCATest, MessageHeaderRoundTrips) {
+  // A distinct value in every field, so a swapped or truncated one shows up.
+  // The tag uses its top bits: it carries a handler address on a 64-bit peer.
+  char Buf[TestCA::MsgHeader::Size];
+  TestCA::MsgHeader::encode(Buf, TestCA::Opcode::Call, 0x0123456789abcdefULL,
+                            0xfedcba9876543210ULL, /*PayloadSize=*/7);
+
+  auto F = TestCA::MsgHeader::decode(Buf);
+  EXPECT_EQ(F.OpC, static_cast<uint64_t>(TestCA::Opcode::Call));
+  EXPECT_EQ(F.SeqNo, 0x0123456789abcdefULL);
+  EXPECT_EQ(F.Tag, 0xfedcba9876543210ULL);
+
+  // encode takes the payload size, decode reports the whole message: a reader
+  // holding the header needs to know how much is still to come.
+  EXPECT_EQ(F.MsgSize, TestCA::MsgHeader::Size + 7);
+}
+
+TEST(SimpleRemoteCATest, MessageHeaderRoundTripsWithNoPayload) {
+  // A message that is exactly a header. Nothing is left to read once it is
+  // decoded, which is the case a reader has to tell from a partial one.
+  char Buf[TestCA::MsgHeader::Size];
+  TestCA::MsgHeader::encode(Buf, TestCA::Opcode::Setup, /*SeqNo=*/0, /*Tag=*/0,
+                            /*PayloadSize=*/0);
+
+  auto F = TestCA::MsgHeader::decode(Buf);
+  EXPECT_EQ(F.OpC, static_cast<uint64_t>(TestCA::Opcode::Setup));
+  EXPECT_EQ(F.SeqNo, 0u);
+  EXPECT_EQ(F.Tag, 0u);
+  EXPECT_EQ(F.MsgSize, TestCA::MsgHeader::Size);
 }
 
 TEST(SimpleRemoteCATest, OrderlyHangupRoundTrips) {
@@ -212,7 +245,7 @@ TEST(SimpleRemoteCATest, ResultWithAnUnknownKindIsRejected) {
   EXPECT_EQ(toString(A.takeError()),
             "Malformed result message: invalid kind 2");
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, DecodeResultOfMalformedOutOfBandErrorIsNotTerminal) {
@@ -241,7 +274,7 @@ TEST(SimpleRemoteCATest, RegisterCallReturnsDistinctNonZeroSequenceNumbers) {
   EXPECT_NE(Second, 0u);
   EXPECT_NE(First, Second);
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
@@ -260,7 +293,7 @@ TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
   EXPECT_FALSE(!!CA->takeCall(/*SeqNo=*/9999)) << "never registered";
 
   CA->failPendingControllerCall(std::move(Taken));
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
@@ -283,5 +316,5 @@ TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
 
   for (auto &[SeqNo, OnComplete] : All)
     CA->failPendingControllerCall(std::move(OnComplete));
-  S.detach([] {});
+  S.detach();
 }

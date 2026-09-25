@@ -35,11 +35,11 @@ subroutine call_fct1()
 end
 
 ! CHECK-LABEL: func @_QPcall_fct1()
-! CHECK:         %[[A:.*]] = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFcall_fct1Ea"}
+! CHECK:         %[[A:.*]] = fir.alloca f32 <{bindc_name = "a", uniq_name = "_QFcall_fct1Ea"}>
 ! CHECK:         %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {{.*}}
-! CHECK:         %[[B:.*]] = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFcall_fct1Eb"}
+! CHECK:         %[[B:.*]] = fir.alloca f32 <{bindc_name = "b", uniq_name = "_QFcall_fct1Eb"}>
 ! CHECK:         %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] {{.*}}
-! CHECK:         %[[C:.*]] = fir.alloca f32 {bindc_name = "c", uniq_name = "_QFcall_fct1Ec"}
+! CHECK:         %[[C:.*]] = fir.alloca f32 <{bindc_name = "c", uniq_name = "_QFcall_fct1Ec"}>
 ! CHECK:         %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {{.*}}
 ! CHECK:         %[[RES:.*]] = fir.call @_QPfct1(%[[A_DECL]]#0, %[[B_DECL]]#0) {{.*}}: (!fir.ref<f32>, !fir.ref<f32>) -> f32
 ! CHECK:         hlfir.assign %[[RES]] to %[[C_DECL]]#0 : f32, !fir.ref<f32>

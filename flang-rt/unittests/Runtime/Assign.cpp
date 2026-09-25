@@ -15,8 +15,30 @@
 #include <cstring>
 #include <vector>
 #if defined(__unix__) || defined(__APPLE__)
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+
+static void *AllocateAnonymousPages(std::size_t size) {
+#if defined(MAP_ANONYMOUS)
+  return mmap(nullptr, size, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#else
+  // Platforms without MAP_ANONYMOUS or MAP_ANON (e.g. AIX): map /dev/zero
+  // as a portable anonymous-mapping equivalent (per POSIX).
+  int devZero{open("/dev/zero", O_RDWR)};
+  if (devZero < 0) {
+    return MAP_FAILED;
+  }
+  void *res{
+      mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, devZero, 0)};
+  close(devZero);
+  return res;
+#endif
+}
 #endif
 
 using namespace Fortran::runtime;
@@ -493,8 +515,7 @@ TEST(Assign, RTNAME(CopyOutAssignReadOnlyUnmodified)) {
   // value comparison would consider the unmodified NaN element "changed"
   // and store to it, faulting on the read-only page.
   std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
-  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  void *page{AllocateAnonymousPages(pageSize)};
   ASSERT_NE(page, MAP_FAILED);
   double *data{static_cast<double *>(page)};
   for (int j{0}; j < 8; ++j) {
@@ -565,8 +586,7 @@ TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
   // even an unmodified copy-out stores every element, so a read-only original
   // faults. This proves the environment control selects the legacy path.
   std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
-  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  void *page{AllocateAnonymousPages(pageSize)};
   ASSERT_NE(page, MAP_FAILED);
   double *data{static_cast<double *>(page)};
   for (int j{0}; j < 8; ++j) {
@@ -604,8 +624,7 @@ TEST(Assign, RTNAME(CopyOutAssignSkipsUnmodifiedPrefix)) {
   // modifies only an element on the second page. Copy-out must not fault and
   // must deliver the modification.
   std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
-  void *pages{mmap(nullptr, 2 * pageSize, PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  void *pages{AllocateAnonymousPages(2 * pageSize)};
   ASSERT_NE(pages, MAP_FAILED);
   // Element stride 2*sizeof(double); place 'count' elements so that the
   // first ones sit on page 1 and the last ones on page 2.
@@ -646,8 +665,7 @@ TEST(Assign, RTNAME(CopyOutAssignReadOnlyModifiedDies)) {
   // a read-only original then faults, which is the intended behavior for a
   // program that modifies a non-definable actual argument.
   std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
-  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  void *page{AllocateAnonymousPages(pageSize)};
   ASSERT_NE(page, MAP_FAILED);
   double *data{static_cast<double *>(page)};
   for (int j{0}; j < 8; ++j) {

@@ -76,6 +76,8 @@
 using namespace llvm;
 using namespace dwarf;
 
+extern cl::opt<bool> PreserveHotDataSectionPrefix;
+
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
@@ -666,26 +668,43 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
   }
 
   bool HasPrefix = false;
+  SmallString<32> SectionPrefix;
   if (const auto *F = dyn_cast<Function>(GO)) {
     // Jump table hotness takes precedence over its enclosing function's hotness
     // if it's known. The function's section prefix is used if jump table entry
     // hotness is unknown.
     if (JTE && JTE->Hotness != MachineFunctionDataHotness::Unknown) {
-      if (JTE->Hotness == MachineFunctionDataHotness::Hot) {
-        raw_svector_ostream(Name) << ".hot";
-      } else {
-        assert(JTE->Hotness == MachineFunctionDataHotness::Cold &&
-               "Hotness must be cold");
-        raw_svector_ostream(Name) << ".unlikely";
+      switch (JTE->Hotness) {
+      case MachineFunctionDataHotness::Cold:
+        raw_svector_ostream(SectionPrefix) << ".unlikely";
+        break;
+      case MachineFunctionDataHotness::Hot: {
+        if (PreserveHotDataSectionPrefix)
+          raw_svector_ostream(SectionPrefix) << ".hot";
+        break;
       }
-      HasPrefix = true;
-    } else if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
-      HasPrefix = true;
-    }
+      default:
+        llvm_unreachable("Unknown jump table hotness");
+        break;
+      }
+    } else if (std::optional<StringRef> Prefix = F->getSectionPrefix())
+      raw_svector_ostream(SectionPrefix) << "." << *Prefix;
   } else if (const auto *GV = dyn_cast<GlobalVariable>(GO)) {
     if (std::optional<StringRef> Prefix = GV->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
+      raw_svector_ostream(SectionPrefix) << "." << *Prefix;
+    }
+  }
+
+  if (!SectionPrefix.empty()) {
+    bool AddSectionPrefix = true;
+    if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
+        Kind.isBSS()) {
+      AddSectionPrefix =
+          !SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix;
+    }
+
+    if (AddSectionPrefix) {
+      Name += SectionPrefix;
       HasPrefix = true;
     }
   }
@@ -2123,16 +2142,24 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
                               : dyn_cast<GlobalObject>(LHS);
 
   // Both ptrtoint instructions must wrap global objects:
-  // - Only dso_local global variables/functions (or direct aliases thereof) are
-  //   eligible for image relative relocations.
+  // - Only global variables that are dso_local are eligible for image relative
+  //   relocations.
+  // - FIXME: Referring to a dllimport function produces an image-relative
+  //   relocation against the local import thunk rather than the canonical
+  //   function pointer, which lacks program-wide pointer identity. This is
+  //   sufficient for use cases like MSVC exception handling metadata (where the
+  //   function is only invoked), but is not theoretically sound in general.
+  //   We probably need something like dso_local_equivalent to explicitly
+  //   request a callable local entry point.
   // - The subtrahend refers to the special symbol __ImageBase, a
-  // GlobalVariable. We expect __ImageBase to be a global variable without a
-  // section, externally defined.
+  //   GlobalVariable. We expect __ImageBase to be a global variable without a
+  //   section, externally defined.
   //
   // It should look something like this: @__ImageBase = external constant i8
-  if (!GO || !TM.shouldAssumeDSOLocal(LHS) || GO->isThreadLocal() ||
-      !isa<GlobalVariable>(RHS) || RHS->isThreadLocal() ||
-      RHS->getName() != "__ImageBase" || !RHS->hasExternalLinkage() ||
+  if (!GO || (isa<GlobalVariable>(GO) && !TM.shouldAssumeDSOLocal(LHS)) ||
+      GO->isThreadLocal() || !isa<GlobalVariable>(RHS) ||
+      RHS->isThreadLocal() || RHS->getName() != "__ImageBase" ||
+      !RHS->hasExternalLinkage() ||
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
 
@@ -2922,11 +2949,15 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                      GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
         SD);
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
-    return getContext().getGOFFSection(Kind, Symbol->getName(),
-                                       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
-                                                    GOFF::ESD_LT_XPLink,
-                                                    PRBindingScope, 0},
-                                       ED);
+    MCSectionGOFF *PR = getContext().getGOFFSection(
+        Kind, Symbol->getName(),
+        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                     PRBindingScope, 0},
+        ED);
+    // The binder rejects zero-length PR sections. Mark the PR so the writer
+    // inflates it to a valid length if needed.
+    PR->setRequiresNonZeroLength();
+    return PR;
   }
   return TextSection;
 }

@@ -7,6 +7,15 @@
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=RELOC %s
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
+/// The optimized sequence reaches the GOT with a 32-bit PC-relative
+/// displacement, so it has the same range limit as an unrelaxed GOTTPOFF.
+// RUN: echo 'SECTIONS { .text 0x100000 : { *(.text) } .got 0x80200000 : { *(.got) } }' > %t.lds
+// RUN: not ld.lld %t.o %t.so -T %t.lds -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=RANGE %s --implicit-check-not=error:
+
+// RANGE: error: {{.*}}.o:(.text+0x4): relocation R_X86_64_TLSGD out of range: 2148532208 is not in [-2147483648, 2147483647]; references 'tlsshared0'
+// RANGE: error: {{.*}}.o:(.text+0x14): relocation R_X86_64_TLSGD out of range: 2148532200 is not in [-2147483648, 2147483647]; references 'tlsshared1'
+
 // SEC: .got PROGBITS 00000000002023a8 0003a8 000010 00 WA 0 0 8
 
 //RELOC:      Relocations [

@@ -165,3 +165,38 @@ HFAMatrix2 ret_hfa_matrix2() {
   return r;
 }
 // CHECK: define{{.*}} %struct.HFAMatrix2 @ret_hfa_matrix2
+
+// Empty records and zero-size types are ignored as returns (void).
+typedef struct {
+} Empty;
+Empty ret_empty(void) {
+  Empty e;
+  return e;
+}
+// CHECK: define{{.*}} void @ret_empty()
+
+typedef union {
+} EmptyUnion;
+EmptyUnion ret_empty_union(void) {
+  EmptyUnion u;
+  return u;
+}
+// CHECK: define{{.*}} void @ret_empty_union()
+
+typedef struct {
+  int arr[0];
+} ZeroSize;
+ZeroSize ret_zerosize(void) {
+  ZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_zerosize()
+
+typedef struct {
+  ZeroSize inner;
+} NestedZeroSize;
+NestedZeroSize ret_nested_zerosize(void) {
+  NestedZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_nested_zerosize()

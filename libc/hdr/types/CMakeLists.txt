@@ -58,6 +58,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct___pthread_cleanup_frame
+  HDRS
+    struct___pthread_cleanup_frame.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct___pthread_cleanup_frame
+)
+
+add_proxy_header_library(
   struct_r_debug
   HDRS
     struct_r_debug.h

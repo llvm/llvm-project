@@ -60,6 +60,21 @@ def FeatureLDSAllocGranularity1024 : SubtargetFeatureLDSAllocGranularity<1024>;
 def FeatureLDSAllocGranularity1280 : SubtargetFeatureLDSAllocGranularity<1280>;
 def FeatureLDSAllocGranularity2048 : SubtargetFeatureLDSAllocGranularity<2048>;
 
+// Units used to encode LDS size in program resource registers and metadata.
+// These can differ from the hardware allocation granularity. A generic target's
+// encoding granularity must be present on at least one covered GPU.
+class SubtargetFeatureLDSEncodingGranularity <int Granularity> : AMDGPUGenericAnyFeature <
+  "lds-encoding-granularity-"#Granularity,
+  "LDSEncodingGranularity",
+  !cast<string>(Granularity),
+  "LDS encoding granularity in bytes.">;
+
+def FeatureLDSEncodingGranularity256 : SubtargetFeatureLDSEncodingGranularity<256>;
+def FeatureLDSEncodingGranularity512 : SubtargetFeatureLDSEncodingGranularity<512>;
+def FeatureLDSEncodingGranularity1024 : SubtargetFeatureLDSEncodingGranularity<1024>;
+def FeatureLDSEncodingGranularity1280 : SubtargetFeatureLDSEncodingGranularity<1280>;
+def FeatureLDSEncodingGranularity2048 : SubtargetFeatureLDSEncodingGranularity<2048>;
+
 // Whether each wavefront size mode is available on the hardware,
 // independent of the active mode.
 def FeatureSupportsWave32 : SubtargetFeature<"supports-wave32",

@@ -22,6 +22,12 @@ queue::queue(const context &syclContext, const device &syclDevice,
                                    asyncHandler, propList);
 }
 
+queue::queue(const context &syclContext, const device &syclDevice,
+             const property_list &propList)
+    : queue(syclContext, syclDevice,
+            detail::getSyclObjImpl(syclContext)->get_async_handler(),
+            propList) {}
+
 backend queue::get_backend() const noexcept { return impl->getBackend(); }
 
 context queue::get_context() const {

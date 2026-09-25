@@ -63,7 +63,7 @@ struct __optional_ref_iterator_base<_Tp&> {
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<_Tp*>;
 #    else
-  using iterator = __capacity_aware_iterator<_Tp*, optional<_Tp&>, 1>;
+  using iterator = __capacity_aware_iterator<_Tp*, 1>;
 #    endif
 };
 
@@ -283,7 +283,7 @@ public:
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__value_, __value_, __value_ + (this->has_value() ? 1 : 0));
 #    else
-    return std::__make_capacity_aware_iterator<_Tp*, optional<_Tp&>, 1>(__value_);
+    return std::__make_capacity_aware_iterator<_Tp*, 1>(__value_);
 #    endif
   }
 

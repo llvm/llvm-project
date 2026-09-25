@@ -3003,9 +3003,8 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   if (SubReg) {
     Reg = TRI->getSubReg(Reg, SubReg);
 
-    // Currently all regular registers have their .l and .h subregisters, so
-    // we should never need to generate an error here.
-    assert(Reg && "Invalid subregister!");
+    if (!Reg)
+      Error(Loc, "invalid subregister");
   }
 
   return Reg;
@@ -5151,6 +5150,7 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
     unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
     if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), DppCtrl) &&
+        getSTI().hasFeature(AMDGPU::FeatureDPALU_DPP) &&
         AMDGPU::isDPALU_DPP(MII.get(Opc), MII, getSTI())) {
       // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
       // only on GFX12.
