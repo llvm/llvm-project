@@ -35,7 +35,7 @@ end subroutine
 ! CHECK: return %[[RET]]
 
 ! CHECK-LABEL: func.func @_QPtest()
-! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".result"}
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
 ! CHECK: hlfir.declare %[[RES]] {uniq_name = ".tmp.func_result"}
 ! CHECK: fir.call @_QMmPfsum()
 ! CHECK: fir.if

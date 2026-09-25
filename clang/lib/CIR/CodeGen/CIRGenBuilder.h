@@ -195,9 +195,12 @@ public:
     return op;
   }
 
-  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
-                             mlir::Value src, mlir::Value len) {
-    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  cir::MemCpyOp createMemCpy(mlir::Location loc, Address dst, Address src,
+                             mlir::Value len) {
+    return cir::MemCpyOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,

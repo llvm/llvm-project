@@ -77,12 +77,12 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_pointer()
-! CHECK-DAG: %[[C1_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> {bindc_name = "c1", fir.target, uniq_name = "_QMpolyFtest_pointerEc1"}
-! CHECK-DAG: %[[C2_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> {bindc_name = "c2", fir.target, uniq_name = "_QMpolyFtest_pointerEc2"}
-! CHECK-DAG: %[[C3_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> {bindc_name = "c3", fir.target, uniq_name = "_QMpolyFtest_pointerEc3"}
-! CHECK-DAG: %[[C4_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> {bindc_name = "c4", fir.target, uniq_name = "_QMpolyFtest_pointerEc4"}
-! CHECK-DAG: %[[P_ALLOCA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> {bindc_name = "p", uniq_name = "_QMpolyFtest_pointerEp"}
-! CHECK-DAG: %[[PA_ALLOCA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> {bindc_name = "pa", uniq_name = "_QMpolyFtest_pointerEpa"}
+! CHECK-DAG: %[[C1_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "c1", uniq_name = "_QMpolyFtest_pointerEc1"}> {fir.target}
+! CHECK-DAG: %[[C2_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "c2", uniq_name = "_QMpolyFtest_pointerEc2"}> {fir.target}
+! CHECK-DAG: %[[C3_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "c3", uniq_name = "_QMpolyFtest_pointerEc3"}> {fir.target}
+! CHECK-DAG: %[[C4_ALLOCA:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "c4", uniq_name = "_QMpolyFtest_pointerEc4"}> {fir.target}
+! CHECK-DAG: %[[P_ALLOCA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> <{bindc_name = "p", uniq_name = "_QMpolyFtest_pointerEp"}>
+! CHECK-DAG: %[[PA_ALLOCA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> <{bindc_name = "pa", uniq_name = "_QMpolyFtest_pointerEpa"}>
 ! CHECK-DAG: %[[C1:.*]]:2 = hlfir.declare %[[C1_ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMpolyFtest_pointerEc1"}
 ! CHECK-DAG: %[[C2:.*]]:2 = hlfir.declare %[[C2_ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMpolyFtest_pointerEc2"}
 ! CHECK-DAG: %[[C3:.*]]:2 = hlfir.declare %[[C3_ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMpolyFtest_pointerEc3"}

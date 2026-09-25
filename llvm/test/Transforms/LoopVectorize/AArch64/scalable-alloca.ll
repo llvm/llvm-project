@@ -3,7 +3,6 @@
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): alloca
-; CHECK-REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @alloca(ptr %vla, i64 %N) {
 ; CHECK-LABEL: @alloca(
 ; CHECK-NOT: <vscale x

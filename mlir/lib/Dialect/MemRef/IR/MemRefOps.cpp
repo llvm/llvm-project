@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
@@ -2635,17 +2636,6 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
   // type, e.g., could not get strides/offset.
   assert(succeeded(resultType) && "could not compute layout");
   build(builder, result, *resultType, src, reassociation, outputShape);
-}
-
-/// Verify that none of the reassociation groups is empty.
-template <typename MemrefReshapeOp>
-static LogicalResult verifyReassociationIndicesNotEmpty(MemrefReshapeOp op) {
-  if (llvm::any_of(
-          op.getReassociationIndices(),
-          [](const ReassociationIndices &group) { return group.empty(); })) {
-    return op.emitOpError("reassociation indices must not be empty");
-  }
-  return success();
 }
 
 LogicalResult ExpandShapeOp::verify() {

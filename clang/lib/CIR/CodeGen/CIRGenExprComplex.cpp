@@ -1006,7 +1006,7 @@ mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
   Expr *cond = e->getCond()->IgnoreParens();
   mlir::Value condValue = cgf.evaluateExprAsBool(cond);
 
-  CIRGenFunction::ConditionalEvaluation eval(cgf);
+  CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
 
   return cir::TernaryOp::create(
              builder, loc, condValue,

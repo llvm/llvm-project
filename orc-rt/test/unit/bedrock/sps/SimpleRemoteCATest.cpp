@@ -28,6 +28,7 @@
 #include <vector>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 
@@ -132,7 +133,7 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
   // controller would be left to interpret.
   EXPECT_EQ(static_cast<size_t>(IB.data() - Payload.data()), Payload.size());
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, MessageHeaderRoundTrips) {
@@ -244,7 +245,7 @@ TEST(SimpleRemoteCATest, ResultWithAnUnknownKindIsRejected) {
   EXPECT_EQ(toString(A.takeError()),
             "Malformed result message: invalid kind 2");
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, DecodeResultOfMalformedOutOfBandErrorIsNotTerminal) {
@@ -273,7 +274,7 @@ TEST(SimpleRemoteCATest, RegisterCallReturnsDistinctNonZeroSequenceNumbers) {
   EXPECT_NE(Second, 0u);
   EXPECT_NE(First, Second);
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
@@ -292,7 +293,7 @@ TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
   EXPECT_FALSE(!!CA->takeCall(/*SeqNo=*/9999)) << "never registered";
 
   CA->failPendingControllerCall(std::move(Taken));
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
@@ -315,5 +316,5 @@ TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
 
   for (auto &[SeqNo, OnComplete] : All)
     CA->failPendingControllerCall(std::move(OnComplete));
-  S.detach([] {});
+  S.detach();
 }

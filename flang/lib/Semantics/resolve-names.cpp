@@ -781,6 +781,11 @@ public:
   }
   void SetCUDADataAttr(SourceName, Symbol &,
       std::optional<common::CUDADataAttr>, bool isImplicit = false);
+  // Apply -gpu=mem:managed / -gpu=mem:pinned to an unattributed
+  // allocatable or data pointer. Explicit CUDA data attributes are left
+  // unchanged. CUDA Fortran must be enabled so a pure OpenACC compilation
+  // does not route every allocatable through the CUDA Fortran pipeline.
+  void ApplyImplicitCUDADataAttr(Symbol &);
 
 protected:
   FuncResultStack &funcResultStack() { return funcResultStack_; }
@@ -3844,6 +3849,40 @@ bool ScopeHandler::CheckDuplicatedAttrs(
   attrs.IterateOverMembers(
       [&](Attr x) { ok &= CheckDuplicatedAttr(name, symbol, x); });
   return ok;
+}
+
+void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
+  // Only when CUDA Fortran is enabled; otherwise -gpu=mem:managed on a
+  // non-CUDA-Fortran translation unit (e.g. pure OpenACC) would incorrectly
+  // route every allocatable through the CUDA Fortran managed descriptor
+  // pipeline.
+  if (!context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
+    return;
+  if (!IsAllocatable(symbol) && !IsPointer(symbol))
+    return;
+  bool managed{context().languageFeatures().IsEnabled(
+      common::LanguageFeature::CudaManaged)};
+  // Implicit pinned remains allocatable-only.
+  bool pinned{!managed && IsAllocatable(symbol) &&
+      context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CudaPinned)};
+  if (!managed && !pinned)
+    return;
+  // A scalar data pointer can still be an EntityDetails at this point, since
+  // only some attributes force an early conversion; arrays are always
+  // objects. Convert it now so both get the attribute. A procedure pointer is
+  // not an object and is left alone.
+  if (!ConvertToObjectEntity(symbol))
+    return;
+  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object || object->cudaDataAttr())
+    return;
+  if (managed) {
+    object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+    object->set_cudaDataAttrIsImplicit();
+  } else {
+    object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+  }
 }
 
 void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
@@ -7618,20 +7657,7 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
     SetCUDADataAttr(
         name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
-
-    // Implicitely attribute allocatable/pointer components with `managed`
-    // memory if CUDA and `-gpu=mem:managed` are enabled.
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
-          !object->cudaDataAttr() &&
-          context().languageFeatures().IsEnabled(
-              common::LanguageFeature::CUDA) &&
-          context().languageFeatures().IsEnabled(
-              common::LanguageFeature::CudaManaged)) {
-        object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        object->set_cudaDataAttrIsImplicit();
-      }
-    }
+    ApplyImplicitCUDADataAttr(symbol);
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, /*inComponentDecl=*/true);
@@ -11011,31 +11037,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
 
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
-          !object->cudaDataAttr()) {
-        // Implicitly treat allocatable/pointer arrays as managed when feature
-        // is enabled. This is done after all explicit CUDA attributes have
-        // been processed. Only applies when CUDA Fortran is enabled; otherwise
-        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
-        // OpenACC) would incorrectly route every allocatable through the CUDA
-        // Fortran managed descriptor pipeline.
-        if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA)) {
-          if (context().languageFeatures().IsEnabled(
-                  common::LanguageFeature::CudaManaged)) {
-            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-            object->set_cudaDataAttrIsImplicit();
-          }
-          // Implicitly treat allocatable arrays as pinned when feature is
-          // enabled.
-          else if (IsAllocatable(symbol) &&
-              context().languageFeatures().IsEnabled(
-                  common::LanguageFeature::CudaPinned))
-            object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
-        }
-      }
-    }
+    ApplyImplicitCUDADataAttr(symbol);
   }
   // Type the deferred data-implied-do index variables now that the whole
   // specification part has been visited (F'2023 19.4 p5).  Plain

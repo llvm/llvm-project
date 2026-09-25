@@ -62,7 +62,9 @@ class SCEV;
 class SCEVPredicate;
 class Type;
 class VPBasicBlock;
-class VPBuilder;
+struct VPBuilderDefaultInserter;
+template <typename InserterTy = VPBuilderDefaultInserter> class VPBuilderBase;
+using VPBuilder = VPBuilderBase<>;
 class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
@@ -262,16 +264,6 @@ public:
   /// VPBlockBase reached.
   const VPBlocksTy &getHierarchicalSuccessors() {
     return getEnclosingBlockWithSuccessors()->getSuccessors();
-  }
-
-  /// \return the predecessors either attached directly to this VPBlockBase or,
-  /// if this VPBlockBase is the entry block of a VPRegionBlock and has no
-  /// predecessors of its own, search recursively for the first enclosing
-  /// VPRegionBlock that has predecessors and return them. If no such
-  /// VPRegionBlock exists, return the (empty) predecessors of the topmost
-  /// VPBlockBase reached.
-  const VPBlocksTy &getHierarchicalPredecessors() {
-    return getEnclosingBlockWithPredecessors()->getPredecessors();
   }
 
   /// \return the hierarchical predecessor of this VPBlockBase if it has a
@@ -1014,12 +1006,6 @@ public:
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
 
-  bool isNonNeg() const {
-    assert(OpType == OperationType::NonNegOp &&
-           "recipe doesn't have a NNEG flag");
-    return NonNegFlags.NonNeg;
-  }
-
   bool hasNoUnsignedWrap() const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
@@ -1101,7 +1087,8 @@ public:
   /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
   /// that support it, asserts otherwise. Opcodes not supporting default flags
   /// include compares and ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
+  LLVM_ABI_FOR_TEST static VPIRFlags getDefaultFlags(unsigned Opcode,
+                                                     Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -1885,7 +1872,8 @@ protected:
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
 /// TODO: Merge with VPWidenRecipe now that type is associated to every
 /// VPRecipeValue.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenCastRecipe : public VPRecipeWithIRFlags,
+                                            public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1932,7 +1920,8 @@ protected:
 };
 
 /// A recipe for widening vector intrinsics.
-class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags,
+                                                 public VPIRMetadata {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
@@ -2195,12 +2184,17 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  unsigned getOpcode() const { return Opcode; }
-
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.
   VPValue *getMask() const {
     return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getOperand(1);
   }
 
 protected:
@@ -2565,9 +2559,6 @@ public:
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
 
-  /// Update the step value of the recipe.
-  void setStepValue(VPValue *V) { setOperand(1, V); }
-
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
@@ -2927,9 +2918,6 @@ public:
     return std::holds_alternative<RdxInLoop>(Style) ||
            std::holds_alternative<RdxOrdered>(Style);
   }
-
-  /// Returns true if the reduction outputs a vector with a scaled down VF.
-  bool isPartialReduction() const { return getVFScaleFactor() > 1; }
 
   /// Returns true, if the phi is part of a multi-use reduction.
   bool hasUsesOutsideReductionChain() const {
@@ -4195,7 +4183,7 @@ protected:
 /// A recipe for converting \p Current into \p Start + \p Current * \p Step.
 /// FastMathFlags are derived from the \p FPBinOp in the case of FP inductions,
 /// and the passed NoWrap \p Flags apply in the case of Ptr and Int inductions.
-class VPDerivedIVRecipe : public VPRecipeWithIRFlags {
+class LLVM_ABI_FOR_TEST VPDerivedIVRecipe : public VPRecipeWithIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
