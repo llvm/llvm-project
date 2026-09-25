@@ -41,6 +41,7 @@ if llvm_jitlink:
         ("%{jit}", "{} -oop-launch={}".format(llvm_jitlink, ogre))
     )
 
+
 # %{cc} and %{cxx} compile C and C++ for the runtime's target. They default to
 # clang and clang++ from the LLVM tools directory. Pass --param orc-rt-cc=<cc>
 # or --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
@@ -52,9 +53,7 @@ def add_compiler(name, clang_name):
     if override:
         compiler = lit.util.which(override)
         if compiler is None:
-            lit_config.fatal(
-                "{} compiler '{}' not found".format(name, override)
-            )
+            lit_config.fatal("{} compiler '{}' not found".format(name, override))
         lit_config.note("using {} override: {}".format(name, compiler))
     else:
         compiler = llvm_config.use_llvm_tool(clang_name)
@@ -62,8 +61,9 @@ def add_compiler(name, clang_name):
             compiler += " --target=" + config.target_triple
     if compiler:
         config.available_features.add(name)
-        substitution = "%{" + name[len("orc-rt-"):] + "}"
+        substitution = "%{" + name[len("orc-rt-") :] + "}"
         config.substitutions.append((substitution, compiler))
+
 
 add_compiler("orc-rt-cc", "clang")
 add_compiler("orc-rt-cxx", "clang++")
@@ -87,15 +87,13 @@ if llvm_mc:
 #   target-arch=<arch>             (arm64 and aarch64 are aliases)
 #   target-object-format=<coff|elf|mach-o>
 # No object format feature is added for targets not recognized below.
-ELF_OS_NAMES = ("linux", "freebsd", "netbsd", "openbsd", "fuchsia", "none",
-                "elf")
+ELF_OS_NAMES = ("linux", "freebsd", "netbsd", "openbsd", "fuchsia", "none", "elf")
+
 
 def add_target_features():
     arch, _, rest = config.target_triple.partition("-")
     if arch in ("arm64", "aarch64"):
-        config.available_features.update(
-            ["target-arch=arm64", "target-arch=aarch64"]
-        )
+        config.available_features.update(["target-arch=arm64", "target-arch=aarch64"])
     else:
         config.available_features.add("target-arch=" + arch)
     components = rest.split("-")
@@ -108,6 +106,7 @@ def add_target_features():
     else:
         return
     config.available_features.add("target-object-format=" + object_format)
+
 
 add_target_features()
 
