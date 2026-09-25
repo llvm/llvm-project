@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -309,7 +310,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     } else {
       for (unsigned int Step = 0; Step < Size; Step += PatternSize) {
         auto *Dst = static_cast<char *>(TgtPtr) + Step;
-        std::memcpy(Dst, PatternPtr, PatternSize);
+        std::memcpy(Dst, PatternPtr,
+                    std::min<int64_t>(PatternSize, Size - Step));
       }
     }
 
