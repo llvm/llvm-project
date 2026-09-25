@@ -2153,9 +2153,8 @@ static bool opIsInSingleThread(mlir::Operation *op) {
 
 static LogicalResult
 emitPrivatizationBarrier(mlir::Operation *op, llvm::IRBuilderBase &builder,
-                         LLVM::ModuleTranslation &moduleTranslation,
-                         bool insertBarrier) {
-  if (!insertBarrier || opIsInSingleThread(op))
+                         LLVM::ModuleTranslation &moduleTranslation) {
+  if (opIsInSingleThread(op))
     return success();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -2180,8 +2179,9 @@ completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
       });
 
   if (!needsFirstprivate)
-    return emitPrivatizationBarrier(op, builder, moduleTranslation,
-                                    insertBarrier);
+    return insertBarrier
+               ? emitPrivatizationBarrier(op, builder, moduleTranslation)
+               : success();
 
   llvm::BasicBlock *copyBlock =
       splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
@@ -2220,8 +2220,9 @@ completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
     moduleTranslation.forgetMapping(copyRegion);
   }
 
-  return emitPrivatizationBarrier(op, builder, moduleTranslation,
-                                  insertBarrier);
+  return insertBarrier
+             ? emitPrivatizationBarrier(op, builder, moduleTranslation)
+             : success();
 }
 
 static LogicalResult
@@ -5261,8 +5262,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  // No call to completePrivateVars because FIRSTPRIVATE is not allowed for
-  // SIMD.
+  // No call to completePrivateVars because SIMD does not allow FIRSTPRIVATE and
+  // is not a worksharing construct, so a privatization barrier here could
+  // deadlock.
 
   assert(afterAllocas.get()->getSinglePredecessor());
   if (failed(initReductionVars(simdOp, reductionArgs, builder,
