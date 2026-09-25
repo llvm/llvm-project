@@ -1419,6 +1419,16 @@ void RegAllocFastImpl::addRegClassDefCounts(
   }
 }
 
+/// Early clobber, partial def, or tied to a use that carries a value: the
+/// register is occupied while the uses are read.
+static bool isLiveThroughDef(const MachineInstr &MI, const MachineOperand &MO) {
+  assert(MO.isDef() && "expected def operand");
+  if (MO.isEarlyClobber() || MO.readsReg())
+    return true;
+  return MO.isTied() &&
+         !MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&MO))).isUndef();
+}
+
 /// Compute \ref DefOperandIndexes so it contains the indices of "def" operands
 /// that are to be allocated. Those are ordered in a way that small classes,
 /// early clobbers and livethroughs are allocated first.
@@ -1478,10 +1488,8 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
       return false;
 
     // Allocate early clobbers and livethrough operands first.
-    bool Livethrough0 = MO0.isEarlyClobber() || MO0.isTied() ||
-                        (MO0.getSubReg() == 0 && !MO0.isUndef());
-    bool Livethrough1 = MO1.isEarlyClobber() || MO1.isTied() ||
-                        (MO1.getSubReg() == 0 && !MO1.isUndef());
+    bool Livethrough0 = isLiveThroughDef(MI, MO0);
+    bool Livethrough1 = isLiveThroughDef(MI, MO1);
     if (Livethrough0 > Livethrough1)
       return true;
     if (Livethrough0 < Livethrough1)
@@ -1490,17 +1498,6 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
     // Tie-break rule: operand index.
     return I0 < I1;
   });
-}
-
-// Returns true if this def (MO) ties to a use that actually carries a value
-// (not undef).
-static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
-  assert(MO.isDef() && "expected a def operand");
-  if (!MO.isTied())
-    return false;
-  unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
-  const MachineOperand &TiedMO = MI.getOperand(TiedIdx);
-  return !TiedMO.isUndef();
 }
 
 void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
@@ -1544,12 +1541,9 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         if (MO.isDef()) {
           HasDef = true;
           HasVRegDef = true;
-          if (MO.isEarlyClobber()) {
+          if (MO.isEarlyClobber())
             HasEarlyClobber = true;
-            NeedToAssignLiveThroughs = true;
-          }
-          if (isTiedToNotUndef(MI, MO) ||
-              (MO.getSubReg() != 0 && !MO.isUndef()))
+          if (isLiveThroughDef(MI, MO))
             NeedToAssignLiveThroughs = true;
         }
       } else if (Reg.isPhysical()) {
@@ -1593,8 +1587,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
             MachineOperand &MO = MI.getOperand(OpIdx);
             LLVM_DEBUG(dbgs() << "Allocating " << MO << '\n');
             Register Reg = MO.getReg();
-            if (MO.isEarlyClobber() || isTiedToNotUndef(MI, MO) ||
-                (MO.getSubReg() && !MO.isUndef())) {
+            if (isLiveThroughDef(MI, MO)) {
               ReArrangedImplicitOps = defineLiveThroughVirtReg(MI, OpIdx, Reg);
             } else {
               ReArrangedImplicitOps = defineVirtReg(MI, OpIdx, Reg);
@@ -1638,8 +1631,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       assert((!MO.isTied() || !isClobberedByRegMasks(MO.getReg())) &&
              "tied def assigned to clobbered register");
 
-      // Do not free tied operands and early clobbers.
-      if (isTiedToNotUndef(MI, MO) || MO.isEarlyClobber())
+      // Do not free live-through defs.
+      if (isLiveThroughDef(MI, MO))
         continue;
       if (!Reg)
         continue;
