@@ -375,3 +375,59 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+// Two sibling selections nested in a loop, each with its own selection control
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @sibling_selections
+  spirv.func @sibling_selections(%count : i32, %cond : i1) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %ivar = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+// CHECK:        spirv.mlir.loop {
+    spirv.mlir.loop {
+      spirv.Branch ^header
+    ^header:
+      %ival0 = spirv.Load "Function" %ivar : i32
+      %icmp = spirv.SLessThan %ival0, %count : i32
+      spirv.BranchConditional %icmp, ^body, ^merge
+    ^body:
+// CHECK:          spirv.mlir.selection control(Flatten)
+      spirv.mlir.selection control(Flatten) {
+        spirv.BranchConditional %cond, ^then, ^merge
+      ^then:
+        spirv.Store "Function" %ivar, %one : i32
+        spirv.Branch ^merge
+      ^merge:
+        spirv.mlir.merge
+      }
+// CHECK:          spirv.mlir.selection control(DontFlatten)
+      spirv.mlir.selection control(DontFlatten) {
+        spirv.BranchConditional %cond, ^then, ^merge
+      ^then:
+        spirv.Store "Function" %ivar, %zero : i32
+        spirv.Branch ^merge
+      ^merge:
+        spirv.mlir.merge
+      }
+      spirv.Branch ^continue
+    ^continue:
+      %ival1 = spirv.Load "Function" %ivar : i32
+      %iadd = spirv.IAdd %ival1, %one : i32
+      spirv.Store "Function" %ivar, %iadd : i32
+      spirv.Branch ^header
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
+  spirv.ExecutionMode @main "LocalSize", 1, 1, 1
+}
