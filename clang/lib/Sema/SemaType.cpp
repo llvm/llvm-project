@@ -2483,13 +2483,15 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
       return QualType();
     }
 
-    if (!VecSize->isIntN(32)) {
+    // Unlike gcc's vector_size attribute, the size is specified as the
+    // number of elements, not the number of bytes. Bool vectors are stored as
+    // an integer with one bit per element and can be formed from any ext
+    // vector (e.g. by the conditional operator), hence the bound.
+    if (VecSize->ugt(llvm::IntegerType::MAX_INT_BITS)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
-    // Unlike gcc's vector_size attribute, the size is specified as the
-    // number of elements, not the number of bytes.
     unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
     if (VectorSize == 0) {

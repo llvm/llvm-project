@@ -378,6 +378,15 @@ void Init() {
   const PR15730<8, char>::type2 PR15730_2 = {};
 }
 
+template <unsigned long long N>
+struct GH165458 {
+  typedef bool __attribute__((ext_vector_type(N))) type; // #GH165458
+};
+// expected-error@#GH165458 {{vector size too large}}
+// expected-note@+1 {{in instantiation of template class 'Templates::GH165458<187553262>' requested here}}
+typedef GH165458<187553262>::type GH165458_TooLarge;
+typedef GH165458<8388608>::type GH165458_Max;
+
 } // namespace Templates
 
 typedef int inte2 __attribute__((__ext_vector_type__(2)));

@@ -567,6 +567,10 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
+- Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than
+  2^23 elements; the attribute now rejects more than 2^23 elements for any
+  element type. (#GH165458)
+
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
   ``struct with_fam * __sized_by(size) ptr;``) was incorrectly also applied to
