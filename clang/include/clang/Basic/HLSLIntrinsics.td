@@ -958,7 +958,7 @@ value, \a Val.
   let VaryingLongVector = 1;
 }
 
-// Returns the floating-point remainder of x/y (scalar overloads).
+// Returns the floating-point remainder of x/y.
 def hlsl_fmod : HLSLBuiltin<"fmod"> {
   let Doc = [{
 \fn T fmod(T x, T y)
@@ -975,17 +975,8 @@ parameter.
   let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns the floating-point remainder of x/y (vector overloads).
-def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
-  let DetailFunc = "fmod_vec_impl";
-  let ParamNames = ["X", "Y"];
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 

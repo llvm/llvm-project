@@ -502,6 +502,8 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixFP32Pats<fmad, V_MAD_MIX_F32>;
+
+let OtherPredicates = [NoFP32Denormals, NoFP16Denormals] in
 defm : MadFmaMixFP16Pats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 } // OtherPredicates = [NoFP32Denormals]
 } // End SubtargetPredicate = HasMadMixInsts

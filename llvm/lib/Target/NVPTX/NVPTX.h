@@ -84,7 +84,6 @@ void initializeNVPTXProxyRegErasureLegacyPassPass(PassRegistry &);
 void initializeNVPTXForwardParamsLegacyPassPass(PassRegistry &);
 void initializeNVPTXAddressFolderLegacyPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
-void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 void initializeNVPTXPeepholeLegacyPassPass(PassRegistry &);

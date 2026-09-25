@@ -19,64 +19,72 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:  ## %bb.3: ## %bb28
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    movw $-2, %si
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movw $-2, %ax
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.4: ## %bb37
-; CHECK-NEXT:    movw $0, 40(%edi)
+; CHECK-NEXT:    movw $0, 40(%ecx)
+; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    leal (,%ecx,4), %ecx
-; CHECK-NEXT:    leal (,%ebx,4), %edx
+; CHECK-NEXT:    leal (,%ebp,4), %ebp
+; CHECK-NEXT:    leal (,%ebx,4), %ebx
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    movzwl %bp, %eax
-; CHECK-NEXT:    movswl %cx, %ecx
-; CHECK-NEXT:    movswl %dx, %edx
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    movswl %bp, %ebp
+; CHECK-NEXT:    movswl %bx, %edi
 ; CHECK-NEXT:    pushl $87
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl %ecx
-; CHECK-NEXT:    pushl $0
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %edx
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl $0
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    calll _SQLDrivers_Internal
 ; CHECK-NEXT:    addl $48, %esp
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:  ## %bb.5:
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %ebx, %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:  LBB0_6: ## %done
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je LBB0_7
 ; CHECK-NEXT:  ## %bb.8: ## %bb167
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    movl L_iodbcdm_global_lock$non_lazy_ptr, %eax
-; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    movl L_iodbcdm_global_lock$non_lazy_ptr, %ecx
+; CHECK-NEXT:    pushl %ecx
+; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    calll _pthread_mutex_unlock
 ; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:  LBB0_7: ## %bb150
-; CHECK-NEXT:    movswl %si, %eax
+; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movswl %cx, %ecx
-; CHECK-NEXT:    movswl %bx, %edx
-; CHECK-NEXT:    movzwl %bp, %esi
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movswl %bp, %ecx
+; CHECK-NEXT:    movswl %bx, %ebx
+; CHECK-NEXT:    movzwl %di, %edi
+; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl %edx
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $1
 ; CHECK-NEXT:    calll _trace_SQLDriversW

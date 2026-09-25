@@ -3002,9 +3002,10 @@ GISelValueTrackingAnalysis::run(MachineFunction &MF,
   return Result(MF, MaxDepth);
 }
 
-PreservedAnalyses
-GISelValueTrackingPrinterPass::run(MachineFunction &MF,
-                                   MachineFunctionAnalysisManager &MFAM) {
+static PreservedAnalyses
+printGISelValueTracking(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM, raw_ostream &OS,
+                        bool PrintFPClass) {
   auto &VTA = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   const auto &MRI = MF.getRegInfo();
   OS << "name: ";
@@ -3019,13 +3020,36 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
         Register Reg = MO.getReg();
         if (!MRI.getType(Reg).isValid())
           continue;
-        KnownBits Known = VTA.getKnownBits(Reg);
-        unsigned SignedBits = VTA.computeNumSignBits(Reg);
-        bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
-        OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
-           << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
+        if (PrintFPClass) {
+          KnownFPClass FPKnown = VTA.computeKnownFPClass(Reg);
+          OS << "  " << MO << " FPClasses:" << FPKnown.getKnownFPClasses()
+             << " SignBitKnown:";
+          if (FPKnown.getSignBit())
+            OS << (*FPKnown.getSignBit() ? '1' : '0');
+          else
+            OS << '?';
+          OS << '\n';
+        } else {
+          KnownBits Known = VTA.getKnownBits(Reg);
+          unsigned SignedBits = VTA.computeNumSignBits(Reg);
+          bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
+          OS << "  " << MO << " KnownBits:" << Known
+             << " SignBits:" << SignedBits
+             << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
+        }
       };
     }
   }
   return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+GISelValueTrackingPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  return printGISelValueTracking(MF, MFAM, OS, false);
+}
+
+PreservedAnalyses GISelValueTrackingFPClassPrinterPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return printGISelValueTracking(MF, MFAM, OS, true);
 }

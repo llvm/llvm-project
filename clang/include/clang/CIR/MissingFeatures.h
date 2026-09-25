@@ -94,6 +94,7 @@ struct MissingFeatures {
   static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
+  static bool opCallInvokeAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }

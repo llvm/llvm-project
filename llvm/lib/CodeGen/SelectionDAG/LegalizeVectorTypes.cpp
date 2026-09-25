@@ -1449,6 +1449,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
     break;
+  case ISD::VECTOR_REPEAT:
+    SplitVecRes_VECTOR_REPEAT(N, Lo, Hi);
+    break;
   case ISD::VECTOR_REVERSE:
     SplitVecRes_VECTOR_REVERSE(N, Lo, Hi);
     break;
@@ -3483,6 +3486,31 @@ void DAGTypeLegalizer::SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
 
   Lo = DAG.getNode(N->getOpcode(), dl, DstVTLo, SrcLo, N->getOperand(1));
   Hi = DAG.getNode(N->getOpcode(), dl, DstVTHi, SrcHi, N->getOperand(1));
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_REPEAT(SDNode *N, SDValue &Lo,
+                                                 SDValue &Hi) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+  assert(LoVT == HiVT && "Expected equal split types");
+
+  // Use smaller even/odd source vectors so their broadcasts can be
+  // reinterleaved in the original lane order for every value of vscale.
+  SDLoc DL(N);
+  auto [SrcLo, SrcHi] = DAG.SplitVector(Src, DL);
+  EVT SplitSrcVT = SrcLo.getValueType();
+  SDValue Deinterleaved =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                  DAG.getVTList(SplitSrcVT, SplitSrcVT), SrcLo, SrcHi);
+  SDValue Even =
+      DAG.getNode(ISD::VECTOR_REPEAT, DL, LoVT, Deinterleaved.getValue(0));
+  SDValue Odd =
+      DAG.getNode(ISD::VECTOR_REPEAT, DL, LoVT, Deinterleaved.getValue(1));
+  SDValue Interleaved = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                                    DAG.getVTList(LoVT, LoVT), Even, Odd);
+  Lo = Interleaved.getValue(0);
+  Hi = Interleaved.getValue(1);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo,
@@ -6333,12 +6361,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
 
   // The source has the same number of elements as the result, so widen it to
   // match WidenVT. It only lives in the widened-vector map if it is itself
-  // widened; otherwise pad it up to the widened element count.
+  // widened; otherwise pad it up to the widened element count
+  // when it is illegal.
   SDValue InOp = N->getOperand(0);
   EVT InVT = InOp.getValueType();
-  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+  TargetLowering::LegalizeTypeAction InAction = getTypeAction(InVT);
+  if (InAction == TargetLowering::TypeWidenVector) {
     InOp = GetWidenedVector(InOp);
-  } else {
+  } else if (InAction != TargetLowering::TypeLegal) {
     EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(),
                                      InVT.getVectorElementType(), WidenEC);
     InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
@@ -7244,7 +7274,7 @@ EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, bool IsOpLenient0,
                      : ToBits <= NarrowBits ? NarrowBits
                                             : ToBits;
   EVT OpVT = Op0.getValueType().changeVectorElementType(
-      *DAG.getContext(), MVT::getIntegerVT(IntBits));
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), IntBits));
   Op0 = adjustMaskToType(Op0, OpVT);
   Op1 = adjustMaskToType(Op1, OpVT);
   return OpVT;
@@ -7807,6 +7837,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_FAKE_USE(N);
     break;
   case ISD::CONCAT_VECTORS:     Res = WidenVecOp_CONCAT_VECTORS(N); break;
+  case ISD::VECTOR_REPEAT:
+    Res = WidenVecOp_VECTOR_REPEAT(N);
+    break;
   case ISD::INSERT_SUBVECTOR:   Res = WidenVecOp_INSERT_SUBVECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR:  Res = WidenVecOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::EXTRACT_VECTOR_ELT: Res = WidenVecOp_EXTRACT_VECTOR_ELT(N); break;
@@ -8259,6 +8292,32 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
       Ops[Idx++] = DAG.getExtractVectorElt(dl, EltVT, InOp, j);
   }
   return DAG.getBuildVector(VT, dl, Ops);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_REPEAT(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT WidenedSrcVT = TLI.getTypeToTransformTo(*DAG.getContext(), SrcVT);
+
+  if (!WidenedSrcVT.getVectorElementCount().hasKnownScalarFactor(
+          SrcVT.getVectorElementCount()))
+    report_fatal_error(
+        "Cannot widen VECTOR_REPEAT operand to an ElementCount that's not "
+        "a known scalar multiple of the input ElementCount.");
+
+  // Repeat the original source because the extra lanes of its widened value
+  // are unspecified.
+  unsigned NumConcat =
+      WidenedSrcVT.getVectorNumElements() / SrcVT.getVectorNumElements();
+  SmallVector<SDValue, 8> Ops(NumConcat, Src);
+  SDValue WidenedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, WidenedSrcVT, Ops);
+  EVT WidenedVT = VT.changeVectorElementCount(
+      *DAG.getContext(),
+      ElementCount::getScalable(WidenedSrcVT.getVectorNumElements()));
+  SDValue Widened = DAG.getNode(ISD::VECTOR_REPEAT, DL, WidenedVT, WidenedSrc);
+  return DAG.getExtractSubvector(DL, VT, Widened, 0);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {

@@ -10,11 +10,15 @@ from clang.cindex import (
     TranslationUnit,
     TypeKind,
     conf,
+    cursor_visit_callback,
+    fields_visit_callback,
 )
 
 
 import gc
+import platform
 import unittest
+from ctypes import c_int, c_long
 
 from .util import get_cursor, get_cursors, get_tu
 
@@ -114,6 +118,15 @@ struct C {
 
 
 class TestCursor(unittest.TestCase):
+    def test_visitor_callback_return_type(self):
+        # On s390x the visitor callbacks must return a full register word so
+        # ctypes writes a fully extended return register; a narrow c_int leaves
+        # the high bytes uninitialized and libclang faults with SIGFPE.
+        # Works around https://github.com/python/cpython/issues/156933.
+        expected = c_long if platform.machine() == "s390x" else c_int
+        self.assertEqual(cursor_visit_callback._restype_, expected)
+        self.assertEqual(fields_visit_callback._restype_, expected)
+
     def test_get_children(self):
         tu = get_tu(CHILDREN_TEST)
 

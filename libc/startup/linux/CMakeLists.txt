@@ -124,6 +124,7 @@ add_object_library(
     libc.src.__support.threads.tcb
     libc.src.__support.threads.thread
     libc.src.__support.threads.linux.futex_utils
+    libc.src.__support.threads.linux.tls
     libc.src.__support.macros.config
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
     libc.src.link._r_debug
@@ -142,7 +143,6 @@ add_object_library(
 merge_relocatable_object(
   crt1
   .${LIBC_TARGET_ARCHITECTURE}.start
-  .${LIBC_TARGET_ARCHITECTURE}.tls
   .${LIBC_TARGET_ARCHITECTURE}.irelative
   .do_start
   .gnu_property_section

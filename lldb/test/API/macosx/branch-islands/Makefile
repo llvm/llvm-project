@@ -1,16 +1,14 @@
-C_SOURCES := main.c foo.c
+C_SOURCES := main.c
 CFLAGS_EXTRAS := -std=c99
+# Link foo.o after the padding so that main's call to foo needs a branch island.
+LD_EXTRAS := padding1.o padding2.o padding3.o padding4.o foo.o
 
 include Makefile.rules
 
-a.out: main.o padding1.o padding2.o padding3.o padding4.o foo.o
-	${CC} ${LDFLAGS} foo.o padding1.o padding2.o padding3.o padding4.o main.o -o a.out
+a.out: $(LD_EXTRAS)
 
-%.o: $(SRCDIR)/%.s
-	${CC} ${CFLAGS} -c $<
+foo.o: foo.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-#padding1.o: padding1.s
-#	${CC} -c $(SRCDIR)/padding1.s
-
-#padding2.o: padding2.s
-#	${CC} -c $(SRCDIR)/padding2.s
+%.o: %.s
+	$(CC) $(CFLAGS) -c -o $@ $<

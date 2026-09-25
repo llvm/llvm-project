@@ -15,7 +15,7 @@ subroutine foo()
   ! CHECK-DAG: %[[c42:.*]] = arith.constant 42 : index
   ! CHECK-DAG: %[[c55:.*]] = arith.constant 55 : index
   ! CHECK-DAG: %[[c12:.*]] = arith.constant 12 : index
-  ! CHECK-DAG: %[[addr:.*]] = fir.alloca !fir.array<42x55x12xf32> {{{.*}}uniq_name = "_QFfooEx"}
+  ! CHECK-DAG: %[[addr:.*]] = fir.alloca !fir.array<42x55x12xf32> <{{{.*}}uniq_name = "_QFfooEx"}>
   ! CHECK: %[[shape:.*]] = fir.shape %[[c42]], %[[c55]], %[[c12]] : (index, index, index) -> !fir.shape<3>
   ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[addr]](%[[shape]]) {uniq_name = "_QFfooEx"}
 

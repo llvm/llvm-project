@@ -9,7 +9,7 @@ integer function verify_test(s1, s2)
 ! CHECK: %[[S1_DECL:.*]]:2 = hlfir.declare %[[S1_UNBOX]]#0 typeparams %[[S1_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFverify_testEs1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[S2_UNBOX:.*]]:2 = fir.unboxchar %[[S2_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK: %[[S2_DECL:.*]]:2 = hlfir.declare %[[S2_UNBOX]]#0 typeparams %[[S2_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 {uniq_name = "_QFverify_testEs2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK: %[[RET_VAR:.*]] = fir.alloca i32 {bindc_name = "verify_test", uniq_name = "_QFverify_testEverify_test"}
+! CHECK: %[[RET_VAR:.*]] = fir.alloca i32 <{bindc_name = "verify_test", uniq_name = "_QFverify_testEverify_test"}>
 ! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET_VAR]] {uniq_name = "_QFverify_testEverify_test"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
 ! CHECK: %[[ABSENT:.*]] = fir.absent !fir.box<i1>
@@ -45,7 +45,7 @@ integer function verify_test2(s1, s2)
 ! CHECK: %[[S1_DECL:.*]]:2 = hlfir.declare %[[S1_UNBOX]]#0 typeparams %[[S1_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFverify_test2Es1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[S2_UNBOX:.*]]:2 = fir.unboxchar %[[S2_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK: %[[S2_DECL:.*]]:2 = hlfir.declare %[[S2_UNBOX]]#0 typeparams %[[S2_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 {uniq_name = "_QFverify_test2Es2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK: %[[RET_VAR:.*]] = fir.alloca i32 {bindc_name = "verify_test2", uniq_name = "_QFverify_test2Everify_test2"}
+! CHECK: %[[RET_VAR:.*]] = fir.alloca i32 <{bindc_name = "verify_test2", uniq_name = "_QFverify_test2Everify_test2"}>
 ! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET_VAR]] {uniq_name = "_QFverify_test2Everify_test2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[BACK:.*]] = arith.constant true
 ! CHECK: %[[S1_PTR:.*]] = fir.convert %[[S1_DECL]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>

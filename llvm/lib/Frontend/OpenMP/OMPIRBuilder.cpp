@@ -8598,29 +8598,33 @@ Constant *OpenMPIRBuilder::emitKernelEnvironment(
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams.front(),
                         Attrs.MaxTeams.front());
 
-  // If MaxThreads is not set and needs adjustment, select the maximum between
-  // the default workgroup size and the MinThreads value. This is only
-  // meaningful for targets with a known grid value (i.e. GPUs); for other
-  // targets (e.g. host kernels) leave it unset so the runtime falls back to
-  // its own device-specific default.
+  // Don't derive or write thread bounds for Bare kernels.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0 && UseDefaultMaxThreads && hasGridValue(T))
-    MaxThreadsVal =
-        std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
-                 Attrs.MinThreads.front());
+  if (Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_BARE) {
+    // If MaxThreads is not set and needs adjustment, select the maximum
+    // between the default workgroup size and the MinThreads value. This is
+    // only meaningful for targets with a known grid value (i.e. GPUs); for
+    // other targets (e.g. host kernels) leave it unset so the runtime falls
+    // back to its own device-specific default.
+    if (MaxThreadsVal < 0 && UseDefaultMaxThreads && hasGridValue(T))
+      MaxThreadsVal =
+          std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
+                   Attrs.MinThreads.front());
 
-  // Generic mode runs the main thread on a warp of its own, past thread_limit.
-  // Reserve the widest warp any target has. Not on SPIR-V, causes problems with
-  // Level Zero.
-  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
-      hasGridValue(T) && !T.isSPIRV())
-    MaxThreadsVal = int32_t(
-        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
-                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
+    // Generic mode runs the main thread on a warp of its own, past
+    // thread_limit. Reserve the widest warp any target has. Not on SPIR-V,
+    // causes problems with Level Zero.
+    if (MaxThreadsVal > 0 &&
+        Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC && hasGridValue(T) &&
+        !T.isSPIRV())
+      MaxThreadsVal = int32_t(
+          std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
+                            int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
 
-  if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
-                               MaxThreadsVal);
+    if (MaxThreadsVal > 0)
+      writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
+                                 MaxThreadsVal);
+  }
 
   Constant *MinThreads =
       ConstantInt::getSigned(Int32, Attrs.MinThreads.front());
@@ -10089,7 +10093,7 @@ Error OpenMPIRBuilder::emitOffloadingArraysAndArgs(
 }
 
 static void emitTargetCall(
-    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, Value *RTLocOverride,
     OpenMPIRBuilder::InsertPointTy AllocaIP,
     ArrayRef<BasicBlock *> DeallocBlocks, OpenMPIRBuilder::TargetDataInfo &Info,
     const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
@@ -10229,10 +10233,14 @@ static void emitTargetCall(
     }
 
     unsigned NumTargetItems = Info.NumberOfPtrs;
-    uint32_t SrcLocStrSize;
-    Constant *SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-    Value *RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
-                                               llvm::omp::IdentFlag(0), 0);
+    Value *RTLoc = RTLocOverride;
+    if (!RTLoc) {
+      uint32_t SrcLocStrSize;
+      Constant *SrcLocStr =
+          OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
+      RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
+                                          llvm::omp::IdentFlag(0), 0);
+    }
 
     Value *TripCount = RuntimeAttrs.LoopTripCount
                            ? Builder.CreateIntCast(RuntimeAttrs.LoopTripCount,
@@ -10297,8 +10305,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
     CustomMapperCallbackTy CustomMapperCB, const DependenciesInfo &Dependencies,
     bool HasNowait, Value *DynCGroupMem,
-    OMPDynGroupprivateFallbackType DynCGroupMemFallback,
-    DebugLoc OutlinedFnLoc) {
+    OMPDynGroupprivateFallbackType DynCGroupMemFallback, DebugLoc OutlinedFnLoc,
+    Value *RTLocOverride) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -10319,10 +10327,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // to make a remote call (offload) to the previously outlined function
   // that represents the target region. Do that now.
   if (!Config.isTargetDevice())
-    emitTargetCall(*this, Builder, AllocaIP, DeallocBlocks, Info, DefaultAttrs,
-                   RuntimeAttrs, IfCond, OutlinedFn, OutlinedFnID, Inputs,
-                   GenMapInfoCB, CustomMapperCB, Dependencies, HasNowait,
-                   DynCGroupMem, DynCGroupMemFallback);
+    emitTargetCall(*this, Builder, RTLocOverride, AllocaIP, DeallocBlocks, Info,
+                   DefaultAttrs, RuntimeAttrs, IfCond, OutlinedFn, OutlinedFnID,
+                   Inputs, GenMapInfoCB, CustomMapperCB, Dependencies,
+                   HasNowait, DynCGroupMem, DynCGroupMemFallback);
   return Builder.saveIP();
 }
 

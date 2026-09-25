@@ -1,0 +1,10 @@
+# RUN: not llvm-reduce -j 4 --test FileCheck %s -o %t 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not llvm-reduce -j 4 -x=mir --test FileCheck %s -o %t 2>&1 | FileCheck -check-prefix=ERR %s
+
+# ERR: {{.*}}llvm-reduce{{.*}}: -j is not supported for MIR reduction
+
+---
+name: f
+body: |
+  bb.0:
+...

@@ -366,8 +366,6 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param attrs [out] - On return, the attribute list to use.
   /// \param callingConv [out] - On return, the calling convention to use.
-  /// \param sideEffect [out] - On return, the side effect type of the
-  /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
   void constructAttributeList(
@@ -375,7 +373,7 @@ public:
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
-      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
+      bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
   /// function attributes to add to a function based on language opts, codegen
   /// opts, and some small properties.

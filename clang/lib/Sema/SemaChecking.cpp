@@ -201,14 +201,14 @@ static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
   return !HasError;
 }
 
-static bool convertArgumentToType(Sema &S, Expr *&Value, QualType Ty) {
+bool Sema::convertArgumentToType(Expr *&Value, QualType Ty) {
   if (Value->isTypeDependent())
     return false;
 
   InitializedEntity Entity =
-      InitializedEntity::InitializeParameter(S.Context, Ty, false);
+      InitializedEntity::InitializeParameter(Context, Ty, false);
   ExprResult Result =
-      S.PerformCopyInitialization(Entity, SourceLocation(), Value);
+      PerformCopyInitialization(Entity, SourceLocation(), Value);
   if (Result.isInvalid())
     return true;
   Value = Result.get();
@@ -1184,9 +1184,8 @@ public:
     Expr *SizeArg = TheCall->getArg(NewIndex);
     if (!SizeArg->EvaluateAsInt(Result, S.getASTContext()))
       return std::nullopt;
-    llvm::APSInt Integer = Result.Val.getInt();
-    assert(Integer.isUnsigned() &&
-           "size arg should be unsigned after implicit conversion to size_t");
+    llvm::APSInt Integer = Result.Val.getInt().extOrTrunc(SizeTypeWidth);
+    Integer.setIsUnsigned(true);
     return Integer;
   }
 
@@ -1467,6 +1466,19 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIrecv:
+  case Builtin::BIrecvfrom: {
+    unsigned ExpectedArgs = BuiltinID == Builtin::BIrecv ? 4 : 6;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(1)->getType()->isPointerType() ||
+        !TheCall->getArg(2)->getType()->isIntegerType())
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    DestinationSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
   case Builtin::BImemcpy:
@@ -1690,7 +1702,7 @@ static bool checkPointerAuthEnabled(Sema &S, Expr *E) {
 
 static bool checkPointerAuthKey(Sema &S, Expr *&Arg) {
   // Convert it to type 'int'.
-  if (convertArgumentToType(S, Arg, S.Context.IntTy))
+  if (S.convertArgumentToType(Arg, S.Context.IntTy))
     return true;
 
   // Value-dependent expressions are okay; wait for template instantiation.
@@ -1826,7 +1838,7 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg, PointerAuthOpKind OpKind,
 
   // Convert to that type.  This should just be an lvalue-to-rvalue
   // conversion.
-  if (convertArgumentToType(S, Arg, ExpectedTy))
+  if (S.convertArgumentToType(Arg, ExpectedTy))
     return true;
 
   if (!RequireConstant) {
@@ -6698,7 +6710,7 @@ bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
   // Argument 0 is checked for us and the remaining arguments must be
   // constant integers.
   for (unsigned i = 1; i != NumArgs; ++i) {
-    if (convertArgumentToType(*this, TheCall->getArgs()[i], Context.IntTy))
+    if (convertArgumentToType(TheCall->getArgs()[i], Context.IntTy))
       return true;
     if (BuiltinConstantArgRange(TheCall, i, 0, i == 1 ? 1 : 3))
       return true;
@@ -6813,7 +6825,7 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
 
   if (NumArgs > 2) {
     Expr *ThirdArg = TheCall->getArg(2);
-    if (convertArgumentToType(*this, ThirdArg, Context.getSizeType()))
+    if (convertArgumentToType(ThirdArg, Context.getSizeType()))
       return true;
     TheCall->setArg(2, ThirdArg);
   }

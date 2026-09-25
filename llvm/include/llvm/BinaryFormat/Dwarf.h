@@ -825,7 +825,8 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Gleam:
     return false;
   }
-  llvm_unreachable("Unknown language kind.");
+
+  return false;
 }
 
 inline TypeKind getArrayIndexTypeEncoding(SourceLanguage S) {

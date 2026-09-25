@@ -405,6 +405,17 @@ static void checkOptions(Ctx &ctx) {
       ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
+  if (ctx.arg.zMarkPlt) {
+    if (ctx.arg.emachine != EM_X86_64)
+      ErrAlways(ctx) << "-z mark-plt only supported on X86_64";
+    // The PLT entry address is stored in the JUMP_SLOT relocation's addend, so
+    // -z mark-plt requires RELA relocations. REL relocations have no addend
+    // field and the .got.plt entry is already occupied by the lazy-binding
+    // address, so the information would be silently lost.
+    else if (!ctx.arg.isRela)
+      ErrAlways(ctx) << "-z mark-plt requires -z rela";
+  }
+
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
 
@@ -1466,8 +1477,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.cmseOutputLib = args.getLastArgValue(OPT_out_implib);
   ctx.arg.fixCortexA8 =
       args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
-  ctx.arg.fortranCommon =
-      args.hasFlag(OPT_fortran_common, OPT_no_fortran_common, false);
   ctx.arg.gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   ctx.arg.gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   ctx.arg.gdbIndex = args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -1673,6 +1682,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");

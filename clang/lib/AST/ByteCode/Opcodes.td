@@ -190,6 +190,9 @@ def PushIgnoreDiags : SuccessOpcode;
 def PopIgnoreDiags : SuccessOpcode;
 
 def StartInit : SuccessOpcode;
+def StartFieldInit : SuccessOpcode {
+  let Args = [ArgUint32];
+}
 def EndInit : SuccessOpcode;
 
 def StartSpeculation : SuccessOpcode;
@@ -322,6 +325,10 @@ def Null : SuccessOpcode {
   let Types = [PtrTypeClass];
   let Args = [ArgUint64, ArgTypePtr];
   let HasGroup = 1;
+}
+
+def CastAddressSpace : Opcode {
+  let Args = [ArgUint64, ArgTypePtr];
 }
 
 //===----------------------------------------------------------------------===//

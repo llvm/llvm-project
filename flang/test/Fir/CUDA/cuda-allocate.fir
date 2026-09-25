@@ -206,7 +206,7 @@ func.func @_QQallocate_stream() {
 }
 
 // CHECK-LABEL: func.func @_QQallocate_stream() 
-// CHECK: %[[STREAM_ALLOCA:.*]] = fir.alloca i64 {bindc_name = "stream1", uniq_name = "_QFEstream1"}
+// CHECK: %[[STREAM_ALLOCA:.*]] = fir.alloca i64 <{bindc_name = "stream1", uniq_name = "_QFEstream1"}>
 // CHECK: %[[STREAM:.*]] = fir.declare %[[STREAM_ALLOCA]] {uniq_name = "_QFEstream1"} : (!fir.ref<i64>) -> !fir.ref<i64>
 // CHECK: fir.call @_FortranACUFAllocatableAllocate(%{{.*}}, %[[STREAM]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, !fir.ref<i1>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 
@@ -294,7 +294,7 @@ func.func @_QQpinned() attributes {fir.bindc_name = "testasync"} {
 }
 
 // CHECK-LABEL: func.func @_QQpinned() attributes {fir.bindc_name = "testasync"} {
-// CHECK: %[[PINNED:.*]] = fir.alloca !fir.logical<4> {bindc_name = "pinnedflag", uniq_name = "_QFEpinnedflag"}
+// CHECK: %[[PINNED:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "pinnedflag", uniq_name = "_QFEpinnedflag"}>
 // CHECK: %[[DECL_PINNED:.*]] = fir.declare %[[PINNED]] {uniq_name = "_QFEpinnedflag"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
 // CHECK: %[[CONV_PINNED:.*]] = fir.convert %[[DECL_PINNED]] : (!fir.ref<!fir.logical<4>>) -> !fir.ref<i1>
 // CHECK: fir.call @_FortranACUFAllocatableAllocate(%{{.*}}, %{{.*}}, %[[CONV_PINNED]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, !fir.ref<i1>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32

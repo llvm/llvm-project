@@ -19,6 +19,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -673,17 +674,9 @@ const char *const variadicOperandParserCode = R"(
     return ::mlir::failure();
 )";
 const char *const optionalOperandParserCode = R"(
-  {
-    {0}OperandsLoc = parser.getCurrentLocation();
-    ::mlir::OpAsmParser::UnresolvedOperand operand;
-    ::mlir::OptionalParseResult parseResult =
-                                    parser.parseOptionalOperand(operand);
-    if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-      {0}Operands.push_back(operand);
-    }
-  }
+  {0}OperandsLoc = parser.getCurrentLocation();
+  if (::mlir::detail::parseOptionalOperandInto(parser, {0}Operands))
+    return ::mlir::failure();
 )";
 const char *const operandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
@@ -727,16 +720,8 @@ const char *const variadicTypeParserCode = R"(
     return ::mlir::failure();
 )";
 const char *const optionalTypeParserCode = R"(
-  {
-    ::mlir::Type optionalType;
-    ::mlir::OptionalParseResult parseResult =
-                                    parser.parseOptionalType(optionalType);
-    if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-      {0}Types.push_back(optionalType);
-    }
-  }
+  if (::mlir::detail::parseOptionalTypeInto(parser, {0}Types))
+    return ::mlir::failure();
 )";
 const char *const typeParserCode = R"(
   {
@@ -967,7 +952,8 @@ static void genLiteralParser(StringRef value, MethodBody &body) {
 
 /// Generate the storage code required for parsing the given element.
 static void genElementParserStorage(FormatElement *element, const Operator &op,
-                                    MethodBody &body) {
+                                    MethodBody &body,
+                                    bool groupOperandStorage) {
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
     ArrayRef<FormatElement *> elements = optional->getThenElements();
 
@@ -979,20 +965,20 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
       elidedAnchorElement = anchor;
     for (FormatElement *childElement : elements)
       if (childElement != elidedAnchorElement)
-        genElementParserStorage(childElement, op, body);
+        genElementParserStorage(childElement, op, body, groupOperandStorage);
     for (FormatElement *childElement : optional->getElseElements())
-      genElementParserStorage(childElement, op, body);
+      genElementParserStorage(childElement, op, body, groupOperandStorage);
 
   } else if (auto *oilist = dyn_cast<OIListElement>(element)) {
     for (ArrayRef<FormatElement *> pelement : oilist->getParsingElements()) {
       if (!oilist->getUnitVariableParsingElement(pelement))
         for (FormatElement *element : pelement)
-          genElementParserStorage(element, op, body);
+          genElementParserStorage(element, op, body, groupOperandStorage);
     }
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
     for (FormatElement *paramElement : custom->getElements())
-      genElementParserStorage(paramElement, op, body);
+      genElementParserStorage(paramElement, op, body, groupOperandStorage);
 
   } else if (isa<OperandsDirective>(element)) {
     body << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
@@ -1012,9 +998,21 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     StringRef name = operand->getVar()->name;
     if (operand->getVar()->isVariableLength()) {
-      body
-          << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
-          << name << "Operands;\n";
+      if (groupOperandStorage) {
+        unsigned index = 0;
+        for (const NamedTypeConstraint &candidate : op.getOperands()) {
+          if (&candidate == operand->getVar())
+            break;
+          if (candidate.isVariableLength())
+            ++index;
+        }
+        body << "  auto &" << name << "Operands = odsOperandVectors[" << index
+             << "];\n";
+      } else {
+        body
+            << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
+            << name << "Operands;\n";
+      }
       if (operand->getVar()->isVariadicOfVariadic()) {
         body << "    llvm::SmallVector<int32_t> " << name
              << "OperandGroupSizes;\n";
@@ -1845,8 +1843,16 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   // Generate variables to store the operands and type within the format. This
   // allows for referencing these variables in the presence of optional
   // groupings.
+  unsigned numVariableLengthOperands = llvm::count_if(
+      op.getOperands(), [](const NamedTypeConstraint &operand) {
+        return operand.isVariableLength();
+      });
+  bool groupOperandStorage = !allOperands && numVariableLengthOperands > 1;
+  if (groupOperandStorage)
+    body << "  ::mlir::detail::OperandParserStorage<"
+         << numVariableLengthOperands << "> odsOperandVectors;\n";
   for (FormatElement *element : elements)
-    genElementParserStorage(element, op, body);
+    genElementParserStorage(element, op, body, groupOperandStorage);
 
   // A format context used when parsing attributes with buildable types.
   FmtContext attrTypeCtx;
@@ -2723,14 +2729,49 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
-  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
+  // TODO: Remove the non-strict path when strict properties in assembly
+  // formats are always enabled.
+  if (fmt.useStrictPropertiesInAssemblyFormat) {
+    // Inherent attributes are printed by their bindings or prop-dict.
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getDiscardableAttrDictionary().getValue());\n";
+    return;
+  }
 
-  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
-
+  SmallVector<StringRef> fixedElidedAttrs;
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    fixedElidedAttrs.push_back("operandSegmentSizes");
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    fixedElidedAttrs.push_back("resultSegmentSizes");
   for (StringRef key : fmt.inferredAttributes.keys())
-    body << "  elidedAttrs.push_back(\"" << key << "\");\n";
+    fixedElidedAttrs.push_back(key);
   for (const NamedAttribute *attr : fmt.usedAttributes)
-    body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
+    fixedElidedAttrs.push_back(attr->name);
+
+  bool hasConditionalElision =
+      llvm::any_of(op.getAttributes(), [&](const NamedAttribute &namedAttr) {
+        return !fmt.usedAttributes.contains(&namedAttr) &&
+               !namedAttr.attr.isDerivedAttr() &&
+               namedAttr.attr.hasDefaultValue();
+      });
+  if (hasConditionalElision) {
+    body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  } else if (fixedElidedAttrs.empty()) {
+    body << "  ::llvm::ArrayRef<::llvm::StringRef> elidedAttrs;\n";
+  } else {
+    body << "  static constexpr ::llvm::StringRef elidedAttrs[] = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  }
 
   // Add code to check attributes for equality with their default values.
   // Default-valued attributes will not be printed when their value matches the
@@ -2779,12 +2820,12 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 /// the previous element was a punctuation literal.
 static void genLiteralPrinter(StringRef value, MethodBody &body,
                               bool &shouldEmitSpace, bool &lastWasPunctuation) {
-  body << "  _odsPrinter";
+  body << "  _odsPrinter << \"";
 
   // Don't insert a space for certain punctuation.
   if (shouldEmitSpace && shouldEmitSpaceBefore(value, lastWasPunctuation))
-    body << " << ' '";
-  body << " << \"" << value << "\";\n";
+    body << ' ';
+  body << value << "\";\n";
 
   // Insert a space after certain literals.
   shouldEmitSpace =
@@ -3343,8 +3384,10 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
+  // Printing is not performance sensitive. LLVM_ATTRIBUTE_MINSIZE reduces
+  // binary size and compiler work for printers generated for every operation.
   auto *method = opClass.addMethod(
-      "void", "print",
+      "LLVM_ATTRIBUTE_MINSIZE void", "print",
       MethodParameter("::mlir::OpAsmPrinter &", "_odsPrinter"));
   auto &body = method->body();
 

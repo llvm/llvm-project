@@ -62,14 +62,14 @@ cir.func @ptr_stride_zero_strips_to_alloca() {
 // CHECK-LABEL: Testing : "ptr_stride_constant_offsets"
 // CHECK-DAG: arr#0 <-> other#0: NoAlias
 // CHECK-DAG: arr#0 <-> ptr#0: MustAlias
-// CHECK-DAG: arr#0 <-> elem#0: MayAlias
-// CHECK-DAG: arr#0 <-> elem2#0: MayAlias
+// CHECK-DAG: arr#0 <-> elem#0: PartialAlias
+// CHECK-DAG: arr#0 <-> elem2#0: PartialAlias
 // CHECK-DAG: other#0 <-> ptr#0: NoAlias
 // CHECK-DAG: other#0 <-> elem#0: NoAlias
 // CHECK-DAG: other#0 <-> elem2#0: NoAlias
-// CHECK-DAG: ptr#0 <-> elem#0: MayAlias
-// CHECK-DAG: ptr#0 <-> elem2#0: MayAlias
-// CHECK-DAG: elem#0 <-> elem2#0: MayAlias
+// CHECK-DAG: ptr#0 <-> elem#0: NoAlias
+// CHECK-DAG: ptr#0 <-> elem2#0: NoAlias
+// CHECK-DAG: elem#0 <-> elem2#0: NoAlias
 
 !s32i = !cir.int<s, 32>
 cir.func @ptr_stride_constant_offsets() {
@@ -91,19 +91,19 @@ cir.func @ptr_stride_constant_offsets() {
 // CHECK-LABEL: Testing : "ptr_stride_out_of_bounds"
 // CHECK-DAG: arr#0 <-> other#0: NoAlias
 // CHECK-DAG: arr#0 <-> ptr#0: MustAlias
-// CHECK-DAG: arr#0 <-> oob#0: MayAlias
-// CHECK-DAG: arr#0 <-> inbounds#0: MayAlias
-// CHECK-DAG: arr#0 <-> oob2#0: MayAlias
+// CHECK-DAG: arr#0 <-> oob#0: NoAlias
+// CHECK-DAG: arr#0 <-> inbounds#0: PartialAlias
+// CHECK-DAG: arr#0 <-> oob2#0: NoAlias
 // CHECK-DAG: other#0 <-> ptr#0: NoAlias
 // CHECK-DAG: other#0 <-> oob#0: NoAlias
 // CHECK-DAG: other#0 <-> inbounds#0: NoAlias
 // CHECK-DAG: other#0 <-> oob2#0: NoAlias
-// CHECK-DAG: ptr#0 <-> oob#0: MayAlias
-// CHECK-DAG: ptr#0 <-> inbounds#0: MayAlias
-// CHECK-DAG: ptr#0 <-> oob2#0: MayAlias
-// CHECK-DAG: oob#0 <-> inbounds#0: MayAlias
+// CHECK-DAG: ptr#0 <-> oob#0: NoAlias
+// CHECK-DAG: ptr#0 <-> inbounds#0: NoAlias
+// CHECK-DAG: ptr#0 <-> oob2#0: NoAlias
+// CHECK-DAG: oob#0 <-> inbounds#0: NoAlias
 // CHECK-DAG: oob#0 <-> oob2#0: MustAlias
-// CHECK-DAG: inbounds#0 <-> oob2#0: MayAlias
+// CHECK-DAG: inbounds#0 <-> oob2#0: NoAlias
 
 !s32i = !cir.int<s, 32>
 cir.func @ptr_stride_out_of_bounds() {
@@ -149,18 +149,18 @@ cir.func @ptr_stride_dynamic_offset(%n: !s32i) {
 // CHECK-DAG: s1#0 <-> s2#0: NoAlias
 // CHECK-DAG: s1#0 <-> m1_0#0: MustAlias
 // CHECK-DAG: s2#0 <-> m1_0#0: NoAlias
-// CHECK-DAG: s1#0 <-> m1_1#0: MayAlias
+// CHECK-DAG: s1#0 <-> m1_1#0: PartialAlias
 // CHECK-DAG: s2#0 <-> m1_1#0: NoAlias
-// CHECK-DAG: m1_0#0 <-> m1_1#0: MayAlias
+// CHECK-DAG: m1_0#0 <-> m1_1#0: NoAlias
 // CHECK-DAG: s1#0 <-> m2_0#0: NoAlias
 // CHECK-DAG: s2#0 <-> m2_0#0: MustAlias
 // CHECK-DAG: m1_0#0 <-> m2_0#0: NoAlias
 // CHECK-DAG: m1_1#0 <-> m2_0#0: NoAlias
 // CHECK-DAG: s1#0 <-> m2_1#0: NoAlias
-// CHECK-DAG: s2#0 <-> m2_1#0: MayAlias
+// CHECK-DAG: s2#0 <-> m2_1#0: PartialAlias
 // CHECK-DAG: m1_0#0 <-> m2_1#0: NoAlias
 // CHECK-DAG: m1_1#0 <-> m2_1#0: NoAlias
-// CHECK-DAG: m2_0#0 <-> m2_1#0: MayAlias
+// CHECK-DAG: m2_0#0 <-> m2_1#0: NoAlias
 
 !s32i = !cir.int<s, 32>
 !rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
@@ -184,13 +184,13 @@ cir.func @get_member_distinct_allocas() {
 // CHECK-DAG: o#0 <-> inner#0: MustAlias
 // CHECK-DAG: o#0 <-> i0#0: MustAlias
 // CHECK-DAG: inner#0 <-> i0#0: MustAlias
-// CHECK-DAG: o#0 <-> i1#0: MayAlias
-// CHECK-DAG: inner#0 <-> i1#0: MayAlias
-// CHECK-DAG: i0#0 <-> i1#0: MayAlias
-// CHECK-DAG: o#0 <-> z#0: MayAlias
-// CHECK-DAG: inner#0 <-> z#0: MayAlias
-// CHECK-DAG: i0#0 <-> z#0: MayAlias
-// CHECK-DAG: i1#0 <-> z#0: MayAlias
+// CHECK-DAG: o#0 <-> i1#0: PartialAlias
+// CHECK-DAG: inner#0 <-> i1#0: PartialAlias
+// CHECK-DAG: i0#0 <-> i1#0: NoAlias
+// CHECK-DAG: o#0 <-> z#0: PartialAlias
+// CHECK-DAG: inner#0 <-> z#0: NoAlias
+// CHECK-DAG: i0#0 <-> z#0: NoAlias
+// CHECK-DAG: i1#0 <-> z#0: NoAlias
 
 !s32i = !cir.int<s, 32>
 !rec_Inner = !cir.struct<"Inner" {data !s32i, data !s32i}>
@@ -236,14 +236,14 @@ cir.func @get_member_union() {
 // CHECK-DAG: a1#0 <-> e2_0#0: NoAlias
 // CHECK-DAG: a2#0 <-> e2_0#0: MustAlias
 // CHECK-DAG: e1_0#0 <-> e2_0#0: NoAlias
-// CHECK-DAG: a1#0 <-> e1_1#0: MayAlias
+// CHECK-DAG: a1#0 <-> e1_1#0: PartialAlias
 // CHECK-DAG: a2#0 <-> e1_1#0: NoAlias
-// CHECK-DAG: e1_0#0 <-> e1_1#0: MayAlias
+// CHECK-DAG: e1_0#0 <-> e1_1#0: NoAlias
 // CHECK-DAG: e2_0#0 <-> e1_1#0: NoAlias
 // CHECK-DAG: a1#0 <-> e2_1#0: NoAlias
-// CHECK-DAG: a2#0 <-> e2_1#0: MayAlias
+// CHECK-DAG: a2#0 <-> e2_1#0: PartialAlias
 // CHECK-DAG: e1_0#0 <-> e2_1#0: NoAlias
-// CHECK-DAG: e2_0#0 <-> e2_1#0: MayAlias
+// CHECK-DAG: e2_0#0 <-> e2_1#0: NoAlias
 // CHECK-DAG: e1_1#0 <-> e2_1#0: NoAlias
 
 !s32i = !cir.int<s, 32>
@@ -267,15 +267,15 @@ cir.func @get_element_distinct_allocas() {
 
 // CHECK-LABEL: Testing : "get_element_of_records"
 // CHECK-DAG: arr#0 <-> e0#0: MustAlias
-// CHECK-DAG: arr#0 <-> e1#0: MayAlias
-// CHECK-DAG: e0#0 <-> e1#0: MayAlias
-// CHECK-DAG: arr#0 <-> e0_y#0: MayAlias
-// CHECK-DAG: e0#0 <-> e0_y#0: MayAlias
-// CHECK-DAG: e1#0 <-> e0_y#0: MayAlias
-// CHECK-DAG: arr#0 <-> e1_y#0: MayAlias
-// CHECK-DAG: e0#0 <-> e1_y#0: MayAlias
-// CHECK-DAG: e1#0 <-> e1_y#0: MayAlias
-// CHECK-DAG: e0_y#0 <-> e1_y#0: MayAlias
+// CHECK-DAG: arr#0 <-> e1#0: PartialAlias
+// CHECK-DAG: e0#0 <-> e1#0: NoAlias
+// CHECK-DAG: arr#0 <-> e0_y#0: PartialAlias
+// CHECK-DAG: e0#0 <-> e0_y#0: PartialAlias
+// CHECK-DAG: e1#0 <-> e0_y#0: NoAlias
+// CHECK-DAG: arr#0 <-> e1_y#0: PartialAlias
+// CHECK-DAG: e0#0 <-> e1_y#0: NoAlias
+// CHECK-DAG: e1#0 <-> e1_y#0: PartialAlias
+// CHECK-DAG: e0_y#0 <-> e1_y#0: NoAlias
 
 !s32i = !cir.int<s, 32>
 !rec_P = !cir.struct<"P" {data !s32i, data !s32i}>
@@ -321,12 +321,16 @@ cir.func @base_class_addr_distinct_allocas() {
 // -----
 
 // CHECK-LABEL: Testing : "base_and_derived_class_addr"
-// CHECK-DAG: base#0 <-> derived#0: MayAlias
-// CHECK-DAG: base#0 <-> first#0: MayAlias
+// CHECK-DAG: base#0 <-> derived#0: PartialAlias
+// CHECK-DAG: base#0 <-> first#0: NoAlias
 // CHECK-DAG: derived#0 <-> first#0: MustAlias
-// CHECK-DAG: base#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: base#0 <-> basedata#0: MustAlias
+// CHECK-DAG: derived#0 <-> basedata#0: PartialAlias
+// CHECK-DAG: first#0 <-> basedata#0: NoAlias
+// CHECK-DAG: base#0 <-> func.region0#0: PartialAlias
 // CHECK-DAG: derived#0 <-> func.region0#0: MustAlias
 // CHECK-DAG: first#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: basedata#0 <-> func.region0#0: PartialAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
@@ -340,18 +344,24 @@ cir.func @base_and_derived_class_addr(%d: !cir.ptr<!rec_Derived>)
              -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
   %first = cir.get_member %d[0] {name = "x", test.ptr = "first"}
            : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
+  %basedata = cir.get_member %base[0] {name = "b", test.ptr = "basedata"}
+              : !cir.ptr<!rec_Base> -> !cir.ptr<!u8i>
   cir.return
 }
 
 // -----
 
 // CHECK-LABEL: Testing : "base_and_derived_class_maybe_null"
-// CHECK-DAG: base#0 <-> derived#0: MayAlias
-// CHECK-DAG: base#0 <-> first#0: MayAlias
+// CHECK-DAG: base#0 <-> derived#0: PartialAlias
+// CHECK-DAG: base#0 <-> first#0: NoAlias
 // CHECK-DAG: derived#0 <-> first#0: MustAlias
-// CHECK-DAG: base#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: base#0 <-> basedata#0: MustAlias
+// CHECK-DAG: derived#0 <-> basedata#0: PartialAlias
+// CHECK-DAG: first#0 <-> basedata#0: NoAlias
+// CHECK-DAG: base#0 <-> func.region0#0: PartialAlias
 // CHECK-DAG: derived#0 <-> func.region0#0: MustAlias
 // CHECK-DAG: first#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: basedata#0 <-> func.region0#0: PartialAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
@@ -365,6 +375,8 @@ cir.func @base_and_derived_class_maybe_null(%d: !cir.ptr<!rec_Derived>)
              -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
   %first = cir.get_member %d[0] {name = "x", test.ptr = "first"}
            : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
+  %basedata = cir.get_member %base[0] {name = "b", test.ptr = "basedata"}
+              : !cir.ptr<!rec_Base> -> !cir.ptr<!u8i>
   cir.return
 }
 
@@ -373,19 +385,19 @@ cir.func @base_and_derived_class_maybe_null(%d: !cir.ptr<!rec_Derived>)
 // CHECK-LABEL: Testing : "complex_parts_distinct_allocas"
 // CHECK-DAG: c1#0 <-> c2#0: NoAlias
 // CHECK-DAG: c1#0 <-> real1#0: MustAlias
-// CHECK-DAG: c1#0 <-> imag1#0: MayAlias
+// CHECK-DAG: c1#0 <-> imag1#0: PartialAlias
 // CHECK-DAG: c1#0 <-> real2#0: NoAlias
 // CHECK-DAG: c1#0 <-> imag2#0: NoAlias
 // CHECK-DAG: c2#0 <-> real1#0: NoAlias
 // CHECK-DAG: c2#0 <-> imag1#0: NoAlias
 // CHECK-DAG: c2#0 <-> real2#0: MustAlias
-// CHECK-DAG: c2#0 <-> imag2#0: MayAlias
-// CHECK-DAG: real1#0 <-> imag1#0: MayAlias
+// CHECK-DAG: c2#0 <-> imag2#0: PartialAlias
+// CHECK-DAG: real1#0 <-> imag1#0: NoAlias
 // CHECK-DAG: real1#0 <-> real2#0: NoAlias
 // CHECK-DAG: real1#0 <-> imag2#0: NoAlias
 // CHECK-DAG: imag1#0 <-> real2#0: NoAlias
 // CHECK-DAG: imag1#0 <-> imag2#0: NoAlias
-// CHECK-DAG: real2#0 <-> imag2#0: MayAlias
+// CHECK-DAG: real2#0 <-> imag2#0: NoAlias
 
 cir.func @complex_parts_distinct_allocas() {
   %c1    = cir.alloca "c1" align(4) : !cir.ptr<!cir.complex<!cir.float>> {test.ptr = "c1"}
@@ -407,10 +419,33 @@ cir.func @complex_parts_distinct_allocas() {
 
 // -----
 
+// CHECK-LABEL: Testing : "unknown_access_size"
+// CHECK-DAG: s#0 <-> m0#0: MustAlias
+// CHECK-DAG: s#0 <-> m1#0: PartialAlias
+// CHECK-DAG: m0#0 <-> m1#0: NoAlias
+// CHECK-DAG: s#0 <-> vp#0: MayAlias
+// CHECK-DAG: m0#0 <-> vp#0: MayAlias
+// CHECK-DAG: m1#0 <-> vp#0: MustAlias
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+cir.func @unknown_access_size() {
+  %s = cir.alloca "s" align(4) : !cir.ptr<!rec_S> {test.ptr = "s"}
+  %m0 = cir.get_member %s[0] {name = "x", test.ptr = "m0"}
+        : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  %m1 = cir.get_member %s[1] {name = "y", test.ptr = "m1"}
+        : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  %vp = cir.cast bitcast %m1 : !cir.ptr<!s32i> -> !cir.ptr<!cir.void>
+          {test.ptr = "vp"}
+  cir.return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "offsets_from_pointer_argument"
-// CHECK-DAG: px#0 <-> py#0: MayAlias
+// CHECK-DAG: px#0 <-> py#0: NoAlias
 // CHECK-DAG: px#0 <-> func.region0#0: MustAlias
-// CHECK-DAG: py#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: py#0 <-> func.region0#0: PartialAlias
 
 !s32i = !cir.int<s, 32>
 !rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
@@ -426,15 +461,21 @@ cir.func @offsets_from_pointer_argument(%s: !cir.ptr<!rec_S>)
 // -----
 
 // CHECK-LABEL: Testing : "bitint_struct_elements"
-// CHECK-DAG: px#0 <-> py#0: MayAlias
+// CHECK-DAG: px#0 <-> py#0: NoAlias
 // CHECK-DAG: px#0 <-> func.region0#0: MustAlias
-// CHECK-DAG: px#0 <-> px_plus_one#0: MayAlias
+// CHECK-DAG: px#0 <-> px_plus_one#0: NoAlias
 // CHECK-DAG: px#0 <-> pxb#0: MustAlias
-// CHECK-DAG: px#0 <-> pxb_plus_four#0: MayAlias
-// CHECK-DAG: py#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: px#0 <-> pxb_plus_four#0: NoAlias
+// CHECK-DAG: py#0 <-> func.region0#0: PartialAlias
 // CHECK-DAG: py#0 <-> px_plus_one#0: MustAlias
-// CHECK-DAG: py#0 <-> pxb#0: MayAlias
+// CHECK-DAG: py#0 <-> pxb#0: NoAlias
 // CHECK-DAG: py#0 <-> pxb_plus_four#0: MustAlias
+// CHECK-DAG: px_plus_one#0 <-> func.region0#0: PartialAlias
+// CHECK-DAG: px_plus_one#0 <-> pxb#0: NoAlias
+// CHECK-DAG: px_plus_one#0 <-> pxb_plus_four#0: MustAlias
+// CHECK-DAG: pxb#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: pxb#0 <-> pxb_plus_four#0: NoAlias
+// CHECK-DAG: pxb_plus_four#0 <-> func.region0#0: PartialAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
@@ -461,19 +502,25 @@ cir.func @bitint_struct_elements(%s: !cir.ptr<!rec_S>)
 // CHECK-LABEL: Testing : "bitint_array_elements"
 // CHECK-DAG: decay#0 <-> func.region0#0: MustAlias
 // CHECK-DAG: decay#0 <-> elem0#0: MustAlias
-// CHECK-DAG: decay#0 <-> elem1#0: MayAlias
-// CHECK-DAG: decay#0 <-> decay_plus_one#0: MayAlias
+// CHECK-DAG: decay#0 <-> elem1#0: NoAlias
+// CHECK-DAG: decay#0 <-> decay_plus_one#0: NoAlias
 // CHECK-DAG: decay#0 <-> db#0: MustAlias
-// CHECK-DAG: decay#0 <-> db_plus_four#0: MayAlias
+// CHECK-DAG: decay#0 <-> db_plus_four#0: NoAlias
 // CHECK-DAG: elem0#0 <-> func.region0#0: MustAlias
-// CHECK-DAG: elem0#0 <-> elem1#0: MayAlias
-// CHECK-DAG: elem0#0 <-> decay_plus_one#0: MayAlias
+// CHECK-DAG: elem0#0 <-> elem1#0: NoAlias
+// CHECK-DAG: elem0#0 <-> decay_plus_one#0: NoAlias
 // CHECK-DAG: elem0#0 <-> db#0: MustAlias
-// CHECK-DAG: elem0#0 <-> db_plus_four#0: MayAlias
-// CHECK-DAG: elem1#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: elem0#0 <-> db_plus_four#0: NoAlias
+// CHECK-DAG: elem1#0 <-> func.region0#0: PartialAlias
 // CHECK-DAG: elem1#0 <-> decay_plus_one#0: MustAlias
-// CHECK-DAG: elem1#0 <-> db#0: MayAlias
+// CHECK-DAG: elem1#0 <-> db#0: NoAlias
 // CHECK-DAG: elem1#0 <-> db_plus_four#0: MustAlias
+// CHECK-DAG: decay_plus_one#0 <-> func.region0#0: PartialAlias
+// CHECK-DAG: decay_plus_one#0 <-> db#0: NoAlias
+// CHECK-DAG: decay_plus_one#0 <-> db_plus_four#0: MustAlias
+// CHECK-DAG: db#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: db#0 <-> db_plus_four#0: NoAlias
+// CHECK-DAG: db_plus_four#0 <-> func.region0#0: PartialAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
