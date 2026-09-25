@@ -775,7 +775,7 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], s[6:7], s[4:5]
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX90A-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GFX90A-NEXT:  .LBB5_1: ; %Flow4
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], -1
@@ -783,7 +783,7 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_vccnz .LBB5_10
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.shared
-; GFX90A-NEXT:    ds_add_rtn_f64 v[2:3], v0, v[0:1]
+; GFX90A-NEXT:    ds_add_rtn_f64 v[4:5], v0, v[0:1]
 ; GFX90A-NEXT:    s_branch .LBB5_10
 ; GFX90A-NEXT:  .LBB5_3: ; %atomicrmw.check.private
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
@@ -795,16 +795,16 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], s[6:7], s[4:5]
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX90A-NEXT:    s_cbranch_vccnz .LBB5_5
 ; GFX90A-NEXT:    s_branch .LBB5_6
 ; GFX90A-NEXT:  .LBB5_4: ; %atomicrmw.private
-; GFX90A-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v3, v2
-; GFX90A-NEXT:    v_add_f64 v[4:5], v[2:3], v[0:1]
-; GFX90A-NEXT:    buffer_store_dword v5, v0, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen
+; GFX90A-NEXT:    v_mov_b32_e32 v5, v4
+; GFX90A-NEXT:    v_add_f64 v[2:3], v[4:5], v[0:1]
+; GFX90A-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
 ; GFX90A-NEXT:    s_branch .LBB5_9
 ; GFX90A-NEXT:  .LBB5_5: ; %atomicrmw.global
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
@@ -829,8 +829,8 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[2:3], v6, v[2:5], s[6:7] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_cmp_eq_u64_e64 s[6:7], v[2:3], v[4:5]
-; GFX90A-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB5_7
 ; GFX90A-NEXT:  ; %bb.8: ; %atomicrmw.end1
@@ -844,9 +844,9 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX90A-NEXT:  ; %bb.11: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_mov_b32 s4, 32
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_lshrrev_b64 v[4:5], s4, v[2:3]
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v4
+; GFX90A-NEXT:    v_lshrrev_b64 v[2:3], s4, v[4:5]
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v4
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -862,7 +862,7 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX942-NEXT:    s_mov_b64 s[0:1], -1
 ; GFX942-NEXT:    s_xor_b64 s[2:3], s[2:3], s[0:1]
 ; GFX942-NEXT:    s_and_b64 vcc, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GFX942-NEXT:  .LBB5_1: ; %Flow4
 ; GFX942-NEXT:    s_mov_b64 s[2:3], -1
@@ -870,7 +870,7 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX942-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB5_10
 ; GFX942-NEXT:  ; %bb.2: ; %atomicrmw.shared
-; GFX942-NEXT:    ds_add_rtn_f64 v[2:3], v0, v[0:1]
+; GFX942-NEXT:    ds_add_rtn_f64 v[4:5], v0, v[0:1]
 ; GFX942-NEXT:    s_branch .LBB5_10
 ; GFX942-NEXT:  .LBB5_3: ; %atomicrmw.check.private
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
@@ -882,14 +882,14 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX942-NEXT:    s_mov_b64 s[0:1], -1
 ; GFX942-NEXT:    s_xor_b64 s[2:3], s[2:3], s[0:1]
 ; GFX942-NEXT:    s_and_b64 vcc, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB5_5
 ; GFX942-NEXT:    s_branch .LBB5_6
 ; GFX942-NEXT:  .LBB5_4: ; %atomicrmw.private
-; GFX942-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
+; GFX942-NEXT:    scratch_load_dwordx2 v[4:5], off, s0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_add_f64 v[4:5], v[2:3], v[0:1]
-; GFX942-NEXT:    scratch_store_dwordx2 off, v[4:5], s0
+; GFX942-NEXT:    v_add_f64 v[2:3], v[4:5], v[0:1]
+; GFX942-NEXT:    scratch_store_dwordx2 off, v[2:3], s0
 ; GFX942-NEXT:    s_branch .LBB5_9
 ; GFX942-NEXT:  .LBB5_5: ; %atomicrmw.global
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
@@ -914,8 +914,8 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[2:3], v6, v[2:5], s[2:3] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_cmp_eq_u64_e64 s[2:3], v[2:3], v[4:5]
-; GFX942-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
+; GFX942-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GFX942-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB5_7
 ; GFX942-NEXT:  ; %bb.8: ; %atomicrmw.end1
@@ -929,9 +929,9 @@ define double @optnone_atomicrmw_fadd_f64_expand(double %val) #1 {
 ; GFX942-NEXT:  ; %bb.11: ; %atomicrmw.end
 ; GFX942-NEXT:    s_mov_b32 s0, 32
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_lshrrev_b64 v[4:5], s0, v[2:3]
-; GFX942-NEXT:    v_mov_b32_e32 v0, v2
-; GFX942-NEXT:    v_mov_b32_e32 v1, v4
+; GFX942-NEXT:    v_lshrrev_b64 v[2:3], s0, v[4:5]
+; GFX942-NEXT:    v_mov_b32_e32 v0, v4
+; GFX942-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
