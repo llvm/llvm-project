@@ -13,9 +13,9 @@ class Kernel1;
 bool check(backend be) {
   switch (be) {
   case backend::opencl:
-  case backend::level_zero:
-  case backend::cuda:
-  case backend::hip:
+  case backend::ext_llvm_level_zero:
+  case backend::ext_llvm_cuda:
+  case backend::ext_llvm_hip:
     return true;
   default:
     return false;

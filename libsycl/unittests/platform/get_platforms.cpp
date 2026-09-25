@@ -27,11 +27,11 @@ TEST(PlatformTest, APIGetPlatformsDefaultMock) {
 
   auto Platforms = sycl::platform::get_platforms();
   ASSERT_EQ(Platforms.size(), 1u);
-  EXPECT_EQ(Platforms[0].get_backend(), sycl::backend::level_zero);
+  EXPECT_EQ(Platforms[0].get_backend(), sycl::backend::ext_llvm_level_zero);
 
   auto Devices = Platforms[0].get_devices();
   ASSERT_EQ(Devices.size(), 1u);
-  EXPECT_EQ(Devices[0].get_backend(), sycl::backend::level_zero);
+  EXPECT_EQ(Devices[0].get_backend(), sycl::backend::ext_llvm_level_zero);
 
   EXPECT_FALSE(Devices[0].is_cpu());
   EXPECT_FALSE(Devices[0].is_accelerator());

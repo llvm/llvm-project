@@ -17,6 +17,10 @@
 
 #include <sycl/__impl/version.hpp>
 
+// 6.2. Requirements for an extension
+// libsycl always has at list 1 extension - level_zero backend.
+#define SYCL_IMPLEMENTATION_LLVM
+
 #define _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL namespace sycl {
 #define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
 
