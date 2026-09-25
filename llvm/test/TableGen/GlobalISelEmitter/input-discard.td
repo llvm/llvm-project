@@ -11,19 +11,19 @@ def FOO : I<(outs GPR32:$dst), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // GISEL-NEXT: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_foo),
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckType2, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckType3, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // (intrinsic_w_chain:{ *:[i32] } {{[0-9]+}}:{ *:[iPTR] }, srcvalue:{ *:[i32] }, i32:{ *:[i32] }:$src1)  =>  (FOO:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), GPR32:{ *:[i32] }:$src1)
 // GISEL-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
 // GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::FOO),
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// GISEL-NEXT: GIR_RootToRootCopy0, // DstI[dst]
 // GISEL-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/3, // src1
+// GISEL-NEXT: GIR_RootToRootCopy3, // src1
 // GISEL-NEXT: GIR_RootConstrainSelectedInstOperands,
 // GISEL-NEXT: // GIR_Coverage
 // GISEL-NEXT: GIR_EraseRootFromParent_Done,
