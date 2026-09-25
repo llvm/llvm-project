@@ -1,0 +1,44 @@
+# REQUIRES: xtensa
+## R_XTENSA_PDIFF_ULEB128 marks a padded same-section uleb128 difference.
+## LLD does not implement Xtensa relaxation, so the reloc is ignored and the
+## assembler-written value must be preserved.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -r %t.o | FileCheck %s --check-prefix=RELOC
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-objdump -s -j .debug_rnglists %t | FileCheck %s
+
+# RELOC: 0x0 R_XTENSA_PDIFF_ULEB128 foo
+
+# CHECK:      Contents of section .debug_rnglists:
+# CHECK-NEXT: {{.*}}808100
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_XTENSA
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '00000000'
+  - Name:    .debug_rnglists
+    Type:    SHT_PROGBITS
+    # Padded uleb128 for 128: 0x80 0x81 0x00 (minimal 0x80 0x01 plus one spare).
+    Content: '808100'
+  - Name:    .rela.debug_rnglists
+    Type:    SHT_RELA
+    Link:    .symtab
+    Info:    .debug_rnglists
+    Relocations:
+      - Offset: 0
+        Symbol: foo
+        Type:   R_XTENSA_PDIFF_ULEB128
+Symbols:
+  - Name:    foo
+    Section: .text
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
