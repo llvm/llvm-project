@@ -176,14 +176,17 @@ bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
     llvm::function_ref<bool(unsigned, Stmt *, Stmt *)> Callback,
     llvm::function_ref<void(OMPLoopTransformationDirective *)>
-        OnTransformationCallback) {
+        OnTransformationCallback,
+    bool RelaxNestForPeeledTransformation) {
   CurStmt = ignoreContainersKeepingIntraTileHint(CurStmt);
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     // If we peel a loop-transformation directive, the enclosing ForStmt is
     // compiler-synthesized and its body may hold helper statements (e.g.
     // `reverse` injects `.reversed.iv` and update exprs) before the next
-    // loop. Scan it as an imperfect nest so that, e.g., `omp tile` followed by
-    // `omp reverse` is accepted.
+    // loop. When the caller opts in via RelaxNestForPeeledTransformation, scan
+    // it as an imperfect nest so that, e.g., `omp tile` followed by
+    // `omp reverse` is accepted. Callers that require a perfect for-loop nest
+    // after peeling (e.g. `omp flatten`) leave the flag false.
     bool PeeledTransformation = false;
     while (true) {
       auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
@@ -233,7 +236,9 @@ bool OMPLoopBasedDirective::doForAllLoops(
       CurStmt = cast<CXXForRangeStmt>(LoopStmt)->getBody();
     }
     CurStmt = OMPLoopBasedDirective::tryToFindNextInnerLoop(
-        CurStmt, TryImperfectlyNestedLoops || PeeledTransformation);
+        CurStmt,
+        TryImperfectlyNestedLoops ||
+            (RelaxNestForPeeledTransformation && PeeledTransformation));
   }
   return true;
 }

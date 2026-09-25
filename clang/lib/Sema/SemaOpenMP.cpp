@@ -15347,6 +15347,11 @@ bool SemaOpenMP::checkTransformableLoopNest(
     SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
     Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits) {
   OriginalInits.emplace_back();
+  // tile/stripe/reverse accept a nested loop-transformation directive as
+  // their associated loop; other loop-transforming constructs (unroll, split,
+  // interchange, flatten) require a strict for-loop nest.
+  bool RelaxNestForPeeledTransformation =
+      Kind == OMPD_tile || Kind == OMPD_stripe || Kind == OMPD_reverse;
   bool Result = OMPLoopBasedDirective::doForAllLoops(
       AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false, NumLoops,
       [this, &LoopHelpers, &Body, &OriginalInits,
@@ -15382,7 +15387,8 @@ bool SemaOpenMP::checkTransformableLoopNest(
       },
       [&OriginalInits](OMPLoopTransformationDirective *Transform) {
         updatePreInits(Transform, OriginalInits.back());
-      });
+      },
+      RelaxNestForPeeledTransformation);
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
   return Result;
@@ -15684,7 +15690,8 @@ static void addLoopPreInits(ASTContext &Context,
 
 /// Collect the loop statements (ForStmt or CXXRangeForStmt) of the affected
 /// loop of a construct.
-static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
+static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts,
+                             bool RelaxNestForPeeledTransformation = false) {
   size_t NumLoops = LoopStmts.size();
   OMPLoopBasedDirective::doForAllLoops(
       AStmt, /*TryImperfectlyNestedLoops=*/false, NumLoops,
@@ -15692,7 +15699,8 @@ static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
         assert(!LoopStmts[Cnt] && "Loop statement must not yet be assigned");
         LoopStmts[Cnt] = CurStmt;
         return false;
-      });
+      },
+      RelaxNestForPeeledTransformation);
   assert(!is_contained(LoopStmts, nullptr) &&
          "Expecting a loop statement for each affected loop");
 }
@@ -15745,7 +15753,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
   // Collect all affected loop statements.
   SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
-  collectLoopStmts(AStmt, LoopStmts);
+  collectLoopStmts(AStmt, LoopStmts, /*RelaxNestForPeeledTransformation=*/true);
 
   SmallVector<Stmt *, 4> PreInits;
   CaptureVars CopyTransformer(SemaRef);
@@ -16102,7 +16110,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
   // Collect all affected loop statements.
   SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
-  collectLoopStmts(AStmt, LoopStmts);
+  collectLoopStmts(AStmt, LoopStmts, /*RelaxNestForPeeledTransformation=*/true);
 
   SmallVector<Stmt *, 4> PreInits;
   CaptureVars CopyTransformer(SemaRef);
@@ -16633,7 +16641,8 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
 
   // Find the loop statement.
   Stmt *LoopStmt = nullptr;
-  collectLoopStmts(AStmt, {LoopStmt});
+  collectLoopStmts(AStmt, {LoopStmt},
+                   /*RelaxNestForPeeledTransformation=*/true);
 
   // Determine the PreInit declarations.
   SmallVector<Stmt *> PreInits;
