@@ -683,13 +683,6 @@ class DAPTestSession(Session):
                 response.success, True, f"got error response: {response}."
             )
             self.test_case.assertIsInstance(response, EmptyBodyResponse)
-
-            # In VSCode, immediately following 'configurationDone', a
-            # 'threads' request is made to get the initial set of threads,
-            # specifically the main threads id and name.
-            # We issue the threads request to mimic this pattern and prevent
-            # tests that use threads to have the wrong result.
-            self.send_request(ThreadsArgs()).result()
         else:
             self.test_case.assertEqual(response.success, False)
             self.test_case.assertIsInstance(response, ErrorResponse)
