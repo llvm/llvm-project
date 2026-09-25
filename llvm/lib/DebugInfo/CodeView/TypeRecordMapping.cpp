@@ -618,7 +618,6 @@ Error TypeRecordMapping::visitKnownMember(CVMemberRecord &CVR,
       IO, Record.getAccess(), MethodKind::Vanilla, MethodOptions::None);
   error(IO.mapInteger(Record.Attrs.Attrs, "Attrs: " + Attrs));
 
-  // FIXME: Handle full APInt such as __int128.
   error(IO.mapEncodedInteger(Record.Value, "EnumValue"));
   error(IO.mapStringZ(Record.Name, "Name"));
 
