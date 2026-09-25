@@ -829,6 +829,49 @@ define amdgpu_kernel void @k_vararg(ptr %p) {
   ret void
 }
 
+; A direct call whose signature disagrees with the callee. The operand is a
+; constant, but it does not correspond to the parameter it would be matched
+; against positionally, so nothing is promoted.
+
+define internal fastcc void @callee_sig_mismatch(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_sig_mismatch(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_sig_mismatch() {
+; CHECK-LABEL: define amdgpu_kernel void @k_sig_mismatch() {
+; CHECK-NEXT:    call fastcc void @callee_sig_mismatch(i32 7)
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_sig_mismatch(i32 7)
+  ret void
+}
+
+; An assume-like intrinsic is a use of the function but not a call to it.
+
+define internal fastcc void @callee_assume_operand(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_assume_operand(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_assume_operand(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_assume_operand(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr @callee_assume_operand, i64 4) ]
+; CHECK-NEXT:    call fastcc void @callee_assume_operand(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["align"(ptr @callee_assume_operand, i64 4)]
+  call fastcc void @callee_assume_operand(ptr %p)
+  ret void
+}
+
 attributes #0 = { noinline optnone }
 attributes #1 = { naked }
 attributes #2 = { noipa }

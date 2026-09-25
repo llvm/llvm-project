@@ -56,11 +56,16 @@ static bool collectDirectCallSites(Function &F,
   if (!F.hasLocalLinkage())
     return false;
 
-  // Every use must be the callee of a direct call to F. isCallee distinguishes
-  // that from F appearing as a call operand. Reject musttail/invoke *to* F.
-  for (Use &U : F.uses()) {
-    auto *CB = dyn_cast<CallBase>(U.getUser());
-    if (!CB || !CB->isCallee(&U) || CB->isMustTailCall() || isa<InvokeInst>(CB))
+  // IgnoreAssumeLikeCalls must be off. An assume-like intrinsic taking F as an
+  // operand is a use of F but not a call to it, and the loop below would read
+  // the wrong operand from it.
+  if (F.hasAddressTaken(/*PutOffender=*/nullptr, /*IgnoreCallbackUses=*/false,
+                        /*IgnoreAssumeLikeCalls=*/false))
+    return false;
+
+  for (User *U : F.users()) {
+    auto *CB = cast<CallBase>(U);
+    if (CB->isMustTailCall() || isa<InvokeInst>(CB))
       return false;
     Calls.push_back(CB);
   }
