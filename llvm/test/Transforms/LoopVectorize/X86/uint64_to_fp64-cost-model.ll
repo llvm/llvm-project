@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 
-; CHECK: cost of 4 for VF 1 For instruction:   %conv = uitofp i64 %tmp to double
+; CHECK: Cost of 4 for VF 1: EMIT-SCALAR ir<%conv> = uitofp ir<%tmp> to double
 ; CHECK: Cost of 5 for VF 2: WIDEN-CAST ir<%conv> = uitofp ir<%tmp> to double
 ; CHECK: Cost of 10 for VF 4: WIDEN-CAST ir<%conv> = uitofp ir<%tmp> to double
 define void @uint64_to_double_cost(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
