@@ -102,8 +102,37 @@ target triple = "x86_64-unknown-linux-gnu"
   ptr @.str.8,
   ptr @.str.9
 ], align 16
-
 @table.volatile = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multiple.loads.same.bb = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multiple.loads.diff.bb = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.gep.escapes = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.gep.volatile.load = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.gep.inconsistent.load.type = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.gep.no.uses = internal constant [2 x ptr] [
   ptr @.str.8,
   ptr @.str.9
 ], align 16
@@ -143,6 +172,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @wrong.skip.table = internal constant [4 x ptr] [ptr null, ptr @.str.8, ptr null, ptr @.str.9], align 16
 ; CHECK: @table.multiple.load.uses.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32)], align 4
 ; CHECK: @table.volatile = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.multiple.loads.same.bb.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multiple.loads.same.bb.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multiple.loads.same.bb.rel to i64)) to i32)], align 4
+; CHECK: @table.multiple.loads.diff.bb.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multiple.loads.diff.bb.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multiple.loads.diff.bb.rel to i64)) to i32)], align 4
+; CHECK: @table.gep.escapes = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.gep.volatile.load = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.gep.inconsistent.load.type = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.gep.no.uses = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ;.
 define ptr @external_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @external_linkage(
@@ -458,6 +493,102 @@ define ptr @gep_volatile_load(i64 %index) {
   %gep = getelementptr inbounds [2 x ptr], ptr @table.volatile, i64 0, i64 %index
   %load = load volatile ptr, ptr %gep, align 8
   ret ptr %load
+}
+
+define ptr @gep_multiple_loads_same_bb(i64 %index) {
+; CHECK-LABEL: define ptr @gep_multiple_loads_same_bb(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC1:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multiple.loads.same.bb.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    call void @use(ptr [[RELTABLE_INTRINSIC1]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multiple.loads.same.bb.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.multiple.loads.same.bb, i64 0, i64 %index
+  %load1 = load ptr, ptr %gep, align 8
+  call void @use(ptr %load1)
+  %load2 = load ptr, ptr %gep, align 8
+  ret ptr %load2
+}
+
+define ptr @gep_multiple_loads_diff_bb(i64 %index, i1 %cond) {
+; CHECK-LABEL: define ptr @gep_multiple_loads_diff_bb(
+; CHECK-SAME: i64 [[INDEX:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC1:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multiple.loads.diff.bb.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    call void @use(ptr [[RELTABLE_INTRINSIC1]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC1]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multiple.loads.diff.bb.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+entry:
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.multiple.loads.diff.bb, i64 0, i64 %index
+  br i1 %cond, label %then, label %else
+
+then:
+  %load1 = load ptr, ptr %gep, align 8
+  call void @use(ptr %load1)
+  ret ptr %load1
+
+else:
+  %load2 = load ptr, ptr %gep, align 8
+  ret ptr %load2
+}
+
+define ptr @gep_escapes(i64 %index) {
+; CHECK-LABEL: define ptr @gep_escapes(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table.gep.escapes, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.gep.escapes, i64 0, i64 %index
+  call void @use(ptr %gep)
+  %load = load ptr, ptr %gep, align 8
+  ret ptr %load
+}
+
+define ptr @gep_multiple_loads_volatile(i64 %index) {
+; CHECK-LABEL: define ptr @gep_multiple_loads_volatile(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table.gep.volatile.load, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[LOAD2:%.*]] = load volatile ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD2]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.gep.volatile.load, i64 0, i64 %index
+  %load1 = load ptr, ptr %gep, align 8
+  %load2 = load volatile ptr, ptr %gep, align 8
+  ret ptr %load2
+}
+
+define ptr @gep_inconsistent_load_type(i64 %index) {
+; CHECK-LABEL: define ptr @gep_inconsistent_load_type(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table.gep.inconsistent.load.type, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret ptr [[LOAD1]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.gep.inconsistent.load.type, i64 0, i64 %index
+  %load1 = load ptr, ptr %gep, align 8
+  %load2 = load i32, ptr %gep, align 4
+  ret ptr %load1
+}
+
+define void @gep_no_uses(i64 %index) {
+; CHECK-LABEL: define void @gep_no_uses(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table.gep.no.uses, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    ret void
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.gep.no.uses, i64 0, i64 %index
+  ret void
 }
 
 !llvm.module.flags = !{!0, !1}
