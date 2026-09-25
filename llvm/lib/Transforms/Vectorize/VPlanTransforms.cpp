@@ -916,17 +916,16 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 /// value of the affine expression \p VPV computes.
 static VPWidenInductionRecipe *
 getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
-                   VPValue **PostIncStart = nullptr) {
+                   VPValue **PostIncStart = nullptr,
+                   std::optional<APInt> *StartOffset = nullptr) {
+  assert((!StartOffset || PostIncStart) &&
+         "cannot request an offset without a start value");
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    if (IntOrFpIV && IntOrFpIV->isTruncated())
-      return nullptr;
-    if (PostIncStart)
-      *PostIncStart = WideIV->getStartValue();
-    return WideIV;
+    return (IntOrFpIV && IntOrFpIV->isTruncated()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -975,27 +974,27 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
   if (!PostIncStart)
     return IsWideIVInc() ? WideIV : nullptr;
 
-  // start + C + i * step stays affine for any constant C, so both the step and
-  // any other constant offset can be folded into the start value.
+  // (Start + C) + IV * Step stays affine for any constant C, including the
+  // Step, so it can be folded into the Start value.
+  // It would not be profitable to look for a non-constant Start or C, as it
+  // would necessitate introducing an extra add or sub instruction.
   const APInt *C;
   APInt Offset;
-  if (IsWideIVInc()) {
-    if (!match(WideIV->getStepValue(), m_APInt(C)))
-      return nullptr;
+  if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
     Offset = *C;
-  } else if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C)))) {
-    Offset = *C;
-  } else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C)))) {
+  else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C))))
     Offset = -*C;
-  } else {
+  else
     return nullptr;
-  }
 
   const APInt *StartC;
+  // A narrowed IV computes in a narrower type than its start value.
   if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
       StartC->getBitWidth() != Offset.getBitWidth())
     return nullptr;
   *PostIncStart = Plan.getConstantInt(*StartC + Offset);
+  if (StartOffset)
+    *StartOffset = Offset;
   return WideIV;
 }
 
@@ -6304,11 +6303,14 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-      VPValue *Start;
+      VPValue *Start = nullptr;
+      std::optional<APInt> StartOffset;
       VPWidenInductionRecipe *WideIV =
-          getOptimizableIVOf(Op, Plan, PSE, &Start);
+          getOptimizableIVOf(Op, Plan, PSE, &Start, &StartOffset);
       if (!WideIV)
         continue;
+      if (!Start)
+        Start = WideIV->getStartValue();
 
       // A truncate that is not widened is left to the scalarization decisions
       // made earlier.
@@ -6334,7 +6336,7 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
           WideIV->getPHINode(), Start, WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(),
           VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
-          VPI.getDebugLoc());
+          VPI.getDebugLoc(), StartOffset);
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

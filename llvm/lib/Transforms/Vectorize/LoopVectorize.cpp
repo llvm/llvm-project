@@ -7247,6 +7247,11 @@ static void preparePlanForEpilogueVectorLoop(
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
     }
     assert(ResumeVPV && "Must have a resume value");
+    if (auto *NarrowIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+      if (const APInt *StartOffset = NarrowIV->getStartOffset();
+          StartOffset && !StartOffset->isZero())
+        ResumeVPV =
+            PHBuilder.createAdd(ResumeVPV, Plan.getConstantInt(*StartOffset));
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
   }
 
