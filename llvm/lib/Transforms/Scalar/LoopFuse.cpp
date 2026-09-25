@@ -1928,9 +1928,11 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   for (auto &L : LI) {
     Changed |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
-    for (Loop *L : LI.getLoopsInPreorder())
-      Changed |= simplifyLoopGuard(L, DTU, LI, SE);
   }
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    Changed |= simplifyLoopGuard(L, DTU, LI, SE);
+  }
+
   if (Changed)
     PDT.recalculate(F);
 
