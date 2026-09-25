@@ -2,10 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12,GFX12-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-- < %s | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
 
-; End-to-end lowering of the VGPR "as memory" address space (13) on a
-; movrel-capable subtarget (gfx12). A load/store of a uniform (SGPR) pointer
-; lowers to an M0-relative move (v_movrels_b32 / v_movreld_b32) over the wave's
-; vector registers, with the dword index (pointer >> 2) placed in M0.
+; End-to-end lowering on gfx12: an access through a uniform pointer is an
+; M0-relative v_movrels_b32 / v_movreld_b32, with the dword index in M0.
 
 define i32 @load_i32(ptr addrspace(13) inreg %p) {
 ; GFX12-LABEL: load_i32:
@@ -320,9 +318,7 @@ define i32 @load_i32_twice(ptr addrspace(13) inreg %p) {
   ret i32 %z
 }
 
-; Null and poison pointers must be accepted (produce valid code) rather than
-; crash or fail the machine verifier. The specific null-pointer value is
-; defined by the parent change that introduces the address space.
+; Null and poison pointers must produce valid code.
 
 define i32 @load_null() {
 ; GFX12-LABEL: load_null:
@@ -404,4 +400,40 @@ define void @store_poison(i32 %v) {
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   store i32 %v, ptr addrspace(13) poison
   ret void
+}
+
+; An extension of a whole-dword load is folded into the load by the combiner.
+define i64 @load_zext_i64(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_zext_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(13) %p
+  %z = zext i32 %v to i64
+  ret i64 %z
+}
+
+define i64 @load_sext_i64(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_sext_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(13) %p
+  %s = sext i32 %v to i64
+  ret i64 %s
 }

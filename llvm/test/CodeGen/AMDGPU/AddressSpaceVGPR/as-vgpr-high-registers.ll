@@ -1,20 +1,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-- < %s | FileCheck %s --check-prefixes=CHECK,SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-- < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 
-; A subtarget with more than 256 addressable VGPRs encodes a register number's
-; high bits separately, with S_SET_VGPR_MSB. A whole-dword access folds its
-; constant dword offset into the base register of each indexed move, so an
-; access whose base reaches v256 or beyond needs those bits described -
-; otherwise only the low eight bits are encoded and the move silently touches a
-; register 256 lower than the one meant.
-;
-; The moves must therefore be in the named operand table, since that is how
-; AMDGPULowerVGPREncoding finds the operands whose high bits it has to describe.
-;
-; Only SelectionDAG folds the offset into the base; GlobalISel folds it into the
-; index instead and indexes from v0, so it cannot reach a high base this way and
-; needs no mode change. Both are checked, because the difference is the reason
-; this went unnoticed.
+; With more than 256 VGPRs, a move whose base register is v256 or above needs
+; S_SET_VGPR_MSB, or only the low eight bits are encoded. SelectionDAG can fold
+; a constant offset into the base register and so reach a high base; GlobalISel
+; folds it into the index and always uses v0 as the base.
 
 ; The dword index is %i + 254, so a four-dword access spans v254, v255, v256 and
 ; v257 relative to M0.

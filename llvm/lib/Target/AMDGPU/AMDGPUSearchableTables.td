@@ -430,10 +430,6 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyEarlyOut = 1;
 }
 
-//===----------------------------------------------------------------------===//
-// V_LOAD/STORE_IDX opcode mapping table.
-//===----------------------------------------------------------------------===//
-
 def VLdStIdxOpcodeInfoTable : GenericTable {
   let FilterClass = "VLdStIdxOpcodeInfo";
   let CppTypeName = "VLdStIdxOpcodeInfo";

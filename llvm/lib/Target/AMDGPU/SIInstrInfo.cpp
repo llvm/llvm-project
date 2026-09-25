@@ -670,9 +670,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
-    // Callers treat identical base operands as the same address, which only
-    // holds while the base names a value. The movrel form reads M0, and M0 can
-    // be redefined between accesses, so report it as opaque.
+    // The movrel form's index is whatever M0 holds, which can change between
+    // accesses, so it has no base operand to report.
     if (!LdStIdx->isGPRIdx())
       return false;
     BaseOp = &LdStIdx->getIdxOp();
@@ -7791,16 +7790,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // The VGPR indexing mode form takes its dword index in an SGPR, so a
-  // divergent index is made uniform with a waterfall loop. The movrel form
-  // reads M0, whose divergent writes are waterfalled when the copy into M0 is
-  // lowered.
+  // The GPR_IDX form needs its index in an SGPR. For the movrel form, a
+  // divergent M0 write is waterfalled where the copy into M0 is lowered.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     if (!LdStIdx->isGPRIdx())
       return CreatedBB;
     MachineOperand *Idx = &LdStIdx->getIdxOp();
-    // isSGPRReg handles physical registers too, so an unexpected physical index
-    // is waterfalled rather than silently skipped.
+    // A physical VGPR index is waterfalled too; isSGPRReg covers both.
     if (Idx->isReg() && !RI.isSGPRReg(MRI, Idx->getReg()))
       CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
     return CreatedBB;
@@ -8296,9 +8292,9 @@ void SIInstrInfo::handleCopyToPhysHelper(
   MachineBasicBlock::iterator I = Inst.getIterator();
   MachineBasicBlock::iterator E = Inst.getParent()->end();
   if (DstReg == AMDGPU::M0) {
-    // A VGPR "as memory" access indexes with M0 in every lane, so like the
-    // SGPR arguments of SI_CALL_ISEL below it is waterfalled. Other readers of
-    // M0 take the first lane.
+    // A VGPR "as memory" access uses M0 in every lane, so, like the SGPR
+    // arguments of SI_CALL_ISEL below, it is waterfalled. Other readers of M0
+    // take lane 0.
     SmallVector<MachineOperand *, 4> IdxOps;
     bool HasOtherReaders = false;
     while (++I != E) {
@@ -11355,15 +11351,14 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
-  // Always divergent: it reads the wave's per-lane registers, so even a uniform
-  // index yields a per-lane value.
+  // Each lane reads its own registers, however uniform the index.
   if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
     return ValueUniformity::NeverUniform;
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results. The VGPR address space is likewise divergent (see
-  // above; this covers a G_LOAD not yet legalized to G_AMDGPU_REG_LOAD).
+  // different results. So are VGPR address space loads, before they become
+  // G_AMDGPU_REG_LOAD.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.

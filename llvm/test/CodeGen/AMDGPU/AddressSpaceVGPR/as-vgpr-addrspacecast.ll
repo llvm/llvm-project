@@ -4,10 +4,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-- < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-- < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-GISEL
 
-; A pointer to the VGPR "as memory" address space (13) round-trips through the
-; generic address space using a synthetic aperture: the shared aperture with the
-; aperture number in its low bits. The round-trip preserves the value, including
-; the -1 null pointer, but the generic pointer must not be dereferenced.
+; VGPR "as memory" (address space 13) pointers round-trip through the generic
+; address space via a synthetic aperture, preserving the value, including the
+; -1 null pointer.
 
 define ptr @vgpr_to_flat(ptr addrspace(13) %ptr) {
 ; GFX12-SDAG-LABEL: vgpr_to_flat:
