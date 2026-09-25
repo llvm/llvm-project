@@ -129,12 +129,15 @@ define double @fmul_rhs_of_scalar_fadd_same_block(ptr %p, ptr %q, double %x, dou
 ; CHECK-LABEL: define double @fmul_rhs_of_scalar_fadd_same_block(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], double [[X:%.*]], double [[Y:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Q]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[Q]], align 8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds double, ptr [[Q]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[Q1]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract double [[A0]], [[B0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract double [[A1]], [[B1]]
 ; CHECK-NEXT:    [[S0:%.*]] = fadd contract double [[X]], [[M0]]
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[S1:%.*]] = fadd contract double [[Y]], [[M1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], double [[S0]], double [[S1]]
 ; CHECK-NEXT:    ret double [[R]]
