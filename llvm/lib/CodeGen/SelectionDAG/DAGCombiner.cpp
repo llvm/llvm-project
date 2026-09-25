@@ -3632,6 +3632,20 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
     return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
                      DAG.getUNDEF(CarryVT));
 
+  // fold operation with constant operands.
+  // TODO: Move this to FoldConstantArithmetic when it supports nodes with
+  // multiple results.
+  ConstantSDNode *C0 = isConstOrConstSplat(N0);
+  ConstantSDNode *C1 = isConstOrConstSplat(N1);
+  if (C0 && C1 && !C0->isOpaque() && !C1->isOpaque()) {
+    bool Overflow;
+    APInt Result =
+        IsSigned ? C0->getAPIntValue().sadd_ov(C1->getAPIntValue(), Overflow)
+                 : C0->getAPIntValue().uadd_ov(C1->getAPIntValue(), Overflow);
+    return CombineTo(N, DAG.getConstant(Result, DL, VT),
+                     DAG.getBoolConstant(Overflow, DL, CarryVT, CarryVT));
+  }
+
   // canonicalize constant to RHS.
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -4803,6 +4817,20 @@ SDValue DAGCombiner::visitSUBO(SDNode *N) {
   if (!N->hasAnyUseOfValue(1))
     return CombineTo(N, DAG.getNode(ISD::SUB, DL, VT, N0, N1),
                      DAG.getUNDEF(CarryVT));
+
+  // fold operation with constant operands.
+  // TODO: Move this to FoldConstantArithmetic when it supports nodes with
+  // multiple results.
+  ConstantSDNode *C0 = isConstOrConstSplat(N0);
+  ConstantSDNode *C1 = isConstOrConstSplat(N1);
+  if (C0 && C1 && !C0->isOpaque() && !C1->isOpaque()) {
+    bool Overflow;
+    APInt Result =
+        IsSigned ? C0->getAPIntValue().ssub_ov(C1->getAPIntValue(), Overflow)
+                 : C0->getAPIntValue().usub_ov(C1->getAPIntValue(), Overflow);
+    return CombineTo(N, DAG.getConstant(Result, DL, VT),
+                     DAG.getBoolConstant(Overflow, DL, CarryVT, CarryVT));
+  }
 
   // fold (subo x, x) -> 0 + no borrow
   if (N0 == N1)
