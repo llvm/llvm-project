@@ -1155,6 +1155,17 @@ public:
     return true;
   }
 
+  bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *ILE) {
+    auto *SubExpr = ILE->getSubExpr();
+    if (!SubExpr)
+      return false;
+    // The backing array of a std::initializer_list is a temporary whose
+    // lifetime ends in this function, so its elements are destructed here.
+    if (!CanTriviallyDestruct(SubExpr->getType()))
+      return false;
+    return Visit(SubExpr);
+  }
+
   bool VisitMemberExpr(const MemberExpr *ME) {
     // Field access is allowed but the base pointer may itself be non-trivial.
     return Visit(ME->getBase());
