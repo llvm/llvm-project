@@ -3756,20 +3756,6 @@ IntrinsicProcTable::Implementation::HandleEnumerationNext(
     context.messages().Say("NEXT() requires argument A"_err_en_US);
     return std::nullopt;
   }
-  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
-  if (arguments.size() > 1 && arguments[1]) {
-    context.messages().Say(arguments[1]->sourceLocation(),
-        "NEXT() with STAT= is not yet supported"_err_en_US);
-    return std::nullopt;
-  }
-  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
-  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
-    if (!IsConstantExpr(*expr)) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "NEXT() with a non-constant argument is not yet supported"_err_en_US);
-      return std::nullopt;
-    }
-  }
   DynamicType enumerationType{derived};
   characteristics::DummyDataObject ddoA{
       characteristics::TypeAndShape{enumerationType}};
@@ -3806,20 +3792,6 @@ IntrinsicProcTable::Implementation::HandleEnumerationPrevious(
   if (!arguments[0]) {
     context.messages().Say("PREVIOUS() requires argument A"_err_en_US);
     return std::nullopt;
-  }
-  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
-  if (arguments.size() > 1 && arguments[1]) {
-    context.messages().Say(arguments[1]->sourceLocation(),
-        "PREVIOUS() with STAT= is not yet supported"_err_en_US);
-    return std::nullopt;
-  }
-  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
-  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
-    if (!IsConstantExpr(*expr)) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "PREVIOUS() with a non-constant argument is not yet supported"_err_en_US);
-      return std::nullopt;
-    }
   }
   DynamicType enumerationType{derived};
   characteristics::DummyDataObject ddoA{

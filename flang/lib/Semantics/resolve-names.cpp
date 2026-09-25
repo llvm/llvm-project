@@ -6581,6 +6581,13 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
   DeclTypeSpec &declType{enclosingScope.MakeDerivedType(
       DeclTypeSpec::TypeDerived, std::move(enumTypeSpec))};
   for (const parser::Name &name : x.v) {
+    // A repeated enumerator name would make MakeSymbol return the existing
+    // symbol, whose set_details() below would then abort.
+    if (Symbol *prev{FindInScope(enclosingScope, name.source)};
+        prev && !prev->has<UnknownDetails>()) {
+      SayAlreadyDeclared(name, *prev);
+      continue;
+    }
     int ordinal{typeDetails.enumeratorCount() + 1};
     // Create the enumerator symbol in the enclosing scope, not the
     // enumeration type's own DerivedType scope.
