@@ -26,8 +26,6 @@ namespace llvm {
 
 class MipsTargetMachine : public CodeGenTargetMachineImpl {
   bool isLittle;
-  // Selected ABI
-  MipsABIInfo ABI;
   // Used to initialize module-wide object-file policy.
   MipsSubtarget DefaultSubtarget;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -66,7 +64,6 @@ public:
   }
 
   bool isLittleEndian() const { return isLittle; }
-  const MipsABIInfo &getABI() const { return ABI; }
 };
 
 /// Mips32/64 big endian target machine.
