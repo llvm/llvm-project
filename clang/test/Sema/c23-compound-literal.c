@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only %s
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only -frecovery-ast -frecovery-ast-type %s
 // RUN: %clang_cc1 -std=c23 -triple x86_64-scei-ps4 -verify=expected,ps4 -fsyntax-only %s
 
 #define M static
@@ -348,4 +349,8 @@ A *test54(void) {
 
 int *test55(void) {
   return (static int[]){1, 2};
+}
+
+int test56(int x) {                 // expected-note {{'test56' declared here}}
+  return (constexpr int){test56()}; // expected-error {{too few arguments to function call, single argument 'x' was not specified}}
 }

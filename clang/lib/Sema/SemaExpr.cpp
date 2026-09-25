@@ -7782,7 +7782,8 @@ ExprResult Sema::BuildCompoundLiteralExpr(
         }
 
         Expr::EvalResult Eval;
-        if (HasConstexpr &&
+        if (HasConstexpr && !Init->isTypeDependent() &&
+            !Init->isValueDependent() &&
             Init->EvaluateAsRValue(Eval, Context,
                                    /*InConstantContext=*/true) &&
             Eval.Val.hasValue())
