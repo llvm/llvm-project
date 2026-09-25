@@ -6,11 +6,11 @@ define void @fp_paired_splat(ptr %out, ptr %in, double %a, double %b, double %c)
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], [[B]]
 ; CHECK-NEXT:    [[EP0:%.*]] = getelementptr double, ptr [[OUT]], i64 32
 ; CHECK-NEXT:    [[EP1:%.*]] = getelementptr double, ptr [[OUT]], i64 34
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IN]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P2]], align 8
-; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], [[B]]
 ; CHECK-NEXT:    [[S1:%.*]] = fsub double [[S0]], [[C]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[S1]], i64 0
@@ -66,8 +66,8 @@ define i32 @int_paired_splat(ptr %p, ptr %q, i32 %a, i32 %b,
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[D]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[C]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = zext i8 [[X1]] to i32
 ; CHECK-NEXT:    [[V0:%.*]] = zext i8 [[X0]] to i32
+; CHECK-NEXT:    [[V1:%.*]] = zext i8 [[X1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[V0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[V1]], i64 0
@@ -176,16 +176,12 @@ define i32 @int_paired_splat_gathered_loads(ptr %pix1, i32 %add20, i8 %c8, i8 %d
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[ADD68]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[SUB67_1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], splat (i32 1)
-; CHECK-NEXT:    [[LY:%.*]] = load i8, ptr [[ARRAYIDX3]], align 1
 ; CHECK-NEXT:    [[LX:%.*]] = load i8, ptr [[PIX1]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[LX]] to i32
-; CHECK-NEXT:    [[CONV_3:%.*]] = zext i8 [[C8]] to i32
+; CHECK-NEXT:    [[LY:%.*]] = load i8, ptr [[ARRAYIDX3]], align 1
 ; CHECK-NEXT:    [[CONV4:%.*]] = zext i8 [[LY]] to i32
-; CHECK-NEXT:    [[CONV4_3:%.*]] = zext i8 [[D8]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = shl nuw nsw i32 [[CONV]], 16
-; CHECK-NEXT:    [[SUB_3:%.*]] = shl nuw nsw i32 [[CONV_3]], 16
 ; CHECK-NEXT:    [[SHL:%.*]] = or disjoint i32 [[SUB]], [[CONV4]]
-; CHECK-NEXT:    [[SHL_3:%.*]] = or disjoint i32 [[SUB_3]], [[CONV4_3]]
 ; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[SHL]], -65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[ADD9]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -194,6 +190,10 @@ define i32 @int_paired_splat_gathered_loads(ptr %pix1, i32 %add20, i8 %c8, i8 %d
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> [[TMP8]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[CONV_3:%.*]] = zext i8 [[C8]] to i32
+; CHECK-NEXT:    [[CONV4_3:%.*]] = zext i8 [[D8]] to i32
+; CHECK-NEXT:    [[SUB_3:%.*]] = shl nuw nsw i32 [[CONV_3]], 16
+; CHECK-NEXT:    [[SHL_3:%.*]] = or disjoint i32 [[SUB_3]], [[CONV4_3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[SHL_3]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <2 x i32> [[TMP11]], <i32 -65534, i32 -65536>

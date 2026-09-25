@@ -317,8 +317,13 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
   Address DestAddr = DestLV.getAddress();
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
-  assert(E->getArg(1)->getType()->isIntegerType() &&
-         "Intrinsic InterlockedOp value operand must be an integer");
+  [[maybe_unused]] QualType ValTy = E->getArg(1)->getType();
+  if (Op == llvm::AtomicRMWInst::Xchg)
+    assert((ValTy->isIntegerType() || ValTy->isFloatingType()) &&
+           "InterlockedExchange value operand must be an integer or a float");
+  else
+    assert(ValTy->isIntegerType() &&
+           "Intrinsic InterlockedOp value operand must be an integer");
 
   // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
   // Set the memory scope: Workgroup for groupshared, otherwise Device.
@@ -1043,6 +1048,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
                              Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_handlefromheap: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    llvm::Intrinsic::ID IntrinsicID =
+        CGM.getHLSLRuntime().getCreateHandleFromHeapIntrinsic();
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, {IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
+    Value *MainHandle = EmitScalarExpr(E->getArg(0));
+    if (!CGM.getTriple().isSPIRV())
+      return MainHandle;
+
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    llvm::Intrinsic::ID IntrinsicID =
+        llvm::Intrinsic::spv_resource_counterhandlefromheap;
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             {MainHandle});
+  }
+
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());
@@ -1460,6 +1484,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_exchange: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
   }
   case Builtin::BI__builtin_hlsl_interlocked_max: {
     llvm::AtomicRMWInst::BinOp Op =

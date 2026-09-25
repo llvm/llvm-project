@@ -2458,6 +2458,10 @@ cc_binary(
     copts = [
         "-Wno-uninitialized",
     ],
+    local_defines = select({
+        "//third-party:llvm_libxml2_enabled": ["CLANG_HAVE_LIBXML=1"],
+        "//conditions:default": [],
+    }),
     stamp = 0,
     deps = [
         ":ast",
@@ -2474,6 +2478,7 @@ cc_binary(
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
+        "//third-party:libxml2",
     ],
 )
 
@@ -3151,6 +3156,7 @@ cc_library(
         ":cir_dialect",
         "//llvm:Support",
         "//mlir:Analysis",
+        "//mlir:DataLayoutInterfaces",
         "//mlir:IR",
         "//mlir:SideEffectInterfaces",
     ],

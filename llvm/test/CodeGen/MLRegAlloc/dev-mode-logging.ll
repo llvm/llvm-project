@@ -21,7 +21,6 @@
 ; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
 ; RUN:   -regalloc-enable-advisor=development -regalloc-training-log=%t3.log < %S/Inputs/two-large-fcts.ll
 ; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t3.log > %t3.readable
-; RUN: cp -f %t3.readable /tmp/test
 ; RUN: FileCheck --input-file %t3.readable %s --check-prefixes=CHECK-TWO-FCTS
 
 ; CHECK-NOT: nan

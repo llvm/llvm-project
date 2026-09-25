@@ -649,7 +649,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     // Set PGO options based on command line flags
     setPGOOptions(*Target);
 
-    return Target->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout(Options.MCOptions.getABIName());
   };
   if (InputLanguage == "mir" ||
       (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {
