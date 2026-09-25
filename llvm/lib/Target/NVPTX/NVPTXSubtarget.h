@@ -87,8 +87,7 @@ public:
   }
   bool hasAtomAddF64() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomScope() const { return hasFeature(NVPTX::SM60); }
-  bool hasAtomBitwise64() const { return hasFeature(NVPTX::SM32); }
-  bool hasAtomMinMax64() const { return hasFeature(NVPTX::SM32); }
+  bool hasAtomMinMaxAndOrXor() const { return hasFeature(NVPTX::SM32); }
   bool hasAtomCas16() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX63);
   }
