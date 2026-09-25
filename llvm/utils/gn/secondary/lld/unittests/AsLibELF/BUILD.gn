@@ -5,6 +5,7 @@ unittest("LLDAsLibELFTests") {
   deps = [
     "//lld/Common",
     "//lld/ELF",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "OutputStream.cpp",
