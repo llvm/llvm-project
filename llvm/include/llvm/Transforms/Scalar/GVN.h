@@ -117,7 +117,7 @@ struct GVNOptions {
 };
 
 /// A mapping from value numbers to lists of Value*'s that
-/// have that value number.  Use findLeader to query it.
+/// have that value number. Use getLeaders to query it.
 class GVNLeaderMap {
 public:
   struct LeaderTableEntry {
