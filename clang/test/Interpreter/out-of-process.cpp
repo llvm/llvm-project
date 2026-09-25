@@ -4,6 +4,11 @@
 
 extern "C" int printf(const char *, ...);
 
+printf("FLUSH_START");
+// CHECK: FLUSH_START
+printf("\nFLUSH_OK\n");
+// CHECK: FLUSH_OK
+
 int intVar = 0;
 double doubleVar = 3.14;
 %undo
@@ -84,5 +89,8 @@ int complexFunc(int x) \
 
 auto r11 = printf("complexFunc(5) = %d\n", complexFunc(5));
 // CHECK: complexFunc(5) = 15
+
+printf("FINAL_FLUSH");
+// CHECK: FINAL_FLUSH
 
 %quit
