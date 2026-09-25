@@ -263,6 +263,8 @@ getModRefInfoInaccessibleAndTargetMemLoc(const MemoryEffects CallUse,
   };
 
   addModRefInfoForLoc(IRMemLocation::InaccessibleMem);
+  for (auto Loc : MemoryEffects::fpenvLocations())
+    addModRefInfoForLoc(Loc);
   for (auto Loc : MemoryEffects::targetMemLocations())
     addModRefInfoForLoc(Loc);
   return Result;

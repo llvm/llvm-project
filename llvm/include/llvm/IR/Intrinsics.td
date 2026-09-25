@@ -54,6 +54,27 @@ def IntrInaccessibleMemOnly : IntrinsicProperty;
 // by the module being compiled. This is a weaker form of IntrArgMemOnly.
 def IntrInaccessibleMemOrArgMemOnly : IntrinsicProperty;
 
+/// This intrinsic only may read floating-point control modes.
+def IntrReadFPControlOnly : IntrinsicProperty;
+
+/// This intrinsic only may write floating-point control modes.
+def IntrWriteFPControlOnly : IntrinsicProperty;
+
+/// This intrinsic only may update floating-point status bits (read-OR-write).
+def IntrUpdateFPStatusOnly : IntrinsicProperty;
+
+/// This intrinsic only may read floating-point environment (control modes and
+/// status bits).
+def IntrReadFPEnvironmentOnly : IntrinsicProperty;
+
+/// This intrinsic only may write floating-point environment (control modes and
+/// status bits).
+def IntrWriteFPEnvironmentOnly : IntrinsicProperty;
+
+/// This intrinsic only may update floating-point status bits (read-OR-write) or
+/// read control modes.
+def IntrFPOperationOnly : IntrinsicProperty;
+
 // Tablegen representation of IRMemLocation.
 class IntrinsicMemoryLocation;
 
@@ -63,6 +84,8 @@ def ArgMem : IntrinsicMemoryLocation;
 def InaccessibleMem : IntrinsicMemoryLocation;
 def TargetMem0 : IntrinsicMemoryLocation;
 def TargetMem1 : IntrinsicMemoryLocation;
+def FPControlMem : IntrinsicMemoryLocation;
+def FPStatusMem : IntrinsicMemoryLocation;
 
 // The list of IRMemoryLocations that are read from.
 class IntrRead<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
@@ -1368,16 +1391,21 @@ def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
 //===--------------- Access to Floating Point Environment -----------------===//
 //
 
-let IntrProperties = [IntrInaccessibleMemOnly] in {
-  def int_get_rounding  : DefaultAttrsIntrinsic<[llvm_i32_ty], []>;
-  def int_set_rounding  : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
-  def int_get_fpenv     : DefaultAttrsIntrinsic<[llvm_anyint_ty], []>;
-  def int_set_fpenv     : DefaultAttrsIntrinsic<[], [llvm_anyint_ty]>;
-  def int_reset_fpenv   : DefaultAttrsIntrinsic<[], []>;
-  def int_get_fpmode    : DefaultAttrsIntrinsic<[llvm_anyint_ty], []>;
-  def int_set_fpmode    : DefaultAttrsIntrinsic<[], [llvm_anyint_ty]>;
-  def int_reset_fpmode  : DefaultAttrsIntrinsic<[], []>;
-}
+def int_get_rounding  : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                            [IntrReadFPControlOnly]>;
+def int_set_rounding  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+                            [IntrWriteFPControlOnly]>;
+def int_get_fpenv     : DefaultAttrsIntrinsic<[llvm_anyint_ty], [],
+                            [IntrReadFPEnvironmentOnly]>;
+def int_set_fpenv     : DefaultAttrsIntrinsic<[], [llvm_anyint_ty],
+                            [IntrWriteFPEnvironmentOnly]>;
+def int_reset_fpenv   : DefaultAttrsIntrinsic<[], [],
+                            [IntrWriteFPEnvironmentOnly]>;
+def int_get_fpmode    : DefaultAttrsIntrinsic<[llvm_anyint_ty], [],
+                            [IntrReadFPControlOnly]>;
+def int_set_fpmode    : DefaultAttrsIntrinsic<[], [llvm_anyint_ty],
+                            [IntrWriteFPControlOnly]>;
+def int_reset_fpmode  : DefaultAttrsIntrinsic<[], [], [IntrWriteFPControlOnly]>;
 
 //===--------------- Floating Point Properties ----------------------------===//
 //
@@ -1397,7 +1425,8 @@ def int_is_fpclass
 /// floating point environment.
 def IntrStrictFP : IntrinsicProperty;
 
-let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
+// Constrained functions that depend on the current rounding mode.
+let IntrProperties = [IntrFPOperationOnly, IntrStrictFP] in {
   def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
@@ -1438,14 +1467,6 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
                                                          llvm_metadata_ty,
                                                          llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fptosi : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                    [ llvm_anyfloat_ty,
-                                                      llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fptoui : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                    [ llvm_anyfloat_ty,
-                                                      llvm_metadata_ty ]>;
-
   def int_experimental_constrained_sitofp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ llvm_anyint_ty,
                                                          llvm_metadata_ty,
@@ -1460,10 +1481,6 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
                                                        [ llvm_anyfloat_ty,
                                                          llvm_metadata_ty,
                                                          llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fpext : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ llvm_anyfloat_ty,
-                                                       llvm_metadata_ty ]>;
 
   // These intrinsics are sensitive to the rounding mode so we need constrained
   // versions of each of them.  When strict rounding and exception control are
@@ -1565,6 +1582,21 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
                                                       [ llvm_any_scalar_float_ty,
                                                         llvm_metadata_ty,
                                                         llvm_metadata_ty ]>;
+}
+
+// Constrained functions that do not depend on the current rounding mode.
+let IntrProperties = [IntrUpdateFPStatusOnly, IntrStrictFP] in {
+  def int_experimental_constrained_fptosi : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
+                                                    [ llvm_anyfloat_ty,
+                                                      llvm_metadata_ty ]>;
+
+  def int_experimental_constrained_fptoui : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
+                                                    [ llvm_anyfloat_ty,
+                                                      llvm_metadata_ty ]>;
+  def int_experimental_constrained_fpext : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                                     [ llvm_anyfloat_ty,
+                                                       llvm_metadata_ty ]>;
+
   def int_experimental_constrained_maxnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                       [ LLVMMatchType<0>,
                                                         LLVMMatchType<0>,
