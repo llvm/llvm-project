@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/XCOFFObjectFile.h"
@@ -229,6 +230,47 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
   return I;
 }
 
+static Expected<MaterializationUnit::Interface>
+getGOFFObjectFileSymbolInfo(ExecutionSession &ES,
+                            const object::GOFFObjectFile &Obj) {
+  MaterializationUnit::Interface I;
+  for (auto &Sym : Obj.symbols()) {
+    Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+    if (!SymFlagsOrErr)
+      return SymFlagsOrErr.takeError();
+
+    uint32_t Flags = *SymFlagsOrErr;
+    // Skip symbols not defined in this object file.
+    if (Flags & object::SymbolRef::SF_Undefined)
+      continue;
+    // Skip symbols that are not global.
+    if (!(Flags & object::SymbolRef::SF_Global))
+      continue;
+
+    auto SymbolType = Sym.getType();
+    if (!SymbolType)
+      return SymbolType.takeError();
+
+    // Skip file symbols.
+    if (*SymbolType == object::SymbolRef::ST_File)
+      continue;
+
+    auto Name = Sym.getName();
+    if (!Name)
+      return Name.takeError();
+
+    auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+    if (!SymFlags)
+      return SymFlags.takeError();
+
+    // TODO: weak symbol.
+
+    I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
+  }
+
+  return I;
+}
+
 Expected<MaterializationUnit::Interface>
 getXCOFFObjectFileSymbolInfo(ExecutionSession &ES,
                              const object::ObjectFile &Obj) {
@@ -330,6 +372,8 @@ getObjectFileInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
     return getCOFFObjectFileSymbolInfo(ES, *COFFObj);
   else if (auto *XCOFFObj = dyn_cast<object::XCOFFObjectFile>(Obj->get()))
     return getXCOFFObjectFileSymbolInfo(ES, *XCOFFObj);
+  else if (auto *GOFFObj = dyn_cast<object::GOFFObjectFile>(Obj->get()))
+    return getGOFFObjectFileSymbolInfo(ES, *GOFFObj);
 
   return getGenericObjectFileSymbolInfo(ES, **Obj);
 }
