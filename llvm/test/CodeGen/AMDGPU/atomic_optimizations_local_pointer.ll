@@ -1821,17 +1821,16 @@ define amdgpu_kernel void @add_i64_constant(ptr addrspace(1) %out) {
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:  .LBB4_2:
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX8-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX8-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX8-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX8-NEXT:    v_mul_u32_u24_e32 v0, 5, v2
-; GFX8-NEXT:    v_mul_hi_u32_u24_e32 v1, 5, v2
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s5, v0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s3
+; GFX8-NEXT:    v_mov_b32_e32 v1, s2
+; GFX8-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], 5, v2, v[0:1]
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    s_nop 1
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX8-NEXT:    s_endpgm
 ;

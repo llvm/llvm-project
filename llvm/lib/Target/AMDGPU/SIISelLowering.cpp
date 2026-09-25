@@ -17421,6 +17421,103 @@ static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
                      DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
 }
 
+// performMulCombine may lower an i64 ISD::MUL whose operands are known to fit
+// in 24 bits into 24-bit multiply nodes before the enclosing add is combined:
+//
+//   mul i64 x, y  -->  build_pair (mul_u24 x, y), (mulhi_u24 x, y)
+//
+// That rewrite removes the ISD::MUL that tryFoldToMad64_32 keys on, so the
+// fused mad is never formed. Recover it by matching the 24-bit multiply forms
+// directly and folding (add mul24(x, y), z) --> mad_[iu]64_[iu]32 x, y, z.
+static SDValue tryFoldMul24ToMad64_32(SDNode *N, SelectionDAG &DAG,
+                                      const GCNSubtarget &ST) {
+  assert(N->isAnyAdd());
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i64 || !ST.hasMad64_32())
+    return SDValue();
+
+  // Structurally match a 24-bit multiply that produces an i64 value, returning
+  // its two 32-bit factors and whether it is signed. Handles the build_pair
+  // form getMul24 emits for 64-bit results as well as a bare i64 MUL_[IU]24.
+  auto MatchMul24 = [](SDValue V, SDValue &X, SDValue &Y,
+                       bool &Signed) -> bool {
+    if (V.getValueType() != MVT::i64)
+      return false;
+
+    if (V.getOpcode() == ISD::BUILD_PAIR) {
+      SDValue Lo = V.getOperand(0);
+      SDValue Hi = V.getOperand(1);
+      bool IsUnsigned = Lo.getOpcode() == AMDGPUISD::MUL_U24 &&
+                        Hi.getOpcode() == AMDGPUISD::MULHI_U24;
+      bool IsSigned = Lo.getOpcode() == AMDGPUISD::MUL_I24 &&
+                      Hi.getOpcode() == AMDGPUISD::MULHI_I24;
+      // The halves must be the low/high parts of the same multiply.
+      if ((!IsUnsigned && !IsSigned) || Lo.getOperand(0) != Hi.getOperand(0) ||
+          Lo.getOperand(1) != Hi.getOperand(1))
+        return false;
+      X = Lo.getOperand(0);
+      Y = Lo.getOperand(1);
+      Signed = IsSigned;
+      return true;
+    }
+
+    if (V.getOpcode() == AMDGPUISD::MUL_U24 ||
+        V.getOpcode() == AMDGPUISD::MUL_I24) {
+      X = V.getOperand(0);
+      Y = V.getOperand(1);
+      Signed = V.getOpcode() == AMDGPUISD::MUL_I24;
+      return true;
+    }
+
+    return false;
+  };
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue X, Y;
+  bool Signed = false;
+  if (!MatchMul24(LHS, X, Y, Signed)) {
+    std::swap(LHS, RHS);
+    if (!MatchMul24(LHS, X, Y, Signed))
+      return SDValue();
+  }
+
+  // Without full-rate 64-bit ops, only fold a single-use multiply to avoid
+  // duplicating it. Checked first so a bail builds no nodes.
+  if (!ST.hasFullRate64Ops()) {
+    bool SingleUse = LHS.hasOneUse();
+    if (SingleUse && LHS.getOpcode() == ISD::BUILD_PAIR)
+      SingleUse =
+          LHS.getOperand(0).hasOneUse() && LHS.getOperand(1).hasOneUse();
+    if (!SingleUse)
+      return SDValue();
+  }
+
+  SDLoc SL(N);
+  X = DAG.getAnyExtOrTrunc(X, SL, MVT::i32);
+  Y = DAG.getAnyExtOrTrunc(Y, SL, MVT::i32);
+  unsigned NumBitsX = Signed ? AMDGPUTargetLowering::numBitsSigned(X, DAG)
+                             : AMDGPUTargetLowering::numBitsUnsigned(X, DAG);
+  unsigned NumBitsY = Signed ? AMDGPUTargetLowering::numBitsSigned(Y, DAG)
+                             : AMDGPUTargetLowering::numBitsUnsigned(Y, DAG);
+  if (Signed) {
+    // AND cannot preserve sign, so only fold when both operands provably fit.
+    if (NumBitsX > 24 || NumBitsY > 24)
+      return SDValue();
+  } else {
+    // MUL_U24 reads only bits [23:0] but the mad reads all 32. Mask so the
+    // full-width mad computes the same product.
+    SDValue Mask24 = DAG.getConstant((1u << 24) - 1, SL, MVT::i32);
+    if (NumBitsX > 24)
+      X = DAG.getNode(ISD::AND, SL, MVT::i32, X, Mask24);
+    if (NumBitsY > 24)
+      Y = DAG.getNode(ISD::AND, SL, MVT::i32, Y, Mask24);
+  }
+
+  return getMad64_32(DAG, SL, MVT::i64, X, Y, RHS, Signed);
+}
+
 // Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z) plus high
 // multiplies, if any.
 //
@@ -17861,6 +17958,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     }
   }
 
+  // performMulCombine may have already turned an i64 mul feeding this add into
+  // 24-bit multiply nodes. Recover the fused mad from that form.
+  if (SDValue Folded = tryFoldMul24ToMad64_32(N, DAG, *Subtarget))
+    return Folded;
+
   if (SDValue V = reassociateScalarOps(N, DAG)) {
     return V;
   }
@@ -18091,6 +18193,10 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
         return Folded;
     }
   }
+
+  // Analogous recovery for the 24-bit multiply form (see performAddCombine).
+  if (SDValue Folded = tryFoldMul24ToMad64_32(N, DAG, *Subtarget))
+    return Folded;
 
   // If the 32 low bits of the constant are all zero, there is nothing to fold
   // into an immediate offset, so it's better to eliminate the unnecessary
