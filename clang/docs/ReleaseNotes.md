@@ -591,6 +591,13 @@ features cannot lower the translation-unit ABI level;
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
+- An explicit `visibility` attribute (or a `#pragma GCC visibility`) on the
+  declaration of the weak name in `#pragma weak X = Y` is no longer dropped. The
+  alias used to silently take the `-fvisibility` default instead, which could
+  make symbols meant to be exported local to a shared object. Matching GCC, the
+  alias now takes the visibility of the weak name's own declaration,
+  independently of the aliasee's.
+
 #### Bug Fixes to C++ Support
 
 - Fixed lambdas with specifiers or attributes after the capture list being
