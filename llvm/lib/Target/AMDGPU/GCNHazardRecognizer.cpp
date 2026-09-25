@@ -2688,10 +2688,9 @@ bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
   Register B0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src1)->getReg();
   SmallVector<Register, 4> WMMARegs({D0, A0, B0});
 
-  if (SIInstrInfo::isSWMMAC(WMMA)) {
-    Register Idx0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2)->getReg();
-    WMMARegs.push_back(Idx0);
-  }
+  const MachineOperand *Src2 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2);
+  if (Src2->isReg())
+    WMMARegs.push_back(Src2->getReg());
 
   for (const MachineOperand &ValuDef : MI.defs()) {
     Register VDstReg = ValuDef.getReg();
