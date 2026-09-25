@@ -882,6 +882,12 @@ static bool usedOutsideSplit(Value v, Operation *split) {
 
 /// isRecomputableAfterFission checks if an operation can be recomputed
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
+  // A descriptor load must be recomputed from the mapped descriptor in each
+  // split target. Caching the box by value captures a host base_addr that the
+  // flat to/from copy cannot re-attach to the device data.
+  if (auto load = dyn_cast<fir::LoadOp>(op))
+    if (isa<fir::BaseBoxType>(load.getType()))
+      return true;
   // If the op has side effects, it cannot be recomputed.
   // We consider fir.declare as having no side effects.
   return isa<fir::DeclareOp>(op) || isMemoryEffectFree(op);
