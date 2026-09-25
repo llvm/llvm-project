@@ -119,35 +119,6 @@ The following container fields are derived from the operands above:
 - **MinPrecision**: from `CompType` when native low-precision mode is disabled;
   otherwise `Default`. The backend reads native mode from `dx.nativelowprec`.
 
-### Backend finalization
-
-`DXILSignatureAnalysis` reconstructs per-entry signatures before metadata
-translation, and retains them through container emission. It currently handles
-vertex and pixel input/output signatures. Nonempty signatures for other stages,
-patch/primitive signatures, and dedicated-intrinsic semantics are not yet
-supported. Signature accesses must be in the entry function.
-
-The analysis packs unallocated signatures using the stage-appropriate algorithm.
-Fully allocated input must match that algorithm's layout; partially allocated
-signatures are rejected. IDs and instruction row/component operands remain
-logical element coordinates, independent of packed register locations.
-
-Usage and dynamic-index masks are recomputed from surviving accesses. Undefined
-pixel-input interpolation defaults to constant for integers, noperspective for
-`SV_Position`, and linear otherwise. Explicit interpolation is retained.
-
-The final DXIL signature ABI is emitted under `dx.entryPoints`; it is distinct
-from the internal 13-operand element format above. `dx.semantic.signatures` is
-removed before bitcode serialization. `ISG1`/`OSG1` contain one record per row,
-whereas DXIL and PSV preserve multi-row elements.
-
-Dependency maps currently conservatively connect every read input component to
-every written output component, including all rows of an accessed element.
-This accounts for control, memory, call, and dynamic-index dependencies without
-claiming precise dataflow. The same map is emitted in `PSV0` and
-`dx.viewIdState`, with padding and unaccessed components left zero. This does
-not yet implement `SV_ViewID` itself.
-
 ## Semantic Indices
 
 ```LLVM
