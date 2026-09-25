@@ -4,16 +4,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.42-- < %s | FileCheck %s --check-prefixes=GFX942,GFX942-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.42-- < %s | FileCheck %s --check-prefixes=GFX942,GFX942-GISEL
 
-; A divergent (per-lane) dword index into VGPR "as memory" (address space 13)
-; is handled with a waterfall loop: for each unique index across the wave, set
-; M0 and do the M0-relative move under a matching-lane EXEC subset. The pointer
-; arrives in a VGPR (no inreg), so the index (pointer >> 2) is divergent.
-;
-; gfx942 covers the two axes gfx1200 cannot. It is wave64, so the loop runs over
-; a 64-lane mask rather than a 32-lane one, and it indexes with the VGPR indexing
-; mode instead of movrel, so the index reaches the hardware by a different route.
-; gfx1250 cannot stand in for the first: it is wave32 only, and asking it for
-; wave64 makes llc emit no functions at all, which reads as a passing test.
+; A divergent index (the pointer is in a VGPR) is waterfalled: one iteration per
+; unique index, with the move done for the matching lanes. gfx942 adds wave64
+; and the VGPR indexing mode; gfx1250 cannot cover wave64, since it is wave32
+; only and llc emits no functions when asked for wave64.
 
 define i32 @load_i32(ptr addrspace(13) %p) {
 ; GFX12-SDAG-LABEL: load_i32:
@@ -220,10 +214,8 @@ define void @store_i32(ptr addrspace(13) %p, i32 %x) {
   store i32 %y, ptr addrspace(13) %p
   ret void
 }
-; The value read out of the address space is per-lane whatever the index is, so
-; a uniform index does not make it uniform. A consumer that requires a uniform
-; operand must therefore not be handed it directly: doing so inserts a
-; readfirstlane, which broadcasts one lane's value across the whole wave.
+; The loaded value is per-lane even with a uniform index, so a consumer that
+; needs a uniform operand must not get it by readfirstlane.
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
 
 define i32 @uniform_index_divergent_value(ptr addrspace(13) inreg %p, <4 x i32> inreg %rsrc) {

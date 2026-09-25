@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Two properties of the VGPR "as memory" (address space 13) indexed accesses
-// are asserted here rather than in a lit test, because no pass can be made to
-// observe them: these pseudos read M0, which is written in any function that
-// uses them, and that alone stops MachineLICM and MachineSink from moving
-// them. Their safety today is therefore incidental, and the properties below
-// are what it would rest on if that incidental protection ever went away.
+// Properties of the VGPR "as memory" (address space 13) accesses that no lit
+// test can observe: the M0 they read already stops MachineLICM and MachineSink
+// from moving them. These checks are what remains if that ever changes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,10 +28,8 @@ public:
   void SetUp() override { setUpImpl("amdgpu12.00-amd-", "", ""); }
 };
 
-// An indexed access reads or writes the per-lane vector registers of the active
-// lanes, so which lanes are active is part of what it does. Its implicit use of
-// EXEC must not be reported ignorable: that is what would otherwise let it be
-// hoisted or sunk across a write to EXEC, changing the set of lanes touched.
+// An access touches only the active lanes' registers, so its EXEC use must not
+// be ignorable, or it could be moved across a write to EXEC.
 TEST_F(VGPRAsMemoryTest, ExecUseIsNotIgnorable) {
   StringRef MIRString = R"MIR(
 name: exec_use
@@ -86,12 +81,8 @@ body:             |
   }
 }
 
-// Two whole-dword accesses indexed by M0 - the form every access has on a
-// movrel subtarget - with M0 redefined between them. The dwords they touch are
-// (first M0)+1 and (second M0)+0, which are the same dword whenever the second
-// index is one more than the first, so they may alias. Disjointness is decided
-// from a base operand and the constant offset, and these have no base operand
-// that could tell the two M0 values apart.
+// With M0 redefined between them, offsets 1 and 0 can still name the same
+// dword, and nothing but M0 tells the two indices apart, so these may alias.
 TEST_F(VGPRAsMemoryTest, M0IndexedAccessesAcrossAM0RedefMayAlias) {
   StringRef MIRString = R"MIR(
 name: m0_redef
