@@ -18,8 +18,7 @@
 
 using namespace llvm;
 
-static constexpr char TripleName[] = "amdgcn--amdpal";
-static constexpr char CPUName[] = "gfx1201";
+static constexpr char TripleName[] = "amdgpu12.01--amdpal";
 
 // Test that we can generate a data-only AMDGPU ELF directly using the MC layer,
 // without asserting due to initializeTargetID() not being called.
@@ -36,7 +35,7 @@ TEST(AMDGPUTargetStreamer, ELFStreamerBasic) {
   if (!T)
     GTEST_SKIP();
   std::unique_ptr<TargetMachine> TM(
-      T->createTargetMachine(Trpl, CPUName, "", {}, {}, {}, {}));
+      T->createTargetMachine(Trpl, "", "", {}, {}, {}, {}));
 
   const MCSubtargetInfo &STI = TM->getMCSubtargetInfo();
   const MCRegisterInfo &RI = TM->getMCRegisterInfo();
@@ -53,7 +52,7 @@ TEST(AMDGPUTargetStreamer, ELFStreamerBasic) {
   Expected<std::unique_ptr<MCStreamer>> StreamerOr =
       TM->createMCStreamer(Outs, {}, CodeGenFileType::ObjectFile, Context);
   if (Error Err = StreamerOr.takeError())
-    report_fatal_error(StringRef(toString(std::move(Err))));
+    reportFatalUsageError(std::move(Err));
   std::unique_ptr<MCStreamer> Streamer = std::move(*StreamerOr);
 
   Streamer->initSections(STI);
