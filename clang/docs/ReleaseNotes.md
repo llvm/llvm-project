@@ -546,6 +546,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when a global variable in a non-default address space, such as one declared with `__seg_gs`, is mapped into an OpenMP `target` region. (#GH140069)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed a crash and silently dropped code when a declaration that declares nothing, like `int;`, is the last
+  statement of a GNU statement expression or the body of an `if`. (#GH215454)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
