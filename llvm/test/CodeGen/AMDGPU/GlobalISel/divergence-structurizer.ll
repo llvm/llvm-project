@@ -384,10 +384,10 @@ define amdgpu_cs void @loop_with_div_break_with_body(ptr addrspace(1) %x, ptr ad
 ; GFX10-NEXT:    ; in Loop: Header=BB5_2 Depth=1
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; GFX10-NEXT:    s_and_b32 s5, exec_lo, s3
-; GFX10-NEXT:    s_or_b32 s0, s5, s0
 ; GFX10-NEXT:    s_andn2_b32 s2, s2, exec_lo
-; GFX10-NEXT:    s_and_b32 s5, exec_lo, s4
-; GFX10-NEXT:    s_or_b32 s2, s2, s5
+; GFX10-NEXT:    s_and_b32 s6, exec_lo, s4
+; GFX10-NEXT:    s_or_b32 s0, s5, s0
+; GFX10-NEXT:    s_or_b32 s2, s2, s6
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_cbranch_execz .LBB5_4
 ; GFX10-NEXT:  .LBB5_2: ; %A

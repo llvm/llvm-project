@@ -327,7 +327,7 @@ inline MockControllerAccess::PostFn postOnto(QueueingRunner<>::WorkQueue &Q) {
 void waitForShutdown(Session &S) {
   std::promise<void> P;
   auto F = P.get_future();
-  S.shutdown([P = std::move(P)]() mutable { P.set_value(); });
+  S.shutdown([P = std::move(P)]() mutable noexcept { P.set_value(); });
   F.get();
 }
 
@@ -404,10 +404,10 @@ TEST(SessionTest, ScheduleShutdownFromOnDetachHandler) {
   int OnDetachHandlersRun = 0;
   bool OnShutdownHandlerRun = false;
 
-  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
-  S.addOnDetach([&]() { S.shutdown(); });
-  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
-  S.addOnShutdown([&]() {
+  S.addOnDetach([&]() noexcept { ++OnDetachHandlersRun; });
+  S.addOnDetach([&]() noexcept { S.shutdown(); });
+  S.addOnDetach([&]() noexcept { ++OnDetachHandlersRun; });
+  S.addOnShutdown([&]() noexcept {
     EXPECT_EQ(OnDetachHandlersRun, 2);
     OnShutdownHandlerRun = true;
   });
@@ -428,7 +428,7 @@ TEST(SessionTest, RedundantAsyncShutdown) {
 
   // Now try to add a new on-shutdown callback and verify that it runs.
   bool RedundantCallbackRan = false;
-  S.shutdown([&]() { RedundantCallbackRan = true; });
+  S.shutdown([&]() noexcept { RedundantCallbackRan = true; });
   EXPECT_TRUE(RedundantCallbackRan);
 }
 
@@ -448,7 +448,7 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoOutstandingKeepalives) {
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
-    S.shutdown([&]() {
+    S.shutdown([&]() noexcept {
       EXPECT_TRUE(ShutdownOpIdx);
       EXPECT_EQ(*ShutdownOpIdx, 1);
       SessionShutdownComplete = true;
@@ -476,7 +476,7 @@ TEST(SessionTest, OutstandingKeepalivesDelayShutdown) {
 
   // We expect shutdown to wait for any outstanding keepalives to be released.
   bool ShutdownComplete = false;
-  S.shutdown([&]() { ShutdownComplete = true; });
+  S.shutdown([&]() noexcept { ShutdownComplete = true; });
 
   // Detach should have happened, but shutdown should be waiting on token.
   EXPECT_EQ(DetachOpIdx, 0U);
@@ -846,7 +846,7 @@ TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
   // drain phase should therefore complete without waiting on the deferred
   // Return call.
   bool ShutdownComplete = false;
-  S.shutdown([&] { ShutdownComplete = true; });
+  S.shutdown([&]() noexcept { ShutdownComplete = true; });
   EXPECT_TRUE(ShutdownComplete);
 }
 
@@ -1008,7 +1008,7 @@ TEST(ControllerAccessTest, OnDisconnectReportsOrderlyDisconnect) {
   size_t HandlerRuns = 0;
   std::string ErrMsg = "<not run>";
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  S.setOnDisconnect([&](Error Err) {
+  S.setOnDisconnect([&](Error Err) noexcept {
     ++HandlerRuns;
     ErrMsg = errMsgOrEmpty(std::move(Err));
   });
@@ -1024,7 +1024,8 @@ TEST(ControllerAccessTest, OnDisconnectReportsAbnormalDisconnect) {
   // An abnormal disconnection reports the ControllerAccess's Error unchanged.
   std::optional<std::string> ErrMsg;
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.setOnDisconnect(
+      [&](Error Err) noexcept { ErrMsg = errMsgOrEmpty(std::move(Err)); });
   S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
                                           "connection closed without hangup");
 
@@ -1065,8 +1066,9 @@ TEST(ControllerAccessTest, OnDisconnectSuppressesErrorReporterRouting) {
   std::vector<std::string> ErrMsgs;
   std::optional<std::string> HandlerErrMsg;
   Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
-  S.setOnDisconnect(
-      [&](Error Err) { HandlerErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.setOnDisconnect([&](Error Err) noexcept {
+    HandlerErrMsg = errMsgOrEmpty(std::move(Err));
+  });
   S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
                                           "connection closed without hangup");
 
@@ -1088,7 +1090,8 @@ TEST(ControllerAccessTest, OnDisconnectReportsConnectFailure) {
   // would still pass if a failed connect were reported as success.
   std::optional<std::string> ErrMsg;
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.setOnDisconnect(
+      [&](Error Err) noexcept { ErrMsg = errMsgOrEmpty(std::move(Err)); });
 
   S.attach<MockControllerAccess>(
       BootstrapInfo(S), MockControllerAccess::PostFn{},
@@ -1110,7 +1113,7 @@ TEST(ControllerAccessTest, OnDisconnectReportsSuccessWithoutAttach) {
   std::string ErrMsg = "<not run>";
   {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-    S.setOnDisconnect([&](Error Err) {
+    S.setOnDisconnect([&](Error Err) noexcept {
       ++HandlerRuns;
       ErrMsg = errMsgOrEmpty(std::move(Err));
     });
@@ -1130,7 +1133,7 @@ TEST(ControllerAccessTest, OnDisconnectRunsBeforeDetachAndShutdown) {
 
   {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-    S.setOnDisconnect([&](Error Err) {
+    S.setOnDisconnect([&](Error Err) noexcept {
       DisconnectOpIdx = OpIdx++;
       cantFail(std::move(Err));
     });
@@ -1161,9 +1164,9 @@ TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandler) {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
-    S.setOnDisconnect([&](Error Err) {
+    S.setOnDisconnect([&](Error Err) noexcept {
       cantFail(std::move(Err));
-      S.shutdown([&]() { OnShutdownRan = true; });
+      S.shutdown([&]() noexcept { OnShutdownRan = true; });
     });
     S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
 
@@ -1192,9 +1195,9 @@ TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandlerAfterRemoteHangup) {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
-    S.setOnDisconnect([&](Error Err) {
+    S.setOnDisconnect([&](Error Err) noexcept {
       cantFail(std::move(Err));
-      S.shutdown([&]() { OnShutdownRan = true; });
+      S.shutdown([&]() noexcept { OnShutdownRan = true; });
     });
     S.attach<DisconnectingControllerAccess>(BootstrapInfo(S), "", &CA);
     ASSERT_TRUE(CA);
