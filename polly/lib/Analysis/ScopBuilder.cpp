@@ -1464,6 +1464,11 @@ void ScopBuilder::addUserAssumptions(
 
     isl::set AssumptionInvalidDomain = AssumptionInvalidDomainMap[BB];
     bool HasPreconditions = !AssumptionInvalidDomain.is_empty();
+    // An assumption inside the SCoP only holds where its block is executed,
+    // i.e. it also relies on the preconditions of the domain of the block, such
+    // as those of the conditions that lead to it.
+    if (InScop && !BBInvalidDomain.is_empty())
+      HasPreconditions = true;
     InvalidDomainMap[BB] = BBInvalidDomain.unite(AssumptionInvalidDomain);
 
     if (!Valid)
