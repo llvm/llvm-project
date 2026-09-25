@@ -1773,9 +1773,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __bucket_co
       } else {
         __next_pointer __np = __cp;
         if _LIBCPP_CONSTEXPR (!_UniqueKeys) {
-          for (; __np->__next_ != nullptr &&
-                 key_eq()(__cp->__upcast()->__get_value(), __np->__next_->__upcast()->__get_value());
-               __np = __np->__next_)
+          for (; __np->__next_ != nullptr && __cp->__hash() == __np->__next_->__hash(); __np = __np->__next_)
             ;
         }
         __pp->__next_                    = __np->__next_;
