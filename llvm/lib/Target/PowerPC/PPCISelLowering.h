@@ -673,6 +673,12 @@ namespace llvm {
         CallingConv::ID CallerCC, bool isVarArg,
         const SmallVectorImpl<ISD::InputArg> &Ins) const;
 
+    bool IsEligibleForTailCallOptimization_AIX(
+        const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+        CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
+        const SmallVectorImpl<ISD::OutputArg> &Outs, const Function *CallerFunc,
+        bool isCalleeExternalSymbol) const;
+
     bool IsEligibleForTailCallOptimization_64SVR4(
         const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
         CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
