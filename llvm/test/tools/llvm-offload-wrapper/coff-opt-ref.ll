@@ -14,7 +14,7 @@
 
 ; CHECK: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
 ; CHECK-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
-; CHECK: icmp ne ptr getelementptr inbounds ([1 x %struct.__tgt_offload_entry], ptr @__start_llvm_offload_entries, i32 0, i32 1), @__stop_llvm_offload_entries
+; CHECK: icmp ne ptr getelementptr inbounds (i8, ptr @__start_llvm_offload_entries, i64 56), @__stop_llvm_offload_entries
 
 ; OBJ: Name: llvm_offload_entries{{[$]}}OA
 ; OBJ: RawDataSize: 0x38

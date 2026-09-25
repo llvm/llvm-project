@@ -448,15 +448,6 @@ def LLVM_LaunderInvariantGroupOp
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
-def LLVM_StripInvariantGroupOp
-    : LLVM_OneResultIntrOp<"strip.invariant.group", [], [0],
-        [DeclareOpInterfaceMethods<PromotableOpInterface>,
-         SameOperandsAndResultType]> {
-  let arguments = (ins LLVM_AnyPointer:$ptr);
-  let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
-}
-
 // Constrained Floating-Point Intrinsics.
 
 class LLVM_ConstrainedIntr<string mnem, int numArgs,

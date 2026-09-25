@@ -180,11 +180,12 @@ def prepare(config, litConfig):
     installDir = os.path.join(prefix, "install")
     os.makedirs(root, exist_ok=True)
 
-    cmake = os.environ.get("CMAKE", "cmake")
-
+    cmake = _expand(config, _getSubstitution("%{cmake}", config))
     if not os.path.exists(os.path.join(buildDir, "CMakeCache.txt")):
         litConfig.note("Configuring GoogleBenchmark in {}".format(buildDir))
         compiler = _expand(config, _getSubstitution("%{cxx}", config))
+        cmake_generator = _expand(config, _getSubstitution("%{cmake_generator}", config))
+        cmake_make_program = _expand(config, _getSubstitution("%{cmake_make_program}", config))
         _run(
             litConfig,
             "configure",
@@ -192,6 +193,8 @@ def prepare(config, litConfig):
                 cmake,
                 "-S", SOURCE_DIR,
                 "-B", buildDir,
+                "-G", cmake_generator,
+                "-DCMAKE_MAKE_PROGRAM={}".format(cmake_make_program),
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DCMAKE_CXX_COMPILER={}".format(compiler),
                 "-DCMAKE_CXX_FLAGS={}".format(" ".join(flags)),

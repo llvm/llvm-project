@@ -403,7 +403,10 @@ public:
   }
 
   /// Move-construct an Expected<T> from an Expected<OtherT>.
-  Expected(Expected &&Other) { moveConstruct(std::move(Other)); }
+  Expected(Expected &&Other) noexcept(
+      std::is_nothrow_move_constructible_v<storage_type>) {
+    moveConstruct(std::move(Other));
+  }
 
   /// Move construct an Expected<T> value from an Expected<OtherT>, where OtherT
   /// must be convertible to T.
@@ -423,7 +426,8 @@ public:
   }
 
   /// Move-assign from another Expected<T>.
-  Expected &operator=(Expected &&Other) {
+  Expected &operator=(Expected &&Other) noexcept(
+      std::is_nothrow_move_constructible_v<storage_type>) {
     moveAssign(std::move(Other));
     return *this;
   }

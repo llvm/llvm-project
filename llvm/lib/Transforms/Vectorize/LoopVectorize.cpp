@@ -1114,12 +1114,6 @@ public:
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
   }
 
-  /// Returns true if tail-folding is preferred over an epilogue.
-  bool preferTailFoldedLoop() const {
-    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
-           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
-  }
-
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
     return ChosenTailFoldingStyle;
@@ -3400,11 +3394,10 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
 /// Check if there are any conflicts that prevent tail-folding the epilogue.
 /// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
 /// otherwise CM_EpilogueAllowed.
-static EpilogueLowering
-getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
-                        OptimizationRemarkEmitter *ORE,
-                        LoopVectorizationLegality &LVL,
-                        LoopVectorizeHints &Hints) {
+static EpilogueLowering getEpilogueTailLowering(
+    const LoopVectorizationCostModel &MainCM, const Loop *L,
+    OptimizationRemarkEmitter *ORE, LoopVectorizationLegality &LVL,
+    const LoopVectorizeHints &Hints, TargetTransformInfo *TTI) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
@@ -3460,6 +3453,40 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
       LVL.hasUncountableEarlyExit()) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported yet for early-exit loops",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  // The epilogue reuses the main loop's interleave groups, so it can't be
+  // tail-folded if the target can't mask interleaved accesses.
+  // TODO: Add support once the epilogue has its own IAI, separate from the main
+  // loop's.
+  if (MainCM.InterleaveInfo.hasGroups() &&
+      !useMaskedInterleavedAccesses(*TTI)) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with interleaved accesses "
+        "when masking them isn't supported",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (ForcePartialAliasingVectorization) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with alias masking",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!LVL.getReductionVars().empty()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with reductions",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!LVL.getFixedOrderRecurrences().empty()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with fixed-order recurrence",
         "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
@@ -6466,9 +6493,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
             ? UncountableExitStyle::MaskedHandleExitInScalarLoop
             : UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
-                        OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle))
+                        ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
+                        EEStyle)) {
       return nullptr;
+    }
   } else {
     RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);
   }
@@ -7847,7 +7875,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       Config, IAI, PSE, ORE, GetBPI);
 
   EpilogueLowering EpilogueTailLoweringStatus =
-      getEpilogueTailLowering(LVP.getCostModel(), L, ORE, LVL, Hints);
+      getEpilogueTailLowering(LVP.getCostModel(), L, ORE, LVL, Hints, TTI);
   if (EpilogueTailLoweringStatus ==
       EpilogueLowering::CM_EpilogueNotNeededFoldTail) {
     // TODO: Apply tail-folding on the vectorized epilogue loop.

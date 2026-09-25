@@ -693,7 +693,7 @@ void DAP::SetTarget(const lldb::SBTarget target) { this->target = target; }
 
 bool DAP::HandleObject(const Message &M) {
   TelemetryDispatcher dispatcher(&debugger);
-  dispatcher.Set("client_name", m_client_name.str());
+  dispatcher.Set("client_name", m_client_name);
   if (const auto *req = std::get_if<Request>(&M)) {
     {
       std::lock_guard<std::mutex> guard(m_active_request_mutex);
@@ -759,7 +759,7 @@ bool DAP::HandleObject(const Message &M) {
                            }),
                        *resp->message);
       }
-      dispatcher.Set("error", message.str());
+      dispatcher.Set("error", message);
 
       (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));

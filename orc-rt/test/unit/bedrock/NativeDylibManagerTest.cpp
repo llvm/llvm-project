@@ -21,6 +21,7 @@
 #include <optional>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 // Local aliases for brevity in test bodies.
