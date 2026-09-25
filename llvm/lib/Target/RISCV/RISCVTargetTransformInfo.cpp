@@ -19,6 +19,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cmath>
+#include <limits>
 #include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -1409,6 +1410,28 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
+  // Performant implementations of the vector extension will coalesce
+  // elements if they fall on the same cache line
+  uint64_t CacheLineBytes = ST->getCacheLineSize();
+  if (!CacheLineBytes) // If no value, use default value of 64
+    CacheLineBytes = 64;
+  if (const ConstantInt *StrideCI =
+          dyn_cast_or_null<ConstantInt>(MICA.getStrideVal())) {
+    int64_t Stride = StrideCI->getSExtValue();
+    // Bail early to avoid UB with std:abs() call
+    if (Stride != std::numeric_limits<int64_t>::min() && Stride != 0) {
+      uint64_t AbsStride = (uint64_t)std::abs(Stride);
+      if (AbsStride < CacheLineBytes) {
+        uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
+        if ((CacheLineBytes / AbsStride) >= MaxCombines)
+          NumLoads = divideCeil(NumLoads, MaxCombines);
+        else
+          // If we were to calculate CacheLineBytes / AbsStride first, would
+          // lose accuracy
+          NumLoads = divideCeil((NumLoads * AbsStride), CacheLineBytes);
+      }
+    }
+  }
   return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 

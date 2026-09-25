@@ -12,16 +12,19 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
+
+extern const char *TestMainArgv0;
 
 LLD_HAS_DRIVER(elf)
 
 // With "-o -", the ELF driver writes the output image to the stdoutOS stream
 // passed to link(), so lld used as a library can capture it in a raw_ostream.
 TEST(AsLib, OutputToStream) {
-  llvm::SmallString<256> input(getenv("LLD_SRC_DIR"));
-  llvm::sys::path::append(input, "unittests", "AsLibELF", "Inputs",
-                          "kernel1.o");
+  llvm::SmallString<128> input =
+      llvm::unittest::getInputFileDirectory(TestMainArgv0);
+  llvm::sys::path::append(input, "kernel1.o");
   std::vector<const char *> args{"ld.lld", "-shared", input.c_str(), "-o", "-"};
 
   std::string buf;
