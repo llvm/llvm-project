@@ -618,6 +618,8 @@ bool SIPreEmitPeephole::canSourceClobberRegister(
   return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
 }
 
+// Returns true if V_PK_MOV_B32 uses NEG, which V_MOV_B32_e32 cannot preserve.
+// NEG_HI has no effect on V_PK_MOV_B32.
 bool SIPreEmitPeephole::hasUnsupportedVPKMovModifiers(
     const MachineInstr &MI) const {
   unsigned Src0Mods =
@@ -799,8 +801,6 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (!IsUnpackable)
       continue;
 
-    // V_PK_MOV_B32 applies NEG to the selected source regardless of OP_SEL,
-    // while NEG_HI has no effect. V_MOV_B32_e32 cannot preserve NEG.
     if (!AMDGPU::hasNamedOperand(UnpackedOpCode,
                                  AMDGPU::OpName::src0_modifiers) &&
         hasUnsupportedVPKMovModifiers(Instr))
