@@ -402,8 +402,9 @@ void AArch64TargetInfo::getTargetDefinesARMV97A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  const llvm::Triple &T = getTriple();
   // Target identification.
-  if (getTriple().isWindowsArm64EC()) {
+  if (T.isWindowsArm64EC()) {
     // Define the same set of macros as would be defined on x86_64 to ensure that
     // ARM64EC datatype layouts match those of x86_64 compiled code
     Builder.defineMacro("__amd64__");
@@ -415,7 +416,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
-  if (getTriple().isLFI())
+  // For bare-metal none-elf.
+  if (T.getOS() == llvm::Triple::UnknownOS && T.getEnvironmentName() == "elf" &&
+      Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  if (T.isLFI())
     Builder.defineMacro("__LFI__");
 
   // Inline assembly supports AArch64 flag outputs.
