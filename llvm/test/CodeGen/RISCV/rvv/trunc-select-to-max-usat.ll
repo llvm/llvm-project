@@ -214,14 +214,9 @@ define <4 x i8> @test_v4i16_v4i8_swapped(<4 x i16> %x) {
 ; CHECK-LABEL: test_v4i16_v4i8_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    li a0, 255
-; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmax.vx v8, v8, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i16> %x, zeroinitializer
   %b = sext <4 x i1> %a to <4 x i16>
@@ -235,16 +230,11 @@ define <4 x i8> @test_v4i32_v4i8_swapped(<4 x i32> %x) {
 ; CHECK-LABEL: test_v4i32_v4i8_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
-; CHECK-NEXT:    li a0, 255
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmax.vx v8, v8, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i32> %x, zeroinitializer
   %b = sext <4 x i1> %a to <4 x i32>
@@ -258,15 +248,9 @@ define <4 x i16> @test_v4i32_v4i16_swapped(<4 x i32> %x) {
 ; CHECK-LABEL: test_v4i32_v4i16_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    lui a0, 16
-; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmax.vx v8, v8, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i32> %x, zeroinitializer
   %b = sext <4 x i1> %a to <4 x i32>
@@ -280,14 +264,9 @@ define <vscale x 4 x i8> @test_nxv4i16_nxv4i8_swapped(<vscale x 4 x i16> %x) {
 ; CHECK-LABEL: test_nxv4i16_nxv4i8_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
-; CHECK-NEXT:    li a0, 255
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmax.vx v8, v8, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <vscale x 4 x i16> %x, zeroinitializer
   %b = sext <vscale x 4 x i1> %a to <vscale x 4 x i16>
@@ -301,17 +280,11 @@ define <vscale x 4 x i16> @test_nxv4i64_nxv4i16_swapped(<vscale x 4 x i64> %x) {
 ; CHECK-LABEL: test_nxv4i64_nxv4i16_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmsgt.vi v0, v8, 0
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmerge.vim v12, v12, -1, v0
-; CHECK-NEXT:    lui a0, 16
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vmsgtu.vx v0, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    vmax.vx v8, v8, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v12, v8, 0
+; CHECK-NEXT:    vnclipu.wi v12, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vnclipu.wi v8, v12, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <vscale x 4 x i64> %x, zeroinitializer
   %b = sext <vscale x 4 x i1> %a to <vscale x 4 x i64>
