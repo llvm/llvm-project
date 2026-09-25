@@ -946,9 +946,10 @@ vector.transfer_write %cst, %m[%c0, %c0] : vector<2x3xf32>, memref<2x3xf32>
 
 // -----
 
-// Negative test: dynamic start index. Access is only valid when
-// 0 <= memrefIdx < memrefDim, so the guard must check both bounds
-// explicitly rather than relying on an unsigned reinterpretation trick.
+// Dynamic start index that may be negative at runtime. Access is only
+// valid when 0 <= memrefIdx < memrefDim, so the guard must check both
+// bounds explicitly rather than relying on an unsigned reinterpretation
+// trick.
 
 // CHECK-LABEL: func.func @transfer_read_neg_start_guard
 func.func @transfer_read_neg_start_guard(%a: memref<4x8xf32>, %i: index)
