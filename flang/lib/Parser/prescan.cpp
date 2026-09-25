@@ -603,7 +603,8 @@ void Prescanner::SkipToEndOfLine() {
 }
 
 bool Prescanner::MustSkipToEndOfLine() const {
-  if (inFixedForm_ && column_ > fixedFormColumnLimit_ && !tabInCurrentLine_) {
+  if (inFixedForm_ && IsPastFixedFormColumnLimit(column_) &&
+      !tabInCurrentLine_) {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
@@ -925,12 +926,13 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
           !preprocessingOnly_ && IsSpaceOrTab(at_)) {
         const char *probe{at_};
         int col{column_};
-        while (col <= fixedFormColumnLimit_ && IsSpaceOrTab(probe)) {
+        while (!IsPastFixedFormColumnLimit(col) && IsSpaceOrTab(probe)) {
           probe += IsSpaceOrTab(probe);
           ++col;
         }
-        if (col > fixedFormColumnLimit_ || *probe == '\n' || *probe == '\r' ||
-            (*probe == '!' && col <= fixedFormColumnLimit_)) {
+        if (IsPastFixedFormColumnLimit(col) || *probe == '\n' ||
+            *probe == '\r' ||
+            (*probe == '!' && !IsPastFixedFormColumnLimit(col))) {
           SkipSpaces();
           hadContinuation = SkipToNextSignificantCharacter();
         }
@@ -1249,8 +1251,9 @@ void Prescanner::Hollerith(
 // In fixed form, source card images must be processed as if they were at
 // least 72 columns wide, at least in character literal contexts.
 bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
-  while (inFixedForm_ && !tabInCurrentLine_ && at_[1] == '\n') {
-    if (column_ < fixedFormColumnLimit_) {
+  while (inFixedForm_ && fixedFormColumnLimit_ && !tabInCurrentLine_ &&
+      at_[1] == '\n') {
+    if (column_ < *fixedFormColumnLimit_) {
       tokens.PutNextTokenChar(' ', spaceProvenance_);
       ++column_;
       return true;
@@ -1299,7 +1302,7 @@ bool Prescanner::IsFixedFormCommentLine(const char *start) const {
       break;
     }
   }
-  if (!anyTabs && p >= start + fixedFormColumnLimit_) {
+  if (!anyTabs && IsPastFixedFormColumnLimit(p - start + 1)) {
     return true;
   }
   if (*p == '!' && !inCharLiteral_ && (anyTabs || p != start + 5)) {
@@ -1848,7 +1851,7 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       (features_.IsEnabled(LanguageFeature::OpenMP) &&
           std::strcmp(sentinel, "$omp") == 0)};
   if (isOpenMPSentinelScan) {
-    for (; column <= fixedFormColumnLimit_; ++column, ++p) {
+    for (; !IsPastFixedFormColumnLimit(column); ++column, ++p) {
       if (IsSpaceOrTab(p)) {
       } else if (*p == '!') {
         return std::nullopt; // sentinel + blanks + ! is a comment, not a
