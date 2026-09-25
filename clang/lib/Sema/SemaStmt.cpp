@@ -430,6 +430,27 @@ void Sema::ActOnFinishOfCompoundStmt() {
   PopCompoundScope();
 }
 
+// Returns the given statement as if its labels and attributes were
+// stripped, if any.
+static Stmt *GetInnermostStatement(Stmt *Outer) {
+  if (isa<LabelStmt>(Outer))
+    Outer = cast<LabelStmt>(Outer)->getInnermostLabeledStmt();
+
+  if (isa<AttributedStmt>(Outer))
+    Outer = cast<AttributedStmt>(Outer)->getSubStmt();
+
+  return Outer;
+}
+
+// Diagnose if the given statement is a redundant _Defer statement.
+static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
+  Stmt *Inner = GetInnermostStatement(Body);
+
+  if (isa<DeferStmt>(Inner))
+    S.Diag(Inner->getBeginLoc(), diag::warn_redundant_defer)
+        << Inner->getSourceRange();
+}
+
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
   return getCurFunction()->CompoundScopes.back();
 }
@@ -474,22 +495,16 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   // or a plain `return` statement.
   if (NumElts > 1) {
     for (unsigned i = 0; i != NumElts - 1; ++i) {
-      if (!isa<DeferStmt>(Elts[i]))
-        continue;
-
-      if (isa<BreakStmt, ContinueStmt>(Elts[i + 1]) ||
-          (isa<ReturnStmt>(Elts[i + 1]) &&
-           !cast<ReturnStmt>(Elts[i + 1])->getRetValue()))
-        Diag(Elts[i]->getBeginLoc(), diag::warn_redundant_defer)
-            << Elts[i]->getSourceRange();
+      Stmt *Inner = GetInnermostStatement(Elts[i + 1]);
+      if (isa<BreakStmt, ContinueStmt>(Inner) ||
+          (isa<ReturnStmt>(Inner) && !cast<ReturnStmt>(Inner)->getRetValue()))
+        CheckRedundantDeferStmt(*this, Elts[i]);
     }
   }
 
   // Check for defer as last statement.
-  Stmt *Back = NumElts > 0 ? Elts[NumElts - 1] : nullptr;
-  if (Back && isa<DeferStmt>(Back))
-    Diag(Back->getBeginLoc(), diag::warn_redundant_defer)
-        << Back->getSourceRange();
+  if (NumElts > 0)
+    CheckRedundantDeferStmt(*this, Elts[NumElts - 1]);
 
   // Calculate difference between FP options in this compound statement and in
   // the enclosing one. If this is a function body, take the difference against
@@ -1018,13 +1033,9 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
-  if (isa<DeferStmt>(thenStmt))
-    Diag(thenStmt->getBeginLoc(), diag::warn_redundant_defer)
-        << thenStmt->getSourceRange();
-
-  if (elseStmt && isa<DeferStmt>(elseStmt))
-    Diag(elseStmt->getBeginLoc(), diag::warn_redundant_defer)
-        << elseStmt->getSourceRange();
+  CheckRedundantDeferStmt(*this, thenStmt);
+  if (elseStmt)
+    CheckRedundantDeferStmt(*this, elseStmt);
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
@@ -1866,9 +1877,8 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
 
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
-  else if (isa<DeferStmt>(Body))
-    Diag(Body->getBeginLoc(), diag::warn_redundant_defer)
-        << Body->getSourceRange();
+  else
+    CheckRedundantDeferStmt(*this, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2360,9 +2370,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
   Expr *Third  = third.release().getAs<Expr>();
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
-  else if (isa<DeferStmt>(Body))
-    Diag(Body->getBeginLoc(), diag::warn_redundant_defer)
-        << Body->getSourceRange();
+  else
+    CheckRedundantDeferStmt(*this, Body);
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
@@ -4075,9 +4084,7 @@ StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope) {
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
 
   // Check for superfluous nested defer.
-  if (isa<DeferStmt>(Body))
-    Diag(Body->getBeginLoc(), diag::warn_redundant_defer)
-        << Body->getSourceRange();
+  CheckRedundantDeferStmt(*this, Body);
 
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
