@@ -161,8 +161,8 @@ public:
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
-  virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
-                                                 unsigned OpNum) const;
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                         unsigned OpNum) const;
 
   /// Return the register class to use for the register operand of an inline asm
   /// memory operand with constraint \p C.
