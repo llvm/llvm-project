@@ -20,7 +20,7 @@ class FunctionStartsTestCase(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "13.0"])
     def test_function_starts_binary(self):
         """Test that we make synthetic symbols when we have the binary."""
-        self.build(dictionary={"CODESIGN": ""})  # Binary is getting stripped later.
+        self.build()
         self.do_function_starts(False)
 
     @skipIfRemote
@@ -28,7 +28,7 @@ class FunctionStartsTestCase(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "13.0"])
     def test_function_starts_no_binary(self):
         """Test that we make synthetic symbols when we don't have the binary"""
-        self.build(dictionary={"CODESIGN": ""})  # Binary is getting stripped later.
+        self.build()
         self.do_function_starts(True)
 
     def do_function_starts(self, in_memory):
@@ -36,8 +36,6 @@ class FunctionStartsTestCase(TestBase):
         make sure the caller has synthetic symbols"""
 
         exe = os.path.realpath(self.getBuildArtifact(exe_name))
-        # Now strip the binary, but leave externals so we can break on dont_strip_me.
-        self.runBuildCommand(["strip", "-u", "-x", "-S", exe])
 
         # Use a file as a synchronization point between test and inferior.
         pid_file_path = lldbutil.append_to_process_working_directory(

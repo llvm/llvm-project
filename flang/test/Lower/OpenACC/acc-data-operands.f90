@@ -48,7 +48,7 @@ subroutine acc_operand_array_section_component()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_component() {
-! CHECK: %[[W:.*]] = fir.alloca !fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}> {bindc_name = "w", uniq_name = "_QMacc_data_operandFacc_operand_array_section_componentEw"}
+! CHECK: %[[W:.*]] = fir.alloca !fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}> <{bindc_name = "w", uniq_name = "_QMacc_data_operandFacc_operand_array_section_componentEw"}>
 ! CHECK: %[[DECLW:.*]]:2 = hlfir.declare %[[W]]
 ! CHECK: %[[EXT:.*]] = arith.constant 100 : index
 ! CHECK: %[[COORD_DATA:.*]] = hlfir.designate %[[DECLW]]#0{"data"}   shape %{{.*}} : (!fir.ref<!fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
@@ -71,7 +71,7 @@ subroutine acc_operand_derived_type_component()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_derived_type_component() {
-! CHECK: %[[W:.*]] = fir.alloca !fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}> {bindc_name = "w", uniq_name = "_QMacc_data_operandFacc_operand_derived_type_componentEw"}
+! CHECK: %[[W:.*]] = fir.alloca !fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}> <{bindc_name = "w", uniq_name = "_QMacc_data_operandFacc_operand_derived_type_componentEw"}>
 ! CHECK: %[[DECLW:.*]]:2 = hlfir.declare %[[W]]
 ! CHECK: %[[COORD_DATA:.*]] = hlfir.designate %[[DECLW]]#0{"data"}   shape %{{.*}} : (!fir.ref<!fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) dataClause(acc_copy) name("w%data") -> !fir.ref<!fir.array<100xf32>>
@@ -90,7 +90,7 @@ subroutine acc_operand_array_derived_type_component()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_derived_type_component() {
-! CHECK: %[[W:.*]] = fir.alloca !fir.array<10x!fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}>> {bindc_name = "w", uniq_name = "_QMacc_data_operandFacc_operand_array_derived_type_componentEw"}
+! CHECK: %[[W:.*]] = fir.alloca !fir.array<10x!fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}>> <{bindc_name = "w", uniq_name = "_QMacc_data_operandFacc_operand_array_derived_type_componentEw"}>
 ! CHECK: %[[DECLW:.*]]:2 = hlfir.declare %[[W]]
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[W_1:.*]] = hlfir.designate %[[DECLW]]#0 (%[[C1]])  : (!fir.ref<!fir.array<10x!fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}>>>, index) -> !fir.ref<!fir.type<_QMacc_data_operandTwrapper{data:!fir.array<100xf32>}>>
@@ -114,7 +114,7 @@ subroutine acc_operand_array_section_allocatable()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_allocatable() {
-! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QMacc_data_operandFacc_operand_array_section_allocatableEa"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "a", uniq_name = "_QMacc_data_operandFacc_operand_array_section_allocatableEa"}>
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>
 ! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -165,7 +165,7 @@ subroutine acc_operand_array_section_pointer()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_pointer() {
-! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "p", uniq_name = "_QMacc_data_operandFacc_operand_array_section_pointerEp"}
+! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> <{bindc_name = "p", uniq_name = "_QMacc_data_operandFacc_operand_array_section_pointerEp"}>
 ! CHECK: %[[DECLP:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>
 ! CHECK: %[[LOAD_BOX_P_1:.*]] = fir.load %[[DECLP]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index

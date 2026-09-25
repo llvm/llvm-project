@@ -719,6 +719,32 @@ public:
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
 
+  /// Returns the size of the current tree, stopping at gathers
+  /// For instance, even though we continue adding tree entries after
+  /// a split node, this function stops counting at the split node
+  /// since it is a gather. This matches the behavior of MinBWs
+  /// computation.
+  unsigned getTreeSizeExcludingGathers() const {
+    unsigned Cnt = 0;
+    SmallBitVector GatherTreeNodes(VectorizableTree.size(), false);
+    for (unsigned NodeIdx : seq<unsigned>(VectorizableTree.size())) {
+      auto &TE = VectorizableTree[NodeIdx];
+      if (DeletedNodes.contains(TE.get()))
+        continue;
+      auto IsGather = [&](TreeEntry *TE) {
+        return TE->isGather() || TransformedToGatherNodes.contains(TE) ||
+               GatherTreeNodes.test(TE->Idx);
+      };
+      if (IsGather(TE.get()) || (!TE->UserTreeIndex.UserTE && NodeIdx != 0) ||
+          (TE->UserTreeIndex.UserTE && (IsGather(TE->UserTreeIndex.UserTE)))) {
+        GatherTreeNodes.set(NodeIdx);
+        continue;
+      }
+      ++Cnt;
+    }
+    return Cnt;
+  }
+
   /// Returns the base graph size, before any transformations.
   unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
 
@@ -823,8 +849,22 @@ public:
     auto [It, Inserted] =
         NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
     if (Inserted)
-      It->second = slpvectorizer::getNumberOfParts(*TTI, VecTy, ScalarTy,
-                                                   SLPReVec, Limit);
+      It->second = slpvectorizer::getNumberOfPartsOrRegs(
+          /*QueryNumParts=*/true, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
+    return It->second;
+  }
+
+  /// \returns the number of parts, the type \p VecTy is split at the codegen
+  /// phase. The type legalization queries are repeated for the very same types
+  /// during the analysis, so the results are cached for the function.
+  unsigned getRegUsageForType(
+      Type *VecTy, Type *ScalarTy,
+      unsigned Limit = std::numeric_limits<unsigned>::max()) const {
+    auto [It, Inserted] =
+        NumberOfRegsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
+    if (Inserted)
+      It->second = slpvectorizer::getNumberOfPartsOrRegs(
+          /*QueryNumParts=*/false, *TTI, VecTy, ScalarTy, SLPReVec, Limit);
     return It->second;
   }
 
@@ -2561,6 +2601,15 @@ private:
   template <typename BVTy, typename ResTy, typename... Args>
   ResTy processBuildVector(const TreeEntry *E, Type *ScalarTy, Args &...Params);
 
+  /// Handles the gather of zero-extended sub-fields of the same wider integer
+  /// scalar, emitted as a bitcast to the field vector plus a permutation and
+  /// an extension to the lane type, if the gathered values match.
+  template <typename ResTy, typename BVTy>
+  std::optional<ResTy> processExtractedFieldsGather(
+      BVTy &ShuffleBuilder, const TreeEntry *E, Type *ScalarTy,
+      ArrayRef<Value *> VL,
+      ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors);
+
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
@@ -3555,6 +3604,23 @@ private:
   /// before the root node.
   SmallVector<TreeEntry *> SplatGatheredScalarsRoots;
 
+  /// Checks if any of \p Entries is an internal gather of a splat gather
+  /// subtree.
+  bool hasSplatSubtreeGather(
+      ArrayRef<SmallVector<const TreeEntry *>> Entries) const {
+    if (SplatGatheredScalarsRoots.empty())
+      return false;
+    return any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
+      return any_of(TEs, [&](const TreeEntry *TE) {
+        if (!TE->isGather())
+          return false;
+        while (TE->UserTreeIndex)
+          TE = TE->UserTreeIndex.UserTE;
+        return is_contained(SplatGatheredScalarsRoots, TE);
+      });
+    });
+  }
+
   /// Number of tree entries added while building the splat gather subtrees.
   /// The subtrees are auxiliary and must not inflate the tree size recorded
   /// for failed store chain attempts.
@@ -3735,9 +3801,13 @@ private:
   mutable SmallDenseMap<std::tuple<Type *, Type *, unsigned>, unsigned>
       NumberOfPartsCache;
 
-  /// Values, already been analyzed for mininmal bitwidth and found to be
-  /// non-profitable.
-  DenseSet<Value *> AnalyzedMinBWVals;
+  /// Cache of the number of regs for the types and the parts limit.
+  mutable SmallDenseMap<std::tuple<Type *, Type *, unsigned>, unsigned>
+      NumberOfRegsCache;
+
+  /// Values already analyzed for minimal bitwidth and found to be
+  /// non-profitable, mapped to the size of the tree used for the analysis.
+  SmallDenseMap<Value *, unsigned> AnalyzedMinBWVals;
 
   /// A list of values that need to extracted out of the tree.
   /// This list holds pairs of (Internal Scalar : External User). External User
@@ -5592,6 +5662,12 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles =
       isGatherShuffledEntry(&TE, GatheredScalars, Mask, Entries, NumParts,
                             /*ForOrder=*/true);
+  // The internal gathers of the splat gather subtrees are not used as shuffle
+  // sources, do not reorder the tree to match them.
+  if (hasSplatSubtreeGather(Entries)) {
+    GatherShuffles.clear();
+    Entries.clear();
+  }
   // No shuffled operands - ignore.
   if (GatherShuffles.empty() && ExtractShuffles.empty())
     return std::nullopt;
@@ -6602,11 +6678,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       }
     }
     if (Sz == 2 && TE.getVectorFactor() == 4 &&
-        slpvectorizer::getNumberOfParts(
-            *TTI,
+        getNumberOfParts(
             getWidenedType(getValueType(TE.Scalars.front(), SLPReVec),
                            2 * TE.getVectorFactor()),
-            getValueType(TE.Scalars.front(), SLPReVec), SLPReVec) == 1)
+            getValueType(TE.Scalars.front(), SLPReVec)) == 1)
       return std::nullopt;
     if (TE.ReuseShuffleIndices.size() % Sz != 0)
       return std::nullopt;
@@ -10073,10 +10148,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
     auto *UniquesVecTy =
         cast<VectorType>(getWidenedType(ScalarTy, NumUniqueScalarValues));
-    const unsigned NumParts =
-        slpvectorizer::getNumberOfParts(TTI, VecTy, ScalarTy, SLPReVec);
-    const unsigned UniquesNumParts =
-        slpvectorizer::getNumberOfParts(TTI, UniquesVecTy, ScalarTy, SLPReVec);
+    const unsigned NumParts = R.getNumberOfParts(VecTy, ScalarTy);
+    const unsigned UniquesNumParts = R.getNumberOfParts(UniquesVecTy, ScalarTy);
     // No need to schedule scalars and only single register used? Use original
     // scalars, do not pack.
     if (!RequireScheduling) {
@@ -12122,7 +12195,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo,
       ExpandShuffleMask);
-  if (State == TreeEntry::NeedToGather) {
+  // The zero-extended sub-fields of the same wider integer scalar are
+  // gathered and emitted as a bitcast to the field vector plus a permutation.
+  // For 2 lanes the emission is not cheaper than the insertelement chain.
+  if (State == TreeEntry::NeedToGather ||
+      (VL.size() > 2 && ReuseShuffleIndices.empty() &&
+       matchGatheredExtractedFields(VL, *DL))) {
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
@@ -14204,7 +14282,9 @@ void BoUpSLP::transformNodes() {
             // We use allSameOpcode instead of isAltShuffle because we don't
             // want to use interchangeable instruction here.
             !allSameOpcode(VL) || !allSameBlock(VL)) ||
-          allConstant(VL) || isSplat(VL))
+          allConstant(VL) || isSplat(VL) ||
+          (E.ReuseShuffleIndices.empty() &&
+           matchGatheredExtractedFields(VL, *DL)))
         continue;
       if (ForceLoadGather && E.hasState() && E.getOpcode() == Instruction::Load)
         continue;
@@ -14247,10 +14327,9 @@ void BoUpSLP::transformNodes() {
           bool IsSplat = isSplat(Slice);
           bool IsTwoRegisterSplat = true;
           if (IsSplat && VF == 2) {
-            unsigned NumRegs2VF = slpvectorizer::getNumberOfParts(
-                *TTI,
+            unsigned NumRegs2VF = getNumberOfParts(
                 getWidenedType(getValueType(Slice.front(), SLPReVec), 2 * VF),
-                getValueType(Slice.front(), SLPReVec), SLPReVec);
+                getValueType(Slice.front(), SLPReVec));
             IsTwoRegisterSplat = NumRegs2VF == 2;
           }
           if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
@@ -15491,8 +15570,7 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts = slpvectorizer::getNumberOfParts(
-        TTI, MaskVecTy, ScalarTy, SLPReVec, Mask.size());
+    unsigned NumParts = R.getNumberOfParts(MaskVecTy, ScalarTy, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -15507,8 +15585,7 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts = slpvectorizer::getNumberOfParts(
-        TTI, MaskVecTy, ScalarTy, SLPReVec, Mask.size());
+    unsigned NumParts = R.getNumberOfParts(MaskVecTy, ScalarTy, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -15628,6 +15705,52 @@ public:
         ElementCount::getFixed(
             cast<FixedVectorType>(Root->getType())->getNumElements()),
         getAllOnesValue(*R.DL, ScalarTy->getScalarType()));
+  }
+  /// Estimates the cost of the gather of zero-extended sub-fields of width
+  /// \p FieldWidth of the same wider integer scalar \p Src, permuted by
+  /// \p Mask, as a bitcast to the field vector plus a permutation and an
+  /// extension to the lane type.
+  InstructionCost createExtractedFieldsVector(Value *Src, unsigned FieldWidth,
+                                              ArrayRef<int> Mask,
+                                              const TreeEntry &E) {
+    auto *FieldTy = IntegerType::get(Src->getContext(), FieldWidth);
+    unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
+    assert(SrcWidth % FieldWidth == 0 &&
+           "Expected the field width to divide the source width.");
+    unsigned NumFields = SrcWidth / FieldWidth;
+    auto *FieldVecTy = cast<VectorType>(getWidenedType(FieldTy, NumFields));
+    TTI::CastContextHint CCH = R.getCastContextHint(E);
+    InstructionCost Cost = TTI.getCastInstrCost(
+        Instruction::BitCast, FieldVecTy, Src->getType(), CCH, CostKind);
+    // The permutation is elided only for the full-length identity mask.
+    if (Mask.size() != NumFields ||
+        !ShuffleVectorInst::isIdentityMask(Mask, NumFields))
+      Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, FieldVecTy,
+                             CostKind, Mask);
+    if (!ScalarTy->isIntegerTy(FieldWidth))
+      Cost += TTI.getCastInstrCost(
+          Instruction::ZExt, getWidenedType(ScalarTy, Mask.size()),
+          getWidenedType(FieldTy, Mask.size()), CCH, CostKind);
+    // The extraction instructions die once the fields are emitted from the
+    // source scalar; their scalar cost is credited back for the gathers
+    // directly feeding the reduction. Instructions vectorized elsewhere are
+    // skipped: their scalar cost is already a part of the scalar baseline.
+    if (R.UserIgnoreList &&
+        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
+      for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
+        if (CheckedExtracts.insert(I).second && !R.isVectorized(I) &&
+            R.areAllUsersVectorized(I, &VectorizedVals))
+          Cost -= isa<CastInst>(I)
+                      ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
+                                             I->getOperand(0)->getType(),
+                                             TTI::getCastContextHint(I),
+                                             CostKind, I)
+                      : TTI.getArithmeticInstrCost(
+                            I->getOpcode(), I->getType(), CostKind,
+                            TTI::getOperandInfo(I->getOperand(0)),
+                            TTI::getOperandInfo(I->getOperand(1)),
+                            {I->getOperand(0), I->getOperand(1)}, I);
+    return Cost;
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
   /// Finalize emission of the shuffles.
@@ -15774,6 +15897,17 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
     if (ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
       return TTI::CastContextHint::Reversed;
   }
+  // A gather of extracted sub-fields inherits the context of the entry
+  // vectorizing the common source scalar, or of the source scalar load.
+  if (TE.isGather())
+    if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+            matchGatheredExtractedFields(TE.Scalars, *DL)) {
+      Value *Src = std::get<0>(*Fields);
+      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(Src); !TEs.empty())
+        return getCastContextHint(*TEs.front());
+      if (isa<LoadInst>(Src))
+        return TTI::CastContextHint::Normal;
+    }
   return TTI::CastContextHint::None;
 }
 
@@ -17584,6 +17718,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
                    [this](Value *V) { return EphValues.contains(V); }) &&
            (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
             TE->Scalars.size() < Limit ||
+            matchGatheredExtractedFields(TE->Scalars, *DL) ||
             // Nodes with copyable lanes may mix in non-extract lanes, which
             // are not representable as a shuffle of the source vector.
             (((TE->hasState() &&
@@ -22434,6 +22569,26 @@ public:
                       return createShuffle(V1, V2, Mask);
                     });
   }
+  /// Emits the gather of zero-extended sub-fields of width \p FieldWidth of
+  /// the same wider integer scalar \p Src, permuted by \p Mask, as a bitcast
+  /// to the field vector plus a permutation and an extension to the lane type.
+  Value *createExtractedFieldsVector(Value *Src, unsigned FieldWidth,
+                                     ArrayRef<int> Mask, const TreeEntry &) {
+    auto *FieldTy = IntegerType::get(Src->getContext(), FieldWidth);
+    unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
+    assert(SrcWidth % FieldWidth == 0 &&
+           "Expected the field width to divide the source width.");
+    Value *Vec = Builder.CreateBitCast(
+        Src, getWidenedType(FieldTy, SrcWidth / FieldWidth));
+    if (auto *I = dyn_cast<Instruction>(Vec)) {
+      R.GatherShuffleExtractSeq.insert(I);
+      R.CSEBlocks.insert(I->getParent());
+    }
+    Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
+    // The extracted fields are unsigned.
+    Vec = castToScalarTyElem(Vec, /*IsSigned=*/false);
+    return Vec;
+  }
   Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.
   /// \param Action the action (if any) to be performed before final applying of
@@ -22553,6 +22708,39 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   return vectorizeTree(getOperandEntry(E, NodeIdx));
 }
 
+template <typename ResTy, typename BVTy>
+std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
+    BVTy &ShuffleBuilder, const TreeEntry *E, Type *ScalarTy,
+    ArrayRef<Value *> VL,
+    ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors) {
+  if (!SubVectors.empty() || !E->ReuseShuffleIndices.empty() ||
+      !ScalarTy->isIntegerTy())
+    return std::nullopt;
+  std::optional<std::tuple<Value *, unsigned, SmallVector<int>>>
+      ExtractedFields = matchGatheredExtractedFields(VL, *DL);
+  if (!ExtractedFields ||
+      ScalarTy->getIntegerBitWidth() < std::get<1>(*ExtractedFields))
+    return std::nullopt;
+  Value *Src = std::get<0>(*ExtractedFields);
+  unsigned FieldWidth = std::get<1>(*ExtractedFields);
+  SmallVector<int> &Mask = std::get<2>(*ExtractedFields);
+  unsigned NumFields = Src->getType()->getIntegerBitWidth() / FieldWidth;
+  // The vector of the reduction root gather feeds only the commutative
+  // reduction; other users of the gathered scalars keep using the scalars,
+  // so the lane order is unobservable. Emit the fields in the natural order
+  // and skip the permutation when each lane holds a distinct field.
+  if (!E->UserTreeIndex && UserIgnoreList && Mask.size() == NumFields) {
+    SmallVector<int> SortedMask(Mask);
+    sort(SortedMask);
+    // Each field is held at most once; poison lanes are ignored.
+    if (adjacent_find(SortedMask, [](int A, int B) {
+          return A != PoisonMaskElem && A == B;
+        }) == SortedMask.end())
+      std::iota(Mask.begin(), Mask.end(), 0);
+  }
+  return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask, *E);
+}
+
 template <typename BVTy, typename ResTy, typename... Args>
 ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                   Args &...Params) {
@@ -22664,6 +22852,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   Type *OrigScalarTy = GatheredScalars.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, GatheredScalars.size());
   unsigned NumParts = getNumberOfParts(VecTy, ScalarTy, GatheredScalars.size());
+  if (std::optional<ResTy> Res = processExtractedFieldsGather<ResTy>(
+          ShuffleBuilder, E, ScalarTy, GatheredScalars, SubVectors))
+    return *Res;
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
     bool Resized = false;
@@ -22720,23 +22911,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // The splat gather subtrees are speculative: the keep/drop check may
     // delete them and does not track reuse of their internal gathers by other
     // gathers.
-    if (!GatherShuffles.empty() && !SplatGatheredScalarsRoots.empty()) {
-      auto IsSplatSubtreeGather = [&](const TreeEntry *MTE) {
-        if (!MTE->isGather())
-          return false;
-        for (const TreeEntry *U = MTE; U && U->UserTreeIndex;
-             U = U->UserTreeIndex.UserTE)
-          if (is_contained(SplatGatheredScalarsRoots, U->UserTreeIndex.UserTE))
-            return true;
-        return false;
-      };
-      if (any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
-            return any_of(TEs, IsSplatSubtreeGather);
-          })) {
-        GatherShuffles.clear();
-        Entries.clear();
-        std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
-      }
+    if (hasSplatSubtreeGather(Entries)) {
+      GatherShuffles.clear();
+      Entries.clear();
+      std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
     }
     if (!GatherShuffles.empty()) {
       if (std::optional<ResTy> Delayed =
@@ -26446,9 +26624,8 @@ void BoUpSLP::optimizeGatherSequence() {
   // and its mask indeces are the same as in the first one or undefs. E.g.
   // shuffle %0, poison, <0, 0, 0, undef> is less defined than shuffle %0,
   // poison, <0, 0, 0, 0>.
-  auto &&IsIdenticalOrLessDefined = [TTI = TTI](Instruction *I1,
-                                                Instruction *I2,
-                                                SmallVectorImpl<int> &NewMask) {
+  auto &&IsIdenticalOrLessDefined = [this](Instruction *I1, Instruction *I2,
+                                           SmallVectorImpl<int> &NewMask) {
     if (I1->getType() != I2->getType())
       return false;
     auto *SI1 = dyn_cast<ShuffleVectorInst>(I1);
@@ -26480,14 +26657,10 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           slpvectorizer::getNumberOfParts(*TTI, SI1->getType(),
-                                           SI1->getType()->getElementType(),
-                                           SLPReVec) ==
-               slpvectorizer::getNumberOfParts(
-                   *TTI,
-                   getWidenedType(SI1->getType()->getElementType(),
-                                  SM1.size() - LastUndefsCnt),
-                   SI1->getType()->getElementType(), SLPReVec);
+           getNumberOfParts(SI1->getType(), SI1->getType()->getElementType()) ==
+               getNumberOfParts(getWidenedType(SI1->getType()->getElementType(),
+                                               SM1.size() - LastUndefsCnt),
+                                SI1->getType()->getElementType());
   };
   // Perform O(N^2) search over the gather/shuffle sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
@@ -28431,8 +28604,14 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
   }
 
+  auto IsAnalyzedMinBWVal = [&](Value *V, unsigned SizeExGathers) {
+    auto It = AnalyzedMinBWVals.find(V);
+    return It != AnalyzedMinBWVals.end() && It->second >= SizeExGathers;
+  };
+
   // Analyzed the reduction already and not profitable - exit.
-  if (AnalyzedMinBWVals.contains(VectorizableTree[NodeIdx]->Scalars.front()))
+  if (IsAnalyzedMinBWVal(VectorizableTree[NodeIdx]->Scalars.front(),
+                         getTreeSizeExcludingGathers()))
     return;
 
   SmallVector<unsigned> ToDemote;
@@ -28494,8 +28673,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     if (!TreeRootIT)
       return 0u;
 
+    unsigned SizeExGathers = getTreeSizeExcludingGathers();
     if (any_of(E.Scalars,
-               [&](Value *V) { return AnalyzedMinBWVals.contains(V); }))
+               [&](Value *V) { return IsAnalyzedMinBWVal(V, SizeExGathers); }))
       return 0u;
 
     unsigned NumParts =
@@ -28736,8 +28916,11 @@ void BoUpSLP::computeMinimumValueSizes() {
         MaxBitWidth >=
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
-      if (UserIgnoreList)
-        AnalyzedMinBWVals.insert_range(TreeRoot);
+      if (UserIgnoreList) {
+        unsigned Sz = getTreeSizeExcludingGathers();
+        for (Value *V : TreeRoot)
+          AnalyzedMinBWVals.insert_or_assign(V, Sz);
+      }
       NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
@@ -29488,6 +29671,7 @@ bool StoreChainContext::vectorizeOneVF(
                                            unsigned, unsigned &)>
         VectorizeStoreChain) {
   bool AnyProfitableGraph = false;
+  bool PreferWideSlices = false;
   unsigned FirstUnvecStore = getFirstUnvecStore();
 
   // Form slices of size VF starting from FirstUnvecStore and try to
@@ -29520,6 +29704,43 @@ bool StoreChainContext::vectorizeOneVF(
           continue;
         }
       }
+      auto MarkVectorized = [&](unsigned Len) {
+        // Mark the vectorized stores so that we don't vectorize them
+        // again.
+        VectorizedStores.insert_range(
+            ArrayRef(Operands).slice(SliceStartIdx, Len));
+        AnyProfitableGraph = RepeatChanged = Changed = true;
+        // If we vectorized initial block, no need to try to vectorize
+        // it again.
+        markRangeVectorized(SliceStartIdx, Len, FirstUnvecStore, MaxSliceEnd);
+        SliceStartIdx += Len;
+        ++NumStoreChains;
+        if (Stride > 1)
+          ++NumStridedStoreChains;
+        NumVectorizedStores += Len;
+      };
+      // With the register VF 2 the instruction count check may reject the
+      // leading slice, shifting it strands its stores and the wider VFs are
+      // tried only if nothing is vectorized: try the wider slice at the same
+      // position. Once the chain took the wider slices, try them first.
+      auto TryWideSlice = [&]() {
+        if (MaxRegVF != 2 || VF != MaxRegVF ||
+            SliceStartIdx != FirstUnvecStore ||
+            SliceStartIdx + 2 * VF > MaxSliceEnd)
+          return false;
+        unsigned WideTreeSize;
+        if (!VectorizeStoreChain(
+                 ArrayRef(Operands).slice(SliceStartIdx, 2 * VF), SliceStartIdx,
+                 MinVF, WideTreeSize)
+                 .value_or(false))
+          return false;
+        MarkVectorized(2 * VF);
+        return true;
+      };
+      const bool WideFirst = PreferWideSlices;
+      if (WideFirst && TryWideSlice())
+        continue;
+      PreferWideSlices = false;
       unsigned TreeSize;
       std::optional<bool> Res =
           VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize);
@@ -29530,18 +29751,11 @@ bool StoreChainContext::vectorizeOneVF(
             .first->getSecond()
             .second = VF;
       } else if (*Res) {
-        // Mark the vectorized stores so that we don't vectorize them
-        // again.
-        VectorizedStores.insert_range(Slice);
-        AnyProfitableGraph = RepeatChanged = Changed = true;
-        // If we vectorized initial block, no need to try to vectorize
-        // it again.
-        markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
-        SliceStartIdx += VF;
-        ++NumStoreChains;
-        if (Stride > 1)
-          ++NumStridedStoreChains;
-        NumVectorizedStores += VF;
+        MarkVectorized(VF);
+        continue;
+      }
+      if (Res && !WideFirst && TryWideSlice()) {
+        PreferWideSlices = true;
         continue;
       }
       if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {
@@ -32061,6 +32275,15 @@ public:
           return Vals.size() >= ReductionLimit ||
                  (Vals.size() == 2 && Vals.front() != Vals.back());
         });
+    // Small sign-aware groups pay off only when paired via the vector fsub:
+    // each sign must have a group of at least 2 values.
+    auto HasGroupOfSign = [&](bool Negated) {
+      return any_of(ReducedVals, [&](ArrayRef<Value *> Vals) {
+        return Vals.size() >= 2 && IsNegated(Vals.front()) == Negated;
+      });
+    };
+    const bool CanPairSigns =
+        HasGroupOfSign(/*Negated=*/false) && HasGroupOfSign(/*Negated=*/true);
     // Same-size groups of the seed-level reduction get the profitability
     // ordering (cheap groups go last) when the minimum vector factor covers
     // the whole reduction.
@@ -32194,8 +32417,8 @@ public:
       const bool MinVFAllowed = IsSeedRoot && NoScalarLeftovers &&
                                 all_of(Candidates, UsedByReductionOnly);
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 || (!isSplat(Candidates) &&
-                                  NegatedReducedVals.empty() && !MinVFAllowed)))
+          (NumReducedVals < 2 ||
+           (!isSplat(Candidates) && !CanPairSigns && !MinVFAllowed)))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
@@ -32284,25 +32507,24 @@ public:
 
       unsigned ReduxWidth = NumReducedVals;
       auto GetVectorFactor = [&, &TTI = *TTI](unsigned ReduxWidth) {
-        unsigned NumParts, NumRegs;
+        unsigned NumRegs, NumAvailRegs;
         Type *ScalarTy = Candidates.front()->getType();
         ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy,
                                                         ReduxWidth, SLPReVec);
         VectorType *Tp = cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-        NumParts = slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
-        NumRegs =
+        NumRegs = V.getRegUsageForType(Tp, ScalarTy);
+        NumAvailRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
-        while (NumParts > NumRegs) {
+        while (NumRegs > NumAvailRegs) {
           assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
           ReduxWidth = bit_floor(ReduxWidth - 1);
           VectorType *Tp =
               cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-          NumParts =
-              slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
-          NumRegs =
+          NumRegs = V.getRegUsageForType(Tp, ScalarTy);
+          NumAvailRegs =
               TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         }
-        if (NumParts > NumRegs / 2)
+        if (NumRegs > NumAvailRegs / 2)
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
@@ -32338,7 +32560,7 @@ public:
       // Same small-group allowance for the vector width, if it covers the
       // whole group.
       const unsigned MinReduxWidth =
-          !NegatedReducedVals.empty() || (MinVFAllowed && NumReducedVals == 2)
+          CanPairSigns || (MinVFAllowed && NumReducedVals == 2)
               ? 2
               : ReductionLimit;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
@@ -33005,15 +33227,14 @@ public:
       ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth,
                                                       SLPReVec);
       Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
-      unsigned NumParts =
-          slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
+      unsigned NumParts = V.getNumberOfParts(Tp, ScalarTy);
       unsigned NumRegs =
           TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
       while (NumParts > NumRegs) {
         assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
         ReduxWidth = bit_floor(ReduxWidth - 1);
         Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
-        NumParts = slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
+        NumParts = V.getNumberOfParts(Tp, ScalarTy);
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
       }

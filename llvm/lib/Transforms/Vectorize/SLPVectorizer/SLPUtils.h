@@ -30,6 +30,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace llvm {
 class AssumptionCache;
@@ -418,6 +419,14 @@ TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
 /// bound keeps precision on arithmetic carries, where bit-wise analysis
 /// loses it.
 APInt getScalarMaxValue(const Value *V, unsigned Depth = 0);
+
+/// Checks if the values in \p VL are zero-extended sub-fields of the same
+/// wider integer scalar. Returns the source scalar, the field width and the
+/// field permutation mask. The extraction dual of the lane-packing layout.
+/// The field-to-lane mapping of the bitcast to the field vector is defined
+/// for little-endian targets only.
+std::optional<std::tuple<Value *, unsigned, SmallVector<int>>>
+matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL);
 
 /// Description of a bitfield packing of vector lanes into a scalar value:
 /// every lane contributes a disjoint contiguous byte field of the result.

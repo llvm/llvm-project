@@ -20,7 +20,7 @@ module {
   func.func private @_QMmmEarr_acc_declare_update_desc_post_alloc() {
     return
   }
-// CHECK: func.func private @_QMmmEarr_acc_declare_update_desc_post_alloc() attributes {acc.declare_action}
+// CHECK: func.func private @_QMmmEarr_acc_declare_update_desc_post_alloc() attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMmmEarr_acc_declare_update_desc_post_alloc>}
 // CHECK-LABEL: func.func @_QMmmPsub
   func.func @_QMmmPsub() {
     %c100 = arith.constant 100 : index
@@ -77,7 +77,7 @@ module {
  func.func private @_QMmmFsubEarr_acc_declare_update_desc_post_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
    return
  }
-// CHECK: func.func private @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%{{.*}}) attributes {acc.declare_action}
+// CHECK: func.func private @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%{{.*}}) attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMmmFsubEarr_acc_declare_update_desc_post_alloc>}
 // CHECK-LABEL: func.func @_QMmmPsub
   func.func @_QMmmPsub() {
     %c100 = arith.constant 100 : index
@@ -204,3 +204,17 @@ module {
 // CHECK-NEXT: %{{.*}} = cuf.deallocate %[[BOX]]
 // CHECK-NEXT: fir.call @_QFpost_dealloc(%[[BOX]])
 }
+
+// -----
+
+// A recipe names itself in the slot of the action it carries out, which states
+// what the recipe does. Only the operations that allocate or deallocate the
+// object ask for a call of it.
+module {
+  func.func private @_QMmmEarr_acc_declare_post_alloc() attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMmmEarr_acc_declare_post_alloc>} {
+    return
+  }
+}
+
+// CHECK-LABEL: func.func private @_QMmmEarr_acc_declare_post_alloc
+// CHECK-NOT: fir.call

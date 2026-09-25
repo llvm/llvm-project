@@ -633,9 +633,6 @@ struct FixedScalableVFPair {
 
   /// \return true if either fixed- or scalable VF is non-zero.
   explicit operator bool() const { return FixedVF || ScalableVF; }
-
-  /// \return true if either fixed- or scalable VF is a valid vector VF.
-  bool hasVector() const { return FixedVF.isVector() || ScalableVF.isVector(); }
 };
 
 /// Holds state needed to make cost decisions before computing costs per-VF,
@@ -699,12 +696,6 @@ class VFSelectionContext {
   /// PHINodes of the reductions that should be expanded in-loop. Set by
   /// collectInLoopReductions.
   SmallPtrSet<PHINode *, 4> InLoopReductions;
-
-  /// A Map of inloop reduction operations and their immediate chain operand.
-  /// FIXME: This can be removed once reductions can be costed correctly in
-  /// VPlan. This was added to allow quick lookup of the inloop operations.
-  /// Set by collectInLoopReductions.
-  DenseMap<Instruction *, Instruction *> InLoopReductionImmediateChains;
 
   /// Maximum safe number of elements to be processed per vector iteration,
   /// which do not prevent store-load forwarding and are safe with regard to the
@@ -811,8 +802,6 @@ public:
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
-  /// InLoopReductionImmediateChains is filled with each in-loop reduction
-  /// operation and its immediate chain operand for use during cost modelling.
   void collectInLoopReductions();
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -823,12 +812,6 @@ public:
   /// Returns the set of in-loop reduction PHIs.
   const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
     return InLoopReductions;
-  }
-
-  /// Returns the immediate chain operand of in-loop reduction operation \p I,
-  /// or nullptr if \p I is not an in-loop reduction operation.
-  Instruction *getInLoopReductionImmediateChain(Instruction *I) const {
-    return InLoopReductionImmediateChains.lookup(I);
   }
 
   /// Check whether vectorization would require runtime checks. When optimizing

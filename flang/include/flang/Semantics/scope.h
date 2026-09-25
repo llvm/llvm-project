@@ -279,6 +279,16 @@ public:
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(parser::CharBlock);
 
+  // Record objects that have a device mapping in this OpenACC construct.
+  // Unlike a CUDA data attribute, this does not change the storage denoted by
+  // ordinary references to the object in the construct.
+  void AddOpenACCMappedSymbol(const Symbol &symbol) {
+    openACCMappedSymbols_.insert(symbol.GetUltimate());
+  }
+  bool IsOpenACCMappedSymbol(const Symbol &symbol) const {
+    return openACCMappedSymbols_.count(symbol.GetUltimate()) != 0;
+  }
+
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,
       DeclTypeSpec::Category = DeclTypeSpec::TypeDerived) const;
@@ -316,6 +326,7 @@ private:
   std::list<DeclTypeSpec> declTypeSpecs_;
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
+  UnorderedSymbolSet openACCMappedSymbols_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
   parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement
