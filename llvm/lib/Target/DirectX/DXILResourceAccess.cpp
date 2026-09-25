@@ -330,6 +330,47 @@ getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
   llvm_unreachable("Unhandled atomicrmw operation");
 }
 
+// Compute the (coord0, coord1) pair for a buffer resource atomic operation.
+// Non-struct buffers (RawBuffer or TypedBuffer) fold the byte offset into the
+// index and leave coord1 poison. Only StructuredBuffer atomics use both a
+// struct index and a byte offset.
+static std::pair<Value *, Value *>
+getAtomicResourceCoords(IntrinsicInst *II, Value *PointerOperand,
+                        dxil::ResourceTypeInfo &RTI, IRBuilder<> &Builder,
+                        const DataLayout &DL) {
+  Value *Index = II->getOperand(1);
+
+  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset = traverseGEPOffsets(DL, Builder, PointerOperand, AccessSize);
+
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  return {Index, Offset};
+}
+
+// The coordinates of a texture access are a scalar or a vector with one element
+// per texture dimension, including the array slice if there is one. These map
+// directly onto the coordinate operands of the atomic ops.
+static SmallVector<Value *, 3> getTextureAtomicCoords(IntrinsicInst *II,
+                                                      IRBuilder<> &Builder) {
+  Value *Coords = II->getOperand(1);
+  SmallVector<Value *, 3> CoordArgs;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Coords->getType())) {
+    assert(VecTy->getNumElements() <= 3 && "Too many texture coordinates");
+    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I)
+      CoordArgs.push_back(Builder.CreateExtractElement(Coords, I));
+  } else {
+    CoordArgs.push_back(Coords);
+  }
+  return CoordArgs;
+}
+
 static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
                             Value *Handle, ArrayRef<Value *> Coords) {
   assert(!Coords.empty() && Coords.size() <= 3 &&
@@ -342,17 +383,31 @@ static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
     return;
   }
 
+  // DXIL has no floating-point atomic op. A float exchange only moves the bit
+  // pattern, so cast the value to an integer of the same width, exchange, and
+  // cast the result back. This matches what DXC emits.
+  Value *Val = AI->getValOperand();
+  Type *ValTy = Val->getType();
+  Type *OpTy = ValTy;
+  if (ValTy->isFloatingPointTy()) {
+    OpTy = Builder.getIntNTy(ValTy->getPrimitiveSizeInBits());
+    Val = Builder.CreateBitCast(Val, OpTy);
+  }
+
   SmallVector<Value *, 6> Args{
       Handle, Builder.getInt32(static_cast<uint32_t>(*BinOpCode))};
   append_range(Args, Coords);
   Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
-  Args.push_back(AI->getValOperand());
+  Args.push_back(Val);
 
   // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
   // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
   // its `createTmpHandleCast` bookkeeping.
-  Value *Result = Builder.CreateIntrinsic(
-      AI->getType(), Intrinsic::dx_resource_atomic_binop, Args);
+  Value *Result =
+      Builder.CreateIntrinsic(OpTy, Intrinsic::dx_resource_atomic_binop, Args);
+
+  if (OpTy != ValTy)
+    Result = Builder.CreateBitCast(Result, ValTy);
 
   AI->replaceAllUsesWith(Result);
 }
@@ -361,53 +416,94 @@ static void createBufferAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
                                     dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = AI->getDataLayout();
   IRBuilder<> Builder(AI);
-  Value *Index = II->getOperand(1);
-
-  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
-  uint64_t AccessSize = 1;
-  Value *Offset =
-      traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
-
-  // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
-  // into the index and only pass a single coordinate — only StructuredBuffer
-  // atomics use both a struct index and a byte offset.
-  if (!RTI.isStruct()) {
-    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
-    if (!ConstantOffset || !ConstantOffset->isZero())
-      Index = Builder.CreateAdd(Index, Offset);
-
-    emitAtomicBinOp(Builder, AI, II->getOperand(0), {Index});
-    return;
-  }
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
 
   emitAtomicBinOp(Builder, AI, II->getOperand(0), {Index, Offset});
 }
 
 static void createTextureAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
                                      dxil::ResourceTypeInfo &RTI) {
+  // A texture atomic operates on a whole texel, so a multi-component texel has
+  // no single addressable component. A scalar float texel is allowed, because
+  // emitAtomicBinOp exchanges its bit pattern as an integer.
   Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
-  if (!ContainedType->isIntegerTy()) {
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
     reportFatalUsageError("DXIL atomicrmw requires a texture resource with a "
-                          "scalar integer element type");
+                          "scalar element type");
     return;
   }
 
   IRBuilder<> Builder(AI);
 
-  // The coordinates of a texture access are a scalar or a vector with one
-  // element per texture dimension, including the array slice if there is one.
-  // These map directly onto the coordinate operands of the atomic op.
-  Value *Coords = II->getOperand(1);
-  SmallVector<Value *, 3> CoordArgs;
-  if (auto *VecTy = dyn_cast<FixedVectorType>(Coords->getType())) {
-    assert(VecTy->getNumElements() <= 3 && "Too many texture coordinates");
-    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I)
-      CoordArgs.push_back(Builder.CreateExtractElement(Coords, I));
-  } else {
-    CoordArgs.push_back(Coords);
+  emitAtomicBinOp(Builder, AI, II->getOperand(0),
+                  getTextureAtomicCoords(II, Builder));
+}
+
+static void emitAtomicCompareExchange(IRBuilder<> &Builder,
+                                      AtomicCmpXchgInst *AI, Value *Handle,
+                                      ArrayRef<Value *> Coords) {
+  assert(!Coords.empty() && Coords.size() <= 3 &&
+         "Atomic operations take between one and three coordinates");
+
+  Value *Compare = AI->getCompareOperand();
+  Value *NewValue = AI->getNewValOperand();
+
+  SmallVector<Value *, 6> Args{Handle};
+  append_range(Args, Coords);
+  Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
+  Args.push_back(Compare);
+  Args.push_back(NewValue);
+
+  Value *Original = Builder.CreateIntrinsic(
+      NewValue->getType(), Intrinsic::dx_resource_atomic_compare_exchange,
+      Args);
+
+  // `cmpxchg` yields a { original, success } pair, but the DXIL op returns
+  // only the original value. DXIL has no way to express the success flag, and
+  // no HLSL builtin reads it, so replace the users of the pair directly
+  // instead of building it again. No pass after this one removes dead code.
+  SmallVector<ExtractValueInst *> Extracts;
+  for (User *U : AI->users()) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV || EV->getIndices()[0] != 0)
+      reportFatalUsageError("DXIL cmpxchg provides only the original value");
+    Extracts.push_back(EV);
   }
 
-  emitAtomicBinOp(Builder, AI, II->getOperand(0), CoordArgs);
+  for (ExtractValueInst *EV : Extracts) {
+    EV->replaceAllUsesWith(Original);
+    EV->eraseFromParent();
+  }
+}
+
+static void createBufferAtomicCompareExchange(IntrinsicInst *II,
+                                              AtomicCmpXchgInst *AI,
+                                              dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
+
+  emitAtomicCompareExchange(Builder, AI, II->getOperand(0), {Index, Offset});
+}
+
+// `cmpxchg` operands are always integers, so unlike atomicrmw there is no
+// float element type to convert here. The element type must be scalar.
+static void createTextureAtomicCompareExchange(IntrinsicInst *II,
+                                               AtomicCmpXchgInst *AI,
+                                               dxil::ResourceTypeInfo &RTI) {
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
+    reportFatalUsageError("DXIL cmpxchg requires a texture resource with a "
+                          "scalar element type");
+    return;
+  }
+
+  IRBuilder<> Builder(AI);
+
+  emitAtomicCompareExchange(Builder, AI, II->getOperand(0),
+                            getTextureAtomicCoords(II, Builder));
 }
 
 static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
@@ -442,6 +538,43 @@ static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   case dxil::ResourceKind::Invalid:
   case dxil::ResourceKind::NumEntries:
     llvm_unreachable("Invalid resource kind for atomicrmw");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static void createAtomicCompareExchangeIntrinsic(IntrinsicInst *II,
+                                                 AtomicCmpXchgInst *AI,
+                                                 dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createBufferAtomicCompareExchange(II, AI, RTI);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+    return createTextureAtomicCompareExchange(II, AI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+    reportFatalUsageError(
+        "DXIL cmpxchg not implemented for this texture resource kind");
+    return;
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::TBuffer:
+    reportFatalUsageError(
+        "DXIL cmpxchg not implemented for this resource type");
+    return;
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for cmpxchg");
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -761,6 +894,8 @@ static Instruction *getHandleOperand(Instruction *AI) {
     return dyn_cast<Instruction>(SI->getPointerOperand());
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
     return dyn_cast<Instruction>(RMWI->getPointerOperand());
+  if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(AI))
+    return dyn_cast<Instruction>(CXI->getPointerOperand());
   if (auto *II = dyn_cast<IntrinsicInst>(AI))
     if (II->getIntrinsicID() == Intrinsic::dx_resource_updatecounter)
       return dyn_cast<Instruction>(II->getArgOperand(0));
@@ -1055,6 +1190,9 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
     } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
       createAtomicBinOpIntrinsic(II, AI, RTI);
       DeadInsts.push_back(AI);
+    } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(U)) {
+      createAtomicCompareExchangeIntrinsic(II, CXI, RTI);
+      DeadInsts.push_back(CXI);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }
