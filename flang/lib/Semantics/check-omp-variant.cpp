@@ -191,7 +191,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
   // controls can be paired with it for static-applicability matching. A
   // well-formed WHEN clause has exactly one modifier, its context selector;
   // pair it only in that case, which also makes front() safe. Any other count
-  // is malformed and already diagnosed by VerifyModifiers.
+  // is malformed and already diagnosed by VerifyModifierSyntax.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =
