@@ -1413,6 +1413,14 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
   if (match(LHS, m_Ctpop(m_Specific(Val))))
     return getValueFromICmpCtpop(EdgePred, RHS);
 
+  const APInt *CountC;
+  if (match(LHS, m_CombineOr(m_Cttz(m_Specific(Val), m_Value()),
+                             m_Ctlz(m_Specific(Val), m_Value()))) &&
+      match(RHS, m_APInt(CountC)) &&
+      !ConstantRange::makeExactICmpRegion(EdgePred, *CountC)
+           .contains(APInt(BitWidth, BitWidth)))
+    return ValueLatticeElement::getNot(Constant::getNullValue(Ty));
+
   const APInt *Mask, *C;
   if (match(LHS, m_And(m_Specific(Val), m_APInt(Mask))) &&
       match(RHS, m_APInt(C))) {
