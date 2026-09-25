@@ -57,16 +57,16 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to scalarize the result of this "
                        "operator!\n");
 
-  case ISD::SPLAT_VECTOR:
-    R = N->getOperand(0);
-    break;
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
     R = ScalarizeVecRes_LOOP_DEPENDENCE_MASK(N);
     break;
   case ISD::MERGE_VALUES:      R = ScalarizeVecRes_MERGE_VALUES(N, ResNo);break;
   case ISD::BITCAST:           R = ScalarizeVecRes_BITCAST(N); break;
-  case ISD::BUILD_VECTOR:      R = ScalarizeVecRes_BUILD_VECTOR(N); break;
+  case ISD::SPLAT_VECTOR:
+  case ISD::BUILD_VECTOR:
+    R = ScalarizeVecRes_BUILD_VECTOR_OR_SPLAT(N);
+    break;
   case ISD::EXTRACT_SUBVECTOR: R = ScalarizeVecRes_EXTRACT_SUBVECTOR(N); break;
   case ISD::FP_ROUND:          R = ScalarizeVecRes_FP_ROUND(N); break;
   case ISD::CONVERT_FROM_ARBITRARY_FP:
@@ -478,10 +478,10 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
                      NewVT, Op);
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_BUILD_VECTOR(SDNode *N) {
+SDValue DAGTypeLegalizer::ScalarizeVecRes_BUILD_VECTOR_OR_SPLAT(SDNode *N) {
   EVT EltVT = N->getValueType(0).getVectorElementType();
   SDValue InOp = N->getOperand(0);
-  // The BUILD_VECTOR operands may be of wider element types and
+  // The BUILD_VECTOR / SPLAT operands may be of wider element types and
   // we may need to truncate them back to the requested return type.
   if (EltVT.isInteger())
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), EltVT, InOp);

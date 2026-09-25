@@ -835,7 +835,7 @@ private:
 
   SDValue ScalarizeVecRes_ADDRSPACECAST(SDNode *N);
   SDValue ScalarizeVecRes_BITCAST(SDNode *N);
-  SDValue ScalarizeVecRes_BUILD_VECTOR(SDNode *N);
+  SDValue ScalarizeVecRes_BUILD_VECTOR_OR_SPLAT(SDNode *N);
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue ScalarizeVecRes_FP_ROUND(SDNode *N);
   SDValue ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
