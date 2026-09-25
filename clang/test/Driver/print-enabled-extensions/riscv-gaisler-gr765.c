@@ -10,7 +10,6 @@
 // CHECK-NEXT:     d                    2.2       'D' (Double-Precision Floating-Point)
 // CHECK-NEXT:     c                    2.0       'C' (Compressed Instructions)
 // CHECK-NEXT:     b                    1.0       'B' (the collection of the Zba, Zbb, Zbs extensions)
-// CHECK-NEXT:     h                    1.0       'H' (Hypervisor)
 // CHECK-NEXT:     zic64b               1.0       'Zic64b' (Cache Block Size Is 64 Bytes)
 // CHECK-NEXT:     zicbom               1.0       'Zicbom' (Cache-Block Management Instructions)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
@@ -46,4 +45,4 @@
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-EMPTY:
-// CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_h1p0_zic64b1p0_zicbom1p0_zicfiss1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihpm2p0_zimop1p0_zmmul1p0_zaamo1p0_zalrsc1p0_zfa1p0_zfbfmin1p0_zfh1p0_zfhmin1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbc1p0_zbkb1p0_zbkc1p0_zbkx1p0_zbs1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0_zkt1p0
+// CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_zic64b1p0_zicbom1p0_zicfiss1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihpm2p0_zimop1p0_zmmul1p0_zaamo1p0_zalrsc1p0_zfa1p0_zfbfmin1p0_zfh1p0_zfhmin1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbc1p0_zbkb1p0_zbkc1p0_zbkx1p0_zbs1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0_zkt1p0
