@@ -746,16 +746,49 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto leafs{llvm::omp::getLeafConstructsOrSelf(dirStack_.back()->DirId())};
+  parser::CharBlock source{GetContext().clauseSource};
+  std::string clauseName{
+      parser::omp::GetUpperName(llvm::omp::Clause::OMPC_ordered, version)};
+
   // the parameter of ordered clause is optional
   if (const auto &expr{x.v}) {
     RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_ordered, *expr);
-    // 2.8.3 Loop SIMD Construct Restriction
-    if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
-      context_.Say(GetContext().clauseSource,
-          "No ORDERED clause with a parameter can be specified "
-          "on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
+
+    // 5.1-: ORDERED(n) cannot be present on composite directive with SIMD.
+    if (version <= 51) {
+      if (llvm::is_contained(leafs, llvm::omp::Directive::OMPD_simd)) {
+        context_.Say(source,
+            "%s clause with an argument is not allowed on a compound directive with %s as a constituent"_err_en_US,
+            clauseName,
+            parser::omp::GetUpperName(
+                llvm::omp::Directive::OMPD_simd, version));
+      }
     }
+    // 5.2-: If ORDERED(n), no LINEAR may be present.
+    if (version <= 52) {
+      for (const parser::OmpClause &clause : dirStack_.back()->Clauses().v) {
+        llvm::omp::Clause clauseId{clause.Id()};
+        if (clauseId == llvm::omp::Clause::OMPC_linear) {
+          context_
+              .Say(clause.source,
+                  "%s clause is not allowed when %s clause with an argument is present"_err_en_US,
+                  parser::omp::GetUpperName(clauseId, version), clauseName)
+              .Attach(source, "%s clause specified here"_en_US, clauseName);
+        }
+      }
+    }
+  }
+
+  if (llvm::is_contained(leafs, llvm::omp::OMPD_distribute)) {
+    // ORDERED is not allowed on DISTRIBUTE, so there have to be multiple leafs.
+    assert(leafs.size() > 1 && "Unexpected directive");
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not allowed on a compound directive with %s as a constituent"_err_en_US,
+        clauseName,
+        parser::omp::GetUpperName(
+            llvm::omp::Directive::OMPD_distribute, version));
   }
 }
 

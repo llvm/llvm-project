@@ -217,6 +217,8 @@ use omp_lib
      a = 3.14
   enddo
 
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
@@ -226,6 +228,7 @@ use omp_lib
      a = 3.14
   enddo
 
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
@@ -420,7 +423,6 @@ use omp_lib
 !                         simd-clause
 
   !$omp parallel
-  !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
   !ERROR: NOGROUP clause is not allowed on DO SIMD directive
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N

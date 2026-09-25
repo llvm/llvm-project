@@ -52,6 +52,7 @@ subroutine sub1()
   end do
   !$omp end target parallel do
 
+  !ERROR: ORDERED clause is not allowed on a compound directive with DISTRIBUTE as a constituent
   !ERROR: ORDERED clause is not allowed on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do ordered(1)
   do i = 1, N
