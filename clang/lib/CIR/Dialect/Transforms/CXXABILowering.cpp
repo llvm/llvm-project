@@ -647,7 +647,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Location loc = op->getLoc();
   mlir::Value loweredAddress = adaptor.getAddress();
 
-  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
+  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParamsAttr();
+  if (!deleteParams)
+    deleteParams = cir::UsualDeleteParamsAttr::get(op.getContext(), false,
+                                                   std::nullopt, false, false);
   bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
   assert(!deleteParams.getDestroyingDelete() &&

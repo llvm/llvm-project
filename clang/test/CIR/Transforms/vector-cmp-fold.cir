@@ -312,14 +312,13 @@ module  {
       #cir.fp<8.000000e+00> : !cir.float
     ]> : !cir.vector<4 x !cir.float>
     %new_vec = cir.vec.cmp(lt, %vec_1, %vec_2) :
-        !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
-      fenv = #cir.fenv<strict_except = true>
-    }
+        !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+        fenv(strict_except = true)
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
   // CHECK-LABEL: cir.func{{.*}} @no_fold_cmp_vector_with_fenv
   // CHECK: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) :
   // CHECK-SAME: !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CHECK-SAME: {fenv = #cir.fenv<strict_except = true>}
+  // CHECK-SAME: fenv(strict_except = true)
 }

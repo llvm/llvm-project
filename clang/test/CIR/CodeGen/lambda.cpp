@@ -13,7 +13,7 @@ void use_global_lambda() {
   global_lambda();
 }
 
-// CIR: cir.global "private" internal dso_local @global_lambda = #cir.zero : ![[REC_LAM_GLOBAL_LAMBDA:.*]] {alignment = 1 : i64}
+// CIR: cir.global "private" internal dso_local @global_lambda = #cir.zero : ![[REC_LAM_GLOBAL_LAMBDA:.*]] align(1)
 // CIR: cir.func {{.*}} @_Z17use_global_lambdav()
 // CIR:   %[[LAMBDA:.*]] = cir.get_global @global_lambda : !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>
 // CIR:   cir.call @_ZNK3$_0clEv(%[[LAMBDA]]) : (!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()

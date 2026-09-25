@@ -38,7 +38,7 @@ int *constArrAddr = &arr[2][1];
 
 bool bool_global = true;
 
-// CIR: cir.global external @bool_global = #true {alignment = 1 : i64}
+// CIR: cir.global external @bool_global = #true align(1)
 // LLVM: @bool_global = global i8 1, align 1
 // OGCG: @bool_global = global i8 1, align 1
 

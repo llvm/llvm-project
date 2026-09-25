@@ -25,9 +25,9 @@ int tls() {
 // The thread_local static local materializes a non-default TLS kind, alongside
 // the retained AST handle.
 // CHECK: @_ZZ3tlsvE1s
-// CHECK-SAME: ast = #cir.var.decl.ast
-// CHECK-SAME: static_local_info = #cir.static_local_info<local = true, tls = dynamic, is_inline = false, tsk = undeclared>
+// CHECK-SAME: ast(#cir.var.decl.ast)
+// CHECK-SAME: static_local_info(local = true, tls = dynamic, is_inline = false, tsk = undeclared)
 
 // CHECK: @_ZZ7regularvE1s
-// CHECK-SAME: ast = #cir.var.decl.ast
-// CHECK-SAME: static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+// CHECK-SAME: ast(#cir.var.decl.ast)
+// CHECK-SAME: static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
