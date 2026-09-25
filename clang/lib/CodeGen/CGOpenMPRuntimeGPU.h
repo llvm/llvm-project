@@ -154,6 +154,14 @@ public:
            llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
   }
 
+  /// Check whether the target kernel being emitted is tagged
+  /// SPMD_STRIDED_LOOP, to complete the promotion to a strided-loop SPMD
+  /// kernel.
+  bool canPromoteToStridedLoop() const override {
+    return KernelAttrs.ExecFlags ==
+           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_STRIDED_LOOP;
+  }
+
   /// Get call to __kmpc_alloc_shared
   std::pair<llvm::Value *, llvm::Value *>
   getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) override;
