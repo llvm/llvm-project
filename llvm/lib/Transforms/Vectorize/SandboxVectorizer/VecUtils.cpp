@@ -137,7 +137,7 @@ void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
 template void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Value>(
         ArrayRef<Value *>);
-template void
+template LLVM_TEMPLATE_ABI void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
         ArrayRef<Instruction *>);
 
