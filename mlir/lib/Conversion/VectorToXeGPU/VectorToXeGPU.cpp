@@ -115,13 +115,20 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/true))
     return rewriter.notifyMatchFailure(xferOp, "Unsupported permutation map");
+  // The transfer is built from a run of innermost source dimensions, as wide as
+  // the vector, with one dimension of slack for a 1D transfer: dropping the
+  // broadcast results of a map like (d1, 0) leaves a rank-1 transfer that still
+  // reads d1, and the scattered path reads along any dimension anyway.
   unsigned numInputDims = map.getNumInputs();
+  unsigned numAccessibleDims = std::max(vecRank, 2u);
+  unsigned firstAccessibleDim =
+      numInputDims > numAccessibleDims ? numInputDims - numAccessibleDims : 0;
   for (AffineExpr expr : map.getResults().take_back(vecRank)) {
     // A broadcast result names no source dimension, so it constrains nothing.
     auto dim = dyn_cast<AffineDimExpr>(expr);
     if (!dim)
       continue;
-    if (dim.getPosition() < (numInputDims - vecRank))
+    if (dim.getPosition() < firstAccessibleDim)
       return rewriter.notifyMatchFailure(
           xferOp, "Only the innermost dimensions can be accessed");
   }
@@ -622,76 +629,131 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
   return success();
 }
 
+// An nd block load fetches a 2D block, which a 1D transfer does not ask for -
+// but a leading unit dimension gives it one:
+//
+//   %v = vector.transfer_read %src[%i0, %i1] : memref<32x64xf32>, vector<8xf32>
+// becomes
+//   %b = vector.transfer_read %src[%i0, %i1]
+//     : memref<32x64xf32>, vector<1x8xf32>
+//   %v = vector.shape_cast %b : vector<1x8xf32> to vector<8xf32>
+//
+// Only a transfer running along the innermost source dimension qualifies. That
+// dimension is contiguous, which transferPreconditions has already checked, so
+// the <1xN> block it asks for is one the hardware can fetch. A transfer along
+// any other dimension would need the unit dimension on the other side, and a
+// <Nx1> block is not a shape the layouts downstream can distribute - the
+// scattered path is the one that fits it.
+static LogicalResult lowerToUnitDimRead(vector::TransferReadOp readOp,
+                                        PatternRewriter &rewriter) {
+  VectorType vecTy = readOp.getVectorType();
+  AffineMap map = readOp.getPermutationMap();
+  int64_t numInputs = map.getNumInputs();
+  int64_t pos = cast<AffineDimExpr>(map.getResult(0)).getPosition();
+  if (numInputs < 2 || pos != numInputs - 1)
+    return rewriter.notifyMatchFailure(
+        readOp, "1D transfer does not run along the innermost dimension");
+
+  Value block = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(),
+      VectorType::get({1, vecTy.getDimSize(0)}, vecTy.getElementType()),
+      readOp.getBase(), readOp.getIndices(),
+      AffineMapAttr::get(
+          AffineMap::getMinorIdentityMap(numInputs, 2, map.getContext())),
+      readOp.getPadding(), /*mask=*/Value(),
+      rewriter.getBoolArrayAttr({true, readOp.isDimInBounds(0)}));
+
+  rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, vecTy, block);
+  return success();
+}
+
 // Lowers a transfer whose permutation map broadcasts some of the vector
-// dimensions into a narrower transfer plus a vector.broadcast. For example
+// dimensions into a transfer of just the data in memory - the map with its
+// broadcast results dropped - plus the vector ops that expand it back:
 //
 //   %r = vector.transfer_read %src[%i0, %i1, %i2], %pad
 //     {permutation_map = affine_map<(d0, d1, d2) -> (d2, 0)>,
 //      in_bounds = [false, false]} : memref<256x32x512xf16>, vector<64x64xf16>
-//
 // becomes
-//
 //   %v = vector.transfer_read %src[%i0, %i1, %i2], %pad
-//     {permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>,
-//      in_bounds = [false, true]} : memref<256x32x512xf16>, vector<64x1xf16>
-//   %r = vector.broadcast %v : vector<64x1xf16> to vector<64x64xf16>
+//     {permutation_map = affine_map<(d0, d1, d2) -> (d2)>,
+//      in_bounds = [false]} : memref<256x32x512xf16>, vector<64xf16>
+//   %c = vector.shape_cast %v : vector<64xf16> to vector<1x64xf16>
+//   %t = vector.transpose %c, [1, 0] : vector<1x64xf16> to vector<64x1xf16>
+//   %r = vector.broadcast %t : vector<64x1xf16> to vector<64x64xf16>
 //
-// Each map result is either a source dimension d<k>, which reads real data, or
-// the constant 0 - a broadcast, along which that data only repeats. Only the
-// innermost `vecRank` source dimensions can be named, `dimOffset` being the
-// first of them and `isNamed` tracking which are taken. Result i of the
-// narrower transfer is built as:
-//
-//   d<k>: readExprs[i] keeps d<k>, readShape[i] keeps the vector's extent, and
-//         readInBounds[i] keeps the transfer's own bounds check.
-//   0:    readExprs[i] takes the lowest source dimension `isNamed` still has
-//         free, so that the map stays a permutation; readShape[i] becomes 1,
-//         and readInBounds[i] becomes true, as a single element at that
-//         dimension's own index needs no bounds check.
-//
-// Any mix works: the map names one source dimension per non-broadcast result,
-// so a spare one is always left for each broadcast result. What remains is a
-// plain permutation, which the other paths lower as usual.
+// A broadcast result names no source dimension, so only the dimensions the map
+// does name hold data; dropping the rest leaves the transfer that reads it, at
+// the extents and bounds checks those dimensions had. The dropped results come
+// back as unit dimensions, which the transpose moves to the positions those
+// results held, and vector.broadcast stretches to their final extents.
 static LogicalResult lowerBroadcastRead(vector::TransferReadOp readOp,
                                         PatternRewriter &rewriter) {
+  Location loc = readOp.getLoc();
   VectorType vecTy = readOp.getVectorType();
+  ArrayRef<int64_t> vecShape = vecTy.getShape();
   AffineMap map = readOp.getPermutationMap();
   int64_t vecRank = vecTy.getRank();
-  int64_t dimOffset = map.getNumInputs() - vecRank;
 
-  SmallVector<int64_t> readShape(vecTy.getShape());
-  SmallVector<bool> readInBounds(vecRank, true);
-  SmallVector<AffineExpr> readExprs(map.getResults());
-  SmallVector<bool> isNamed(vecRank, false);
+  SmallVector<int64_t> dataPos, bcastPos;
   for (int64_t i = 0; i < vecRank; ++i) {
-    if (auto dim = dyn_cast<AffineDimExpr>(readExprs[i])) {
-      readInBounds[i] = readOp.isDimInBounds(i);
-      isNamed[dim.getPosition() - dimOffset] = true;
-    }
+    if (isa<AffineDimExpr>(map.getResult(i)))
+      dataPos.push_back(i);
+    else
+      bcastPos.push_back(i);
   }
 
-  for (int64_t i = 0, leftoverDim = 0; i < vecRank; ++i) {
-    if (isa<AffineDimExpr>(readExprs[i]))
-      continue;
-    while (isNamed[leftoverDim])
-      ++leftoverDim;
-    isNamed[leftoverDim] = true;
-    readShape[i] = 1;
-    readExprs[i] = rewriter.getAffineDimExpr(dimOffset + leftoverDim);
+  SmallVector<AffineExpr> readExprs;
+  SmallVector<int64_t> readShape;
+  SmallVector<bool> readInBounds;
+  for (int64_t i : dataPos) {
+    readExprs.push_back(map.getResult(i));
+    readShape.push_back(vecShape[i]);
+    readInBounds.push_back(readOp.isDimInBounds(i));
+  }
+  // An all-broadcast map leaves no data dimension to read. Read one element of
+  // the innermost source dimension instead - a 0D transfer is not supported,
+  // and one element is all the data such a transfer holds.
+  if (readExprs.empty()) {
+    readExprs.push_back(rewriter.getAffineDimExpr(map.getNumInputs() - 1));
+    readShape.push_back(1);
+    readInBounds.push_back(true);
   }
 
   auto readTy = VectorType::get(readShape, vecTy.getElementType());
   Value read = vector::TransferReadOp::create(
-      rewriter, readOp.getLoc(), readTy, readOp.getBase(), readOp.getIndices(),
+      rewriter, loc, readTy, readOp.getBase(), readOp.getIndices(),
       AffineMapAttr::get(
           AffineMap::get(map.getNumInputs(), 0, readExprs, map.getContext())),
       readOp.getPadding(), /*mask=*/Value(),
       rewriter.getBoolArrayAttr(readInBounds));
 
-  if (readTy == vecTy)
-    rewriter.replaceOp(readOp, read);
+  // Grow the transfer back to the requested rank, one unit dimension per
+  // dropped result. The shape_cast adds them innermost, where they leave the
+  // dimension the data came in on innermost too, and the transpose moves them
+  // to the positions their results held. Only unit dimensions move, so the
+  // transpose permutes dimensions without shuffling elements between them.
+  SmallVector<int64_t> order(bcastPos);
+  llvm::append_range(order, dataPos);
+  SmallVector<int64_t> castShape(bcastPos.size(), 1);
+  for (int64_t i : dataPos)
+    castShape.push_back(vecShape[i]);
+  auto castTy = VectorType::get(castShape, vecTy.getElementType());
+  Value cast = castTy == readTy
+                   ? read
+                   : vector::ShapeCastOp::create(rewriter, loc, castTy, read);
+
+  if (!llvm::is_sorted(order)) {
+    SmallVector<int64_t> perm(vecRank);
+    for (int64_t i = 0; i < vecRank; ++i)
+      perm[order[i]] = i;
+    cast = vector::TransposeOp::create(rewriter, loc, cast, perm);
+  }
+
+  if (cast.getType() == vecTy)
+    rewriter.replaceOp(readOp, cast);
   else
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(readOp, vecTy, read);
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(readOp, vecTy, cast);
   return success();
 }
 
@@ -795,6 +857,15 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     // the scattered path, which permutes strides explicitly.
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
+
+    // A 1D transfer has no 2D block for an nd load to fetch, but it can borrow
+    // a unit dimension to get one. Only worth it where a block load is what we
+    // are heading for; otherwise the scattered path takes the 1D vector as is.
+    if (hasBlockLoadSupport && loadedVecTy.getRank() == 1 &&
+        readMemTy.getElementType().isIntOrFloat() &&
+        (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding())) &&
+        succeeded(lowerToUnitDimRead(readOp, rewriter)))
+      return success();
 
     // Prefer an nd block load. It requires HW block-load support, a vector of
     // rank >= 2 backed by a scalar-element memref, and a map the block load can
