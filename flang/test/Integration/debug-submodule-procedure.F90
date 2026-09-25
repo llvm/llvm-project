@@ -20,5 +20,9 @@ contains
 end submodule subkid
 #endif
 
-! CHECK: !DISubprogram(name: "hello", linkageName: "_QMsubparPhello", scope: ![[MOD:[0-9]+]]
-! CHECK: ![[MOD]] = !DIModule(scope: ![[#]], name: "subpar"
+! CHECK-DAG: ![[MOD:[0-9]+]] = !DIModule(scope: ![[#]], name: "subpar.subkid"
+! CHECK-DAG: !DISubprogram(name: "hello", linkageName: "_QMsubparPhello", scope: ![[MOD]]
+
+! The submodule imports its ancestor.
+! CHECK-DAG: ![[ANC:[0-9]+]] = !DIModule(scope: null, name: "subpar", isDecl: true)
+! CHECK-DAG: !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[MOD]], entity: ![[ANC]]

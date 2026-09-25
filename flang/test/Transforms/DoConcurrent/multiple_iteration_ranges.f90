@@ -59,13 +59,13 @@ end
 
 ! COMMON: omp.parallel {
 
-! COMMON-NEXT: %[[ITER_VAR_I:.*]] = fir.alloca i32 {bindc_name = "i"}
+! COMMON-NEXT: %[[ITER_VAR_I:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! COMMON-NEXT: %[[BINDING_I:.*]]:2 = hlfir.declare %[[ITER_VAR_I]] {uniq_name = "_QFEi"}
 
-! COMMON-NEXT: %[[ITER_VAR_J:.*]] = fir.alloca i32 {bindc_name = "j"}
+! COMMON-NEXT: %[[ITER_VAR_J:.*]] = fir.alloca i32 <{bindc_name = "j"}>
 ! COMMON-NEXT: %[[BINDING_J:.*]]:2 = hlfir.declare %[[ITER_VAR_J]] {uniq_name = "_QFEj"}
 
-! COMMON-NEXT: %[[ITER_VAR_K:.*]] = fir.alloca i32 {bindc_name = "k"}
+! COMMON-NEXT: %[[ITER_VAR_K:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 ! COMMON-NEXT: %[[BINDING_K:.*]]:2 = hlfir.declare %[[ITER_VAR_K]] {uniq_name = "_QFEk"}
 
 ! DEVICE: omp.distribute

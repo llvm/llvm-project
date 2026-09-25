@@ -51,7 +51,7 @@ func.func @simple_nested() -> i32 {
 /// Check that non-visible nested functions do not track arguments.
 module {
   // NESTED-LABEL: module @nested_module
-  module @nested_module attributes { sym_visibility = "public" } {
+  module @nested_module <sym_visibility = "public"> {
 
     // NESTED: func nested @nested(
     func.func nested @nested(%arg0 : i32) -> (i32, i32) {

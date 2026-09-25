@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
@@ -420,6 +421,81 @@ LogicalResult ExtfOp::verify() {
         "dst element bitwidth should be greater than src element bitwidth");
   return verifyPackedWidth(*this, "src", srcTy, getNumValues(dstTy),
                            getNarrowFloatBitWidth(getSrcEtype().getEtype()));
+}
+
+/// Float semantics the element type attributes of `xevm.truncf` and `xevm.extf`
+/// stand for. The narrow formats are the OCP FP8 and FP4 ones: `bf8` is
+/// E5M2, `f8` is E4M3 and `e2m1` is FP4.
+static const llvm::fltSemantics *getFloatSemantics(TruncfSrcElemTypes etype) {
+  switch (etype) {
+  case TruncfSrcElemTypes::F16:
+    return &llvm::APFloat::IEEEhalf();
+  case TruncfSrcElemTypes::BF16:
+    return &llvm::APFloat::BFloat();
+  }
+  return nullptr;
+}
+
+static const llvm::fltSemantics *getFloatSemantics(ExtfDstElemTypes etype) {
+  switch (etype) {
+  case ExtfDstElemTypes::F16:
+    return &llvm::APFloat::IEEEhalf();
+  case ExtfDstElemTypes::BF16:
+    return &llvm::APFloat::BFloat();
+  }
+  return nullptr;
+}
+
+static const llvm::fltSemantics *getFloatSemantics(TruncfDstElemTypes etype) {
+  switch (etype) {
+  case TruncfDstElemTypes::BF8:
+    return &llvm::APFloat::Float8E5M2();
+  case TruncfDstElemTypes::F8:
+    return &llvm::APFloat::Float8E4M3FN();
+  case TruncfDstElemTypes::E2M1:
+    return &llvm::APFloat::Float4E2M1FN();
+  }
+  return nullptr;
+}
+
+static const llvm::fltSemantics *getFloatSemantics(ExtfSrcElemTypes etype) {
+  switch (etype) {
+  case ExtfSrcElemTypes::BF8:
+    return &llvm::APFloat::Float8E5M2();
+  case ExtfSrcElemTypes::F8:
+    return &llvm::APFloat::Float8E4M3FN();
+  case ExtfSrcElemTypes::E2M1:
+    return &llvm::APFloat::Float4E2M1FN();
+  }
+  return nullptr;
+}
+
+/// truncf(extf(a)) -> a, when the two ops convert through the same pair of
+/// formats and every narrow value survives the round trip. `bf8` does not
+/// qualify: it is IEEE-like, and extending a signaling NaN quiets it, so the
+/// original value cannot be recovered. This mirrors `arith.truncf`, which gates
+/// the same fold on `APFloatBase::isLosslesslyConvertibleTo`.
+OpFoldResult TruncfOp::fold(FoldAdaptor) {
+  auto extfOp = getSrc().getDefiningOp<ExtfOp>();
+  if (!extfOp)
+    return {};
+
+  const llvm::fltSemantics *narrowSem =
+      getFloatSemantics(getDstEtype().getEtype());
+  const llvm::fltSemantics *wideSem =
+      getFloatSemantics(getSrcEtype().getEtype());
+  if (narrowSem != getFloatSemantics(extfOp.getSrcEtype().getEtype()) ||
+      wideSem != getFloatSemantics(extfOp.getDstEtype().getEtype()))
+    return {};
+
+  Value narrowSrc = extfOp.getSrc();
+  if (narrowSrc.getType() != getDst().getType())
+    return {};
+
+  if (!llvm::APFloatBase::isLosslesslyConvertibleTo(*narrowSem, *wideSem))
+    return {};
+
+  return narrowSrc;
 }
 
 LogicalResult BitcastShuffleOp::verify() {

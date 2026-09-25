@@ -1292,7 +1292,7 @@ public:
 
   lldb::ExpressionResults
   RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
-                const EvaluateExpressionOptions &options,
+                const EvaluateExpressionOptions &requested_options,
                 DiagnosticManager &diagnostic_manager);
 
   void GetStatus(Stream &ostrm, bool is_verbose = false);

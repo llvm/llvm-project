@@ -4,7 +4,7 @@
 
 !CHECK-LABEL: func @_QPlastprivate_iv_inc
 
-!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_incEi"}
+!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlastprivate_iv_incEi"}>
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:      %[[LB:.*]] = arith.constant 4 : i32
@@ -41,7 +41,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate_iv_dec
 
-!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_decEi"}
+!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlastprivate_iv_decEi"}>
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      %[[LB:.*]] = arith.constant 10 : i32
 !CHECK:      %[[UB:.*]] = arith.constant 1 : i32

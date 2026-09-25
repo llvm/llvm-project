@@ -8,6 +8,8 @@ bar
 # Counter Values:
 31
 42
+# Num Bitmap Bytes:
+$0
 
 bar
 # Func Hash:
@@ -17,6 +19,8 @@ bar
 # Counter Values:
 500
 600
+# Num Bitmap Bytes:
+$0
 
 baz
 # Func Hash:
@@ -26,4 +30,6 @@ baz
 # Counter Values:
 7
 8
+# Num Bitmap Bytes:
+$0
 

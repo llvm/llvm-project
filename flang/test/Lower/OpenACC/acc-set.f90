@@ -18,7 +18,7 @@ program test_acc_set
 end
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK: %[[L:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFEl"}
+! CHECK: %[[L:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "l", uniq_name = "_QFEl"}>
 ! HLFIR: %[[DECLL:.*]]:2 = hlfir.declare %[[L]] {uniq_name = "_QFEl"}
 
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32

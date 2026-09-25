@@ -463,9 +463,10 @@ define ptr @gep_volatile_load(i64 %index) {
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 7, !"PIC Level", i32 2}
 !1 = !{i32 1, !"Code Model", i32 1}
-!4 = !{!"any pointer", !5, i64 0}
+!4 = !{!7, !7, i64 0, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}
 !6 = !{!"Simple C/C++ TBAA"}
+!7 = !{!"any pointer", !5}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ;.

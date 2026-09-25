@@ -39,6 +39,9 @@ static cl::opt<CarriedLatency> BlockCarriedLatency(
             CarriedLatency::All, "all",
             "Pad latency for any SU with an incoming ds_load dependency.")));
 
+// Default VGPR threshold percent for coexec scheduler.
+static constexpr unsigned DefaultCoExecVGPRThresholdPercent = 100;
+
 namespace {
 
 // Used to disable post-RA scheduling with function level granularity.
@@ -1067,9 +1070,13 @@ AMDGPUCoExecSchedStrategy::AMDGPUCoExecSchedStrategy(
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::ILPInitialSchedule);
   SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
+  SchedStages.push_back(GCNSchedStageID::LiveIntervalRPReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
   // Use more accurate GCN pressure trackers.
   UseGCNTrackers = true;
+
+  if (!VGPRThresholdPercentOpt.getNumOccurrences())
+    VGPRThresholdPercent = DefaultCoExecVGPRThresholdPercent;
 }
 
 void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,

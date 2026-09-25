@@ -675,8 +675,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
 
   if (cookieRequired) {
     ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
-    cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
-                           deletePtr, cookieSize);
+    clang::CharUnits elementAlign =
+        clang::CharUnits::fromQuantity(op.getElementAlign());
+    cxxABI.readArrayCookie(loc, loweredAddress, elementAlign, dl, cirBuilder,
+                           numElements, deletePtr, cookieSize);
   } else {
     deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
                                     cir::CastKind::bitcast, loweredAddress);

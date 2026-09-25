@@ -34,6 +34,13 @@ bool isSplitStorageBitInt(cir::IntType ty, const mlir::DataLayout &dataLayout) {
       llvm::alignTo(storeSize, dataLayout.getTypeABIAlignment(storageTy));
   return allocSize != storeSize;
 }
+
+/// Checks if `dataLayout` describes a big endian layout.
+bool isBigEndian(const mlir::DataLayout &dataLayout) {
+  auto endiannessStr =
+      mlir::dyn_cast_or_null<mlir::StringAttr>(dataLayout.getEndianness());
+  return endiannessStr && endiannessStr == "big";
+}
 } // namespace
 
 mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
@@ -47,6 +54,9 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
   if (!isSplitStorageBitInt(intTy, dataLayout))
     return rewriter.getIntegerAttr(
         mlir::IntegerType::get(intTy.getContext(), storageBits), val);
+
+  if (isBigEndian(dataLayout))
+    val = val.byteSwap();
 
   // If we have to do split storage, we are an array of bytes.  Split this up
   // into the array that matches convertTypeForMemory.
@@ -69,6 +79,18 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
   if (mlir::isa<cir::BoolType>(type)) {
     return mlir::IntegerType::get(type.getContext(),
                                   dataLayout.getTypeSizeInBits(type));
+  }
+
+  if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
+    if (mlir::isa<cir::BoolType>(matrixTy.getElementType())) {
+      assert(!cir::MissingFeatures::hlsl());
+      llvm_unreachable(
+          "convertTypeForMemory: Matrix with bool as element type");
+    }
+
+    uint64_t size = matrixTy.getRowNum() * matrixTy.getColumnNum();
+    mlir::Type elementType = converter.convertType(matrixTy.getElementType());
+    return mlir::LLVM::LLVMArrayType::get(elementType, size);
   }
 
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {

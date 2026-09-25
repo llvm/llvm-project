@@ -956,7 +956,7 @@ void CallConvLoweringPass::runOnOperation() {
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
-  // the parameter, so that a call forwarding the parameter can still recognise
+  // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
   // function returns.
   llvm::scope_exit drainParamSlots(
@@ -1099,14 +1099,17 @@ void CallConvLoweringPass::runOnOperation() {
     addressTakers[callee].push_back(getGlobal);
   });
 
-  // Restate every non-byval indirect parameter's slot alignment as the one the
-  // ABI promises for that parameter, before anything reads a slot.  A call is
-  // rewritten together with its callee rather than with the function
-  // containing it, so a call forwarding such a parameter can be reached before
-  // the parameter's own function is rewritten.  Doing this up front makes the
-  // forwarding decision independent of the order the two were declared in.
-  for (auto &kv : classifications)
-    rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
+  // Restate every non-byval indirect parameter's slot alignment and route any
+  // use of such a parameter as a call argument through a load of that slot,
+  // before any definition or call site is rewritten.  Doing this up front
+  // makes the forwarding decision independent of the order the callee and its
+  // caller were declared in.
+  for (auto &kv : classifications) {
+    if (failed(rewriteCtx.prepareNonByvalParameters(kv.first, kv.second))) {
+      signalPassFailure();
+      return;
+    }
+  }
 
   // An sret slot or an indirect argument is a pointer the source never
   // wrote, and an ellipsis can carry one the declared parameters do not

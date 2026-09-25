@@ -37,7 +37,9 @@ def OpB : NS_Op<"one_variadic_operand_op", []> {
 // CHECK-LABEL: OpB::build
 // CHECK:         ::mlir::ValueRange input
 // CHECK-NOT:     assert
-// CHECK:         odsState.addOperands(input);
+// CHECK:         build(odsBuilder, odsState, ::mlir::TypeRange{}, input);
+// CHECK-LABEL: OpB::build
+// CHECK:         odsState.addOperands(operands);
 
 def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> {
   let arguments = (ins Variadic<AnyTensor>:$input1, AnyTensor:$input2, Variadic<AnyTensor>:$input3);
@@ -55,6 +57,8 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
 // DECL-NEXT: return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSOperands(1).begin());
 
 // CHECK-LABEL: OpD::build
-// CHECK-NEXT: odsState.addOperands(input1);
+// CHECK-NEXT: build(odsBuilder, odsState, ::mlir::TypeRange{}, input1, input2, input3);
+// CHECK-LABEL: OpD::build
+// CHECK: odsState.addOperands(input1);
 // CHECK-NEXT: odsState.addOperands(input2);
 // CHECK-NEXT: odsState.addOperands(input3);

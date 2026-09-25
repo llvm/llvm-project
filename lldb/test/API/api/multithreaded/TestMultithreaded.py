@@ -17,6 +17,7 @@ class SBBreakpointCallbackCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/225860
     @skipIfRemote
     @skipIfHostIncompatibleWithTarget
     def test_python_stop_hook(self):
