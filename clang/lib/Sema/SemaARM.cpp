@@ -427,16 +427,16 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   TheCall->setArg(3, Hint);
 
   if (!Hint->isValueDependent()) {
-    std::optional<llvm::APSInt> HintAP = Hint->getIntegerConstantExpr(Context);
-    if (!HintAP)
+    Expr::EvalResult HintResult;
+    if (!Hint->EvaluateAsInt(HintResult, Context))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_atomic_hint_has_invalid_hint_type)
              << Hint->getType() << Hint->getSourceRange();
 
-    if (llvm::toAArch64MemoryHint(HintAP->getZExtValue()) ==
-        llvm::AArch64MemoryHint::MEM_HINT_NONE) {
+    unsigned HintVal = HintResult.Val.getInt().getZExtValue();
+    if (llvm::toAArch64MemoryHint(HintVal) == llvm::AArch64MemoryHint::NONE) {
       Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
-          << *HintAP << Hint->getSourceRange();
+          << HintVal << Hint->getSourceRange();
       return false;
     }
   }
