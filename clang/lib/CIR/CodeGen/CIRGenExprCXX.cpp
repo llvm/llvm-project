@@ -765,10 +765,21 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr &&
-      calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName())) {
-    callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
-                           mlir::UnitAttr::get(callOrTryCall->getContext()));
+  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr) {
+    if (calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
+      callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
+                             mlir::UnitAttr::get(callOrTryCall->getContext()));
+
+    // A sane operator new does not read or write accessible memory. Classic
+    // sets this on the new-expression call, not on a direct ::operator new
+    // call and not on the function definition. inaccessibleMem is readwrite
+    // and errnoMem is write, matching inaccessibleOrErrnoMemOnly(ModRef, Mod).
+    if (cgf.cgm.getCodeGenOpts().AssumeSaneOperatorNew &&
+        calleeDecl->getDeclName().isAnyOperatorNew())
+      callOrTryCall.setMemoryEffectsAttr(
+          cir::MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+              callOrTryCall->getContext(), cir::ModRefInfo::ModRef,
+              cir::ModRefInfo::Mod));
   }
 
   return rv;
