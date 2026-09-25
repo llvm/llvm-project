@@ -1778,6 +1778,8 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     assert(def && "Expected operand to be defined by an operation");
     if (auto expressionOp = dyn_cast<ExpressionOp>(def))
       def = expressionOp.getRootOp();
+    // Within an expression, `emitc.load` emits only its operand, so determine
+    // parentheses from the operand rather than from the load operation.
     if (auto loadOp = dyn_cast<emitc::LoadOp>(def))
       return emitOperand(loadOp.getOperand(), isInBrackets);
     FailureOr<int> precedence = getOperatorPrecedence(def);
