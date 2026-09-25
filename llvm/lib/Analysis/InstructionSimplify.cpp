@@ -6567,6 +6567,8 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
       PtrSym != LoadedRHSSym || PtrOffset != LoadedRHSOffset)
     return nullptr;
 
+  if (auto *Equiv = dyn_cast<DSOLocalEquivalent>(LoadedLHSPtr))
+    return Equiv->getGlobalValue();
   return LoadedLHSPtr;
 }
 
