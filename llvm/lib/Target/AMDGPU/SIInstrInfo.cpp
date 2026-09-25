@@ -5164,9 +5164,7 @@ bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
     return false;
 
   // Only look at definitions that can execute under the same EXEC mask as the
-  // use. Note that this also rules out instructions that write EXEC
-  // themselves, such as V_CMPX, since those would be found by the caller's
-  // scan for writes to EXEC.
+  // use.
   const MachineInstr *Def = MRI.getVRegDef(Reg);
   if (!Def || Def->getParent() != MBB)
     return false;
