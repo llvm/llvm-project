@@ -1633,6 +1633,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.sysconf
 
     # sys/select.h entrypoints
+    libc.src.sys.select.pselect
     libc.src.sys.select.select
 
     # wchar.h entrypoints
