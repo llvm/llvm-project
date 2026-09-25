@@ -542,6 +542,17 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// Adjustment from a local range to the corresponding loaded range. Zero
+  /// means the range has no loaded copy.
+  ///
+  /// Unlike the adjustment vectors above, this vector is indexed by range, so
+  /// entry \c I corresponds to \c NonAffectingRanges[I].
+  std::vector<int64_t> NonAffectingRedirectAdjustments;
+
+  /// Whether the control block has been written. Import locations in the
+  /// control block must remain local.
+  bool ControlBlockWritten = false;
+
   /// A list of classes in named modules which need to emit the VTable in
   /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
@@ -555,6 +566,13 @@ private:
   /// This function erases source locations pointing into such files.
   SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
                                         const SrcMgr::FileInfo &File);
+
+  /// Returns \p Loc in a loaded copy of its file, or an invalid location if the
+  /// file is kept locally.
+  SourceLocation getRedirectedLocation(SourceLocation Loc) const;
+
+  /// Returns the first non-affecting range whose end is not before \p Offset.
+  unsigned getNonAffectingRangeLowerBound(SourceLocation::UIntTy Offset) const;
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
