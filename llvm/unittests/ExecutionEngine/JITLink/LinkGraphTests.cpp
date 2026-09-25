@@ -833,6 +833,28 @@ TEST(LinkGraphTest, SplitBlock) {
     EXPECT_EQ(B3.edges().begin()->getOffset(), 0U);
 }
 
+TEST(LinkGraphTest, SplitBlockPreservesLaterSymbolAddress) {
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              getGenericEdgeKindName);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+
+  orc::ExecutorAddr BlockAddr(0x1000);
+  auto &B = G.createContentBlock(Sec, BlockContent, BlockAddr, 1, 0);
+  auto &S = G.addDefinedSymbol(B, 15, "S", 1, Linkage::Strong, Scope::Default,
+                               false, false);
+  const orc::ExecutorAddr SymbolAddr = S.getAddress();
+
+  auto Blocks = G.splitBlock(B, ArrayRef<int>({4, 8}));
+
+  ASSERT_EQ(Blocks.size(), 3U);
+  EXPECT_EQ(&S.getBlock(), Blocks[2]);
+  EXPECT_EQ(S.getOffset(), 7U);
+  EXPECT_EQ(S.getAddress(), SymbolAddr);
+  EXPECT_EQ(S.getSize(), 1U);
+}
+
 TEST(LinkGraphTest, GraphAllocationMethods) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
               Triple("x86_64-apple-darwin"), SubtargetFeatures(),
