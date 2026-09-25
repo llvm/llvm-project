@@ -3061,17 +3061,17 @@ private:
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Coop matrix handling.
-  void CheckCoopMatrixLoadElementType(QualType MatrixType,
+  bool CheckCoopMatrixLoadElementType(QualType MatrixType,
                                       SourceLocation MatrixLoc, CallExpr *call);
-  void CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
+  bool CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
                                            QualType BufferType,
                                            SourceLocation MatrixLoc);
   bool CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx);
   bool CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr);
-  bool CheckCoopMatrixLoadStoreStride(Expr *Stride);
+  bool CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx);
   ExprResult BuiltinCoopMatrixStore(CallExpr *TheCall, ExprResult CallResult);
   ExprResult BuiltinCoopMatrixLoad(CallExpr *TheCall, ExprResult CallResult);
-  void CheckCoopMatrixMatMulOutput(CallExpr *TheCall);
+  bool CheckCoopMatrixMatMulOutput(CallExpr *TheCall);
   ExprResult BuiltinCoopMatrixMulAdd(CallExpr *TheCall, ExprResult CallResult);
   ExprResult CreateCoopMatBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
                                 Expr *LHSExpr, Expr *RHSExpr);
@@ -7997,7 +7997,7 @@ public:
   /// Are the two types cooperative matrix types and do they have the same
   /// dimensions i.e. do they have the same number of rows and the same number
   /// of columns? Also do they have the same scope and use?
-  bool areCoopMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
+  bool areCoopMatrixTypesCompatible(QualType srcTy, QualType destTy);
 
   bool areVectorTypesSameSize(QualType srcType, QualType destType);
 

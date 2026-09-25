@@ -8062,8 +8062,7 @@ bool Sema::areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy) {
          matSrcType->getNumColumns() == matDestType->getNumColumns();
 }
 
-bool Sema::areCoopMatrixTypesOfTheSameDimension(QualType srcTy,
-                                                QualType destTy) {
+bool Sema::areCoopMatrixTypesCompatible(QualType srcTy, QualType destTy) {
   if (!destTy->isCooperativeMatrixType() || !srcTy->isCooperativeMatrixType())
     return false;
 
@@ -8186,7 +8185,7 @@ bool Sema::CheckMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
 bool Sema::CheckCoopMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
                                CastKind &Kind) {
   if (SrcTy->isCooperativeMatrixType() && DestTy->isCooperativeMatrixType()) {
-    if (!areCoopMatrixTypesOfTheSameDimension(SrcTy, DestTy)) {
+    if (!areCoopMatrixTypesCompatible(SrcTy, DestTy)) {
       return Diag(R.getBegin(), diag::err_invalid_conversion_between_matrixes)
              << DestTy << SrcTy << R;
     }
@@ -15999,12 +15998,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
         Diag(LHSExpr->getBeginLoc(), diag::err_coop_matrix_assignment);
         return ExprError();
       }
-      auto call = dyn_cast<CallExpr>(RHSExpr);
-      assert(call);
-      call->setType(LHSExpr->getType());
-      CheckCoopMatrixLoadElementType(LHSExpr->getType(), LHSExpr->getBeginLoc(),
-                                     call);
-      CheckCoopMatrixMatMulOutput(call);
+      auto Call = dyn_cast<CallExpr>(RHSExpr);
+      assert(Call);
+      Call->setType(LHSExpr->getType());
+      if (CheckCoopMatrixLoadElementType(LHSExpr->getType(), LHSExpr->getBeginLoc(),
+                                     Call))
+        return ExprError();
+      if (CheckCoopMatrixMatMulOutput(Call))
+        return ExprError();
     }
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
     if (getLangOpts().CPlusPlus &&

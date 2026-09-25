@@ -11962,13 +11962,6 @@ def ext_coopmat_without_pragma
 def err_invalid_coopmat_attr
     : Error<"invalid argument of cooperative matrix attribute">;
 
-def err_coop_mat_not_primitive
-    : Error<"cooperative matrix attribute only supported for integer and "
-            "floating-point types">;
-
-def err_coop_mat_rol_col_size
-    : Error<"cooperative matrix row and column must have power-of-two size">;
-
 def err_coop_mem_layout_enum
     : Error<"memory layout for cooperative matrix should be "
             "CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or "
@@ -12019,8 +12012,8 @@ def err_unsupported_coopmat_binary_operator
 def err_unsupported_coopmat_scalar_operator
     : Error<"unsupported cooperative matrix scalar operator">;
 
-def err_ref_coopmat_var
-    : Error<"invalid reference of cooperative matrix variable">;
+def err_invalid_operand_for_coopmat_scalar_operator
+    : Error<"unsupported type for cooperative matrix scalar operator">;
 
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<

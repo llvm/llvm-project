@@ -2065,7 +2065,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::OpenCLConstantAddressSpace:
   case attr::OpenCLGenericAddressSpace:
   case attr::HLSLGroupSharedAddressSpace:
-  case attr::CoopMatrixType:
   case attr::SYCLPrivateAddressSpace:
   case attr::SYCLGlobalAddressSpace:
   case attr::SYCLLocalAddressSpace:
