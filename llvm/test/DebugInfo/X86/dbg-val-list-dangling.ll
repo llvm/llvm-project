@@ -1,9 +1,5 @@
-;; At the moment we emit an undef as soon as we encounter "dangling" variadic
-;; dbg_value nodes. This does not reduce correctness but does reduce coverage.
-;; We should make variadic dbg_values work in the same way as their
-;; non-variadic counterparts here.
-;; FIXME: When dangling nodes for a variadic dbg_value are found, we should be
-;; able to recover the value in some cases.
+;; The address of a global is emitted as a location in its own right, so it never
+;; dangles and a variadic dbg_value recovers it just like a non-variadic one.
 
 ; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - -experimental-debug-variable-locations=false | FileCheck %s
 
@@ -22,8 +18,8 @@
 ; CHECK: ![[C:[0-9]+]] = !DILocalVariable(name: "c",
 ; CHECK: ![[D:[0-9]+]] = !DILocalVariable(name: "d",
 
-; CHECK-DAG: DBG_VALUE %[[VREG:[0-9]]], $noreg, ![[C]], !DIExpression(), debug-location
-; CHECK-DAG: DBG_VALUE_LIST ![[D]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), $noreg, debug-location
+; CHECK-DAG: DBG_VALUE @.str, $noreg, ![[C]], !DIExpression(), debug-location
+; CHECK-DAG: DBG_VALUE_LIST ![[D]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), @.str, debug-location
 
 target triple = "x86_64-unknown-linux-gnu"
 

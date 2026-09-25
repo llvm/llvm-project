@@ -1466,7 +1466,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         // debug values.
         if (MO.isReg()) {
           DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
-        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm() || MO.isGlobal()) {
           DebugOps.push_back(DbgOpStore.insert(MO));
         } else {
           llvm_unreachable("Unexpected debug operand type.");
