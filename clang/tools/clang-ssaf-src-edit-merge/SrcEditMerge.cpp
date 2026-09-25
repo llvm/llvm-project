@@ -106,7 +106,7 @@ cl::opt<std::string> SarifConflictsOut(
 bool readInput(llvm::StringRef Path,
                clang::tooling::TranslationUnitReplacements &Out) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-      llvm::MemoryBuffer::getFile(Path);
+      llvm::MemoryBuffer::getFile(Path, /*IsText=*/true);
   if (std::error_code EC = Buffer.getError()) {
     llvm::errs() << ToolName << ": "
                  << llvm::formatv(CannotReadInput, Path, EC.message()) << "\n";
