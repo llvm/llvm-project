@@ -2225,7 +2225,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     MB.CreateIndexAssumption(RowIdx, NumRows);
 
   Value *FlatMatrix = Visit(E->getBase());
-  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
+  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
@@ -2242,7 +2242,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
   }
 
-  return CGF.EmitFromMemory(RowVec, E->getType());
+  return RowVec;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
