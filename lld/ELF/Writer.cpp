@@ -1664,6 +1664,12 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // Sizes are no longer allowed to grow, so all allowable spills have been
   // taken. Remove any leftover potential spills.
   ctx.script->erasePotentialSpillSections();
+
+  // Refresh the header from the final addresses as relaxCFIJumpTables() can
+  // move input sections without changing output-section start addresses, so the
+  // cache from inside the loop can be stale (#226166).
+  if (!errCount(ctx) && ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())
+    ctx.in.ehFrameHdr->refreshCache(ctx);
 }
 
 // If Input Sections have been shrunk (basic block sections) then
@@ -1749,6 +1755,11 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
   for (OutputSection *osec : ctx.outputSections)
     for (InputSection *is : getInputSections(*osec, storage))
       is->trim();
+
+  // The jump deletions above shrank input sections and moved symbol values.
+  // Refresh the header so its keys match the final PCs.
+  if (ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())
+    ctx.in.ehFrameHdr->refreshCache(ctx);
 }
 
 // Sections that finalizeAddressDependentContent may add to.

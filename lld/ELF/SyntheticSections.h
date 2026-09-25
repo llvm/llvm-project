@@ -103,11 +103,23 @@ public:
   void finalizeContents() override;
   bool updateAllocSize(Ctx &) override;
 
-  // Cached FDE data computed by updateAllocSize, used by
-  // EhFrameSection::writeTo.
-  SmallVector<EhFrameSection::FdeData, 0> fdes;
-  bool large = false; // Whether to use sdata8 encoding.
+  // Rebuild the cached search-table entries from the current addresses.
+  // Never changes size and never relayouts. If the rebuilt table does not
+  // fit the assigned capacity, reports an error.
+  void refreshCache(Ctx &);
+
+  // Cached FDE data computed by computeFdeTable(), used by
+  // EhFrameSection::writeTo().
+  struct CachedFdeTable {
+    SmallVector<EhFrameSection::FdeData, 0> fdes;
+    bool large = false; // Whether to use sdata8 encoding.
+    size_t requiredSize = 0;
+  };
+  CachedFdeTable cache;
   size_t size = 0;
+
+private:
+  CachedFdeTable computeFdeTable(Ctx &);
 };
 
 class GotSection final : public SyntheticSection {
