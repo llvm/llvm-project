@@ -693,10 +693,10 @@ static Option *findPrefixOption(StringRef Name, size_t &Length,
   return nullptr;
 }
 
-/// HandlePrefixedOption - The specified argument string (which started with at
-/// least one '-') does not fully match an available option.  Check to see if
-/// this is a prefix option.  If so, split arg into output an Arg/Value pair and
-/// return the Option to parse it with.
+/// The specified argument string (which started with at least one '-') does not
+/// fully match an available option.  Check to see if this is a prefix option.
+/// If so, split arg into output an Arg/Value pair and return the Option to
+/// parse it with.
 static Option *HandlePrefixedOption(StringRef &Arg, StringRef &Value,
                                     const OptionsMapTy &OptionsMap) {
   if (Arg.size() == 1)
