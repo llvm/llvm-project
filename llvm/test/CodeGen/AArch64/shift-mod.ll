@@ -356,3 +356,33 @@ define i64 @lshr_i64_sub63(i64 %x, i64 %amt) {
   %r = lshr i64 %x, %sub
   ret i64 %r
 }
+
+; Test rotate with masked/modified shift amount.
+define i32 @rotr_i32_and(i32 %x, i32 %amt) {
+; CHECK-SD-LABEL: rotr_i32_and:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ror w0, w0, w1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: rotr_i32_and:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and w8, w1, #0x1f
+; CHECK-GI-NEXT:    ror w0, w0, w8
+; CHECK-GI-NEXT:    ret
+  %m = and i32 %amt, 31
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %m)
+  ret i32 %r
+}
+
+define i32 @rotr_i32_sub(i32 %x, i32 %amt) {
+; CHECK-LABEL: rotr_i32_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    ror w0, w0, w8
+; CHECK-NEXT:    ret
+  %s = sub i32 64, %amt
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %s)
+  ret i32 %r
+}
+
+declare i32 @llvm.fshr.i32(i32, i32, i32)
