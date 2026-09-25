@@ -3193,11 +3193,6 @@ bool HexagonInstrInfo::hasNonExtEquivalent(const MachineInstr &MI) const {
   return false;
 }
 
-bool HexagonInstrInfo::hasPseudoInstrPair(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(),
-                                 Hexagon::InstrType_Pseudo) >= 0;
-}
-
 bool HexagonInstrInfo::hasUncondBranch(const MachineBasicBlock *B)
       const {
   MachineBasicBlock::const_iterator I = B->getFirstTerminator(), E = B->end();
@@ -4337,10 +4332,6 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   return HexagonII::HSIG_None;
 }
 
-short HexagonInstrInfo::getEquivalentHWInstr(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(), Hexagon::InstrType_Real);
-}
-
 unsigned HexagonInstrInfo::getInstrTimingClassLatency(
       const InstrItineraryData *ItinData, const MachineInstr &MI) const {
   // Default to one cycle for no itinerary. However, an "empty" itinerary may
@@ -4602,10 +4593,6 @@ bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
   if (Cond[1].isUndef())
     PredRegFlags |= RegState::Undef;
   return true;
-}
-
-short HexagonInstrInfo::getPseudoInstrPair(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(), Hexagon::InstrType_Pseudo);
 }
 
 short HexagonInstrInfo::getRegForm(const MachineInstr &MI) const {
