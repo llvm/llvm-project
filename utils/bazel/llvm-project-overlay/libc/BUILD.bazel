@@ -3687,6 +3687,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_clone",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/clone.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    textual_hdrs = [
+        "src/__support/OSUtil/linux/syscall_wrappers/aarch64/clone.h",
+        "src/__support/OSUtil/linux/syscall_wrappers/riscv/clone.h",
+        "src/__support/OSUtil/linux/syscall_wrappers/x86_64/clone.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+        ":__support_macros_properties_architectures",
+        ":hdr_stdint_proxy",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_close",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/close.h"],
     target_compatible_with = select({
@@ -4230,6 +4253,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_cleanup_stack",
+    hdrs = ["src/__support/threads/cleanup_stack.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":types_struct___pthread_cleanup_frame",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_linux_futex_word_type",
     hdrs = ["src/__support/threads/linux/futex_word.h"],
     target_compatible_with = select({
@@ -4256,6 +4293,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_cleanup_stack",
         ":hdr_stdint_proxy",
         ":types_size_t",
         ":types_struct___pthread_cleanup_frame",
@@ -4463,8 +4501,10 @@ libc_support_library(
         ":__support_fixedvector",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_threads_cleanup_stack",
         ":__support_threads_mutex",
         ":__support_threads_thread_headers",
+        ":types_struct___pthread_cleanup_frame",
     ] + select({
         "@platforms//os:linux": [":__support_threads_linux_thread"],
         "//conditions:default": [],
@@ -4474,7 +4514,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_linux_thread",
     srcs = ["src/__support/threads/linux/thread.cpp"],
-    copt_sets = ["threading"],
     target_compatible_with = select({
         ":full_build_linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -4492,6 +4531,7 @@ libc_support_library(
         ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_clone",
         ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_getpid",
         ":__support_osutil_linux_syscall_wrappers_mmap",

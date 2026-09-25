@@ -84,10 +84,6 @@ _LIBC_LIBRARY_COPT_SETS = {
         "-fno-omit-frame-pointer",
         "-fno-stack-protector",
     ],
-    "threading": [
-        "-fno-omit-frame-pointer",
-        "-Wno-frame-address",
-    ],
 }
 
 def _libc_library(
