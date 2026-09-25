@@ -1410,8 +1410,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         STM.getAddressableLocalMemorySize(), DS_Error));
   }
 
-  // Catches the paths the register allocator budget cannot constrain: explicit
-  // physical registers in inline asm and wave dispatch VGPR arguments.
+  // When dynamic VGPRs are enabled, entry functions are launched with a single
+  // VGPR block. The register allocator enforces this constraint, but we also
+  // need to catch explicit physical registers in inline asm and wave dispatch
+  // VGPR arguments.
   if (MFI->isDynamicVGPREnabled() &&
       AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
     unsigned BlockSize = MFI->getDynamicVGPRBlockSize();
@@ -1421,7 +1423,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       LLVMContext &Ctx = F.getContext();
       Ctx.diagnose(DiagnosticInfoResourceLimit(
           F, "dynamic VGPR entry point vector registers", NumVgpr, BlockSize,
-          DS_Error, DK_ResourceLimit));
+          DS_Warning, DK_ResourceLimit));
     }
   }
 
