@@ -3690,9 +3690,9 @@ static bool evalICmpImm(uint8_t Imm, const APSInt &A, const APSInt &B,
   case 0x04: // _MM_CMPINT_NE
     return (A != B);
   case 0x05: // _MM_CMPINT_NLT
-    return IsUnsigned ? A.ugt(B) : A.sgt(B);
-  case 0x06: // _MM_CMPINT_NLE
     return IsUnsigned ? A.uge(B) : A.sge(B);
+  case 0x06: // _MM_CMPINT_NLE
+    return IsUnsigned ? A.ugt(B) : A.sgt(B);
   case 0x07: // _MM_CMPINT_TRUE
     return true;
   default:
