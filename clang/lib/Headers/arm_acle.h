@@ -41,8 +41,10 @@ void __sevl(void);
 void __yield(void);
 
 /* Atomic Hints */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 const int HINT_STSHH_KEEP = 0;
 const int HINT_STSHH_STRM = 1;
+#endif
 
 #if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
 #define __dbg(t) __builtin_arm_dbg(t)
