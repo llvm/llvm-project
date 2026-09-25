@@ -159,6 +159,14 @@ bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
                  : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
+bool VFSelectionContext::isLegalExpandLoadOrCompressStore(
+    bool IsLoad, Type *ScalarTy, Align Alignment, ElementCount VF) const {
+  Type *VectorTy = toVectorTy(ScalarTy, VF);
+  return ForceTargetSupportsMaskedMemoryOps ||
+         (IsLoad ? TTI.isLegalMaskedExpandLoad(VectorTy, Alignment)
+                 : TTI.isLegalMaskedCompressStore(VectorTy, Alignment));
+}
+
 bool VFSelectionContext::supportsScalableVectors() const {
   return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors ||
          VectorizerParams::VectorizationFactor.isScalable();
