@@ -7,7 +7,7 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [68 x ptr] [ptr @_ZGVbN2v_sin, ptr @_ZGVbN4v_sinf, ptr @_ZGVbN2v_cos, ptr @_ZGVbN4v_cosf, ptr @_ZGVbN2v_tan, ptr @_ZGVbN4v_tanf, ptr @_ZGVbN2v_exp, ptr @_ZGVbN4v_expf, ptr @_ZGVbN2v_log, ptr @_ZGVbN4v_logf, ptr @_ZGVbN2vv_pow, ptr @_ZGVbN4vv_powf, ptr @_ZGVbN2v_acos, ptr @_ZGVbN4v_acosf, ptr @_ZGVbN2v_asin, ptr @_ZGVbN4v_asinf, ptr @_ZGVbN2v_atan, ptr @_ZGVbN4v_atanf, ptr @_ZGVbN2vv_atan2, ptr @_ZGVbN4vv_atan2f, ptr @_ZGVbN2v_cosh, ptr @_ZGVbN4v_coshf, ptr @_ZGVbN2v_sinh, ptr @_ZGVbN4v_sinhf, ptr @_ZGVbN2v_tanh, ptr @_ZGVbN4v_tanhf, ptr @_ZGVbN2v_exp10, ptr @_ZGVbN4v_exp10f, ptr @_ZGVbN2v_exp2, ptr @_ZGVbN4v_exp2f, ptr @_ZGVbN2v_log10, ptr @_ZGVbN4v_log10f, ptr @_ZGVbN2v_log2, ptr @_ZGVbN4v_log2f, ptr @_ZGVdN4v_sin, ptr @_ZGVdN8v_sinf, ptr @_ZGVdN4v_cos, ptr @_ZGVdN8v_cosf, ptr @_ZGVdN4v_tan, ptr @_ZGVdN8v_tanf, ptr @_ZGVdN4v_exp, ptr @_ZGVdN8v_expf, ptr @_ZGVdN4v_log, ptr @_ZGVdN8v_logf, ptr @_ZGVdN4vv_pow, ptr @_ZGVdN8vv_powf, ptr @_ZGVdN4v_acos, ptr @_ZGVdN8v_acosf, ptr @_ZGVdN4v_asin, ptr @_ZGVdN8v_asinf, ptr @_ZGVdN4v_atan, ptr @_ZGVdN8v_atanf, ptr @_ZGVdN4vv_atan2, ptr @_ZGVdN8vv_atan2f, ptr @_ZGVdN4v_cosh, ptr @_ZGVdN8v_coshf, ptr @_ZGVdN4v_sinh, ptr @_ZGVdN8v_sinhf, ptr @_ZGVdN4v_tanh, ptr @_ZGVdN8v_tanhf, ptr @_ZGVdN4v_exp10, ptr @_ZGVdN8v_exp10f, ptr @_ZGVdN4v_exp2, ptr @_ZGVdN8v_exp2f, ptr @_ZGVdN4v_log10, ptr @_ZGVdN8v_log10f, ptr @_ZGVdN4v_log2, ptr @_ZGVdN8v_log2f], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [46 x ptr] [ptr @_ZGVbN2v_sin, ptr @_ZGVbN4v_sinf, ptr @_ZGVbN2v_cos, ptr @_ZGVbN4v_cosf, ptr @_ZGVbN2v_tan, ptr @_ZGVbN4v_tanf, ptr @_ZGVbN2v_exp, ptr @_ZGVbN4v_expf, ptr @_ZGVbN2v_log, ptr @_ZGVbN4v_logf, ptr @_ZGVbN2vv_pow, ptr @_ZGVbN4vv_powf, ptr @_ZGVbN2v_acos, ptr @_ZGVbN4v_acosf, ptr @_ZGVbN2v_asin, ptr @_ZGVbN4v_asinf, ptr @_ZGVbN2v_atan, ptr @_ZGVbN4v_atanf, ptr @_ZGVbN2vv_atan2, ptr @_ZGVbN4vv_atan2f, ptr @_ZGVbN2v_cosh, ptr @_ZGVbN4v_coshf, ptr @_ZGVbN2v_sinh, ptr @_ZGVbN4v_sinhf, ptr @_ZGVbN2v_tanh, ptr @_ZGVbN4v_tanhf, ptr @_ZGVbN2v_exp10, ptr @_ZGVbN4v_exp10f, ptr @_ZGVbN2v_exp2, ptr @_ZGVbN4v_exp2f, ptr @_ZGVbN2v_log10, ptr @_ZGVbN4v_log10f, ptr @_ZGVbN2v_log2, ptr @_ZGVbN4v_log2f, ptr @_ZGVdN4v_sin, ptr @_ZGVdN8v_sinf, ptr @_ZGVdN4v_cos, ptr @_ZGVdN8v_cosf, ptr @_ZGVdN4v_tan, ptr @_ZGVdN8v_tanf, ptr @_ZGVdN4v_exp, ptr @_ZGVdN8v_expf, ptr @_ZGVdN4v_log, ptr @_ZGVdN8v_logf, ptr @_ZGVdN4vv_pow, ptr @_ZGVdN8vv_powf], section "llvm.metadata"
 ;.
 define <2 x double> @llvm_sin_f64(<2 x double> %in0) {
 ; CHECK-LABEL: @llvm_sin_f64(
@@ -463,7 +463,7 @@ define <8 x float> @llvm_pow_wide_f32(<8 x float> %in0, <8 x float> %in1) {
 
 define <4 x double> @llvm_acos_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_acos_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_acos(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.acos.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.acos.v4f64(<4 x double> %in0)
@@ -472,7 +472,7 @@ define <4 x double> @llvm_acos_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_acos_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_acos_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_acosf(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.acos.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.acos.v8f32(<8 x float> %in0)
@@ -481,7 +481,7 @@ define <8 x float> @llvm_acos_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_asin_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_asin_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_asin(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.asin.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.asin.v4f64(<4 x double> %in0)
@@ -490,7 +490,7 @@ define <4 x double> @llvm_asin_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_asin_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_asin_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_asinf(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.asin.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.asin.v8f32(<8 x float> %in0)
@@ -499,7 +499,7 @@ define <8 x float> @llvm_asin_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_atan_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_atan_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_atan(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.atan.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.atan.v4f64(<4 x double> %in0)
@@ -508,7 +508,7 @@ define <4 x double> @llvm_atan_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_atan_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_atan_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_atanf(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.atan.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.atan.v8f32(<8 x float> %in0)
@@ -517,7 +517,7 @@ define <8 x float> @llvm_atan_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_atan2_wide_f64(<4 x double> %in0, <4 x double> %in1) {
 ; CHECK-LABEL: @llvm_atan2_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4vv_atan2(<4 x double> [[IN0:%.*]], <4 x double> [[IN1:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.atan2.v4f64(<4 x double> [[IN0:%.*]], <4 x double> [[IN1:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.atan2.v4f64(<4 x double> %in0, <4 x double> %in1)
@@ -526,7 +526,7 @@ define <4 x double> @llvm_atan2_wide_f64(<4 x double> %in0, <4 x double> %in1) {
 
 define <8 x float> @llvm_atan2_wide_f32(<8 x float> %in0, <8 x float> %in1) {
 ; CHECK-LABEL: @llvm_atan2_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8vv_atan2f(<8 x float> [[IN0:%.*]], <8 x float> [[IN1:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.atan2.v8f32(<8 x float> [[IN0:%.*]], <8 x float> [[IN1:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.atan2.v8f32(<8 x float> %in0, <8 x float> %in1)
@@ -535,7 +535,7 @@ define <8 x float> @llvm_atan2_wide_f32(<8 x float> %in0, <8 x float> %in1) {
 
 define <4 x double> @llvm_cosh_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_cosh_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_cosh(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.cosh.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.cosh.v4f64(<4 x double> %in0)
@@ -544,7 +544,7 @@ define <4 x double> @llvm_cosh_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_cosh_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_cosh_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_coshf(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.cosh.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.cosh.v8f32(<8 x float> %in0)
@@ -553,7 +553,7 @@ define <8 x float> @llvm_cosh_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_sinh_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_sinh_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_sinh(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.sinh.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.sinh.v4f64(<4 x double> %in0)
@@ -562,7 +562,7 @@ define <4 x double> @llvm_sinh_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_sinh_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_sinh_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_sinhf(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.sinh.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.sinh.v8f32(<8 x float> %in0)
@@ -571,7 +571,7 @@ define <8 x float> @llvm_sinh_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_tanh_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_tanh_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_tanh(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.tanh.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.tanh.v4f64(<4 x double> %in0)
@@ -580,7 +580,7 @@ define <4 x double> @llvm_tanh_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_tanh_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_tanh_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_tanhf(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.tanh.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.tanh.v8f32(<8 x float> %in0)
@@ -589,7 +589,7 @@ define <8 x float> @llvm_tanh_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_exp10_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_exp10_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_exp10(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.exp10.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.exp10.v4f64(<4 x double> %in0)
@@ -598,7 +598,7 @@ define <4 x double> @llvm_exp10_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_exp10_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_exp10_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_exp10f(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.exp10.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.exp10.v8f32(<8 x float> %in0)
@@ -607,7 +607,7 @@ define <8 x float> @llvm_exp10_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_exp2_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_exp2_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_exp2(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.exp2.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.exp2.v4f64(<4 x double> %in0)
@@ -616,7 +616,7 @@ define <4 x double> @llvm_exp2_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_exp2_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_exp2_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_exp2f(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.exp2.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.exp2.v8f32(<8 x float> %in0)
@@ -625,7 +625,7 @@ define <8 x float> @llvm_exp2_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_log10_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_log10_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_log10(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.log10.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.log10.v4f64(<4 x double> %in0)
@@ -634,7 +634,7 @@ define <4 x double> @llvm_log10_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_log10_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_log10_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_log10f(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.log10.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.log10.v8f32(<8 x float> %in0)
@@ -643,7 +643,7 @@ define <8 x float> @llvm_log10_wide_f32(<8 x float> %in0) {
 
 define <4 x double> @llvm_log2_wide_f64(<4 x double> %in0) {
 ; CHECK-LABEL: @llvm_log2_wide_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_log2(<4 x double> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x double> @llvm.log2.v4f64(<4 x double> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call fast <4 x double> @llvm.log2.v4f64(<4 x double> %in0)
@@ -652,7 +652,7 @@ define <4 x double> @llvm_log2_wide_f64(<4 x double> %in0) {
 
 define <8 x float> @llvm_log2_wide_f32(<8 x float> %in0) {
 ; CHECK-LABEL: @llvm_log2_wide_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_log2f(<8 x float> [[IN0:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <8 x float> @llvm.log2.v8f32(<8 x float> [[IN0:%.*]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = call fast <8 x float> @llvm.log2.v8f32(<8 x float> %in0)

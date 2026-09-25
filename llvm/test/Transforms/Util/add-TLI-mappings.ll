@@ -49,11 +49,10 @@
 ; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_log10f,
 ; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN4v_log10f,
 ; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_log10f
-; LIBMVEC-X86-SAME: [4 x ptr] [
+; LIBMVEC-X86-SAME: [3 x ptr] [
 ; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_sin,
 ; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin,
-; LIBMVEC-X86-SAME:   ptr @_ZGVbN4v_log10f,
-; LIBMVEC-X86-SAME:   ptr @_ZGVdN8v_log10f
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN4v_log10f
 ; SLEEFGNUABI-SAME: [18 x ptr] [
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vl8_modf,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl8_modf,
@@ -265,7 +264,6 @@ declare double @ldexp(double, i32 signext) #0
 ; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
 ; LIBMVEC-X86: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
 ; LIBMVEC-X86: declare <4 x float> @_ZGVbN4v_log10f(<4 x float>)
-; LIBMVEC-X86: declare <8 x float> @_ZGVdN8v_log10f(<8 x float>)
 
 ; ACCELERATE: declare <4 x float> @vlog10f(<4 x float>)
 
@@ -363,8 +361,7 @@ attributes #0 = { nounwind readnone }
 ; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVbN2v_sin),
 ; LIBMVEC-X86-SAME:   _ZGV_LLVM_N4v_sin(_ZGVdN4v_sin)" }
 ; LIBMVEC-X86:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
-; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(_ZGVbN4v_log10f),
-; LIBMVEC-X86-SAME:   _ZGV_LLVM_N8v_llvm.log10.f32(_ZGVdN8v_log10f)" }
+; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(_ZGVbN4v_log10f)" }
 
 ; SLEEFGNUABI:      attributes #[[MODF]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2vl8_modf(_ZGVnN2vl8_modf),
