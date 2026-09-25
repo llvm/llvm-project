@@ -793,6 +793,10 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (TrackLaneMasks) {
         SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
         RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx);
+      } else if (LIS) {
+        // Detect dead defs from LiveIntervals instead of trusting operand dead
+        // flags.
+        RegOpers.detectDeadDefs(MI, *LIS, MRI);
       }
       if (PDiffs != nullptr)
         PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
