@@ -13521,11 +13521,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // The positive stride case is the same as isKnownPositive(Stride) returning
     // true (original behavior of the function).
     //
-    if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
-        !loopHasNoAbnormalExits(L))
+    if (PredicatedIV || !NoWrap || !loopHasNoAbnormalExits(L))
       return getCouldNotCompute();
 
-    if (!isKnownNonZero(Stride)) {
+    if (!loopIsFiniteByAssumption(L)) {
+      // If the loop may be infinite, add a predicate ensuring Stride is
+      // positive, to guarantee forward progress.
+      if (!AllowPredicates || !isLoopInvariant(Stride, L))
+        return getCouldNotCompute();
+
+      const SCEV *Zero = getZero(Stride->getType());
+      auto *P = getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero);
+      Predicates.push_back(P);
+      // When the predicate holds (Stride > 0), umax(Stride, 1) == Stride,
+      // so the result is unchanged. To prevent div by zero.
+      Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+    } else if (!isKnownNonZero(Stride)) {
       // If we have a step of zero, and RHS isn't invariant in L, we don't know
       // if it might eventually be greater than start and if so, on which
       // iteration.  We can't even produce a useful upper bound.
