@@ -533,10 +533,10 @@ define void @f16(ptr %a, ptr %b, i8 %c) {
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @fun2(ptr nonnull [[A]], ptr nonnull [[B]]) #[[ATTR7:[0-9]+]]
+; TUNIT-NEXT:    tail call void @fun2(ptr noundef nonnull [[A]], ptr noundef nonnull [[B]]) #[[ATTR7:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       if.else:
-; TUNIT-NEXT:    tail call void @fun2(ptr nonnull [[A]], ptr [[B]]) #[[ATTR7]]
+; TUNIT-NEXT:    tail call void @fun2(ptr noundef nonnull [[A]], ptr [[B]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
@@ -545,19 +545,19 @@ define void @f16(ptr %a, ptr %b, i8 %c) {
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    tail call void @fun2(ptr nonnull [[A]], ptr nonnull [[B]]) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    tail call void @fun2(ptr noundef nonnull [[A]], ptr noundef nonnull [[B]]) #[[ATTR6:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       if.else:
-; CGSCC-NEXT:    tail call void @fun2(ptr nonnull [[A]], ptr [[B]]) #[[ATTR6]]
+; CGSCC-NEXT:    tail call void @fun2(ptr noundef nonnull [[A]], ptr [[B]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ;
   %cmp = icmp eq i8 %c, 0
   br i1 %cmp, label %if.then, label %if.else
 if.then:
-  tail call void @fun2(ptr nonnull %a, ptr nonnull %b)
+  tail call void @fun2(ptr noundef nonnull %a, ptr noundef nonnull %b)
   ret void
 if.else:
-  tail call void @fun2(ptr nonnull %a, ptr %b)
+  tail call void @fun2(ptr noundef nonnull %a, ptr %b)
   ret void
 }
 ; TEST 17 explore child BB test
@@ -581,7 +581,7 @@ define void @f17(ptr %a, i8 %c) {
 ; TUNIT-NEXT:    tail call void @fun0() #[[ATTR7]]
 ; TUNIT-NEXT:    br label [[CONT]]
 ; TUNIT:       cont:
-; TUNIT-NEXT:    tail call void @fun1(ptr nonnull [[A]]) #[[ATTR7]]
+; TUNIT-NEXT:    tail call void @fun1(ptr noundef nonnull [[A]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
@@ -596,7 +596,7 @@ define void @f17(ptr %a, i8 %c) {
 ; CGSCC-NEXT:    tail call void @fun0() #[[ATTR6]]
 ; CGSCC-NEXT:    br label [[CONT]]
 ; CGSCC:       cont:
-; CGSCC-NEXT:    tail call void @fun1(ptr nonnull [[A]]) #[[ATTR6]]
+; CGSCC-NEXT:    tail call void @fun1(ptr noundef nonnull [[A]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ;
   %cmp = icmp eq i8 %c, 0
@@ -608,7 +608,7 @@ if.else:
   tail call void @fun0()
   br label %cont
 cont:
-  tail call void @fun1(ptr nonnull %a)
+  tail call void @fun1(ptr noundef nonnull %a)
   ret void
 }
 ; TEST 18 More complex test
@@ -638,13 +638,13 @@ define void @f18(ptr %a, ptr %b, i8 %c) {
 ; TUNIT-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 1
 ; TUNIT-NEXT:    br i1 [[CMP2]], label [[CONT_THEN:%.*]], label [[CONT_ELSE:%.*]]
 ; TUNIT:       cont.then:
-; TUNIT-NEXT:    tail call void @fun1(ptr nonnull [[B]]) #[[ATTR7]]
+; TUNIT-NEXT:    tail call void @fun1(ptr noundef nonnull [[B]]) #[[ATTR7]]
 ; TUNIT-NEXT:    br label [[CONT2:%.*]]
 ; TUNIT:       cont.else:
 ; TUNIT-NEXT:    tail call void @fun0() #[[ATTR7]]
 ; TUNIT-NEXT:    br label [[CONT2]]
 ; TUNIT:       cont2:
-; TUNIT-NEXT:    tail call void @fun1(ptr nonnull [[A]]) #[[ATTR7]]
+; TUNIT-NEXT:    tail call void @fun1(ptr noundef nonnull [[A]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
@@ -662,13 +662,13 @@ define void @f18(ptr %a, ptr %b, i8 %c) {
 ; CGSCC-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 1
 ; CGSCC-NEXT:    br i1 [[CMP2]], label [[CONT_THEN:%.*]], label [[CONT_ELSE:%.*]]
 ; CGSCC:       cont.then:
-; CGSCC-NEXT:    tail call void @fun1(ptr nonnull [[B]]) #[[ATTR6]]
+; CGSCC-NEXT:    tail call void @fun1(ptr noundef nonnull [[B]]) #[[ATTR6]]
 ; CGSCC-NEXT:    br label [[CONT2:%.*]]
 ; CGSCC:       cont.else:
 ; CGSCC-NEXT:    tail call void @fun0() #[[ATTR6]]
 ; CGSCC-NEXT:    br label [[CONT2]]
 ; CGSCC:       cont2:
-; CGSCC-NEXT:    tail call void @fun1(ptr nonnull [[A]]) #[[ATTR6]]
+; CGSCC-NEXT:    tail call void @fun1(ptr noundef nonnull [[A]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ;
   %cmp1 = icmp eq i8 %c, 0
@@ -683,13 +683,13 @@ cont:
   %cmp2 = icmp eq i8 %c, 1
   br i1 %cmp2, label %cont.then, label %cont.else
 cont.then:
-  tail call void @fun1(ptr nonnull %b)
+  tail call void @fun1(ptr noundef nonnull %b)
   br label %cont2
 cont.else:
   tail call void @fun0()
   br label %cont2
 cont2:
-  tail call void @fun1(ptr nonnull %a)
+  tail call void @fun1(ptr noundef nonnull %a)
   ret void
 }
 
@@ -704,11 +704,11 @@ define void @f19(ptr %a, ptr %b, i8 %c) {
 ; TUNIT-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
 ; TUNIT:       loop.body:
-; TUNIT-NEXT:    tail call void @fun1(ptr nonnull [[B]]) #[[ATTR5]]
-; TUNIT-NEXT:    tail call void @fun1(ptr nonnull [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    tail call void @fun1(ptr noundef nonnull [[B]]) #[[ATTR5]]
+; TUNIT-NEXT:    tail call void @fun1(ptr noundef nonnull [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    br label [[LOOP_HEADER]]
 ; TUNIT:       loop.exit:
-; TUNIT-NEXT:    tail call void @fun1(ptr nonnull [[B]]) #[[ATTR5]]
+; TUNIT-NEXT:    tail call void @fun1(ptr noundef nonnull [[B]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
@@ -719,11 +719,11 @@ define void @f19(ptr %a, ptr %b, i8 %c) {
 ; CGSCC-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
 ; CGSCC:       loop.body:
-; CGSCC-NEXT:    tail call void @fun1(ptr nonnull [[B]]) #[[ATTR4]]
-; CGSCC-NEXT:    tail call void @fun1(ptr nonnull [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    tail call void @fun1(ptr noundef nonnull [[B]]) #[[ATTR4]]
+; CGSCC-NEXT:    tail call void @fun1(ptr noundef nonnull [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[LOOP_HEADER]]
 ; CGSCC:       loop.exit:
-; CGSCC-NEXT:    tail call void @fun1(ptr nonnull [[B]]) #[[ATTR4]]
+; CGSCC-NEXT:    tail call void @fun1(ptr noundef nonnull [[B]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   br label %loop.header
@@ -731,11 +731,11 @@ loop.header:
   %cmp2 = icmp eq i8 %c, 0
   br i1 %cmp2, label %loop.body, label %loop.exit
 loop.body:
-  tail call void @fun1(ptr nonnull %b)
-  tail call void @fun1(ptr nonnull %a)
+  tail call void @fun1(ptr noundef nonnull %b)
+  tail call void @fun1(ptr noundef nonnull %a)
   br label %loop.header
 loop.exit:
-  tail call void @fun1(ptr nonnull %b)
+  tail call void @fun1(ptr noundef nonnull %b)
   ret void
 }
 
@@ -745,9 +745,9 @@ declare void @use1(ptr %x)
 declare void @use2(ptr %x, ptr %y);
 declare void @use3(ptr %x, ptr %y, ptr %z);
 
-declare void @use1nonnull(ptr nonnull %x);
-declare void @use2nonnull(ptr nonnull %x, ptr nonnull %y);
-declare void @use3nonnull(ptr nonnull %x, ptr nonnull %y, ptr nonnull %z);
+declare void @use1nonnull(ptr noundef nonnull %x);
+declare void @use2nonnull(ptr noundef nonnull %x, ptr noundef nonnull %y);
+declare void @use3nonnull(ptr noundef nonnull %x, ptr noundef nonnull %y, ptr noundef nonnull %z);
 
 declare i8 @use1safecall(ptr %x) readonly nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
 
@@ -757,7 +757,7 @@ define void @parent1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@parent1
 ; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; CHECK-NEXT:    call void @use3(ptr [[C]], ptr [[A]], ptr [[B]])
-; CHECK-NEXT:    call void @use3nonnull(ptr nonnull [[B]], ptr nonnull [[C]], ptr nonnull [[A]])
+; CHECK-NEXT:    call void @use3nonnull(ptr noundef nonnull [[B]], ptr noundef nonnull [[C]], ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use3(ptr %c, ptr %a, ptr %b)
@@ -769,9 +769,9 @@ define void @parent1(ptr %a, ptr %b, ptr %c) {
 
 define void @parent2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@parent2
-; CHECK-SAME: (ptr nonnull [[A:%.*]], ptr nonnull [[B:%.*]], ptr nonnull [[C:%.*]]) {
-; CHECK-NEXT:    call void @use3nonnull(ptr nonnull [[B]], ptr nonnull [[C]], ptr nonnull [[A]])
-; CHECK-NEXT:    call void @use3(ptr nonnull [[C]], ptr nonnull [[A]], ptr nonnull [[B]])
+; CHECK-SAME: (ptr noundef nonnull [[A:%.*]], ptr noundef nonnull [[B:%.*]], ptr noundef nonnull [[C:%.*]]) {
+; CHECK-NEXT:    call void @use3nonnull(ptr noundef nonnull [[B]], ptr noundef nonnull [[C]], ptr noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use3(ptr noundef nonnull [[C]], ptr noundef nonnull [[A]], ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -784,9 +784,9 @@ define void @parent2(ptr %a, ptr %b, ptr %c) {
 
 define void @parent3(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@parent3
-; CHECK-SAME: (ptr nonnull [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
-; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
-; CHECK-NEXT:    call void @use3(ptr [[C]], ptr [[B]], ptr nonnull [[A]])
+; CHECK-SAME: (ptr noundef nonnull [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
+; CHECK-NEXT:    call void @use1nonnull(ptr noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use3(ptr [[C]], ptr [[B]], ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -800,10 +800,10 @@ define void @parent3(ptr %a, ptr %b, ptr %c) {
 
 define void @parent4(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@parent4
-; CHECK-SAME: (ptr [[A:%.*]], ptr nonnull [[B:%.*]], ptr nonnull [[C:%.*]]) {
-; CHECK-NEXT:    call void @use2nonnull(ptr nonnull [[C]], ptr nonnull [[B]])
-; CHECK-NEXT:    call void @use2(ptr [[A]], ptr nonnull [[C]])
-; CHECK-NEXT:    call void @use1(ptr nonnull [[B]])
+; CHECK-SAME: (ptr [[A:%.*]], ptr noundef nonnull [[B:%.*]], ptr noundef nonnull [[C:%.*]]) {
+; CHECK-NEXT:    call void @use2nonnull(ptr noundef nonnull [[C]], ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @use2(ptr [[A]], ptr noundef nonnull [[C]])
+; CHECK-NEXT:    call void @use1(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -824,7 +824,7 @@ define void @parent5(ptr %a, i1 %a_is_notnull) {
 ; CHECK-SAME: (ptr [[A:%.*]], i1 noundef [[A_IS_NOTNULL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[A_IS_NOTNULL]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
+; CHECK-NEXT:    call void @use1nonnull(ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       f:
 ; CHECK-NEXT:    ret void
@@ -845,7 +845,7 @@ define i8 @parent6(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
 ; CHECK-SAME: (ptr [[A:%.*]], ptr nofree noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
-; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
+; CHECK-NEXT:    call void @use1nonnull(ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
 
@@ -858,9 +858,9 @@ define i8 @parent6(ptr %a, ptr %b) {
 
 define i8 @parent7(ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@parent7
-; CHECK-SAME: (ptr nonnull [[A:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @use1safecall(ptr nonnull readonly [[A]]) #[[ATTR18:[0-9]+]]
-; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
+; CHECK-SAME: (ptr noundef nonnull [[A:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @use1safecall(ptr noundef nonnull readonly [[A]]) #[[ATTR18:[0-9]+]]
+; CHECK-NEXT:    call void @use1nonnull(ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 
@@ -877,9 +877,9 @@ declare i32 @esfp(...)
 define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@parent8
-; TUNIT-SAME: (ptr nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR5]] personality ptr @esfp {
+; TUNIT-SAME: (ptr noundef nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr noundef nonnull [[B:%.*]]) #[[ATTR5]] personality ptr @esfp {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
+; TUNIT-NEXT:    invoke void @use2nonnull(ptr noundef nonnull [[A]], ptr noundef nonnull [[B]])
 ; TUNIT-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; TUNIT:       cont:
 ; TUNIT-NEXT:    ret i1 false
@@ -890,9 +890,9 @@ define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@parent8
-; CGSCC-SAME: (ptr nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR4]] personality ptr @esfp {
+; CGSCC-SAME: (ptr noundef nonnull [[A:%.*]], ptr nofree readnone captures(none) [[BOGUS1:%.*]], ptr noundef nonnull [[B:%.*]]) #[[ATTR4]] personality ptr @esfp {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
+; CGSCC-NEXT:    invoke void @use2nonnull(ptr noundef nonnull [[A]], ptr noundef nonnull [[B]])
 ; CGSCC-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CGSCC:       cont:
 ; CGSCC-NEXT:    ret i1 false
@@ -1103,7 +1103,7 @@ define i32 @nonnull_exec_ctx_1(ptr %a, i32 %b) {
 ; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR7]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
 ; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
@@ -1119,7 +1119,7 @@ define i32 @nonnull_exec_ctx_1(ptr %a, i32 %b) {
 ; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR6]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
 ; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
@@ -1133,7 +1133,7 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(ptr nonnull %a)
+  %tmp5 = tail call i32 @g(ptr noundef nonnull %a)
   ret i32 %tmp5
 
 hd:
@@ -1153,7 +1153,7 @@ define i32 @nonnull_exec_ctx_1b(ptr %a, i32 %b) {
 ; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR7]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
 ; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
@@ -1171,7 +1171,7 @@ define i32 @nonnull_exec_ctx_1b(ptr %a, i32 %b) {
 ; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR6]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
 ; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
@@ -1187,7 +1187,7 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(ptr nonnull %a)
+  %tmp5 = tail call i32 @g(ptr noundef nonnull %a)
   ret i32 %tmp5
 
 hd:
@@ -1210,7 +1210,7 @@ define i32 @nonnull_exec_ctx_2(ptr %a, i32 %b) willreturn nounwind {
 ; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
 ; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
@@ -1226,7 +1226,7 @@ define i32 @nonnull_exec_ctx_2(ptr %a, i32 %b) willreturn nounwind {
 ; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
 ; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
@@ -1240,7 +1240,7 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(ptr nonnull %a)
+  %tmp5 = tail call i32 @g(ptr noundef nonnull %a)
   ret i32 %tmp5
 
 hd:
@@ -1260,7 +1260,7 @@ define i32 @nonnull_exec_ctx_2b(ptr %a, i32 %b) willreturn nounwind {
 ; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; TUNIT-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; TUNIT:       ex:
-; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret i32 [[TMP5]]
 ; TUNIT:       hd:
 ; TUNIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
@@ -1278,7 +1278,7 @@ define i32 @nonnull_exec_ctx_2b(ptr %a, i32 %b) willreturn nounwind {
 ; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; CGSCC-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; CGSCC:       ex:
-; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr noundef nonnull [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret i32 [[TMP5]]
 ; CGSCC:       hd:
 ; CGSCC-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
@@ -1294,7 +1294,7 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(ptr nonnull %a)
+  %tmp5 = tail call i32 @g(ptr noundef nonnull %a)
   ret i32 %tmp5
 
 hd:
@@ -1512,10 +1512,10 @@ define ptr @nonnull_function_ptr_2() {
   ret ptr @function_decl
 }
 
-; FIXME: nonnull should not be propagated to the caller's p unless there is noundef
+; The nonnull attribute does not describe the caller's value without noundef.
 define void @nonnull_caller(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_caller
-; CHECK-SAME: (ptr nonnull [[P:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void @nonnull_callee(ptr nonnull [[P]])
 ; CHECK-NEXT:    ret void
 ;

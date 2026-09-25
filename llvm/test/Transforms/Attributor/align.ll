@@ -649,7 +649,7 @@ define void @test12-5(ptr align 4 %p) {
 ; TUNIT-SAME: (ptr align 16 [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr i64, ptr [[P]], i64 1
 ; TUNIT-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i64, ptr [[ARRAYIDX0]], i64 3
-; TUNIT-NEXT:    tail call void @use(ptr align 16 [[ARRAYIDX1]]) #[[ATTR6:[0-9]+]]
+; TUNIT-NEXT:    tail call void @use(ptr noundef align 16 [[ARRAYIDX1]]) #[[ATTR6:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
@@ -657,13 +657,13 @@ define void @test12-5(ptr align 4 %p) {
 ; CGSCC-SAME: (ptr align 16 [[P:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CGSCC-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr i64, ptr [[P]], i64 1
 ; CGSCC-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i64, ptr [[ARRAYIDX0]], i64 3
-; CGSCC-NEXT:    tail call void @use(ptr align 16 [[ARRAYIDX1]]) #[[ATTR7:[0-9]+]]
+; CGSCC-NEXT:    tail call void @use(ptr noundef align 16 [[ARRAYIDX1]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   %p-cast = bitcast ptr %p to ptr
   %arrayidx0 = getelementptr i64, ptr %p-cast, i64 1
   %arrayidx1 = getelementptr i64, ptr %arrayidx0, i64 3
-  tail call void @use(ptr align 16 %arrayidx1)
+  tail call void @use(ptr noundef align 16 %arrayidx1)
   ret void
 }
 
@@ -671,17 +671,17 @@ define void @test12-6(ptr align 4 %p) {
 ; TUNIT: Function Attrs: mustprogress nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@test12-6
 ; TUNIT-SAME: (ptr align 16 [[P:%.*]]) #[[ATTR7]] {
-; TUNIT-NEXT:    tail call void @use(ptr align 16 [[P]]) #[[ATTR6]]
+; TUNIT-NEXT:    tail call void @use(ptr noundef align 16 [[P]]) #[[ATTR6]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@test12-6
 ; CGSCC-SAME: (ptr align 16 [[P:%.*]]) #[[ATTR8]] {
-; CGSCC-NEXT:    tail call void @use(ptr align 16 [[P]]) #[[ATTR7]]
+; CGSCC-NEXT:    tail call void @use(ptr noundef align 16 [[P]]) #[[ATTR7]]
 ; CGSCC-NEXT:    ret void
 ;
   %p-cast = bitcast ptr %p to ptr
-  tail call void @use(ptr align 16 %p-cast)
+  tail call void @use(ptr noundef align 16 %p-cast)
   ret void
 }
 
@@ -1020,10 +1020,10 @@ return:                                           ; preds = %entry, %if.then
   ret ptr %retval.0
 }
 
-; FIXME: align 4 should not be propagated to the caller's p unless there is noundef
+; The align attribute does not describe the caller's value without noundef.
 define void @align4_caller(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@align4_caller
-; CHECK-SAME: (ptr align 4 [[P:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void @align4_callee(ptr align 4 [[P]])
 ; CHECK-NEXT:    ret void
 ;

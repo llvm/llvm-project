@@ -66,7 +66,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr %arg) 
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -133,7 +133,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr %arg) 
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -200,7 +200,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr %arg) 
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -267,7 +267,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr %arg) 
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -328,7 +328,7 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr %arg) 
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -389,7 +389,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr %arg) 
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -456,7 +456,7 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr %arg) #4 {
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2
@@ -523,7 +523,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr %arg) #3 {
 bb:
   %tmp = alloca <8 x i64>, align 32
   %tmp2 = alloca <8 x i64>, align 32
-  call void @llvm.memset.p0.i64(ptr align 32 %tmp, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr noundef align 32 %tmp, i8 0, i64 32, i1 false)
   call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr %tmp2, ptr %tmp)
   %tmp4 = load <8 x i64>, ptr %tmp2, align 32
   store <8 x i64> %tmp4, ptr %arg, align 2

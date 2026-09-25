@@ -2542,12 +2542,18 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
 
     unsigned ArgNo = CB->getArgOperandNo(U);
     IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
-    // As long as we only use known information there is no need to track
-    // dependences here.
-    bool IsKnownNonNull;
-    AA::hasAssumedIRAttr<Attribute::NonNull>(A, &QueryingAA, IRP,
-                                             DepClassTy::NONE, IsKnownNonNull);
-    IsNonNull |= IsKnownNonNull;
+    // The nonnull attribute produces poison if its constraint is violated. It
+    // therefore only proves that the original value is nonnull if poison is
+    // not accepted at this call boundary.
+    if (!CB->paramHasAttr(ArgNo, Attribute::NonNull) ||
+        CB->isPassingUndefUB(ArgNo)) {
+      // As long as we only use known information there is no need to track
+      // dependences here.
+      bool IsKnownNonNull;
+      AA::hasAssumedIRAttr<Attribute::NonNull>(
+          A, &QueryingAA, IRP, DepClassTy::NONE, IsKnownNonNull);
+      IsNonNull |= IsKnownNonNull;
+    }
     auto *DerefAA =
         A.getAAFor<AADereferenceable>(QueryingAA, IRP, DepClassTy::NONE);
     return DerefAA ? DerefAA->getKnownDereferenceableBytes() : 0;
@@ -5295,6 +5301,13 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       return 0;
 
     unsigned ArgNo = CB->getArgOperandNo(U);
+    // The align attribute produces poison if its constraint is violated. It
+    // therefore only proves that the original value is aligned if poison is
+    // not accepted at this call boundary.
+    if (CB->paramHasAttr(ArgNo, Attribute::Alignment) &&
+        !CB->isPassingUndefUB(ArgNo))
+      return 0;
+
     IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
     // As long as we only use known information there is no need to track
     // dependences here.
