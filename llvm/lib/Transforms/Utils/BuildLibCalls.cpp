@@ -774,6 +774,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_ctermid:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    break;
   case LibFunc_clearerr:
   case LibFunc_closedir:
     Changed |= setRetAndArgsNoUndef(F);
