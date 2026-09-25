@@ -21,18 +21,29 @@ namespace llvm {
 namespace AMDGPUMI {
 
 // Wrapper for the whole-dword VGPR "as memory" (address space 13) indexed
-// load/store pseudos (V_LOAD_IDX_B<N> / V_STORE_IDX_B<N>). Operand layout:
-//   load:  (outs data), (ins idx, offset)
-//   store: (outs),      (ins data, idx, offset)
-// so data/idx/offset are always operands 0/1/2.
+// load/store pseudos. The movrel form (V_LOAD_IDX_B<N> / V_STORE_IDX_B<N>)
+// reads its index from M0; the VGPR indexing mode form
+// (V_LOAD_IDX_GPR_IDX_B<N> / V_STORE_IDX_GPR_IDX_B<N>) takes it in an SGPR:
+//   movrel:   load (outs data), (ins offset)      store (ins data, offset)
+//   gpr_idx:  load (outs data), (ins idx, offset) store (ins data, idx, offset)
 class VLoadStoreIdxInst : public MachineInstr {
 public:
+  bool isGPRIdx() const;
+
   MachineOperand &getDataOp() { return getOperand(0); }
-  MachineOperand &getIdxOp() { return getOperand(1); }
-  MachineOperand &getOffsetOp() { return getOperand(2); }
+  MachineOperand &getIdxOp() {
+    assert(isGPRIdx() && "movrel form reads its index from M0");
+    return getOperand(1);
+  }
+  MachineOperand &getOffsetOp() { return getOperand(isGPRIdx() ? 2 : 1); }
   const MachineOperand &getDataOp() const { return getOperand(0); }
-  const MachineOperand &getIdxOp() const { return getOperand(1); }
-  const MachineOperand &getOffsetOp() const { return getOperand(2); }
+  const MachineOperand &getIdxOp() const {
+    assert(isGPRIdx() && "movrel form reads its index from M0");
+    return getOperand(1);
+  }
+  const MachineOperand &getOffsetOp() const {
+    return getOperand(isGPRIdx() ? 2 : 1);
+  }
 
   unsigned getBitWidth() const;
 
@@ -43,8 +54,8 @@ public:
 
 class VLoadIdxInst : public VLoadStoreIdxInst {
 public:
-  static int tryGetOpcodeForBitWidth(unsigned Bits);
-  static unsigned getOpcodeForBitWidth(unsigned Bits);
+  static int tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
+  static unsigned getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
 
   static bool classof(const MachineInstr *MI) {
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
@@ -55,8 +66,8 @@ public:
 
 class VStoreIdxInst : public VLoadStoreIdxInst {
 public:
-  static int tryGetOpcodeForBitWidth(unsigned Bits);
-  static unsigned getOpcodeForBitWidth(unsigned Bits);
+  static int tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
+  static unsigned getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
 
   static bool classof(const MachineInstr *MI) {
     const AMDGPU::VLdStIdxOpcodeInfo *Info =

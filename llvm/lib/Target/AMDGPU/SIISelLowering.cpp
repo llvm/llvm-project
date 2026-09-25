@@ -6951,30 +6951,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  // Must run after SIFixSGPRCopies, so that a divergent index is already
-  // uniform and the copy lands inside its waterfall loop. Assigning M0 during
-  // selection would suppress that loop, which legalizeOperands builds only for
-  // an index not already in an SGPR class.
-  if (auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
-    if (ST.useVGPRIndexMode()) {
-      if (!MI.definesRegister(AMDGPU::M0, TRI))
-        MI.addOperand(MachineOperand::CreateReg(AMDGPU::M0, /*isDef=*/true,
-                                                /*isImp=*/true));
-      return BB;
-    }
-
-    MachineOperand &IdxOp = LdSt->getIdxOp();
-    assert(IdxOp.isReg() && "VGPR-memory index must be a register");
-    if (IdxOp.getReg() != AMDGPU::M0) {
-      BuildMI(*BB, &MI, DL, TII->get(AMDGPU::COPY), AMDGPU::M0)
-          .addReg(IdxOp.getReg());
-      IdxOp.setReg(AMDGPU::M0);
-      // M0 is reserved and may still hold this value at a later access.
-      IdxOp.setIsKill(false);
-    }
-    return BB;
-  }
-
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);

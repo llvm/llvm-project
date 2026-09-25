@@ -1065,39 +1065,63 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 //===----------------------------------------------------------------------===//
 
 // Populates the VLdStIdxOpcodeInfo searchable table, mapping each pseudo to its
-// bit width and load/store direction (see AMDGPUMachineInstrs.h).
-class VLdStIdxOpcodeInfo<int size, bit isStore> {
+// bit width, load/store direction and indexing mechanism (see
+// AMDGPUMachineInstrs.h).
+class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bits<12> BitWidth = size;
   bit IsStore = isStore;
+  bit IsGPRIdx = isGPRIdx;
 }
 
 foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
               VReg_512, VReg_1024] in {
-  // $idx and $offset are in dwords. The index reaches M0 by a route that
-  // depends on the subtarget, hence the custom inserter.
+  // $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
+  // V_INDIRECT_REG_*_GPR_IDX, the movrel form reads the index from M0, which
+  // the selection patterns write, and the VGPR indexing mode form takes it in
+  // an SGPR and clobbers M0 through the s_set_gpr_idx_on it expands to.
   //
-  // Unlike SI_INDIRECT_SRC/DST and V_INDIRECT_REG_*, the storage indexed here
-  // is the whole register file rather than a tuple an operand can name, so
-  // these are memory accesses carrying an MMO.
+  // Unlike those pseudos, the storage indexed here is the whole register file
+  // rather than a tuple an operand can name, so these are memory accesses
+  // carrying an MMO.
   def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
     (outs rc:$data),
-    (ins SReg_32:$idx, i32imm:$offset)>,
-    VLdStIdxOpcodeInfo<rc.Size, 0> {
+    (ins i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 0, 0> {
       let mayLoad = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
-      let usesCustomInserter = 1;
+      let Uses = [M0, EXEC];
   }
   def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
     (outs),
-    (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
-    VLdStIdxOpcodeInfo<rc.Size, 1> {
+    (ins rc:$data, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 1, 0> {
       let mayStore = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
-      let usesCustomInserter = 1;
+      let Uses = [M0, EXEC];
+  }
+  def V_LOAD_IDX_GPR_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data),
+    (ins SReg_32:$idx, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 0, 1> {
+      let mayLoad = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+      let Uses = [M0, EXEC];
+      let Defs = [M0];
+  }
+  def V_STORE_IDX_GPR_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 1, 1> {
+      let mayStore = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+      let Uses = [M0, EXEC];
+      let Defs = [M0];
   }
 }
 
@@ -1117,23 +1141,45 @@ let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
       : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
 }
 
-// An (add idx, imm) shape folds a constant dword offset into $offset.
+// An (add idx, imm) shape folds a constant dword offset into $offset. In the
+// movrel form the index is an M0 input, so the copy into M0 is emitted by
+// selection itself; a divergent one is waterfalled by SIFixSGPRCopies.
 multiclass VRegIdxLoadStorePat<ValueType vt> {
   defvar load_inst = !cast<Instruction>("V_LOAD_IDX_B"#vt.Size);
   defvar store_inst = !cast<Instruction>("V_STORE_IDX_B"#vt.Size);
+  defvar gpr_idx_load_inst = !cast<Instruction>("V_LOAD_IDX_GPR_IDX_B"#vt.Size);
+  defvar gpr_idx_store_inst =
+      !cast<Instruction>("V_STORE_IDX_GPR_IDX_B"#vt.Size);
 
-  def : GCNPat<
-    (vt (SIreg_load (add i32:$idx, (i32 imm:$offset)))),
-    (load_inst $idx, imm:$offset)>;
-  def : GCNPat<
-    (vt (SIreg_load i32:$idx)),
-    (load_inst $idx, 0)>;
-  def : GCNPat<
-    (SIreg_store vt:$data, (add i32:$idx, (i32 imm:$offset))),
-    (store_inst $data, $idx, imm:$offset)>;
-  def : GCNPat<
-    (SIreg_store vt:$data, i32:$idx),
-    (store_inst $data, $idx, 0)>;
+  let OtherPredicates = [NotUseVGPRIndexMode] in {
+    def : GCNPat<
+      (vt (SIreg_load (add M0, (i32 imm:$offset)))),
+      (load_inst imm:$offset)>;
+    def : GCNPat<
+      (vt (SIreg_load M0)),
+      (load_inst 0)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, (add M0, (i32 imm:$offset))),
+      (store_inst $data, imm:$offset)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, M0),
+      (store_inst $data, 0)>;
+  }
+
+  let OtherPredicates = [UseVGPRIndexMode] in {
+    def : GCNPat<
+      (vt (SIreg_load (add i32:$idx, (i32 imm:$offset)))),
+      (gpr_idx_load_inst $idx, imm:$offset)>;
+    def : GCNPat<
+      (vt (SIreg_load i32:$idx)),
+      (gpr_idx_load_inst $idx, 0)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, (add i32:$idx, (i32 imm:$offset))),
+      (gpr_idx_store_inst $data, $idx, imm:$offset)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, i32:$idx),
+      (gpr_idx_store_inst $data, $idx, 0)>;
+  }
 }
 
 foreach vt = !listconcat(

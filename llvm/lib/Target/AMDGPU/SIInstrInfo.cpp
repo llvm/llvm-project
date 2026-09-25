@@ -670,12 +670,13 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    // Callers treat identical base operands as the same address, which only
+    // holds while the base names a value. The movrel form reads M0, and M0 can
+    // be redefined between accesses, so report it as opaque.
+    if (!LdStIdx->isGPRIdx())
+      return false;
     BaseOp = &LdStIdx->getIdxOp();
     OffsetOp = &LdStIdx->getOffsetOp();
-
-    // Callers treat identical base operands as the same address, which only
-    // holds while the base names a value. On a movrel subtarget these all read
-    // M0, and M0 can be redefined between them, so report them as opaque.
     if (!BaseOp->isReg() || !BaseOp->getReg().isVirtual())
       return false;
 
@@ -7789,9 +7790,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // The dword index must be in an SGPR (it becomes M0), so a divergent index is
-  // made uniform with a waterfall loop.
+  // The VGPR indexing mode form takes its dword index in an SGPR, so a
+  // divergent index is made uniform with a waterfall loop. The movrel form
+  // reads M0, whose divergent writes are waterfalled when the copy into M0 is
+  // lowered.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    if (!LdStIdx->isGPRIdx())
+      return CreatedBB;
     MachineOperand *Idx = &LdStIdx->getIdxOp();
     // isSGPRReg handles physical registers too, so an unexpected physical index
     // is waterfalled rather than silently skipped.
@@ -8215,7 +8220,7 @@ void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
 
 void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
                              MachineDominatorTree *MDT) const {
-  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
+  MapVector<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
   DenseMap<MachineInstr *, bool> V2SPhyCopiesToErase;
   while (!Worklist.empty()) {
     MachineInstr &Inst = *Worklist.top();
@@ -8238,6 +8243,9 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
     if (Entry.first->getOpcode() == AMDGPU::SI_CALL_ISEL)
       createWaterFallForSiCall(Entry.first, MDT, Entry.second.MOs,
                                Entry.second.SGPRs);
+    else if (isa<AMDGPUMI::VLoadStoreIdxInst>(Entry.first))
+      generateWaterFallLoop(*this, *Entry.first, Entry.second.MOs, MDT, nullptr,
+                            nullptr, Entry.second.SGPRs);
   }
 
   for (std::pair<MachineInstr *, bool> Entry : V2SPhyCopiesToErase)
@@ -8281,16 +8289,45 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
 void SIInstrInfo::handleCopyToPhysHelper(
     SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
     MachineRegisterInfo &MRI,
-    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    MapVector<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
-  if (DstReg == AMDGPU::M0) {
-    createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    V2SPhyCopiesToErase.try_emplace(&Inst, true);
-    return;
-  }
   Register SrcReg = Inst.getOperand(1).getReg();
   MachineBasicBlock::iterator I = Inst.getIterator();
   MachineBasicBlock::iterator E = Inst.getParent()->end();
+  if (DstReg == AMDGPU::M0) {
+    // A VGPR "as memory" access indexes with M0 in every lane, so like the
+    // SGPR arguments of SI_CALL_ISEL below it is waterfalled. Other readers of
+    // M0 take the first lane.
+    SmallVector<MachineOperand *, 4> IdxOps;
+    bool HasOtherReaders = false;
+    while (++I != E) {
+      auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*I);
+      if (LdSt && !LdSt->isGPRIdx())
+        IdxOps.push_back(I->findRegisterUseOperand(DstReg, &RI));
+      else if (I->readsRegister(DstReg, &RI))
+        HasOtherReaders = true;
+      if (I->findRegisterDefOperand(DstReg, &RI))
+        break;
+    }
+    // The waterfall loop reads the whole register.
+    if (!IdxOps.empty() && Inst.getOperand(1).getSubReg()) {
+      SrcReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*Inst.getParent(), Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
+              SrcReg)
+          .addReg(Inst.getOperand(1).getReg(), {},
+                  Inst.getOperand(1).getSubReg());
+    }
+    for (MachineOperand *MO : IdxOps) {
+      MO->setReg(SrcReg);
+      V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[MO->getParent()];
+      V2SCopyInfo.MOs.push_back(MO);
+      V2SCopyInfo.SGPRs.push_back(DstReg);
+    }
+    if (IdxOps.empty() || HasOtherReaders)
+      createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
+    V2SPhyCopiesToErase.try_emplace(&Inst, true);
+    return;
+  }
   // Only search current block since phyreg's def & use cannot cross
   // blocks when MF.NoPhi = false.
   while (++I != E) {
@@ -8325,7 +8362,7 @@ void SIInstrInfo::handleCopyToPhysHelper(
 
 void SIInstrInfo::moveToVALUImpl(
     SIInstrWorklist &Worklist, MachineDominatorTree *MDT, MachineInstr &Inst,
-    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    MapVector<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
 
   MachineBasicBlock *MBB = Inst.getParent();

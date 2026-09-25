@@ -18,6 +18,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -1569,7 +1570,7 @@ public:
   void
   moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
                  MachineInstr &Inst,
-                 DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+                 MapVector<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
                  DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
   /// Wrapper function for generating waterfall for instruction \p MI
   /// This function take into consideration of related pre & succ instructions
@@ -1788,7 +1789,7 @@ public:
   void handleCopyToPhysHelper(
       SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
       MachineRegisterInfo &MRI,
-      DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+      MapVector<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
       DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
 
   // FIXME: This should be removed
