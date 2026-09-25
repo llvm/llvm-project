@@ -2025,6 +2025,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
       bool HasDQRoundTrip = ST->hasDQI() || (NumRegElts == 16 && ST->hasBWI() &&
                                              !ST->canExtendTo512DQ());
 
+      // clang-format off
       static const CostKindTblEntry X64MaskBroadcastTbl[] = { // 64-bit targets
         // neg + kmovq
         { ScalarSplat,    MVT::v64i1, { 1,  2, 2, 2 } },
@@ -2107,7 +2108,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
         { LaneCrossPermute, MVT::v64i1, { 3,  9, 5, 6 } },
         { LaneCrossPermute, MVT::v32i1, { 3,  9, 5, 6 } },
       };
-
+      // clang-format on
       if (ST->is64Bit())
         if (const auto *Entry =
                 CostTableLookup(X64MaskBroadcastTbl, Form, LT.second))
