@@ -113,11 +113,13 @@ canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
 
 /// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion
 /// point and source slice loop bounds specified in 'srcSlice'.
-/// `isInnermostSiblingInsertionFusion` enables cleanup of `srcForOp that is a
+/// Returns the current destination loop, which may differ from 'dstForOp' if
+/// fusion replaces it while promoting a single-iteration reduction loop.
+/// `isInnermostSiblingInsertionFusion` enables cleanup of `srcForOp` that is a
 /// single-iteration reduction loop being sibling-fused into a 'dstForOp'.
-void fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-               const ComputationSliceState &srcSlice,
-               bool isInnermostSiblingInsertionFusion = false);
+AffineForOp fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
+                      const ComputationSliceState &srcSlice,
+                      bool isInnermostSiblingInsertionFusion = false);
 
 /// LoopNestStats aggregates various per-loop statistics (eg. loop trip count
 /// and operation count) for a loop nest up until (and including) the innermost

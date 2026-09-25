@@ -354,8 +354,8 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
 
 /// Patch the loop body of a forOp that is a single iteration reduction loop
 /// into its containing block.
-static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
-                                                    bool siblingFusionUser) {
+static FailureOr<AffineForOp>
+promoteSingleIterReductionLoop(AffineForOp forOp, bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
   std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount || *tripCount != 1)
@@ -417,14 +417,14 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
   parentBlock->getOperations().splice(Block::iterator(forOp),
                                       forOp.getBody()->getOperations());
   forOp.erase();
-  return success();
+  return newLoop;
 }
 
 /// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
 /// and source slice loop bounds specified in 'srcSlice'.
-void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-                             const ComputationSliceState &srcSlice,
-                             bool isInnermostSiblingInsertion) {
+AffineForOp mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
+                                    const ComputationSliceState &srcSlice,
+                                    bool isInnermostSiblingInsertion) {
   // Clone 'srcForOp' into 'dstForOp' at 'srcSlice->insertPoint'.
   OpBuilder b(srcSlice.insertPoint->getBlock(), srcSlice.insertPoint);
   IRMapping mapper;
@@ -458,14 +458,20 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
   // Fix up and if possible, eliminate single iteration loops.
   for (AffineForOp forOp : sliceLoops) {
     if (isLoopParallelAndContainsReduction(forOp) &&
-        isInnermostSiblingInsertion && srcIsUnitSlice())
+        isInnermostSiblingInsertion && srcIsUnitSlice()) {
       // Patch reduction loop - only ones that are sibling-fused with the
       // destination loop - into the parent loop.
-      (void)promoteSingleIterReductionLoop(forOp, true);
-    else
+      AffineForOp parentForOp = forOp->getParentOfType<AffineForOp>();
+      FailureOr<AffineForOp> newParentForOp =
+          promoteSingleIterReductionLoop(forOp, true);
+      if (succeeded(newParentForOp) && parentForOp == dstForOp)
+        dstForOp = *newParentForOp;
+    } else {
       // Promote any single iteration slice loops.
       (void)promoteIfSingleIteration(forOp);
+    }
   }
+  return dstForOp;
 }
 
 /// Collect loop nest statistics (eg. loop trip count and operation count)
