@@ -80,7 +80,7 @@ false:
 define void @isint_branch(double %d) nounwind {
   ; CHECK-LABEL: name: isint_branch
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
   ; CHECK-NEXT:   liveins: $xmm0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fr64 = COPY $xmm0
@@ -94,20 +94,13 @@ define void @isint_branch(double %d) nounwind {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vr128 = COPY killed [[CVTSI642SDrr]]
   ; CHECK-NEXT:   [[PANDrr1:%[0-9]+]]:vr128 = PANDrr [[COPY3]], [[MOVAPDrm]]
   ; CHECK-NEXT:   [[PORrr:%[0-9]+]]:vr128 = PORrr [[PANDrr1]], killed [[PANDNrr]]
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fr64 = COPY killed [[PORrr]]
-  ; CHECK-NEXT:   [[MOVSDto64rr:%[0-9]+]]:gr64 = MOVSDto64rr [[COPY2]]
-  ; CHECK-NEXT:   [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri 4841369599423283199
-  ; CHECK-NEXT:   [[SUB64rr:%[0-9]+]]:gr64 = SUB64rr [[MOVSDto64rr]], killed [[MOV64ri]], implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.4, 15, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3 (%ir-block.0):
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4 (%ir-block.0):
-  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fr64 = PHI [[COPY4]], %bb.3, [[COPY]], %bb.0
-  ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], killed [[PHI]], implicit-def $eflags, implicit $mxcsr
+  ; CHECK-NEXT:   [[CMPSDrmi:%[0-9]+]]:fr64 = nofpexcept CMPSDrmi [[COPY2]], $rip, 1, $noreg, %const.1, $noreg, 5, implicit $mxcsr :: (load (s64) from constant-pool)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vr128 = COPY killed [[CMPSDrmi]]
+  ; CHECK-NEXT:   [[PANDNrr1:%[0-9]+]]:vr128 = PANDNrr [[COPY4]], killed [[PORrr]]
+  ; CHECK-NEXT:   [[PANDrr2:%[0-9]+]]:vr128 = PANDrr [[COPY4]], [[COPY1]]
+  ; CHECK-NEXT:   [[PORrr1:%[0-9]+]]:vr128 = PORrr [[PANDNrr1]], killed [[PANDrr2]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fr64 = COPY killed [[PORrr1]]
+  ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], killed [[COPY5]], implicit-def $eflags, implicit $mxcsr
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 5, implicit $eflags
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 10, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1

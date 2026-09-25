@@ -1152,20 +1152,18 @@ define void @test_half_trunc(half %a0, ptr %p0) nounwind {
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movq %rdi, %rbx
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pand %xmm1, %xmm2
-; X64-NEXT:    movd %xmm2, %eax
-; X64-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
-; X64-NEXT:    jge .LBB20_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    cvttps2dq %xmm2, %xmm2
-; X64-NEXT:    cvtdq2ps %xmm2, %xmm2
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    movaps %xmm0, %xmm2
 ; X64-NEXT:    andps %xmm1, %xmm2
-; X64-NEXT:    pandn %xmm0, %xmm1
-; X64-NEXT:    por %xmm2, %xmm1
-; X64-NEXT:    movdqa %xmm1, %xmm0
-; X64-NEXT:  .LBB20_2:
+; X64-NEXT:    cvttps2dq %xmm2, %xmm3
+; X64-NEXT:    cvtdq2ps %xmm3, %xmm3
+; X64-NEXT:    andps %xmm1, %xmm3
+; X64-NEXT:    andnps %xmm0, %xmm1
+; X64-NEXT:    orps %xmm1, %xmm3
+; X64-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    andps %xmm2, %xmm0
+; X64-NEXT:    andnps %xmm3, %xmm2
+; X64-NEXT:    orps %xmm2, %xmm0
 ; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    pextrw $0, %xmm0, %eax
 ; X64-NEXT:    movw %ax, (%rbx)
@@ -1182,22 +1180,21 @@ define void @test_half_trunc(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pand %xmm1, %xmm2
-; X86-NEXT:    movd %xmm2, %eax
-; X86-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
-; X86-NEXT:    jge .LBB20_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    cvttps2dq %xmm2, %xmm2
-; X86-NEXT:    cvtdq2ps %xmm2, %xmm2
-; X86-NEXT:    andps %xmm1, %xmm2
-; X86-NEXT:    pandn %xmm0, %xmm1
-; X86-NEXT:    por %xmm2, %xmm1
-; X86-NEXT:    movdqa %xmm1, %xmm0
-; X86-NEXT:  .LBB20_2:
-; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    movaps %xmm1, %xmm0
+; X86-NEXT:    andps %xmm2, %xmm0
+; X86-NEXT:    cvttps2dq %xmm0, %xmm3
+; X86-NEXT:    cvtdq2ps %xmm3, %xmm3
+; X86-NEXT:    andps %xmm2, %xmm3
+; X86-NEXT:    andnps %xmm1, %xmm2
+; X86-NEXT:    orps %xmm2, %xmm3
+; X86-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movaps %xmm0, %xmm2
+; X86-NEXT:    andnps %xmm3, %xmm2
+; X86-NEXT:    andps %xmm1, %xmm0
+; X86-NEXT:    orps %xmm2, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esi)

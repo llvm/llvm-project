@@ -10,20 +10,18 @@ declare i64 @llvm.fptosi.sat.i64.f64(double)
 define float @trunc_unsigned_f32(float %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
-; SSE2-NEXT:    jge .LBB0_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    andps %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:  .LBB0_2:
+; SSE2-NEXT:    cvttps2dq %xmm2, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_unsigned_f32:
@@ -53,22 +51,18 @@ define float @trunc_unsigned_f32(float %x) #0 {
 define double @trunc_unsigned_f64(double %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    movq %xmm2, %rax
-; SSE2-NEXT:    movabsq $4841369599423283199, %rcx # imm = 0x432FFFFFFFFFFFFF
-; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jg .LBB1_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    cvttsd2si %xmm2, %rax
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm2
 ; SSE2-NEXT:    andpd %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:  .LBB1_2:
+; SSE2-NEXT:    cvttsd2si %xmm2, %rax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm3, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_unsigned_f64:
@@ -110,7 +104,7 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 ; SSE2-NEXT:    andps %xmm1, %xmm3
 ; SSE2-NEXT:    andnps %xmm0, %xmm1
 ; SSE2-NEXT:    orps %xmm1, %xmm3
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    cmpnltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    andnps %xmm3, %xmm2
 ; SSE2-NEXT:    orps %xmm2, %xmm0
@@ -146,8 +140,7 @@ define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; SSE2-NEXT:    andpd %xmm1, %xmm3
 ; SSE2-NEXT:    andnpd %xmm0, %xmm1
 ; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    cmpnltpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    andpd %xmm2, %xmm0
 ; SSE2-NEXT:    andnpd %xmm1, %xmm2
 ; SSE2-NEXT:    orpd %xmm2, %xmm0
@@ -184,9 +177,8 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; SSE2-NEXT:    movapd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm0, %xmm5
 ; SSE2-NEXT:    orpd %xmm4, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1127219199,1127219199,1127219199,1127219199]
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm3
+; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    cmpnltpd %xmm4, %xmm3
 ; SSE2-NEXT:    andpd %xmm3, %xmm0
 ; SSE2-NEXT:    andnpd %xmm5, %xmm3
 ; SSE2-NEXT:    orpd %xmm3, %xmm0
@@ -203,8 +195,7 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; SSE2-NEXT:    andpd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm1, %xmm2
 ; SSE2-NEXT:    orpd %xmm5, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm3
+; SSE2-NEXT:    cmpnltpd %xmm4, %xmm3
 ; SSE2-NEXT:    andpd %xmm3, %xmm1
 ; SSE2-NEXT:    andnpd %xmm2, %xmm3
 ; SSE2-NEXT:    orpd %xmm3, %xmm1
@@ -258,20 +249,18 @@ define float @trunc_signed_f32_no_fast_math(float %x) nounwind {
 define float @trunc_signed_f32_nsz(float %x) #0 {
 ; SSE2-LABEL: trunc_signed_f32_nsz:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    cmpl $1325400064, %eax # imm = 0x4F000000
-; SSE2-NEXT:    jge .LBB6_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    andps %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:  .LBB6_2:
+; SSE2-NEXT:    cvttps2dq %xmm2, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_signed_f32_nsz:
@@ -333,22 +322,18 @@ define double @trunc_signed32_f64_no_fast_math(double %x) nounwind {
 define double @trunc_signed32_f64_nsz(double %x) #0 {
 ; SSE2-LABEL: trunc_signed32_f64_nsz:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    movq %xmm2, %rax
-; SSE2-NEXT:    movabsq $4841369599423283199, %rcx # imm = 0x432FFFFFFFFFFFFF
-; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jg .LBB8_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    cvttsd2si %xmm2, %rax
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm2
 ; SSE2-NEXT:    andpd %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:  .LBB8_2:
+; SSE2-NEXT:    cvttsd2si %xmm2, %rax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm3, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_signed32_f64_nsz:
@@ -539,22 +524,18 @@ define double @trunc_signed_f64_no_fast_math(double %x) nounwind {
 define double @trunc_signed_f64_nsz(double %x) #0 {
 ; SSE2-LABEL: trunc_signed_f64_nsz:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [NaN,NaN]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    movq %xmm2, %rax
-; SSE2-NEXT:    movabsq $4841369599423283199, %rcx # imm = 0x432FFFFFFFFFFFFF
-; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    jg .LBB14_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    cvttsd2si %xmm2, %rax
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm2
 ; SSE2-NEXT:    andpd %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:  .LBB14_2:
+; SSE2-NEXT:    cvttsd2si %xmm2, %rax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm3, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_signed_f64_nsz:
@@ -596,7 +577,7 @@ define <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
 ; SSE2-NEXT:    andps %xmm1, %xmm3
 ; SSE2-NEXT:    andnps %xmm0, %xmm1
 ; SSE2-NEXT:    orps %xmm1, %xmm3
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    cmpnltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    andnps %xmm3, %xmm2
 ; SSE2-NEXT:    orps %xmm2, %xmm0
@@ -632,8 +613,7 @@ define <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
 ; SSE2-NEXT:    andpd %xmm1, %xmm3
 ; SSE2-NEXT:    andnpd %xmm0, %xmm1
 ; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    cmpnltpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    andpd %xmm2, %xmm0
 ; SSE2-NEXT:    andnpd %xmm1, %xmm2
 ; SSE2-NEXT:    orpd %xmm2, %xmm0
@@ -670,9 +650,8 @@ define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
 ; SSE2-NEXT:    movapd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm0, %xmm5
 ; SSE2-NEXT:    orpd %xmm4, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1127219199,1127219199,1127219199,1127219199]
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm3
+; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    cmpnltpd %xmm4, %xmm3
 ; SSE2-NEXT:    andpd %xmm3, %xmm0
 ; SSE2-NEXT:    andnpd %xmm5, %xmm3
 ; SSE2-NEXT:    orpd %xmm3, %xmm0
@@ -689,8 +668,7 @@ define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
 ; SSE2-NEXT:    andpd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm1, %xmm2
 ; SSE2-NEXT:    orpd %xmm5, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm3
+; SSE2-NEXT:    cmpnltpd %xmm4, %xmm3
 ; SSE2-NEXT:    andpd %xmm3, %xmm1
 ; SSE2-NEXT:    andnpd %xmm2, %xmm3
 ; SSE2-NEXT:    orpd %xmm3, %xmm1

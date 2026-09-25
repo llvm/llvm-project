@@ -23220,18 +23220,15 @@ static SDValue lowerFTRUNC_FROUND_SSE2(SDValue Op, SelectionDAG &DAG) {
   else
     llvm_unreachable("Unexpected type");
 
-  SDValue AbsInt = DAG.getBitcast(IntVT, Abs);
-
-  SDValue Threshold;
-  if (VT.getScalarType() == MVT::f32) {
-    Threshold = DAG.getConstant(0x4EFFFFFF, DL, IntVT);
-  } else {
-    Threshold = DAG.getConstant(0x432FFFFFFFFFFFFFULL, DL, IntVT);
-  }
+  const fltSemantics &Sem = VT.getFltSemantics();
+  APFloat Bound = VT.getScalarType() == MVT::f32
+                      ? APFloat(Sem, "0x1.0p23")
+                      : APFloat(Sem, "0x1.0p52");
+  SDValue Threshold = DAG.getConstantFP(Bound, DL, VT);
 
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
-      DAG.getDataLayout(), *DAG.getContext(), IntVT);
-  SDValue IsLarge = DAG.getSetCC(DL, CCVT, AbsInt, Threshold, ISD::SETGT);
+      DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue IsLarge = DAG.getSetCC(DL, CCVT, Abs, Threshold, ISD::SETUGE);
 
   SDValue TruncInt = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, AbsBiased);
   SDValue AbsTrunc = DAG.getNode(ISD::SINT_TO_FP, DL, VT, TruncInt);
