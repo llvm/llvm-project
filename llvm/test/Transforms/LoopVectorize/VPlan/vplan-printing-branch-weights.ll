@@ -12,10 +12,10 @@
 ; RUN:     -vplan-print-after=dissolveLoopRegions -disable-output %s 2>&1 \
 ; RUN:   | FileCheck --strict-whitespace --check-prefix=DISSOLVE %s
 
-; Track the execution frequency of a predicated block through VPlan, from the
-; branch weights of the original loop to the branch weights of the branch
-; guarding the predicated block.
+; Track the branch weights of the original loop through VPlan.
 
+; The branch weights of a conditional branch become the execution frequency of
+; the predicated block and the branch weights of the branch guarding it.
 define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-LABEL: VPlan for loop in 'predicated_block'
 ; PREDICATE:  VPlan ' for UF>=1' {
@@ -124,7 +124,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; REGION-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.idx>, ir<1>
 ; REGION-NEXT:      WIDEN ir<%i> = load vp<[[VP5]]>
 ; REGION-NEXT:      WIDEN ir<%cmp> = icmp sgt ir<%i>, ir<0>
-; REGION-NEXT:      WIDEN ir<%add> = add ir<%i>, ir<1>
+; REGION-NEXT:      WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 2305843009213693952 (25%))
 ; REGION-NEXT:      WIDEN-CAST ir<%t> = trunc ir<%add> to i16
 ; REGION-NEXT:      WIDEN-CAST ir<%ext> = sext ir<%t> to i64
 ; REGION-NEXT:    Successor(s): pred.store
@@ -169,7 +169,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-NEXT:    CLONE ir<%gep.idx> = getelementptr inbounds ir<%idx>, vp<%index>
 ; DISSOLVE-NEXT:    WIDEN ir<%i> = load ir<%gep.idx>
 ; DISSOLVE-NEXT:    WIDEN ir<%cmp> = icmp sgt ir<%i>, ir<0>
-; DISSOLVE-NEXT:    WIDEN ir<%add> = add ir<%i>, ir<1>
+; DISSOLVE-NEXT:    WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 2305843009213693952 (25%))
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%t> = trunc ir<%add> to i16
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%ext> = sext ir<%t> to i64
 ; DISSOLVE-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = extractelement ir<%cmp>, ir<0>
@@ -230,5 +230,172 @@ exit:
   ret void
 }
 
+define void @selects(ptr noalias %a, ptr noalias %b, i1 %c, i64 %n) {
+; PREDICATE-LABEL: VPlan for loop in 'selects'
+; PREDICATE:  VPlan ' for UF>=1' {
+; PREDICATE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; PREDICATE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; PREDICATE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; PREDICATE-NEXT:  Live-in ir<%n> = original trip-count
+; PREDICATE-EMPTY:
+; PREDICATE-NEXT:  ir-bb<entry>:
+; PREDICATE-NEXT:  Successor(s): scalar.ph, vector.ph
+; PREDICATE-EMPTY:
+; PREDICATE-NEXT:  vector.ph:
+; PREDICATE-NEXT:  Successor(s): vector loop
+; PREDICATE-EMPTY:
+; PREDICATE-NEXT:  <x1> vector loop: {
+; PREDICATE-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; PREDICATE-EMPTY:
+; PREDICATE-NEXT:    vector.body:
+; PREDICATE-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; PREDICATE-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
+; PREDICATE-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep.a>
+; PREDICATE-NEXT:      EMIT ir<%cmp> = icmp sgt ir<%l>, ir<0>
+; PREDICATE-NEXT:      EMIT ir<%sel.varying> = select ir<%cmp>, ir<%l>, ir<0> (!prof {3, 5})
+; PREDICATE-NEXT:      EMIT store ir<%sel.varying>, ir<%gep.a>
+; PREDICATE-NEXT:      EMIT ir<%sel.uniform> = select ir<%c>, ir<20>, ir<10> (!prof {5, 3})
+; PREDICATE-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
+; PREDICATE-NEXT:      EMIT store ir<%sel.uniform>, ir<%gep.b>
+; PREDICATE-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; PREDICATE-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
+; PREDICATE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; PREDICATE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; PREDICATE-NEXT:    No successors
+; PREDICATE-NEXT:  }
+; PREDICATE-NEXT:  Successor(s): middle.block
+; PREDICATE-EMPTY:
+; PREDICATE-NEXT:  middle.block:
+;
+; CONSTRUCT-LABEL: VPlan for loop in 'selects'
+; CONSTRUCT:  VPlan ' for UF>=1' {
+; CONSTRUCT-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CONSTRUCT-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CONSTRUCT-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CONSTRUCT-NEXT:  Live-in ir<%n> = original trip-count
+; CONSTRUCT-EMPTY:
+; CONSTRUCT-NEXT:  ir-bb<entry>:
+; CONSTRUCT-NEXT:  Successor(s): scalar.ph, vector.ph
+; CONSTRUCT-EMPTY:
+; CONSTRUCT-NEXT:  vector.ph:
+; CONSTRUCT-NEXT:  Successor(s): vector loop
+; CONSTRUCT-EMPTY:
+; CONSTRUCT-NEXT:  <x1> vector loop: {
+; CONSTRUCT-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CONSTRUCT-EMPTY:
+; CONSTRUCT-NEXT:    vector.body:
+; CONSTRUCT-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CONSTRUCT-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
+; CONSTRUCT-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
+; CONSTRUCT-NEXT:      WIDEN ir<%l> = load vp<[[VP4]]>
+; CONSTRUCT-NEXT:      EMIT ir<%cmp> = icmp sgt ir<%l>, ir<0>
+; CONSTRUCT-NEXT:      EMIT ir<%sel.varying> = select ir<%cmp>, ir<%l>, ir<0> (!prof {3, 5})
+; CONSTRUCT-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
+; CONSTRUCT-NEXT:      WIDEN store vp<[[VP5]]>, ir<%sel.varying>
+; CONSTRUCT-NEXT:      EMIT ir<%sel.uniform> = select ir<%c>, ir<20>, ir<10> (!prof {5, 3})
+; CONSTRUCT-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
+; CONSTRUCT-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
+; CONSTRUCT-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sel.uniform>
+; CONSTRUCT-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CONSTRUCT-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
+; CONSTRUCT-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CONSTRUCT-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CONSTRUCT-NEXT:    No successors
+; CONSTRUCT-NEXT:  }
+; CONSTRUCT-NEXT:  Successor(s): middle.block
+; CONSTRUCT-EMPTY:
+; CONSTRUCT-NEXT:  middle.block:
+;
+; REGION-LABEL: VPlan for loop in 'selects'
+; REGION:  VPlan 'Initial VPlan for VF={2},UF>=1' {
+; REGION-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; REGION-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; REGION-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; REGION-NEXT:  Live-in ir<%n> = original trip-count
+; REGION-EMPTY:
+; REGION-NEXT:  ir-bb<entry>:
+; REGION-NEXT:  Successor(s): scalar.ph, vector.ph
+; REGION-EMPTY:
+; REGION-NEXT:  vector.ph:
+; REGION-NEXT:  Successor(s): vector loop
+; REGION-EMPTY:
+; REGION-NEXT:  <x1> vector loop: {
+; REGION-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; REGION-EMPTY:
+; REGION-NEXT:    vector.body:
+; REGION-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; REGION-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
+; REGION-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
+; REGION-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
+; REGION-NEXT:      WIDEN ir<%cmp> = icmp sgt ir<%l>, ir<0>
+; REGION-NEXT:      WIDEN ir<%sel.varying> = select ir<%cmp>, ir<%l>, ir<0> (!prof {3, 5})
+; REGION-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
+; REGION-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sel.varying>
+; REGION-NEXT:      CLONE ir<%sel.uniform> = select ir<%c>, ir<20>, ir<10> (!prof {5, 3})
+; REGION-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP4]]>
+; REGION-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
+; REGION-NEXT:      WIDEN store vp<[[VP7]]>, ir<%sel.uniform>
+; REGION-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; REGION-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; REGION-NEXT:    No successors
+; REGION-NEXT:  }
+; REGION-NEXT:  Successor(s): middle.block
+; REGION-EMPTY:
+; REGION-NEXT:  middle.block:
+;
+; DISSOLVE-LABEL: VPlan for loop in 'selects'
+; DISSOLVE:  VPlan 'Initial VPlan for VF={2},UF={1}' {
+; DISSOLVE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
+; DISSOLVE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = vector-trip-count
+; DISSOLVE-NEXT:  Live-in ir<%n> = original trip-count
+; DISSOLVE-EMPTY:
+; DISSOLVE-NEXT:  ir-bb<entry>:
+; DISSOLVE-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<2>
+; DISSOLVE-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; DISSOLVE-NEXT:  Successor(s): scalar.ph, vector.ph
+; DISSOLVE-EMPTY:
+; DISSOLVE-NEXT:  vector.ph:
+; DISSOLVE-NEXT:    CLONE ir<%sel.uniform> = select ir<%c>, ir<20>, ir<10> (!prof {5, 3})
+; DISSOLVE-NEXT:  Successor(s): vector.body
+; DISSOLVE-EMPTY:
+; DISSOLVE-NEXT:  vector.body:
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; DISSOLVE-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; DISSOLVE-NEXT:    WIDEN ir<%l> = load ir<%gep.a>
+; DISSOLVE-NEXT:    WIDEN ir<%cmp> = icmp sgt ir<%l>, ir<0>
+; DISSOLVE-NEXT:    WIDEN ir<%sel.varying> = select ir<%cmp>, ir<%l>, ir<0>
+; DISSOLVE-NEXT:    WIDEN store ir<%gep.a>, ir<%sel.varying>
+; DISSOLVE-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
+; DISSOLVE-NEXT:    WIDEN store ir<%gep.b>, ir<%sel.uniform>
+; DISSOLVE-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, vp<[[VP0]]>
+; DISSOLVE-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP1]]>
+; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP3]]>
+; DISSOLVE-NEXT:  Successor(s): middle.block, vector.body
+; DISSOLVE-EMPTY:
+; DISSOLVE-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %l = load i32, ptr %gep.a, align 4
+  %cmp = icmp sgt i32 %l, 0
+  %sel.varying = select i1 %cmp, i32 %l, i32 0, !prof !2
+  store i32 %sel.varying, ptr %gep.a, align 4
+  %nc = xor i1 %c, true
+  %sel.uniform = select i1 %nc, i32 10, i32 20, !prof !2
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 %sel.uniform, ptr %gep.b, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1, i32 3}
 !1 = !{!"branch_weights", i32 1, i32 999}
+!2 = !{!"branch_weights", i32 3, i32 5}

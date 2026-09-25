@@ -34,7 +34,9 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TypeSize.h"
@@ -1224,6 +1226,23 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   return nullptr;
 }
 
+/// Swap the branch weights recorded for \p R, a select whose two selected
+/// operands are being swapped, so that they keep describing the probability of
+/// its condition. Does nothing if there are none, or if they are the marker for
+/// an explicitly unknown profile, which is symmetric.
+static void swapSelectBranchWeights(VPRecipeBase &R, VPlan &Plan) {
+  auto *MD = dyn_cast<VPIRMetadata>(&R);
+  if (!MD)
+    return;
+  SmallVector<uint32_t, 2> Weights;
+  if (!extractBranchWeights(MD->getMetadata(LLVMContext::MD_prof), Weights) ||
+      Weights.size() != 2)
+    return;
+  MD->setMetadata(
+      LLVMContext::MD_prof,
+      MDBuilder(Plan.getContext()).createBranchWeights(Weights[1], Weights[0]));
+}
+
 /// Return an existing value or a live in for VPSingleDefRecipe \p Def if
 /// possible. This shouldn't create or modify recipes.
 static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
@@ -1448,6 +1467,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     Def->setOperand(0, C);
     Def->setOperand(1, Y);
     Def->setOperand(2, X);
+    swapSelectBranchWeights(*Def, Plan);
     return Def;
   }
 
@@ -1558,6 +1578,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
             // select (cmp pred), X, Y -> select (cmp inv_pred), Y, X
             R->setOperand(1, Y);
             R->setOperand(2, X);
+            swapSelectBranchWeights(*R, Plan);
           } else {
             // not (cmp pred) -> cmp inv_pred
             assert(match(R, m_Not(m_Specific(Cmp))) && "Unexpected user");
