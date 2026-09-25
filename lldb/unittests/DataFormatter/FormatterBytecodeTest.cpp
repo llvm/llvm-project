@@ -588,4 +588,63 @@ TEST_F(FormatterBytecodeTest, DictionaryOps) {
                   data));
     ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
   }
+
+  {
+    // dict_has yields a signed Integer, usable with comparison operators.
+    DataStack data;
+    ASSERT_TRUE(Interpret(
+        {op_dict, op_lit_string, 1, 'a', op_dict_has, op_lit_integer, 0, op_eq},
+        data));
+    ASSERT_TRUE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Dictionaries can be nested.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict, op_dup, op_lit_string, 1, 'k', op_dict,
+                           op_dict_set, op_lit_string, 1, 'k', op_dict_get},
+                          data));
+    ASSERT_TRUE(data.Pop<std::shared_ptr<Dictionary>>());
+  }
+
+  // Error: store a dictionary in itself.
+  EXPECT_THAT_ERROR(
+      InterpretFail(
+          {op_dict, op_dup, op_lit_string, 1, 'k', op_over, op_dict_set}),
+      FailedWithMessage(
+          "dict_set would create a reference cycle(opcode=dict_set)"));
+  // Error: store b in a, when a is already in b.
+  EXPECT_THAT_ERROR(
+      InterpretFail(
+          {op_dict,     op_dict,     op_dup,  op_lit_string, 1,
+           'k',         op_lit_uint, 0,       op_pick,       op_dict_set,
+           op_lit_uint, 0,           op_pick, op_lit_string, 1,
+           'k',         op_lit_uint, 1,       op_pick,       op_dict_set}),
+      FailedWithMessage(
+          "dict_set would create a reference cycle(opcode=dict_set)"));
+
+  {
+    // Dictionaries shared by multiple parents. Starting from [d0 d0], each
+    // level turns [.. p] into [.. n] where n["a"] and n["b"] are both p. The
+    // number of paths to d0 doubles per level, so cycle detection must not
+    // walk every path.
+    std::vector<uint8_t> code = {op_dict, op_dup};
+    for (int i = 0; i < 64; ++i)
+      code.insert(code.end(),
+                  {op_dict, op_swap, op_over, op_over, op_lit_string, 1, 'a',
+                   op_swap, op_dict_set, op_over, op_over, op_lit_string, 1,
+                   'b', op_swap, op_dict_set, op_drop});
+    {
+      DataStack data;
+      ASSERT_TRUE(Interpret(code, data));
+      ASSERT_EQ(data.size(), 2u);
+    }
+    // Error: store the top dictionary in d0, which it reaches via sharing.
+    code.insert(code.end(), {op_over, op_swap, op_lit_string, 1, 'k', op_swap,
+                             op_dict_set});
+    EXPECT_THAT_ERROR(
+        InterpretFail(code),
+        FailedWithMessage(
+            "dict_set would create a reference cycle(opcode=dict_set)"));
+  }
 }

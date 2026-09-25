@@ -11,6 +11,9 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -136,7 +139,7 @@ static llvm::Error FormatImpl(DataStack &data) {
       format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
       format(FormatFunctor(toString(*sel)));
-    else if (auto dict = std::get_if<std::shared_ptr<Dictionary>>(&arg))
+    else if (auto *dict = std::get_if<DictionarySP>(&arg))
       format(FormatFunctor("dict"));
   }
   data.Push(s);
@@ -214,6 +217,27 @@ static DataStackElement WrapAPSIntResult(T result, unsigned bit_width,
     return llvm::APSInt(llvm::APInt(bit_width, result), is_unsigned);
   else
     return DataStackElement(std::move(result));
+}
+
+/// Returns true if `target` is transitively reachable via `from`. Likewise,
+/// returns true if they are the same dictionary. This is used to prevent memory
+/// leaks caused by retain cycles. Dictionaries can be shared by multiple
+/// parents, so each one is visited only once to prevent exponential running
+/// time.
+static bool Reaches(const Dictionary *from, const Dictionary *target) {
+  llvm::SmallPtrSet<const Dictionary *, 8> visited;
+  llvm::SmallVector<const Dictionary *, 8> worklist = {from};
+  while (!worklist.empty()) {
+    const Dictionary *dict = worklist.pop_back_val();
+    if (dict == target)
+      return true;
+    if (!visited.insert(dict).second)
+      continue;
+    for (const auto &entry : *dict)
+      if (auto *nested = std::get_if<DictionarySP>(&entry.second))
+        worklist.push_back(nested->get());
+  }
+  return false;
 }
 
 llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
@@ -746,14 +770,17 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       TYPE_CHECK(Dict, String, Any);
       auto value = data.PopAny();
       auto key = data.Pop<std::string>();
-      auto dict_sp = data.Pop<std::shared_ptr<Dictionary>>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      if (auto *nested_sp = std::get_if<DictionarySP>(&value))
+        if (Reaches(nested_sp->get(), dict_sp.get()))
+          return error("dict_set would create a reference cycle");
       (*dict_sp)[key] = std::move(value);
       continue;
     }
     case op_dict_get: {
       TYPE_CHECK(Dict, String);
       auto key = data.Pop<std::string>();
-      auto dict_sp = data.Pop<std::shared_ptr<Dictionary>>();
+      auto dict_sp = data.Pop<DictionarySP>();
       auto it = dict_sp->find(key);
       if (it == dict_sp->end())
         return error("key not found in dictionary");
@@ -763,9 +790,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     case op_dict_has: {
       TYPE_CHECK(Dict, String);
       auto key = data.Pop<std::string>();
-      auto dict_sp = data.Pop<std::shared_ptr<Dictionary>>();
+      auto dict_sp = data.Pop<DictionarySP>();
       bool found = dict_sp->find(key) != dict_sp->end();
-      data.Push(llvm::APSInt(llvm::APInt(1, found), /*isUnsigned=*/true));
+      data.Push(llvm::APSInt::get(found));
       continue;
     }
     }
