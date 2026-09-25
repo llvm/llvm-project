@@ -28,6 +28,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
 #include "flang/Parser/openmp-utils.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
@@ -38,6 +39,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2482,6 +2484,80 @@ void AppendDirectiveContextTraits(llvm::omp::Directive directive,
   }
 }
 
+namespace {
+struct ConditionNames {
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
+  bool Pre(const parser::Name &name) {
+    if (name.symbol)
+      names.push_back(&name);
+    return false;
+  }
+  llvm::SmallVector<const parser::Name *> names;
+};
+
+// Profile the original expression, not its folded value. In particular, two
+// named constants with the same value still denote different declarations.
+// Retain the cooked expression spelling, except for outer parentheses, blanks
+// outside character literals, and names resolved to their ultimate symbols.
+llvm::StringRef GetConditionIdentity(
+    const parser::ScalarExpr &condition, SemanticsContext &context) {
+  const auto *expr{parser::Unwrap<parser::Expr>(condition)};
+  CHECK(expr);
+  while (
+      const auto *parentheses{std::get_if<parser::Expr::Parentheses>(&expr->u)})
+    expr = &parentheses->v.value();
+
+  ConditionNames visitor;
+  parser::Walk(*expr, visitor);
+  llvm::sort(visitor.names, [](const auto *a, const auto *b) {
+    return a->source.begin() < b->source.begin();
+  });
+
+  llvm::FoldingSetNodeID id;
+  auto addText = [&](parser::CharBlock source) {
+    std::string text;
+    char quote{0};
+    for (const char *p{source.begin()}; p != source.end(); ++p) {
+      char ch{*p};
+      if (quote) {
+        text += ch;
+        if (ch == quote)
+          quote = 0;
+        else if (ch == '\\' &&
+            context.IsEnabled(common::LanguageFeature::BackslashEscapes) &&
+            p + 1 != source.end())
+          text += *++p;
+      } else if (ch == '\'' || ch == '"') {
+        quote = ch;
+        text += ch;
+      } else if (!llvm::isSpace(ch)) {
+        text += ch;
+      }
+    }
+    id.AddString(text);
+  };
+
+  const char *next{expr->source.begin()};
+  for (const parser::Name *name : visitor.names) {
+    if (!expr->source.Contains(name->source) || name->source.begin() < next)
+      continue;
+    addText({next, name->source.begin()});
+    id.AddPointer(&name->symbol->GetUltimate());
+    next = name->source.end();
+  }
+  addText({next, expr->source.end()});
+
+  // Intern the full profile in context-owned storage. Recompute it after
+  // reading a module; symbol pointers are local to this compilation.
+  llvm::FoldingSetNodeIDRef profile{id.getRef()};
+  SourceName saved{context.SaveTempName(
+      std::string{reinterpret_cast<const char *>(profile.data()),
+          profile.size() * sizeof(unsigned)})};
+  return {saved.begin(), saved.size()};
+}
+} // namespace
+
 static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     const parser::OmpTraitSelector &selector, llvm::omp::VariantMatchInfo &vmi,
     SemanticsContext &semaCtx,
@@ -2508,8 +2584,8 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
       if (!scalarExpr) {
         continue;
       }
+      llvm::StringRef condition{GetConditionIdentity(*scalarExpr, semaCtx)};
       if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
-        llvm::StringRef condition{prop.source.begin(), prop.source.size()};
         vmi.addTrait(set,
             *constValue ? llvm::omp::TraitProperty::user_condition_true
                         : llvm::omp::TraitProperty::user_condition_false,
@@ -2520,7 +2596,7 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
         dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
       }
       vmi.addTrait(set, llvm::omp::TraitProperty::user_condition_unknown,
-          llvm::StringRef{prop.source.begin(), prop.source.size()}, scorePtr);
+          condition, scorePtr);
     }
     return;
   }
@@ -2640,8 +2716,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         staticVMI.UserCondition = {};
         llvm::APInt *conditionScorePtr{
             conditionScore ? &*conditionScore : nullptr};
-        llvm::StringRef conditionSource{
-            dynamicCondition->source.begin(), dynamicCondition->source.size()};
+        llvm::StringRef conditionIdentity{rawVMI.UserCondition};
 
         bool hasMatchAny{rawVMI.RequiredTraits.test(unsigned(matchAnyTrait))};
         bool hasMatchNone{rawVMI.RequiredTraits.test(unsigned(matchNoneTrait))};
@@ -2656,7 +2731,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
 
           llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
           conditionTrueVMI.addTrait(
-              llvm::omp::TraitProperty::user_condition_true, conditionSource,
+              llvm::omp::TraitProperty::user_condition_true, conditionIdentity,
               conditionScorePtr);
           if (!llvm::omp::isVariantApplicableInContext(
                   conditionTrueVMI, matchContext)) {
@@ -2669,7 +2744,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
               rankingVMI.addTrait(hasMatchNone
                       ? llvm::omp::TraitProperty::user_condition_false
                       : llvm::omp::TraitProperty::user_condition_true,
-                  conditionSource, conditionScorePtr);
+                  conditionIdentity, conditionScorePtr);
             };
 
         if (hasMatchAny && isStaticVMIApplicable) {
@@ -2680,7 +2755,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
           addConditionTraitForRanking(conditionTrueVMI);
           llvm::omp::VariantMatchInfo conditionFalseVMI{staticVMI};
           conditionFalseVMI.addTrait(
-              llvm::omp::TraitProperty::user_condition_false, conditionSource,
+              llvm::omp::TraitProperty::user_condition_false, conditionIdentity,
               conditionScorePtr);
           result.candidates.push_back({spec, std::move(conditionTrueVMI),
               isExplicit, dynamicCondition});
