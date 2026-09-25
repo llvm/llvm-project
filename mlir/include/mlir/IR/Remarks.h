@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -665,19 +666,56 @@ public:
   void finalize() override {}
 };
 
-/// Policy that emits only the last remark reported for each identity, see
-/// DenseMapInfo<Remark>. Remarks are stored until finalize().
+/// Policy that emits only the last remark reported for each identity.
+/// Remarks are stored until finalize(). A later remark with the same identity
+/// replaces the stored one in place, so root remarks are emitted in the order
+/// in which their identity was first reported.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
-  /// Remarks reported since the last finalize().
-  llvm::DenseSet<detail::Remark> postponedRemarks;
+  /// Location, remark name, combined category name and kind. Arguments,
+  /// function name and remark ID are not part of the identity, so a later
+  /// remark with the same identity replaces an earlier one.
+  struct Identity {
+    Location loc;
+    std::string remarkName;
+    std::string combinedCategoryName;
+    RemarkKind kind;
+
+    explicit Identity(const detail::Remark &remark)
+        : loc(remark.getLocation()), remarkName(remark.getRemarkName()),
+          combinedCategoryName(remark.getCombinedCategoryName()),
+          kind(remark.getRemarkKind()) {}
+
+    auto asTuple() const {
+      return std::tie(loc, remarkName, combinedCategoryName, kind);
+    }
+  };
+
+  struct IdentityInfo {
+    static unsigned getHashValue(const Identity &identity) {
+      return std::apply(
+          [](const auto &...fields) {
+            return static_cast<unsigned>(llvm::hash_combine(fields...));
+          },
+          identity.asTuple());
+    }
+
+    static bool isEqual(const Identity &lhs, const Identity &rhs) {
+      return lhs.asTuple() == rhs.asTuple();
+    }
+  };
+
+  /// Remarks reported since the last finalize(), keyed by identity and kept
+  /// in first-report order.
+  llvm::MapVector<Identity, detail::Remark,
+                  llvm::DenseMap<Identity, unsigned, IdentityInfo>>
+      postponedRemarks;
 
 public:
   RemarkEmittingPolicyFinal();
 
   void reportRemark(const detail::Remark &remark) override {
-    postponedRemarks.erase(remark);
-    postponedRemarks.insert(remark);
+    postponedRemarks.insert_or_assign(Identity(remark), remark);
   }
 
   /// Emits and drains all stored remarks. Related remarks are printed right
@@ -761,26 +799,4 @@ LogicalResult enableOptimizationRemarks(
 
 } // namespace mlir::remark
 
-/// Two remarks are the same for RemarkEmittingPolicyFinal when they have the
-/// same location, remark name, combined category name and kind.
-namespace llvm {
-template <>
-struct DenseMapInfo<mlir::remark::detail::Remark> {
-  static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
-    return llvm::hash_combine(
-        remark.getLocation().getAsOpaquePointer(),
-        llvm::hash_value(remark.getRemarkName()),
-        llvm::hash_value(remark.getCombinedCategoryName()),
-        static_cast<unsigned>(remark.getRemarkKind()));
-  }
-
-  static bool isEqual(const mlir::remark::detail::Remark &lhs,
-                      const mlir::remark::detail::Remark &rhs) {
-    return lhs.getLocation() == rhs.getLocation() &&
-           lhs.getRemarkName() == rhs.getRemarkName() &&
-           lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName() &&
-           lhs.getRemarkKind() == rhs.getRemarkKind();
-  }
-};
-} // namespace llvm
 #endif // MLIR_IR_REMARKS_H
