@@ -186,6 +186,8 @@ protected:
 
   bool EmulateTBZ(const uint32_t opcode);
 
+  bool EmulateMOVRegister(const uint32_t opcode);
+
   ProcState m_opcode_pstate;
   ProcState m_emulated_pstate; // This can get updated by the opcode.
   bool m_ignore_conditions;

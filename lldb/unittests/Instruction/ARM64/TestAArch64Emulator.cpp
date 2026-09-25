@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/Opcode.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -18,6 +19,8 @@
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -27,12 +30,35 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
   uint8_t memory[64] = {0};
   uint64_t memory_offset = 0;
 
+  /// The register writes seen since the last Run(), with the context the
+  /// emulator attached to each one.
+  struct RegisterWrite {
+    uint32_t reg = LLDB_INVALID_REGNUM;
+    uint64_t value = 0;
+    EmulateInstruction::ContextType context_type =
+        EmulateInstruction::eContextInvalid;
+    /// The register named by an eInfoTypeRegisterPlusOffset payload, if any.
+    uint32_t context_reg = LLDB_INVALID_REGNUM;
+    int64_t context_offset = 0;
+  };
+  std::vector<RegisterWrite> writes;
+
   Arch64EmulatorTester()
       : EmulateInstructionARM64(ArchSpec("arm64-apple-ios")) {
     memset(&gpr, 0, sizeof(gpr));
     EmulateInstruction::SetCallbacks(ReadMemoryCallback, WriteMemoryCallback,
                                      ReadRegisterCallback,
                                      WriteRegisterCallback);
+  }
+
+  /// Emulate a single instruction word, discarding any previously recorded
+  /// writes. Conditions are always ignored.
+  bool Run(uint32_t inst) {
+    writes.clear();
+    if (!SetInstruction(lldb_private::Opcode(inst, eByteOrderLittle), Address(),
+                        nullptr))
+      return false;
+    return EvaluateInstruction(eEmulateInstructionOptionIgnoreConditions);
   }
 
   static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
@@ -75,6 +101,17 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
                                     const RegisterValue &reg_value) {
     auto *tester = static_cast<Arch64EmulatorTester *>(instruction);
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    RegisterWrite write;
+    write.reg = reg;
+    write.value = reg_value.GetAsUInt64();
+    write.context_type = context.type;
+    if (context.GetInfoType() ==
+        EmulateInstruction::eInfoTypeRegisterPlusOffset) {
+      write.context_reg =
+          context.info.RegisterPlusOffset.reg.kinds[eRegisterKindLLDB];
+      write.context_offset = context.info.RegisterPlusOffset.signed_offset;
+    }
+    tester->writes.push_back(write);
     if (reg >= gpr_x0_arm64 && reg <= gpr_x28_arm64) {
       tester->gpr.x[reg - gpr_x0_arm64] = reg_value.GetAsUInt64();
       return true;
@@ -177,4 +214,67 @@ TEST_F(TestAArch64Emulator, TestAutoAdvancePC) {
                               eEmulateInstructionOptionIgnoreConditions));
   ASSERT_EQ(emu.gpr.pc, (uint64_t)0x123456789abcde04);
   ASSERT_EQ(emu.gpr.x[8], (uint64_t)0x44332211);
+}
+
+/// Test that moving the contents from one register to another works.
+TEST_F(TestAArch64Emulator, TestMOVRegister) {
+  Arch64EmulatorTester emu;
+  // lr is x30
+  emu.gpr.lr = 0xdeadbeef12345678;
+
+  // mov x2, x30
+  ASSERT_TRUE(emu.Run(0xaa1e03e2));
+
+  ASSERT_EQ(1u, emu.writes.size());
+  // Check that x2 was written to.
+  EXPECT_EQ((uint32_t)gpr_x2_arm64, emu.writes[0].reg);
+  // Check that x2 has the value originally on x30.
+  EXPECT_EQ(0xdeadbeef12345678ULL, emu.gpr.x[2]);
+  // Check that the contents of the write originated from a register.
+  EXPECT_EQ(EmulateInstruction::eContextRegisterPlusOffset,
+            emu.writes[0].context_type);
+  // Check that the original register was lr.
+  EXPECT_EQ((uint32_t)gpr_lr_arm64, emu.writes[0].context_reg);
+  EXPECT_EQ(0, emu.writes[0].context_offset);
+}
+
+TEST_F(TestAArch64Emulator, TestMOVRegister32BitZeroExtends) {
+  Arch64EmulatorTester emu;
+  emu.gpr.lr = 0xffffffffdeadbeef;
+
+  // mov w2, w30.
+  ASSERT_TRUE(emu.Run(0x2a1e03e2));
+
+  ASSERT_EQ(1u, emu.writes.size());
+  EXPECT_EQ((uint32_t)gpr_x2_arm64, emu.writes[0].reg);
+  EXPECT_EQ(0x00000000deadbeefULL, emu.writes[0].value);
+}
+
+TEST_F(TestAArch64Emulator, TestMOVRegisterFromZeroRegister) {
+  Arch64EmulatorTester emu;
+  // Register 31 is xzr in this encoding, but sp in lldb's numbering.
+  // Reading it must yield zero, not the stack pointer.
+  emu.gpr.sp = 0x7fff0000;
+
+  // mov x2, xzr
+  ASSERT_TRUE(emu.Run(0xaa1f03e2));
+
+  ASSERT_EQ(1u, emu.writes.size());
+  EXPECT_EQ((uint32_t)gpr_x2_arm64, emu.writes[0].reg);
+  EXPECT_EQ(0u, emu.writes[0].value);
+  // There is no source register to name, so the value is an immediate zero.
+  EXPECT_EQ(EmulateInstruction::eContextImmediate, emu.writes[0].context_type);
+}
+
+TEST_F(TestAArch64Emulator, TestMOVRegisterToZeroRegisterIsDiscarded) {
+  Arch64EmulatorTester emu;
+  emu.gpr.x[2] = 0xabcd;
+  emu.gpr.sp = 0x7fff0000;
+
+  // mov xzr, x2: the destination is xzr, so the write is discarded. sp holds
+  // lldb's register 31 and must be left alone.
+  ASSERT_TRUE(emu.Run(0xaa0203ff));
+
+  EXPECT_TRUE(emu.writes.empty());
+  EXPECT_EQ(0x7fff0000ULL, emu.gpr.sp);
 }
