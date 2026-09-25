@@ -147,3 +147,22 @@ func.func @boxchar_len_i32_i64(%arg0 : !fir.boxchar<4>) -> (i64) {
 // INT32:  %[[len:.*]] = llvm.extractvalue %[[box_char]][1] : !llvm.struct<(ptr, i32)>
 // INT32:  %{{.*}} = llvm.sext %0 : i32 to i64
 // INT32-NEXT:  llvm.return
+
+// -----
+
+// Test that dynamic allocation uses the target index width.
+
+func.func @dynamic_alloca(%extent : index) {
+  %0 = fir.alloca !fir.array<?xi32>, %extent
+  return
+}
+
+// INT64-LABEL: llvm.func @dynamic_alloca
+// INT64-SAME: %[[extent:.*]]: i64
+// INT64: %[[count:.*]] = llvm.mul %[[extent]], %{{.*}} : i64
+// INT64: llvm.alloca %[[count]] x i32 : (i64) -> !llvm.ptr
+
+// INT32-LABEL: llvm.func @dynamic_alloca
+// INT32-SAME: %[[extent:.*]]: i32
+// INT32: %[[count:.*]] = llvm.mul %[[extent]], %{{.*}} : i32
+// INT32: llvm.alloca %[[count]] x i32 : (i32) -> !llvm.ptr

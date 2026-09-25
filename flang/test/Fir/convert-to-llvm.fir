@@ -1,6 +1,8 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
+// The generic checks assume a 64-bit index width. Keep representative i386
+// coverage under a target-specific prefix.
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=I386,CHECK-COMDAT
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-pc-win32" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT,GENERIC
@@ -1093,6 +1095,10 @@ func.func @alloca_one() -> !fir.ref<i32> {
 // AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK: llvm.return [[A]] : !llvm.ptr
 
+// I386-LABEL: llvm.func @alloca_one() -> !llvm.ptr
+// I386: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// I386: llvm.alloca %[[ONE]] x i32 : (i32) -> !llvm.ptr
+
 
 // -----
 
@@ -2128,6 +2134,12 @@ func.func @ext_array_coor5(%arg0: !fir.ref<!fir.array<?xi32>>, %idx1 : index, %i
 // CHECK:           %[[VAL_16:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_13]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:         }
 
+// I386-LABEL: llvm.func @ext_array_coor5(
+// I386-SAME: %[[BASE:[^,]+]]: !llvm.ptr, %[[EXTENT:[^,]+]]: i32
+// I386: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// I386: %[[STRIDE:.*]] = llvm.mul %[[ONE]], %[[EXTENT]] overflow<nsw, nuw> : i32
+// I386: llvm.getelementptr nusw|nuw %[[BASE]][%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, i32
+
 // Conversion for 3-d array
 
 func.func @ext_array_coor6(%arg0: !fir.ref<!fir.array<?x?x?xi32>>, %idx1 : index, %idx2 : index, %idx3 : index, %idx4 : index, %idx5 : index) {
@@ -2438,6 +2450,10 @@ func.func @coordinate_box_array_1d(%arg0: !fir.box<!fir.array<10 x f32>>, %arg1:
 // CHECK-NEXT:  %[[SUBOJECT_OFFSET:.*]] = llvm.add %[[BYTE_OFFSET]], %[[OFFSET_INIT]] overflow<nsw> : i64
 // CHECK-NEXT:  %[[SUBOBJECT_ADDR:.*]] = llvm.getelementptr %[[ARRAY_OBJECT]][%[[SUBOJECT_OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 // CHECK-NEXT:  llvm.return
+
+// I386-LABEL: llvm.func @coordinate_box_array_1d(
+// I386-SAME: %[[BOX:.*]]: !llvm.ptr, %[[COORDINATE:.*]]: i32)
+// I386: llvm.mul %[[COORDINATE]], %{{.*}} overflow<nsw> : i32
 
 // `fir.array` inside a `fir.box` (1d) - dynamic size
 func.func @coordinate_of_box_dynamic_array_1d(%arg0: !fir.box<!fir.array<? x f32>>, %arg1: index) {

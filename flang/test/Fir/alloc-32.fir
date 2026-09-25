@@ -18,12 +18,10 @@ func.func @allocmem_scalar_nonchar() -> !fir.heap<i32> {
 
 // CHECK-LABEL: define ptr @allocmem_scalar_dynchar(
 // CHECK-SAME: i32 %[[len:.*]])
-// CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
-// CHECK: %[[mul2:.*]] = mul i64 1, %[[mul1]]
-// CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
-// CHECK: %[[sz:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
-// CHECK: %[[trunc:.*]] = trunc i64 %[[sz]] to i32
-// CHECK: call ptr @malloc(i32 %[[trunc]])
+// CHECK: %[[mul:.*]] = mul i32 1, %[[len]]
+// CHECK: %[[cmp:.*]] = icmp sgt i32 %[[mul]], 0
+// CHECK: %[[sz:.*]] = select i1 %[[cmp]], i32 %[[mul]], i32 1
+// CHECK: call ptr @malloc(i32 %[[sz]])
 func.func @allocmem_scalar_dynchar(%l : i32) -> !fir.heap<!fir.char<1,?>> {
   %1 = fir.allocmem !fir.char<1,?>(%l : i32)
   return %1 : !fir.heap<!fir.char<1,?>>
