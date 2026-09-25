@@ -535,7 +535,7 @@ struct VariableGEPIndex {
   APInt Scale;
 
   // Context instruction to use when querying information about this index.
-  const Instruction *CxtI;
+  const Instruction *CtxI;
 
   /// True if all operations in this expression are NSW.
   bool IsNSW;
@@ -617,7 +617,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   // Limit recursion depth to limit compile time in crazy cases.
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
-  const Instruction *CxtI = dyn_cast<Instruction>(V);
+  const Instruction *CtxI = dyn_cast<Instruction>(V);
 
   unsigned IndexSize = DL.getIndexTypeSizeInBits(V->getType());
   DecomposedGEP Decomposed;
@@ -764,7 +764,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       }
 
       if (!!Scale) {
-        VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW,
+        VariableGEPIndex Entry = {LE.Val, Scale, CtxI, LE.IsNSW,
                                   /* IsNegated */ false};
         Decomposed.VarIndices.push_back(Entry);
       }
@@ -1923,7 +1923,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
 
     // If we didn't consume this entry, add it to the end of the Dest list.
     if (!Found) {
-      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CxtI, Src.IsNSW,
+      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CtxI, Src.IsNSW,
                                 /* IsNegated */ true};
       DestGEP.VarIndices.push_back(Entry);
 
@@ -1945,7 +1945,7 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
     const VariableGEPIndex &Index = GEP.VarIndices[I];
     const APInt &Scale = Index.Scale;
 
-    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    SimplifyQuery SQ(DL, DT, &AC, Index.CtxI, /*UseInstrInfo=*/true);
     KnownBits Known = computeKnownBits(Index.Val.V, SQ);
     VarIndexKnownBits.emplace_back(Known);
 
@@ -2018,7 +2018,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CtxI))) {
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
       if (MultiplyByScaleNoWrap(Var)) {
@@ -2046,9 +2046,9 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
 
     if (Var0.hasNegatedScaleOf(Var1)) {
       if (isKnownNonEqual(Var0.Val.V, Var1.Val.V,
-                          SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
-                                                         ? Var0.CxtI
-                                                         : Var1.CxtI)))
+                          SimplifyQuery(DL, DT, &AC, /*CtxI=*/Var0.CtxI
+                                                         ? Var0.CtxI
+                                                         : Var1.CtxI)))
         return Var0.Scale.abs();
       // Equal scales would imply the GCD equals the scale itself, leading
       // the generalized path below not to do better than isKnownNonEqual.

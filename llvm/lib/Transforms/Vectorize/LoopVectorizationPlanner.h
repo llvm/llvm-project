@@ -25,6 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
@@ -97,8 +98,17 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 } // namespace LoopVectorizationUtils
 
-/// VPlan-based builder utility analogous to IRBuilder.
-class VPBuilder {
+/// Default inserter for VPBuilderBase, inserting \p R at \p It in \p VPBB.
+struct VPBuilderDefaultInserter {
+  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                    VPBasicBlock::iterator It) {
+    VPBB->insert(R, It);
+  }
+};
+
+/// VPlan-based builder utility similar to IRBuilder. Recipes are inserted via
+/// \p InserterTy.
+template <typename InserterTy> class VPBuilderBase : public InserterTy {
 private:
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
@@ -132,10 +142,11 @@ private:
 
   VPInsertPoint InsertPt;
 
+protected:
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InsertPt.getBlock()->insert(R, InsertPt.getIterator());
+      InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
     return R;
   }
 
@@ -153,17 +164,18 @@ public:
     return *InsertPt.getBlock()->getPlan();
   }
 
-  VPBuilder() = default;
-  VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
+  VPBuilderBase() = default;
+  VPBuilderBase(const VPInsertPoint &IP) : InsertPt(IP) {}
+  VPBuilderBase(InserterTy Inserter) : InserterTy(Inserter) {}
+  VPBuilderBase(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
       : InsertPt(TheBB, IP) {}
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
-  /// Create a VPBuilder to insert after \p R.
-  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
+  /// Create a builder to insert after \p R.
+  static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
     return {R->getParent(), std::next(R->getIterator())};
   }
 
@@ -182,7 +194,7 @@ public:
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InsertPt.getBlock()->insert(R, InsertPt.getIterator());
+    InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
     return R;
   }
 
@@ -341,7 +353,16 @@ public:
   /// result, then select between \p TrueVal and \p FalseVal.
   VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
                                       VPValue *FalseVal,
-                                      DebugLoc DL = DebugLoc::getUnknown());
+                                      DebugLoc DL = DebugLoc::getUnknown()) {
+    assert(ChainOp->getScalarType()->isIntegerTy(1) &&
+           "ChainOp must be i1 for AnyOf reduction");
+    VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                    FastMathFlags());
+    auto *OrReduce = createNaryOp(VPInstruction::ComputeReductionResult,
+                                  {ChainOp}, Flags, DL);
+    auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+    return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
+  }
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
@@ -519,7 +540,25 @@ public:
   /// with element type \p SourceElementTy.
   VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
                                                     Type *SourceElementTy,
-                                                    bool Reverse, DebugLoc DL);
+                                                    bool Reverse, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
+    if (Reverse) {
+      // When folding the tail, we may compute an address that we don't in the
+      // original scalar loop: drop the GEP no-wrap flags in this case.
+      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
+      // emit negative indices.
+      GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
+                                        ? GEPNoWrapFlags::none()
+                                        : Flags.withoutNoUnsignedWrap();
+      return tryInsertInstruction(
+          new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), SourceElementTy,
+                                       /*Stride=*/-1, ReverseFlags, DL));
+    }
+    Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+    VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+    return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
+  }
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
@@ -556,11 +595,11 @@ public:
   /// RAII object that stores the current insertion point and restores it when
   /// the object is destroyed.
   class InsertPointGuard {
-    VPBuilder &Builder;
+    VPBuilderBase &Builder;
     VPInsertPoint InsertPt;
 
   public:
-    InsertPointGuard(VPBuilder &B) : Builder(B), InsertPt(B.InsertPt) {}
+    InsertPointGuard(VPBuilderBase &B) : Builder(B), InsertPt(B.InsertPt) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
@@ -633,9 +672,6 @@ struct FixedScalableVFPair {
 
   /// \return true if either fixed- or scalable VF is non-zero.
   explicit operator bool() const { return FixedVF || ScalableVF; }
-
-  /// \return true if either fixed- or scalable VF is a valid vector VF.
-  bool hasVector() const { return FixedVF.isVector() || ScalableVF.isVector(); }
 };
 
 /// Holds state needed to make cost decisions before computing costs per-VF,
@@ -699,12 +735,6 @@ class VFSelectionContext {
   /// PHINodes of the reductions that should be expanded in-loop. Set by
   /// collectInLoopReductions.
   SmallPtrSet<PHINode *, 4> InLoopReductions;
-
-  /// A Map of inloop reduction operations and their immediate chain operand.
-  /// FIXME: This can be removed once reductions can be costed correctly in
-  /// VPlan. This was added to allow quick lookup of the inloop operations.
-  /// Set by collectInLoopReductions.
-  DenseMap<Instruction *, Instruction *> InLoopReductionImmediateChains;
 
   /// Maximum safe number of elements to be processed per vector iteration,
   /// which do not prevent store-load forwarding and are safe with regard to the
@@ -811,8 +841,6 @@ public:
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
-  /// InLoopReductionImmediateChains is filled with each in-loop reduction
-  /// operation and its immediate chain operand for use during cost modelling.
   void collectInLoopReductions();
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -823,12 +851,6 @@ public:
   /// Returns the set of in-loop reduction PHIs.
   const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
     return InLoopReductions;
-  }
-
-  /// Returns the immediate chain operand of in-loop reduction operation \p I,
-  /// or nullptr if \p I is not an in-loop reduction operation.
-  Instruction *getInLoopReductionImmediateChain(Instruction *I) const {
-    return InLoopReductionImmediateChains.lookup(I);
   }
 
   /// Check whether vectorization would require runtime checks. When optimizing

@@ -173,7 +173,7 @@ char SILowerControlFlowLegacy::ID = 0;
 INITIALIZE_PASS(SILowerControlFlowLegacy, DEBUG_TYPE, "SI lower control flow",
                 false, false)
 
-static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
+static void setImpSCCDefDead(MachineInstr &MI, bool IsDead = true) {
   MachineOperand &ImpDefSCC = MI.getOperand(3);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
 
@@ -252,7 +252,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(Cond.getReg(), MI, *And);
 
-  setImpSCCDefDead(*And, true);
+  setImpSCCDefDead(*And);
 
   MachineInstr *Xor = nullptr;
   if (!SimpleIf) {

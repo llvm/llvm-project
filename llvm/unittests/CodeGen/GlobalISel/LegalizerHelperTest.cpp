@@ -3287,6 +3287,59 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, NarrowScalarInsert) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_INSERT).lower(); });
+
+  LLT S8 = LLT::integer(8);
+  LLT S16 = LLT::integer(16);
+  LLT S32 = LLT::integer(32);
+  LLT S128 = LLT::integer(128);
+  auto Src = B.buildMergeValues(S128, {Copies[0], Copies[1]});
+  auto Val8 = B.buildTrunc(S8, Copies[2]);
+  auto Val16 = B.buildTrunc(S16, Copies[2]);
+
+  // The inserted value fits strictly inside the second 32-bit piece.
+  auto Inside = B.buildInsert(S128, Src, Val8, 40);
+  // The inserted value ends exactly at the end of the second piece.
+  auto Boundary = B.buildInsert(S128, Src, Val8, 56);
+  // The inserted value crosses from the second piece into the third.
+  auto Straddling = B.buildInsert(S128, Src, Val16, 56);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+
+  for (auto Insert : {Inside, Boundary, Straddling}) {
+    B.setInstrAndDebugLoc(*Insert);
+    EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+              Helper.narrowScalar(*Insert, 0, S32));
+  }
+
+  const auto *CheckStr = R"(
+  CHECK: [[SRC:%[0-9]+]]:_(i128) = G_MERGE_VALUES
+  CHECK: [[VAL8:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[VAL16:%[0-9]+]]:_(i16) = G_TRUNC
+  CHECK: [[A0:%[0-9]+]]:_(i32), [[A1:%[0-9]+]]:_(i32), [[A2:%[0-9]+]]:_(i32), [[A3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SRC]]
+  CHECK-NEXT: [[A:%[0-9]+]]:_(i32) = G_INSERT [[A1]]:_, [[VAL8]]:_(i8), 8
+  CHECK-NEXT: {{%[0-9]+}}:_(i128) = G_MERGE_VALUES [[A0]]:_(i32), [[A]]:_(i32), [[A2]]:_(i32), [[A3]]:_(i32)
+  CHECK: [[B0:%[0-9]+]]:_(i32), [[B1:%[0-9]+]]:_(i32), [[B2:%[0-9]+]]:_(i32), [[B3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SRC]]
+  CHECK-NEXT: [[B:%[0-9]+]]:_(i32) = G_INSERT [[B1]]:_, [[VAL8]]:_(i8), 24
+  CHECK-NEXT: {{%[0-9]+}}:_(i128) = G_MERGE_VALUES [[B0]]:_(i32), [[B]]:_(i32), [[B2]]:_(i32), [[B3]]:_(i32)
+  CHECK: [[C0:%[0-9]+]]:_(i32), [[C1:%[0-9]+]]:_(i32), [[C2:%[0-9]+]]:_(i32), [[C3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SRC]]
+  CHECK-NEXT: [[LO:%[0-9]+]]:_(s8) = G_EXTRACT [[VAL16]]:_(i16), 0
+  CHECK-NEXT: [[CLO:%[0-9]+]]:_(i32) = G_INSERT [[C1]]:_, [[LO]]:_(s8), 24
+  CHECK-NEXT: [[HI:%[0-9]+]]:_(s8) = G_EXTRACT [[VAL16]]:_(i16), 8
+  CHECK-NEXT: [[CHI:%[0-9]+]]:_(i32) = G_INSERT [[C2]]:_, [[HI]]:_(s8), 0
+  CHECK-NEXT: {{%[0-9]+}}:_(i128) = G_MERGE_VALUES [[C0]]:_(i32), [[CLO]]:_(i32), [[CHI]]:_(i32), [[C3]]:_(i32)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 TEST_F(AArch64GISelMITest, LowerInsert) {
   setUp();
   if (!TM)
