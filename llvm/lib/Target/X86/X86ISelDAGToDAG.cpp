@@ -4250,9 +4250,8 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   // Try to match potentially-truncated shift amount as `(bitwidth - y)`,
   // or leave the shift amount as-is, but then we'll have to negate it.
-  auto canonicalizeShiftAmt = [&NBits, &NegateNBits,
-                               &MatchedBitwidth](SDValue ShiftAmt,
-                                                 unsigned Bitwidth) {
+  auto canonicalizeShiftAmt = [&NBits, &NegateNBits, &MatchedBitwidth](
+                                  SDValue ShiftAmt, unsigned Bitwidth) {
     MatchedBitwidth = Bitwidth;
     NBits = ShiftAmt;
     NegateNBits = true;
@@ -4413,8 +4412,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // We might have matched the amount of high bits to be cleared,
   // but we want the amount of low bits to be kept, so negate it then.
   if (NegateNBits) {
-    SDValue BitWidthC =
-        CurDAG->getConstant(MatchedBitwidth, DL, MVT::i32);
+    SDValue BitWidthC = CurDAG->getConstant(MatchedBitwidth, DL, MVT::i32);
     insertDAGNode(*CurDAG, SDValue(Node, 0), BitWidthC);
 
     NBits = CurDAG->getNode(ISD::SUB, DL, MVT::i32, BitWidthC, NBits);
