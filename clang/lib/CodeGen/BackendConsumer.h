@@ -92,6 +92,14 @@ public:
   // Links each entry in LinkModules into our module.  Returns true on error.
   bool LinkInModules(llvm::Module *M);
 
+  /// Replace the set of modules to link in. LinkInModules() consumes the
+  /// modules, so incremental compilation (clang-repl) must reload and reseed
+  /// them before each translation unit; otherwise later inputs would miss the
+  /// linked-in bitcode (e.g. HIP device libraries).
+  void setLinkModules(SmallVector<LinkModule, 4> LMs) {
+    LinkModules = std::move(LMs);
+  }
+
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.
   const FullSourceLoc getBestLocationFromDebugLoc(
