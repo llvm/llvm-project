@@ -2789,6 +2789,11 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
   def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
+
+  // For 32-bit rotates the shift amount is legalized with a zext to i64;
+  // peek through it and apply the 32-bit shift-amount masking.
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (zext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
