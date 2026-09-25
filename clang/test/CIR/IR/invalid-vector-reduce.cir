@@ -1,0 +1,78 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!f32 = !cir.float
+!v4f32 = !cir.vector<4 x !f32>
+
+module {
+  cir.func @missing_accumulator(%vec: !v4f32) {
+    // expected-error @below {{'cir.vec.reduce' op requires an accumulator for fadd reduction}}
+    %0 = cir.vec.reduce(fadd, %vec) : (!v4f32) -> !f32
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!v4s32 = !cir.vector<4 x !s32i>
+
+module {
+  cir.func @unexpected_accumulator(%vec: !v4s32, %start: !s32i) {
+    // expected-error @below {{'cir.vec.reduce' op does not accept an accumulator for add reduction}}
+    %0 = cir.vec.reduce(add, %vec, %start) : (!v4s32, !s32i) -> !s32i
+    cir.return
+  }
+}
+
+// -----
+
+!f32 = !cir.float
+!v4f32 = !cir.vector<4 x !f32>
+
+module {
+  cir.func @wrong_vector_type(%vec: !v4f32) {
+    // expected-error @below {{'cir.vec.reduce' op requires an integer or boolean vector for add reduction}}
+    %0 = cir.vec.reduce(add, %vec) : (!v4f32) -> !f32
+    cir.return
+  }
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+!v4u32 = !cir.vector<4 x !u32i>
+
+module {
+  cir.func @wrong_signedness(%vec: !v4u32) {
+    // expected-error @below {{'cir.vec.reduce' op requires a signed integer vector for smax reduction}}
+    %0 = cir.vec.reduce(smax, %vec) : (!v4u32) -> !u32i
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!v4s32 = !cir.vector<4 x !s32i>
+
+module {
+  cir.func @integer_fastmath(%vec: !v4s32) {
+    // expected-error @below {{'cir.vec.reduce' op fast-math flags are only valid for floating-point reductions}}
+    %0 = cir.vec.reduce(add, %vec) : (!v4s32) -> !s32i {fastmath_flags = #cir.fastmath<reassoc>}
+    cir.return
+  }
+}
+
+// -----
+
+!f32 = !cir.float
+!f64 = !cir.double
+!v4f32 = !cir.vector<4 x !f32>
+
+module {
+  cir.func @wrong_accumulator_type(%vec: !v4f32, %start: !f64) {
+    // expected-error @below {{'cir.vec.reduce' op accumulator type '!cir.double' doesn't match vector element type '!cir.float'}}
+    %0 = cir.vec.reduce(fadd, %vec, %start) : (!v4f32, !f64) -> !f32
+    cir.return
+  }
+}

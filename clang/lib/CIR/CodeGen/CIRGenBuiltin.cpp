@@ -2187,7 +2187,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
-    auto getIntrinsicName = [this, builtinIDIfNoAsmLabel](QualType type) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
+    auto getReductionKind = [this, builtinIDIfNoAsmLabel](QualType type) {
       if (const auto *vecTy = type->getAs<VectorType>())
         type = vecTy->getElementType();
       else if (type->isSizelessVectorType())
@@ -2195,52 +2196,64 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
       if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max) {
         if (type->isSignedIntegerType())
-          return "vector.reduce.smax";
+          return cir::VecReduceKind::SMax;
         if (type->isUnsignedIntegerType())
-          return "vector.reduce.umax";
+          return cir::VecReduceKind::UMax;
         assert(type->isFloatingType() && "must have a float here");
-        return "vector.reduce.fmax";
+        return cir::VecReduceKind::FMax;
       }
 
       if (type->isSignedIntegerType())
-        return "vector.reduce.smin";
+        return cir::VecReduceKind::SMin;
       if (type->isUnsignedIntegerType())
-        return "vector.reduce.umin";
+        return cir::VecReduceKind::UMin;
       assert(type->isFloatingType() && "must have a float here");
-      return "vector.reduce.fmin";
+      return cir::VecReduceKind::FMin;
     };
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, getIntrinsicName(e->getArg(0)->getType()),
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    mlir::Value input = emitScalarExpr(e->getArg(0));
+    cir::VecReduceKind kind = getReductionKind(e->getArg(0)->getType());
+    cir::FastMathFlagsAttr fastMath;
+    if (kind == cir::VecReduceKind::FMax || kind == cir::VecReduceKind::FMin)
+      fastMath = getFastMathFlagsAttr();
+    auto reduction = cir::VecReduceOp::create(
+        builder, getLoc(e->getExprLoc()), input, mlir::Value{}, kind, fastMath);
+    return RValue::get(reduction.getResult());
   }
   case Builtin::BI__builtin_reduce_add:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.add",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
   case Builtin::BI__builtin_reduce_mul:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.mul",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
   case Builtin::BI__builtin_reduce_xor:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.xor",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
   case Builtin::BI__builtin_reduce_or:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.or",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
-  case Builtin::BI__builtin_reduce_and:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.and",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+  case Builtin::BI__builtin_reduce_and: {
+    cir::VecReduceKind kind;
+    switch (builtinIDIfNoAsmLabel) {
+    case Builtin::BI__builtin_reduce_add:
+      kind = cir::VecReduceKind::Add;
+      break;
+    case Builtin::BI__builtin_reduce_mul:
+      kind = cir::VecReduceKind::Mul;
+      break;
+    case Builtin::BI__builtin_reduce_xor:
+      kind = cir::VecReduceKind::Xor;
+      break;
+    case Builtin::BI__builtin_reduce_or:
+      kind = cir::VecReduceKind::Or;
+      break;
+    case Builtin::BI__builtin_reduce_and:
+      kind = cir::VecReduceKind::And;
+      break;
+    default:
+      llvm_unreachable("unexpected vector reduction builtin");
+    }
+
+    mlir::Value input = emitScalarExpr(e->getArg(0));
+    auto reduction =
+        cir::VecReduceOp::create(builder, getLoc(e->getExprLoc()), input,
+                                 mlir::Value{}, kind, cir::FastMathFlagsAttr{});
+    return RValue::get(reduction.getResult());
+  }
   case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     bool isAssociative =
         builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd;
 
@@ -2267,15 +2280,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                                   /*Negative=*/true)));
     }
 
-    SmallVector<mlir::Value, 2> args = {startValue, vector};
-    cir::FastMathFlagsAttr fastMath;
-    if (isAssociative)
-      fastMath = cir::FastMathFlagsAttr::get(&getMLIRContext(),
-                                             cir::FastMathFlags::reassoc);
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(
+        isAssociative ? cir::FastMathFlags::reassoc : cir::FastMathFlags::none);
 
-    mlir::Value result = builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd",
-                                                     scalarTy, fastMath, args);
-    return RValue::get(result);
+    auto reduction = cir::VecReduceOp::create(
+        builder, loc, vector, startValue, cir::VecReduceKind::FAdd, fastMath);
+    return RValue::get(reduction.getResult());
   }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:

@@ -1,6 +1,7 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
 
 module  {
 
@@ -221,5 +222,47 @@ cir.func @vector_splat_test() {
 // CHECK-NEXT: %[[SHL:.*]] = cir.shift(left, %[[TMP]] : !cir.vector<4 x !s32i>, %[[SPLAT_VEC]] : !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
 // CHECK-NEXT: cir.store %[[SHL]], %[[SHL_RES:.*]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK-NEXT: cir.return
+
+cir.func @vector_reduce_test(%svec: !cir.vector<4 x !s32i>,
+                             %uvec: !cir.vector<4 x !u32i>,
+                             %fvec: !cir.vector<4 x !cir.float>,
+                             %bvec: !cir.vector<4 x !cir.bool>,
+                             %start: !cir.float) {
+  %0 = cir.vec.reduce(add, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %1 = cir.vec.reduce(mul, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %2 = cir.vec.reduce(and, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %3 = cir.vec.reduce(or, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %4 = cir.vec.reduce(xor, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %5 = cir.vec.reduce(smax, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %6 = cir.vec.reduce(smin, %svec) : (!cir.vector<4 x !s32i>) -> !s32i
+  %7 = cir.vec.reduce(umax, %uvec) : (!cir.vector<4 x !u32i>) -> !u32i
+  %8 = cir.vec.reduce(umin, %uvec) : (!cir.vector<4 x !u32i>) -> !u32i
+  %9 = cir.vec.reduce(fadd, %fvec, %start) : (!cir.vector<4 x !cir.float>, !cir.float) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  %10 = cir.vec.reduce(fmul, %fvec, %start) : (!cir.vector<4 x !cir.float>, !cir.float) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  %11 = cir.vec.reduce(fmax, %fvec) : (!cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<nnan>}
+  %12 = cir.vec.reduce(fmin, %fvec) : (!cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<nnan>}
+  %13 = cir.vec.reduce(add, %bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+  %14 = cir.vec.reduce(umax, %bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+  %15 = cir.vec.reduce(and, %bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @vector_reduce_test
+// CHECK: cir.vec.reduce(add,
+// CHECK: cir.vec.reduce(mul,
+// CHECK: cir.vec.reduce(and,
+// CHECK: cir.vec.reduce(or,
+// CHECK: cir.vec.reduce(xor,
+// CHECK: cir.vec.reduce(smax,
+// CHECK: cir.vec.reduce(smin,
+// CHECK: cir.vec.reduce(umax,
+// CHECK: cir.vec.reduce(umin,
+// CHECK: cir.vec.reduce(fadd, {{.*}}) : (!cir.vector<4 x !cir.float>, !cir.float) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+// CHECK: cir.vec.reduce(fmul, {{.*}}) : (!cir.vector<4 x !cir.float>, !cir.float) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+// CHECK: cir.vec.reduce(fmax, {{.*}}) : (!cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<nnan>}
+// CHECK: cir.vec.reduce(fmin, {{.*}}) : (!cir.vector<4 x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<nnan>}
+// CHECK: cir.vec.reduce(add, {{.*}}) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+// CHECK: cir.vec.reduce(umax, {{.*}}) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+// CHECK: cir.vec.reduce(and, {{.*}}) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
 
 }
