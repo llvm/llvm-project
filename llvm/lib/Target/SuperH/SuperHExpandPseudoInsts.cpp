@@ -62,9 +62,9 @@ private:
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
 
   bool storeToFrame(Block &MBB, BlockIt MBBI, int Scale);
-  bool storeToGlobal(Block &MBB, BlockIt MBBI);
+  bool storeToAddress(Block &MBB, BlockIt MBBI);
   bool loadFromFrame(Block &MBB, BlockIt MBBI, int Scale);
-  bool loadFromGlobal(Block &MBB, BlockIt MBBI);
+  bool loadFromAddress(Block &MBB, BlockIt MBBI);
 };
 
 
@@ -129,7 +129,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*SPtr opcode.");
-  case SH::MOVBSPtr: {
+  case SH::MOVBSF: {
 
     // mov      <src reg>,  r0
     // mov.b    r0, @(offset,r1)
@@ -140,7 +140,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
         .addImm(Offset);
     break;
   }
-  case SH::MOVWSPtr: {
+  case SH::MOVWSF: {
 
     // mov      <src reg>,  r0
     // mov.w    r0, @(offset,r1)
@@ -151,7 +151,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
         .addImm(Offset);
     break;
   }
-  case SH::MOVLSPtr: {
+  case SH::MOVLSF: {
 
     // mov.b    <src reg>, @(offset,r1)
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS4))
@@ -165,33 +165,38 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
   return eraseMI(MI);
 }
 
-bool SuperHExpandPseudo::storeToGlobal(Block &MBB, BlockIt MBBI) {
+bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
   const SuperHMachineFunctionInfo *FI = MF.getInfo<SuperHMachineFunctionInfo>();
 
-  auto SrcReg = MI.getOperand(0).getReg();
-  auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF);
-  if (!G)
-    return false;
+  Register SrcReg = MI.getOperand(0).getReg();
+  Register DstReg;
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
-      .addConstantPoolIndex(G->getLabelId());
+  if (MI.getOperand(1).isGlobal()) {
+    if (auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
+          .addConstantPoolIndex(G->getLabelId());
+      DstReg = SH::R1;
+    }
+  } else if (MI.getOperand(1).isReg()) {
+    DstReg = MI.getOperand(1).getReg();
+  }
 
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*SPtr opcode.");
-  case SH::MOVBSPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS)).addReg(SrcReg).addReg(SH::R1);
+  case SH::MOVBSP: {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS)).addReg(SrcReg).addReg(DstReg);
     break;
   }
-  case SH::MOVWSPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS)).addReg(SrcReg).addReg(SH::R1);
+  case SH::MOVWSP: {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS)).addReg(SrcReg).addReg(DstReg);
     break;
   }
-  case SH::MOVLSPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS)).addReg(SrcReg).addReg(SH::R1);
+  case SH::MOVLSP: {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS)).addReg(SrcReg).addReg(DstReg);
     break;
   }
   }
@@ -200,39 +205,45 @@ bool SuperHExpandPseudo::storeToGlobal(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::MOVBSPtr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
+bool SuperHExpandPseudo::expand<SH::MOVBSF>(Block &MBB, BlockIt MBBI) {
 
-  // Store to global.
-  if (MI.getOperand(1).isGlobal()) {
-    return storeToGlobal(MBB, MBBI);
-  }
-
+  // Store to stack frame
   return storeToFrame(MBB, MBBI, 1);
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::MOVWSPtr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
+bool SuperHExpandPseudo::expand<SH::MOVWSF>(Block &MBB, BlockIt MBBI) {
 
-  // Store to global.
-  if (MI.getOperand(1).isGlobal()) {
-    return storeToGlobal(MBB, MBBI);
-  }
-
+  // Store to stack frame
   return storeToFrame(MBB, MBBI, 2);
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::MOVLSPtr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
+bool SuperHExpandPseudo::expand<SH::MOVLSF>(Block &MBB, BlockIt MBBI) {
 
-  // Store to global.
-  if (MI.getOperand(1).isGlobal()) {
-    return storeToGlobal(MBB, MBBI);
-  }
-
+  // Store to stack frame
   return storeToFrame(MBB, MBBI, 4);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVBSP>(Block &MBB, BlockIt MBBI) {
+  
+  // Store to address.
+  return storeToAddress(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVWSP>(Block &MBB, BlockIt MBBI) {
+
+  // Store to address.
+  return storeToAddress(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVLSP>(Block &MBB, BlockIt MBBI) {
+
+  // Store to address.
+  return storeToAddress(MBB, MBBI);
 }
 
 
@@ -264,7 +275,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*LPtr opcode.");
-  case SH::MOVBLPtr: {
+  case SH::MOVBLF: {
 
     // mov.w    @(offset,r1), r0
     // mov      r0,           <dst reg>
@@ -277,7 +288,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
         .addReg(SH::R0, RegState::Kill);
     break;
   }
-  case SH::MOVWLPtr: {
+  case SH::MOVWLF: {
 
     // mov.b    @(offset,r1), r0
     // mov      r0,           <dst reg>
@@ -287,7 +298,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
         .addReg(SH::R0, RegState::Define);
     break;
   }
-  case SH::MOVLLPtr: {
+  case SH::MOVLLF: {
 
     // mov.l    @(offset,r1), <dst reg>
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL4))
@@ -301,34 +312,38 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
   return eraseMI(MI);
 }
 
-bool SuperHExpandPseudo::loadFromGlobal(Block &MBB, BlockIt MBBI) {
+bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
   const SuperHMachineFunctionInfo *FI = MF.getInfo<SuperHMachineFunctionInfo>();
 
-  auto DstReg = MI.getOperand(0).getReg();
-  auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF);
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg;
 
-  if (!G)
-    return false;
-
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
-      .addConstantPoolIndex(G->getLabelId());
+  if (MI.getOperand(1).isGlobal()) {
+    if (auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
+          .addConstantPoolIndex(G->getLabelId());
+      SrcReg = SH::R1;
+    }
+  } else if (MI.getOperand(1).isReg()) {
+    SrcReg = MI.getOperand(1).getReg();
+  }
 
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*LPtr opcode.");
-  case SH::MOVBLPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL), DstReg).addReg(SH::R1);
+  case SH::MOVBLP: {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL), DstReg).addReg(SrcReg);
     break;
   }
-  case SH::MOVWLPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL), DstReg).addReg(SH::R1);
+  case SH::MOVWLP: {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL), DstReg).addReg(SrcReg);
     break;
   }
-  case SH::MOVLLPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL), DstReg).addReg(SH::R1);
+  case SH::MOVLLP: {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL), DstReg).addReg(SrcReg);
     break;
   }
   }
@@ -337,36 +352,45 @@ bool SuperHExpandPseudo::loadFromGlobal(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::MOVBLPtr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
+bool SuperHExpandPseudo::expand<SH::MOVBLF>(Block &MBB, BlockIt MBBI) {
 
-  // Load from global.
-  if (MI.getOperand(1).isGlobal())
-    return loadFromGlobal(MBB, MBBI);
-
+  // Load from stack frame.
   return loadFromFrame(MBB, MBBI, 1);
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::MOVWLPtr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
+bool SuperHExpandPseudo::expand<SH::MOVWLF>(Block &MBB, BlockIt MBBI) {
 
-  // Load from global.
-  if (MI.getOperand(1).isGlobal())
-    return loadFromGlobal(MBB, MBBI);
-
+  // Load from stack frame.
   return loadFromFrame(MBB, MBBI, 2);
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::MOVLLPtr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
+bool SuperHExpandPseudo::expand<SH::MOVLLF>(Block &MBB, BlockIt MBBI) {
 
-  // Load from global.
-  if (MI.getOperand(1).isGlobal())
-    return loadFromGlobal(MBB, MBBI);
-
+  // Load from stack frame.
   return loadFromFrame(MBB, MBBI, 4);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVBLP>(Block &MBB, BlockIt MBBI) {
+
+  // Load from address.
+  return loadFromAddress(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVWLP>(Block &MBB, BlockIt MBBI) {
+
+  // Load from address.
+  return loadFromAddress(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVLLP>(Block &MBB, BlockIt MBBI) {
+
+  // Load from address.
+  return loadFromAddress(MBB, MBBI);
 }
 
 
@@ -603,12 +627,18 @@ bool SuperHExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   switch (Opcode) {
   default:
     break;
-    EXPAND(SH::MOVBSPtr);
-    EXPAND(SH::MOVWSPtr);
-    EXPAND(SH::MOVLSPtr);
-    EXPAND(SH::MOVBLPtr);
-    EXPAND(SH::MOVWLPtr);
-    EXPAND(SH::MOVLLPtr);
+    EXPAND(SH::MOVBSF);
+    EXPAND(SH::MOVWSF);
+    EXPAND(SH::MOVLSF);
+    EXPAND(SH::MOVBLF);
+    EXPAND(SH::MOVWLF);
+    EXPAND(SH::MOVLLF);
+    EXPAND(SH::MOVBSP);
+    EXPAND(SH::MOVWSP);
+    EXPAND(SH::MOVLSP);
+    EXPAND(SH::MOVBLP);
+    EXPAND(SH::MOVWLP);
+    EXPAND(SH::MOVLLP);
     EXPAND(SH::SHLri);
     EXPAND(SH::SHRri);
     EXPAND(SH::SRAri);

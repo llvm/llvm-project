@@ -82,6 +82,11 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, VT, Custom);
   }
 
+  // Constants have special lowering rules depending on their length.
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::Constant, VT, Custom);
+  }
+
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
