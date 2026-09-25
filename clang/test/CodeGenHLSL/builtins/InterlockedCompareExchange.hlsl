@@ -17,8 +17,7 @@ groupshared int64_t  gs_i64;
 groupshared uint64_t gs_u64;
 
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_int
-// DXCHECK:  [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
-// SPVCHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
+// CHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
 // CHECK-NEXT: [[OLD:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
 // CHECK-NEXT: store i32 [[OLD]], ptr {{.*}}%orig
 export void test_int(int cmp, int v) {
@@ -27,8 +26,7 @@ export void test_int(int cmp, int v) {
 }
 
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_uint
-// DXCHECK:  [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
-// SPVCHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
+// CHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
 // CHECK-NEXT: [[OLD:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
 // CHECK-NEXT: store i32 [[OLD]], ptr {{.*}}%orig
 export void test_uint(uint cmp, uint v) {
@@ -37,8 +35,7 @@ export void test_uint(uint cmp, uint v) {
 }
 
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_int64
-// DXCHECK:  [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}}, i64 %{{.*}} syncscope("workgroup") monotonic monotonic
-// SPVCHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}}, i64 %{{.*}} syncscope("workgroup") monotonic monotonic
+// CHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}}, i64 %{{.*}} syncscope("workgroup") monotonic monotonic
 // CHECK-NEXT: [[OLD:%.*]] = extractvalue { i64, i1 } [[PAIR]], 0
 // CHECK-NEXT: store i64 [[OLD]], ptr {{.*}}%orig
 export void test_int64(int64_t cmp, int64_t v) {
@@ -47,8 +44,7 @@ export void test_int64(int64_t cmp, int64_t v) {
 }
 
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_uint64
-// DXCHECK:  [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}}, i64 %{{.*}} syncscope("workgroup") monotonic monotonic
-// SPVCHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}}, i64 %{{.*}} syncscope("workgroup") monotonic monotonic
+// CHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}}, i64 %{{.*}} syncscope("workgroup") monotonic monotonic
 // CHECK-NEXT: [[OLD:%.*]] = extractvalue { i64, i1 } [[PAIR]], 0
 // CHECK-NEXT: store i64 [[OLD]], ptr {{.*}}%orig
 export void test_uint64(uint64_t cmp, uint64_t v) {
