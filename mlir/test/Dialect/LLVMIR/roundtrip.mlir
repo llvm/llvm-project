@@ -770,6 +770,8 @@ func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f
   %11 = llvm.intr.sin(%arg0) fastmath<fast> : (f32) -> f32
 // CHECK: {{.*}} = llvm.intr.sin(%arg0) fastmath<afn> : (f32) -> f32
   %12 = llvm.intr.sin(%arg0) fastmath<afn> : (f32) -> f32
+// CHECK: {{.*}} = llvm.intr.modf(%arg0) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
+  %modf = llvm.intr.modf(%arg0) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
 
 // CHECK: {{.*}} = llvm.intr.vector.reduce.fmin(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
   %13 = llvm.intr.vector.reduce.fmin(%arg3) fastmath<nnan> : (vector<2xf32>) -> f32
@@ -1331,4 +1333,17 @@ llvm.func @masked_nontemporal_no_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>)
   // CHECK: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}) <nontemporal> :
   llvm.intr.masked.store(%0, %ptr, %mask) <nontemporal> : vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
+}
+
+// CHECK-LABEL: @switch_result_number
+llvm.func @switch_result_number(%arg0: i32) -> i32 {
+  %0:2 = "test.op_with_two_results"() : () -> (i32, i32)
+  // CHECK: llvm.switch
+  llvm.switch %arg0 : i32, ^bb1(%0#0 : i32) [
+    0: ^bb2(%0#1 : i32)
+  ]
+^bb1(%1: i32):
+  llvm.return %1 : i32
+^bb2(%2: i32):
+  llvm.return %2 : i32
 }

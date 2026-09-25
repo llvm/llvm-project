@@ -509,6 +509,11 @@ cc_library(
             "-ldl",
             "-lm",
         ],
+    }) + select({
+        # musl's 128 KiB default worker stack is insufficient for recursive
+        # LLVM passes such as DSE's dominator-tree traversal.
+        "@rules_cc//cc/libc:musl": ["-Wl,-z,stack-size=8388608"],
+        "//conditions:default": [],
     }),
     textual_hdrs = glob([
         "include/llvm/Support/*.def",
@@ -525,6 +530,10 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
+        # We unconditionally depend on the custom LLVM lzma wrapper. This only
+        # provides the configuration define unless lzma is enabled, in which
+        # case it also links the system liblzma.
+        "//third-party:lzma",
         "//libc:shared_math_headers_for_apfloat",
     ],
 )
@@ -841,6 +850,7 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/GSYM/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":MC",

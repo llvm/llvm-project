@@ -204,7 +204,6 @@ LLVM_ABI Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
 LLVM_ABI Value *
 simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType, ArrayRef<Value *> Args,
                   FastMathFlags FMF, const SimplifyQuery &Q,
-                  Function *CxtF = nullptr,
                   fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
                   RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 

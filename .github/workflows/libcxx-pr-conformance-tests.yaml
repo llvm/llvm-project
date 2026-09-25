@@ -39,7 +39,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -85,7 +85,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -140,7 +140,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     needs: [ stage2 ]
     continue-on-error: false
     strategy:

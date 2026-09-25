@@ -50,9 +50,8 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
-                                           const std::string &CPU,
-                                           const std::string &FS,
+WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT, StringRef CPU,
+                                           StringRef FS,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),

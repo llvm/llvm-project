@@ -15,34 +15,34 @@ func.func private @calleeDyn(!fir.ref<!fir.array<?xf64>>) -> ()
 
 // 8 * 8 = 64 bytes, at the threshold: the buffer goes on the stack.
 func.func @small_constant_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<i32>) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<8xf64>>>
+  %tmpBox = fir.alloca !fir.box<!fir.array<8xf64>>
   %c1 = arith.constant 1 : index
   %c8 = arith.constant 8 : index
   %1 = fir.load %arg1 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> i64
   %3 = fir.shape %c8 : (index) -> !fir.shape<1>
   %4 = hlfir.designate %arg0 (%2, %c1:%c8:%c1)  shape %3 : (!fir.box<!fir.array<?x?xf64>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<8xf64>>
-  %5:2 = hlfir.copy_in %4 to %0 : (!fir.box<!fir.array<8xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<8xf64>>>>) -> (!fir.box<!fir.array<8xf64>>, i1)
+  %5:3 = hlfir.copy_in %4 to %tmpBox : (!fir.box<!fir.array<8xf64>>, !fir.ref<!fir.box<!fir.array<8xf64>>>) -> (!fir.box<!fir.array<8xf64>>, i1, i1)
   %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<8xf64>>) -> !fir.ref<!fir.array<8xf64>>
   fir.call @callee8(%6) : (!fir.ref<!fir.array<8xf64>>) -> ()
-  hlfir.copy_out %0, %5#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<8xf64>>>>, i1) -> ()
+  hlfir.copy_out %tmpBox, %5#1, %5#2 : (!fir.ref<!fir.box<!fir.array<8xf64>>>, i1, i1) -> ()
   return
 }
 
 // 100 * 8 = 800 bytes, above the 64 byte threshold: the buffer stays on the
 // heap and is freed by the inlined copy-out.
 func.func @big_constant_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<i32>) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<100xf64>>>
+  %tmpBox = fir.alloca !fir.box<!fir.array<100xf64>>
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
   %1 = fir.load %arg1 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> i64
   %3 = fir.shape %c100 : (index) -> !fir.shape<1>
   %4 = hlfir.designate %arg0 (%2, %c1:%c100:%c1)  shape %3 : (!fir.box<!fir.array<?x?xf64>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<100xf64>>
-  %5:2 = hlfir.copy_in %4 to %0 : (!fir.box<!fir.array<100xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<100xf64>>>>) -> (!fir.box<!fir.array<100xf64>>, i1)
+  %5:3 = hlfir.copy_in %4 to %tmpBox : (!fir.box<!fir.array<100xf64>>, !fir.ref<!fir.box<!fir.array<100xf64>>>) -> (!fir.box<!fir.array<100xf64>>, i1, i1)
   %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<100xf64>>) -> !fir.ref<!fir.array<100xf64>>
   fir.call @callee100(%6) : (!fir.ref<!fir.array<100xf64>>) -> ()
-  hlfir.copy_out %0, %5#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<100xf64>>>>, i1) -> ()
+  hlfir.copy_out %tmpBox, %5#1, %5#2 : (!fir.ref<!fir.box<!fir.array<100xf64>>>, i1, i1) -> ()
   return
 }
 
@@ -50,16 +50,16 @@ func.func @big_constant_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir
 // because a dynamically sized fir.alloca cannot be hoisted out of the copy-in
 // branch and would grow the stack if the copy-in were inside a loop.
 func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<i32>, %n: index) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>>
+  %tmpBox = fir.alloca !fir.box<!fir.array<?xf64>>
   %c1 = arith.constant 1 : index
   %1 = fir.load %arg1 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> i64
   %3 = fir.shape %n : (index) -> !fir.shape<1>
   %4 = hlfir.designate %arg0 (%2, %c1:%n:%c1)  shape %3 : (!fir.box<!fir.array<?x?xf64>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf64>>
-  %5:2 = hlfir.copy_in %4 to %0 : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.box<!fir.array<?xf64>>, i1)
+  %5:3 = hlfir.copy_in %4 to %tmpBox : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
   fir.call @calleeDyn(%6) : (!fir.ref<!fir.array<?xf64>>) -> ()
-  hlfir.copy_out %0, %5#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1) -> ()
+  hlfir.copy_out %tmpBox, %5#1, %5#2 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1) -> ()
   return
 }
 

@@ -113,6 +113,17 @@ const TargetRegisterClass *X86InstrInfo::getRegClass(const MCInstrDesc &MCID,
   return RI->constrainRegClassToNonRex2(RC);
 }
 
+const TargetRegisterClass *X86InstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  if (Subtarget.isTarget64BitLP64())
+    return &X86::GR64RegClass;
+  // If the target is 64bit but we have been told to use 32bit addresses, we can
+  // still use 64-bit register as long as we know the high bits are zeros.
+  // Reflect that in the returned register class.
+  return Subtarget.is64Bit() ? &X86::LOW32_ADDR_ACCESSRegClass
+                             : &X86::GR32RegClass;
+}
+
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
                                          Register &SrcReg, Register &DstReg,
                                          unsigned &SubIdx) const {
@@ -5356,24 +5367,42 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // CmpInstr).
   //
   // Clobbers are staged in Pending and committed only on success. Visited
-  // (seeded with MultiPredMBB) stops the walk from revisiting a block or
-  // re-entering the single-predecessor chain, so none is collected twice.
+  // is seeded with the caller's single-predecessor chain (CmpMBB through
+  // MultiPredMBB) so the walk doesn't re-scan blocks the caller already
+  // staged. The walk doubles as a cycle detector: a predecessor equal to
+  // CmpMBB is a back-edge from CmpMBB's successors into the walked region,
+  // which means CmpMBB is on a CFG cycle. In that case the region below
+  // CmpInstr executes on the back-edge before the next iteration's CmpInstr
+  // and must be checked too: bail on any non-NF-convertible EFLAGS clobber,
+  // stage NF-convertible ones.
   //
   // Each NF conversion trades a compact legacy/EVEX-compressed encoding for a
   // wider EVEX (often NDD three-operand) one, growing code size, while the
   // reuse only removes a single compare. Cap the total number of conversions
-  // (those the caller already collected on the single-predecessor chain plus
-  // those the walk stages) so the reuse cannot bloat code just to delete one
-  // compare.
+  // (caller chain + predecessor walk + below-scan) so the reuse cannot bloat
+  // code just to delete one compare.
   MachineInstr *Sub = nullptr;
   MachineBasicBlock *SubMBB = nullptr;
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> Pending;
+
+  MachineBasicBlock *CmpMBB = CmpInstr.getParent();
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
   SmallVector<MachineBasicBlock *, 8> Worklist;
+  for (MachineBasicBlock *MBB = CmpMBB; MBB != MultiPredMBB;
+       MBB = MBB->getSinglePredecessor())
+    Visited.insert(MBB);
   Visited.insert(MultiPredMBB);
-  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
+
+  bool CmpMBBOnCycle = false;
+  auto TryPush = [&](MachineBasicBlock *Pred) {
+    if (Pred == CmpMBB)
+      CmpMBBOnCycle = true;
     if (Visited.insert(Pred).second)
       Worklist.push_back(Pred);
+  };
+
+  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
+    TryPush(Pred);
   while (!Worklist.empty()) {
     MachineBasicBlock *MBB = Worklist.pop_back_val();
     MachineInstr *Producer = nullptr;
@@ -5404,8 +5433,7 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
     if (MBB->pred_empty())
       return nullptr;
     for (MachineBasicBlock *Pred : MBB->predecessors())
-      if (Visited.insert(Pred).second)
-        Worklist.push_back(Pred);
+      TryPush(Pred);
   }
   if (!Sub)
     return nullptr;
@@ -5418,6 +5446,22 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // to producers that yield identical flags.
   if (IsSwapped || ImmDelta != 0)
     return nullptr;
+
+  // If CmpMBB is on a CFG cycle, its below-CmpInstr region is on the back-edge
+  // path and must also be free of non-NF-convertible EFLAGS clobbers.
+  if (CmpMBBOnCycle) {
+    for (MachineInstr &Inst : make_range(
+             std::next(MachineBasicBlock::iterator(CmpInstr)), CmpMBB->end())) {
+      if (!Inst.modifiesRegister(X86::EFLAGS, TRI))
+        continue;
+      unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
+      if (!NewOpc)
+        return nullptr;
+      if (InstsToUpdate.size() + Pending.size() >= MaxNFConversions)
+        return nullptr;
+      Pending.push_back(std::make_pair(&Inst, NewOpc));
+    }
+  }
 
   InstsToUpdate.append(Pending.begin(), Pending.end());
   return Sub;
@@ -5579,6 +5623,14 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           break;
         }
 
+        // Try to use CF produced by an LZCNT/TZCNT reading %SrcReg: it and
+        // "cmp $1, %SrcReg" both set CF iff %SrcReg is zero. The other flags
+        // differ, so all EFLAGS users need to read CF only (ADC/SBB/RCL/RCR).
+        // Example:
+        //     lzcntq %rdi, %rax
+        //     ...                 // EFLAGS not changed
+        //     cmpq $1, %rdi       // <-- can be removed
+        //     adcq $0, %rax       // reads CF only
         if (isCmpRedundantAfterLTZCNT(SrcReg, SrcReg2, CmpMask, CmpValue,
                                       Inst)) {
           LTZCNTInst = &Inst;
@@ -5793,6 +5845,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       break;
     }
   }
+
+  if (LTZCNTInst && !MI)
+    return false;
 
   // If we have to update users but EFLAGS is live-out abort, since we cannot
   // easily find all of the users.

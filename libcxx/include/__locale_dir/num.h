@@ -20,7 +20,6 @@
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale_dir/check_grouping.h>
 #include <__locale_dir/ctype.h>
-#include <__locale_dir/get_c_locale.h>
 #include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__locale_dir/scan_keyword.h>
@@ -307,17 +306,17 @@ _LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtof(__a, __p2, __locale::__get_c_locale());
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtod(__a, __p2, __locale::__get_c_locale());
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtold(__a, __p2, __locale::__get_c_locale());
 }
 
 template <class _Tp>
@@ -1046,15 +1045,15 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   if (__specify_precision)
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
   else
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, __v);
   unique_ptr<char, void (*)(void*)> __nbh(nullptr, free);
   if (__nc > static_cast<int>(__nbuf - 1)) {
     if (__specify_precision)
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
     else
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, __v);
     if (__nc == -1)
       std::__throw_bad_alloc();
     __nbh.reset(__nb);

@@ -58,6 +58,7 @@ add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
     ${OBJC_LIBS}
   CLANG_LIBS
     clangBasic
+    clangOptions
     )
 
 add_dependencies(lldbPluginPlatformMacOSX

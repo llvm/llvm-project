@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -69,6 +70,8 @@ public:
 private:
   llvm::StringMap<mlir::LLVM::DIModuleAttr> moduleMap;
   llvm::StringMap<mlir::LLVM::DICommonBlockAttr> commonBlockMap;
+  /// Whether this module is being compiled for an OpenMP target device.
+  bool isTargetDevice = false;
   // List of GlobalVariableExpressionAttr that are attached to a given global
   // that represents the storage for common block.
   llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<mlir::Attribute>>
@@ -197,6 +200,46 @@ static bool isDataObjectName(fir::NameUniquer::NameKind kind) {
 // Check if a name belongs to a module rather than to a procedure.
 static bool isModuleLevelName(const fir::NameUniquer::DeconstructedName &name) {
   return name.procs.empty() && !name.modules.empty();
+}
+
+// Check if the storage of a variable with the given CUDA Fortran data
+// attribute can be addressed by the host.
+static bool isHostAddressable(cuf::DataAttributeAttr dataAttr) {
+  if (!dataAttr)
+    return true;
+  switch (dataAttr.getValue()) {
+  case cuf::DataAttribute::Constant:
+  case cuf::DataAttribute::Device:
+  case cuf::DataAttribute::Shared:
+    return false;
+  case cuf::DataAttribute::Managed:
+  case cuf::DataAttribute::Pinned:
+  case cuf::DataAttribute::Unified:
+    return true;
+  }
+  llvm_unreachable("unknown CUDA Fortran data attribute");
+}
+
+// Check if the operation belongs to a procedure that is compiled for the
+// device only, whose debug info is generated separately.
+static bool isInDeviceOnlyProcedure(mlir::Operation *op) {
+  auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
+  if (!funcOp)
+    return false;
+  auto procAttr =
+      funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
+  if (!procAttr)
+    return false;
+  switch (procAttr.getValue()) {
+  case cuf::ProcAttribute::Host:
+  case cuf::ProcAttribute::HostDevice:
+    return false;
+  case cuf::ProcAttribute::Device:
+  case cuf::ProcAttribute::Global:
+  case cuf::ProcAttribute::GridGlobal:
+    return true;
+  }
+  llvm_unreachable("unknown CUDA Fortran procedure attribute");
 }
 
 // Check if a global represents a data object declared in a module.
@@ -337,6 +380,11 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
                                            mlir::Value dummyScope,
                                            mlir::Type typeToConvert,
                                            fir::cg::XDeclareOp typeGenDeclOp) {
+  // Exclude variables that the host cannot address.
+  if (!isInDeviceOnlyProcedure(declOp) &&
+      !isHostAddressable(declOp.getDataAttrAttr()))
+    return;
+
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
 
@@ -698,7 +746,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Recursive;
 
   unsigned line = fir::getLineFromLoc(l);
-  if (fir::isInternalProcedure(funcOp)) {
+  // A target device module holds the internal procedures and the outlined
+  // target regions, but not the host procedure they are contained in, which
+  // only the host runs. Scoping them at it would leave a DW_TAG_subprogram
+  // with no code as their parent, and a debugger does not look inside such a
+  // subtree, so scope them at the file instead. Nothing on the device reads a
+  // variable through that scope, so only the name qualification is lost.
+  if (fir::isInternalProcedure(funcOp) && !isTargetDevice) {
     // For contained functions, the scope is the parent subroutine.
     mlir::SymbolRefAttr sym = mlir::cast<mlir::SymbolRefAttr>(
         funcOp->getAttr(fir::getHostSymbolAttrName()));
@@ -1085,6 +1139,9 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::SymbolTable symbolTable(module);
+  if (auto offloadMod =
+          mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*module))
+    isTargetDevice = offloadMod.getIsTargetDevice();
   buildModuleDebugImportsMap(module);
   buildDefinedModuleNames(module);
   llvm::StringRef fileName;

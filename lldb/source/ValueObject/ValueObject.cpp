@@ -966,14 +966,20 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     if (cstr_address.address == 0 ||
         cstr_address.address == LLDB_INVALID_ADDRESS) {
       if (cstr_address.type == eAddressTypeHost && is_array) {
-        const char *cstr = GetDataExtractor().PeekCStr(0);
+        // The array is not required to be NUL terminated, so ask for the
+        // bytes rather than for a C string. Its data can also be shorter than
+        // the array type, as for a DW_AT_const_value string, so clamp the
+        // length to what is really there.
+        DataExtractor &data = GetDataExtractor();
+        const uint8_t *cstr = data.PeekData(0, 1);
         if (cstr == nullptr) {
           s << "<invalid address>";
           error = Status::FromErrorString("invalid address");
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
-        s << llvm::StringRef(cstr, cstr_len);
+        cstr_len = std::min<uint64_t>(cstr_len, data.GetByteSize());
+        s << llvm::StringRef(reinterpret_cast<const char *>(cstr), cstr_len);
         CopyStringDataToBufferSP(s, buffer_sp);
         return {cstr_len, was_capped};
       } else {
@@ -1014,8 +1020,12 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       // takes care of this
       while ((bytes_read = GetPointeeData(data, offset, k_max_buf_size)) > 0) {
         total_bytes_read += bytes_read;
-        const char *cstr = data.PeekCStr(0);
-        size_t len = strnlen(cstr, k_max_buf_size);
+        // The chunk holds the middle of a string as often as its end, so scan
+        // for a terminator instead of requiring one.
+        const uint8_t *bytes = data.PeekData(0, bytes_read);
+        if (bytes == nullptr)
+          break;
+        size_t len = strnlen(reinterpret_cast<const char *>(bytes), bytes_read);
         if (cstr_len_displayed < 0)
           cstr_len_displayed = len;
 

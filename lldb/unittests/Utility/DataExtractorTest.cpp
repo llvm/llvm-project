@@ -150,6 +150,25 @@ TEST(DataExtractorTest, GetCStrAtEnd) {
   EXPECT_EQ(1U, offset);
 }
 
+TEST(DataExtractorTest, PeekCStr) {
+  uint8_t buffer[] = {'X', 'f', 'o', 'o', '\0'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  EXPECT_EQ("foo", E.PeekCStr(1));
+  EXPECT_EQ("", E.PeekCStr(4));
+  EXPECT_EQ(std::nullopt, E.PeekCStr(5));
+
+  // The result is NULL terminated, so data() is a valid C string.
+  EXPECT_STREQ("foo", E.PeekCStr(1)->data());
+}
+
+TEST(DataExtractorTest, PeekCStrUnterminated) {
+  uint8_t buffer[] = {'X', 'f', 'o', 'o'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  EXPECT_EQ(std::nullopt, E.PeekCStr(1));
+}
+
 TEST(DataExtractorTest, GetCStrAtNullOffset) {
   uint8_t buffer[] = {'f', 'o', 'o', '\0'};
   DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);

@@ -131,6 +131,11 @@ public:
         TargetInstrInfo::getRegisterInfo());
   }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &ARM::GPRRegClass;
+  }
+
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
   ScheduleHazardRecognizer *

@@ -244,6 +244,7 @@ set(files
   __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
+  __bit/shift.h
   __bit_reference
   __charconv/chars_format.h
   __charconv/from_chars_floating_point.h
@@ -537,6 +538,7 @@ set(files
   __iterator/size.h
   __iterator/sortable.h
   __iterator/static_bounded_iter.h
+  __iterator/static_packed_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale_dir/check_grouping.h
@@ -544,7 +546,6 @@ set(files
   __locale_dir/collate.h
   __locale_dir/ctype.h
   __locale_dir/ctype_base.h
-  __locale_dir/get_c_locale.h
   __locale_dir/locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
@@ -557,6 +558,7 @@ set(files
   __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
+  __locale_dir/support/default/get_c_locale.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
@@ -711,6 +713,7 @@ set(files
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
+  __pstl/cpu_algos/uninitialized_algorithms.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
   __random/bernoulli_distribution.h

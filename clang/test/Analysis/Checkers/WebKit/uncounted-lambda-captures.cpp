@@ -520,3 +520,168 @@ public:
 
   void doWork();
 };
+
+void callNoEscape([[clang::noescape]] const WTF::Function<void()>&);
+
+template <typename... Callbacks>
+void variadicNoEscape([[clang::noescape]] Callbacks&&... callbacks) {
+  someFunction();
+}
+
+template <typename Callback>
+void templateNoEscape([[clang::noescape]] Callback&& callback) {
+  someFunction();
+}
+
+struct NoEscapeHolder {
+  NoEscapeHolder([[clang::noescape]] const WTF::Function<void()>&);
+  void member([[clang::noescape]] const WTF::Function<void()>&);
+  void overloaded([[clang::noescape]] const WTF::Function<void()>&);
+  void overloaded(int);
+  template <typename Callback> void memberTemplate([[clang::noescape]] Callback&&);
+};
+
+template <typename T>
+void noescape_in_template(NoEscapeHolder& holder, T& dependentHolder) {
+  RefCountable* obj = make_obj();
+  callNoEscape([obj] {
+    obj->method();
+    someFunction();
+  });
+  templateNoEscape([obj] {
+    obj->method();
+    someFunction();
+  });
+  variadicNoEscape([obj] {
+    obj->method();
+    someFunction();
+  }, [obj] {
+    obj->method();
+    someFunction();
+  });
+  holder.overloaded([obj] {
+    obj->method();
+    someFunction();
+  });
+  holder.memberTemplate([obj] {
+    obj->method();
+    someFunction();
+  });
+  dependentHolder.member([obj] {
+    obj->method();
+    someFunction();
+  });
+  NoEscapeHolder holderFromParenInit([obj] {
+    obj->method();
+    someFunction();
+  });
+  NoEscapeHolder holderFromListInit { [obj] {
+    obj->method();
+    someFunction();
+  } };
+  auto holderFromTemporary = NoEscapeHolder([obj] {
+    obj->method();
+    someFunction();
+  });
+}
+
+struct EscapeHolder {
+  EscapeHolder(const WTF::Function<void()>&);
+  void member(const WTF::Function<void()>&);
+};
+
+template <typename Callback>
+void templateEscape(Callback&& callback);
+
+template <typename T>
+void escape_in_template(EscapeHolder& holder, T& dependentHolder) {
+  RefCountable* obj = make_obj();
+  callAsync([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  });
+  templateEscape([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  });
+  holder.member([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  });
+  dependentHolder.member([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  });
+  EscapeHolder holderFromParenInit([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  });
+}
+
+void instantiate_templates(NoEscapeHolder& noEscapeHolder, EscapeHolder& escapeHolder) {
+  noescape_in_template(noEscapeHolder, noEscapeHolder);
+  escape_in_template(escapeHolder, escapeHolder);
+}
+
+// The overloads disagree about NOESCAPE, so which one is picked isn't known
+// until the template is instantiated.
+void mixedNoEscape([[clang::noescape]] const WTF::Function<void()>&, int);
+void mixedNoEscape(const WTF::Function<void()>&, const char*);
+
+template <typename T>
+void mixed_noescape_overloads_in_template() {
+  RefCountable* obj = make_obj();
+  mixedNoEscape([obj] {
+    obj->method();
+    someFunction();
+  }, 1);
+  mixedNoEscape([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  }, "");
+}
+
+void instantiate_mixed_noescape_overloads() {
+  mixed_noescape_overloads_in_template<int>();
+}
+
+// The body of a generic lambda is a template pattern, so the calls in it are
+// checked in the instantiations of its call operator.
+template <typename Callback>
+void withValue(Callback callback) {
+  callback(3);
+  callback(4U);
+}
+
+void noescape_in_generic_lambda(RefCountable* obj) {
+  withValue([obj](auto value) {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    callNoEscape([obj] {
+      obj->method();
+      someFunction();
+    });
+    templateNoEscape([obj] {
+      obj->method();
+      someFunction();
+    });
+    (void)value;
+  });
+}
+
+void escape_in_generic_lambda(RefCountable* obj) {
+  withValue([obj](auto value) {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    callAsync([obj] {
+      // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+      obj->method();
+      someFunction();
+    });
+    (void)value;
+  });
+}

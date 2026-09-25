@@ -77,6 +77,36 @@ void Value::replaceAllUsesWith(Value *Other) {
   Val->replaceAllUsesWith(Other->Val);
 }
 
+const Value *Value::stripAndAccumulateConstantOffsets(
+    const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+    bool AllowInvariantGroup,
+    function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis,
+    bool LookThroughIntToPtr) const {
+  auto LLVMExternalAnalysis = [&ExternalAnalysis, this](llvm::Value &LLVMValue,
+                                                        APInt &Offset) -> bool {
+    Value &ValueRef = *Ctx.getValue(&LLVMValue);
+    return ExternalAnalysis(ValueRef, Offset);
+  };
+  const llvm::Value *LLVMV = Val->stripAndAccumulateConstantOffsets(
+      DL, Offset, AllowNonInbounds, AllowInvariantGroup, LLVMExternalAnalysis);
+  return Ctx.getValue(LLVMV);
+}
+
+Value *Value::stripAndAccumulateConstantOffsets(
+    const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+    bool AllowInvariantGroup,
+    function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis,
+    bool LookThroughIntToPtr) {
+  auto LLVMExternalAnalysis = [&ExternalAnalysis, this](llvm::Value &LLVMValue,
+                                                        APInt &Offset) -> bool {
+    Value &ValueRef = *Ctx.getValue(&LLVMValue);
+    return ExternalAnalysis(ValueRef, Offset);
+  };
+  llvm::Value *LLVMV = Val->stripAndAccumulateConstantOffsets(
+      DL, Offset, AllowNonInbounds, AllowInvariantGroup, LLVMExternalAnalysis);
+  return Ctx.getValue(LLVMV);
+}
+
 #ifndef NDEBUG
 std::string Value::getUid() const {
   std::stringstream SS;

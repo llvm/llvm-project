@@ -17,6 +17,7 @@
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Support/Verifier.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -234,7 +235,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::move(module);
-    const llvm::DataLayout &dl = targetMachine.createDataLayout();
+    const llvm::DataLayout dl(targetMachine.getTargetTriple().computeDataLayout(
+        ci.getInvocation().getTargetOpts().abi));
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
@@ -289,6 +291,14 @@ bool CodeGenAction::beginSourceFileAction() {
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
                               llvm::Twine{"fir.fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
+  if (ci.getInvocation().getLangOpts().CheckIntegerModZeroDivisor) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              fir::getCheckIntegerModZeroDivisorAttrName()),
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
@@ -851,7 +861,7 @@ void CodeGenAction::generateLLVMIR() {
     }
   }
 
-  if (triple.isRISCV() && !targetOpts.abi.empty())
+  if (!targetOpts.abi.empty())
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
@@ -1031,8 +1041,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        targetMachine->Options.ExceptionModel,
-        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
@@ -1428,7 +1436,7 @@ void CodeGenAction::executeAction() {
   // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
-  llvmModule->setDataLayout(targetMachine.createDataLayout());
+  llvmModule->setDataLayout(theTriple.computeDataLayout(targetOpts.abi));
 
   // Link in builtin bitcode libraries
   if (!codeGenOpts.BuiltinBCLibs.empty())

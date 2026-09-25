@@ -101,7 +101,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %19 = fir.load %0 {accessGroups = [#access_group]} : !fir.ref<i32>
     %20 = arith.addi %19, %3 overflow<nsw> : i32
     %21 = arith.subi %5, %c1 : index
-    cf.br ^bb1(%20, %21 : i32, index) {loop_annotation = #loop_annotation}
+    cf.br ^bb1(%20, %21 : i32, index) {llvm.loop_annotation = #loop_annotation}
   ^bb3:  // pred: ^bb1
     fir.store %4 to %0 : !fir.ref<i32>
     return

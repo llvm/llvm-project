@@ -2666,10 +2666,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // the top of the successor blocks.  See the comment on
   // normalForInvokeSafepoint on exactly what is needed.  Note that this step
   // may restructure the CFG.
-  for (CallBase *Call : ToUpdate) {
-    auto *II = dyn_cast<InvokeInst>(Call);
-    if (!II)
-      continue;
+  for (InvokeInst *II : make_isa_range<InvokeInst>(ToUpdate)) {
     normalizeForInvokeSafepoint(II->getNormalDest(), II->getParent(), DT);
     normalizeForInvokeSafepoint(II->getUnwindDest(), II->getParent(), DT);
   }

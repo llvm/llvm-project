@@ -4673,6 +4673,9 @@ struct AAIsDeadFunction : public AAIsDead {
     if (!AssumedLiveBlocks.insert(&BB).second)
       return false;
 
+    if (!A.isDuringDeduction())
+      return true;
+
     // We assume that all of BB is (probably) live now and if there are calls to
     // internal functions we will assume that those are now live as well. This
     // is a performance optimization for blocks with calls to a lot of internal
@@ -4680,8 +4683,16 @@ struct AAIsDeadFunction : public AAIsDead {
     for (const Instruction &I : BB)
       if (const auto *CB = dyn_cast<CallBase>(&I))
         if (auto *F = dyn_cast_if_present<Function>(CB->getCalledOperand()))
-          if (F->hasLocalLinkage())
+          if (F->hasLocalLinkage()) {
+            LLVM_DEBUG({
+              dbgs() << "[AAIsDead] Seeding live internal callee ";
+              F->printAsOperand(dbgs(), /*PrintType=*/false);
+              dbgs() << " from ";
+              BB.getParent()->printAsOperand(dbgs(), /*PrintType=*/false);
+              dbgs() << "\n";
+            });
             A.markLiveInternalFunction(*F);
+          }
     return true;
   }
 

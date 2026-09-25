@@ -385,6 +385,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_relaxed_c_loc});
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
+
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   addSeparateSectionFlags(Triple, Args, CmdArgs);
 
@@ -1331,6 +1334,16 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
+  // -fkeep-inline-functions/-fno-keep-inline-functions are real Clang options
+  // but are not supported by Flang; warn and ignore them.
+  for (options::ID Opt : {options::OPT_fkeep_inline_functions,
+                          options::OPT_fno_keep_inline_functions}) {
+    if (const Arg *A = Args.getLastArg(Opt)) {
+      D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+      A->claim();
+    }
+  }
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -1366,6 +1379,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Initial floating-point exception halting mode. Handled separately so it is
   // not skipped by the -ffast-math fast path in addFloatingPointOptions().
   addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
+
+  // Integer MOD/MODULO zero-divisor check. Forwarded here with -ffpe-trap=
+  // rather than in addFloatingPointOptions() so -ffast-math does not drop it.
+  Args.AddLastArg(CmdArgs, options::OPT_fcheck_integer_mod_zero_divisor);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

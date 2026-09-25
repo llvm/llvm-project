@@ -1176,9 +1176,13 @@ public:
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);
-    if (!result)
-      return emitError(loc) << "expected attribute of type '" << AttrType::name
-                            << "', but found attribute '" << attr << "'";
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of attribute specified");
+      if constexpr (HasStaticName<AttrType>::value)
+        diag << ": expected " << AttrType::name << ", but found " << attr;
+      return diag;
+    }
     return success();
   }
 

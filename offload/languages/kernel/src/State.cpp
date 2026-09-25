@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 #include <atomic>
 #include <cassert>
@@ -138,7 +139,7 @@ StreamTy *ThreadStateTy::getDefaultStream() {
   if (!Device)
     return nullptr;
 
-  if (!__LLVMOffloadingPerThreadDefaultStream) [[likely]]
+  if (LLVM_LIKELY(!__LLVMOffloadingPerThreadDefaultStream))
     return StateTy::get().getOrCreateDefaultStream(Device);
 
   return getOrCreateDefaultStream(Device);
@@ -204,7 +205,7 @@ void ThreadStateTy::destroyDefaultStreams() {
 
 StateTy &StateTy::get() {
   StateTy *ST = StatePtr.load(std::memory_order_acquire);
-  if (!ST) [[unlikely]] {
+  if (LLVM_UNLIKELY(!ST)) {
     std::lock_guard<std::mutex> LG(getStateLock());
     ST = StatePtr.load(std::memory_order_acquire);
     if (!ST) {

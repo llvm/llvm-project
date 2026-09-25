@@ -41,14 +41,14 @@ protected:
     LLVMInitializeRISCVTargetMC();
   }
 
-  RISCVInstrInfoTest() {
+  RISCVInstrInfoTest(StringRef Features = "") {
     std::string Error;
     Triple TT(GetParam());
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     TargetOptions Options;
 
     TM.reset(static_cast<RISCVTargetMachine *>(TheTarget->createTargetMachine(
-        TT, "generic", "", Options, std::nullopt, std::nullopt,
+        TT, "generic", Features, Options, std::nullopt, std::nullopt,
         CodeGenOptLevel::Default)));
 
     Ctx = std::make_unique<LLVMContext>();
@@ -65,6 +65,11 @@ protected:
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 42);
   }
+};
+
+class RISCVXQCIInstrInfoTest : public RISCVInstrInfoTest {
+protected:
+  RISCVXQCIInstrInfoTest() : RISCVInstrInfoTest("+xqci") {}
 };
 
 TEST_P(RISCVInstrInfoTest, IsAddImmediate) {
@@ -379,7 +384,97 @@ TEST_P(RISCVInstrInfoTest, GetDestEEW) {
   EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::TH_VMAQA_VV), 5), 5u);
 }
 
+TEST_P(RISCVXQCIInstrInfoTest, XQCIEInstSize) {
+  const RISCVInstrInfo *TII = ST->getInstrInfo();
+  MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
+  MF->push_back(MBB);
+
+  auto MakeLoad = [&](unsigned Opcode) {
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOLoad, 4, Align(4));
+    return BuildMI(MBB, DebugLoc(), TII->get(Opcode), RISCV::X0)
+        .addReg(RISCV::X14)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .getInstr();
+  };
+
+  auto MakeStore = [&](unsigned Opcode) {
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore, 4, Align(4));
+    return BuildMI(MBB, DebugLoc(), TII->get(Opcode))
+        .addReg(RISCV::X0)
+        .addReg(RISCV::X14)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .getInstr();
+  };
+
+  auto MakeEAI = [&](unsigned Opcode) {
+    return BuildMI(MBB, DebugLoc(), TII->get(Opcode), RISCV::X31)
+        .addReg(RISCV::X31)
+        .addImm(100)
+        .getInstr();
+  };
+
+  auto MakeEI = [&](unsigned Opcode) {
+    return BuildMI(MBB, DebugLoc(), TII->get(Opcode), RISCV::X31)
+        .addReg(RISCV::X30)
+        .addImm(1)
+        .getInstr();
+  };
+
+  auto MakeBranch = [&](unsigned Opcode) {
+    return BuildMI(MBB, DebugLoc(), TII->get(Opcode))
+        .addReg(RISCV::X14)
+        .addImm(1)
+        .addImm(2)
+        .getInstr();
+  };
+
+  auto MakeJump = [&](unsigned Opcode) {
+    return BuildMI(MBB, DebugLoc(), TII->get(Opcode)).addImm(4096).getInstr();
+  };
+
+  // FIXME: The instructions being checked in this test all compress to 4 byte
+  // instructions but getInstSizeInBytes() currently returns 2 for all
+  // instructions that are compressible.
+  auto CheckSize = [&](MachineInstr *MI) {
+    EXPECT_EQ(2u, TII->getInstSizeInBytes(*MI));
+  };
+
+  CheckSize(MakeLoad(RISCV::QC_E_LW));
+  CheckSize(MakeLoad(RISCV::QC_E_LB));
+  CheckSize(MakeLoad(RISCV::QC_E_LH));
+  CheckSize(MakeLoad(RISCV::QC_E_LBU));
+  CheckSize(MakeLoad(RISCV::QC_E_LHU));
+  CheckSize(MakeStore(RISCV::QC_E_SW));
+  CheckSize(MakeStore(RISCV::QC_E_SB));
+  CheckSize(MakeStore(RISCV::QC_E_SH));
+  CheckSize(MakeJump(RISCV::QC_E_JAL));
+  CheckSize(MakeJump(RISCV::QC_E_J));
+  CheckSize(BuildMI(MBB, DebugLoc(), TII->get(RISCV::QC_E_LI), RISCV::X31)
+                .addImm(123)
+                .getInstr());
+  CheckSize(MakeEI(RISCV::QC_E_ADDI));
+  CheckSize(MakeEI(RISCV::QC_E_ANDI));
+  CheckSize(MakeEI(RISCV::QC_E_ORI));
+  CheckSize(MakeEI(RISCV::QC_E_XORI));
+  CheckSize(MakeEAI(RISCV::QC_E_ADDAI));
+  CheckSize(MakeEAI(RISCV::QC_E_ANDAI));
+  CheckSize(MakeEAI(RISCV::QC_E_ORAI));
+  CheckSize(MakeEAI(RISCV::QC_E_XORAI));
+  CheckSize(MakeBranch(RISCV::QC_E_BEQI));
+  CheckSize(MakeBranch(RISCV::QC_E_BNEI));
+  CheckSize(MakeBranch(RISCV::QC_E_BLTI));
+  CheckSize(MakeBranch(RISCV::QC_E_BGEUI));
+  CheckSize(MakeBranch(RISCV::QC_E_BLTUI));
+  CheckSize(MakeBranch(RISCV::QC_E_BGEI));
+}
+
 } // namespace
 
 INSTANTIATE_TEST_SUITE_P(RV32And64, RISCVInstrInfoTest,
                          testing::Values("riscv32", "riscv64"));
+INSTANTIATE_TEST_SUITE_P(RV32, RISCVXQCIInstrInfoTest,
+                         testing::Values("riscv32"));

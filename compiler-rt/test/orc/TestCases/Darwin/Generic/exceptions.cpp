@@ -2,6 +2,7 @@
 // RUN: %llvm_jitlink -slab-allocate=20Mb %t
 //
 // REQUIRES: system-darwin && host-arch-compatible
+// UNSUPPORTED: host-jit-triple=arm64e-{{.*}}
 
 // Test that trivial throw / catch works.
 int main(int argc, char *argv[]) {

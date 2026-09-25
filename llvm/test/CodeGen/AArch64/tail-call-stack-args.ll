@@ -78,3 +78,24 @@ define void @wrapper_func_i64(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i3
   tail call void @func_i64(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i64 %conv)
   ret void
 }
+
+; A musttail call with 9 bytes of stack arg area: the first 8 formal arguments
+; land in registers, followed by ptr %8 (8 bytes) and i1 %9 (1 byte) packed
+; tightly on the stack without padding. 9 is neither 8 nor 16-byte aligned, so
+; we need to round up NumBytes of frame size in order to keep the FPDiff aligned
+; for a stack-restoring (tailcc) callee.
+declare tailcc void @func_9_bytes_argspace(i64, i64, i64, i64, i64, i64, i64, i64, ptr, i1)
+
+define tailcc void @wrapper_func_9_bytes_argspace(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, ptr %8, i1 %9) {
+; SDAG-LABEL: wrapper_func_9_bytes_argspace:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    b func_9_bytes_argspace
+;
+; GI-LABEL: wrapper_func_9_bytes_argspace:
+; GI:       // %bb.0:
+; GI-NEXT:    ldrb w8, [sp, #8]
+; GI-NEXT:    strb w8, [sp, #8]
+; GI-NEXT:    b func_9_bytes_argspace
+  musttail call tailcc void @func_9_bytes_argspace(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, ptr %8, i1 %9)
+  ret void
+}

@@ -1203,6 +1203,15 @@ def RsrcReg128Op : RegisterOperand<RsrcReg32> {
   let PrintMethod = "printRsrcReg";
 }
 
+// Class does not contain any 256 bit values but for disassembler purposes allows
+// decoding to SReg_256.
+def RsrcReg256Op : RegisterOperand<RsrcReg32> {
+  let ParserMatchClass = RsrcRegClass;
+  let DecoderMethod = "decodeRsrcReg256";
+  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+  let PrintMethod = "printRsrcReg";
+}
+
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass AVRegClass<int numRegs, list<ValueType> regTypes,

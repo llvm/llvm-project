@@ -702,25 +702,13 @@ DataExtractor::CopyByteOrderedData(offset_t src_offset, offset_t src_len,
 // non-zero and there aren't enough available bytes, nullptr will be returned
 // and "offset_ptr" will not be updated.
 const char *DataExtractor::GetCStr(offset_t *offset_ptr) const {
-  const char *start = reinterpret_cast<const char *>(PeekData(*offset_ptr, 1));
-  // Already at the end of the data.
-  if (!start)
+  std::optional<llvm::StringRef> str = PeekCStr(*offset_ptr);
+  if (!str)
     return nullptr;
 
-  const char *end = reinterpret_cast<const char *>(m_end);
-
-  // Check all bytes for a null terminator that terminates a C string.
-  const char *terminator_or_end = std::find(start, end, '\0');
-
-  // We didn't find a null terminator, so return nullptr to indicate that there
-  // is no valid C string at that offset.
-  if (terminator_or_end == end)
-    return nullptr;
-
-  // Update offset_ptr for the caller to point to the data behind the
-  // terminator (which is 1 byte long).
-  *offset_ptr += (terminator_or_end - start + 1UL);
-  return start;
+  // Point the caller behind the terminator, which is 1 byte long.
+  *offset_ptr += str->size() + 1;
+  return str->data();
 }
 
 // Extracts a NULL terminated C string from the fixed length field of length
@@ -743,14 +731,29 @@ const char *DataExtractor::GetCStr(offset_t *offset_ptr, offset_t len) const {
   return nullptr;
 }
 
-// Peeks at a string in the contained data. No verification is done to make
-// sure the entire string lies within the bounds of this object's data, only
-// "offset" is verified to be a valid offset.
+// Peeks at a string in the contained data. Both "offset" and the string's
+// terminator are verified to lie within the bounds of this object's data, so
+// the returned string is a valid C string that does not run off the end.
 //
-// Returns a valid C string pointer if "offset" is a valid offset in this
-// object's data, else nullptr is returned.
-const char *DataExtractor::PeekCStr(offset_t offset) const {
-  return reinterpret_cast<const char *>(PeekData(offset, 1));
+// Returns std::nullopt if "offset" is not a valid offset in this object's
+// data, or if no terminator follows it within the data.
+std::optional<llvm::StringRef> DataExtractor::PeekCStr(offset_t offset) const {
+  const char *start = reinterpret_cast<const char *>(PeekData(offset, 1));
+  // Already at the end of the data.
+  if (!start)
+    return std::nullopt;
+
+  const char *end = reinterpret_cast<const char *>(m_end);
+
+  // Check all bytes for a null terminator that terminates a C string.
+  const char *terminator_or_end = std::find(start, end, '\0');
+
+  // We didn't find a null terminator, so there is no valid C string at that
+  // offset.
+  if (terminator_or_end == end)
+    return std::nullopt;
+
+  return llvm::StringRef(start, terminator_or_end - start);
 }
 
 // Extracts an unsigned LEB128 number from this object's data starting at the

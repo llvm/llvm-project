@@ -36,7 +36,7 @@ jobs:
       github.event.action != 'closed'
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:26c16c2c1d57a0e052e01873db555dd56f1d462cbacdd496fecae0b486266a8e'
+      image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     env:
       LLVM_VERSION: 18
     steps:

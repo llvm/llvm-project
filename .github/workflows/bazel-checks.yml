@@ -73,4 +73,5 @@ jobs:
           bazelisk test --config=ci --sandbox_base="" \
             --remote_cache=https://storage.googleapis.com/$CACHE_GCS_BUCKET-bazel \
             --google_default_credentials \
+            --remote_download_outputs=minimal \
             @llvm-project//... //...

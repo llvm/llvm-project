@@ -22,12 +22,6 @@ namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Also generalize this routine and handle dynamic loading properly.
 void init_tls(TLSDescriptor &tls_descriptor) {
-  if (app.tls.size == 0) {
-    tls_descriptor.size = 0;
-    tls_descriptor.tp = 0;
-    return;
-  }
-
   // We will assume the alignment is always a power of two.
   uintptr_t tls_size = app.tls.size & -app.tls.align;
   if (tls_size != app.tls.size)
@@ -48,9 +42,11 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   auto *tcb = reinterpret_cast<ThreadControlBlock *>(end_ptr);
   tcb->self = end_ptr;
 
-  inline_memcpy(reinterpret_cast<char *>(tls_addr),
-                reinterpret_cast<const char *>(app.tls.address),
-                app.tls.init_size);
+  if (app.tls.init_size) {
+    inline_memcpy(reinterpret_cast<char *>(tls_addr),
+                  reinterpret_cast<const char *>(app.tls.address),
+                  app.tls.init_size);
+  }
   // Setting the stack guard to a random value.
   // We cannot call the get_random function here as the function sets errno on
   // failure. Since errno is implemented via a thread local variable, we cannot

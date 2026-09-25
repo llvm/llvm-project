@@ -6071,8 +6071,9 @@ define amdgpu_ps float @flat_load_saddr_i8_offset_or_i64_imm_offset_4160(ptr add
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_mov_b32 s0, 0x1040
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s0, v0 bitop3:0x54
 ; GFX1250-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog

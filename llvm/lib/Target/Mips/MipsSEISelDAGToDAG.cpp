@@ -162,7 +162,7 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
         break;
       case Mips::BuildPairF64_64:
       case Mips::ExtractElementF64_64:
-        if (!Subtarget->useOddSPReg()) {
+        if (!Subtarget->useOddSPReg() || !Subtarget->hasMTHC1()) {
           MI.addOperand(MachineOperand::CreateReg(Mips::SP, false, true));
           break;
         }

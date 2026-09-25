@@ -9,7 +9,9 @@
 #include "RawPtrRefSafetyModel.h"
 #include "ASTUtils.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceManager.h"
 
 using namespace clang;
@@ -77,6 +79,10 @@ public:
   }
   bool isPtrType(const std::string &Name) const override {
     return isRetainPtrOrOSPtr(Name);
+  }
+  bool isSafeExpr(const Expr *E) const override {
+    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
+           isa<ObjCMessageExpr>(E);
   }
   bool isSafeDecl(const Decl *D, const SourceManager &SM) const override {
     // Treat NS/CF globals in system header as immortal.

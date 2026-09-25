@@ -2710,6 +2710,82 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
 }
 
+Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
+                                         Constant *C, ArrayRef<Constant *> Idxs,
+                                         GEPNoWrapFlags NW,
+                                         std::optional<ConstantRange> InRange,
+                                         Type *OnlyIfReducedTy) {
+  // Handle already canonical GEP.
+  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
+
+  // Some API require an ArrayRef of Value * instead of Constant *.
+  ArrayRef<Value *> ValIdxs =
+      ArrayRef((Value *const *)Idxs.data(), Idxs.size());
+  assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+
+  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
+  Type *IdxTy = DL.getIndexType(RetTy);
+
+  Constant *Offset = Constant::getNullValue(IdxTy);
+  auto GTI = gep_type_begin(Ty, ValIdxs), GTE = gep_type_end(Ty, ValIdxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
+    if (Idx->isNullValue())
+      continue;
+
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      uint64_t OpValue = Idx->getUniqueInteger().getZExtValue();
+      uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+      if (!Size)
+        continue;
+
+      Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset,
+                                             ConstantInt::get(IdxTy, Size));
+      if (!Offset)
+        return nullptr;
+
+      continue;
+    }
+
+    // Splat the index if needed.
+    if (IdxTy->isVectorTy() && !Idx->getType()->isVectorTy())
+      Idx = ConstantVector::getSplat(cast<VectorType>(IdxTy)->getElementCount(),
+                                     Idx);
+
+    // Convert to correct type.
+    if (Idx->getType() != IdxTy) {
+      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() <
+                                                IdxTy->getScalarSizeInBits()
+                                            ? Instruction::SExt
+                                            : Instruction::Trunc,
+                                        Idx, IdxTy);
+      if (!Idx)
+        return nullptr;
+    }
+
+    TypeSize TySize = GTI.getSequentialElementStride(DL);
+    if (TySize.isScalable())
+      return nullptr;
+
+    // Multiply by scale.
+    if (TySize != TypeSize::getFixed(1)) {
+      Constant *Scale = ConstantInt::getSigned(IdxTy, TySize.getFixedValue(),
+                                               /*ImplicitTrunc=*/true);
+      Idx = ConstantFoldBinaryInstruction(Instruction::Mul, Idx, Scale);
+      if (!Idx)
+        return nullptr;
+    }
+
+    Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset, Idx);
+    if (!Offset)
+      return nullptr;
+  }
+
+  return getPtrAdd(C, Offset, NW, InRange, OnlyIfReducedTy);
+}
+
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,
                                           Type *OnlyIfReducedTy) {
   assert(Val->getType()->isVectorTy() &&

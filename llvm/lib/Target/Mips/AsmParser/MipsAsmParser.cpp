@@ -9,6 +9,7 @@
 #include "MCTargetDesc/MipsABIFlagsSection.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
+#include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
@@ -6152,95 +6153,27 @@ MipsAsmParser::printWarningWithFixIt(const Twine &Msg, const Twine &FixMsg,
 }
 
 int MipsAsmParser::matchCPURegisterName(StringRef Name) {
-  int CC;
-
-  CC = StringSwitch<unsigned>(Name)
-           .Case("zero", 0)
-           .Cases({"at", "AT"}, 1)
-           .Case("a0", 4)
-           .Case("a1", 5)
-           .Case("a2", 6)
-           .Case("a3", 7)
-           .Case("v0", 2)
-           .Case("v1", 3)
-           .Case("s0", 16)
-           .Case("s1", 17)
-           .Case("s2", 18)
-           .Case("s3", 19)
-           .Case("s4", 20)
-           .Case("s5", 21)
-           .Case("s6", 22)
-           .Case("s7", 23)
-           .Case("k0", 26)
-           .Case("k1", 27)
-           .Case("gp", 28)
-           .Case("sp", 29)
-           .Case("fp", 30)
-           .Case("s8", 30)
-           .Case("ra", 31)
-           .Case("t0", 8)
-           .Case("t1", 9)
-           .Case("t2", 10)
-           .Case("t3", 11)
-           .Case("t4", 12)
-           .Case("t5", 13)
-           .Case("t6", 14)
-           .Case("t7", 15)
-           .Case("t8", 24)
-           .Case("t9", 25)
-           .Default(-1);
-
-  if (!(isABI_N32() || isABI_N64()))
-    return CC;
-
-  if (12 <= CC && CC <= 15) {
-    // Name is one of t4-t7
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  bool IsDeprecated;
+  int Index = MIPS_MC::getCPURegisterIndex(Name, MRI, ABI.getRegAltNameIndex(),
+                                           &IsDeprecated);
+  if (IsDeprecated) {
+    MCRegister Reg = MRI.getRegClass(Mips::GPR32RegClassID).getRegister(Index);
     AsmToken RegTok = getLexer().peekTok();
-    SMRange RegRange = RegTok.getLocRange();
-
-    StringRef FixedName = StringSwitch<StringRef>(Name)
-                              .Case("t4", "t0")
-                              .Case("t5", "t1")
-                              .Case("t6", "t2")
-                              .Case("t7", "t3")
-                              .Default("");
-    assert(FixedName != "" &&  "Register name is not one of t4-t7.");
-
+    StringRef FixedName =
+        MipsInstPrinter::getRegisterName(Reg, ABI.getRegAltNameIndex());
     printWarningWithFixIt("register names $t4-$t7 are only available in O32.",
-                          "Did you mean $" + FixedName + "?", RegRange);
+                          "Did you mean $" + FixedName + "?",
+                          RegTok.getLocRange());
   }
-
-  // Although SGI documentation just cuts out t0-t3 for n32/n64,
-  // GNU pushes the values of t0-t3 to override the o32/o64 values for t4-t7
-  // We are supporting both cases, so for t0-t3 we'll just push them to t4-t7.
-  if (8 <= CC && CC <= 11)
-    CC += 4;
-
-  if (CC == -1)
-    CC = StringSwitch<unsigned>(Name)
-             .Case("a4", 8)
-             .Case("a5", 9)
-             .Case("a6", 10)
-             .Case("a7", 11)
-             .Case("kt0", 26)
-             .Case("kt1", 27)
-             .Default(-1);
-
-  return CC;
+  return Index;
 }
 
 int MipsAsmParser::matchHWRegsRegisterName(StringRef Name) {
-  int CC;
-
-  CC = StringSwitch<unsigned>(Name)
-            .Case("hwr_cpunum", 0)
-            .Case("hwr_synci_step", 1)
-            .Case("hwr_cc", 2)
-            .Case("hwr_ccres", 3)
-            .Case("hwr_ulr", 29)
-            .Default(-1);
-
-  return CC;
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  MCRegister Reg = MIPS_MC::matchRegisterName(Name, MRI, Mips::HWRegsRegClassID,
+                                              Mips::RegAliasName);
+  return Reg ? MRI.getEncodingValue(Reg) : -1;
 }
 
 int MipsAsmParser::matchFPURegisterName(StringRef Name) {
@@ -6295,20 +6228,10 @@ int MipsAsmParser::matchMSA128RegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchMSA128CtrlRegisterName(StringRef Name) {
-  int CC;
-
-  CC = StringSwitch<unsigned>(Name)
-           .Case("msair", 0)
-           .Case("msacsr", 1)
-           .Case("msaaccess", 2)
-           .Case("msasave", 3)
-           .Case("msamodify", 4)
-           .Case("msarequest", 5)
-           .Case("msamap", 6)
-           .Case("msaunmap", 7)
-           .Default(-1);
-
-  return CC;
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  MCRegister Reg = MIPS_MC::matchRegisterName(
+      Name, MRI, Mips::MSACtrlRegClassID, Mips::RegAliasName);
+  return Reg ? MRI.getEncodingValue(Reg) : -1;
 }
 
 bool MipsAsmParser::canUseATReg() {

@@ -782,7 +782,8 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Symbol &ultimateSymbol =
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
-  bool isTarg = var.isTarget();
+  bool isTarg =
+      var.isTarget() || converter.isVisibleCrayPointerTarget(ultimateSymbol);
 
   // Do not allocate storage for cray pointee. The address inside the cray
   // pointer will be used instead when using the pointee. Allocating space
@@ -2094,6 +2095,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     fir::FortranVariableFlagsEnum extraFlags = {};
     if (isCapturedInInternalProcedure(converter, sym))
       extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
+    if (converter.isVisibleCrayPointerTarget(sym))
+      extraFlags = extraFlags | fir::FortranVariableFlagsEnum::target;
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
                                                   extraFlags);

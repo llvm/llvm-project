@@ -398,7 +398,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
                                         /*is_scalable=*/true);
       break;
     case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+      resultType = cir::VectorType::get(builder.getBfloat16Ty(), 8,
                                         /*is_scalable=*/true);
       break;
     case BuiltinType::SveInt32:
@@ -544,7 +544,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
     QualType elemTy = refTy->getPointeeType();
     auto pointeeType = convertTypeForMem(elemTy);
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     assert(resultType && "Cannot get pointer type?");
     break;
   }
@@ -556,7 +557,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     mlir::Type pointeeType = convertType(elemTy);
 
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     break;
   }
 
@@ -773,12 +775,43 @@ CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
   }
 }
 
+/// Whether a by-value ABI type is `_Atomic` or contains an `_Atomic` member.
+/// Pointers and references are not walked: `_Atomic(T)*` is just a pointer.
+static bool typeContainsAtomicForABI(QualType ty, ASTContext &ctx) {
+  ty = ty.getCanonicalType().getUnqualifiedType();
+  if (ty->isAtomicType())
+    return true;
+
+  if (const ArrayType *arrayTy = ctx.getAsArrayType(ty))
+    return typeContainsAtomicForABI(arrayTy->getElementType(), ctx);
+
+  const RecordDecl *rd = ty->getAsRecordDecl();
+  if (!rd || !rd->getDefinition())
+    return false;
+
+  if (const CXXRecordDecl *cxxRD = dyn_cast<CXXRecordDecl>(rd)) {
+    for (const CXXBaseSpecifier &base : cxxRD->bases())
+      if (typeContainsAtomicForABI(base.getType(), ctx))
+        return true;
+  }
+
+  for (const FieldDecl *field : rd->fields())
+    if (typeContainsAtomicForABI(field->getType(), ctx))
+      return true;
+  return false;
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
     RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
+  auto containsAtomic = [&](CanQualType t) {
+    return typeContainsAtomicForABI(t, astContext);
+  };
+  if (containsAtomic(returnType) || llvm::any_of(argTypes, containsAtomic))
+    cgm.errorNYI("passing or returning atomic types");
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
   CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
@@ -869,6 +902,23 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+CIRGenTypes::getPointerAddressSpace(clang::QualType pointeeTy) const {
+  // An explicit source address space is carried directly.
+  if (pointeeTy.getAddressSpace() != LangAS::Default)
+    return cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                      pointeeTy.getAddressSpace());
+
+  // Resolve a default-address-space pointee through getTargetAddressSpace, as
+  // classic CodeGen does. This is only non-zero for languages that default to
+  // a non-default address space (e.g. generic for SYCL device data), and uses
+  // the program address space for functions.
+  unsigned targetAS = getTargetAddressSpace(pointeeTy);
+  if (targetAS == 0)
+    return {};
+  return cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
 }
 
 unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {

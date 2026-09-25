@@ -44,6 +44,31 @@ class TestObjectFileJSON(TestBase):
         self.assertEqual(target.GetTriple(), triple)
 
     @no_debug_info_test
+    def test_page_multiple(self):
+        """A file whose size is a multiple of the page size is mmapped without
+        a NULL terminator."""
+        triple = "arm64-apple-macosx13.0.0"
+        data = {
+            "triple": triple,
+            "uuid": str(uuid.uuid4()),
+            "type": "executable",
+        }
+
+        json_object_file = self.getBuildArtifact("page.json")
+        text = json.dumps(data)
+        # 16k is a multiple of every supported page size and large enough for
+        # llvm::MemoryBuffer to prefer mmap over a read into heap memory.
+        size = 16384
+        self.assertLess(len(text), size)
+        with open(json_object_file, "w") as outfile:
+            outfile.write(text.ljust(size))
+        self.assertEqual(os.path.getsize(json_object_file), size)
+
+        target = self.dbg.CreateTarget(json_object_file)
+        self.assertTrue(target.IsValid())
+        self.assertEqual(target.GetTriple(), triple)
+
+    @no_debug_info_test
     def test_module(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -274,42 +274,6 @@ gpu.func @prefetch_nd() {
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @scatter_load_chunksize
-// CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
-// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
-// CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf16> to vector<1x8xf16>
-gpu.func @scatter_load_chunksize(%src: memref<256xf16>) {
-  %offset = arith.constant dense<12> : vector<16xindex>
-  %mask = arith.constant dense<true> : vector<16xi1>
-  %0 = xegpu.load %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-    : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-  gpu.return
-}
-
-// CHECK-LABEL: gpu.func @scatter_store_chunksize
-// CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
-// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
-// CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-// CHECK: %[[C1:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf16> to vector<1x8xf16>
-// CHECK: %[[C2:.*]] = vector.shape_cast %[[C1]] : vector<1x8xf16> to vector<8xf16>
-// CHECK: xegpu.store %[[C2]], %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
-// CHECK-SAME: : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
-gpu.func @scatter_store_chunksize(%src: memref<256xf16>) {
-  %offset = arith.constant dense<12> : vector<16xindex>
-  %mask = arith.constant dense<true> : vector<16xi1>
-  %0 = xegpu.load %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-    : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-  xegpu.store %0, %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-    : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
-  gpu.return
-}
-
 // CHECK-LABEL: gpu.func @scatter_load
 // CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
 // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
@@ -740,6 +704,28 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
   gpu.return
 }
 
+// lane_data packs all 16 reduced elements of dim1 into a single lane and
+// lane_layout is 1 everywhere, so the reduction is lane-local and must lower to
+// a plain vector.reduction.
+// CHECK-LABEL: gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local
+// CHECK:         %[[F0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x1xf32> to vector<16xf32>
+// CHECK:         %[[A0:.*]] = vector.extract %{{.*}}[0, 0] : f32 from vector<1x1xf32>
+// CHECK:         %[[R0:.*]] = vector.reduction <add>, %[[F0]], %[[A0]] : vector<16xf32> into f32
+// CHECK:         vector.insert %[[R0]], %{{.*}} [0, 0] : f32 into vector<1x1xf32>
+// CHECK-NOT:     gpu.shuffle
+// CHECK:         gpu.return
+gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local() {
+    %src = arith.constant dense<0.0>  : vector<1x16x1xf32>
+    %acc = arith.constant dense<0.0>  : vector<1x1xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      [1] : vector<1x16x1xf32> to vector<1x1xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1], lane_data = [1, 16, 1]>, dims = [1]>
+    }> : vector<1x1xf32>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @vector_extract_from_2d
 // CHECK: %[[EXT:.*]] = vector.extract %{{.*}}[0] : vector<1xf32> from vector<4x1xf32>
 gpu.func @vector_extract_from_2d() {
@@ -949,6 +935,22 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
     <{
       target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }> : vector<64x32xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_partial_lanes
+// CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [3, 0], strides = [1, 1] : vector<1x1xf32> into vector<16x1xf32>
+gpu.func @vector_insert_strided_slice_inner_partial_lanes() {
+  %0 = "test.some_op"()
+    : () -> vector<1x2xf32>
+  %1 = "test.some_op"()
+    : () -> vector<16x2xf32>
+  %2 = vector.insert_strided_slice %0, %1 offsets = [3, 0], strides = [1, 1]
+    : vector<1x2xf32> into vector<16x2xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 2], lane_data = [1, 1]>
+    }> : vector<16x2xf32>
   gpu.return
 }
 

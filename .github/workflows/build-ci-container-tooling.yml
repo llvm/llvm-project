@@ -65,7 +65,7 @@ jobs:
       - name: Build Container
         uses: ./.github/actions/build-container
         with:
-          container-name: ci-ubuntu-24.04-${{ matrix.container-name }}
+          container-name: ci-ubuntu-26.04-${{ matrix.container-name }}
           dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
           target: ci-container-${{ matrix.target || format('code-{0}', matrix.container-name) }}
           test-command: ${{ matrix.test-command }}

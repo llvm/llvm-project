@@ -2745,7 +2745,15 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
 
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   AtomicOrdering AO = AtomicOrdering(I.getOperand(0).getImm());
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
+  uint32_t ScSem = STI.isShader()
+                       ? SPIRV::MemorySemantics::UniformMemory |
+                             SPIRV::MemorySemantics::WorkgroupMemory |
+                             SPIRV::MemorySemantics::ImageMemory
+                       : SPIRV::MemorySemantics::WorkgroupMemory |
+                             SPIRV::MemorySemantics::CrossWorkgroupMemory |
+                             SPIRV::MemorySemantics::ImageMemory;
+  uint32_t MemSem = getMemSemanticsWithStorageClass(
+      STI.getTargetTriple(), static_cast<uint32_t>(getMemSemantics(AO)), ScSem);
   Register MemSemReg = buildI32ConstantInEntryBlock(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
   uint32_t Scope = static_cast<uint32_t>(getMemScope(
@@ -7639,7 +7647,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     SC = GR.getPointerStorageClass(ResType);
   }
 
-  if (ResType->getOpcode() == SPIRV::OpTypeImage && ArraySize == 0)
+  // ArraySize 0 means an unbounded array and we need to set to required
+  // capability.
+  if (ArraySize == 0)
     MIRBuilder.buildInstr(SPIRV::OpCapability)
         .addImm(SPIRV::Capability::RuntimeDescriptorArrayEXT);
 

@@ -10,9 +10,17 @@
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -mabi=lp64  -emit-llvm -o - %s | FileCheck %s --check-prefix=LP64
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -mabi=lp64f  -emit-llvm -o - %s | FileCheck %s --check-prefix=LP64F
 ! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -mabi=lp64d  -emit-llvm -o - %s | FileCheck %s --check-prefix=LP64D
+! RUN: %flang_fc1 -triple riscv64-none-linux-gnu -mabi=lp64e  -emit-llvm -o - %s | FileCheck %s --check-prefix=LP64E
 
+! The ABI also selects the stack alignment in the DataLayout: lp64e uses -S64
+! whereas the other ABIs use -S128.
+! LP64: target datalayout = "{{.*}}-S128"
 ! LP64: !{{[0-9]+}} = !{i32 1, !"target-abi", !"lp64"}
+! LP64F: target datalayout = "{{.*}}-S128"
 ! LP64F: !{{[0-9]+}} = !{i32 1, !"target-abi", !"lp64f"}
+! LP64D: target datalayout = "{{.*}}-S128"
 ! LP64D: !{{[0-9]+}} = !{i32 1, !"target-abi", !"lp64d"}
+! LP64E: target datalayout = "{{.*}}-S64"
+! LP64E: !{{[0-9]+}} = !{i32 1, !"target-abi", !"lp64e"}
 subroutine func
 end subroutine func

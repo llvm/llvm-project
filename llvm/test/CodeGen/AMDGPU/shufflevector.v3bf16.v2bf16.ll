@@ -23,6 +23,7 @@ define void @v_shuffle_v3bf16_v2bf16__0_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v1
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    global_store_short v0, v0, s[16:17] offset:4
 ; GFX900-NEXT:    global_store_dword v0, v1, s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -34,6 +35,7 @@ define void @v_shuffle_v3bf16_v2bf16__0_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v1
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    global_store_short v0, v0, s[16:17] offset:4
 ; GFX90A-NEXT:    global_store_dword v0, v1, s[16:17]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -45,6 +47,7 @@ define void @v_shuffle_v3bf16_v2bf16__0_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v1
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    global_store_short v0, v0, s[0:1] offset:4
 ; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -1413,6 +1416,7 @@ define void @v_shuffle_v3bf16_v2bf16__0_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v1
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    global_store_short v0, v0, s[16:17] offset:4
 ; GFX900-NEXT:    global_store_dword v0, v1, s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -1424,6 +1428,7 @@ define void @v_shuffle_v3bf16_v2bf16__0_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v1
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    global_store_short v0, v0, s[16:17] offset:4
 ; GFX90A-NEXT:    global_store_dword v0, v1, s[16:17]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -1435,6 +1440,7 @@ define void @v_shuffle_v3bf16_v2bf16__0_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v1
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    global_store_short v0, v0, s[0:1] offset:4
 ; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

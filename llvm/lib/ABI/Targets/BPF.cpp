@@ -16,7 +16,7 @@ namespace llvm::abi {
 
 class BPFTargetInfo : public TargetInfo {
 private:
-  TypeBuilder &TB;
+  ABICompatInfo CompatInfo;
 
   ArgInfo classifyReturnType(const Type *RetTy) const {
     if (RetTy->isVoid())
@@ -72,7 +72,9 @@ private:
   }
 
 public:
-  BPFTargetInfo(TypeBuilder &TB) : TB(TB) {}
+  BPFTargetInfo(TypeBuilder &Builder) : TargetInfo(Builder) {}
+
+  const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
 
   void computeInfo(FunctionInfo &FI) const override {
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());

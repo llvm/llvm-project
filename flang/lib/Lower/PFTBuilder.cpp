@@ -559,6 +559,7 @@ private:
     };
 
     rewriteIfGotos();
+    rewriteTrailingCycle();
     auto *eval = constructAndDirectiveStack.back();
     if (eval->isExecutableDirective() && !isOpenMPLoopConstruct(eval)) {
       // A construct at the end of an (unstructured) OpenACC or OpenMP
@@ -675,6 +676,59 @@ private:
     assert(!evaluationListStack.empty() &&
            "trying to pop an empty evaluationListStack");
     evaluationListStack.pop_back();
+  }
+
+  /// Delete a CycleStmt that is the last statement of the body of its own
+  /// DoConstruct, where it is a no-op. The pre-branch-analysis code:
+  ///
+  ///       <<DoConstruct>>
+  ///         1 NonLabelDoStmt: do n = 1, nb
+  ///         2 Statement: ...
+  ///         3 CycleStmt: cycle
+  ///         4 EndDoStmt
+  ///       <<End DoConstruct>>
+  ///
+  /// becomes:
+  ///
+  ///       <<DoConstruct>>
+  ///         1 NonLabelDoStmt: do n = 1, nb
+  ///         2 Statement: ...
+  ///         4 EndDoStmt
+  ///       <<End DoConstruct>>
+  ///
+  /// Branching to the EndDoStmt and falling through to it are the same thing,
+  /// so the CycleStmt has no effect. Deleting it matters because branch
+  /// analysis otherwise marks the DoConstruct unstructured, which costs the
+  /// structured form of the loop -- and with it the induction variable
+  /// semantics that later passes rely on.
+  void rewriteTrailingCycle() {
+    auto &evaluationList = *evaluationListStack.back();
+    if (evaluationList.size() < 3)
+      return;
+    const auto *doStmt =
+        evaluationList.begin()->getIf<parser::NonLabelDoStmt>();
+    if (!doStmt)
+      return;
+    lower::pft::EvaluationList::iterator endDoStmtIt =
+        std::prev(evaluationList.end());
+    if (!endDoStmtIt->isA<parser::EndDoStmt>())
+      return;
+    lower::pft::EvaluationList::iterator cycleStmtIt = std::prev(endDoStmtIt);
+    const auto *cycleStmt = cycleStmtIt->getIf<parser::CycleStmt>();
+    if (!cycleStmt || cycleStmtIt->label)
+      return;
+    std::string cycleName = getConstructName(*cycleStmt);
+    if (!cycleName.empty() && cycleName != getConstructName(*doStmt))
+      return; // cycle for an outer construct
+    // Relink the lexical predecessor of the CycleStmt to the EndDoStmt. That
+    // predecessor is the last statement reachable from the preceding
+    // evaluation, so descend through nested evaluation lists to find it.
+    lower::pft::Evaluation *predecessor = &*std::prev(cycleStmtIt);
+    while (predecessor->evaluationList && !predecessor->evaluationList->empty())
+      predecessor = &predecessor->evaluationList->back();
+    assert(predecessor->lexicalSuccessor == &*cycleStmtIt);
+    predecessor->lexicalSuccessor = cycleStmtIt->lexicalSuccessor;
+    evaluationList.erase(cycleStmtIt);
   }
 
   /// Rewrite IfConstructs containing a GotoStmt or CycleStmt to eliminate an
@@ -2039,7 +2093,16 @@ parser::CharBlock
 Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
   if (beginStmt)
     return stmtSourceLoc(*beginStmt);
-  return scope->sourceRange();
+  // Without a begin statement, e.g. for a main program with no program-stmt,
+  // the position comes from the scope. The scope source range may span an
+  // INCLUDE boundary, and such a range has no single provenance, so it maps to
+  // no source position at all. Narrow it to its first character, which does
+  // have a single provenance, so that the unit does not end up with an unknown
+  // location.
+  parser::CharBlock range{scope->sourceRange()};
+  if (range.empty())
+    return range;
+  return parser::CharBlock{range.begin(), 1};
 }
 
 //===----------------------------------------------------------------------===//

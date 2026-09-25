@@ -13,6 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -340,8 +341,10 @@ Error SimpleRemoteEPC::setup() {
   BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
-  BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
-  BootstrapSymbols[rt::DispatchCtxName] =
+  Mangler Mangle(getTargetTriple());
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchName)] =
+      BootstrapSymbols[DispatchFnName];
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchCtxName)] =
       BootstrapSymbols[ExecutorSessionObjectName];
 
   return Error::success();

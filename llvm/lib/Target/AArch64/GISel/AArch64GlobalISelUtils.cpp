@@ -112,7 +112,7 @@ AArch64GISelUtils::extractPtrauthBlendDiscriminators(Register Disc,
   if (auto ConstDiscVal = getIConstantVRegVal(Disc, MRI)) {
     if (isUInt<16>(ConstDiscVal->getZExtValue())) {
       ConstDisc = ConstDiscVal->getZExtValue();
-      AddrDisc = AArch64::NoRegister;
+      AddrDisc = Register();
     }
     return std::make_tuple(ConstDisc, AddrDisc);
   }

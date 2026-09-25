@@ -22,7 +22,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2960,7 +2959,6 @@ class AssemblyWriter {
   SlotTracker &Machine;
   TypePrinting TypePrinter;
   AssemblyAnnotationWriter *AnnotationWriter = nullptr;
-  SetVector<const Comdat *> Comdats;
   bool IsForDebug;
   bool ShouldPreserveUseListOrder;
   UseListOrderMap UseListOrders;
@@ -3068,13 +3066,7 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
       ShouldPreserveUseListOrder(
           PreserveAssemblyUseListOrder.getNumOccurrences()
               ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {
-  if (!TheModule)
-    return;
-  for (const GlobalObject &GO : TheModule->global_objects())
-    if (const Comdat *C = GO.getComdat())
-      Comdats.insert(C);
-}
+              : ShouldPreserveUseListOrder) {}
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
@@ -3243,13 +3235,16 @@ void AssemblyWriter::printModule(const Module *M) {
 
   printTypeIdentities();
 
-  // Output all comdats.
-  if (!Comdats.empty())
-    Out << '\n';
-  for (const Comdat *C : Comdats) {
-    printComdat(C);
-    if (C != Comdats.back())
+  {
+    // Output each used comdat at its first global object.
+    SmallPtrSet<const Comdat *, 8> PrintedComdats;
+    for (const GlobalObject &GO : M->global_objects()) {
+      const Comdat *C = GO.getComdat();
+      if (!C || !PrintedComdats.insert(C).second)
+        continue;
       Out << '\n';
+      printComdat(C);
+    }
   }
 
   // Output all globals.

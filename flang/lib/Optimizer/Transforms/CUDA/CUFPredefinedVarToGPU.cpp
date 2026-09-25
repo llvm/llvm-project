@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -149,16 +150,9 @@ struct CUFPredefinedVarToGPU
       return;
 
     bool rewrittenWholeFunction = false;
-    if (auto cudaProcAttr =
-            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                cuf::getProcAttrName())) {
-      if (cudaProcAttr.getValue() == cuf::ProcAttribute::Device ||
-          cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
-          cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal ||
-          cudaProcAttr.getValue() == cuf::ProcAttribute::HostDevice) {
-        rewritePredefinedVars(funcOp.getRegion());
-        rewrittenWholeFunction = true;
-      }
+    if (cuf::isDeviceProcedure(funcOp)) {
+      rewritePredefinedVars(funcOp.getRegion());
+      rewrittenWholeFunction = true;
     }
 
     if (rewrittenWholeFunction)

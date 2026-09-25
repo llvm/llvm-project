@@ -45,12 +45,6 @@ MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
-const TargetRegisterClass *
-MipsRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default case");
-  return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-}
-
 unsigned
 MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                       MachineFunction &MF) const {
@@ -316,7 +310,7 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   unsigned FP = Subtarget.isGP32bit() ? Mips::FP : Mips::FP_64;
-  unsigned BP = Subtarget.isGP32bit() ? Mips::S7 : Mips::S7_64;
+  unsigned BP = Subtarget.getABI().getSavedReg(7, Subtarget.isGP64bit());
 
   // Support dynamic stack realignment for all targets except Mips16.
   if (Subtarget.inMips16Mode())

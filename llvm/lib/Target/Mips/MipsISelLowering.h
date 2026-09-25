@@ -146,7 +146,7 @@ using TargetRegisterClass = MCRegisterClass;
     Register
     getExceptionPointerRegister(ExceptionHandling EH,
                                 const Constant *PersonalityFn) const override {
-      return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
+      return ABI.getArgRegPtr(0);
     }
 
     /// If a physical register, this returns the register that receives the
@@ -154,7 +154,7 @@ using TargetRegisterClass = MCRegisterClass;
     Register
     getExceptionSelectorRegister(ExceptionHandling EH,
                                  const Constant *PersonalityFn) const override {
-      return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
+      return ABI.getArgRegPtr(1);
     }
 
     bool isJumpTableRelative() const override {
@@ -507,8 +507,6 @@ using TargetRegisterClass = MCRegisterClass;
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
     }
-
-    int getCPURegisterIndex(StringRef Name) const;
 
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 

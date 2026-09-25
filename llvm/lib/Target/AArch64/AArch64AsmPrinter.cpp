@@ -2070,7 +2070,7 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint64_t Disc,
   assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
 
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
-  if (AddrDisc == AArch64::NoRegister)
+  if (!AddrDisc.isValid())
     AddrDisc = AArch64::XZR;
 
   // If there is no constant discriminator, there's no blend involved:
@@ -2294,14 +2294,13 @@ AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateImmReg(
   Schema.IntDisc = IntDisc;
   Schema.AddrDisc = AddrDiscOp.getReg();
   Schema.AddrDiscIsKilled = AddrDiscOp.isKill();
-  Schema.PCDisc = AArch64::NoRegister;
+  Schema.PCDisc = Register();
   return Schema;
 }
 
 AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateRegReg(
     AArch64PACKey::ID Key, Register AddrDisc, Register PCDisc) {
-  assert(PCDisc != AArch64::NoRegister &&
-         "Use CreateImmReg for non-PC schemas");
+  assert(PCDisc.isValid() && "Use CreateImmReg for non-PC schemas");
   PtrAuthSchema Schema;
   Schema.Key = Key;
   Schema.IntDisc = 0;
@@ -2413,11 +2412,10 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
   const PtrauthCheckMode CheckMode = getCheckMode(MF);
-  const bool IsAuthWithPC = AuthSchema.PCDisc != AArch64::NoRegister;
-  assert(!SignSchema || SignSchema->PCDisc == AArch64::NoRegister);
+  const bool IsAuthWithPC = AuthSchema.PCDisc.isValid();
+  assert(!SignSchema || !SignSchema->PCDisc.isValid());
 
-  Register SignAddrDiscOrNone =
-      SignSchema ? SignSchema->AddrDisc : AArch64::NoRegister;
+  Register SignAddrDiscOrNone = SignSchema ? SignSchema->AddrDisc : Register();
 
   // 1. Authenticate Pointer - this is the only common step.
   // It is more complex than signing because AUTI[AB]171615 may be used.
@@ -3600,13 +3598,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     ///    adrp  x0, :tlsdesc_auth:var
     ///    ldr   x16, [x0, #:tlsdesc_auth_lo12:var]
     ///    add   x0, x0, #:tlsdesc_auth_lo12:var
+    ///    .tlsauthdesccall var
     ///    blraa x16, x0
     ///    (TPIDR_EL0 offset now in x0)
     const MachineOperand &MO_Sym = MI->getOperand(0);
     MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
-    MCOperand SymTLSDescLo12, SymTLSDesc;
+    MCOperand Sym, SymTLSDescLo12, SymTLSDesc;
     MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
     MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
+    MCInstLowering.lowerOperand(MO_Sym, Sym);
     MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
     MCInstLowering.lowerOperand(MO_TLSDESC, SymTLSDesc);
 
@@ -3632,8 +3632,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     Add.addOperand(MCOperand::createImm(AArch64_AM::getShiftValue(0)));
     EmitToStreamer(*OutStreamer, Add);
 
-    // Authenticated TLSDESC accesses are not relaxed.
-    // Thus, do not emit .tlsdesccall for AUTH TLSDESC.
+    // Emit a relocation-annotation. This expands to no code, but requests
+    // the following instruction gets an R_AARCH64_AUTH_TLSDESC_CALL.
+    MCInst TLSAuthDescCall;
+    TLSAuthDescCall.setOpcode(AArch64::TLSAUTHDESCCALL);
+    TLSAuthDescCall.addOperand(Sym);
+    EmitToStreamer(*OutStreamer, TLSAuthDescCall);
+#ifndef NDEBUG
+    --InstsEmitted; // no code emitted
+#endif
 
     MCInst Blraa;
     Blraa.setOpcode(AArch64::BLRAA);

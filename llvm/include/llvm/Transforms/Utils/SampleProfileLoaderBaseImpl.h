@@ -40,6 +40,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
@@ -47,10 +48,6 @@
 namespace llvm {
 using namespace sampleprof;
 using namespace sampleprofutil;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 #define DEBUG_TYPE "sample-profile-impl"
 

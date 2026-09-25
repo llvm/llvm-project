@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
+import addressable_bits_scripted_process
 import dummy_scripted_process
 
 
@@ -100,15 +101,15 @@ class ScriptedProcesTestCase(TestBase):
             log = f.read()
 
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
+            "abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.is_alive not implemented",
+            "abstract method MissingMethodsScriptedProcess.is_alive not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
+            "abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
             log,
         )
 
@@ -322,3 +323,54 @@ class ScriptedProcesTestCase(TestBase):
             "ScriptedFrame.thread should be valid after thread " "registration",
         )
         self.assertEqual(post_launch_frame.thread.GetThreadID(), tid)
+
+    # No dylib on Windows.
+    @skipIfWindows
+    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
+    def test_scripted_process_addressable_bits(self):
+        """Test that the addressable bits a scripted process reports are in
+        effect for the very first stop, without resuming the process."""
+        self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "addressable_bits_scripted_process.py")
+        )
+
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "addressable_bits_scripted_process.AddressableBitsScriptedProcess"
+        )
+
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertSuccess(error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        self.assertEqual(
+            process.GetAddressMask(lldb.eAddressMaskTypeCode),
+            0xFFFFFFFC00000000,
+        )
+        self.assertEqual(
+            process.FixAddress(addressable_bits_scripted_process.TAGGED_PC),
+            addressable_bits_scripted_process.FIXED_PC,
+        )
+
+        # The mask has to have been installed before the threads and their
+        # stack frames were built for this stop: nothing resumes the process
+        # here, so a frame that resolved its pc with the default mask would
+        # never be recomputed.
+        #
+        # Thread 0 has its frame zero built by the unwinder from the register
+        # context, thread 1 reports its frames from the script.
+        for idx in range(2):
+            frame = process.GetThreadAtIndex(idx).GetFrameAtIndex(0)
+            self.assertEqual(
+                frame.GetPC(),
+                addressable_bits_scripted_process.FIXED_PC,
+                f"thread {idx} frame zero pc",
+            )

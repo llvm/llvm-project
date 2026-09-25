@@ -193,7 +193,10 @@ def FmReassoc   : MIFlagEnum<"FmReassoc">;
 def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
+def NoUSWrap    : MIFlagEnum<"NoUSWrap">;
+def Disjoint    : MIFlagEnum<"Disjoint">;
 def NonNeg      : MIFlagEnum<"NonNeg">;
+def SameSign    : MIFlagEnum<"SameSign">;
 def InBounds    : MIFlagEnum<"InBounds">;
 
 def MIFlags;

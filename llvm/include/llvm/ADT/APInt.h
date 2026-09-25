@@ -150,8 +150,7 @@ public:
   /// Was equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords))
   /// historically, but is now deleted because this constructor is prone to
   /// ambiguity with the APInt(unsigned, uint64_t, bool) constructor.
-  LLVM_ABI APInt(unsigned numBits, unsigned numWords,
-                 const uint64_t bigVal[]) = delete;
+  APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]) = delete;
 
   /// Construct an APInt from a string representation.
   ///

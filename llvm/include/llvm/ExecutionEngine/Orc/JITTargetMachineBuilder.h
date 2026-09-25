@@ -160,7 +160,7 @@ public:
   JITTargetMachineBuilderPrinter(JITTargetMachineBuilder &JTMB,
                                  StringRef Indent)
       : JTMB(JTMB), Indent(Indent) {}
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   friend raw_ostream &operator<<(raw_ostream &OS,
                                  const JITTargetMachineBuilderPrinter &JTMBP) {

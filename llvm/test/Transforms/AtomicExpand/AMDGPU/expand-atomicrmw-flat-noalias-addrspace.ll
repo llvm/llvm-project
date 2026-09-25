@@ -1029,7 +1029,7 @@ define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(ptr %ptr, 
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label %[[ATOMICRMW_SHARED:.*]], label %[[ATOMICRMW_CHECK_PRIVATE:.*]]
 ; GFX90A:       [[ATOMICRMW_SHARED]]:
 ; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]], !amdgpu.ignore.denormal.mode [[META1]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !atomic.ignore.denormal.mode [[META1]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX90A-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
 ; GFX90A:       [[ATOMICRMW_CHECK_PRIVATE]]:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
@@ -1042,7 +1042,7 @@ define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(ptr %ptr, 
 ; GFX90A-NEXT:    br label %[[ATOMICRMW_PHI]]
 ; GFX90A:       [[ATOMICRMW_GLOBAL]]:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]], !amdgpu.ignore.denormal.mode [[META1]]
+; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !atomic.ignore.denormal.mode [[META1]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX90A-NEXT:    br label %[[ATOMICRMW_PHI]]
 ; GFX90A:       [[ATOMICRMW_PHI]]:
 ; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP2]], %[[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP5]], %[[ATOMICRMW_GLOBAL]] ]
@@ -1052,15 +1052,15 @@ define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(ptr %ptr, 
 ;
 ; GFX942-LABEL: define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(
 ; GFX942-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]], !amdgpu.ignore.denormal.mode [[META1]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !atomic.ignore.denormal.mode [[META1]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX12-LABEL: define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]], !amdgpu.ignore.denormal.mode [[META1]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !atomic.ignore.denormal.mode [[META1]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX12-NEXT:    ret float [[RES]]
 ;
-  %res = atomicrmw fadd ptr %ptr, float %value syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr %ptr, float %value syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret float %res
 }
 

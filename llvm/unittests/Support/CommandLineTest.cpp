@@ -1666,6 +1666,35 @@ TEST_F(GetOptionWidthTest,
             ExpectedStrSize);
 }
 
+TEST(CommandLineTest, BoolValues) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptF("f", cl::init(true));
+  StackOption<bool> OptFlag("flag");
+
+  const char *args1[] = {"prog", "-flag", "--f=false"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args1, StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(OptFlag);
+  EXPECT_FALSE(OptF);
+  cl::ResetAllOptionOccurrences();
+
+  // An empty value is not the same as no value.
+  const char *args2[] = {"prog", "-flag="};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args2, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args3[] = {"prog", "-flag=yes"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args3, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args4[] = {"prog", "-flag=True"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args4, StringRef(), &llvm::nulls()));
+}
+
 TEST(CommandLineTest, PrefixOptions) {
   cl::ResetCommandLineParser();
 
@@ -2298,23 +2327,20 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
       cl::values(clEnumValN(ValA, "enableA", "Enable A"),
                  clEnumValN(ValB, "enableB", "Enable B"),
                  clEnumValN(ValC, "enableC", "Enable C")));
-  StackOption<std::string, cl::list<std::string>> Sink(cl::Sink);
   StackOption<std::string> Input(cl::Positional);
   StackOption<std::string, cl::list<std::string>> ExtraArgs(cl::ConsumeAfter);
 
-  const char *Args[] = {"prog",     "-option",  "-str=STR", "-enableA",
-                        "-enableC", "-unknown", "input",    "-arg"};
+  const char *Args[] = {"prog",     "-option", "-str=STR", "-enableA",
+                        "-enableC", "input",   "-arg"};
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(8, Args, StringRef(), &OS));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(7, Args, StringRef(), &OS));
   EXPECT_TRUE(OS.str().empty());
 
   EXPECT_TRUE(Option);
   EXPECT_EQ("STR", Str);
   EXPECT_EQ((1u << ValA) | (1u << ValC), Bits.getBits());
-  EXPECT_EQ(1u, Sink.size());
-  EXPECT_EQ("-unknown", Sink[0]);
   EXPECT_EQ("input", Input);
   EXPECT_EQ(1u, ExtraArgs.size());
   EXPECT_EQ("-arg", ExtraArgs[0]);
@@ -2323,7 +2349,6 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   EXPECT_FALSE(Option);
   EXPECT_EQ("", Str);
   EXPECT_EQ(0u, Bits.getBits());
-  EXPECT_EQ(0u, Sink.size());
   EXPECT_EQ(0, Input.getNumOccurrences());
   EXPECT_EQ(0u, ExtraArgs.size());
 }

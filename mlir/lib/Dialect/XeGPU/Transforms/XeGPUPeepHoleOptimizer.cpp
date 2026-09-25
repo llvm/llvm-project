@@ -290,12 +290,12 @@ public:
     Value source = createNdOp.getSource();
     auto memrefType = dyn_cast<MemRefType>(source.getType());
 
-    bool dynamicMemref =
-        memrefType && !xegpu::hasStaticShapeAndStrides(memrefType);
     SmallVector<OpFoldResult> mixedSizes;
     SmallVector<OpFoldResult> mixedStrides;
     memref::ExtractStridedMetadataOp meta;
-    if (dynamicMemref) {
+    if (memrefType) {
+      // extract_aligned_pointer_as_index returns the base pointer without the
+      // memref offset, so always extract strided metadata to fold it in.
       meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
       mixedSizes = meta.getConstifiedMixedSizes();
       mixedStrides = meta.getConstifiedMixedStrides();
@@ -328,20 +328,15 @@ public:
           innerLaneData);
 
     if (memrefType) {
-      Value baseIdx;
-      if (dynamicMemref) {
-        // Base = aligned base pointer + structural offset (in bytes).
-        Value alignedPtr = memref::ExtractAlignedPointerAsIndexOp::create(
-            rewriter, loc, meta.getBaseBuffer());
-        Value elemBytes = arith::ConstantIndexOp::create(
-            rewriter, loc, memrefType.getElementTypeBitWidth() / 8);
-        Value offBytes =
-            arith::MulIOp::create(rewriter, loc, meta.getOffset(), elemBytes);
-        baseIdx = arith::AddIOp::create(rewriter, loc, alignedPtr, offBytes);
-      } else {
-        baseIdx = memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc,
-                                                                 source);
-      }
+      // Compute base = aligned pointer + offset (in bytes).
+      Value alignedPtr = memref::ExtractAlignedPointerAsIndexOp::create(
+          rewriter, loc, meta.getBaseBuffer());
+      Value elemBytes = arith::ConstantIndexOp::create(
+          rewriter, loc, memrefType.getElementTypeBitWidth() / 8);
+      Value offsetBytes =
+          arith::MulIOp::create(rewriter, loc, meta.getOffset(), elemBytes);
+      Value baseIdx =
+          arith::AddIOp::create(rewriter, loc, alignedPtr, offsetBytes);
       source = arith::IndexCastOp::create(rewriter, loc, rewriter.getI64Type(),
                                           baseIdx);
     }

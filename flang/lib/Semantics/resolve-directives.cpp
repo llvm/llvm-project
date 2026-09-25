@@ -1058,7 +1058,13 @@ private:
 
 void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
     Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+  // A CUDA Fortran compilation that was not given an OpenACC target still has
+  // to resolve the directives recovered from module files, because they can
+  // describe the device-side call target of a procedure through
+  // `acc routine bind(...)`. The sentinel is not recognized in the main source
+  // in that case, so no user directive can reach this point.
+  if (context.IsEnabled(common::LanguageFeature::OpenACC) ||
+      context.IsEnabled(common::LanguageFeature::CUDA)) {
     AccAttributeVisitor{context, topScope}.Walk(node);
   }
 }

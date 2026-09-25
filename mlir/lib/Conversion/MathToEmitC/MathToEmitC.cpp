@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/MathToEmitC/MathToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -15,6 +16,22 @@
 using namespace mlir;
 
 namespace {
+/// Implement the interface to convert Math to EmitC.
+struct MathToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  MathToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
+    populateConvertMathToEmitCPatterns(
+        patterns, lowerToCpp.value_or(true) ? emitc::LanguageTarget::cpp11
+                                            : emitc::LanguageTarget::c99);
+  }
+};
+
 template <typename OpType>
 class LowerToEmitCCallOpaque : public OpRewritePattern<OpType> {
   std::string calleeStr;
@@ -54,6 +71,12 @@ LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
 }
 
 } // namespace
+
+void mlir::registerConvertMathToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, math::MathDialect *dialect) {
+    dialect->addInterfaces<MathToEmitCDialectInterface>();
+  });
+}
 
 // Populates patterns to replace `math` operations with `emitc.call_opaque`,
 // using function names consistent with those in <math.h>.

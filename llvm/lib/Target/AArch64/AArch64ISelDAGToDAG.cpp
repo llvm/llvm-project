@@ -638,9 +638,11 @@ static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
 }
 
 // Decodes the raw integer splat value from a NEON splat operation.
-static std::optional<APInt> DecodeNEONSplat(SDValue N) {
+static std::optional<APInt> DecodeNEONSplat(SDValue N,
+                                            const AArch64Subtarget *Subtarget) {
   assert(N.getValueType().isInteger() && "Only integers are supported");
-  if (N->getOpcode() == AArch64ISD::NVCAST)
+  if (N->getOpcode() == AArch64ISD::NVCAST ||
+      (N->getOpcode() == ISD::BITCAST && Subtarget->isLittleEndian()))
     N = N->getOperand(0);
   unsigned SplatWidth = N.getScalarValueSizeInBits();
   if (N.getOpcode() == AArch64ISD::FMOV)
@@ -669,9 +671,10 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
 
 // If \p N is a NEON splat operation (movi, fmov, etc), return the splat value
 // matching the element size of N.
-static std::optional<APInt> GetNEONSplatValue(SDValue N) {
+static std::optional<APInt>
+GetNEONSplatValue(SDValue N, const AArch64Subtarget *Subtarget) {
   unsigned SplatWidth = N.getScalarValueSizeInBits();
-  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N)) {
+  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N, Subtarget)) {
     if (SplatVal->getBitWidth() <= SplatWidth)
       return APInt::getSplat(SplatWidth, *SplatVal);
     if (SplatVal->isSplat(SplatWidth))
@@ -682,7 +685,7 @@ static std::optional<APInt> GetNEONSplatValue(SDValue N) {
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
                                                          SDValue &Imm) {
-  std::optional<APInt> ImmVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmVal)
     return false;
   uint64_t Encoding;
@@ -696,7 +699,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
                                                         SDValue &Shift) {
-  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget))
     return SelectSVEAddSubImm(SDLoc(N), *ImmVal,
                               N.getValueType().getScalarType().getSimpleVT(),
                               Imm, Shift,
@@ -706,13 +709,13 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEArithSImm(SDValue N,
                                                         SDValue &Imm) {
-  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget))
     return SelectSVESignedArithImm(SDLoc(N), *ImmVal, Imm);
   return false;
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
-  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmAPIntVal)
     return false;
 
@@ -725,7 +728,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfUImm8(SDValue N, SDValue &Imm) {
-  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmAPIntVal)
     return false;
 
@@ -747,9 +750,10 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::ConstraintCode::o:
   case InlineAsm::ConstraintCode::Q:
     // We need to make sure that this one operand does not end up in XZR, thus
-    // require the address to be in a PointerRegClass register.
-    const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    const TargetRegisterClass *TRC = TRI->getPointerRegClass();
+    // require the address to be in a pointer register.
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    const TargetRegisterClass *TRC =
+        TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
     SDLoc dl(Op);
     SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i64);
     SDValue NewOp =

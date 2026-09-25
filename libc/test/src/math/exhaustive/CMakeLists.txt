@@ -263,22 +263,10 @@ add_fp_unittest(
     expf_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.expf
-    libc.src.__support.FPUtil.fp_bits
-  LINK_LIBRARIES
-    -lpthread
-)
-
-add_fp_unittest(
-  expf_static_rounding_test
-  NO_RUN_POSTBUILD
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    expf_static_rounding_test.cpp
-  DEPENDS
     .exhaustive_test_static_rounding
-    libc.src.__support.math.expf
+    libc.src.math.expf
+    libc.src.__support.math.expf_double_eval
+    libc.src.__support.math.expf_float_eval
     libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
@@ -296,6 +284,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.exp2f
+    libc.src.__support.math.exp2f_float_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -327,6 +316,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.exp10f
+    libc.src.__support.math.exp10f_float_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

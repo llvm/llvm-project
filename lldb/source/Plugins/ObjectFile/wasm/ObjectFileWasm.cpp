@@ -839,18 +839,18 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     }
 
     SectionSP section_sp = std::make_shared<Section>(
-        GetModule(),  // Module to which this section belongs.
-        this,         // ObjectFile to which this section belongs and
-                      // should read section data from.
-        section_type, // Section ID.
-        ConstString(section_name), // Section name.
-        section_type,              // Section type.
-        vm_addr,                   // VM address.
-        vm_size,                   // VM size in bytes of this section.
-        file_offset,               // Offset of this section in the file.
-        sect_info.size,            // Size of the section as found in the file.
-        0,                         // Alignment of the section
-        0);                        // Flags for this section.
+        GetModule(),    // Module to which this section belongs.
+        this,           // ObjectFile to which this section belongs and
+                        // should read section data from.
+        section_type,   // Section ID.
+        section_name,   // Section name.
+        section_type,   // Section type.
+        vm_addr,        // VM address.
+        vm_size,        // VM size in bytes of this section.
+        file_offset,    // Offset of this section in the file.
+        sect_info.size, // Size of the section as found in the file.
+        0,              // Alignment of the section
+        0);             // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }
@@ -924,7 +924,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
   if (!m_globals.empty()) {
     global_section_sp = std::make_shared<Section>(
         GetModule(),
-        /*obj_file=*/this, eSectionTypeWasmGlobal, ConstString("global"),
+        /*obj_file=*/this, eSectionTypeWasmGlobal, "global",
         eSectionTypeWasmGlobal,
         /*file_vm_addr=*/kWasmGlobalFileAddress,
         /*vm_size=*/m_num_imported_globals + m_globals.size(),
@@ -979,7 +979,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         /*obj_file=*/this,
         ++segment_id << 8, // 1-based segment index, shifted by 8 bits to avoid
                            // collision with section IDs.
-        ConstString(segment.name), GetSegmentTypeFromName(segment.name),
+        segment.name, GetSegmentTypeFromName(segment.name),
         /*file_vm_addr=*/file_vm_addr,
         /*vm_size=*/segment.size,
         /*file_offset=*/file_offset,
@@ -1005,15 +1005,14 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
       LLDB_LOG_ERROR(log, memory_size.takeError(),
                      "Failed to parse Wasm memory section: {0}");
     } else if (*memory_size > static_data_end) {
-      SectionSP bss_sp =
-          std::make_shared<Section>(GetModule(),
-                                    /*obj_file=*/this, ++segment_id << 8,
-                                    ConstString(".bss"), eSectionTypeZeroFill,
-                                    /*file_vm_addr=*/static_data_end,
-                                    /*vm_size=*/*memory_size - static_data_end,
-                                    /*file_offset=*/0,
-                                    /*file_size=*/0,
-                                    /*log2align=*/0, /*flags=*/0);
+      SectionSP bss_sp = std::make_shared<Section>(
+          GetModule(),
+          /*obj_file=*/this, ++segment_id << 8, ".bss", eSectionTypeZeroFill,
+          /*file_vm_addr=*/static_data_end,
+          /*vm_size=*/*memory_size - static_data_end,
+          /*file_offset=*/0,
+          /*file_size=*/0,
+          /*log2align=*/0, /*flags=*/0);
       m_sections_up->AddSection(bss_sp);
       GetModule()->GetSectionList()->AddSection(bss_sp);
     }

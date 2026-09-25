@@ -39,7 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -53,11 +53,6 @@ namespace llvm {
 
 class MemoryBuffer;
 
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {

@@ -12,6 +12,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar/LowerAtomicPass.h"
 
@@ -48,10 +49,10 @@ ModulePass *llvm::createWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
   return new WebAssemblyCoalesceFeaturesAndStripAtomicsLegacy(&TM);
 }
 
-static std::string getFeatureString(const WebAssemblySubtarget *ST,
+static std::string getFeatureString(const MCSubtargetInfo &STI,
                                     const FeatureBitset &Features) {
   std::string Ret;
-  for (const SubtargetFeatureKV &KV : ST->getAllProcessorFeatures()) {
+  for (const SubtargetFeatureKV &KV : STI.getAllProcessorFeatures()) {
     if (Features[KV.Value])
       Ret += (StringRef("+") + KV.key() + ",").str();
     else
@@ -69,26 +70,21 @@ coalesceFeatures(const Module &M, WebAssemblyTargetMachine *WasmTM) {
   // disabled. If any function lacks a target-features attribute, it'll
   // default to the target CPU from the `TargetMachine`.
   FeatureBitset Features;
-  // We need any MCSubtargetInfo to access WebAssemblyFeatureKV.
-  const WebAssemblySubtarget *AnyST = nullptr;
+  bool AnyDefined = false;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
 
-    AnyST = WasmTM->getSubtargetImpl(F);
-    Features |= AnyST->getFeatureBits();
+    Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
+    AnyDefined = true;
   }
 
-  // If we have no defined functions, use the target CPU from the
+  // If we have no defined functions, use the module-wide feature bits from the
   // `TargetMachine`.
-  if (!AnyST) {
-    AnyST =
-        WasmTM->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                                 std::string(WasmTM->getTargetFeatureString()));
-    Features = AnyST->getFeatureBits();
-  }
+  if (!AnyDefined)
+    Features = WasmTM->getMCSubtargetInfo().getFeatureBits();
 
-  return {Features, getFeatureString(AnyST, Features)};
+  return {Features, getFeatureString(WasmTM->getMCSubtargetInfo(), Features)};
 }
 
 static void replaceFeatures(Function &F, const std::string &Features) {
@@ -180,7 +176,8 @@ static bool coalesceFeaturesAndStripAtomics(Module &M,
 
   // In cooperative threading mode, thread locals are meaningful even without
   // atomics.
-  const WebAssemblySubtarget *ST = WasmTM->getSubtargetImpl();
+  const WebAssemblySubtarget *ST = WasmTM->getSubtargetImpl(
+      WasmTM->getTargetCPU(), WasmTM->getTargetFeatureString());
   bool CooperativeThreading = ST->hasCooperativeMultithreading();
 
   if (!Features[WebAssembly::FeatureAtomics]) {
@@ -197,7 +194,15 @@ static bool coalesceFeaturesAndStripAtomics(Module &M,
   else if (StrippedTLS && !StrippedAtomics)
     stripAtomics(M);
 
-  recordFeatures(M, ST, Features, StrippedAtomics || StrippedTLS);
+  bool Stripped = StrippedAtomics || StrippedTLS;
+  if (!Stripped &&
+      (Features[WebAssembly::FeatureAtomics] ||
+       (CooperativeThreading && Features[WebAssembly::FeatureBulkMemory])) &&
+      !M.getModuleFlag("thread-model")) {
+    M.setThreadModel(ThreadModel::POSIX);
+  }
+
+  recordFeatures(M, ST, Features, Stripped);
 
   // Conservatively assume we have made some change
   return true;

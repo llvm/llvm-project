@@ -14,10 +14,12 @@
 #include "orc-rt/support/bit.h"
 #include "gtest/gtest.h"
 
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 using namespace orc_rt;
-
+#ifndef _WIN32
 TEST(ExecutorProcessInfoTest, DetectSucceeds) {
   auto EPI = ExecutorProcessInfo::Detect();
   EXPECT_TRUE(!!EPI);
@@ -34,10 +36,13 @@ TEST(ExecutorProcessInfoTest, DetectPageSizeAtLeast4096) {
   EXPECT_GE(EPI.pageSize(), 4096U);
 }
 
-TEST(ExecutorProcessInfoTest, DetectPageSizeMatchesSysconf) {
-  auto EPI = cantFail(ExecutorProcessInfo::Detect());
-  EXPECT_EQ(EPI.pageSize(), static_cast<size_t>(sysconf(_SC_PAGESIZE)));
+TEST(ExecutorProcessInfoTest, DetectPageSizeMatchesSystem) {
+  auto EPI = ExecutorProcessInfo::Detect();
+  ASSERT_TRUE(!!EPI);
+
+  EXPECT_EQ(EPI->pageSize(), static_cast<uint64_t>(sysconf(_SC_PAGESIZE)));
 }
+#endif
 
 TEST(ExecutorProcessInfoTest, ConstructWithExplicitValues) {
   ExecutorProcessInfo EPI("x86_64-unknown-linux-gnu", 4096, "+x,+a,+b");

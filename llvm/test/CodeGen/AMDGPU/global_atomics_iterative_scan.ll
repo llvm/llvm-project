@@ -28,7 +28,7 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1), ptr addrspace(1) %val
 ; IR-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], 0
 ; IR-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP13:%.*]]
 ; IR:       11:
-; IR-NEXT:    [[TMP12:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP9]] seq_cst, align 4
+; IR-NEXT:    [[TMP12:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP9]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP13]]
 ; IR:       13:
 ; IR-NEXT:    ret void
@@ -46,7 +46,7 @@ entry:
   %ele = getelementptr i32, ptr addrspace(1) %value.address, i64 %idxprom
   %value = load i32, ptr addrspace(1) %ele, align 4
   %gep = getelementptr i32, ptr addrspace(1) %mem.location, i32 4
-  %old = atomicrmw volatile add ptr addrspace(1) %gep, i32 %value seq_cst, align 4
+  %old = atomicrmw add ptr addrspace(1) %gep, i32 %value seq_cst, align 4
   ret void
 }
 
@@ -74,7 +74,7 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, ptr addrspace(
 ; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 ; IR-NEXT:    br label [[COMPUTELOOP:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP13:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP13:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9:%.*]]
 ; IR:       9:
 ; IR-NEXT:    ret void
@@ -107,7 +107,7 @@ entry:
   %ele = getelementptr i32, ptr addrspace(1) %value.address, i64 %idxprom
   %value = load i32, ptr addrspace(1) %ele, align 4
   %gep = getelementptr i32, ptr addrspace(1) %mem.location, i32 4
-  %old = atomicrmw volatile add ptr addrspace(1) %gep, i32 %value seq_cst, align 4
+  %old = atomicrmw add ptr addrspace(1) %gep, i32 %value seq_cst, align 4
   ret void
 }
 

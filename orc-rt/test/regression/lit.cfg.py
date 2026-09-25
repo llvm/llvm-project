@@ -94,3 +94,10 @@ config.substitutions.append(("%target_triple", config.target_triple))
 # The architecture the runtime was built for, so tests can check the triple it
 # reports against an independent source.
 config.substitutions.append(("%target-arch", config.target_triple.split("-")[0]))
+
+# Add host OS and arch substitutions for host-detection tests.
+config.substitutions.append(("%host-arch", platform.machine()))
+if platform.system() == "Darwin":
+    config.substitutions.append(("%host-os", "macosx"))
+else:
+    config.substitutions.append(("%host-os", platform.system().lower()))

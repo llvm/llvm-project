@@ -287,18 +287,14 @@ void compare() {
   // CHECK-NEW: call ptr @llvm.launder.invariant.group.p0(ptr
   A *b = new (a) B;
 
-  // CHECK-NEW: %[[a:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr
-  // CHECK-NEW: %[[b:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr
-  // CHECK-NEW: %cmp = icmp eq ptr %[[a]], %[[b]]
+  // CHECK-NEW-NOT: call ptr @llvm.strip.invariant.group
   if (a == b)
     b->foo();
 }
 
 // CHECK-NEW-LABEL: compare2
 bool compare2(A *a, A *a2) {
-  // CHECK-NEW: %[[a:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr
-  // CHECK-NEW: %[[b:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr
-  // CHECK-NEW: %cmp = icmp ult ptr %[[a]], %[[b]]
+  // CHECK-NEW-NOT: call ptr @llvm.strip.invariant.group
   return a < a2;
 }
 // CHECK-NEW-LABEL: compareIntPointers
@@ -330,13 +326,9 @@ bool compareNull(A *a) {
 }
 
 struct X;
-// We have to also introduce the barriers if comparing pointers to incomplete
-// objects
 // CHECK-NEW-LABEL: define{{.*}} zeroext i1 @_Z8compare4P1XS0_
 bool compare4(X *x, X *x2) {
-  // CHECK-NEW: %[[x:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr
-  // CHECK-NEW: %[[x2:.*]] = call ptr @llvm.strip.invariant.group.p0(ptr
-  // CHECK-NEW: %cmp = icmp eq ptr %[[x]], %[[x2]]
+  // CHECK-NEW-NOT: call ptr @llvm.strip.invariant.group
   return x == x2;
 }
 
@@ -349,7 +341,7 @@ void member1(HoldingOtherVirtuals *p) {
 
 // CHECK-NEW-LABEL: member2
 void member2(A *a) {
-  // CHECK-NEW: call ptr @llvm.strip.invariant.group.p0
+  // CHECK-NEW-NOT: call ptr @llvm.strip.invariant.group.p0
   (void)a->m;
 }
 
@@ -366,16 +358,14 @@ void testCompareMembers() {
   // CHECK-NEW:   call void %{{.*}}(ptr {{[^,]*}} %{{.*}})
   ap->foo();
   // CHECK-NEW:    [[TMP7:%.*]] = load ptr, ptr [[AP]]
-  // CHECK-NEW:    [[TMP9:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[TMP7]])
-  // CHECK-NEW:    [[M:%.*]] = getelementptr inbounds nuw [[STRUCT_A:%.*]], ptr [[TMP9]], i32 0, i32 1
+  // CHECK-NEW:    [[M:%.*]] = getelementptr inbounds nuw [[STRUCT_A:%.*]], ptr [[TMP7]], i32 0, i32 1
   // CHECK-NEW:    store ptr [[M]], ptr [[APM]]
   int *const apm = &ap->m;
 
   B *bp = new (ap) B;
 
   // CHECK-NEW:    [[TMP20:%.*]] = load ptr, ptr [[BP]]
-  // CHECK-NEW:    [[TMP23:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[TMP20]])
-  // CHECK-NEW:    [[M4:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP23]], i32 0, i32 1
+  // CHECK-NEW:    [[M4:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[TMP20]], i32 0, i32 1
   // CHECK-NEW:    store ptr [[M4]], ptr [[BPM]]
   int *const bpm = &bp->m;
 
@@ -391,36 +381,26 @@ void testCompareMembers() {
 
 // CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast1P1A(ptr
 void testCast1(A *a) {
-  // Here we get rid of dynamic info
-  // CHECK-NEW: call ptr @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: call ptr @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: @llvm.launder.invariant.group
   auto *v = (void *)a;
 
-  // CHECK-NEW: call ptr @llvm.strip.invariant.group
   auto i2 = (uintptr_t)a;
   (void)i2;
 
-  // CHECK-NEW-NOT: @llvm.strip.invariant.group
-  // CHECK-NEW-NOT: @llvm.launder.invariant.group
-
-  // The information is already stripped
   auto i = (uintptr_t)v;
 }
 
 struct Incomplete;
 // CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast2P10Incomplete(ptr
 void testCast2(Incomplete *I) {
-  // Here we get rid of potential dynamic info
-  // CHECK-NEW: call ptr @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: @llvm.launder.invariant.group
   auto *v = (void *)I;
 
-  // CHECK-NEW: call ptr @llvm.strip.invariant.group
   auto i2 = (uintptr_t)I;
   (void)i2;
 
-  // CHECK-NEW-NOT: @llvm.strip.invariant.group
-  // CHECK-NEW-NOT: @llvm.launder.invariant.group
-
-  // The information is already stripped
   auto i = (uintptr_t)v;
 }
 
@@ -470,14 +450,14 @@ void testCast5(B *b) {
 // CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast6P1A(
 void testCast6(A *a) {
 
-  // CHECK-NEW: @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: @llvm.strip.invariant.group
   auto *I = (Incomplete *)a;
   (void)I;
   // CHECK-NEW: @llvm.launder.invariant.group
   auto *a2 = (A *)I;
   (void)a2;
 
-  // CHECK-NEW: @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: @llvm.strip.invariant.group
   auto *E = (Empty *)a;
   (void)E;
 
@@ -531,7 +511,7 @@ void testCast8(Incomplete *I) {
 
 // CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast9
 void testCast9(PossiblyDerivingFromDynamicBase<Incomplete> *P) {
-  // CHECK-NEW: @llvm.strip.invariant.group
+  // CHECK-NEW-NOT: @llvm.strip.invariant.group
   auto *V = (void *)P;
 
   // CHECK-NEW-LABEL: ret void

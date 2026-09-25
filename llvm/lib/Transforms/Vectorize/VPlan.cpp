@@ -340,26 +340,6 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DL);
 }
 
-Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
-                                                       Value *WideValue,
-                                                       const VPLane &Lane) {
-  Value *ScalarInst = get(Def, Lane);
-  Value *LaneExpr = Lane.getAsRuntimeExpr(Builder, VF);
-  if (auto *StructTy = dyn_cast<StructType>(WideValue->getType())) {
-    // We must handle each element of a vectorized struct type.
-    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; I++) {
-      Value *ScalarValue = Builder.CreateExtractValue(ScalarInst, I);
-      Value *VectorValue = Builder.CreateExtractValue(WideValue, I);
-      VectorValue =
-          Builder.CreateInsertElement(VectorValue, ScalarValue, LaneExpr);
-      WideValue = Builder.CreateInsertValue(WideValue, VectorValue, I);
-    }
-  } else {
-    WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
-  }
-  return WideValue;
-}
-
 void VPTransformState::fixupHeaderPhis() {
   for (VPBlockBase *VPB : vp_depth_first_shallow(Plan->getEntry())) {
     if (!VPBlockUtils::isHeader(VPB, VPDT))
@@ -443,19 +423,28 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
-      // Branches to VPIRBasicBlocks must have the same successors in VPlan as
-      // in the original IR, except when the predecessor is the entry block.
-      // This enables including SCEV and memory runtime check blocks in VPlan.
-      // TODO: Remove exception by modeling the terminator of entry block using
+      // Generated successors are redirected, as for the entry block and for
+      // blocks bypassing both vector loops during epilogue vectorization. Edges
+      // already present in the generated IR need no update; this happens during
+      // epilogue vectorization, where the plan models blocks generated for the
+      // main vector loop.
+      // TODO: Remove the exception by modeling those terminators using
       // BranchOnCond.
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       auto *TermBr = cast<CondBrInst>(PredBBTerminator);
-      assert((!TermBr->getSuccessor(idx) ||
-              (isa<VPIRBasicBlock>(this) &&
-               (TermBr->getSuccessor(idx) == NewBB ||
-                PredVPBlock == getPlan()->getEntry()))) &&
-             "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, NewBB);
+      if (TermBr->getSuccessor(0) != NewBB &&
+          TermBr->getSuccessor(1) != NewBB) {
+        unsigned Idx = PredVPSuccessors.front() == this ? 0 : 1;
+        BasicBlock *ReplacedSucc = TermBr->getSuccessor(Idx);
+        assert(
+            (!ReplacedSucc || isa<VPIRBasicBlock>(PredVPBB)) &&
+            "only VPIRBasicBlock predecessors may have an existing successor "
+            "redirected");
+        if (ReplacedSucc)
+          ReplacedSucc->removePredecessor(PredBB, /*KeepOneInputPHIs=*/true);
+        TermBr->setSuccessor(Idx, NewBB);
+        if (ReplacedSucc)
+          CFG.DTU.applyUpdates({{DominatorTree::Delete, PredBB, ReplacedSucc}});
+      }
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
@@ -1052,16 +1041,21 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
   // Find the vector loop region by following the last successor of each block,
-  // starting from the plan's entry. The vector code path is always the last
-  // successor of the entry (and of the min-iters bypass block, if present), and
-  // every block on the path to the region has a single predecessor. Stop at the
-  // first block with multiple predecessors: in a plain CFG that is the loop
-  // header (no region exists yet), and in a rolled CFG it is the middle block
-  // following the region.
-  for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
-       B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
+  // starting from the plan's entry; the vector code path is always the last
+  // successor. Every block on the path has a single predecessor, except the
+  // vector preheader, which is also entered from the block bypassing the main
+  // vector loop when vectorizing the epilogue. Stop at any other block with
+  // multiple predecessors: in a plain CFG that is the loop header (no region
+  // exists yet), in a region based CFG the scalar preheader.
+  for (VPBlockBase *B = Entry; B;) {
     if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
+      return R->isReplicator() || R->getNumPredecessors() != 1 ? nullptr : R;
+    VPBlockBase *Succ =
+        B->hasSuccessors() ? B->getSuccessors().back() : nullptr;
+    if (B->getNumPredecessors() > 1 && !isa_and_present<VPRegionBlock>(Succ))
+      return nullptr;
+    B = Succ;
+  }
   return nullptr;
 }
 
@@ -1588,27 +1582,28 @@ void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
       assignName(Def);
 }
 
+ModuleSlotTracker &VPSlotTracker::getOrCreateMST() {
+  // F is null for unit tests with incomplete IR.
+  if (!MST) {
+    MST = std::make_unique<ModuleSlotTracker>(getModule());
+    if (F)
+      MST->incorporateFunction(*F);
+  }
+  return *MST;
+}
+
 std::string VPSlotTracker::getName(const Value *V) {
   std::string Name;
   raw_string_ostream S(Name);
-  if (V->hasName() || !isa<Instruction>(V)) {
+  // If V isn't an instruction in a basic block or named, it can be printed
+  // directly without ModuleSlotTracker.
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->hasName() || !I->getParent()) {
     V->printAsOperand(S, false);
     return Name;
   }
 
-  if (!MST) {
-    // Lazily create the ModuleSlotTracker when we first hit an unnamed
-    // instruction.
-    auto *I = cast<Instruction>(V);
-    // This check is required to support unit tests with incomplete IR.
-    if (I->getParent()) {
-      MST = std::make_unique<ModuleSlotTracker>(I->getModule());
-      MST->incorporateFunction(*I->getFunction());
-    } else {
-      MST = std::make_unique<ModuleSlotTracker>(nullptr);
-    }
-  }
-  V->printAsOperand(S, false, *MST);
+  V->printAsOperand(S, false, getOrCreateMST());
   return Name;
 }
 
@@ -1938,17 +1933,15 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       for (const VPBasicBlock *VPBB :
            VPBlockUtils::blocksOnly<const VPBasicBlock>(
                vp_depth_first_shallow(VPRB->getEntry()))) {
-        for (const VPRecipeBase &Recipe : *VPBB) {
-          auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
-          if (!RepR)
-            continue;
-          if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
+        for (const VPReplicateRecipe &RepR :
+             make_isa_range<VPReplicateRecipe>(*VPBB)) {
+          if (!isa<StoreInst>(RepR.getUnderlyingInstr()))
             continue;
           // Check if scatter is legal for this store. If so, don't count it.
-          Type *Ty = RepR->getOperand(0)->getScalarType();
+          Type *Ty = RepR.getOperand(0)->getScalarType();
           auto *VTy = VectorType::get(Ty, VF);
           const Align Alignment =
-              getLoadStoreAlignment(RepR->getUnderlyingInstr());
+              getLoadStoreAlignment(RepR.getUnderlyingInstr());
           if (!TTI.isLegalMaskedScatter(VTy, Alignment))
             ++(*NumPredStores);
         }
@@ -1966,13 +1959,9 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                       ID);
 }
 
-uint64_t VPCostContext::getReplicateRegionCostDivisor(
-    const VPRegionBlock *Region) const {
-  if (CostKind == TTI::TCK_CodeSize)
-    return 1;
-  std::optional<VPExecutionFrequency> Freq =
-      Region->getEntryBranchOnMask()->getExecutionFrequency();
-  if (!Freq)
+uint64_t
+VPCostContext::getCostDivisor(std::optional<VPExecutionFrequency> Freq) const {
+  if (CostKind == TTI::TCK_CodeSize || !Freq)
     return 1;
   // A recorded frequency is neither zero nor always-executing, so the
   // probability is non-zero and the division below is safe.

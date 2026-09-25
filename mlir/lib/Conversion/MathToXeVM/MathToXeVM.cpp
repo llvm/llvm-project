@@ -281,12 +281,14 @@ void ConvertMathToXeVMPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
 
-  // Native OCL patterns should take precedence for `fast` ops even when
-  // convertToOCL is set.
-  populateMathToXeVMConversionPatterns(patterns, convertArith,
-                                       convertToOCL + 1);
+  // The native (`afn`) patterns must outrank the precise OCL patterns: an op
+  // marked `afn` gets the native intrinsic, and every other op falls through to
+  // the precise OCL intrinsic.
+  constexpr unsigned oclBenefit = 1;
+  populateMathToXeVMConversionPatterns(patterns, convertArith, oclBenefit + 1);
   if (convertToOCL) {
-    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns, 1);
+    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns,
+                                                    oclBenefit);
     target
         .addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::LogOp,
                       LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();

@@ -119,3 +119,20 @@ void use_empty_derived2() {
 // OGCG: define{{.*}} void @_Z18use_empty_derived2v
 // OGCG:   alloca %struct.EmptyDerived2
 // OGCG:   ret void
+
+// Makes sure these are the same 
+template <class T> struct Template {
+  int m;
+};
+extern template struct Template<char>;
+template struct Template<char>;
+void takesTemplate(int Template<char>::*);
+void usesTemplate() { takesTemplate(&Template<char>::m); }
+// CIR: cir.func{{.*}} @_Z12usesTemplatev
+// CIR: cir.call @_Z13takesTemplateM8TemplateIcEi(
+
+// LLVM: define dso_local void @_Z12usesTemplatev
+// LLVM: call void @_Z13takesTemplateM8TemplateIcEi(
+
+// OGCG: define dso_local void @_Z12usesTemplatev
+// OGCG: call void @_Z13takesTemplateM8TemplateIcEi(

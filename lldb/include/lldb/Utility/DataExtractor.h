@@ -16,6 +16,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -23,6 +24,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 
 namespace lldb_private {
 class Log;
@@ -855,19 +857,21 @@ public:
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
-  /// Peek at a C string at \a offset.
+  /// Peek at a NUL terminated C string at \a offset.
   ///
-  /// Peeks at a string in the contained data. No verification is done to make
-  /// sure the entire string lies within the bounds of this object's data,
-  /// only \a offset is verified to be a valid offset.
+  /// The terminator must lie within the bounds of this object's data, so the
+  /// returned string never extends past the end of the data. Its data() is a
+  /// valid C string pointer, and its size() is the length the caller would
+  /// otherwise have to compute with strlen.
   ///
   /// \param[in] offset
   ///     An offset into the data.
   ///
   /// \return
-  ///     A non-nullptr C string pointer if \a offset is a valid offset,
-  ///     nullptr otherwise.
-  const char *PeekCStr(lldb::offset_t offset) const;
+  ///     The string at \a offset, or std::nullopt if \a offset is not a valid
+  ///     offset or the string is not terminated within the data. An empty
+  ///     string and a missing one are distinct.
+  std::optional<llvm::StringRef> PeekCStr(lldb::offset_t offset) const;
 
   /// Peek at a bytes at \a offset.
   ///

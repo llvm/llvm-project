@@ -419,6 +419,7 @@ private:
   bool HasRequires(llvm::omp::Clause req);
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
+  void CheckCloseModifierOnMapMembers();
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;

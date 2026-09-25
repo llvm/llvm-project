@@ -172,6 +172,9 @@ protected:
 /// Creates an Itanium-family ABI.
 std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm);
 
+/// Creates a Microsoft-family ABI.
+std::unique_ptr<CIRCXXABI> createMicrosoftCXXABI(LowerModule &lm);
+
 } // namespace cir
 
 #endif // CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRCXXABI_H

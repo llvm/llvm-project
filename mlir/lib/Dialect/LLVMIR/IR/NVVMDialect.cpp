@@ -4267,13 +4267,19 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  // We have the most basic mbarrier.arrive_drop supported on sm_80.
+  // It supports: Space=cta, scope=cta, No relaxed, No explicit count.
+  // So, only for this combination use the legacy intrinsic.
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  if (!hasCount &&
+      (id == llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cta))
+    return {llvm::Intrinsic::nvvm_mbarrier_arrive_drop_shared, {mbar}};
+
   // When count is not explicitly specified, the default is 1.
   llvm::LLVMContext &ctx = mt.getLLVMContext();
-  bool hasCount = static_cast<bool>(thisOp.getCount());
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
-
   return {id, {mbar, count}};
 }
 
@@ -4573,6 +4579,9 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
     args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask)
                                     : i16Unused);
+  } else {
+    args.push_back(builder.getInt32(0)); // ignore_bytes_left
+    args.push_back(builder.getInt32(0)); // ignore_bytes_right
   }
 
   // Cache hint, if available.
@@ -4581,10 +4590,17 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *i64Unused = llvm::ConstantInt::get(builder.getInt64Ty(), 0);
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
 
-  // Flag arguments for multicast and cachehint.
-  if (!isSharedCTA)
-    args.push_back(builder.getInt1(hasMulticastMask));
-  args.push_back(builder.getInt1(hasCacheHint));
+  // Flag arguments for multicast/ignore_oob and cachehint.
+  if (isSharedCTA) {
+    args.push_back(builder.getInt1(hasCacheHint)); // flag_ch
+    args.push_back(builder.getInt1(false));        // flag_oob
+  } else {
+    args.push_back(builder.getInt1(hasMulticastMask)); // flag_mc
+    args.push_back(builder.getInt1(hasCacheHint));     // flag_ch
+  }
+
+  // flag_valid_pattern = disabled.
+  args.push_back(builder.getInt32(0));
 
   llvm::Intrinsic::ID id =
       isSharedCTA
@@ -4673,8 +4689,8 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *cg =
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
 
-  // validate_pattern = disabled
-  llvm::Value *validatePattern = builder.getInt32(0);
+  // flag_valid_pattern = disabled
+  llvm::Value *flagValidPattern = builder.getInt32(0);
 
   if (!isCTAOnly) {
     // For shared::cluster, all the arguments that we build are applicable.
@@ -4683,12 +4699,12 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt1(hasMC));
     args.push_back(builder.getInt1(hasCacheHint));
     args.push_back(cg);
-    args.push_back(validatePattern);
+    args.push_back(flagValidPattern);
   } else {
     // For shared::cta, only cache-hint is applicable.
     args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
     args.push_back(builder.getInt1(hasCacheHint));
-    args.push_back(validatePattern);
+    args.push_back(flagValidPattern);
   }
 
   constexpr size_t numDims = 5;  // 1D to 5D

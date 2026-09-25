@@ -62,7 +62,8 @@ private:
   };
 
 public:
-  DynamicAllocator() = default;
+  DynamicAllocator(llvm::BumpPtrAllocator &DescAlloc)
+      : DescAllocator(DescAlloc) {}
   DynamicAllocator(DynamicAllocator &) = delete;
   DynamicAllocator(DynamicAllocator &&) = delete;
   ~DynamicAllocator();
@@ -105,8 +106,7 @@ private:
   // to them.
   llvm::SmallVector<Allocation> DeadAllocations;
 
-  using PoolAllocTy = llvm::BumpPtrAllocator;
-  PoolAllocTy DescAllocator;
+  llvm::BumpPtrAllocator &DescAllocator;
 
   /// Allocates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {

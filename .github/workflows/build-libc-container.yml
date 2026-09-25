@@ -36,7 +36,7 @@ jobs:
       - name: Build Container
         uses: ./.github/actions/build-container
         with:
-          container-name: libc-ubuntu-24.04
+          container-name: libc-ubuntu-26.04
           dockerfile: .github/workflows/containers/libc/Dockerfile
           target: ''
           test-command: ${{ matrix.test-command }}

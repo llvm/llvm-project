@@ -594,6 +594,11 @@ CIRGenFunction::emitOMPInterchangeDirective(const OMPInterchangeDirective &s) {
   return mlir::failure();
 }
 mlir::LogicalResult
+CIRGenFunction::emitOMPFlattenDirective(const OMPFlattenDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPFlattenDirective");
+  return mlir::failure();
+}
+mlir::LogicalResult
 CIRGenFunction::emitOMPAssumeDirective(const OMPAssumeDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPAssumeDirective");
   return mlir::failure();

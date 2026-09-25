@@ -15,11 +15,11 @@
 #include "hdr/types/gid_t.h"
 #include "hdr/types/struct_passwd.h"
 #include "hdr/types/uid_t.h"
-#include "pwd_test_utils.h"
 #include "src/__support/libc_errno.h"
 #include "src/pwd/getpwuid.h"
 #include "src/pwd/pwd_utils.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/pwd/pwd_test_utils.h"
 
 using LlvmLibcGetpwuidTest = LlvmLibcPwdTest;
 
@@ -89,29 +89,38 @@ TEST_F(LlvmLibcGetpwuidTest, BlankLines) {
 }
 
 TEST_F(LlvmLibcGetpwuidTest, FileOpenFailure) {
-  LIBC_NAMESPACE::pwd::TESTONLY_set_passwd_path(
-      "/nonexistent_directory/nonexistent_file");
+  auto missing_path =
+      libc_make_test_file_path("nonexistent_dir/getpwuid_missing.test");
+  LIBC_NAMESPACE::pwd::TESTONLY_set_passwd_path(missing_path);
 
   struct passwd *pwd = LIBC_NAMESPACE::getpwuid(0);
   ASSERT_EQ(pwd, nullptr);
   ASSERT_ERRNO_EQ(ENOENT);
 }
 
-TEST_F(LlvmLibcGetpwuidTest, BufferTooSmall) {
-  // A line exceeding line_buffer (1024 bytes) triggers ERANGE.
-  char content[1100];
+TEST_F(LlvmLibcGetpwuidTest, LongLineGrowsBuffer) {
+  // A multi-kilobyte record requires dynamic growth of the lookup buffer to
+  // return the entry in full.
+  constexpr size_t GECOS_LENGTH = 3000;
+  constexpr size_t CONTENT_BUFFER_SIZE = GECOS_LENGTH + 128;
+  char content[CONTENT_BUFFER_SIZE];
   LIBC_NAMESPACE::internal::strlcpy(content,
                                     "longuser:x:1000:1000:", sizeof(content));
-  size_t cur = LIBC_NAMESPACE::internal::string_length(content);
-  for (; cur < 1050; ++cur)
-    content[cur] = 'a';
+  size_t prefix_len = LIBC_NAMESPACE::internal::string_length(content);
+  size_t cur = prefix_len;
+  for (size_t i = 0; i < GECOS_LENGTH; ++i)
+    content[cur++] = 'a';
   LIBC_NAMESPACE::internal::strlcpy(content + cur, ":/home/longuser:/bin/sh\n",
                                     sizeof(content) - cur);
 
-  ScopedPasswdFile test_file(libc_make_test_file_path("getpwuid_toosmall.test"),
+  ScopedPasswdFile test_file(libc_make_test_file_path("getpwuid_longline.test"),
                              content);
 
   struct passwd *pwd = LIBC_NAMESPACE::getpwuid(1000);
-  ASSERT_EQ(pwd, nullptr);
-  ASSERT_ERRNO_EQ(ERANGE);
+  ASSERT_NE(pwd, nullptr);
+  ASSERT_STREQ(pwd->pw_name, "longuser");
+  ASSERT_STREQ(pwd->pw_dir, "/home/longuser");
+  ASSERT_STREQ(pwd->pw_shell, "/bin/sh");
+  ASSERT_EQ(LIBC_NAMESPACE::internal::string_length(pwd->pw_gecos),
+            GECOS_LENGTH);
 }

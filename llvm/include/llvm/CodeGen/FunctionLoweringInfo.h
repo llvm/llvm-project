@@ -25,6 +25,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
 #include <utility>
@@ -186,6 +187,9 @@ public:
   /// selector registers are copied into these virtual registers by
   /// SelectionDAGISel::PrepareEHLandingPad().
   Register ExceptionPointerVirtReg, ExceptionSelectorVirtReg;
+
+  /// The exception model in effect, resolved once per function.
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
 
   /// The current call site index being processed, if any. 0 if none.
   unsigned CurCallSite = 0;

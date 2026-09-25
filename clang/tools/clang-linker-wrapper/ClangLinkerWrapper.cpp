@@ -174,24 +174,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "LinkerWrapperOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LinkerWrapperOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "LinkerWrapperOpts.inc"
-#undef OPTION
-};
-
-class WrapperOptTable : public opt::GenericOptTable {
+class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -706,9 +694,6 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
       T->createTargetMachine(M.getTargetTriple(), CPU, Features, Options,
                              Reloc::PIC_, M.getCodeModel()));
 
-  if (M.getDataLayout().isDefault())
-    M.setDataLayout(TM->createDataLayout());
-
   int FD = -1;
   auto TempFileOrErr = createOutputFile(
       ExecutableName + "." + getOffloadKindName(Kind) + ".image.wrapper", "o");
@@ -809,8 +794,10 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   LLVMContext Context;
   Module M("offload.wrapper.module", Context);
-  M.setTargetTriple(Triple(
-      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple())));
+  Triple TheTriple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+  M.setTargetTriple(TheTriple);
+  M.setDataLayout(TheTriple.computeDataLayout());
 
   switch (Kind) {
   case OFK_OpenMP:

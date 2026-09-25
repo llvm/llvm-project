@@ -191,7 +191,11 @@ bool WebAssemblyPostLegalizerCombinerLegacy::runOnMachineFunction(
 PreservedAnalyses WebAssemblyPostLegalizerCombinerPass::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
   bool Changed = runCombinerOnMachineFunction(
-      MF, [&]() { return MF.getFunction().hasOptNone(); },
+      MF,
+      [&]() {
+        return MF.getFunction().hasOptNone() ||
+               shouldSkipOptimizationForOptBisect(MF.getFunction());
+      },
       [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
       [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); },
       [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); });

@@ -4283,3 +4283,41 @@ void test_cyclic_cfg(int n) {
   }         // expected-note {{local variable 'a' is destroyed here}}
   v.use();  // expected-note {{later used here}}
 }
+
+namespace TakeOwnershipTests {
+std::unique_ptr<int> takeOwnership(int* i) { return std::unique_ptr<int>(i); }
+
+void doubleFree() {
+    std::unique_ptr<int> up;
+    {
+        int a = 42;
+        // No use-after-scope warning here.
+        // This is a double-free due to multiple ownership which is currently not supported.
+        up = takeOwnership(&a);
+    }
+    (void)up.get();
+}
+
+void ok() {
+    std::unique_ptr<int> up;
+    {
+        int* a = new int(42);
+        up = takeOwnership(a); // Ok.
+    }
+    (void)up.get();
+}
+
+void take(std::unique_ptr<int> o);
+
+void foo() {
+    int* p;
+    std::unique_ptr<int> up;
+    {
+        std::unique_ptr<int> o = std::unique_ptr<int>(new int(42));
+        p = o.get();        // expected-warning {{local variable 'o' may not live long enough}} \
+                            // expected-note {{result of call to 'get' aliases the storage of local variable 'o' because the implicit object parameter is inferred as lifetimebound}}
+        up = std::move(o);  // expected-note {{potentially moved here}}
+    }                       // expected-note {{local variable 'o' is destroyed here}}
+    (void)*p;               // expected-note {{later used here}}
+}
+} // namespace TakeOwnershipTests

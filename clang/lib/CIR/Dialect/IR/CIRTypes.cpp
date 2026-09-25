@@ -1487,14 +1487,6 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return 1;
 }
 
-std::optional<uint64_t> BitFieldType::getSoleDeclaredExtentInBits(
-    const mlir::DataLayout &dataLayout) const {
-  if (getFields().size() != 1)
-    return std::nullopt;
-  return dataLayout.getTypeSizeInBits(getFields().front().getDeclaredType())
-      .getFixedValue();
-}
-
 //===----------------------------------------------------------------------===//
 // VectorType Definitions
 //===----------------------------------------------------------------------===//
@@ -1631,6 +1623,8 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::sycl_global_host:
   case LangAS::sycl_local:
   case LangAS::sycl_private:
+  case LangAS::sycl_generic:
+  case LangAS::sycl_constant:
   case LangAS::ptr32_sptr:
   case LangAS::ptr32_uptr:
   case LangAS::ptr64:

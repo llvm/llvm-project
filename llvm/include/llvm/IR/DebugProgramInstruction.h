@@ -47,6 +47,7 @@
 #ifndef LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 #define LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
@@ -527,7 +528,7 @@ public:
   Metadata *getRawAddress() const {
     return isDbgAssign() ? DebugValues[1] : DebugValues[0];
   }
-  Metadata *getRawAssignID() const { return DebugValues[2]; }
+  Metadata *getRawAssignID() const { return DebugValues[AssignIDIdx]; }
   LLVM_ABI DIAssignID *getAssignID() const;
   DIExpression *getAddressExpression() const { return AddressExpression.get(); }
   MDNode *getRawAddressExpression() const {
@@ -568,10 +569,7 @@ public:
 /// Filter the DbgRecord range to DbgVariableRecord types only and downcast.
 static inline auto
 filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
-  return map_range(
-      make_filter_range(R,
-                        [](DbgRecord &E) { return isa<DbgVariableRecord>(E); }),
-      [](DbgRecord &E) { return std::ref(cast<DbgVariableRecord>(E)); });
+  return make_isa_range<DbgVariableRecord>(R);
 }
 
 /// Per-instruction record of debug-info. If an Instruction is the position of

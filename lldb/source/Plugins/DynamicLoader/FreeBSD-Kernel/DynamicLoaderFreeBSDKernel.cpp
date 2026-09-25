@@ -181,10 +181,14 @@ bool DynamicLoaderFreeBSDKernel::ReadELFHeader(Process *process,
 lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
     Process *process, lldb::addr_t addr, bool *read_error) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
+  bool local_read_error;
+
+  if (!read_error)
+    read_error = &local_read_error;
+  *read_error = false;
 
   if (addr == LLDB_INVALID_ADDRESS) {
-    if (read_error)
-      *read_error = true;
+    *read_error = true;
     return UUID();
   }
 

@@ -427,6 +427,7 @@ def hlsl_asdouble : HLSLTwoArgBuiltin<"asdouble", "__builtin_hlsl_asdouble"> {
 }];
   let ReturnType = VaryingShape<DoubleTy>;
   let VaryingTypes = [UIntTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -600,6 +601,7 @@ the screen-space x-coordinate.
 }];
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -649,6 +651,7 @@ the screen-space y-coordinate.
 }];
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1141,6 +1144,7 @@ This function uses the following formula: X * 2^Exp
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1264,6 +1268,7 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingMatDims = [];
+   let VaryingLongVector = 1;
 }
 
 // Returns the greater of X and Y.

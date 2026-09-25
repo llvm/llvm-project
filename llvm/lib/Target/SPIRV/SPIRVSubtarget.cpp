@@ -110,7 +110,12 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
-  GR = std::make_unique<SPIRVGlobalRegistry>(TM.createDataLayout());
+  // FIXME: The GlobalRegistry does not belong in the subtarget, see issue
+  // #223774. The DataLayout is a property of the module and in principle
+  // depends on program state. It just happens SPIRV currently doesn't use
+  // target-abi names.
+  GR = std::make_unique<SPIRVGlobalRegistry>(
+      DataLayout(TargetTriple.computeDataLayout()));
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);

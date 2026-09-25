@@ -247,8 +247,6 @@ public:
     // Remember information about positional options.
     if (O->getFormattingFlag() == cl::Positional)
       SC->PositionalOpts.push_back(O);
-    else if (O->getMiscFlags() & cl::Sink) // Remember sink options
-      SC->SinkOpts.push_back(O);
     else if (O->getNumOccurrencesFlag() == cl::ConsumeAfter) {
       if (SC->ConsumeAfterOpt) {
         O->error("Cannot specify more than one option with cl::ConsumeAfter!");
@@ -293,13 +291,6 @@ public:
            Opt != Sub.PositionalOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.PositionalOpts.erase(Opt);
-          break;
-        }
-      }
-    else if (O->getMiscFlags() & cl::Sink)
-      for (auto *Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
-        if (*Opt == O) {
-          Sub.SinkOpts.erase(Opt);
           break;
         }
       }
@@ -375,8 +366,7 @@ public:
            "SubCommand::getAll() should not be registered");
     for (auto &E : SubCommand::getAll().OptionsMap) {
       Option *O = E.second;
-      if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
-          O->hasArgStr())
+      if (O->isPositional() || O->isConsumeAfter() || O->hasArgStr())
         addOption(O, sub);
       else
         addLiteralOption(*O, sub, E.first);
@@ -439,13 +429,14 @@ static CommandLineParser &globalParser() {
 
 template <typename T, T TrueVal, T FalseVal>
 static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
+  // ProvideOption passes a null Arg for a bare -flag (treated as true) and an
+  // empty one for -flag= (treated as invalid).
+  if (!Arg.data() || Arg == "true" || Arg == "1") {
     Value = TrueVal;
     return false;
   }
 
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
+  if (Arg == "false" || Arg == "0") {
     Value = FalseVal;
     return false;
   }
@@ -464,7 +455,7 @@ extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
 Option::Option(NumOccurrencesFlag OccurrencesFlag, OptionHidden Hidden)
     : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
       HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
-      FullyInitialized(false), Position(0), AdditionalVals(0) {
+      FullyInitialized(false), Position(0) {
   Categories.push_back(&getGeneralCategory());
 }
 
@@ -532,7 +523,6 @@ void SubCommand::unregisterSubCommand() {
 
 void SubCommand::reset() {
   PositionalOpts.clear();
-  SinkOpts.clear();
   OptionsMap.clear();
 
   ConsumeAfterOpt = nullptr;
@@ -656,8 +646,7 @@ static Option *LookupNearestOption(StringRef Arg,
 /// CommaSeparateAndAddOccurrence - A wrapper around Handler->addOccurrence()
 /// that does special handling of cl::CommaSeparated options.
 static bool CommaSeparateAndAddOccurrence(Option *Handler, unsigned pos,
-                                          StringRef ArgName, StringRef Value,
-                                          bool MultiArg = false) {
+                                          StringRef ArgName, StringRef Value) {
   // Check to see if this option accepts a comma separated list of values.  If
   // it does, we have to split up the value into multiple values.
   if (Handler->getMiscFlags() & CommaSeparated) {
@@ -666,7 +655,7 @@ static bool CommaSeparateAndAddOccurrence(Option *Handler, unsigned pos,
 
     while (Pos != StringRef::npos) {
       // Process the portion before the comma.
-      if (Handler->addOccurrence(pos, ArgName, Val.substr(0, Pos), MultiArg))
+      if (Handler->addOccurrence(pos, ArgName, Val.substr(0, Pos)))
         return true;
       // Erase the portion before the comma, AND the comma.
       Val = Val.substr(Pos + 1);
@@ -677,7 +666,7 @@ static bool CommaSeparateAndAddOccurrence(Option *Handler, unsigned pos,
     Value = Val;
   }
 
-  return Handler->addOccurrence(pos, ArgName, Value, MultiArg);
+  return Handler->addOccurrence(pos, ArgName, Value);
 }
 
 /// ProvideOption - For Value, this differentiates between an empty value ("")
@@ -686,9 +675,6 @@ static bool CommaSeparateAndAddOccurrence(Option *Handler, unsigned pos,
 static inline bool ProvideOption(Option *Handler, StringRef ArgName,
                                  StringRef Value, int argc,
                                  const char *const *argv, int &i) {
-  // Is this a multi-argument option?
-  unsigned NumAdditionalVals = Handler->getNumAdditionalVals();
-
   // Enforce value requirements
   switch (Handler->getValueExpectedFlag()) {
   case ValueRequired:
@@ -703,10 +689,6 @@ static inline bool ProvideOption(Option *Handler, StringRef ArgName,
     }
     break;
   case ValueDisallowed:
-    if (NumAdditionalVals > 0)
-      return Handler->error("multi-valued option specified"
-                            " with ValueDisallowed modifier!");
-
     if (Value.data())
       return Handler->error("does not allow a value! '" + Twine(Value) +
                             "' specified.");
@@ -715,32 +697,7 @@ static inline bool ProvideOption(Option *Handler, StringRef ArgName,
     break;
   }
 
-  // If this isn't a multi-arg option, just run the handler.
-  if (NumAdditionalVals == 0)
-    return CommaSeparateAndAddOccurrence(Handler, i, ArgName, Value);
-
-  // If it is, run the handle several times.
-  bool MultiArg = false;
-
-  if (Value.data()) {
-    if (CommaSeparateAndAddOccurrence(Handler, i, ArgName, Value, MultiArg))
-      return true;
-    --NumAdditionalVals;
-    MultiArg = true;
-  }
-
-  while (NumAdditionalVals > 0) {
-    if (i + 1 >= argc)
-      return Handler->error("not enough values!");
-    assert(argv && "null check");
-    Value = StringRef(argv[++i]);
-
-    if (CommaSeparateAndAddOccurrence(Handler, i, ArgName, Value, MultiArg))
-      return true;
-    MultiArg = true;
-    --NumAdditionalVals;
-  }
-  return false;
+  return CommaSeparateAndAddOccurrence(Handler, i, ArgName, Value);
 }
 
 bool llvm::cl::ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
@@ -1525,8 +1482,6 @@ void CommandLineParser::ResetAllOptionOccurrences() {
       O->reset();
     for (Option *O : SC->PositionalOpts)
       O->reset();
-    for (Option *O : SC->SinkOpts)
-      O->reset();
     if (SC->ConsumeAfterOpt)
       SC->ConsumeAfterOpt->reset();
   }
@@ -1588,7 +1543,6 @@ bool CommandLineParser::ParseCommandLineOptions(
   assert(ChosenSubCommand);
   auto &ConsumeAfterOpt = ChosenSubCommand->ConsumeAfterOpt;
   auto &PositionalOpts = ChosenSubCommand->PositionalOpts;
-  auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
 
   for (auto *O: DefaultOptions) {
@@ -1725,17 +1679,11 @@ bool CommandLineParser::ParseCommandLineOptions(
 
       // Otherwise, look for the closest available option to report to the user
       // in the upcoming error.
-      if (!Handler && SinkOpts.empty())
+      if (!Handler)
         LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
     }
 
     if (!Handler) {
-      if (!SinkOpts.empty()) {
-        for (Option *SinkOpt : SinkOpts)
-          SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
-        continue;
-      }
-
       auto ReportUnknownArgument = [&](bool IsArg,
                                        StringRef NearestArgumentName) {
         *Errs << ProgramName << ": Unknown "
@@ -1907,11 +1855,8 @@ bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   return true;
 }
 
-bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
-                           bool MultiArg) {
-  if (!MultiArg)
-    NumOccurrences++; // Increment the number of times we have been seen
-
+bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value) {
+  ++NumOccurrences;
   return handleOccurrence(pos, ArgName, Value);
 }
 

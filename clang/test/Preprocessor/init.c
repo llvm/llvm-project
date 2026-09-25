@@ -1008,10 +1008,12 @@
 // AMDGPU:#define cl_khr_local_int32_base_atomics 1
 // AMDGPU:#define cl_khr_local_int32_extended_atomics 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-rtems-elf < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD %s
-// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-DEFAULT-CXX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-LDBL64 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-rtems-elf < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-LDBL64 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD -check-prefix SPARC-LDBL128 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-unknown-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix SPARC-LDBL128 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-sun-solaris < /dev/null | FileCheck -match-full-lines -check-prefix SPARC-LDBL128 %s
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT -check-prefix SPARC-LDBL64 -check-prefix SPARC-DEFAULT-CXX %s
 //
 // SPARC-NOT:#define _LP64
 // SPARC:#define __BIGGEST_ALIGNMENT__ 8
@@ -1122,19 +1124,29 @@
 // SPARC:#define __INT_LEAST8_MAX__ 127
 // SPARC:#define __INT_LEAST8_TYPE__ signed char
 // SPARC:#define __INT_MAX__ 2147483647
-// SPARC:#define __LDBL_DENORM_MIN__ 6.47517511943802511092443895822764655e-4966L
-// SPARC:#define __LDBL_DIG__ 33
-// SPARC:#define __LDBL_EPSILON__ 1.92592994438723585305597794258492732e-34L
+// SPARC-LDBL64:#define __LDBL_DENORM_MIN__ 4.9406564584124654e-324L
+// SPARC-LDBL128:#define __LDBL_DENORM_MIN__ 6.47517511943802511092443895822764655e-4966L
+// SPARC-LDBL64:#define __LDBL_DIG__ 15
+// SPARC-LDBL128:#define __LDBL_DIG__ 33
+// SPARC-LDBL64:#define __LDBL_EPSILON__ 2.2204460492503131e-16L
+// SPARC-LDBL128:#define __LDBL_EPSILON__ 1.92592994438723585305597794258492732e-34L
 // SPARC:#define __LDBL_HAS_DENORM__ 1
 // SPARC:#define __LDBL_HAS_INFINITY__ 1
 // SPARC:#define __LDBL_HAS_QUIET_NAN__ 1
-// SPARC:#define __LDBL_MANT_DIG__ 113
-// SPARC:#define __LDBL_MAX_10_EXP__ 4932
-// SPARC:#define __LDBL_MAX_EXP__ 16384
-// SPARC:#define __LDBL_MAX__ 1.18973149535723176508575932662800702e+4932L
-// SPARC:#define __LDBL_MIN_10_EXP__ (-4931)
-// SPARC:#define __LDBL_MIN_EXP__ (-16381)
-// SPARC:#define __LDBL_MIN__ 3.36210314311209350626267781732175260e-4932L
+// SPARC-LDBL64:#define __LDBL_MANT_DIG__ 53
+// SPARC-LDBL128:#define __LDBL_MANT_DIG__ 113
+// SPARC-LDBL64:#define __LDBL_MAX_10_EXP__ 308
+// SPARC-LDBL128:#define __LDBL_MAX_10_EXP__ 4932
+// SPARC-LDBL64:#define __LDBL_MAX_EXP__ 1024
+// SPARC-LDBL128:#define __LDBL_MAX_EXP__ 16384
+// SPARC-LDBL64:#define __LDBL_MAX__ 1.7976931348623157e+308L
+// SPARC-LDBL128:#define __LDBL_MAX__ 1.18973149535723176508575932662800702e+4932L
+// SPARC-LDBL64:#define __LDBL_MIN_10_EXP__ (-307)
+// SPARC-LDBL128:#define __LDBL_MIN_10_EXP__ (-4931)
+// SPARC-LDBL64:#define __LDBL_MIN_EXP__ (-1021)
+// SPARC-LDBL128:#define __LDBL_MIN_EXP__ (-16381)
+// SPARC-LDBL64:#define __LDBL_MIN__ 2.2250738585072014e-308L
+// SPARC-LDBL128:#define __LDBL_MIN__ 3.36210314311209350626267781732175260e-4932L
 // SPARC:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // SPARC:#define __LONG_MAX__ 2147483647L
 // SPARC-NOT:#define __LP64__
@@ -1150,7 +1162,8 @@
 // SPARC:#define __SIZEOF_DOUBLE__ 8
 // SPARC:#define __SIZEOF_FLOAT__ 4
 // SPARC:#define __SIZEOF_INT__ 4
-// SPARC:#define __SIZEOF_LONG_DOUBLE__ 16
+// SPARC-LDBL64:#define __SIZEOF_LONG_DOUBLE__ 8
+// SPARC-LDBL128:#define __SIZEOF_LONG_DOUBLE__ 16
 // SPARC:#define __SIZEOF_LONG_LONG__ 8
 // SPARC:#define __SIZEOF_LONG__ 4
 // SPARC:#define __SIZEOF_POINTER__ 4

@@ -2428,6 +2428,25 @@ public:
 
   /// @}
 
+  //===--------------------------------------------------------------------===//
+  /// \name Speculative load lowering.
+  /// @{
+
+  /// Emit code to check if a speculative load of the given size from Ptr is
+  /// safe. Returns a Value* representing the check result (i1), or nullptr
+  /// to use the default lowering (which returns false). Targets can override
+  /// to provide their own safety check (e.g., alignment-based page boundary
+  /// check).
+  /// \param Builder IRBuilder positioned at the intrinsic call site
+  /// \param Ptr the pointer operand
+  /// \param Size the size in bytes (constant or runtime value for scalable)
+  virtual Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                          Value *Size) const {
+    return nullptr;
+  }
+
+  /// @}
+
   /// Inserts in the IR a target-specific intrinsic specifying a fence.
   /// It is called by AtomicExpandPass before expanding an
   ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
@@ -5994,6 +6013,9 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  // Expand ISD::MULH[SU]. Can expand to MUL_LOHI or wide MUL if available.
+  SDValue expandMULH(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
   /// non-null they will be included in the multiplication. The expansion works

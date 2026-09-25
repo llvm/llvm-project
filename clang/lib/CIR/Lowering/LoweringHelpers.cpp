@@ -124,7 +124,7 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
 template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(
+bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
     int64_t currentIndex) {
@@ -136,7 +136,7 @@ void convertToDenseElementsAttrImpl(
       }
       // Remaining slots are trailing zeros; values was zero-initialized.
       currentIndex += attr.getTrailingZerosNum();
-      return;
+      return true;
     }
   }
 
@@ -171,12 +171,18 @@ void convertToDenseElementsAttrImpl(
       continue;
     }
 
+    // A global view can be the result of pointer conversions, so we can't
+    // represent them as an APInt/APFloat.  So give up if we see one.
+    if (auto global = mlir::dyn_cast<cir::GlobalViewAttr>(eltAttr))
+      return false;
+
     llvm_unreachable("unknown element in ConstArrayAttr");
   }
+  return true;
 }
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr convertToDenseElementsAttr(
+std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
     cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
     mlir::Type elementType, mlir::Type convertedElementType) {
   unsigned vectorSize = 1;
@@ -184,8 +190,12 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
     vectorSize *= dim;
   auto values = llvm::SmallVector<StorageTy, 8>(
       vectorSize, getZeroInitFromType<StorageTy>(elementType));
-  convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims, /*currentDim=*/0,
-                                         /*initialIndex=*/0);
+
+  if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
+                                              /*currentDim=*/0,
+                                              /*initialIndex=*/0))
+    return std::nullopt;
+
   return mlir::DenseElementsAttr::get(
       mlir::RankedTensorType::get(dims, convertedElementType),
       llvm::ArrayRef(values));

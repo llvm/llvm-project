@@ -204,8 +204,8 @@ def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
     Result Type must be a scalar or vector of floating-point type.
 
     Float Value must be a scalar or vector of floating-point type.  It must
-    have the same number of components as Result Type.  The component width
-    cannot equal the component width in Result Type.
+    have the same number of components as Result Type.  The component type
+    must not equal the component type in Result Type.
 
     Results are computed per component.
 

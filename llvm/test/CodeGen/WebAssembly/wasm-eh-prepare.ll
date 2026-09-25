@@ -2,7 +2,7 @@
 ; RUN: opt < %s -win-eh-prepare -demote-catchswitch-only -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
 ; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S | FileCheck %s
 ; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
-; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -stop-after=wasm-eh-prepare | FileCheck %s
+; RUN: llc < %s -exception-model=wasm -mattr=+exception-handling -stop-after=wasm-eh-prepare | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

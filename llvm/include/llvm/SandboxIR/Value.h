@@ -292,6 +292,20 @@ public:
   /// \Returns the LLVM IR name of the bottom-most LLVM value.
   StringRef getName() const { return Val->getName(); }
 
+  const Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false) const;
+
+  Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false);
+
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;

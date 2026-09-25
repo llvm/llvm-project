@@ -892,6 +892,10 @@ public:
     return cir::MaxOp::create(*this, loc, lhs, rhs);
   }
 
+  mlir::Value createMin(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::MinOp::create(*this, loc, lhs, rhs);
+  }
+
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
     cir::FenvAttr fenv;

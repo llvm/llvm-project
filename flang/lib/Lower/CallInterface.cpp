@@ -16,11 +16,11 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
@@ -706,10 +706,7 @@ setCUDAAttributes(mlir::func::FuncOp func,
     cuf::ProcAttribute proc = procAttr.getValue();
     if (proc != cuf::ProcAttribute::Host &&
         proc != cuf::ProcAttribute::HostDevice) {
-      fir::AllocationPolicy policy =
-          fir::getAllocationPolicy(func.getOperation());
-      policy.stackArrays = false;
-      fir::setAllocationPolicy(func.getOperation(), policy);
+      cuf::setDeviceAllocationPolicy(func.getOperation());
     }
   }
 

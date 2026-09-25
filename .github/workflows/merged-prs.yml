@@ -17,7 +17,7 @@ jobs:
     permissions:
       pull-requests: write
     container:
-      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:f4193631559b3a6ccd815280f80fd9211305a3f246e75aec84c6c8caea01d2a9"
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-26.04-github-automation:latest@sha256:a8499c90a5890da942693c3e6a28113c2b851037c5facbb102a271f690439472"
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       (github.event.pull_request.merged == true)

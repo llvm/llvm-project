@@ -185,7 +185,7 @@ private:
   bool isChecked() const noexcept { return ErrPtr & 0x1; }
 
   void setChecked(bool Checked) noexcept {
-    ErrPtr = (ErrPtr & ~uintptr_t(1)) | Checked;
+    ErrPtr = (ErrPtr & ~uintptr_t(1)) | (uintptr_t)Checked;
   }
 
   template <typename ErrT = ErrorInfoBase>

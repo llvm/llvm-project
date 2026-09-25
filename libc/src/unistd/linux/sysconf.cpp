@@ -123,8 +123,32 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
     return get_nprocessors_conf();
   case _SC_NPROCESSORS_ONLN:
     return get_nprocessors_onln();
+  case _SC_VERSION:
+    return _POSIX_VERSION;
   case _SC_THREADS:
     return _POSIX_THREADS;
+  case _SC_THREAD_ATTR_STACKADDR:
+    return _POSIX_THREAD_ATTR_STACKADDR;
+  case _SC_THREAD_ATTR_STACKSIZE:
+    return _POSIX_THREAD_ATTR_STACKSIZE;
+  case _SC_THREAD_CPUTIME:
+    return _POSIX_THREAD_CPUTIME;
+  case _SC_THREAD_PRIO_INHERIT:
+    return _POSIX_THREAD_PRIO_INHERIT;
+  case _SC_THREAD_PRIO_PROTECT:
+    return _POSIX_THREAD_PRIO_PROTECT;
+  case _SC_THREAD_PRIORITY_SCHEDULING:
+    return _POSIX_THREAD_PRIORITY_SCHEDULING;
+  case _SC_THREAD_PROCESS_SHARED:
+    return _POSIX_THREAD_PROCESS_SHARED;
+  case _SC_THREAD_ROBUST_PRIO_INHERIT:
+    return _POSIX_THREAD_ROBUST_PRIO_INHERIT;
+  case _SC_THREAD_ROBUST_PRIO_PROTECT:
+    return _POSIX_THREAD_ROBUST_PRIO_PROTECT;
+  case _SC_THREAD_SAFE_FUNCTIONS:
+    return _POSIX_THREAD_SAFE_FUNCTIONS;
+  case _SC_THREAD_SPORADIC_SERVER:
+    return _POSIX_THREAD_SPORADIC_SERVER;
   case _SC_GETGR_R_SIZE_MAX:
     // No recommended buffer size for getgrgid_r/getgrnam_r, as they work
     // with any user-supplied buffer.

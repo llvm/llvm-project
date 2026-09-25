@@ -24,12 +24,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 void init_tls(TLSDescriptor &tls_descriptor) {
-  if (app.tls.size == 0) {
-    tls_descriptor.size = 0;
-    tls_descriptor.tp = 0;
-    return;
-  }
-
   // aarch64 follows the variant 1 TLS layout:
   //
   // 1. First entry is the dynamic thread vector pointer

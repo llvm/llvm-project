@@ -79,11 +79,11 @@ far2:	bx lr
 //--- overlay.ld
 
 SECTIONS {
-  .text.01 0x1000 : { *(.text.00) }
+  .text.01 0x1000 : AT(0x1000) { *(.text.00) }
   OVERLAY 0x2000 : {
     .text.over.01   { *(.text.over.01) }
     .text.over.02   { *(.text.over.02) }
   }
   .text.02 0x3000 : { *(.text.02) }
-  .text.03 0x80000000 : { *(.text.far) }
+  .text.03 0x80000000 : AT(0x80000000) { *(.text.far) }
 }

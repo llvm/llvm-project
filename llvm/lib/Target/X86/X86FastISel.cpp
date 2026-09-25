@@ -924,8 +924,9 @@ redo_gep:
       uint64_t S = GTI.getSequentialElementStride(DL);
       for (;;) {
         if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
-          // Constant-offset addressing.
-          Disp += CI->getSExtValue() * S;
+          // Constant-offset addressing. The index may be wider than 64 bits;
+          // it is truncated to the pointer width like any other GEP index.
+          Disp += CI->getValue().sextOrTrunc(64).getSExtValue() * S;
           break;
         }
         if (canFoldAddIntoGEP(U, Op)) {

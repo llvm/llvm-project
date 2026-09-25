@@ -706,7 +706,7 @@ void test_loop_firstprivate_lastprivate() {
 
 void test_ordered() {
 #pragma omp target
-#pragma omp teams distribute parallel for simd ordered // expected-error {{unexpected OpenMP clause 'ordered' in directive '#pragma omp teams distribute parallel for simd'}}
+#pragma omp teams distribute parallel for simd ordered // OK
   for (int i = 0; i < 16; ++i)
     ;
 }

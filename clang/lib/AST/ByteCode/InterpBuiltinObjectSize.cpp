@@ -352,7 +352,7 @@ computeOpaqueSize(const ASTContext &ASTCtx, const Pointer &Ptr,
     return TypeSize.getQuantity();
 
   // Check if we need to add the flexible array member size.
-  const VarDecl *Base = dyn_cast<VarDecl>(OP.Base);
+  const VarDecl *Base = OP.getBaseDecl();
   if (!Base)
     return TypeSize.getQuantity();
 
@@ -390,7 +390,7 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
   if (Ptr.isOpaquePointer()) {
     bool UseClosestSurroundingVariable = (Kind == 1) || (Kind == 3);
     const OpaquePointer &OP = Ptr.asOpaquePointer();
-    InvalidBase = OP.Base->getType()->isPointerType();
+    InvalidBase = OP.Base.getType()->isPointerType();
     bool DetermineForCompleteObject = pointsToCompleteObject(ASTCtx, Ptr);
     bool WritingOffTheEnd = isUserWritingOffTheEnd(ASTCtx, OP);
 

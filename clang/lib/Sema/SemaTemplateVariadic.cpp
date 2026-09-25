@@ -453,7 +453,7 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
   if (sema::CapturingScopeInfo *CSI = getEnclosingLambdaOrBlock()) {
     for (auto &Pack : Unexpanded) {
       auto DeclaresThisPack = [&](NamedDecl *LocalPack) {
-        if (auto *TTPT = Pack.first.dyn_cast<const TemplateTypeParmType *>()) {
+        if (auto *TTPT = dyn_cast<const TemplateTypeParmType *>(Pack.first)) {
           auto *TTPD = dyn_cast<TemplateTypeParmDecl>(LocalPack);
           return TTPD && TTPD->getTypeForDecl() == TTPT;
         }

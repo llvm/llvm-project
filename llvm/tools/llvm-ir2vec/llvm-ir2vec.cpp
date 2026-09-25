@@ -214,7 +214,7 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
-    return Ctx.TM->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout();
   };
 
   Ctx.M = MIR->parseIRModule(SetDataLayout);

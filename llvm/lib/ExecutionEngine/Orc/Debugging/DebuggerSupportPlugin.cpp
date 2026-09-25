@@ -11,6 +11,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -328,7 +329,8 @@ namespace orc {
 Expected<std::unique_ptr<GDBJITDebugInfoRegistrationPlugin>>
 GDBJITDebugInfoRegistrationPlugin::Create(ExecutionSession &ES,
                                           JITDylib &BootstrapJD) {
-  auto RegisterActionName = ES.intern(rt::RegisterJITLoaderGDBAllocActionName);
+  auto RegisterActionName =
+      MangleAndInterner(ES)(rt::RegisterJITLoaderGDBAllocActionName);
 
   if (auto RegisterSym = ES.lookup({&BootstrapJD}, RegisterActionName))
     return std::make_unique<GDBJITDebugInfoRegistrationPlugin>(

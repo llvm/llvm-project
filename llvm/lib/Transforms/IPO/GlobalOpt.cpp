@@ -1843,11 +1843,7 @@ static void RemovePreallocated(Function *F) {
 
   // Cannot modify users() while iterating over it, so make a copy.
   SmallVector<User *, 4> PreallocatedCalls(F->users());
-  for (User *U : PreallocatedCalls) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB)
-      continue;
-
+  for (CallBase *CB : make_isa_range<CallBase>(PreallocatedCalls)) {
     assert(
         !CB->isMustTailCall() &&
         "Shouldn't call RemotePreallocated() on a musttail preallocated call");
