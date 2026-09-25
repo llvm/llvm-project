@@ -1172,9 +1172,7 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 /// Try to simplify logical and bitwise recipes in \p Def.
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   // Simplify (X && Y) | (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
+  // TODO: Remove now that we have smaller combines for this.
   VPValue *X, *Y;
   if (match(Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
@@ -1339,21 +1337,17 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (!Plan.isUnrolled())
     return nullptr;
 
-  // After unrolling, extract-lane may be used to extract values from multiple
-  // scalar sources. Only simplify when extracting from a single scalar source.
-  VPValue *LaneToExtract;
-  if (match(Def, m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(A)))) {
-    // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
-    if (vputils::isSingleScalar(A))
-      return A;
+  // Simplify extracts of the same single-scalar.
+  if (match(Def, m_VPInstruction<VPInstruction::ExtractLane>()) &&
+      all_equal(drop_begin(Def->operands())) &&
+      vputils::isSingleScalar(Def->getOperand(1)))
+    return Def->getOperand(1);
 
-    // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
-    // scalar canonical IV.
-    VPWidenIntOrFpInductionRecipe *WidenIV;
-    if (match(LaneToExtract, m_ZeroInt()) &&
-        match(A, m_CanonicalWidenIV(WidenIV)))
-      return WidenIV->getRegion()->getCanonicalIV();
-  }
+  // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
+  // scalar canonical IV.
+  VPWidenIntOrFpInductionRecipe *WidenIV;
+  if (match(Def, m_ExtractLane(m_ZeroInt(), m_CanonicalWidenIV(WidenIV))))
+    return WidenIV->getRegion()->getCanonicalIV();
 
   // Simplify unrolled VectorPointer without offset, or with zero offset, to
   // just the pointer operand.
@@ -1380,8 +1374,27 @@ static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
   return DefR ? DefR->getParent() == VPBB : isa<VPIRValue>(V);
 }
 
-/// Combine \p Def into a simpler recipe. May modify or create new recipes.
-static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
+namespace {
+/// Inserter for VPBuilderBase which appends all created VPSingleDefRecipes to a
+/// worklist, so they get combined as well.
+struct VPCombineInserter {
+  SmallVectorImpl<VPSingleDefRecipe *> &Worklist;
+
+  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                    VPBasicBlock::iterator It) {
+    VPBB->insert(R, It);
+    if (auto *Def = dyn_cast<VPSingleDefRecipe>(R))
+      Worklist.push_back(Def);
+  }
+};
+
+using VPCombineBuilder = VPBuilderBase<VPCombineInserter>;
+} // namespace
+
+/// Combine \p Def into a simpler recipe. May modify or create new recipes via
+/// \p Builder.
+static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
+                                        VPCombineBuilder &Builder) {
   if (auto *V = simplifyRecipe(Plan, Def)) {
     Def->replaceAllUsesWith(V);
     return Def;
@@ -1399,11 +1412,9 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
         RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
         RepR->getDebugLoc());
-    Unmasked->insertBefore(RepR);
+    Builder.insert(Unmasked);
     return Unmasked;
   }
-
-  VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
   // VPInstructions, as we would fail to create widen/replicate recpes from the
@@ -1720,18 +1731,19 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
 
   [[maybe_unused]] unsigned InitWorklistSize = Worklist.size();
 
+  VPCombineBuilder Builder({Worklist});
   while (!Worklist.empty()) {
     assert(Worklist.size() < InitWorklistSize * 2 &&
            "Worklist is growing large, possible cycle?");
     VPSingleDefRecipe *Def = Worklist.pop_back_val();
-    VPSingleDefRecipe *New = combineRecipe(Plan, Def);
+    Builder.setInsertPoint(Def);
+    VPSingleDefRecipe *New = combineRecipe(Plan, Def, Builder);
     if (!New)
       continue;
     if (New != Def) {
       // Replace the recipe with a new one.
       Def->replaceAllUsesWith(New);
       Def->eraseFromParent();
-      Worklist.push_back(New);
       // TODO: Append users to the worklist (might need a setvector)
     } else if (vputils::isDeadRecipe(*Def)) {
       // Recipe was modified - it may be dead now.
@@ -2427,12 +2439,12 @@ static void licm(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
-                                  LoopRegion->getExitingBasicBlock()))
-        continue;
       if (any_of(R.operands(), [](VPValue *Op) {
             return !Op->isDefinedOutsideLoopRegions();
           }))
+        continue;
+      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
+                                  LoopRegion->getExitingBasicBlock()))
         continue;
       R.moveBefore(*Preheader, Preheader->end());
     }
@@ -2448,9 +2460,10 @@ static void licm(VPlan &Plan) {
       LoopRegion->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
-                                  LoopRegion->getExitingBasicBlock(),
-                                  /*Sinking=*/true))
+      // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
+      // support recipes with multiple defined values (e.g., interleaved loads).
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def)
         continue;
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
@@ -2470,17 +2483,6 @@ static void licm(VPlan &Plan) {
           continue;
       }
 
-      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      assert((!R.mayWriteToMemory() ||
-              (RepR && RepR->getOpcode() == Instruction::Store &&
-               RepR->getOperand(1)->isDefinedOutsideLoopRegions())) &&
-             "The only recipes that may write to memory are expected to be "
-             "stores with invariant pointer-operand");
-
-      // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
-      // support recipes with multiple defined values (e.g., interleaved loads).
-      auto *Def = cast<VPSingleDefRecipe>(&R);
-
       // Cannot sink the recipe if the user is defined in a loop region or a
       // non-successor of the vector loop region. Cannot sink if user is a phi
       // either.
@@ -2498,6 +2500,18 @@ static void licm(VPlan &Plan) {
                    Parent->getSinglePredecessor() != LoopRegion;
           }))
         continue;
+
+      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
+                                  LoopRegion->getExitingBasicBlock(),
+                                  /*Sinking=*/true))
+        continue;
+
+      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      assert((!R.mayWriteToMemory() ||
+              (RepR && RepR->getOpcode() == Instruction::Store &&
+               RepR->getOperand(1)->isDefinedOutsideLoopRegions())) &&
+             "The only recipes that may write to memory are expected to be "
+             "stores with invariant pointer-operand");
 
       if (!SinkBB)
         SinkBB = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());

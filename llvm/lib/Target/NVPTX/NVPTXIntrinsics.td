@@ -6961,17 +6961,26 @@ let isConvergent = true in {
 // Bulk store instructions
 def st_bulk_imm : TImmLeaf<i64, [{ return Imm == 0; }]>;
 
-let Predicates = [SM100] in {
-  def INT_NVVM_ST_BULK_GENERIC :
-    BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
-              "st.bulk",
-              [(int_nvvm_st_bulk addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
-
-  def INT_NVVM_ST_BULK_SHARED_CTA:
-    BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
-              "st.bulk.shared::cta",
-              [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
+class StBulkInst<NVPTXAddressSpace AS, string InstSuffix,
+                 RegTyInfo Size, list<Predicate> Preds>
+      : BasicNVPTXInst<
+            (outs),
+            (ins ADDR:$dest_addr, Size.RC:$size, i64imm:$value),
+            "st.bulk" # InstSuffix,
+            [(IntrinsicInAS<int_nvvm_st_bulk, AS>
+                  addr:$dest_addr, Size.Ty:$size, st_bulk_imm:$value)]> {
+    let Predicates = Preds;
 }
+
+multiclass StBulkInsts<RegTyInfo Size, list<Predicate> Preds> {
+  def _GENERIC :
+      StBulkInst<AddrSpaceGeneric, "", Size, Preds>;
+  def _SHARED_CTA :
+      StBulkInst<AddrSpaceShared, ".shared::cta", Size, Preds>;
+}
+
+defm INT_NVVM_ST_BULK_I64 : StBulkInsts<I64RT, [SM100]>;
+defm INT_NVVM_ST_BULK_I32 : StBulkInsts<I32RT, [PTX90, SM100]>;
 
 //
 // Asynchronous store instructions

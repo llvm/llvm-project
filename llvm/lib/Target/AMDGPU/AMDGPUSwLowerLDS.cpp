@@ -158,7 +158,7 @@ struct AsanInstrumentInfo {
 };
 
 struct FunctionsAndLDSAccess {
-  DenseMap<Function *, KernelLDSParameters> KernelToLDSParametersMap;
+  MapVector<Function *, KernelLDSParameters> KernelToLDSParametersMap;
   SetVector<Function *> KernelsWithIndirectLDSAccess;
   SetVector<Function *> NonKernelsWithLDSArgument;
   SetVector<GlobalVariable *> AllNonKernelLDSAccess;

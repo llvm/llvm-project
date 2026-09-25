@@ -88,6 +88,7 @@ add_orc_rt_unittest(SupportTests
 # implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of portable
 # APIs stay in the shared list and reach the system through these.
 set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+  bedrock/SocketConnectorTest.cpp
   bedrock/SocketHandleTest.cpp
   bedrock/sys/posix/SocketTestUtils.cpp
   )
@@ -101,7 +102,7 @@ endif()
 
 if (APPLE)
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
-    bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    bedrock/sys/darwin/StandaloneMachOUnwindInfoRegistrarTest.cpp
     )
 else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)

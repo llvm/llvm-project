@@ -1557,13 +1557,13 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
 Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                        const DataLayout &DL,
-                                       const Instruction *CxtI,
+                                       const Instruction *CtxI,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
-  KnownBits Known = computeKnownBits(V, DL, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, AC, CtxI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
@@ -3019,6 +3019,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(LLVMContext::MD_callee_type,
                          MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
         }
+        break;
+      case LLVMContext::MD_callees:
+        // If K moves, it replaces J on J's path and must allow J's callees as
+        // well. If K does not move, its callees remain valid.
+        if (!AAOnly && DoesKMove)
+          K->setMetadata(Kind, MDNode::getMergedCalleesMetadata(KMD, JMD));
         break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
