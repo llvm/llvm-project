@@ -288,7 +288,7 @@ ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
     if (getModuleMap().canonicalizeModuleMapPath(CanonicalPath))
       return {};
 
-    auto Hash = llvm::xxh3_64bits(CanonicalPath.str());
+    auto Hash = llvm::xxh3_64bits(CanonicalPath);
 
     SmallString<128> HashStr;
     llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);

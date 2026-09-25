@@ -4,20 +4,22 @@
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed "s|DIR|%/t|g" %t/cdb0.json.template > %t/cdb0.json
-// RUN: sed "s|DIR|%/t|g" %t/cdb1.json.template > %t/cdb1.json
 // RUN: sed "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json
 // RUN: mkdir -p %t/foo
 // RUN: cp %t/Mod.h %t/foo/
 // RUN: cp %t/m.m %t/foo/
 
-// RUN: clang-scan-deps -compilation-database %t/cdb0.json -j 1 \
-// RUN:   -format experimental-full > %t/deps.json
+// RUN: clang-scan-deps -format experimental-full -- \
+// RUN:   %clang -I %t/dir -I %t/Dir -c %t/tu0.c -ivfsoverlay %t/overlay.json \
+// RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
+// RUN:   > %t/deps.json
 
 // RUN: echo 'DIFFERENT_PATH' >> %t/deps.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb1.json -j 1 \
-// RUN:   -format experimental-full >> %t/deps.json
+// RUN: clang-scan-deps -format experimental-full -- \
+// RUN:   %clang -I %t/dir -I %t/Dir -c %t/tu1.c -ivfsoverlay %t/overlay.json \
+// RUN:     -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
+// RUN:   >> %t/deps.json
 
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
@@ -99,24 +101,6 @@
   }
   ]
 }
-
-//--- cdb0.json.template
-[
-  {
-    "directory": "DIR",
-    "command": "clang -fsyntax-only -Idir -IDir DIR/tu0.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -ivfsoverlay overlay.json",
-    "file": "DIR/tu0.c"
-  }
-]
-
-//--- cdb1.json.template
-[
-  {
-    "directory": "DIR",
-    "command": "clang -fsyntax-only -Idir -IDir DIR/tu1.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -ivfsoverlay overlay.json",
-    "file": "DIR/tu1.c"
-  }
-]
 
 //--- m.m
 module Mod { header "Mod.h" }
