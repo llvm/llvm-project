@@ -1634,9 +1634,16 @@ constexpr unsigned BreakpointResolverAllResolversMask =
 
 /// Modes for evaluating breakpoint conditions.
 enum BreakpointConditionMode {
+  /// Use Data Inspection Language (DIL) to evaluate the condition.
   eBreakpointConditionModeDIL,
+  /// Use UserExpression to evaluate the condition.
   eBreakpointConditionModeExpr,
+  /// Use DIL to evaluate the condition, and if it fails,
+  /// fall back to UserExpression.
   eBreakpointConditionModeDWIM,
+  /// Use the mode specified by the `target.breakpoints-condition-mode` setting.
+  /// This value is only used as the default breakpoint condition behavior and
+  /// cannot be set explicitly in settings or breakpoint command options.
   eBreakpointConditionModeDefault
 };
 
