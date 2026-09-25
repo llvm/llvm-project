@@ -926,6 +926,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       log("Env {0}: {1}", EnvVar, *Val);
   }
 
+  RealThreadsafeFS TFS;
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
   Opts.EnableExperimentalModulesSupport = ExperimentalModulesSupport;
@@ -988,7 +989,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // external decls, since currently the index doesn't support C++20 modules.
   Opts.CodeComplete.ForceLoadPreamble = ExperimentalModulesSupport;
 
-  RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
   if (EnableConfig)
     ProviderStack = config::Provider::createDefaultProviders(TFS);
