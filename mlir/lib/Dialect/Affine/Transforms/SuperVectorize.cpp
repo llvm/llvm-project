@@ -659,12 +659,17 @@ static LogicalResult analyzeProfitability(ArrayRef<NestedMatch> matches,
                                           unsigned patternDepth,
                                           VectorizationStrategy *strategy) {
   for (auto m : matches) {
+    Operation *loop = m.getMatchedOperation();
+    // Skip loops nested in another match at this level (same vector dim).
+    if (llvm::any_of(matches, [loop](const NestedMatch &other) {
+          return other.getMatchedOperation()->isProperAncestor(loop);
+        }))
+      continue;
     if (failed(analyzeProfitability(m.getMatchedChildren(), depthInPattern + 1,
                                     patternDepth, strategy))) {
       return failure();
     }
-    vectorizeLoopIfProfitable(m.getMatchedOperation(), depthInPattern,
-                              patternDepth, strategy);
+    vectorizeLoopIfProfitable(loop, depthInPattern, patternDepth, strategy);
   }
   return success();
 }
@@ -1265,6 +1270,13 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
+  // One map result per enclosing vectorized loop; must match the vector rank.
+  if (permutationMap.getNumResults() != vectorType.getRank()) {
+    LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap rank does not "
+                         "match the vector rank\n");
+    return nullptr;
+  }
+
   Value transferVal = createReadOrMaskedRead(
       state.builder, loadOp.getLoc(), loadOp.getMemRef(), vectorType,
       /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/true, indices,
@@ -1313,6 +1325,14 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
     return nullptr;
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
+
+  // Same rank check as for loads.
+  if (permutationMap.getNumResults() !=
+      cast<VectorType>(vectorValue.getType()).getRank()) {
+    LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap rank does not "
+                         "match the vector rank\n");
+    return nullptr;
+  }
 
   // A transfer_write with a broadcast dimension (constant expr in the
   // permutation map) is invalid. Bail out to avoid producing invalid IR.
