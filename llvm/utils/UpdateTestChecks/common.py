@@ -647,6 +647,8 @@ SEPARATOR = "."
 METADATA_NODES_RE = re.compile(r"^\s*!(\d+)\s*=\s*!\{(.*)\}", re.M)
 TBAA_TAGS_RE = re.compile(r"!tbaa\s*!([0-9]+)")
 
+MULTIPLE_BRACES_RE = re.compile(r"{{+|\[\[+")
+
 
 def error(msg, test_file=None):
     if test_file:
@@ -1004,6 +1006,14 @@ class FunctionTestBuilder:
         """
         Returns the number of functions processed from the output by the regex.
         """
+
+        def escape_braces(match_obj):
+            return "{{" + re.escape(match_obj.group(0)) + "}}"
+
+        # Escape multiple {{ or [[ as {{}} and [[]] have special meaning in
+        # FileCheck.
+        raw_tool_output = MULTIPLE_BRACES_RE.sub(escape_braces, raw_tool_output)
+
         build_global_values_dictionary(
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
@@ -1920,18 +1930,6 @@ def generalize_check_lines(
         regexp = ginfo.get_unstable_globals_regexp()
     else:
         regexp = ginfo.get_regexp()
-
-    multiple_braces_re = re.compile(r"{{+|\[\[+")
-
-    def escape_braces(match_obj):
-        return "{{" + re.escape(match_obj.group(0)) + "}}"
-
-    if not ginfo.is_asm():
-        for i, _ in enumerate(lines):
-            # Escape multiple {{ or [[ as {{}} and [[]] have special meaning in
-            # FileCheck.
-            scrubbed_line = multiple_braces_re.sub(escape_braces, lines[i])
-            lines[i] = scrubbed_line
 
     if ginfo.is_ir():
         for i, line in enumerate(lines):
