@@ -109,6 +109,8 @@ public:
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   bool needsFrameIndexResolution(const MachineFunction &MF) const override;
 
+  unsigned getWin64MSVCDynAllocaCallFrameSize(const MachineFunction &MF) const;
+
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
