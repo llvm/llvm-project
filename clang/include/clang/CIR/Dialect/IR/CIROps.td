@@ -5174,7 +5174,8 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
 //===----------------------------------------------------------------------===//
 
 def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
-  Pure, Terminator, HasParent<"AwaitOp">
+  Pure, Terminator, HasParent<"AwaitOp">,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>
 ]> {
   let summary = "Marks the point where a coroutine actually suspends";
   let description = [{
