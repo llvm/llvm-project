@@ -249,7 +249,8 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return (Call->hasRetAttr(UseSExt ? Attribute::AttrKind::SExt : Attribute::AttrKind::ZExt));
+    return (Call->hasRetAttr(UseSExt ? Attribute::AttrKind::SExt
+                                     : Attribute::AttrKind::ZExt));
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
@@ -825,9 +826,9 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
       // TODO We should accept calls even if they don't have zeroext, as they
       // can still be sinks.
       auto *Call = cast<CallInst>(I);
-      return isSupportedType(Call) && (UseSExt ?
-             Call->hasRetAttr(Attribute::AttrKind::SExt) :
-             Call->hasRetAttr(Attribute::AttrKind::ZExt));
+      return isSupportedType(Call) &&
+             (UseSExt ? Call->hasRetAttr(Attribute::AttrKind::SExt)
+                      : Call->hasRetAttr(Attribute::AttrKind::ZExt));
     }
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {
@@ -863,8 +864,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
   SafeToPromote.clear();
   SafeWrap.clear();
 
-  if (!isSupportedValue(V) || !shouldPromote(V) ||
-      !isLegalToPromote(V))
+  if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V))
     return false;
 
   LLVM_DEBUG(dbgs() << "IR Promotion: TryToPromote: " << *V << ", from "
@@ -888,8 +888,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     if (isa<GetElementPtrInst>(V))
       return false;
 
-    if (!isSupportedValue(V) ||
-        (shouldPromote(V) && !isLegalToPromote(V))) {
+    if (!isSupportedValue(V) || (shouldPromote(V) && !isLegalToPromote(V))) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Can't handle: " << *V << "\n");
       return false;
     }
