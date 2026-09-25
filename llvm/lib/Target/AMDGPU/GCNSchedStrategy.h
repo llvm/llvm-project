@@ -81,6 +81,12 @@ protected:
                             GCNUpwardRPTracker &UpwardTracker,
                             ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
 
+  /// \returns the ArchVGPR and AGPR pressure of \p RP to compare against the
+  /// per-bank limits. Honors -amdgpu-avgpr-banking; without it this is just
+  /// getArchVGPRNum()/getAGPRNum(), which charge every AVGPR to ArchVGPR.
+  std::pair<unsigned, unsigned>
+  getBankedPressure(const GCNRegPressure &RP) const;
+
   std::vector<unsigned> Pressure;
 
   std::vector<unsigned> MaxPressure;
@@ -90,6 +96,15 @@ protected:
   unsigned VGPRExcessLimit;
 
   unsigned AGPRExcessLimit;
+
+  /// Budget for the combined ArchVGPR + AGPR file, or zero on targets without
+  /// one. Banking AVGPRs can leave both banks looking comfortable while the
+  /// combined file overflows, so that case needs its own check.
+  unsigned UnifiedVGPRExcessLimit = 0;
+
+  /// Combined-file pressure of the candidate most recently passed to
+  /// getRegisterPressures(). Only maintained when the GCN trackers are in use.
+  unsigned CandUnifiedVGPRPressure = 0;
 
   unsigned TargetOccupancy;
 

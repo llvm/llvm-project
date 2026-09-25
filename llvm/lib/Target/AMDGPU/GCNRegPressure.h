@@ -89,6 +89,29 @@ struct GCNRegPressure {
   /// \returns the AVGPR32 pressure
   unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
+  /// \returns the ArchVGPR32 and AccVGPR32 pressure after distributing the
+  /// bank-agnostic AVGPR pressure across the two banks.
+  ///
+  /// getArchVGPRNum() charges every AVGPR to the ArchVGPR bank. An AVGPR may
+  /// be allocated to either bank, so that overstates ArchVGPR demand by the
+  /// full AVGPR count and understates AGPR demand by the same amount. Place
+  /// the values that have no choice first, then absorb as much of the
+  /// remainder as the AGPR bank still has room for.
+  std::pair<unsigned, unsigned> getBankedVGPRNum(unsigned ArchLimit) const {
+    unsigned Arch = Value[VGPR];
+    unsigned Acc = Value[AGPR];
+    unsigned Flex = Value[AVGPR];
+    unsigned ArchHeadroom = Arch < ArchLimit ? ArchLimit - Arch : 0;
+
+    // The allocation order of every av_* class lists the ArchVGPRs before the
+    // AGPRs, and greedy takes the first non-interfering register in that order
+    // before it considers evicting or spilling. So a flexible value lands in
+    // the AGPR bank only once the ArchVGPR bank has no room left for it.
+    unsigned ToArch = std::min(Flex, ArchHeadroom);
+    unsigned ToAcc = Flex - ToArch;
+    return {Arch + ToArch, Acc + ToAcc};
+  }
+
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
                     Value[TOTAL_KINDS + AGPR]);

@@ -1122,8 +1122,8 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
       AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       SGPRPressure = DownwardTracker.getPressure().getSGPRNum();
-      VGPRPressure = DownwardTracker.getPressure().getArchVGPRNum();
-      AGPRPressure = DownwardTracker.getPressure().getAGPRNum();
+      std::tie(VGPRPressure, AGPRPressure) =
+          getBankedPressure(DownwardTracker.getPressure());
     }
   }
 

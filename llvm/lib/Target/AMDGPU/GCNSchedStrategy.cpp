@@ -78,6 +78,12 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> AVGPRBanking(
+    "amdgpu-avgpr-banking", cl::Hidden,
+    cl::desc("Distribute AVGPR pressure across the ArchVGPR and AGPR banks "
+             "instead of charging all of it to ArchVGPR"),
+    cl::init(false));
+
 static cl::opt<unsigned> PendingQueueLimit(
     "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
     cl::desc(
@@ -152,6 +158,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
   AGPRExcessLimit =
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::AGPR_32RegClass);
+
+  UnifiedVGPRExcessLimit = ST.hasGFX90AInsts() ? ST.getMaxNumVGPRs(*MF) : 0;
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   // Set the initial TargetOccupnacy to the maximum occupancy that we can
@@ -252,6 +260,13 @@ static bool canUsePressureDiffs(const SUnit &SU) {
   return true;
 }
 
+std::pair<unsigned, unsigned>
+GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
+  if (!AVGPRBanking)
+    return {RP.getArchVGPRNum(), RP.getAGPRNum()};
+  return RP.getBankedVGPRNum(VGPRExcessLimit);
+}
+
 void GCNSchedStrategy::getRegisterPressures(
     bool AtTop, const RegPressureTracker &RPTracker, SUnit *SU,
     std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure,
@@ -280,10 +295,12 @@ void GCNSchedStrategy::getRegisterPressures(
     TempUpwardTracker.recede(*MI);
     NewPressure = TempUpwardTracker.getPressure();
   }
+  auto [ArchNum, AccNum] = getBankedPressure(NewPressure);
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
-      NewPressure.getArchVGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
+  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = ArchNum;
+  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AccNum;
+  CandUnifiedVGPRPressure =
+      NewPressure.getVGPRNum(/*UnifiedVGPRFile=*/UnifiedVGPRExcessLimit > 0);
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -402,6 +419,17 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     Cand.RPDelta.Excess.setUnitInc(NewSGPRPressure - SGPRExcessLimit);
   }
 
+  // Banking AVGPRs can leave both banks under their own limit while the
+  // combined file is oversubscribed, which none of the checks above catch.
+  // This outranks them all: overflowing the combined file means spilling.
+  if (AVGPRBanking && UnifiedVGPRExcessLimit &&
+      CandUnifiedVGPRPressure >= UnifiedVGPRExcessLimit) {
+    HasHighPressure = true;
+    Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
+    Cand.RPDelta.Excess.setUnitInc(CandUnifiedVGPRPressure -
+                                   UnifiedVGPRExcessLimit);
+  }
+
   // Register pressure is considered 'CRITICAL' if it is approaching a value
   // that would reduce the wave occupancy for the execution unit.  When
   // register pressure is 'CRITICAL', increasing SGPR, VGPR, and AGPR
@@ -488,8 +516,8 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
       SGPRPressure = T->getPressure().getSGPRNum();
-      VGPRPressure = T->getPressure().getArchVGPRNum();
-      AGPRPressure = T->getPressure().getAGPRNum();
+      std::tie(VGPRPressure, AGPRPressure) =
+          getBankedPressure(T->getPressure());
     }
   }
   LLVM_DEBUG(dbgs() << "Available Q:\n");
