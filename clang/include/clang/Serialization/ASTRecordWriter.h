@@ -189,8 +189,8 @@ public:
     Record->push_back(Value);
   }
 
-  void writeCharUnits(CharUnits Value) {
-    Record->push_back(Value.getQuantity());
+  void writeDynAllocKind(DynAllocKind Value) {
+    Record->push_back(llvm::to_underlying(Value));
   }
 
   void writeUnsignedOrNone(UnsignedOrNone Value) {

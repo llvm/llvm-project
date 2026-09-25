@@ -524,6 +524,5 @@ DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
 }
 
 CharUnits Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
-  return GetAlignOfDynamicAlloc(Ctx, getDataType(Ctx),
-                                getDynAllocKindForExpr(asExpr()));
+  return GetAlignOfDynamicAlloc(Ctx, getDataType(Ctx), getDynAllocKind());
 }

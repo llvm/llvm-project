@@ -334,8 +334,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     Base = VD;
   else if (const auto *E = Desc->asExpr()) {
     if (block()->isDynamic()) {
-      DynamicAllocLValue DA(*block()->DynAllocId,
-                            Desc->computeAlignForDynamicAlloc(ASTCtx));
+      DynamicAllocLValue DA(*block()->DynAllocId, Desc->getDynAllocKind());
       Base =
           APValue::LValueBase::getDynamicAlloc(DA, Desc->getDataType(ASTCtx));
     } else {

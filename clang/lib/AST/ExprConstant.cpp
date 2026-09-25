@@ -1954,8 +1954,7 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
     return nullptr;
   }
 
-  DynamicAllocLValue DA(
-      NumHeapAllocs++, GetAlignOfDynamicAlloc(Ctx, T, DynAlloc::kindOfExpr(E)));
+  DynamicAllocLValue DA(NumHeapAllocs++, DynAlloc::kindOfExpr(E));
   LV.set(APValue::LValueBase::getDynamicAlloc(DA, T));
   auto Result = HeapAllocs.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(DA), std::tuple<>());
@@ -10664,7 +10663,8 @@ static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
   if (const auto *E = Value.Base.dyn_cast<const Expr *>())
     return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
   if (const auto &DA = Value.Base.dyn_cast<DynamicAllocLValue>())
-    return DA.getAlign();
+    return GetAlignOfDynamicAlloc(Info.getASTContext(), Value.Base.getType(),
+                                  DA.getAllocKind());
   return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
 }
 
