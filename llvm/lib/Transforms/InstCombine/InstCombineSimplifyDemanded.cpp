@@ -384,7 +384,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // If all of the demanded bits are known to be zero on one side or the
     // other, turn this into an *inclusive* or.
     //    e.g. (A & C1)^(B & C2) -> (A & C1)|(B & C2) iff C1&C2 == 0
-    if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.Zero)) {
+    WithCache<const Value *> LHSCache(I->getOperand(0), LHSKnown),
+        RHSCache(I->getOperand(1), RHSKnown);
+    if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.Zero) ||
+        (DemandedMask.isAllOnes() &&
+         haveNoCommonBitsSet(LHSCache, RHSCache, Q))) {
       Instruction *Or =
           BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1));
       if (DemandedMask.isAllOnes())
