@@ -970,6 +970,22 @@ function(add_llvm_install_targets target)
     add_dependencies(${target} install-${ARG_SYMLINK})
     add_dependencies(${target}-stripped install-${ARG_SYMLINK}-stripped)
   endif()
+
+  # Guarded so that this doesn't collide with an "uninstall" target some
+  # other project already defines, in builds that embed LLVM as a
+  # subdirectory. CMAKE_BINARY_DIR (rather than CMAKE_CURRENT_BINARY_DIR) is
+  # used throughout since this function may be called from a subdirectory,
+  # but install_manifest.txt is always written to the top of the build tree.
+  if(NOT TARGET uninstall)
+    configure_file(
+      "${LLVM_CMAKE_DIR}/cmake_uninstall.cmake.in"
+      "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
+      @ONLY)
+    add_custom_target(uninstall
+      COMMAND "${CMAKE_COMMAND}" -P
+              "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake")
+    set_target_properties(uninstall PROPERTIES FOLDER "${subproject_title}/Installation")
+  endif()
 endfunction()
 
 # Define special targets that behave like a component group. They don't have any
