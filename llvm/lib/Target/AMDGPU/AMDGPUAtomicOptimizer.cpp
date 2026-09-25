@@ -621,7 +621,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
 static Constant *getIdentityValueForAtomicOp(Type *const Ty,
                                              AtomicRMWInst::BinOp Op) {
   LLVMContext &C = Ty->getContext();
-  const unsigned BitWidth = Ty->getPrimitiveSizeInBits();
+  const unsigned BitWidth = static_cast<unsigned>(Ty->getPrimitiveSizeInBits());
   switch (Op) {
   default:
     llvm_unreachable("Unhandled atomic op");
@@ -744,7 +744,8 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   Type *const Ty = I.getType();
   Type *Int32Ty = B.getInt32Ty();
   bool isAtomicFloatingPointTy = Ty->isFloatingPointTy();
-  [[maybe_unused]] const unsigned TyBitWidth = DL.getTypeSizeInBits(Ty);
+  [[maybe_unused]] const unsigned TyBitWidth =
+      static_cast<unsigned>(DL.getTypeSizeInBits(Ty));
 
   // This is the value in the atomic operation we need to combine in order to
   // reduce the number of atomic operations.

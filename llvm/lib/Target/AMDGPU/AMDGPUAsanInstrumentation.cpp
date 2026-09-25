@@ -197,8 +197,9 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
       if (Alignment.value() >= Granularity ||
           Alignment.value() >= FixedSize / 8)
         return instrumentAddressImpl(
-            M, IRB, OrigIns, InsertBefore, Addr, Alignment, FixedSize, IsWrite,
-            SizeArgument, UseCalls, Recover, AsanScale, AsanOffset);
+            M, IRB, OrigIns, InsertBefore, Addr, Alignment,
+            static_cast<uint32_t>(FixedSize), IsWrite, SizeArgument, UseCalls,
+            Recover, AsanScale, AsanOffset);
     }
   }
   // Instrument unusual size or unusual alignment.
@@ -287,7 +288,8 @@ void getInterestingMemoryOperands(
         // Use the pointer alignment as the element alignment if the stride is a
         // mutiple of the pointer alignment. Otherwise, the element alignment
         // should be Align(1).
-        unsigned PointerAlign = Alignment.valueOrOne().value();
+        unsigned PointerAlign =
+            static_cast<unsigned>(Alignment.valueOrOne().value());
         if (!isa<ConstantInt>(Stride) ||
             cast<ConstantInt>(Stride)->getZExtValue() % PointerAlign != 0)
           Alignment = Align(1);
