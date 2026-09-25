@@ -140,11 +140,6 @@ int main(int argc, char **argv) {
       llvm::cl::init(false));
   llvm::cl::opt<std::string> inputSplitMarker{
       "split-input-file", llvm::cl::ValueOptional,
-      llvm::cl::callback([&](const std::string &str) {
-        // Implicit value: use default marker if flag was used without value.
-        if (str.empty())
-          inputSplitMarker.setValue(kDefaultSplitMarker);
-      }),
       llvm::cl::desc("Split the input file into chunks using the given or "
                      "default marker and process each chunk independently"),
       llvm::cl::init("")};
@@ -180,6 +175,9 @@ int main(int argc, char **argv) {
 
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL Frontend");
+  // Without a value, --split-input-file selects the default marker.
+  if (inputSplitMarker.getNumOccurrences() && inputSplitMarker.empty())
+    inputSplitMarker.setValue(kDefaultSplitMarker);
 
   // Set up the input file.
   std::string errorMessage;

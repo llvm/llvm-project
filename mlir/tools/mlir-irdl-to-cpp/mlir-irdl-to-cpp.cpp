@@ -87,12 +87,6 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
 
   static llvm::cl::opt<std::string> splitInputFile(
       "split-input-file", llvm::cl::ValueOptional,
-      llvm::cl::callback([&](const std::string &str) {
-        // Implicit value: use default marker if flag was used without
-        // value.
-        if (str.empty())
-          splitInputFile.setValue(kDefaultSplitMarker);
-      }),
       llvm::cl::desc("Split the input file into chunks using the given or "
                      "default marker and process each chunk independently"),
       llvm::cl::init(""));
@@ -100,6 +94,9 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "mlir-irdl-to-cpp");
+  // Without a value, --split-input-file selects the default marker.
+  if (splitInputFile.getNumOccurrences() && splitInputFile.empty())
+    splitInputFile.setValue(kDefaultSplitMarker);
 
   std::string errorMessage;
   std::unique_ptr<llvm::MemoryBuffer> input =

@@ -155,11 +155,6 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
   static llvm::cl::opt<std::string> inputSplitMarker{
       "split-input-file", llvm::cl::ValueOptional,
-      llvm::cl::callback([&](const std::string &str) {
-        // Implicit value: use default marker if flag was used without value.
-        if (str.empty())
-          inputSplitMarker.setValue(kDefaultSplitMarker);
-      }),
       llvm::cl::desc("Split the input file into chunks using the given or "
                      "default marker and process each chunk independently"),
       llvm::cl::init("")};
@@ -202,6 +197,9 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   registerTranslationCLOptions();
   registerDefaultTimingManagerCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, toolName);
+  // Without a value, --split-input-file selects the default marker.
+  if (inputSplitMarker.getNumOccurrences() && inputSplitMarker.empty())
+    inputSplitMarker.setValue(kDefaultSplitMarker);
 
   // Initialize the timing manager.
   DefaultTimingManager tm;
