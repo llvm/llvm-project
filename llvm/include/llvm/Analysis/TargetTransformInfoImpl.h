@@ -470,7 +470,7 @@ public:
   virtual bool isTypeLegal(Type *Ty) const { return false; }
 
   virtual bool isLegalToCallVectorFunction(FunctionType *FTy,
-                                           StringRef Name) const {
+                                           const VFInfo &Info) const {
     return true;
   }
 

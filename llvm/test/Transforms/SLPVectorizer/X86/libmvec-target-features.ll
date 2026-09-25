@@ -57,10 +57,5 @@ define void @avx2(ptr noalias %out, ptr noalias %in) #2 {
 }
 
 declare double @erf(double) nounwind willreturn memory(none)
-attributes #0 = { "target-cpu"="x86-64" }
 attributes #1 = { "target-cpu"="sandybridge" }
 attributes #2 = { "target-cpu"="haswell" }
-attributes #3 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="256" }
-attributes #4 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="512" }
-attributes #5 = { "target-cpu"="haswell" "target-features"="-avx2" }
-attributes #6 = { "target-cpu"="haswell" "prefer-vector-width"="128" }

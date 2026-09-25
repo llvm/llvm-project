@@ -69,7 +69,54 @@ exit:
   ret void
 }
 
+define void @prefer256_no_min(ptr noalias %out, ptr noalias %in) #7 {
+; CHECK-LABEL: define void @prefer256_no_min(
+; CHECK: call <8 x double> @amd_vrd8_log
+; CHECK: ret void
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %p = getelementptr float, ptr %in, i64 %i
+  %x = load float, ptr %p, align 4
+  %d = fpext float %x to double
+  %r = call double @llvm.log.f64(double %d)
+  %f = fptrunc double %r to float
+  %q = getelementptr float, ptr %out, i64 %i
+  store float %f, ptr %q, align 4
+  %next = add nuw nsw i64 %i, 1
+  %done = icmp eq i64 %next, 64
+  br i1 %done, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @prefer256_min512(ptr noalias %out, ptr noalias %in) #8 {
+; CHECK-LABEL: define void @prefer256_min512(
+; CHECK: call <8 x double> @amd_vrd8_log
+; CHECK: ret void
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %p = getelementptr float, ptr %in, i64 %i
+  %x = load float, ptr %p, align 4
+  %d = fpext float %x to double
+  %r = call double @llvm.log.f64(double %d)
+  %f = fptrunc double %r to float
+  %q = getelementptr float, ptr %out, i64 %i
+  store float %f, ptr %q, align 4
+  %next = add nuw nsw i64 %i, 1
+  %done = icmp eq i64 %next, 64
+  br i1 %done, label %exit, label %loop
+exit:
+  ret void
+}
+
 declare double @llvm.log.f64(double)
 attributes #0 = { "target-cpu"="haswell" }
-attributes #1 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="256" }
+attributes #1 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="256" "min-legal-vector-width"="256" }
 attributes #2 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="512" }
+
+attributes #7 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="256" }
+attributes #8 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="256" "min-legal-vector-width"="512" }

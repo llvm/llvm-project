@@ -37,7 +37,7 @@ define <4 x double> @disabled_avx2(<4 x double> %x, <4 x double> %y) #5 {
 
 define <4 x double> @prefer128(<4 x double> %x, <4 x double> %y) #6 {
 ; CHECK-LABEL: define <4 x double> @prefer128(
-; CHECK-NEXT: [[R:%.*]] = call fast <4 x double> @llvm.pow.v4f64(<4 x double> %x, <4 x double> %y)
+; CHECK-NEXT: [[R:%.*]] = call fast <4 x double> @_ZGVdN4vv_pow(<4 x double> %x, <4 x double> %y)
 ; CHECK-NEXT: ret <4 x double> [[R]]
   %r = call fast <4 x double> @llvm.pow.v4f64(<4 x double> %x, <4 x double> %y)
   ret <4 x double> %r
@@ -55,7 +55,5 @@ declare <4 x double> @llvm.pow.v4f64(<4 x double>, <4 x double>)
 attributes #0 = { "target-cpu"="x86-64" }
 attributes #1 = { "target-cpu"="sandybridge" }
 attributes #2 = { "target-cpu"="haswell" }
-attributes #3 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="256" }
-attributes #4 = { "target-cpu"="skylake-avx512" "prefer-vector-width"="512" }
 attributes #5 = { "target-cpu"="haswell" "target-features"="-avx2" }
 attributes #6 = { "target-cpu"="haswell" "prefer-vector-width"="128" }

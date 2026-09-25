@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include <optional>
 
 using namespace llvm;
@@ -222,21 +223,38 @@ static bool hasSupportedVectorTypes(Type *Ty, const DataLayout &DL,
 }
 
 bool X86TTIImpl::isLegalToCallVectorFunction(FunctionType *FTy,
-                                             StringRef Name) const {
-  // The x86 Vector Function ABI encodes the required ISA in the symbol.
-  // In particular, a 256-bit AVX caller cannot use the AVX2 ('d') variant,
-  // even though its vector arguments fit in a YMM register.
-  if ((Name.starts_with("_ZGVb") && !ST->hasSSE2()) ||
-      (Name.starts_with("_ZGVc") && !ST->hasAVX()) ||
-      (Name.starts_with("_ZGVd") && !ST->hasAVX2()) ||
-      (Name.starts_with("_ZGVe") && !ST->hasAVX512()))
+                                             const VFInfo &Info) const {
+  // Preserve the ISA from the mapping even when the symbol is redirected.
+  // TLI also uses LLVM-internal mappings with GNU ABI symbol names, so check
+  // both sources. AVX and AVX2 variants have the same vector width but require
+  // different instruction sets.
+  StringRef Name = Info.VectorName;
+  if (((Info.ISA == VFISAKind::SSE || Name.starts_with("_ZGVb")) &&
+       !ST->hasSSE2()) ||
+      ((Info.ISA == VFISAKind::AVX || Name.starts_with("_ZGVc")) &&
+       !ST->hasAVX()) ||
+      ((Info.ISA == VFISAKind::AVX2 || Name.starts_with("_ZGVd")) &&
+       !ST->hasAVX2()) ||
+      ((Info.ISA == VFISAKind::AVX512 || Name.starts_with("_ZGVe")) &&
+       !ST->hasAVX512()))
     return false;
 
   // Check the actual call signature, not the vectorized loop's element type.
   // A float loop can contain a double-precision call with twice its width.
-  // Conservatively avoid calls wider than the target's preferred vector width:
-  // codegen must not split the operands of an already selected external call.
-  TypeSize MaxWidth = getRegisterBitWidth(TTI::RGK_FixedWidthVector);
+  // Use the registers enabled for legalization, not just the preferred width.
+  // In particular, min-legal-vector-width can enable ZMM arguments even when
+  // the caller prefers 256-bit vectors.
+  TypeSize MaxWidth = TypeSize::getFixed(ST->useAVX512Regs() ? 512
+                                         : ST->hasAVX()      ? 256
+                                         : ST->hasSSE1()     ? 128
+                                                             : 0);
+  // Overwide GNU variants use multiple registers of their ABI class (and
+  // may return indirectly). A single wider IR vector does not model that ABI.
+  if (Info.ISA == VFISAKind::SSE || Name.starts_with("_ZGVb"))
+    MaxWidth = std::min(MaxWidth, TypeSize::getFixed(128));
+  else if (Info.ISA == VFISAKind::AVX || Info.ISA == VFISAKind::AVX2 ||
+           Name.starts_with("_ZGVc") || Name.starts_with("_ZGVd"))
+    MaxWidth = std::min(MaxWidth, TypeSize::getFixed(256));
   return hasSupportedVectorTypes(FTy->getReturnType(), DL, MaxWidth) &&
          all_of(FTy->params(), [&](Type *Ty) {
            return hasSupportedVectorTypes(Ty, DL, MaxWidth);

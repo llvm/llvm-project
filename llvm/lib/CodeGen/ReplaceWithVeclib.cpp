@@ -199,8 +199,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   }
 
   FunctionType *VectorFTy = VFABI::createFunctionType(*OptInfo, ScalarFTy);
-  if (!VectorFTy ||
-      !TTI.isLegalToCallVectorFunction(VectorFTy, VD->getVectorFnName()))
+  if (!VectorFTy || !TTI.isLegalToCallVectorFunction(VectorFTy, *OptInfo))
     return false;
 
   Function *TLIFunc =
