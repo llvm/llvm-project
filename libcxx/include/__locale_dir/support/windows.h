@@ -168,6 +168,32 @@ _LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
+// ctype masks
+//
+
+struct __ctype_base {
+  using mask = unsigned short;
+
+  static const mask space        = _SPACE;
+  static const mask print        = _BLANK | _PUNCT | _ALPHA | _DIGIT;
+  static const mask cntrl        = _CONTROL;
+  static const mask upper        = _UPPER;
+  static const mask lower        = _LOWER;
+  static const mask alpha        = _ALPHA;
+  static const mask digit        = _DIGIT;
+  static const mask punct        = _PUNCT;
+  static const mask xdigit       = _HEX;
+  static const mask blank        = _BLANK;
+  static const mask __regex_word = 0x4000; // 0x8000 and 0x0100 and 0x00ff are used
+#define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
+#define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
+};
+
+#ifdef _LIBCPP_BUILDING_LIBRARY
+inline const __ctype_base::mask* __classic_table() noexcept { return __pctype_func(); }
+#endif
+
+//
 // Strtonum functions
 //
 
@@ -308,8 +334,6 @@ struct __locale_guard {
 } // namespace __locale
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
-
-#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
 #include <__locale_dir/support/default/get_c_locale.h>
 

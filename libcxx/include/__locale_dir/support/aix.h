@@ -86,6 +86,30 @@ inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc)
 }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
+//
+// ctype masks
+//
+
+struct __ctype_base {
+  using mask = unsigned int;
+
+  static const mask space        = _ISSPACE;
+  static const mask print        = _ISPRINT;
+  static const mask cntrl        = _ISCNTRL;
+  static const mask upper        = _ISUPPER;
+  static const mask lower        = _ISLOWER;
+  static const mask alpha        = _ISALPHA;
+  static const mask digit        = _ISDIGIT;
+  static const mask punct        = _ISPUNCT;
+  static const mask xdigit       = _ISXDIGIT;
+  static const mask blank        = _ISBLANK;
+  static const mask __regex_word = 0x8000;
+};
+
+#ifdef _LIBCPP_BUILDING_LIBRARY
+inline const __ctype_base::mask* __classic_table() _NOEXCEPT { return (const unsigned int*)__lc_ctype_ptr->obj->mask; }
+#endif
+
 // The following structure is a quick-and-dirty workaround for routines that AIX
 // does not provide in the "_l" (locale-aware) variants.
 struct __setAndRestore {
@@ -297,8 +321,6 @@ _LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
-
-#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
 #include <__locale_dir/support/default/get_c_locale.h>
 

@@ -84,6 +84,39 @@ inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc)
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
+// ctype masks
+//
+
+struct __ctype_base {
+  // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
+  typedef char mask;
+  // In case char is signed, static_cast is needed to avoid warning on
+  // positive value becomming negative.
+  static const mask space  = static_cast<mask>(_S);
+  static const mask print  = static_cast<mask>(_P | _U | _L | _N | _B);
+  static const mask cntrl  = static_cast<mask>(_C);
+  static const mask upper  = static_cast<mask>(_U);
+  static const mask lower  = static_cast<mask>(_L);
+  static const mask alpha  = static_cast<mask>(_U | _L);
+  static const mask digit  = static_cast<mask>(_N);
+  static const mask punct  = static_cast<mask>(_P);
+  static const mask xdigit = static_cast<mask>(_X | _N);
+  static const mask blank  = static_cast<mask>(_B);
+  // mask is already fully saturated, use a different type in regex_type_traits.
+  static const unsigned short __regex_word = 0x100;
+#define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
+#define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
+#define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_XDIGIT
+};
+
+#ifdef _LIBCPP_BUILDING_LIBRARY
+inline const __ctype_base::mask* __classic_table() noexcept {
+  // Newlib has a 257-entry table in ctype_.c, where (char)0 starts at [1].
+  return _ctype_ + 1;
+}
+#endif
+
+//
 // Strtonum functions
 //
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
@@ -244,8 +277,6 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
 }
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
-
-#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
 #include <__locale_dir/support/default/get_c_locale.h>
 

@@ -559,6 +559,7 @@ set(files
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/default/get_c_locale.h
+  __locale_dir/support/default/rune_table.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
