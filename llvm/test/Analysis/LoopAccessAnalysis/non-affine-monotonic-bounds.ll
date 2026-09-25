@@ -11,13 +11,11 @@ define void @bitset_udiv64_const_tc(ptr %words, ptr %out) {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
-; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %out High: (441 + %out))
-; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %words High: (7 + %words))
@@ -58,13 +56,11 @@ define void @bitset_udiv64_symbolic_tc(ptr %words, ptr %out, i64 %N) {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
-; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %out High: (%N + %out))
-; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %words High: (1 + ((-1 + %N) /u 64) + %words))
@@ -591,13 +587,11 @@ define void @bitset_udiv_neg_4_symbolic_tc(ptr %words, ptr %out, i64 %N) {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
-; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %out High: (%N + %out))
-; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %words High: (1 + ((-1 + %N) /u -4) + %words))
@@ -640,13 +634,11 @@ define void @bitset_udiv64_symbolic_start_and_tc(ptr %words, ptr %out, i64 %N, i
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
-; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%start + %out) High: (%N + %out))
-; CHECK-NEXT:            Member: {(%start + %out),+,1}<nw><%loop>
 ; CHECK-NEXT:            Member: {(%start + %out),+,1}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((%start /u 64) + %words) High: (1 + ((-1 + %N) /u 64) + %words))
