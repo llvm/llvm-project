@@ -448,8 +448,9 @@ public:
                                        Value *Op1);
 
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
-  /// system if \p Pred is signed/unsigned.
-  void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
+  /// system if \p Pred is signed/unsigned. If \p Pred is samesign, add the
+  /// fact with flipped signedness.
+  void transferToOtherSystem(CmpPredicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -1194,8 +1195,32 @@ std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
 }
 
 void ConstraintInfo::transferToOtherSystem(
-    CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
-    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
+    CmpPredicate Pred, Value *A, Value *B, unsigned NumIn, unsigned NumOut,
+    SmallVectorImpl<StackEntry> &DFSInStack) {
+  if (!ICmpInst::isRelational(Pred))
+    return;
+  // If samesign is present on the ICmp, simply flip the sign of the
+  // predicate, transferring the information from the signed system to the
+  // unsigned system, and viceversa.
+  if (Pred.hasSameSign()) {
+    addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B, NumIn, NumOut,
+            DFSInStack);
+    // The operands also have the same sign: if one of them is known to be
+    // non-negative (or negative), so is the other.
+    if (A->getType()->isIntegerTy()) {
+      std::optional<bool> ASign = getKnownSign(A, /*StrictlyNegative=*/true);
+      std::optional<bool> BSign = getKnownSign(B, /*StrictlyNegative=*/true);
+      if (ASign.has_value() != BSign.has_value()) {
+        bool IsNegative = ASign ? *ASign : *BSign;
+        Value *OtherOp = ASign ? B : A;
+        addFact(IsNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE, OtherOp,
+                Constant::getNullValue(A->getType()), NumIn, NumOut,
+                DFSInStack);
+      }
+    }
+    return;
+  }
+
   // Check if we can combine facts from the signed and unsigned systems to
   // derive additional facts.
   if (!A->getType()->isIntegerTy())
@@ -1591,6 +1616,65 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
+#ifndef NDEBUG
+static void dumpUnpackedICmp(raw_ostream &OS, ICmpInst::Predicate Pred,
+                             Value *LHS, Value *RHS) {
+  OS << "icmp " << Pred << ' ';
+  LHS->printAsOperand(OS, /*PrintType=*/true);
+  OS << ", ";
+  RHS->printAsOperand(OS, /*PrintType=*/false);
+}
+#endif
+
+/// Calls \p AddCond for each condition known to hold when a conditional branch
+/// on \p Cond takes its true edge if \p IsTrue, or its false edge otherwise.
+/// Looks through chains of logical ands on the true edge and chains of logical
+/// ors on the false edge.
+static void forEachBranchCondition(
+    Value *Cond, bool IsTrue,
+    function_ref<void(CmpPredicate, Value *, Value *)> AddCond) {
+  CmpPredicate Pred;
+  Value *A, *B;
+  if (match(Cond, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
+    AddCond(IsTrue ? Pred : CmpPredicate::getInverse(Pred), A, B);
+    return;
+  }
+
+  Value *Op0, *Op1;
+  bool IsOr = match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1)));
+  // If there's a select that matches both AND and OR, we need to commit to
+  // one of the options. Arbitrarily pick OR.
+  bool IsAnd = !IsOr && match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)));
+  if (!(IsOr && !IsTrue) && !(IsAnd && IsTrue))
+    return;
+
+  SmallVector<Value *> CondWorkList;
+  SmallPtrSet<Value *, 8> SeenCond;
+  auto QueueValue = [&CondWorkList, &SeenCond](Value *V) {
+    if (SeenCond.insert(V).second)
+      CondWorkList.push_back(V);
+  };
+  QueueValue(Op1);
+  QueueValue(Op0);
+  while (!CondWorkList.empty()) {
+    Value *Cur = CondWorkList.pop_back_val();
+    if (match(Cur, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
+      AddCond(IsOr ? CmpPredicate::getInverse(Pred) : Pred, A, B);
+      continue;
+    }
+    if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+      QueueValue(Op1);
+      QueueValue(Op0);
+      continue;
+    }
+    if (IsAnd && match(Cur, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+      QueueValue(Op1);
+      QueueValue(Op0);
+      continue;
+    }
+  }
+}
+
 static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
                                           uint64_t AccessSize,
                                           CmpPredicate &Pred, Value *&A,
@@ -1839,72 +1923,20 @@ void State::addInfoFor(BasicBlock &BB) {
   if (!Br)
     return;
 
-  Value *Cond = Br->getCondition();
-
-  // If the condition is a chain of ORs/AND and the successor only has the
-  // current block as predecessor, queue conditions for the successor.
-  Value *Op0, *Op1;
-  if (match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1))) ||
-      match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
-    bool IsOr = match(Cond, m_LogicalOr());
-    bool IsAnd = match(Cond, m_LogicalAnd());
-    // If there's a select that matches both AND and OR, we need to commit to
-    // one of the options. Arbitrarily pick OR.
-    if (IsOr && IsAnd)
-      IsAnd = false;
-
-    BasicBlock *Successor = Br->getSuccessor(IsOr ? 1 : 0);
-    if (canAddSuccessor(BB, Successor)) {
-      SmallVector<Value *> CondWorkList;
-      SmallPtrSet<Value *, 8> SeenCond;
-      auto QueueValue = [&CondWorkList, &SeenCond](Value *V) {
-        if (SeenCond.insert(V).second)
-          CondWorkList.push_back(V);
-      };
-      QueueValue(Op1);
-      QueueValue(Op0);
-      while (!CondWorkList.empty()) {
-        Value *Cur = CondWorkList.pop_back_val();
-        if (match(Cur, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
-          WorkList.emplace_back(FactOrCheck::getConditionFact(
-              DT.getNode(Successor),
-              IsOr ? CmpPredicate::getInverse(Pred) : Pred, A, B));
-          continue;
-        }
-        if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
-          QueueValue(Op1);
-          QueueValue(Op0);
-          continue;
-        }
-        if (IsAnd && match(Cur, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
-          QueueValue(Op1);
-          QueueValue(Op0);
-          continue;
-        }
-      }
-    }
-    return;
+  // Queue the conditions known to hold in a successor that only has the
+  // current block as predecessor.
+  for (unsigned I : {0, 1}) {
+    BasicBlock *Succ = Br->getSuccessor(I);
+    if (!canAddSuccessor(BB, Succ))
+      continue;
+    forEachBranchCondition(
+        Br->getCondition(), /*IsTrue=*/I == 0,
+        [&](CmpPredicate Pred, Value *A, Value *B) {
+          WorkList.emplace_back(
+              FactOrCheck::getConditionFact(DT.getNode(Succ), Pred, A, B));
+        });
   }
-
-  if (!match(Br->getCondition(), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
-    return;
-  if (canAddSuccessor(BB, Br->getSuccessor(0)))
-    WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(0)), Pred, A, B));
-  if (canAddSuccessor(BB, Br->getSuccessor(1)))
-    WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(1)), CmpPredicate::getInverse(Pred), A, B));
 }
-
-#ifndef NDEBUG
-static void dumpUnpackedICmp(raw_ostream &OS, ICmpInst::Predicate Pred,
-                             Value *LHS, Value *RHS) {
-  OS << "icmp " << Pred << ' ';
-  LHS->printAsOperand(OS, /*PrintType=*/true);
-  OS << ", ";
-  RHS->printAsOperand(OS, /*PrintType=*/false);
-}
-#endif
 
 namespace {
 /// Helper to keep track of a condition and if it should be treated as negated
@@ -2664,33 +2696,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
         ReproducerCondStack.emplace_back(Pred, A, B);
 
-      if (ICmpInst::isRelational(Pred)) {
-        // If samesign is present on the ICmp, simply flip the sign of the
-        // predicate, transferring the information from the signed system to the
-        // unsigned system, and viceversa.
-        if (Pred.hasSameSign()) {
-          Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
-                       CB.NumIn, CB.NumOut, DFSInStack);
-          // The operands also have the same sign: if one of them is known to
-          // be non-negative (or negative), so is the other.
-          if (A->getType()->isIntegerTy()) {
-            std::optional<bool> ASign =
-                Info.getKnownSign(A, /*StrictlyNegative=*/true);
-            std::optional<bool> BSign =
-                Info.getKnownSign(B, /*StrictlyNegative=*/true);
-            if (ASign.has_value() != BSign.has_value()) {
-              bool IsNegative = ASign ? *ASign : *BSign;
-              Value *OtherOp = ASign ? B : A;
-              Info.addFact(IsNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
-                           OtherOp, Constant::getNullValue(A->getType()),
-                           CB.NumIn, CB.NumOut, DFSInStack);
-            }
-          }
-        } else {
-          Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
-                                     DFSInStack);
-        }
-      }
+      Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
       // OR is the OR of the operand sign bits. Similarly, (X & Y) <s 0 implies
