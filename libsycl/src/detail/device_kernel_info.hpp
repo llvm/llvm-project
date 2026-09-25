@@ -20,12 +20,17 @@
 
 #include <OffloadAPI.h>
 
+#include <cstddef>
+#include <mutex>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 class DeviceImageManager;
+class ContextImpl;
 
 // TODO: Pointers to instances of this class are supported to be stored in
 // header function templates as a static variable to avoid repeated runtime
@@ -45,9 +50,31 @@ public:
   /// \return the device image containing the device code of this kernel.
   DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
 
+  /// Returns a cache entry for pair key \p Context & \p Device if successful,
+  /// null otherwise
+  ol_symbol_handle_t tryGetCachedKernel(ContextImpl *Context,
+                                        ol_device_handle_t Device);
+
+  /// Adds \p Kernel to the cache by using the pair key \p Context & \p Device
+  void addCachedKernel(ContextImpl *Context, ol_device_handle_t Device,
+                       ol_symbol_handle_t Kernel);
+
+  /// Removes every cache entry keyed by \p Context, regardless of device.
+  /// Called by ContextImpl when it is being destroyed.
+  void removeCachedKernelsFor(ContextImpl *Context);
+
 private:
   std::string_view MName;
   DeviceImageManager &MDeviceImage;
+
+  using CacheKeyT = std::pair<ContextImpl *, ol_device_handle_t>;
+  struct CacheKeyHash {
+    std::size_t operator()(const CacheKeyT &Key) const noexcept {
+      return std::hash<ContextImpl *>{}(Key.first);
+    }
+  };
+  std::mutex MCacheMutex;
+  std::unordered_map<CacheKeyT, ol_symbol_handle_t, CacheKeyHash> MCache;
 };
 
 } // namespace detail

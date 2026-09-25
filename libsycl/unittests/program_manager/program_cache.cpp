@@ -72,14 +72,79 @@ getKernel(const std::shared_ptr<detail::ContextImpl> &Context,
       getKernelInfo(KernelName), Context, *detail::getSyclObjImpl(Device));
 }
 
+class ProgramCacheTest : public testing::Test {
+protected:
+  void SetUp() override { allowContextAndProgramLifetimeCalls(Mock.get()); }
+
+  mock::MockWrapper Mock;
+};
+
 } // namespace
+
+// A repeat request for the same (kernel, context, device) must be served
+// entirely by DeviceKernelInfo's own cache
+TEST_F(ProgramCacheTest, RepeatedKernelLookupSkipsCompatibilityCheck) {
+  const std::string KernelName = "kernel";
+  sycl::unittests::ScopedKernelRegistration Registration(KernelName);
+
+  const device Device;
+  std::shared_ptr<detail::ContextImpl> Context = createContext(Device);
+
+  EXPECT_CALL(Mock.get(), olIsValidBinary(_, _, _, _)).Times(1);
+  EXPECT_CALL(Mock.get(), olCreateProgram(_, _, _, _, _)).Times(1);
+
+  ol_symbol_handle_t FirstKernel = getKernel(Context, Device, KernelName);
+  ol_symbol_handle_t SecondKernel = getKernel(Context, Device, KernelName);
+  EXPECT_EQ(FirstKernel, SecondKernel);
+}
+
+// A cache hit for one context must never be handed to a different context,
+// even for the exact same kernel and device.
+TEST_F(ProgramCacheTest, KernelCacheIsScopedPerContext) {
+  const std::string KernelName = "kernel";
+  sycl::unittests::ScopedKernelRegistration Registration(KernelName);
+
+  const device Device;
+  std::shared_ptr<detail::ContextImpl> FirstContext = createContext(Device);
+  std::shared_ptr<detail::ContextImpl> SecondContext = createContext(Device);
+
+  EXPECT_CALL(Mock.get(), olIsValidBinary(_, _, _, _)).Times(2);
+  EXPECT_CALL(Mock.get(), olCreateProgram(_, _, _, _, _)).Times(2);
+
+  ol_symbol_handle_t FirstKernel = getKernel(FirstContext, Device, KernelName);
+  ol_symbol_handle_t SecondKernel =
+      getKernel(SecondContext, Device, KernelName);
+  EXPECT_NE(FirstKernel, SecondKernel);
+}
+
+// Destroying a context must remove its entries from every DeviceKernelInfo
+// cache it wrote into: otherwise, if a later context happens to be allocated
+// at the same address, it could be handed a symbol handle into an
+// already-destroyed program.
+TEST_F(ProgramCacheTest, ContextDestructionDropsCacheEntries) {
+  const std::string KernelName = "kernel";
+  sycl::unittests::ScopedKernelRegistration Registration(KernelName);
+
+  const device Device;
+  std::shared_ptr<detail::ContextImpl> Context = createContext(Device);
+  detail::ContextImpl *RawContext = Context.get();
+  ol_device_handle_t DeviceHandle =
+      detail::getSyclObjImpl(Device)->getOLHandle();
+
+  EXPECT_NE(getKernel(Context, Device, KernelName),
+            nullptr); // Populate the cache.
+
+  detail::DeviceKernelInfo &Info = getKernelInfo(KernelName);
+  EXPECT_NE(Info.tryGetCachedKernel(RawContext, DeviceHandle), nullptr);
+
+  Context.reset(); // Destroy the context, RawContext is dandling now.
+
+  EXPECT_EQ(Info.tryGetCachedKernel(RawContext, DeviceHandle), nullptr);
+}
 
 // A program belongs to the context it was created in, so two contexts over the
 // same device must not share one.
-TEST(ProgramCache, ProgramIsCreatedPerContext) {
-  mock::MockWrapper Mock;
-  allowContextAndProgramLifetimeCalls(Mock.get());
-
+TEST_F(ProgramCacheTest, ProgramIsCreatedPerContext) {
   const std::string KernelName = "kernel";
   sycl::unittests::ScopedKernelRegistration Registration(KernelName);
 
@@ -98,10 +163,7 @@ TEST(ProgramCache, ProgramIsCreatedPerContext) {
 }
 
 // A repeated request within the same context must be served from the cache.
-TEST(ProgramCache, ProgramAndKernelAreCached) {
-  mock::MockWrapper Mock;
-  allowContextAndProgramLifetimeCalls(Mock.get());
-
+TEST_F(ProgramCacheTest, ProgramAndKernelAreCached) {
   const std::string KernelName = "kernel";
   sycl::unittests::ScopedKernelRegistration Registration(KernelName);
 
@@ -119,10 +181,7 @@ TEST(ProgramCache, ProgramAndKernelAreCached) {
 // Two images registered for the same device need two programs. The cache used
 // to be keyed by device alone, which handed out the first image's program for
 // kernels of the second one.
-TEST(ProgramCache, ProgramIsCreatedPerDeviceImage) {
-  mock::MockWrapper Mock;
-  allowContextAndProgramLifetimeCalls(Mock.get());
-
+TEST_F(ProgramCacheTest, ProgramIsCreatedPerDeviceImage) {
   std::array<std::string, 2> KernelNames = {"image1kernel", "image2kernel"};
   std::array<llvm::StringRef, 1> Image1Kernels = {KernelNames[0]};
   std::array<llvm::StringRef, 1> Image2Kernels = {KernelNames[1]};
@@ -155,10 +214,7 @@ TEST(ProgramCache, ProgramIsCreatedPerDeviceImage) {
 // liboffload does not reference-count contexts: a program tied to a context
 // that has already been destroyed is in an undefined state, so olDestroyProgram
 // must come first.
-TEST(ProgramCache, ProgramsAreDestroyedBeforeContext) {
-  mock::MockWrapper Mock;
-  allowContextAndProgramLifetimeCalls(Mock.get());
-
+TEST_F(ProgramCacheTest, ProgramsAreDestroyedBeforeContext) {
   const std::string KernelName = "kernel";
   sycl::unittests::ScopedKernelRegistration Registration(KernelName);
 
@@ -178,10 +234,7 @@ TEST(ProgramCache, ProgramsAreDestroyedBeforeContext) {
 // Programs are created from the image's memory and cache kernel names that
 // point into it, so unregistering the image must release them even though the
 // context that owns them stays alive.
-TEST(ProgramCache, ProgramsAreDestroyedOnImageUnregistration) {
-  mock::MockWrapper Mock;
-  allowContextAndProgramLifetimeCalls(Mock.get());
-
+TEST_F(ProgramCacheTest, ProgramsAreDestroyedOnImageUnregistration) {
   const std::string KernelName = "kernel";
   std::array<llvm::StringRef, 1> KernelNames = {KernelName};
   llvm::SmallString<0> Binary =
