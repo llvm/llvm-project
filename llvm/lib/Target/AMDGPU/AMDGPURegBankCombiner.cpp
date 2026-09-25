@@ -95,6 +95,10 @@ public:
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
+  bool matchSameValZeroRegBankAware(
+      MachineInstr &MI,
+      std::function<void(MachineIRBuilder &)> &MatchInfo) const;
+
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
@@ -417,6 +421,24 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MRI.setRegBank(Mask.getReg(0), RB);
   MRI.setRegBank(And.getReg(0), RB);
   MI.eraseFromParent();
+}
+
+bool AMDGPURegBankCombinerImpl::matchSameValZeroRegBankAware(
+    MachineInstr &MI,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+  assert(MI.getOpcode() == AMDGPU::G_XOR || MI.getOpcode() == AMDGPU::G_SUB);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  // Ignore copies, same as same_val_zero does.
+  if (getSrcRegIgnoringCopies(LHS, MRI) != getSrcRegIgnoringCopies(RHS, MRI))
+    return false;
+
+  // Dst already has a register bank, so build the 0 there instead of a new
+  // register.
+  MatchInfo = [Dst](MachineIRBuilder &B) { B.buildConstant(Dst, 0); };
+  return true;
 }
 
 bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
