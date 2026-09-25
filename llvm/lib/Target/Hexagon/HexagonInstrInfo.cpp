@@ -1673,6 +1673,13 @@ bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
   return getAddrMode(MI) == HexagonII::PostInc;
 }
 
+bool HexagonInstrInfo::isPostIncWithImmOffset(const MachineInstr &MI) const {
+  unsigned BasePos, OffsetPos;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    return false;
+  return isPostIncrement(MI) && MI.getOperand(OffsetPos).isImm();
+}
+
 // Returns true if an instruction is predicated irrespective of the predicate
 // sense. For example, all of the following will return true.
 // if (p0) R1 = add(R2, R3)
