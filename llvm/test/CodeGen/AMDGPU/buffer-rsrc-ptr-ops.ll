@@ -84,20 +84,20 @@ define amdgpu_kernel void @buffer_structs(%fat_buffer_struct %arg, ptr addrspace
 ; SDAG-NEXT:    s_load_dword s6, s[4:5], 0x34
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x44
-; SDAG-NEXT:    v_mov_b32_e32 v4, 0
+; SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_ashr_i32 s7, s6, 31
 ; SDAG-NEXT:    s_lshl_b64 s[4:5], s[6:7], 5
 ; SDAG-NEXT:    s_add_u32 s4, s8, s4
-; SDAG-NEXT:    v_mov_b32_e32 v0, s6
+; SDAG-NEXT:    v_mov_b32_e32 v4, s6
 ; SDAG-NEXT:    s_addc_u32 s5, s9, s5
-; SDAG-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
-; SDAG-NEXT:    global_store_dword v4, v0, s[4:5] offset:16
+; SDAG-NEXT:    buffer_store_dword v4, v4, s[0:3], 0 offen
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v3, s3
-; SDAG-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
+; SDAG-NEXT:    global_store_dword v5, v4, s[4:5] offset:16
+; SDAG-NEXT:    global_store_dwordx4 v5, v[0:3], s[4:5]
 ; SDAG-NEXT:    s_endpgm
 main_body:
   %buffer = extractvalue %fat_buffer_struct %arg, 0

@@ -324,13 +324,11 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_cmp_lg_u32 s9, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
 ; CHECK-NEXT:    s_cmp_lg_u32 s6, 0
-; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
-; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; CHECK-NEXT:    s_sub_i32 s1, 0, s2
-; CHECK-NEXT:    s_mov_b32 s7, s4
+; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v0
@@ -346,17 +344,17 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_sub_i32 s0, s0, s3
 ; CHECK-NEXT:    s_cmp_ge_u32 s0, s2
 ; CHECK-NEXT:    s_cselect_b32 s3, 1, 0
-; CHECK-NEXT:    s_sub_i32 s5, s0, s2
+; CHECK-NEXT:    s_sub_i32 s4, s0, s2
 ; CHECK-NEXT:    s_cmp_lg_u32 s3, 0
-; CHECK-NEXT:    s_cselect_b32 s6, s5, s0
-; CHECK-NEXT:    s_cmp_ge_u32 s6, s2
+; CHECK-NEXT:    s_cselect_b32 s4, s4, s0
+; CHECK-NEXT:    s_cmp_ge_u32 s4, s2
 ; CHECK-NEXT:    s_cselect_b32 s3, 1, 0
-; CHECK-NEXT:    s_sub_i32 s0, s6, s2
+; CHECK-NEXT:    s_sub_i32 s0, s4, s2
 ; CHECK-NEXT:    s_cmp_lg_u32 s3, 0
-; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[6:7]
+; CHECK-NEXT:  .LBB1_3: ; %.split
+; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_branch .LBB1_3
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    ; return to shader part epilog
   %result = urem i64 %num, %den
   %cast = bitcast i64 %result to <2 x i32>
   %elt.0 = extractelement <2 x i32> %cast, i32 0

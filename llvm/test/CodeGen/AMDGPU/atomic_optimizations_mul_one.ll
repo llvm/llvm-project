@@ -208,13 +208,13 @@ define amdgpu_cs void @atomic_add_and_format(<4 x i32> inreg %arg) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
-; GCN-NEXT:    v_add_i32_e32 v4, vcc, s4, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v4, s3
+; GCN-NEXT:    v_mov_b32_e32 v3, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
+; GCN-NEXT:    buffer_store_format_xyzw v[1:4], v0, s[0:3], 0 idxen
 ; GCN-NEXT:    s_endpgm
 .entry:
   %a = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, <4 x i32> %arg, i32 0, i32 0, i32 0, i32 0)
@@ -417,13 +417,13 @@ define amdgpu_cs void @atomic_sub_and_format(<4 x i32> inreg %arg) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
-; GCN-NEXT:    v_sub_i32_e32 v4, vcc, s4, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v4, s3
+; GCN-NEXT:    v_mov_b32_e32 v3, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    v_sub_i32_e32 v0, vcc, s4, v0
+; GCN-NEXT:    buffer_store_format_xyzw v[1:4], v0, s[0:3], 0 idxen
 ; GCN-NEXT:    s_endpgm
 .entry:
   %a = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 1, <4 x i32> %arg, i32 0, i32 0, i32 0, i32 0)
@@ -630,13 +630,13 @@ define amdgpu_cs void @atomic_xor_and_format(<4 x i32> inreg %arg) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_xor_b32_e32 v4, s4, v0
+; GCN-NEXT:    v_and_b32_e32 v4, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
+; GCN-NEXT:    v_xor_b32_e32 v4, s4, v4
 ; GCN-NEXT:    buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -727,13 +727,13 @@ define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
-; GCN-NEXT:    v_add_i32_e32 v4, vcc, s4, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v4, s3
+; GCN-NEXT:    v_mov_b32_e32 v3, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
+; GCN-NEXT:    buffer_store_format_xyzw v[1:4], v0, s[0:3], 0 idxen
 ; GCN-NEXT:    s_endpgm
 .entry:
   %a = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 1, ptr addrspace(8) %arg, i32 0, i32 0, i32 0, i32 0)
@@ -825,13 +825,13 @@ define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
-; GCN-NEXT:    v_sub_i32_e32 v4, vcc, s4, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v4, s3
+; GCN-NEXT:    v_mov_b32_e32 v3, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    v_sub_i32_e32 v0, vcc, s4, v0
+; GCN-NEXT:    buffer_store_format_xyzw v[1:4], v0, s[0:3], 0 idxen
 ; GCN-NEXT:    s_endpgm
 .entry:
   %a = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 1, ptr addrspace(8) %arg, i32 0, i32 0, i32 0, i32 0)
@@ -926,13 +926,13 @@ define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v1
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_xor_b32_e32 v4, s4, v0
+; GCN-NEXT:    v_and_b32_e32 v4, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
+; GCN-NEXT:    v_xor_b32_e32 v4, s4, v4
 ; GCN-NEXT:    buffer_store_format_xyzw v[0:3], v4, s[0:3], 0 idxen
 ; GCN-NEXT:    s_endpgm
 .entry:

@@ -169,12 +169,12 @@ define amdgpu_ps void @s_buffer_load_v8i32_sgpr_rsrc_sgpr_offset(<4 x i32> inreg
 ; GFX12-NEXT:    s_mov_b32 s8, s5
 ; GFX12-NEXT:    s_mov_b32 s9, s6
 ; GFX12-NEXT:    s_buffer_load_b256 s[0:7], s[0:3], s4 offset:0x0
+; GFX12-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v5, s5
-; GFX12-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v7, s7
-; GFX12-NEXT:    v_mov_b32_e32 v6, s6
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
+; GFX12-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v8, v[0:3], s[8:9]
 ; GFX12-NEXT:    global_store_b128 v8, v[4:7], s[8:9] offset:16

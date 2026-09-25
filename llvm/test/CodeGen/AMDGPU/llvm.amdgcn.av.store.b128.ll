@@ -1608,16 +1608,16 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset,
 ; GFX1310-SDAG:       ; %bb.0:
 ; GFX1310-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1310-SDAG-NEXT:    s_clause 0x1
-; GFX1310-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24 nv
 ; GFX1310-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
-; GFX1310-SDAG-NEXT:    ds_load_b64 v[0:1], v0
+; GFX1310-SDAG-NEXT:    s_load_b32 s4, s[4:5], 0x24 nv
+; GFX1310-SDAG-NEXT:    ds_load_b64 v[4:5], v0
 ; GFX1310-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1310-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1310-SDAG-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1310-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1310-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, v0, s6
+; GFX1310-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, v4, s4
 ; GFX1310-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1310-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
-; GFX1310-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1310-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
 ; GFX1310-SDAG-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX1310-SDAG-NEXT:    s_endpgm
 ;
@@ -1828,16 +1828,16 @@ define amdgpu_kernel void @global_store_saddr_uniform_ptr_in_vgprs_immoffset(i32
 ; GFX1310-SDAG:       ; %bb.0:
 ; GFX1310-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1310-SDAG-NEXT:    s_clause 0x1
-; GFX1310-SDAG-NEXT:    s_load_b32 s6, s[4:5], 0x24 nv
 ; GFX1310-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
-; GFX1310-SDAG-NEXT:    ds_load_b64 v[0:1], v0
+; GFX1310-SDAG-NEXT:    s_load_b32 s4, s[4:5], 0x24 nv
+; GFX1310-SDAG-NEXT:    ds_load_b64 v[4:5], v0
 ; GFX1310-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1310-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1310-SDAG-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1310-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1310-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, v0, s6
+; GFX1310-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, v4, s4
 ; GFX1310-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1310-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
-; GFX1310-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1310-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
 ; GFX1310-SDAG-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:-120 scope:SCOPE_SE
 ; GFX1310-SDAG-NEXT:    s_endpgm
 ;

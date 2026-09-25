@@ -948,12 +948,11 @@ define amdgpu_kernel void @dynamic_insertelement_v12f32(ptr addrspace(1) %out, <
 define amdgpu_kernel void @dynamic_insertelement_v16f32(ptr addrspace(1) %out, <16 x float> %a, i32 %b) nounwind {
 ; SI-LABEL: dynamic_insertelement_v16f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x10
 ; SI-NEXT:    s_load_dword s4, s[8:9], 0x20
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    v_mov_b32_e32 v16, 0x40a00000
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
-; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    v_mov_b32_e32 v1, s13
@@ -972,6 +971,7 @@ define amdgpu_kernel void @dynamic_insertelement_v16f32(ptr addrspace(1) %out, <
 ; SI-NEXT:    v_mov_b32_e32 v14, s26
 ; SI-NEXT:    v_mov_b32_e32 v15, s27
 ; SI-NEXT:    s_mov_b32 m0, s4
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_movreld_b32_e32 v0, v16
 ; SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
 ; SI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
@@ -981,12 +981,11 @@ define amdgpu_kernel void @dynamic_insertelement_v16f32(ptr addrspace(1) %out, <
 ;
 ; VI-LABEL: dynamic_insertelement_v16f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x40
 ; VI-NEXT:    s_load_dword s4, s[8:9], 0x80
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v16, 0x40a00000
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
-; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
@@ -1005,6 +1004,7 @@ define amdgpu_kernel void @dynamic_insertelement_v16f32(ptr addrspace(1) %out, <
 ; VI-NEXT:    v_mov_b32_e32 v14, s26
 ; VI-NEXT:    v_mov_b32_e32 v15, s27
 ; VI-NEXT:    s_mov_b32 m0, s4
+; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_movreld_b32_e32 v0, v16
 ; VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
@@ -1444,6 +1444,7 @@ define amdgpu_kernel void @dynamic_insertelement_v16i32(ptr addrspace(1) %out, <
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 m0, s4
 ; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    v_mov_b32_e32 v1, s13
 ; SI-NEXT:    v_mov_b32_e32 v2, s14
@@ -1460,7 +1461,6 @@ define amdgpu_kernel void @dynamic_insertelement_v16i32(ptr addrspace(1) %out, <
 ; SI-NEXT:    v_mov_b32_e32 v13, s25
 ; SI-NEXT:    v_mov_b32_e32 v14, s26
 ; SI-NEXT:    v_mov_b32_e32 v15, s27
-; SI-NEXT:    s_mov_b32 m0, s4
 ; SI-NEXT:    v_movreld_b32_e32 v0, 5
 ; SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
 ; SI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
@@ -1476,6 +1476,7 @@ define amdgpu_kernel void @dynamic_insertelement_v16i32(ptr addrspace(1) %out, <
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 m0, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
 ; VI-NEXT:    v_mov_b32_e32 v2, s14
@@ -1492,7 +1493,6 @@ define amdgpu_kernel void @dynamic_insertelement_v16i32(ptr addrspace(1) %out, <
 ; VI-NEXT:    v_mov_b32_e32 v13, s25
 ; VI-NEXT:    v_mov_b32_e32 v14, s26
 ; VI-NEXT:    v_mov_b32_e32 v15, s27
-; VI-NEXT:    s_mov_b32 m0, s4
 ; VI-NEXT:    v_movreld_b32_e32 v0, 5
 ; VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32

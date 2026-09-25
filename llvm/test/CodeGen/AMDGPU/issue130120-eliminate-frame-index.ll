@@ -37,17 +37,15 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cmp_eq_u32 s46, 0
 ; CHECK-NEXT:    s_mov_b32 s49, s48
-; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_cselect_b32 s51, 0, s1
-; CHECK-NEXT:    s_cselect_b32 s55, 0, s35
+; CHECK-NEXT:    s_cselect_b32 s54, 0, s34
+; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_cselect_b32 s52, 0, s2
-; CHECK-NEXT:    s_cselect_b32 s56, 0, s36
+; CHECK-NEXT:    s_cselect_b32 s55, 0, s35
 ; CHECK-NEXT:    s_cselect_b32 vcc_lo, 0, s43
-; CHECK-NEXT:    v_dual_mov_b32 v2, s48 :: v_dual_mov_b32 v3, s49
-; CHECK-NEXT:    v_mov_b32_e32 v4, s50
 ; CHECK-NEXT:    s_cselect_b32 s47, s45, 0xf0
 ; CHECK-NEXT:    s_cselect_b32 s53, 0, s3
-; CHECK-NEXT:    s_cselect_b32 s54, 0, s34
+; CHECK-NEXT:    s_cselect_b32 s56, 0, s36
 ; CHECK-NEXT:    s_cselect_b32 s57, 0, s37
 ; CHECK-NEXT:    s_cselect_b32 s58, 0, s38
 ; CHECK-NEXT:    s_cselect_b32 s59, 0, s0
@@ -60,6 +58,8 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s51
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s52
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s53
+; CHECK-NEXT:    v_dual_mov_b32 v2, s48 :: v_dual_mov_b32 v3, s49
+; CHECK-NEXT:    v_mov_b32_e32 v4, s50
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s54
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s55
 ; CHECK-NEXT:    scratch_store_b64 off, v[0:1], s56

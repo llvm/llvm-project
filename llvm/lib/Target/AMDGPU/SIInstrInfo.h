@@ -1826,9 +1826,14 @@ public:
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
+  // Silence a hidden overloaded virtual function warning.
+  using TargetInstrInfo::getInstrLatency;
+
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getIssueCyclesForCopy(const MachineInstr &MI) const override;
 
   unsigned getBlockingCycles(const MachineInstr &MI) const;
 

@@ -68,9 +68,9 @@ define amdgpu_ps void @test_scalef32_pk32_bf6_bf16_sl(<32 x bfloat> inreg %src, 
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -147,9 +147,9 @@ define amdgpu_ps void @test_scalef32_pk32_bf6_f16_sl(<32 x half> inreg %src, ptr
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -226,9 +226,9 @@ define amdgpu_ps void @test_scalef32_pk32_fp6_bf16_sl(<32 x bfloat> inreg %src, 
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -305,9 +305,9 @@ define amdgpu_ps void @test_scalef32_pk32_fp6_f16_sl(<32 x half> inreg %src, ptr
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -408,9 +408,9 @@ define amdgpu_ps void @test_scalef32_pk32_bf6_bf16_sl_inreg_src(<32 x bfloat> in
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -509,9 +509,9 @@ define amdgpu_ps void @test_scalef32_pk32_bf6_f16_ss(<32 x half> inreg %src, flo
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -565,9 +565,9 @@ define amdgpu_ps void @test_scalef32_pk32_bf6_f16_sl_inreg_src(<32 x half> inreg
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -668,9 +668,9 @@ define amdgpu_ps void @test_scalef32_pk32_fp6_bf16_sl_inreg_src(<32 x bfloat> in
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -769,9 +769,9 @@ define amdgpu_ps void @test_scalef32_pk32_fp6_f16_ss(<32 x half> inreg %src, flo
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
@@ -825,9 +825,9 @@ define amdgpu_ps void @test_scalef32_pk32_fp6_f16_sl_inreg_src(<32 x half> inreg
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s2, v20
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s3, v21
 ; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s4, v22
-; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX950-GISEL-NEXT:    v_readfirstlane_b32 s5, v23
 ; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]

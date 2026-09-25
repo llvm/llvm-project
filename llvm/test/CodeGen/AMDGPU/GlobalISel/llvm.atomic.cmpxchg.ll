@@ -156,12 +156,12 @@ define amdgpu_ps i64 @test_flat_p0_s64_uniform_noalias_private(ptr inreg %ptr, i
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s6, s2
 ; GFX9-NEXT:    s_mov_b32 s7, s3
-; GFX9-NEXT:    v_mov_b32_e32 v5, s1
-; GFX9-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:    v_mov_b32_e32 v5, s1
+; GFX9-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX9-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol

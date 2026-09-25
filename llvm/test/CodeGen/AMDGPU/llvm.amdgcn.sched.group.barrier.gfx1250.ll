@@ -34,32 +34,29 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; COEXEC-NEXT:    s_wait_dscnt 0xd
 ; COEXEC-NEXT:    v_mov_b64_e32 v[58:59], v[42:43]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[56:57], v[40:41]
-; COEXEC-NEXT:    s_wait_dscnt 0xc
-; COEXEC-NEXT:    v_mov_b64_e32 v[62:63], v[18:19]
-; COEXEC-NEXT:    v_mov_b64_e32 v[60:61], v[16:17]
 ; COEXEC-NEXT:    s_wait_dscnt 0xb
-; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], v[26:27]
-; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], v[24:25]
-; COEXEC-NEXT:    s_wait_dscnt 0xa
+; COEXEC-NEXT:    v_mov_b64_e32 v[62:63], v[26:27]
+; COEXEC-NEXT:    v_mov_b64_e32 v[60:61], v[24:25]
+; COEXEC-NEXT:    s_wait_dscnt 0x9
+; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], v[50:51]
+; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], v[48:49]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], v[34:35]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], v[32:33]
-; COEXEC-NEXT:    s_wait_dscnt 0x9
-; COEXEC-NEXT:    v_mov_b64_e32 v[74:75], v[50:51]
-; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], v[48:49]
+; COEXEC-NEXT:    v_mov_b64_e32 v[74:75], v[18:19]
+; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], v[16:17]
 ; COEXEC-NEXT:    s_wait_dscnt 0x1
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[56:59], v[40:47], v[0:15], v76
-; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[72:75], v[48:55], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[64:67], v[48:55], v[0:15], v76
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[68:71], v[32:39], v[0:15], v76
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[64:67], v[24:31], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[60:63], v[24:31], v[0:15], v76
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[60:63], v[16:23], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[72:75], v[16:23], v[0:15], v76
 ; COEXEC-NEXT:    ds_store_b128 v78, v[56:59]
-; COEXEC-NEXT:    ds_store_b128 v77, v[72:75] offset:512
+; COEXEC-NEXT:    ds_store_b128 v77, v[64:67] offset:512
 ; COEXEC-NEXT:    ds_store_b128 v77, v[68:71] offset:1024
-; COEXEC-NEXT:    ds_store_b128 v77, v[64:67] offset:1536
+; COEXEC-NEXT:    ds_store_b128 v77, v[60:63] offset:1536
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(5) SyncID(0)
-; COEXEC-NEXT:    ds_store_b128 v77, v[60:63] offset:2048
+; COEXEC-NEXT:    ds_store_b128 v77, v[72:75] offset:2048
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000200) size(5) SyncID(0)
 ; COEXEC-NEXT:    s_endpgm
 entry:
