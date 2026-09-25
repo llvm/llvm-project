@@ -2068,6 +2068,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                 .Cases({"min.s", "min.i", "min.ll"}, Intrinsic::smin)
                 .Cases({"max.us", "max.ui", "max.ull"}, Intrinsic::umax)
                 .Cases({"min.us", "min.ui", "min.ull"}, Intrinsic::umin)
+                .Cases({"mulhi.s", "mulhi.i", "mulhi.ll"}, Intrinsic::smulh)
+                .Cases({"mulhi.us", "mulhi.ui", "mulhi.ull"}, Intrinsic::umulh)
                 .Default(Intrinsic::not_intrinsic);
         if (IID != Intrinsic::not_intrinsic) {
           NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,

@@ -72,6 +72,30 @@
 #define __shared__ __attribute__((shared))
 #define __constant__ __attribute__((constant))
 
+__device__ int mulhi_i(int a, int b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_i
+  // CHECK: call i32 @llvm.smulh.i32(
+  return __nvvm_mulhi_i(a, b);
+}
+
+__device__ unsigned int mulhi_ui(unsigned int a, unsigned int b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_ui
+  // CHECK: call i32 @llvm.umulh.i32(
+  return __nvvm_mulhi_ui(a, b);
+}
+
+__device__ long long mulhi_ll(long long a, long long b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_ll
+  // CHECK: call i64 @llvm.smulh.i64(
+  return __nvvm_mulhi_ll(a, b);
+}
+
+__device__ unsigned long long mulhi_ull(unsigned long long a, unsigned long long b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_ull
+  // CHECK: call i64 @llvm.umulh.i64(
+  return __nvvm_mulhi_ull(a, b);
+}
+
 __device__ int read_tid() {
 
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
