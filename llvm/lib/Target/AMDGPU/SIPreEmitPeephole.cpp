@@ -20,10 +20,10 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/Statistic.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -73,6 +73,7 @@ private:
   void collectUnpackingCandidates(MachineInstr &BeginMI,
                                   SetVector<MachineInstr *> &InstrsToUnpack,
                                   uint16_t NumMFMACycles);
+  bool canUnpackPkMov(const MachineInstr &MI, bool &HighFirst) const;
   // v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3] op_sel:[1,1,1]
   // op_sel_hi:[0,0,0]
   // ==>
@@ -600,6 +601,38 @@ bool SIPreEmitPeephole::removeRedundantModeWrites(
   return Changed;
 }
 
+bool SIPreEmitPeephole::canUnpackPkMov(const MachineInstr &MI,
+                                       bool &HighFirst) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LoDst = TRI->getSubReg(Dst, AMDGPU::sub0);
+  Register HiDst = TRI->getSubReg(Dst, AMDGPU::sub1);
+
+  auto SelectedSrc = [&](AMDGPU::OpName SrcName,
+                         AMDGPU::OpName ModsName) -> Register {
+    const MachineOperand *Src = TII->getNamedOperand(MI, SrcName);
+    if (!Src || !Src->isReg())
+      return Register();
+
+    unsigned Mods = TII->getNamedOperand(MI, ModsName)->getImm();
+    unsigned SubReg = Mods & SISrcMods::OP_SEL_0 ? AMDGPU::sub1 : AMDGPU::sub0;
+    return TRI->getSubReg(Src->getReg(), SubReg);
+  };
+
+  Register HiSrc =
+      SelectedSrc(AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers);
+  bool LowFirstClobbers = HiSrc && TRI->regsOverlap(LoDst, HiSrc);
+
+  Register LoSrc =
+      SelectedSrc(AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers);
+  bool HighFirstClobbers = LoSrc && TRI->regsOverlap(HiDst, LoSrc);
+
+  if (LowFirstClobbers && HighFirstClobbers)
+    return false;
+
+  HighFirst = LowFirstClobbers;
+  return true;
+}
+
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -613,17 +646,8 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
 
   if (OpCode == AMDGPU::V_PK_MOV_B32) {
-    const MachineOperand *Src1MO =
-        TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    if (!Src1MO || !Src1MO->isReg())
-      return false;
-
-    unsigned Src1Mods =
-        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
-    Register HiSrcReg = Src1Mods & SISrcMods::OP_SEL_0
-                            ? TRI->getSubReg(Src1MO->getReg(), AMDGPU::sub1)
-                            : TRI->getSubReg(Src1MO->getReg(), AMDGPU::sub0);
-    return TRI->regsOverlap(UnpackedDstReg, HiSrcReg);
+    bool HighFirst{};
+    return !canUnpackPkMov(MI, HighFirst);
   }
 
   const MachineOperand *Src0MO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -814,14 +838,25 @@ void SIPreEmitPeephole::performUnpacking(MachineInstr &I) {
   assert(UnpackedOpcode != std::numeric_limits<uint32_t>::max() &&
          "Unsupported Opcode");
 
-  MachineInstrBuilder Op0LOp1L =
-      createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
-  MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
+  bool HighFirst{};
+  if (I.getOpcode() == AMDGPU::V_PK_MOV_B32) {
+    bool CanUnpack = canUnpackPkMov(I, HighFirst);
+    assert(CanUnpack && "Unsafe V_PK_MOV_B32 reached unpacking");
+    (void)CanUnpack;
+  }
 
+  MachineInstrBuilder Op0LOp1L, Op0HOp1H;
+  if (HighFirst) {
+    Op0HOp1H = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
+    Op0LOp1L = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
+  } else {
+    Op0LOp1L = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
+    Op0HOp1H = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
+  }
+
+  MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
   LoDstOp.setIsUndef(DstOp.isUndef());
 
-  MachineInstrBuilder Op0HOp1H =
-      createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
   MachineOperand HiDstOp = Op0HOp1H->getOperand(0);
 
   uint32_t IFlags = I.getFlags();
