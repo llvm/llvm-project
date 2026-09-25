@@ -17,6 +17,7 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include <variant>
 
 namespace clang {
 class ASTContext;
@@ -264,8 +265,14 @@ private:
   }
 
 protected:
-  static DefinitionDataFootprint *
-  createDefinitionDataFootprint(const ASTContext &Ctx, const CXXRecordDecl &RD);
+  // These all return by value now, not an ASTContext-arena-allocated
+  // pointer: footprints live inside FootprintStore's own SmallVector, which
+  // owns them with ordinary C++ lifetime (ctor/dtor/copy), so there's
+  // nothing left for arena allocation to buy -- the arena's job was only
+  // ever to make these survive without anyone having to free them, and a
+  // normally-owned value does that for free too.
+  static DefinitionDataFootprint
+  createDefinitionDataFootprint(const CXXRecordDecl &RD);
 
   static bool compareDefinitionDataFootprint(const DefinitionDataFootprint &FP,
                                              const CXXRecordDecl &RD);
@@ -273,12 +280,10 @@ protected:
   static void restoreDefinitionDataFootprint(const DefinitionDataFootprint &FP,
                                              CXXRecordDecl &RD);
 
-  static SpecializationFootprint *
-  createSpecializationFootprint(const ASTContext &Ctx,
-                                const ClassTemplateSpecializationDecl &Spec) {
-    auto *FP =
-        new (Ctx, alignof(SpecializationFootprint)) SpecializationFootprint();
-    FP->update(Spec);
+  static SpecializationFootprint
+  createSpecializationFootprint(const ClassTemplateSpecializationDecl &Spec) {
+    SpecializationFootprint FP;
+    FP.update(Spec);
     return FP;
   }
   static bool
@@ -294,12 +299,10 @@ protected:
     FP.restore(Spec);
   }
 
-  static VarSpecializationFootprint *
-  createVarSpecializationFootprint(const ASTContext &Ctx,
-                                   const VarTemplateSpecializationDecl &Spec) {
-    auto *FP = new (Ctx, alignof(VarSpecializationFootprint))
-        VarSpecializationFootprint();
-    FP->update(Spec);
+  static VarSpecializationFootprint
+  createVarSpecializationFootprint(const VarTemplateSpecializationDecl &Spec) {
+    VarSpecializationFootprint FP;
+    FP.update(Spec);
     return FP;
   }
   static bool
@@ -315,12 +318,10 @@ protected:
     FP.restore(Spec);
   }
 
-  static FunctionSpecializationFootprint *
-  createFunctionSpecializationFootprint(const ASTContext &Ctx,
-                                        const FunctionDecl &FD) {
-    auto *FP = new (Ctx, alignof(FunctionSpecializationFootprint))
-        FunctionSpecializationFootprint();
-    FP->update(FD);
+  static FunctionSpecializationFootprint
+  createFunctionSpecializationFootprint(const FunctionDecl &FD) {
+    FunctionSpecializationFootprint FP;
+    FP.update(FD);
     return FP;
   }
   static bool compareFunctionSpecializationFootprint(
@@ -335,11 +336,10 @@ protected:
   }
 
   template <typename OwnerT>
-  static MemberSpecializationFootprint *
-  createMemberSpecializationFootprint(const ASTContext &Ctx, const OwnerT &D) {
-    auto *FP = new (Ctx, alignof(MemberSpecializationFootprint))
-        MemberSpecializationFootprint();
-    FP->update(D);
+  static MemberSpecializationFootprint
+  createMemberSpecializationFootprint(const OwnerT &D) {
+    MemberSpecializationFootprint FP;
+    FP.update(D);
     return FP;
   }
   template <typename OwnerT>
@@ -455,60 +455,6 @@ private:
   NamedDecl *tryDetachRedeclChain(Decl *D, PTUID ID);
 };
 
-template <typename DataT> struct Snapshot {
-  PTUID ID;
-  DataT *Data;
-};
-
-template <typename DataT> class StateAwareChain {
-  llvm::SmallVector<Snapshot<DataT>, 4> History;
-
-public:
-  bool empty() const { return History.empty(); }
-
-  const DataT *mostRecent() const {
-    return History.empty() ? nullptr : History.back().Data;
-  }
-
-  std::optional<PTUID> mostRecentID() const {
-    return History.empty() ? std::nullopt
-                           : std::optional<PTUID>(History.back().ID);
-  }
-
-  std::optional<PTUID> oldestID() const {
-    return History.empty() ? std::nullopt
-                           : std::optional<PTUID>(History.front().ID);
-  }
-
-  void commit(PTUID ID, DataT *Fresh) {
-    if (!History.empty() && *History.back().Data == *Fresh)
-      return;
-    assert(History.back().ID != ID);
-    History.push_back(Snapshot<DataT>{ID, Fresh});
-  }
-
-  // const DataT *getPrevious(PTUID ID) const {
-  //   for (auto It = History.rbegin(); It != History.rend(); ++It)
-  //     if (It->ID < ID)
-  //       return It->Data;
-  //   return nullptr;
-  // }
-
-  /// removal: drop every entry with ID >= \p ID.
-  void removeFrom(PTUID ID) {
-    while (!History.empty() && History.back().ID >= ID)
-      History.pop_back(); // no delete.
-  }
-};
-
-using RecordDeclDefinitionDataChain = StateAwareChain<DefinitionDataFootprint>;
-using SpecializationChain = StateAwareChain<SpecializationFootprint>;
-using VarSpecializationChain = StateAwareChain<VarSpecializationFootprint>;
-using FunctionSpecializationChain =
-    StateAwareChain<FunctionSpecializationFootprint>;
-using MemberSpecializationChain =
-    StateAwareChain<MemberSpecializationFootprint>;
-
 /// Maps addresses to the PTU that allocated them, by keeping the slab
 /// checkpoint taken before each PTU began.
 ///
@@ -564,89 +510,6 @@ public:
   }
 };
 
-template <typename ValueT> struct FieldMutation {
-  PTUID ID;
-  ValueT OldValue;
-};
-
-template <typename OwnerT, typename ValueT> class FieldMutationChain {
-  llvm::DenseMap<const OwnerT *, llvm::SmallVector<FieldMutation<ValueT>, 2>>
-      Log;
-
-public:
-  void noteMutation(PTUID ID, const OwnerT *Owner, ValueT OldValue) {
-    auto &Entries = Log[Owner];
-    if (!Entries.empty() && Entries.back().ID == ID)
-      return;
-    Entries.push_back(FieldMutation<ValueT>{ID, OldValue});
-  }
-
-  std::optional<ValueT> mostRecent(const OwnerT *Owner) const {
-    auto It = Log.find(Owner);
-    if (It == Log.end() || It->second.empty())
-      return std::nullopt;
-    return It->second.back().OldValue;
-  }
-
-  std::optional<PTUID> mostRecentID(const OwnerT *Owner) const {
-    auto It = Log.find(Owner);
-    if (It == Log.end())
-      return std::nullopt;
-    auto &History = It->second;
-    return History.empty() ? std::nullopt
-                           : std::optional<PTUID>(History.back().ID);
-  }
-
-  std::optional<PTUID> oldestID(const OwnerT *Owner) const {
-    auto It = Log.find(Owner);
-    if (It == Log.end())
-      return std::nullopt;
-    auto &History = It->second;
-    return History.empty() ? std::nullopt
-                           : std::optional<PTUID>(History.front().ID);
-  }
-
-  // template <typename FnT> void forEachOwnerSince(PTUID ID, FnT &&Fn) const {
-  //   for (auto &Entry : Log)
-  //     if (!Entry.second.empty() && Entry.second.back().ID >= ID)
-  //       Fn(Entry.first);
-  // }
-
-  // void removeFrom(PTUID ID) {
-  //   llvm::SmallVector<OwnerT *> ToErase;
-  //   for (auto &Entry : Log) {
-  //     auto &Entries = Entry.second;
-  //     while (!Entries.empty() && Entries.back().ID >= ID)
-  //       Entries.pop_back();
-  //     if (Entries.empty())
-  //       ToErase.push_back(Entry.first);
-  //   }
-  //   for (const OwnerT *O : ToErase)
-  //     Log.erase(O);
-  // }
-
-  /// Same trim-then-erase-if-empty as removeFrom(ID), scoped to one owner
-  /// instead of sweeping the whole Log -- for callers that already know
-  /// exactly which owners this PTU touched (see PTUStateInfo's
-  /// TouchedFunctionTypeOwners/TouchedTagdeclOwners) and don't need to
-  /// rediscover that by walking every owner ever logged.
-  void removeFromOwner(const OwnerT *Owner, PTUID ID) {
-    auto It = Log.find(Owner);
-    if (It == Log.end())
-      return;
-    auto &Entries = It->second;
-    while (!Entries.empty() && Entries.back().ID >= ID)
-      Entries.pop_back();
-    if (Entries.empty())
-      Log.erase(It);
-  }
-
-  void forget(const OwnerT *Owner) { Log.erase(Owner); }
-};
-
-using FunctionExceptionSpecChain = FieldMutationChain<FunctionDecl, QualType>;
-using TypeForDeclChain = FieldMutationChain<TagDecl, const Type *>;
-
 struct MutationRecord {
   enum class DeclShape : uint16_t {
     None = 0,
@@ -690,6 +553,58 @@ struct MutationRecord {
 using DeclShape = MutationRecord::DeclShape;
 using MutationType = MutationRecord::MutationKind;
 
+using FootprintValue =
+    std::variant<DefinitionDataFootprint, SpecializationFootprint,
+                 VarSpecializationFootprint, FunctionSpecializationFootprint,
+                 MemberSpecializationFootprint, QualType, const Type *>;
+
+struct FootprintSnapshot {
+  PTUID ID;
+  FootprintValue Data;
+};
+
+class FootprintStore {
+  llvm::DenseMap<std::pair<const Decl *, MutationType>,
+                 llvm::SmallVector<FootprintSnapshot, 2>>
+      Store;
+
+public:
+  // Same dedup StateAwareChain::commit() always had: re-committing the
+  // same value for the same owner+kind is a no-op, not a new history entry.
+  template <typename T>
+  void commit(const Decl *Owner, MutationType K, PTUID ID, const T &Fresh) {
+    auto &History = Store[{Owner, K}];
+    if (!History.empty() && std::get<T>(History.back().Data) == Fresh)
+      return;
+    History.push_back(FootprintSnapshot{ID, FootprintValue(Fresh)});
+  }
+
+  // nullptr means either "no history at all" or "history exists but the
+  // most recent entry isn't a T" -- the latter never legitimately happens
+  // for a given (Owner, K) pair, since K determines which alternative was
+  // ever committed there.
+  template <typename T>
+  const T *mostRecent(const Decl *Owner, MutationType K) const {
+    auto It = Store.find({Owner, K});
+    if (It == Store.end() || It->second.empty())
+      return nullptr;
+    return std::get_if<T>(&It->second.back().Data);
+  }
+
+  /// Drop every entry with ID >= \p ID for this (Owner, K), erasing the
+  /// key entirely once its history is empty.
+  void removeFrom(const Decl *Owner, MutationType K, PTUID ID) {
+    auto It = Store.find({Owner, K});
+    if (It == Store.end())
+      return;
+    auto &History = It->second;
+    while (!History.empty() && History.back().ID >= ID)
+      History.pop_back();
+    if (History.empty())
+      Store.erase(It);
+  }
+};
+
 struct PTUStateInfo {
   PTUID ID;
   const TranslationUnitDecl *ThisPTU; // current info
@@ -701,13 +616,13 @@ struct PTUStateInfo {
   /// here touched info mean other this belongs to other PTUs;
   llvm::SmallPtrSet<const DeclContext *, 4> TouchedDC;
 
-  /// Exactly the decls this PTU's own commit() pushed a footprint-chain
-  /// entry for (DefinitionData/Specialization/MemberSpecialization, via
-  /// chainFor()/memberSpecChainFor()).
-  llvm::SmallPtrSet<const Decl *, 8> TouchedFootprintDecls;
-
-  llvm::SmallPtrSet<const FunctionDecl *, 4> TouchedFunctionTypeOwners;
-  llvm::SmallPtrSet<const TagDecl *, 4> TouchedTagdeclOwners;
+  /// Every (Owner, Kind) key this PTU's own commit() wrote a FootprintStore
+  /// entry for -- replaces the old TouchedFootprintDecls/
+  /// TouchedFunctionTypeOwners/TouchedTagdeclOwners trio (one set per
+  /// container that used to exist) with one list, since there's now only
+  /// one container. Duplicates are harmless: FootprintStore::removeFrom is
+  /// idempotent.
+  llvm::SmallVector<std::pair<const Decl *, MutationType>, 8> TouchedFootprints;
 
   explicit PTUStateInfo(PTUID ID) : ID(ID) {}
 
@@ -779,137 +694,10 @@ public:
   void sweep(PTUMutationActions &Act, OnConfirmedFn OnConfirmed);
 };
 
-//===----------------------------------------------------------------------===//
-// DeclLinkedState / LinkedDeclNodeGenerator
-//
-// These nodes keep the footprint-chain state associated with a Decl.
-// Each Decl kind has its own node type so the node only contains state that
-// is valid for that kind. DeclLinkedState then uses the node type to identify
-// which kind of Decl it belongs to.
-//
-// The generator owns these nodes and their chains and reuses them through
-// per-type free lists. This is intentional: nodes need to be released and
-// reused, so they use normal heap allocation instead of ASTContext's
-// bump allocator.
-//
-// The goal is to keep the linked state small, type-safe, and reusable without
-// adding fields for states that a particular Decl can never have.
-//===----------------------------------------------------------------------===//
-struct CXXClassDeclNode {
-  PTUID OriginID;
-  RecordDeclDefinitionDataChain *DefData = nullptr;
-  llvm::PointerUnion<SpecializationChain *, MemberSpecializationChain *> Spec;
-};
-
-struct VarDeclNode {
-  PTUID OriginID;
-  llvm::PointerUnion<VarSpecializationChain *, MemberSpecializationChain *>
-      Spec;
-};
-
-struct FunctionDeclNode {
-  PTUID OriginID;
-  llvm::PointerUnion<FunctionSpecializationChain *, MemberSpecializationChain *>
-      Spec;
-};
-
-struct EnumDeclNode {
-  PTUID OriginID;
-  MemberSpecializationChain *MemberSpec =
-      nullptr; // the only thing an enum can ever have
-};
-
-using DeclLinkedState = llvm::PointerUnion<CXXClassDeclNode *, VarDeclNode *,
-                                           FunctionDeclNode *, EnumDeclNode *>;
-
-/// Pool for reusing node/chain objects without requiring any intrusive
-/// free-list field on T itself -- freed pointers are tracked in a side
-/// vector instead, so this works for the four node types above and the
-/// five StateAwareChain-based chain types alike. Released objects are kept
-/// for reuse, and the pool is bounded by Capacity so unused objects do not
-/// cause unbounded memory growth.
-template <typename T> class ObjectPool {
-  llvm::SmallVector<T *, 8> Free;
-  unsigned Capacity;
-
-public:
-  explicit ObjectPool(unsigned Capacity = 64) : Capacity(Capacity) {}
-
-  ~ObjectPool() {
-    for (T *C : Free)
-      delete C;
-  }
-
-  T *acquire() {
-    if (!Free.empty()) {
-      T *C = Free.pop_back_val();
-      *C = T();
-      return C;
-    }
-    return new T();
-  }
-  /// Reclaimed for real once Free is at capacity, rather than growing
-  /// without bound.
-  void release(T *C) {
-    if (Free.size() >= Capacity) {
-      delete C;
-      return;
-    }
-    Free.push_back(C);
-  }
-};
-
-class LinkedDeclNodeGenerator {
-  ObjectPool<CXXClassDeclNode> RecordNodes;
-  ObjectPool<VarDeclNode> VarNodes;
-  ObjectPool<FunctionDeclNode> FunctionNodes;
-  ObjectPool<EnumDeclNode> EnumNodes;
-
-  ObjectPool<RecordDeclDefinitionDataChain> DefDataChains;
-  ObjectPool<SpecializationChain> ClassSpecChains;
-  ObjectPool<VarSpecializationChain> VarSpecChains;
-  ObjectPool<FunctionSpecializationChain> FunctionSpecChains;
-  ObjectPool<MemberSpecializationChain> MemberSpecChains;
-
-public:
-  CXXClassDeclNode *acquireRecordNode() { return RecordNodes.acquire(); }
-  VarDeclNode *acquireVarNode() { return VarNodes.acquire(); }
-  FunctionDeclNode *acquireFunctionNode() { return FunctionNodes.acquire(); }
-  EnumDeclNode *acquireEnumNode() { return EnumNodes.acquire(); }
-
-  RecordDeclDefinitionDataChain *acquireDefDataChain() {
-    return DefDataChains.acquire();
-  }
-  SpecializationChain *acquireClassSpecChain() {
-    return ClassSpecChains.acquire();
-  }
-  VarSpecializationChain *acquireVarSpecChain() {
-    return VarSpecChains.acquire();
-  }
-  FunctionSpecializationChain *acquireFunctionSpecChain() {
-    return FunctionSpecChains.acquire();
-  }
-  MemberSpecializationChain *acquireMemberSpecChain() {
-    return MemberSpecChains.acquire();
-  }
-
-  void release(CXXClassDeclNode *N) { RecordNodes.release(N); }
-  void release(VarDeclNode *N) { VarNodes.release(N); }
-  void release(FunctionDeclNode *N) { FunctionNodes.release(N); }
-  void release(EnumDeclNode *N) { EnumNodes.release(N); }
-  void release(RecordDeclDefinitionDataChain *C) { DefDataChains.release(C); }
-  void release(SpecializationChain *C) { ClassSpecChains.release(C); }
-  void release(VarSpecializationChain *C) { VarSpecChains.release(C); }
-  void release(FunctionSpecializationChain *C) {
-    FunctionSpecChains.release(C);
-  }
-  void release(MemberSpecializationChain *C) { MemberSpecChains.release(C); }
-};
-
-enum class LangMode : uint8_t {
-  C,   // no DefinitionData, no templates, no implicit special members
-  CXX, // full set
-};
+// enum class LangMode : uint8_t {
+//   C,   // no DefinitionData, no templates, no implicit special members
+//   CXX, // full set
+// };
 
 // Overall flow:
 // - Track changes made by other PTUs so they can be applied to the relevant
@@ -930,197 +718,36 @@ private:
   // Sema::SpecialMemberCache entries for decls this PTU created.
   Sema &SemaRef;
   PTUCheckpointLedger PTUSlabCheckpoints;
-  LangMode Mode;
   PTUID NextID = 0;
 
   mutable std::vector<PTUStateInfo> PTUStack;
 
-  // Stores all declaration footprint state in one map instead of maintaining
-  // separate maps for each declaration/specialization kind. The generator
-  // creates the appropriate node and chain for each Decl.
-  mutable LinkedDeclNodeGenerator Generator;
-  mutable llvm::DenseMap<const Decl *, DeclLinkedState> LinkedDecls;
+  // One relation for every tracked footprint/value kind.
+  FootprintStore Footprints;
 
   // Tracks hidden mutations for all supported Decl kinds in one shared tracker,
   // so they can be restored correctly during rollback.
   SweepTracker HiddenMutationTracker;
 
-  FunctionExceptionSpecChain FunctionTypeMutations;
-  TypeForDeclChain TagDeclTypes;
-
   friend class PTUMutationActions;
 
-  void noteFunctionTypeMutation(PTUID ID, const FunctionDecl *Owner,
-                                QualType OldValue) {
-    FunctionTypeMutations.noteMutation(ID, Owner, OldValue);
-    current().TouchedFunctionTypeOwners.insert(Owner);
-  }
-  void noteTagDeclTypeMutation(PTUID ID, const TagDecl *Owner,
-                               const Type *OldValue) {
-    TagDeclTypes.noteMutation(ID, Owner, OldValue);
-    current().TouchedTagdeclOwners.insert(Owner);
-  }
-
-  TypeForDeclChain &getTagDeclTypeInfo() { return TagDeclTypes; }
-  FunctionExceptionSpecChain &getFunctionTypeMutations() {
-    return FunctionTypeMutations;
-  }
-
-  /// Get-or-create the CXXClassDeclNode backing Canon, acquiring one from
-  /// the generator on first use. The only place a CXXClassDeclNode is
-  /// created for this map.
-  template <typename NodeT, typename AcquireFn>
-  NodeT &nodeFor(const Decl *D, AcquireFn Acquire) {
-    current().TouchedFootprintDecls.insert(D);
-    DeclLinkedState &Info = LinkedDecls[D];
-    if (Info.isNull())
-      Info = (Generator.*Acquire)();
-    return *cast<NodeT *>(Info);
-  }
-
-  template <typename NodeT> NodeT *lookupNode(const Decl *D) const {
-    auto It = LinkedDecls.find(D);
-    if (It == LinkedDecls.end() || It->second.isNull())
-      return nullptr;
-    return dyn_cast<NodeT *>(It->second);
-  }
-
-  CXXClassDeclNode &recordNodeFor(const CXXRecordDecl *RD) {
-    return nodeFor<CXXClassDeclNode>(
-        RD, &LinkedDeclNodeGenerator::acquireRecordNode);
-  }
-  VarDeclNode &varNodeFor(const VarDecl *VD) {
-    return nodeFor<VarDeclNode>(VD, &LinkedDeclNodeGenerator::acquireVarNode);
-  }
-  FunctionDeclNode &functionNodeFor(const FunctionDecl *FD) {
-    return nodeFor<FunctionDeclNode>(
-        FD, &LinkedDeclNodeGenerator::acquireFunctionNode);
-  }
-  EnumDeclNode &enumNodeFor(const EnumDecl *ED) {
-    return nodeFor<EnumDeclNode>(ED, &LinkedDeclNodeGenerator::acquireEnumNode);
-  }
-
-  template <typename WantT, typename NodeT, typename AcquireFn>
-  WantT &specChain(NodeT &Node, AcquireFn Acquire) {
-    if (auto *C = Node.Spec.template dyn_cast<WantT *>())
-      return *C;
-    assert(Node.Spec.isNull() && "node already holds the other Spec kind");
-    auto *C = (Generator.*Acquire)();
-    Node.Spec = C;
-    return *C;
-  }
-
-  RecordDeclDefinitionDataChain &chainFor(const CXXRecordDecl *RD) {
-    CXXClassDeclNode &Node = recordNodeFor(RD);
-    if (!Node.DefData)
-      Node.DefData = Generator.acquireDefDataChain();
-    return *Node.DefData;
-  }
-
-  SpecializationChain &chainFor(const ClassTemplateSpecializationDecl *S) {
-    return specChain<SpecializationChain>(
-        recordNodeFor(cast<CXXRecordDecl>(S)),
-        &LinkedDeclNodeGenerator::acquireClassSpecChain);
-  }
-
-  VarSpecializationChain &chainFor(const VarTemplateSpecializationDecl *S) {
-    return specChain<VarSpecializationChain>(
-        varNodeFor(cast<VarDecl>(S)),
-        &LinkedDeclNodeGenerator::acquireVarSpecChain);
-  }
-
-  FunctionSpecializationChain &chainFor(const FunctionDecl *S) {
-    return specChain<FunctionSpecializationChain>(
-        functionNodeFor(cast<FunctionDecl>(S)),
-        &LinkedDeclNodeGenerator::acquireFunctionSpecChain);
-  }
-
-  MemberSpecializationChain &memberSpecChainFor(const FunctionDecl *FD) {
-    FunctionDeclNode &Node = functionNodeFor(FD);
-    auto *Chain = Node.Spec.dyn_cast<MemberSpecializationChain *>();
-    if (!Chain) {
-      Chain = Generator.acquireMemberSpecChain();
-      Node.Spec = Chain;
-    }
-    return *Chain;
-  }
-  MemberSpecializationChain &memberSpecChainFor(const VarDecl *VD) {
-    VarDeclNode &Node = varNodeFor(VD);
-    auto *Chain = Node.Spec.dyn_cast<MemberSpecializationChain *>();
-    if (!Chain) {
-      Chain = Generator.acquireMemberSpecChain();
-      Node.Spec = Chain;
-    }
-    return *Chain;
-  }
-  MemberSpecializationChain &memberSpecChainFor(const CXXRecordDecl *RD) {
-    CXXClassDeclNode &Node = recordNodeFor(RD);
-    auto *Chain = Node.Spec.dyn_cast<MemberSpecializationChain *>();
-    if (!Chain) {
-      Chain = Generator.acquireMemberSpecChain();
-      Node.Spec = Chain;
-    }
-    return *Chain;
-  }
-  MemberSpecializationChain &memberSpecChainFor(const EnumDecl *ED) {
-    EnumDeclNode &Node = enumNodeFor(ED);
-    if (!Node.MemberSpec)
-      Node.MemberSpec = Generator.acquireMemberSpecChain();
-    return *Node.MemberSpec;
-  }
-
-  const RecordDeclDefinitionDataChain *
-  getChainFor(const CXXRecordDecl *RD) const {
-    CXXClassDeclNode *N = lookupNode<CXXClassDeclNode>(RD);
-    return N ? N->DefData : nullptr;
-  }
-  const SpecializationChain *
-  getChainFor(const ClassTemplateSpecializationDecl *S) const {
-    CXXClassDeclNode *N = lookupNode<CXXClassDeclNode>(S);
-    return N ? N->Spec.dyn_cast<SpecializationChain *>() : nullptr;
-  }
-
-  const VarSpecializationChain *
-  getChainFor(const VarTemplateSpecializationDecl *Spec) const {
-    VarDeclNode *N = lookupNode<VarDeclNode>(Spec);
-    return N ? N->Spec.dyn_cast<VarSpecializationChain *>() : nullptr;
-  }
-
-  const FunctionSpecializationChain *
-  getChainFor(const FunctionDecl *Spec) const {
-    FunctionDeclNode *N = lookupNode<FunctionDeclNode>(Spec);
-    return N ? N->Spec.dyn_cast<FunctionSpecializationChain *>() : nullptr;
-  }
-
-  const MemberSpecializationChain *
-  getMemberSpecChainFor(const FunctionDecl *FD) const {
-    FunctionDeclNode *N = lookupNode<FunctionDeclNode>(FD);
-    return N ? N->Spec.dyn_cast<MemberSpecializationChain *>() : nullptr;
-  }
-
-  const MemberSpecializationChain *
-  getMemberSpecChainFor(const VarDecl *VD) const {
-    VarDeclNode *N = lookupNode<VarDeclNode>(VD);
-    return N ? N->Spec.dyn_cast<MemberSpecializationChain *>() : nullptr;
-  }
-
-  const MemberSpecializationChain *
-  getMemberSpecChainFor(const CXXRecordDecl *RD) const {
-    CXXClassDeclNode *N = lookupNode<CXXClassDeclNode>(RD);
-    return N ? N->Spec.dyn_cast<MemberSpecializationChain *>() : nullptr;
-  }
-
-  const MemberSpecializationChain *
-  getMemberSpecChainFor(const EnumDecl *ED) const {
-    EnumDeclNode *N = lookupNode<EnumDeclNode>(ED);
-    return N ? N->MemberSpec : nullptr;
-  }
-
 public:
-  IncrementalStateTracker(ASTContext &Ctx, Sema &S, LangMode M)
-      : Ctx(Ctx), SemaRef(S), PTUSlabCheckpoints(Ctx), Mode(M) {}
+  IncrementalStateTracker(ASTContext &Ctx, Sema &S)
+      : Ctx(Ctx), SemaRef(S), PTUSlabCheckpoints(Ctx) {}
 
-  LangMode getMode() const { return Mode; }
+  // Writes a new value and records that this PTU touched (Owner, K), so
+  // undoLastEntries() knows what to remove if the PTU is rolled back
+  // without committing. mostRecent() doesn't need any bookkeeping, so it
+  // reads directly from Footprints via Tracker.Footprints.mostRecent<T>(...)
+  // instead of having its own wrapper.
+  template <typename T>
+  void commitFootprint(const Decl *Owner, MutationType K, PTUID ID,
+                       const T &Fresh) {
+    Footprints.commit(Owner, K, ID, Fresh);
+    current().TouchedFootprints.emplace_back(Owner, K);
+  }
+
+  FootprintStore &getFootprints() { return Footprints; }
 
   PTUStateInfo &current() const {
     assert(!PTUStack.empty() && "no PTU has been started");
@@ -1156,25 +783,6 @@ private:
     PTUSlabCheckpoints.undoFrom(ID);
     NextID = ID;
   }
-
-  template <typename ChainT>
-  static bool removeChainField(ChainT *&Field, PTUID ID,
-                               LinkedDeclNodeGenerator &Gen);
-
-  static bool removeRecordSpec(
-      llvm::PointerUnion<SpecializationChain *, MemberSpecializationChain *>
-          &Spec,
-      PTUID ID, LinkedDeclNodeGenerator &Gen);
-  static bool removeVarSpec(
-      llvm::PointerUnion<VarSpecializationChain *, MemberSpecializationChain *>
-          &Spec,
-      PTUID ID, LinkedDeclNodeGenerator &Gen);
-  static bool
-  removeFunctionSpec(llvm::PointerUnion<FunctionSpecializationChain *,
-                                        MemberSpecializationChain *> &Spec,
-                     PTUID ID, LinkedDeclNodeGenerator &Gen);
-  void removeLinkedDecl(const Decl *D, PTUID ID);
-  // just only remove entries from current();
 };
 
 class PTUMutationActions {
