@@ -5450,8 +5450,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
-  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects, &reductionVarCache);
+  {
+    // SIMD clause expressions are inside DO, but loop control remains outside
+    // the loop constructs.
+    mlir::SaveStateStack<OpenMPContextFrame> doContext{
+        converter.getStateStack(), eval, llvm::omp::Directive::OMPD_do};
+    genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
+                   simdReductionObjects, &reductionVarCache);
+  }
 
   // Same as genCompositeDoSimd.
   if (!simdClauseOps.linearVars.empty()) {
@@ -5598,8 +5604,14 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
-  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects, &reductionVarCache);
+  {
+    // SIMD clause expressions are inside DO, but loop control remains outside
+    // the loop constructs.
+    mlir::SaveStateStack<OpenMPContextFrame> doContext{
+        converter.getStateStack(), eval, llvm::omp::Directive::OMPD_do};
+    genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
+                   simdReductionObjects, &reductionVarCache);
+  }
 
   // omp.simd writes back linear vars unconditionally, causing a race when
   // inside a parallel region. Move them to wsloop which has proper last-iter
