@@ -8704,11 +8704,18 @@ call i32 @llvm.read_register.i32(metadata !1), !invariant.load !0
 The experimental `invariant.group` metadata may be attached to
 `load`/`store` instructions referencing a single metadata with no entries.
 The existence of the `invariant.group` metadata on the instruction tells
-the optimizer that every `load` and `store` to the same pointer operand
-can be assumed to load or store the same
-value (but see the `llvm.launder.invariant.group` intrinsic which affects
-when two pointers are considered the same). Pointers returned by bitcast or
-getelementptr with only zero indices are considered the same.
+the optimizer that every `load` and `store` to the "same" pointer operand
+can be assumed to load or store the same value.
+
+More precisely, if memory is accessed through a pointer `%p` using an
+instruction with `!invariant.group` metadata, then, if the same memory (or
+parts of it) are later modified through a pointer that is *invariant-compatible*
+with `%p`, the behavior is undefined. Two pointers are *invariant-compatible*
+if they are *based-on* a common pointer, such that no
+`llvm.strip.invariant.group` or `llvm.launder.invariant.group` intrinsic needs
+to be passed to reach it. For the purposes of `!invariant.group`, writing back
+the same value that is already stored in the location does not count as a
+modification.
 
 Note that the metadata value in invariant.group carries no semantic value.
 Because it must have no entries, all invariant.group annotations in a module
@@ -8717,24 +8724,42 @@ reference the same uniqued empty node.
 Examples:
 
 ```llvm
-@unknownPtr = external global i8
+@unknownPtr = external global i32
 ...
-%ptr = alloca i8
-store i8 42, ptr %ptr, !invariant.group !0
+%ptr = alloca i32
+store i32 42, ptr %ptr, !invariant.group !0
 call void @foo(ptr %ptr)
 
-%a = load i8, ptr %ptr, !invariant.group !0 ; Can assume that value under %ptr didn't change
+; Can assume that value under %ptr didn't change
+%a = load i32, ptr %ptr, !invariant.group !0
+call void @foo(ptr %ptr)
+
+; Can still assume that value under %ptr didn't change.
+; Having !invariant.group on the later load is not required for the invariance
+; property to be used, though it may be used as an optimization heuristic to
+; determine whether finding a dominating !invariant.group access is worthwhile.
+%b = load i32, ptr %ptr
+call void @foo(ptr %ptr)
+
+; Can still assume that the accessed sub-bytes did not change.
+%ptr.plus.2 = getelementptr i8, ptr %ptr, i64 2
+%c = load i16, ptr %ptr.plus.2
+call void @foo(ptr %ptr)
+
+; Can not assume that the entire value did not change, because more memory is
+; loaded than the original !invariant.group access stored.
+%x = load i64, ptr %ptr
 call void @foo(ptr %ptr)
 
 %newPtr = call ptr @getPointer(ptr %ptr)
-%c = load i8, ptr %newPtr, !invariant.group !0 ; Can't assume anything, because we only have information about %ptr
+%c = load i32, ptr %newPtr, !invariant.group !0 ; Can't assume anything, because we only have information about %ptr
 
-%unknownValue = load i8, ptr @unknownPtr
-store i8 %unknownValue, ptr %ptr, !invariant.group !0 ; Can assume that %unknownValue == 42
+%unknownValue = load i32, ptr @unknownPtr
+store i32 %unknownValue, ptr %ptr, !invariant.group !0 ; Can assume that %unknownValue == 42
 
 call void @foo(ptr %ptr)
 %newPtr2 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr)
-%d = load i8, ptr %newPtr2, !invariant.group !0  ; Can't step through launder.invariant.group to get value of %ptr
+%d = load i32, ptr %newPtr2, !invariant.group !0  ; Can't step through launder.invariant.group to get value of %ptr
 
 ...
 declare void @foo(ptr)
@@ -8742,16 +8767,6 @@ declare ptr @getPointer(ptr)
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 
 !0 = !{}
-```
-
-The `invariant.group` metadata must be dropped when replacing one pointer by
-another based on aliasing information. This is because `invariant.group` is tied
-to the SSA value of the pointer operand.
-
-```llvm
-%v = load i8, ptr %x, !invariant.group !0
-; if %x mustalias %y then we can replace the above instruction with
-%v = load i8, ptr %y
 ```
 
 Note that this is an experimental feature, which means that its semantics might
