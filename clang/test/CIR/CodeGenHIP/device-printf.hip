@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx90a -x hip \
-// RUN: -std=c++11 -fclangir -fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -std=c++11 \
+// RUN: -fclangir -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx90a -x hip \
-// RUN: -std=c++11 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple=amdgpu9.0a-amd-amdhsa -x hip -std=c++11 \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // printf fell through to a library call, which does not exist on the device:
