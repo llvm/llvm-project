@@ -58,6 +58,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1458,6 +1459,19 @@ static void computeKnownBitsForRecurrenceOperands(
   computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
 }
 
+// These facts must hold for every participating execution of the intrinsic,
+// rather than just the lane consuming its result. In particular, neither an
+// injected condition nor a branch after the intrinsic constrains other lanes.
+static KnownBits computeKnownBitsForNVVMWarpInput(const IntrinsicInst *II,
+                                                  unsigned OpNo,
+                                                  const SimplifyQuery &Q,
+                                                  unsigned Depth) {
+  SimplifyQuery WarpQ = Q.getWithInstruction(II).getWithoutCondContext();
+  // Retain assumptions valid at the intrinsic. A later assume is usable when
+  // every execution reaching the intrinsic is guaranteed to reach the assume.
+  return computeKnownBits(II->getArgOperand(OpNo), WarpQ, Depth + 1);
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known,
@@ -2360,6 +2374,42 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = KnownBits::add(Known, Known2);
         break;
       }
+      case Intrinsic::nvvm_shfl_sync_idx_i32:
+      case Intrinsic::nvvm_shfl_sync_up_i32:
+      case Intrinsic::nvvm_shfl_sync_down_i32:
+      case Intrinsic::nvvm_shfl_sync_bfly_i32:
+        // A defined shuffle result selects a participating lane's input,
+        // including the calling lane when the source index is out of range.
+        Known =
+            Known.unionWith(computeKnownBitsForNVVMWarpInput(II, 1, Q, Depth));
+        break;
+      case Intrinsic::nvvm_shfl_idx_i32:
+      case Intrinsic::nvvm_shfl_up_i32:
+      case Intrinsic::nvvm_shfl_down_i32:
+      case Intrinsic::nvvm_shfl_bfly_i32:
+      case Intrinsic::nvvm_redux_sync_min:
+      case Intrinsic::nvvm_redux_sync_max:
+      case Intrinsic::nvvm_redux_sync_umin:
+      case Intrinsic::nvvm_redux_sync_umax:
+      case Intrinsic::nvvm_redux_sync_and:
+      case Intrinsic::nvvm_redux_sync_or:
+        // Min/max select an input. AND/OR preserve bits common to every input.
+        // A defined reduction has at least one participant: the calling lane.
+        Known =
+            Known.unionWith(computeKnownBitsForNVVMWarpInput(II, 0, Q, Depth));
+        break;
+      case Intrinsic::nvvm_redux_sync_xor:
+        Known2 = computeKnownBitsForNVVMWarpInput(II, 0, Q, Depth);
+        // Common one bits depend on the parity of the number of participants.
+        // Even a constant member mask does not exclude exited threads.
+        Known.Zero |= Known2.Zero;
+        break;
+      case Intrinsic::nvvm_redux_sync_add:
+        Known2 = computeKnownBitsForNVVMWarpInput(II, 0, Q, Depth);
+        // Carries can change every bit above the common trailing zeros. The
+        // sum wraps to i32, which still preserves those trailing zeros.
+        Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+        break;
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction())
           break;
