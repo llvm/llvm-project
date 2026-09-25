@@ -91,6 +91,15 @@ DialectAsmPrinter::~DialectAsmPrinter() = default;
 
 OpAsmPrinter::~OpAsmPrinter() = default;
 
+void OpAsmPrinter::printOperands(OperandRange operands) {
+  llvm::interleaveComma(operands, getStream(),
+                        [this](Value value) { printOperand(value); });
+}
+
+void OpAsmPrinter::printOperandTypes(ValueTypeRange<OperandRange> types) {
+  llvm::interleaveComma(types, *this);
+}
+
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
   os << '(';
@@ -762,8 +771,10 @@ private:
       printType(type);
 
     // Consider the attributes of the operation for aliases.
-    for (const NamedAttribute &attr : op->getAttrs())
+    for (const NamedAttribute &attr : op->getRawDictionaryAttrs())
       printAttribute(attr.getValue());
+    op->getName().walkInherentAttrs(
+        op, [&](StringRef, Attribute &attr) { printAttribute(attr); });
   }
 
   /// Print the given block. If 'printBlockArgs' is false, the arguments of the
@@ -3856,9 +3867,7 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
     os << ')';
   }
 
-  printOptionalAttrDict(op->getPropertiesStorage()
-                            ? llvm::to_vector(op->getDiscardableAttrs())
-                            : op->getAttrs());
+  printOptionalAttrDict(op->getRawDictionaryAttrs().getValue());
 
   // Print the type signature of the operation.
   os << " : ";

@@ -128,7 +128,6 @@ public:
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
-  std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
 
   TypeSize
@@ -179,7 +178,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
@@ -227,7 +228,7 @@ public:
   std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
       unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
+      ArrayRef<const Value *> Args, const Instruction *CtxI) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -272,7 +273,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
@@ -546,6 +547,12 @@ public:
   /// Return true if a vector instruction will lower to a target instruction
   /// able to splat the given operand.
   bool canSplatOperand(unsigned Opcode, int Operand) const;
+
+  TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<
+          bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+          GatherUseOps) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;

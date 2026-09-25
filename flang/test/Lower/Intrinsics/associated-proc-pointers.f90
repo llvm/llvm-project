@@ -127,7 +127,7 @@ contains
     procedure(func), pointer :: pp
   end
 end
-! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.logical<4> {bindc_name = "ll", uniq_name = "_QFtest_proc_pointer_6Ell"}
+! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "ll", uniq_name = "_QFtest_proc_pointer_6Ell"}>
 ! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_proc_pointer_6Ell"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK: %[[VAL_2:.*]] = fir.call @_QFtest_proc_pointer_6Preffunc() fastmath<contract> : () -> !fir.boxproc<() -> f32>
 ! CHECK: %[[VAL_3:.*]] = fir.address_of(@_QPfunc) : () -> f32

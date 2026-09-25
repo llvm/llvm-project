@@ -266,7 +266,7 @@ class SPIRVLegalizePointerCastImpl {
       return Scalar;
     if (Ty->isIntOrIntVectorTy())
       return B.CreateIntCast(Scalar, IntTy, /*isSigned=*/false);
-    return B.CreateBitCast(Scalar, IntTy);
+    return B.CreateIntrinsic(Intrinsic::spv_bitcast, {IntTy, Ty}, {Scalar});
   }
 
   Value *storeIntToScalar(IRBuilder<> &B, Value *IntVal, Type *ScalarTy) {
@@ -274,7 +274,8 @@ class SPIRVLegalizePointerCastImpl {
       return IntVal;
     if (ScalarTy->isIntOrIntVectorTy())
       return B.CreateIntCast(IntVal, ScalarTy, /*isSigned=*/false);
-    return B.CreateBitCast(IntVal, ScalarTy);
+    return B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                             {ScalarTy, IntVal->getType()}, {IntVal});
   }
 
   void storeScalarToByteLayout(IRBuilder<> &B, Value *Src, Value *Dst,
@@ -283,6 +284,8 @@ class SPIRVLegalizePointerCastImpl {
     Type *I8Ty = Type::getInt8Ty(Ctx);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     Value *IntVal = scalarToStoreInt(B, Src);
+    if (IntVal != Src)
+      buildAssignType(B, IntVal->getType(), IntVal);
     unsigned NumBytes = DL.getTypeStoreSize(Src->getType());
 
     auto StoreByte = [&](unsigned I, Value *Shifted) {
@@ -458,8 +461,11 @@ class SPIRVLegalizePointerCastImpl {
   buildVectorFromLoadedElements(IRBuilder<> &B, FixedVectorType *TargetType,
                                 SmallVector<Value *, 4> &LoadedElements) {
     // <1 x T> shares the SPIR-V type with T, so emitting OpCompositeInsert on
-    // a scalar would be invalid. Bridge with spv_bitcast instead.
-    if (TargetType->getNumElements() == 1) {
+    // a scalar would be invalid. Bridge with spv_bitcast instead unless
+    // SPV_EXT_long_vector is available.
+    bool CanUseAnyVectorRank = TM.getSubtargetImpl()->canUseExtension(
+        SPIRV::Extension::SPV_EXT_long_vector);
+    if (TargetType->getNumElements() == 1 && !CanUseAnyVectorRank) {
       Value *Scalar = LoadedElements[0];
       Value *NewVector = B.CreateIntrinsic(
           Intrinsic::spv_bitcast, {TargetType, Scalar->getType()}, {Scalar});
@@ -602,8 +608,11 @@ class SPIRVLegalizePointerCastImpl {
       GR->buildAssignPtr(B, ElemTy, ElementPtr);
 
       // Extract the element from the vector and store it.
-      Value *Element =
-          E == 1 ? SrcVector : makeExtractElement(B, ElemTy, SrcVector, I);
+      bool CanUseAnyVectorRank = TM.getSubtargetImpl()->canUseExtension(
+          SPIRV::Extension::SPV_EXT_long_vector);
+      Value *Element = (E == 1 && !CanUseAnyVectorRank)
+                           ? SrcVector
+                           : makeExtractElement(B, ElemTy, SrcVector, I);
       StoreInst *SI = B.CreateStore(Element, ElementPtr);
       SI->setAlignment(commonAlignment(Alignment, I * ElemSize));
     }
@@ -701,11 +710,9 @@ class SPIRVLegalizePointerCastImpl {
     LI->setAlignment(Alignment);
     Value *OldValues = LI;
     buildAssignType(B, OldValues->getType(), OldValues);
-    Value *NewValues = Src;
 
     for (unsigned I = 0; I < SrcType->getNumElements(); ++I) {
-      Value *Element =
-          makeExtractElement(B, SrcType->getElementType(), NewValues, I);
+      Value *Element = extractScalarFromVector(B, Src, I);
       OldValues = makeInsertElement(B, OldValues, Element, I);
     }
 

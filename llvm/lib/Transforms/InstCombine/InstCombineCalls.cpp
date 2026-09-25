@@ -53,7 +53,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -448,12 +447,8 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   return nullptr;
 }
 
-/// This function transforms launder.invariant.group and strip.invariant.group
-/// like:
+/// This function transforms launder.invariant.group like:
 /// launder(launder(%x)) -> launder(%x)       (the result is not the argument)
-/// launder(strip(%x)) -> launder(%x)
-/// strip(strip(%x)) -> strip(%x)             (the result is not the argument)
-/// strip(launder(%x)) -> strip(%x)
 /// This is legal because it preserves the most recent information about
 /// the presence or absence of invariant.group.
 static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
@@ -462,23 +457,15 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   auto *StrippedArg = Arg->stripPointerCasts();
   auto *StrippedInvariantGroupsArg = StrippedArg;
   while (auto *Intr = dyn_cast<IntrinsicInst>(StrippedInvariantGroupsArg)) {
-    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group &&
-        Intr->getIntrinsicID() != Intrinsic::strip_invariant_group)
+    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group)
       break;
     StrippedInvariantGroupsArg = Intr->getArgOperand(0)->stripPointerCasts();
   }
   if (StrippedArg == StrippedInvariantGroupsArg)
-    return nullptr; // No launders/strips to remove.
+    return nullptr; // No launders to remove.
 
-  Value *Result = nullptr;
-
-  if (II.getIntrinsicID() == Intrinsic::launder_invariant_group)
-    Result = IC.Builder.CreateLaunderInvariantGroup(StrippedInvariantGroupsArg);
-  else if (II.getIntrinsicID() == Intrinsic::strip_invariant_group)
-    Result = IC.Builder.CreateStripInvariantGroup(StrippedInvariantGroupsArg);
-  else
-    llvm_unreachable(
-        "simplifyInvariantGroupIntrinsic only handles launder and strip");
+  Value *Result =
+      IC.Builder.CreateLaunderInvariantGroup(StrippedInvariantGroupsArg);
   if (Result->getType()->getPointerAddressSpace() !=
       II.getType()->getPointerAddressSpace())
     Result = IC.Builder.CreateAddrSpaceCast(Result, II.getType());
@@ -1202,9 +1189,9 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
   // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
-  if ((Mask & Known.KnownFPClasses) != Mask) {
+  if ((Mask & Known.getKnownFPClasses()) != Mask) {
     II.setArgOperand(
-        1, ConstantInt::get(Src1->getType(), Mask & Known.KnownFPClasses));
+        1, ConstantInt::get(Src1->getType(), Mask & Known.getKnownFPClasses()));
     return &II;
   }
 
@@ -1220,7 +1207,7 @@ static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -1232,7 +1219,7 @@ static std::optional<bool> getKnownSignOrZero(Value *Op,
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -1984,6 +1971,60 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   return IsSin ? Sin : Cos;
 }
 
+/// Fold an scmp/ucmp intrinsic whose operands are extended from a narrower
+/// type:
+///   scmp (sext X), (sext Y) --> scmp X, Y
+///   scmp (zext X), (zext Y) --> ucmp X, Y
+///   ucmp (ext X), (ext Y)   --> ucmp X, Y
+/// Both operands must use the same extend opcode and source type. A constant
+/// operand is narrowed instead, if truncating and re-extending it gives back
+/// the same constant.
+static Value *foldCmpIntrinsicOfExtended(IntrinsicInst *II,
+                                         InstCombiner::BuilderTy &Builder,
+                                         const DataLayout &DL) {
+  // scmp/ucmp are not commutative, so the extend may be on either side.
+  unsigned ExtIdx = 0;
+  Value *X;
+  if (!match(II->getArgOperand(0), m_ZExtOrSExt(m_Value(X)))) {
+    ExtIdx = 1;
+    if (!match(II->getArgOperand(1), m_ZExtOrSExt(m_Value(X))))
+      return nullptr;
+  }
+
+  auto CastOpc = static_cast<Instruction::CastOps>(
+      cast<Operator>(II->getArgOperand(ExtIdx))->getOpcode());
+  Type *NarrowTy = X->getType();
+
+  // The other operand must be the same kind of extend from the same type, or a
+  // constant that can be narrowed losslessly.
+  Value *OtherOp = II->getArgOperand(1 - ExtIdx);
+  Value *Y;
+  Constant *WideC;
+  if (match(OtherOp, m_ZExtOrSExt(m_Value(Y)))) {
+    if (cast<Operator>(OtherOp)->getOpcode() != CastOpc ||
+        Y->getType() != NarrowTy)
+      return nullptr;
+  } else if (match(OtherOp, m_ImmConstant(WideC))) {
+    Y = getLosslessInvCast(WideC, NarrowTy, CastOpc, DL);
+    if (!Y)
+      return nullptr;
+  } else {
+    return nullptr;
+  }
+
+  // Both extends preserve the unsigned order, so an unsigned compare of the
+  // narrow operands is always equivalent. The signed order is only preserved by
+  // sext; zero extended values are non-negative, so a signed compare of those
+  // is an unsigned compare of the narrow operands.
+  Intrinsic::ID NewIID =
+      II->getIntrinsicID() == Intrinsic::scmp && CastOpc == Instruction::SExt
+          ? Intrinsic::scmp
+          : Intrinsic::ucmp;
+  if (ExtIdx != 0)
+    std::swap(X, Y);
+  return Builder.CreateIntrinsic(II->getType(), NewIID, {X, Y});
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -2482,7 +2523,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
-  case Intrinsic::scmp: {
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp: {
+    if (Value *V = foldCmpIntrinsicOfExtended(II, Builder, DL))
+      return replaceInstUsesWith(CI, V);
+
+    if (IID == Intrinsic::ucmp)
+      break;
+
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
 
     // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
@@ -2584,7 +2632,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::masked_scatter:
     return simplifyMaskedScatter(*II);
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
       return replaceInstUsesWith(*II, SkippedBarrier);
     break;
@@ -3971,8 +4018,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %A)
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
-    if (match(IIOperand,
-              m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
+    if (match(
+            IIOperand,
+            m_CombineOr(m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero()),
+                        m_Not(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(A),
+                                             m_Zero())))) &&
         A->getType()->isPointerTy()) {
       Builder.CreateNonnullAssumption(A);
       return eraseInstFromFunction(*II);

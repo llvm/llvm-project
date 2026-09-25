@@ -717,9 +717,23 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg())
       return false;
-    if (SrcOp.getSubReg())
-      return false;
     Register SrcReg = SrcOp.getReg();
+    if (SrcOp.getSubReg()) {
+      // If operand is defined by a LD1/2/3/4 that define a D subreg tuple
+      // then upper bits of the tuple's registers are implicitly zeroed
+      // and the FMOV is unneeded.
+      if (!SrcReg.isVirtual())
+        return false;
+
+      MachineInstr *SrcDef = MRI->getUniqueVRegDef(SrcReg);
+      if (!SrcDef || SrcDef->getOpcode() <= TargetOpcode::GENERIC_OP_END ||
+          SrcDef->getDesc().isPseudo() || !SrcDef->mayLoad())
+        return false;
+
+      const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
+      return RC == &AArch64::DDRegClass || RC == &AArch64::DDDRegClass ||
+             RC == &AArch64::DDDDRegClass;
+    }
     auto IsGPR64Like = [&]() -> bool {
       if (SrcReg.isVirtual())
         return AArch64::GPR64allRegClass.hasSubClassEq(
@@ -904,7 +918,7 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SBFMXri ||
         SrcMI->getOperand(2).getImm() != 0 ||
         SrcMI->getOperand(3).getImm() != 31)
-      return AArch64::NoRegister;
+      return Register();
     return SrcMI->getOperand(1).getReg();
   };
   // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
@@ -912,16 +926,16 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
         SrcMI->getOperand(2).getImm() != AArch64::sub_32 ||
         !MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
     if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
         Orr->getOperand(1).getReg() != AArch64::WZR ||
         !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
     if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
         Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
-      return AArch64::NoRegister;
+      return Register();
     DeadInstrs.insert(Orr);
     return Cpy->getOperand(1).getReg();
   };

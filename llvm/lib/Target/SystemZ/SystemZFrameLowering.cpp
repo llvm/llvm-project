@@ -801,9 +801,12 @@ void SystemZELFFrameLowering::inlineStackProbe(
     MachineMemOperand *MMO = MF.getMachineMemOperand(MachinePointerInfo(),
       MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad, 8, Align(1));
     BuildMI(InsMBB, InsPt, DL, ZII->get(SystemZ::CG))
-      .addReg(SystemZ::R0D, RegState::Undef)
-      .addReg(SystemZ::R15D).addImm(Size - 8).addReg(0)
-      .addMemOperand(MMO);
+        .addReg(SystemZ::R0D, RegState::Undef)
+        .addReg(SystemZ::R15D)
+        .addImm(Size - 8)
+        .addReg(0)
+        .setOperandDead(4)
+        .addMemOperand(MMO);
   };
 
   bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
@@ -864,7 +867,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
 }
 
 bool SystemZELFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  return (MF.disableFramePointerElim() ||
           MF.getFrameInfo().hasVarSizedObjects());
 }
 

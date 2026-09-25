@@ -18,7 +18,7 @@ define void @sum_of_induction_and_guard(i8 %n, i8 %j) mustprogress {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i8 [[IV]], [[J]]
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i8 [[IV]], [[J]]
 ; CHECK-NEXT:    br i1 true, label %[[THEN:.*]], label %[[ELS:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    tail call void @use(i32 1)
@@ -74,7 +74,7 @@ define void @zero_step_constant_start(i32 %n) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 0
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -105,7 +105,7 @@ define void @zero_step_unknown_start(i32 %n, i32 %start) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 0
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -140,7 +140,7 @@ define void @zero_step_addrec_of_outer_loop(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[INNER_LATCH]], label %[[OUTER_LATCH]]
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 0
 ; CHECK-NEXT:    br label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[O_NEXT]] = add i32 [[O]], 1

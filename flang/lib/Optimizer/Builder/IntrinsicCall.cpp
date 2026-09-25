@@ -929,28 +929,27 @@ static llvm::cl::opt<bool>
 /// Return a string containing the given Fortran intrinsic name
 /// with the type of its arguments specified in funcType
 /// surrounded by the given prefix/suffix.
-static std::string
-prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
-                         llvm::StringRef prefix, llvm::StringRef name,
-                         llvm::StringRef suffix, mlir::FunctionType funcType) {
+static std::string prettyPrintIntrinsicName(mlir::Location loc,
+                                            llvm::StringRef prefix,
+                                            llvm::StringRef name,
+                                            llvm::StringRef suffix,
+                                            mlir::FunctionType funcType) {
   std::string output = prefix.str();
   llvm::raw_string_ostream sstream(output);
   if (name == "pow" || name == "pow-unsigned") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
-    sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+    sstream << mlirTypeToIntrinsicFortran(funcType.getInput(0), loc,
                                           displayName)
             << displayName
-            << mlirTypeToIntrinsicFortran(builder, funcType.getInput(1), loc,
+            << mlirTypeToIntrinsicFortran(funcType.getInput(1), loc,
                                           displayName);
   } else {
     sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
-                                            name);
+      sstream << mlirTypeToIntrinsicFortran(funcType.getInput(0), loc, name);
     for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", "
-              << mlirTypeToIntrinsicFortran(builder, argType, loc, name);
+      sstream << ", " << mlirTypeToIntrinsicFortran(argType, loc, name);
     }
     sstream << ")";
   }
@@ -1113,7 +1112,7 @@ mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
     LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
                             << "' operation with type ";
                mathLibFuncType.dump(); llvm::dbgs() << "\n");
-    result = T::create(builder, loc, args);
+    result = T::create(builder, loc, args, typename T::Properties{});
   }
   LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
   return result;
@@ -1151,12 +1150,13 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   // the argument types for an operation
   if constexpr (T::template hasTrait<
                     mlir::OpTrait::SameOperandsAndResultType>()) {
-    result = T::create(builder, loc, args);
+    result = T::create(builder, loc, args, typename T::Properties{});
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   } else {
     auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
     auto realTy = complexTy.getElementType();
-    result = T::create(builder, loc, realTy, args);
+    result = T::create(builder, loc, mlir::TypeRange{realTy}, args,
+                       typename T::Properties{});
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   }
 
@@ -1785,7 +1785,7 @@ searchMathOperation(fir::FirOpBuilder &builder,
 static void checkPrecisionLoss(llvm::StringRef name,
                                mlir::FunctionType funcType,
                                const FunctionDistance &distance,
-                               fir::FirOpBuilder &builder, mlir::Location loc) {
+                               mlir::Location loc) {
   if (!distance.isLosingPrecision())
     return;
 
@@ -1796,8 +1796,8 @@ static void checkPrecisionLoss(llvm::StringRef name,
   // generating the code with the narrowing cast so that the user
   // can get a complete list of the problematic intrinsic calls.
   std::string message = prettyPrintIntrinsicName(
-      builder, loc, "not yet implemented: no math runtime available for '",
-      name, "'", funcType);
+      loc, "not yet implemented: no math runtime available for '", name, "'",
+      funcType);
   mlir::emitError(loc, message);
 }
 
@@ -2443,7 +2443,7 @@ static IntrinsicLibrary::RuntimeCallGenerator getRuntimeCallGeneratorHelper(
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, builder, loc);
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
     mathOp = bestNearMatch;
   }
 
@@ -5233,6 +5233,74 @@ template <bool isGet, bool isModes>
 void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
+  if constexpr (!isModes) {
+    mlir::Type i32Ty = builder.getIntegerType(32);
+    mlir::Type i32PtrTy = builder.getRefType(i32Ty);
+    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
+    if (triple.isOSAIX()) {
+      // On AIX, fegetenv/fesetenv does not round-trip the FPSCR trap-enable
+      // bits [7:3].
+      //
+      // ieee_status_type.__data layout:
+      //   bytes  [0, 20) - fenv_t saved by fegetenv / restored by fesetenv
+      //   bytes [20, 28) - raw FPSCR double from mffs (trap-enable bits [7:3])
+      static constexpr int kAIXFenvTSize = 20; // sizeof(fenv_t) on AIX
+      mlir::Type i8Ty = builder.getIntegerType(8);
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Type f64Ty = builder.getF64Type();
+      mlir::Type f64PtrTy = builder.getRefType(f64Ty);
+      mlir::Type i8SeqTy =
+          fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+      mlir::Type i8SeqPtrTy = builder.getRefType(i8SeqTy);
+
+      // Cast __data base pointer to !fir.ref<!fir.array<?xi8>> for GEP
+      mlir::Value base = fir::ConvertOp::create(builder, loc, i8SeqPtrTy,
+                                                fir::getBase(args[0]));
+
+      // fenv_t pointer: byte offset 0, cast to !fir.ref<i32> for fe[gs]etenv
+      mlir::Value fenvIdx = builder.createIntegerConstant(loc, idxTy, 0);
+      mlir::Value fenvGep = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(i8Ty), base, fenvIdx);
+      mlir::Value fenvPtr =
+          fir::ConvertOp::create(builder, loc, i32PtrTy, fenvGep);
+
+      // Raw FPSCR double pointer: byte offset kAIXFenvTSize (20), cast to f64
+      mlir::Value fpIdx =
+          builder.createIntegerConstant(loc, idxTy, kAIXFenvTSize);
+      mlir::Value fpGep = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(i8Ty), base, fpIdx);
+      mlir::Value fpPtr = fir::ConvertOp::create(builder, loc, f64PtrTy, fpGep);
+
+      if constexpr (isGet) {
+        mlir::func::FuncOp readFlm = fir::factory::getLlvmPpcReadflm(builder);
+        // Save the floating-point environment
+        genRuntimeCall("fegetenv", i32Ty, fenvPtr);
+        // Save the raw FPSCR so that the exception-enable (trap-enable) bits
+        // [7:3] are preserved. On AIX, these bits are not restored by fesetenv.
+        mlir::Value fpscr =
+            fir::CallOp::create(builder, loc, readFlm).getResult(0);
+        // Store the raw FPSCR double at offset kAIXFenvTSize
+        fir::StoreOp::create(builder, loc, fpscr, fpPtr);
+      } else {
+        mlir::func::FuncOp setFlm = fir::factory::getLlvmPpcSetflm(builder);
+        // Restore the floating-point environment
+        genRuntimeCall("fesetenv", i32Ty, fenvPtr);
+        // Load the raw FPSCR double from offset kAIXFenvTSize
+        mlir::Value fpscr = fir::LoadOp::create(builder, loc, fpPtr);
+        // Restore the FPSCR exception-enable (trap-enable) bits [7:3], which
+        // are not restored by fesetenv on AIX.
+        fir::CallOp::create(builder, loc, setFlm, fpscr);
+      }
+      return;
+    } else if (triple.isPPC()) {
+      // Non-AIX PPC (e.g. powerpc64le)
+      mlir::Value addr =
+          fir::ConvertOp::create(builder, loc, i32PtrTy, fir::getBase(args[0]));
+      genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
+      return;
+    }
+  }
+
 #ifndef __GLIBC_USE_IEC_60559_BFP_EXT // only use of "#include <cfenv>"
   // No definitions of fegetmode, fesetmode
   llvm::StringRef func = isModes
@@ -6847,6 +6915,31 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
   return subResult;
 }
 
+/// A zero divisor makes the inlined integer remainder undefined. Guard it
+/// with a test that reports the same fatal error as the runtime IntMod.
+/// A divisor known to be nonzero needs no test.
+static void genIntegerZeroDivisorCheck(fir::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value p,
+                                       bool isModulo) {
+  mlir::ModuleOp mod = builder.getModule();
+  auto checkEnabled = mod->getAttrOfType<mlir::BoolAttr>(
+      fir::getCheckIntegerModZeroDivisorAttrName());
+  if (!checkEnabled || !checkEnabled.getValue())
+    return;
+  if (std::optional<llvm::APInt> constantP = fir::getIntIfConstant(p))
+    if (!constantP->isZero())
+      return;
+  mlir::Value zero = builder.createIntegerConstant(loc, p.getType(), 0);
+  mlir::Value isZero = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::eq, p, zero);
+  builder.genIfThen(loc, isZero)
+      .genThen([&]() {
+        fir::runtime::genReportFatalUserError(
+            builder, loc, isModulo ? "MODULO with P==0" : "MOD with P==0");
+      })
+      .end();
+}
+
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
@@ -6862,8 +6955,10 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
     return builder.createUnsigned<mlir::arith::RemUIOp>(loc, signlessType,
                                                         args[0], args[1]);
   }
-  if (mlir::isa<mlir::IntegerType>(resultType))
+  if (mlir::isa<mlir::IntegerType>(resultType)) {
+    genIntegerZeroDivisorCheck(builder, loc, args[1], /*isModulo=*/false);
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
+  }
 
   if (resultType.isFloat() && useFastRealMod) {
     // Treat MOD as an approximate function and code-gen inline code
@@ -6880,8 +6975,6 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
 // MODULO
 mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
-  // TODO: we'd better generate a runtime call here, when runtime error
-  // checking is needed (to detect 0 divisor) or when precise math is requested.
   assert(args.size() == 2);
   // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
   // In the meantime, use a simple inlined implementation based on truncated
@@ -6899,6 +6992,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                         args[0], args[1]);
   }
   if (mlir::isa<mlir::IntegerType>(resultType)) {
+    genIntegerZeroDivisorCheck(builder, loc, args[1], /*isModulo=*/true);
     auto remainder =
         mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
     auto argXor = mlir::arith::XOrIOp::create(builder, loc, args[0], args[1]);
@@ -7012,7 +7106,8 @@ void IntrinsicLibrary::genMvbits(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Type toType{fir::dyn_cast_ptrEleTy(toAddr.getType())};
   assert(toType.getIntOrFloatBitWidth() == fromType.getIntOrFloatBitWidth() &&
          "mismatched mvbits types");
-  auto to = fir::LoadOp::create(builder, loc, signlessType, toAddr);
+  mlir::Value to = fir::LoadOp::create(builder, loc, toAddr);
+  to = builder.createConvert(loc, signlessType, to);
   mlir::Value topos = builder.createConvert(loc, signlessType, unbox(args[4]));
   mlir::Value zero = builder.createIntegerConstant(loc, signlessType, 0);
   mlir::Value ones = builder.createAllOnesInteger(loc, signlessType);
@@ -8904,22 +8999,69 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
         (fir::isa_trivial(sourceType) ||
          mlir::isa<fir::RecordType>(sourceType)) &&
         fir::isa_trivial(moldType)) {
+      // Compare sizes from getTypeSizeAndAlignment. For RecordType, this
+      // includes tail padding to match the allocation extent used by
+      // STORAGE_SIZE and the TRANSFER runtime path. Alignment is handled
+      // separately: when the source alignment is less than the result type's
+      // alignment, the RecordType path below copies into a result-aligned
+      // alloca rather than loading directly from the source pointer.
       auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
           loc, sourceType, builder.getDataLayout(), builder.getKindMap());
       auto resultSizeAndAlign = fir::getTypeSizeAndAlignment(
           loc, resultType, builder.getDataLayout(), builder.getKindMap());
       if (sourceSizeAndAlign && resultSizeAndAlign &&
           sourceSizeAndAlign->first == resultSizeAndAlign->first) {
-        if (sourceType.isSignlessIntOrFloat() &&
-            resultType.isSignlessIntOrFloat()) {
-          mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
-          if (sourceType != resultType)
-            val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);
-          return val;
+        if (fir::isa_trivial(sourceType)) {
+          // Both source and result are trivial scalars of the same store
+          // size.  Use arith.bitcast for signless integer/float pairs;
+          // for other trivial types (e.g. unsigned integers) arith.bitcast
+          // is not available, so cast the source address and load.
+          if (sourceType.isSignlessIntOrFloat() &&
+              resultType.isSignlessIntOrFloat()) {
+            mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
+            if (sourceType != resultType)
+              val =
+                  mlir::arith::BitcastOp::create(builder, loc, resultType, val);
+            return val;
+          }
+          mlir::Type refTy = builder.getRefType(resultType);
+          mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+          return fir::LoadOp::create(builder, loc, cast);
         }
-        mlir::Type refTy = builder.getRefType(resultType);
-        mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
-        return fir::LoadOp::create(builder, loc, cast);
+        // The source is a RecordType.
+        //
+        // When sourceAlign >= resultAlign, a direct address cast and load is
+        // safe: the existing source storage satisfies the result type's
+        // alignment requirement.
+        //
+        // When sourceAlign < resultAlign (e.g. {i32,i8} is 4-byte aligned
+        // while integer(8) requires 8-byte alignment), loading resultType
+        // directly from sourceBase would assert an over-aligned address and
+        // produce undefined behaviour.  In that case, copy the allocation-size
+        // bytes into a result-typed alloca (which has resultType's natural
+        // alignment) using fir.copy (a non-overlapping byte copy, equivalent
+        // to memcpy), then load from the properly-aligned alloca.
+        //
+        // Note: fir.copy copies exactly sourceSizeAndAlign->first bytes (the
+        // allocation size, including tail padding).  Inter-field and tail
+        // padding bytes of the record are preserved, matching the runtime copy
+        // width and satisfying F2023 16.9.212.
+        if (sourceSizeAndAlign->second >= resultSizeAndAlign->second) {
+          mlir::Type refTy = builder.getRefType(resultType);
+          mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+          return fir::LoadOp::create(builder, loc, cast);
+        }
+        mlir::Value tmp = fir::AllocaOp::create(builder, loc, resultType);
+        mlir::Type byteType = fir::SequenceType::get(
+            {static_cast<int64_t>(sourceSizeAndAlign->first)},
+            builder.getI8Type());
+        mlir::Type byteRefType = builder.getRefType(byteType);
+        mlir::Value sourceBytes =
+            builder.createConvert(loc, byteRefType, sourceBase);
+        mlir::Value resultBytes = builder.createConvert(loc, byteRefType, tmp);
+        fir::CopyOp::create(builder, loc, sourceBytes, resultBytes,
+                            /*noOverlap=*/true);
+        return fir::LoadOp::create(builder, loc, tmp);
       }
     }
   }

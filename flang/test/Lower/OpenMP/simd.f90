@@ -216,7 +216,7 @@ subroutine simdloop_aligned_allocatable()
   integer :: i
   integer, allocatable :: A(:)
   allocate(A(10))
-!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "a",
 !CHECK-SAME: uniq_name = "_QFsimdloop_aligned_allocatableEa"}
 !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
 !CHECK-SAME: uniq_name = "_QFsimdloop_aligned_allocatableEa"} :
@@ -233,7 +233,7 @@ subroutine aligned_non_power_of_two()
   integer :: i
   integer, allocatable :: A(:)
   allocate(A(10))
-!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "a",
 !CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"}
 !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
 !CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"} :
@@ -267,7 +267,7 @@ end subroutine
 !CHECK-LABEL: func.func @_QPlastprivate_with_simd() {
 subroutine lastprivate_with_simd
 
-!CHECK: %[[VAR_SUM:.*]] = fir.alloca f32 {bindc_name = "sum", uniq_name = "_QFlastprivate_with_simdEsum"}
+!CHECK: %[[VAR_SUM:.*]] = fir.alloca f32 <{bindc_name = "sum", uniq_name = "_QFlastprivate_with_simdEsum"}>
 !CHECK: %[[VAR_SUM_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM]] {{.*}}
   implicit none
   integer :: i

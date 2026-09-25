@@ -5,12 +5,12 @@ subroutine size_test()
   real, dimension(1:10, -10:10) :: a
   integer :: dim = 1
   integer :: iSize
-! CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.array<10x21xf32> {bindc_name = "a", uniq_name = "_QFsize_testEa"}
+! CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.array<10x21xf32> <{bindc_name = "a", uniq_name = "_QFsize_testEa"}>
 ! CHECK:         %[[VAL_SS:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:         %[[A_DECL:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_SS]]) {uniq_name = "_QFsize_testEa"}
 ! CHECK:         %[[DIM_ADDR:.*]] = fir.address_of(@_QFsize_testEdim) : !fir.ref<i32>
 ! CHECK:         %[[DIM_DECL:.*]]:2 = hlfir.declare %[[DIM_ADDR]] {uniq_name = "_QFsize_testEdim"}
-! CHECK:         %[[ISIZE_ALLOC:.*]] = fir.alloca i32 {bindc_name = "isize", uniq_name = "_QFsize_testEisize"}
+! CHECK:         %[[ISIZE_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "isize", uniq_name = "_QFsize_testEisize"}>
 ! CHECK:         %[[ISIZE_DECL:.*]]:2 = hlfir.declare %[[ISIZE_ALLOC]] {uniq_name = "_QFsize_testEisize"}
 ! CHECK:         %[[SLICE_RESULT:.*]] = hlfir.designate %[[A_DECL]]#0 (%{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}}
 ! CHECK:         %[[DIM_PTR:.*]] = fir.convert %[[DIM_DECL]]#0 : (!fir.ref<i32>) -> i64

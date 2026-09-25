@@ -172,6 +172,18 @@ public:
   }
   bool IsIntrinsic(
       const SourceName &name, std::optional<Symbol::Flag> flag) const {
+    // TEMPORARY (enumeration-type feature gating): NEXT and PREVIOUS are only
+    // recognized as intrinsic names when the enumeration-type feature is
+    // enabled, so that pre-F2023 programs may still use those names for
+    // implicit external procedures.  This gating is removed once the
+    // enumeration-type feature is fully implemented.
+    if (!context_->languageFeatures().IsEnabled(
+            common::LanguageFeature::EnumerationType)) {
+      const std::string nameStr{name.ToString()};
+      if (nameStr == "next" || nameStr == "previous") {
+        return false;
+      }
+    }
     if (!flag) {
       return context_->intrinsics().IsIntrinsic(name.ToString());
     } else if (flag == Symbol::Flag::Function) {
@@ -250,6 +262,7 @@ public:
   bool BeginAttrs(); // always returns true
   Attrs GetAttrs();
   std::optional<common::CUDADataAttr> cudaDataAttr() { return cudaDataAttr_; }
+  bool cudaDataAttrIsImplicit() const { return cudaDataAttrIsImplicit_; }
   Attrs EndAttrs();
   bool SetPassNameOn(Symbol &);
   void SetBindNameOn(Symbol &);
@@ -292,10 +305,12 @@ public:
   HANDLE_ATTR_CLASS(Volatile, VOLATILE)
 #undef HANDLE_ATTR_CLASS
   bool Pre(const common::CUDADataAttr);
+  bool Pre(const parser::CUDADataAttrSpec::Implicit &);
 
 protected:
   std::optional<Attrs> attrs_;
   std::optional<common::CUDADataAttr> cudaDataAttr_;
+  bool cudaDataAttrIsImplicit_{false};
 
   Attr AccessSpecToAttr(const parser::AccessSpec &x) {
     switch (x.v) {
@@ -764,8 +779,13 @@ public:
     symbol.attrs().set(attr);
     symbol.implicitAttrs().set(attr);
   }
-  void SetCUDADataAttr(
-      SourceName, Symbol &, std::optional<common::CUDADataAttr>);
+  void SetCUDADataAttr(SourceName, Symbol &,
+      std::optional<common::CUDADataAttr>, bool isImplicit = false);
+  // Apply -gpu=mem:managed / -gpu=mem:pinned to an unattributed
+  // allocatable or data pointer. Explicit CUDA data attributes are left
+  // unchanged. CUDA Fortran must be enabled so a pure OpenACC compilation
+  // does not route every allocatable through the CUDA Fortran pipeline.
+  void ApplyImplicitCUDADataAttr(Symbol &);
 
 protected:
   FuncResultStack &funcResultStack() { return funcResultStack_; }
@@ -1329,7 +1349,7 @@ private:
       const parser::TypeParamValue &, common::TypeParamAttr attr);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
-  bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
+  bool HandleSpecificIntrinsicFunction(const parser::Name &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
@@ -1356,6 +1376,7 @@ public:
   bool Pre(const parser::AcSpec &);
   bool Pre(const parser::AcImpliedDo &);
   bool Pre(const parser::DataImpliedDo &);
+  bool Pre(const parser::DataStmt &);
   bool Pre(const parser::DataIDoObject &);
   bool Pre(const parser::DataStmtObject &);
   bool Pre(const parser::DataStmtValue &);
@@ -2574,6 +2595,7 @@ Attrs AttrsVisitor::EndAttrs() {
   Attrs result{GetAttrs()};
   attrs_.reset();
   cudaDataAttr_.reset();
+  cudaDataAttrIsImplicit_ = false;
   passName_ = std::nullopt;
   bindName_.reset();
   isCDefined_ = false;
@@ -2712,6 +2734,12 @@ bool AttrsVisitor::Pre(const common::CUDADataAttr x) {
         common::EnumToString(*cudaDataAttr_), common::EnumToString(x));
   }
   cudaDataAttr_ = x;
+  return false;
+}
+bool AttrsVisitor::Pre(const parser::CUDADataAttrSpec::Implicit &) {
+  // The (IMPLICIT) qualifier only appears in module files, marking an
+  // attribute this compiler applied rather than one the user wrote.
+  cudaDataAttrIsImplicit_ = true;
   return false;
 }
 
@@ -3586,7 +3614,7 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
 }
 
 // Ensure that the symbol for an intrinsic procedure is marked with
-// the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
+// the INTRINSIC attribute.  Also set SIMPLE, PURE &/or ELEMENTAL as
 // appropriate.
 void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   SetImplicitAttr(symbol, Attr::INTRINSIC);
@@ -3595,6 +3623,13 @@ void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   case evaluate::IntrinsicClass::elementalSubroutine:
     SetExplicitAttr(symbol, Attr::ELEMENTAL);
     SetExplicitAttr(symbol, Attr::PURE);
+    break;
+  case evaluate::IntrinsicClass::simpleElementalSubroutine:
+    SetExplicitAttr(symbol, Attr::ELEMENTAL);
+    SetExplicitAttr(symbol, Attr::SIMPLE);
+    break;
+  case evaluate::IntrinsicClass::simpleSubroutine:
+    SetExplicitAttr(symbol, Attr::SIMPLE);
     break;
   case evaluate::IntrinsicClass::impureSubroutine:
     break;
@@ -3816,8 +3851,42 @@ bool ScopeHandler::CheckDuplicatedAttrs(
   return ok;
 }
 
+void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
+  // Only when CUDA Fortran is enabled; otherwise -gpu=mem:managed on a
+  // non-CUDA-Fortran translation unit (e.g. pure OpenACC) would incorrectly
+  // route every allocatable through the CUDA Fortran managed descriptor
+  // pipeline.
+  if (!context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
+    return;
+  if (!IsAllocatable(symbol) && !IsPointer(symbol))
+    return;
+  bool managed{context().languageFeatures().IsEnabled(
+      common::LanguageFeature::CudaManaged)};
+  // Implicit pinned remains allocatable-only.
+  bool pinned{!managed && IsAllocatable(symbol) &&
+      context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CudaPinned)};
+  if (!managed && !pinned)
+    return;
+  // A scalar data pointer can still be an EntityDetails at this point, since
+  // only some attributes force an early conversion; arrays are always
+  // objects. Convert it now so both get the attribute. A procedure pointer is
+  // not an object and is left alone.
+  if (!ConvertToObjectEntity(symbol))
+    return;
+  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object || object->cudaDataAttr())
+    return;
+  if (managed) {
+    object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+    object->set_cudaDataAttrIsImplicit();
+  } else {
+    object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+  }
+}
+
 void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
-    std::optional<common::CUDADataAttr> attr) {
+    std::optional<common::CUDADataAttr> attr, bool isImplicit) {
   if (attr) {
     ConvertToObjectEntity(symbol);
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -3828,6 +3897,7 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
             std::string{common::EnumToString(*object->cudaDataAttr())}.c_str());
       } else {
         object->set_cudaDataAttr(attr);
+        object->set_cudaDataAttrIsImplicit(isImplicit);
       }
     } else {
       Say(source,
@@ -4874,7 +4944,19 @@ void ModuleVisitor::ApplyDefaultAccess() {
     Symbol &symbol{*pair.second};
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
       Attr attr{defaultAttr};
-      if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
+        // F2023 7.6.2p2: the access-spec on the ENUMERATION TYPE statement
+        // supplies the default accessibility of its enumerators.  A
+        // use-associated enumerator also carries the flag but holds UseDetails,
+        // not ObjectEntityDetails; it follows the module default here.
+        if (const auto *obj{symbol.detailsIf<ObjectEntityDetails>()}) {
+          const Symbol &typeSym{obj->type()->derivedTypeSpec().typeSymbol()};
+          if (auto a{typeSym.get<DerivedTypeDetails>()
+                      .enumeratorDefaultAccess()}) {
+            attr = *a;
+          }
+        }
+      } else if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
         if (generic->derivedType()) {
           // If a generic interface has a derived type of the same
           // name that has an explicit accessibility attribute, then
@@ -5741,7 +5823,8 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   }
   SubprogramDetails &entryDetails{entrySymbol.get<SubprogramDetails>()};
   CHECK(entryDetails.entryScope() == &inclusiveScope);
-  SetCUDADataAttr(name.source, entrySymbol, cudaDataAttr());
+  SetCUDADataAttr(
+      name.source, entrySymbol, cudaDataAttr(), cudaDataAttrIsImplicit());
   entrySymbol.attrs() |= GetAttrs();
   SetBindNameOn(entrySymbol);
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
@@ -5976,6 +6059,27 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix) {
+    const Scope &parent{currScope().parent()};
+    if (parent.IsModule() || parent.IsSubmodule()) {
+      if (const Symbol *host{parent.FindSymbol(name.source)}) {
+        const Symbol &hostUlt{host->GetUltimate()};
+        const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
+        if (IsSeparateModuleProcedureInterface(&hostUlt)) {
+          // Use the low-level Warn() call to avoid module-file suppression
+          // based on scope ancestry; InModuleFile() provides the appropriate
+          // check here.
+          context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
+              context().languageFeatures(), common::UsageWarning::Portability,
+              name.source,
+              "Subprogram '%s' in this submodule is missing the MODULE prefix "
+              "to implement the module procedure interface from its parent; "
+              "did you mean 'MODULE %s'?"_port_en_US,
+              name.source, hostSubp->isFunction() ? "FUNCTION" : "SUBROUTINE");
+        }
+      }
+    }
+  }
   Symbol *symbol{GetSpecificFromGeneric(name)};
   const DeclTypeSpec *previousImplicitType{nullptr};
   SourceName previousName;
@@ -6191,7 +6295,8 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   attrs.set(Attr::INTRINSIC, false); // dealt with in Pre(TypeDeclarationStmt)
   Symbol &symbol{DeclareUnknownEntity(name, attrs)};
   symbol.ReplaceName(name.source);
-  SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+  SetCUDADataAttr(
+      name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
   if (const auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
     ConvertToObjectEntity(symbol) || ConvertToProcEntity(symbol);
     symbol.set(
@@ -6421,13 +6526,10 @@ bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
 void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   Attrs attrs{EndAttrs()};
-  if (const auto &optAccessSpec{
-          std::get<std::optional<parser::AccessSpec>>(x.t)};
-      optAccessSpec) {
-    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
-      Say(currStmtSource().value(),
-          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
-    }
+  const auto &optAccessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)};
+  if (optAccessSpec && !NonDerivedTypeScope().IsModule()) { // F2023 C7114
+    Say(currStmtSource().value(),
+        "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
   }
   // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
   // the name of a previously defined enumeration type.  Enumeration Types are
@@ -6443,6 +6545,12 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   }
   DerivedTypeDetails details;
   details.set_isEnumerationType(true);
+  // An access-spec on the ENUMERATION TYPE statement sets the default
+  // accessibility of its enumerators.
+  if (optAccessSpec) {
+    details.set_enumeratorDefaultAccess(
+        attrs.test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC);
+  }
   auto &symbol{MakeSymbol(name, attrs, std::move(details))};
   symbol.ReplaceName(name.source);
   PushScope(Scope::Kind::DerivedType, &symbol);
@@ -6480,6 +6588,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
         MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
     Resolve(name, enumerator);
     enumerator.set_details(ObjectEntityDetails{});
+    enumerator.set(Symbol::Flag::EnumeratorParameter);
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each
@@ -6563,7 +6672,8 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
 }
 void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
   HandleAttributeStmt(Attr::INTRINSIC, name);
-  if (!IsIntrinsic(name.source, std::nullopt)) {
+  const bool isKnownIntrinsic{IsIntrinsic(name.source, std::nullopt)};
+  if (!isKnownIntrinsic) {
     Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
   }
   auto &symbol{DEREF(FindSymbol(name))};
@@ -6588,7 +6698,7 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
             "INTRINSIC statement for explicitly-typed '%s'"_en_US, name.source);
       }
     }
-    if (!symbol.test(Symbol::Flag::Function) &&
+    if (isKnownIntrinsic && !symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine) &&
         !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
@@ -6629,6 +6739,8 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (attr == common::CUDADataAttr::Value) {
         SetExplicitAttr(*symbol, Attr::VALUE);
       } else {
+        // ATTRIBUTES(...) carries a bare CUDA-data-attr, with no place for
+        // the (IMPLICIT) qualifier, so such an attribute is always the user's.
         SetCUDADataAttr(name.source, *symbol, attr);
       }
     }
@@ -7543,7 +7655,9 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   }
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
-    SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+    SetCUDADataAttr(
+        name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
+    ApplyImplicitCUDADataAttr(symbol);
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, /*inComponentDecl=*/true);
@@ -7663,7 +7777,8 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
     attrs.set(Attr::PRIVATE);
   }
   Symbol &symbol{DeclareProcEntity(name, attrs, procInterface)};
-  SetCUDADataAttr(name.source, symbol, cudaDataAttr()); // for error
+  SetCUDADataAttr(name.source, symbol, cudaDataAttr(),
+      cudaDataAttrIsImplicit()); // for error
   symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
@@ -8274,10 +8389,13 @@ Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
 }
 
 bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
-  return FindSymbol(name) || HandleUnrestrictedSpecificIntrinsicFunction(name);
+  return FindSymbol(name) || HandleSpecificIntrinsicFunction(name);
 }
 
-bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
+// Create a symbol for a specific intrinsic function. Unrestricted names
+// receive their result type here; restricted names are kept typeless so
+// that later semantic checks can diagnose their invalid use.
+bool DeclarationVisitor::HandleSpecificIntrinsicFunction(
     const parser::Name &name) {
   if (auto interface{context().intrinsics().IsSpecificIntrinsicFunction(
           name.source.ToString())}) {
@@ -8286,17 +8404,19 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     // INTRINSIC flag will cause this symbol to have a complete interface
     // recreated for it later on demand, but capturing its result type here
     // will make GetType() return a correct result without having to
-    // probe the intrinsics table again.
+    // probe the intrinsics table again.  Restricted specific intrinsic
+    // function names are also resolved here so that their use can be
+    // diagnosed later, but they do not need a result type.
     Symbol &symbol{MakeSymbol(InclusiveScope(), name.source, Attrs{})};
     SetImplicitAttr(symbol, Attr::INTRINSIC);
-    CHECK(interface->functionResult.has_value());
-    evaluate::DynamicType dyType{
-        DEREF(interface->functionResult->GetTypeAndShape()).type()};
-    CHECK(common::IsNumericTypeCategory(dyType.category()));
-    const DeclTypeSpec &typeSpec{
-        MakeNumericType(dyType.category(), dyType.kind())};
     ProcEntityDetails details;
-    details.set_type(typeSpec);
+    if (!interface->isRestrictedSpecific) {
+      CHECK(interface->functionResult.has_value());
+      evaluate::DynamicType dyType{
+          DEREF(interface->functionResult->GetTypeAndShape()).type()};
+      CHECK(common::IsNumericTypeCategory(dyType.category()));
+      details.set_type(MakeNumericType(dyType.category(), dyType.kind()));
+    }
     symbol.set_details(std::move(details));
     symbol.set(Symbol::Flag::Function);
     if (interface->IsElemental()) {
@@ -8641,7 +8761,8 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
       attrs.set(Attr::PRIVATE);
     }
     Symbol &result{MakeSymbol(name, attrs, std::move(details))};
-    SetCUDADataAttr(name, result, cudaDataAttr());
+
+    SetCUDADataAttr(name, result, cudaDataAttr(), cudaDataAttrIsImplicit());
     return &result;
   }
 }
@@ -8920,6 +9041,18 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
       },
       x.u);
   return false;
+}
+
+bool ConstructVisitor::Pre(const parser::DataStmt &) {
+  // C1506: an interface body may not contain a DATA statement.
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *subp{symbol->detailsIf<SubprogramDetails>()};
+        subp && subp->isInterface()) {
+      Say(currStmtSource().value(),
+          "A DATA statement may not appear in an interface body"_err_en_US);
+    }
+  }
+  return true;
 }
 
 bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
@@ -10710,6 +10843,21 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
       spec.u);
 }
 
+static bool IsCallOfDeclaredEntity(
+    const parser::Call &call, const std::list<parser::EntityDecl> &entities) {
+  // Pure query: do not resolve names or modify symbols/scopes.
+  const auto &procDesignator{std::get<parser::ProcedureDesignator>(call.t)};
+  if (const auto *name{std::get_if<parser::Name>(&procDesignator.u)}) {
+    for (const auto &ent : entities) {
+      const auto &objName{std::get<parser::ObjectName>(ent.t)};
+      if (name->source == objName.source) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
     const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
         &stmt) {
@@ -10725,6 +10873,10 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
             // nonempty argument list, to prevent implicitly typing names
             // that might appear.  (TODO: But maybe INTEGER(KIND(n)) after
             // an explicit declaration of 'n' would be useful.)
+            return;
+          }
+          if (IsCallOfDeclaredEntity(*call, entities)) {
+            // Avoid implicitly typing the entity referenced by the KIND call.
             return;
           }
         } else if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
@@ -10885,28 +11037,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
 
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
-          !object->cudaDataAttr()) {
-        // Implicitly treat allocatable/pointer arrays as managed when feature
-        // is enabled. This is done after all explicit CUDA attributes have
-        // been processed. Only applies when CUDA Fortran is enabled; otherwise
-        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
-        // OpenACC) would incorrectly route every allocatable through the CUDA
-        // Fortran managed descriptor pipeline.
-        if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
-      }
-    }
+    ApplyImplicitCUDADataAttr(symbol);
   }
   // Type the deferred data-implied-do index variables now that the whole
   // specification part has been visited (F'2023 19.4 p5).  Plain

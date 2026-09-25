@@ -262,8 +262,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
       return TTI::TCC_Free;
     // zext.w
-    if (Imm == UINT64_C(0xffffffff) &&
-        ((ST->hasStdExtZba() && ST->isRV64()) || ST->isRV32()))
+    if (Imm == UINT64_C(0xffffffff) && (!ST->is64Bit() || ST->hasStdExtZba()))
       return TTI::TCC_Free;
     // bclri
     if (ST->hasStdExtZbs() && (~Imm).isPowerOf2())
@@ -442,12 +441,6 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   case Intrinsic::vector_reduce_fmul:
     return true;
   }
-}
-
-std::optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
-  if (ST->hasVInstructions())
-    return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-  return BaseT::getMaxVScale();
 }
 
 std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
@@ -740,12 +733,11 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-InstructionCost
-RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                             VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                             ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                             ArrayRef<const Value *> Args,
-                             const Instruction *CxtI) const {
+InstructionCost RISCVTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -753,6 +745,9 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
          "Expected the same scalar types");
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands() && Kind == TTI::SK_Broadcast)
+    return TTI::TCC_Free;
 
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
@@ -1167,6 +1162,15 @@ RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
+  // Splitting involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  if (MICA.getID() == Intrinsic::vp_load ||
+      MICA.getID() == Intrinsic::vp_store) {
+    auto LT = getTypeLegalizationCost(Src);
+    if (LT.first > 1)
+      SplitCost += LT.first * TTI::TCC_Expensive;
+  }
+
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
@@ -1307,6 +1311,8 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
                 MICA.getID() == Intrinsic::vp_gather;
   unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *DataTy = MICA.getDataType();
+  Type *PtrTy = DataTy->getWithNewType(
+      DL.getAddressType(DataTy->getContext(), MICA.getAddressSpace()));
   Align Alignment = MICA.getAlignment();
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -1317,12 +1323,24 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
        !isLegalMaskedScatter(DataTy, Align(Alignment))))
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
+  // Splitting vp intrinsics involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  if (MICA.getID() == Intrinsic::vp_gather ||
+      MICA.getID() == Intrinsic::vp_scatter) {
+    auto DataLT = getTypeLegalizationCost(DataTy);
+    auto PtrLT = getTypeLegalizationCost(PtrTy);
+    if (DataLT.first > 1)
+      SplitCost += DataLT.first * TTI::TCC_Expensive;
+    if (PtrLT.first > 1)
+      SplitCost += PtrLT.first * TTI::TCC_Expensive;
+  }
+
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * TTI::TCC_Basic;
+  return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
@@ -1380,12 +1398,18 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (CostKind == TTI::TCK_CodeSize)
     return TTI::TCC_Basic;
 
+  // Splitting vp intrinsics involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  auto LT = getTypeLegalizationCost(DataTy);
+  if (LT.first > 1)
+    SplitCost += LT.first * TTI::TCC_Expensive;
+
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * TTI::TCC_Basic;
+  return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost
@@ -1655,10 +1679,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::abs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      // vabs.v v10, v8
+      // vabs.v v10, v8 (alias for vabd.vx v10, v8, zero)
       if (ST->hasStdExtZvabd())
         return LT.first *
-               getRISCVInstructionCost({RISCV::VABS_V}, LT.second, CostKind);
+               getRISCVInstructionCost({RISCV::VABD_VX}, LT.second, CostKind);
 
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
@@ -1687,8 +1711,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::clmul: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbc() &&
-        !ST->hasStdExtZbkc()) {
+    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbkc()) {
       // TODO: Once custom lowering in this case for RV32 is added, this guard
       // should be removed and the cost model should be updated.
       if (!ST->is64Bit() || LT.second != MVT::i64)
@@ -1760,6 +1783,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     InstructionCost Cost = 0;
     Type *ArgTy = ICA.getArgTypes()[0];
     auto LT = getTypeLegalizationCost(ArgTy);
+    if (!LT.second.isVector())
+      break;
 
     // If the element type is not i1, do a comparison with all-zeros.
     if (LT.second.getVectorElementType() != MVT::i1)
@@ -2628,6 +2653,13 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
                                      VIC);
 
+  // Scalar splat operand can be folded for vector ops that support splatting
+  // the scalar operand, so the explicit insertelement is free in this context.
+  if (Opcode == Instruction::InsertElement &&
+      VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands() && Index == 0)
+    return TTI::TCC_Free;
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
@@ -2807,7 +2839,7 @@ std::optional<InstructionCost>
 RISCVTTIImpl::getCombinedArithmeticInstructionCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // Vector unsigned division/remainder will be simplified to shifts/masks.
   if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
       Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
@@ -2824,25 +2856,25 @@ RISCVTTIImpl::getCombinedArithmeticInstructionCost(
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
 
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
 
   if (std::optional<InstructionCost> CombinedCost =
           getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
-                                               Op2Info, Args, CxtI))
+                                               Op2Info, Args, CtxI))
     return *CombinedCost;
 
   // Legalize the type.
@@ -2865,7 +2897,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         return Entry->Cost * LT.first;
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
   }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
@@ -2957,7 +2989,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     // differentiate them.
     return CastCost + ConstantMatCost +
            BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+                                         Args, CtxI);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
@@ -3011,7 +3043,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
-                         Indices, AccessTy, CostKind);
+                         Indices, CostKind, AccessTy);
     }
   }
   return Cost;
@@ -3070,11 +3102,9 @@ void RISCVTTIImpl::getUnrollingPreferences(
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
+        const Function *F = cast<CallBase>(I).getCalledFunction();
+        if (!F || isLoweredToCall(F))
+          return;
       }
 
       SmallVector<const Value *> Operands(I.operand_values());
@@ -3471,7 +3501,7 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
 bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
                                            Align Alignment) const {
   auto *VTy = dyn_cast<VectorType>(DataTy);
-  if (!VTy || VTy->isScalableTy())
+  if (!VTy)
     return false;
 
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
@@ -3479,22 +3509,22 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 
   // FIXME: If it is an i8 vector and the element count exceeds 256, we should
   // scalarize these types with LMUL >= maximum fixed-length LMUL.
-  if (VTy->getElementType()->isIntegerTy(8))
-    if (VTy->getElementCount().getFixedValue() > 256)
-      return VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen() <
-             ST->getMaxLMULForFixedLengthVectors();
+  if (VTy->getElementType()->isIntegerTy(8)) {
+    uint64_t MaxEltCount = VTy->getElementCount().getKnownMinValue();
+    if (VTy->isScalableTy())
+      MaxEltCount *= ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
+    // We can't yet split any widened indices type.
+    if (MaxEltCount > 256)
+      return getTypeLegalizationCost(
+                 VTy->getWithNewType(Type::getInt16Ty(VTy->getContext())))
+                 .first == 1;
+  }
   return true;
 }
 
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
                                               Align Alignment) const {
-  auto *VTy = dyn_cast<VectorType>(DataTy);
-  if (!VTy || VTy->isScalableTy())
-    return false;
-
-  if (!isLegalMaskedLoadStore(DataTy, Alignment))
-    return false;
-  return true;
+  return isLegalMaskedLoadStore(DataTy, Alignment);
 }
 
 bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
@@ -3602,6 +3632,33 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   }
 }
 
+TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() || !ST->hasVInstructions() || !ST->sinkSplatOperands() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || (*SplatIt)->getType()->isIntegerTy(1) ||
+      isa<VectorType>((*SplatIt)->getType()) ||
+      isa<ExtractElementInst>(*SplatIt))
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty())
+    return VectorInstrContext::None;
+
+  if (all_of(UserOps,
+             [this](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+               return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex);
+             }))
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// splats of scalars can fold into vector instructions.
@@ -3699,7 +3756,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
     Options.AllowedTailExpansions = {3, 5, 6};
@@ -3713,7 +3770,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // The minimum size should be `XLen / 8 + 1`, and the maxinum size should be
     // `VLenB * MaxLMUL` so that it fits in a single register group.
     unsigned MinSize = ST->getXLen() / 8 + 1;
-    unsigned MaxSize = VLenB * ST->getMaxLMULForFixedLengthVectors();
+    unsigned MaxSize = VLenB * 8;
     for (unsigned Size = MinSize; Size <= MaxSize; Size++)
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
@@ -3752,6 +3809,82 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
 
 std::optional<Instruction *>
 RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  // Attach a range return attribute describing the result of vsetvli/vsetvlimax
+  // so generic value analyses can reason about it. The verifier guarantees an
+  // XLen result and constant VSEW/VLMUL encoding a valid vtype, so no defensive
+  // validation is needed here.
+  if (is_contained({Intrinsic::riscv_vsetvli, Intrinsic::riscv_vsetvlimax},
+                   II.getIntrinsicID())) {
+    // These intrinsics require the V extension; without it the VLEN queries
+    // below would assert. Such IR would fail isel anyway, so just bail out.
+    if (!ST->hasVInstructions())
+      return {};
+
+    bool HasAVL = II.getIntrinsicID() == Intrinsic::riscv_vsetvli;
+    unsigned Offset = HasAVL ? 1 : 0;
+    unsigned BitWidth = II.getType()->getIntegerBitWidth();
+    ConstantRange VLenRange(APInt(BitWidth, ST->getRealMinVLen()),
+                            APInt(BitWidth, ST->getRealMaxVLen()) + 1);
+
+    uint64_t VSEW = cast<ConstantInt>(II.getArgOperand(Offset))->getZExtValue();
+    auto VLMUL = static_cast<RISCVVType::VLMUL>(
+        cast<ConstantInt>(II.getArgOperand(Offset + 1))->getZExtValue());
+    unsigned SEW = RISCVVType::decodeVSEW(VSEW);
+    unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+
+    // VLMAX = VLEN / (SEW / LMUL), clamped to >= 1 for any usable vtype.
+    ConstantRange VLMAXRange =
+        VLenRange.udiv(ConstantRange(APInt(BitWidth, Ratio)))
+            .umax(ConstantRange(APInt(BitWidth, 1)));
+
+    // vsetvlimax returns exactly VLMAX; vsetvli returns vl with
+    // 0 <= vl <= min(AVL, VLMAX). vl == AVL only when AVL <= the smallest
+    // possible VLMAX; otherwise vl can shrink below VLMAX (to 0 at runtime), so
+    // only the VLMAX upper bound is sound.
+    ConstantRange VLRange = VLMAXRange;
+    if (HasAVL) {
+      // vl ≤ VLMAX
+      VLRange =
+          ConstantRange::makeAllowedICmpRegion(CmpInst::ICMP_ULE, VLMAXRange);
+
+      Value *AVL = II.getArgOperand(0);
+      ConstantRange AVLRange = computeConstantRangeIncludingKnownBits(
+          AVL, /*ForSigned=*/false,
+          IC.getSimplifyQuery().getWithInstruction(&II));
+
+      // vl = AVL if AVL ≤ VLMAX
+      if (AVLRange.icmp(CmpInst::ICMP_ULE, VLMAXRange))
+        return IC.replaceInstUsesWith(II, AVL);
+
+      // vl ≤ AVL
+      VLRange = VLRange.umin(AVLRange.getUnsignedMax());
+
+      // vl > 0 if AVL > 0
+      if (AVLRange.icmp(CmpInst::ICMP_UGT, APInt::getZero(BitWidth)))
+        VLRange = VLRange.umax(APInt(BitWidth, 1));
+
+      // vl = VLMAX if AVL ≥ (2 * VLMAX)
+      ConstantRange TwoVLMAX = VLMAXRange.multiply(APInt(BitWidth, 2));
+      if (AVLRange.icmp(CmpInst::ICMP_UGE, TwoVLMAX))
+        VLRange = VLRange.intersectWith(VLMAXRange);
+
+      // ceil(AVL / 2) ≤ vl ≤ VLMAX if AVL < (2 * VLMAX)
+      if (AVLRange.icmp(CmpInst::ICMP_ULT, TwoVLMAX))
+        VLRange = VLRange.umax(APIntOps::RoundingUDiv(AVLRange.getUnsignedMin(),
+                                                      APInt(BitWidth, 2),
+                                                      APInt::Rounding::UP));
+    }
+
+    ConstantRange OldRange =
+        II.getRange().value_or(ConstantRange::getFull(BitWidth));
+    ConstantRange NewRange = VLRange.intersectWith(OldRange);
+    if (NewRange != OldRange) {
+      II.addRangeRetAttr(NewRange);
+      return &II;
+    }
+    return {};
+  }
+
   // If all operands of a vmv.v.x are constant, fold a bitcast(vmv.v.x) to scale
   // the vmv.v.x, enabling removal of the bitcast. The transform helps avoid
   // creating redundant masks.

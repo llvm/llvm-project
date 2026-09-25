@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/TargetID.h"
+#include "clang/Basic/OffloadArch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,9 +52,20 @@ getAllPossibleTargetIDFeatures(const llvm::Triple &T,
 /// Returns canonical processor name or empty string if \p Processor is invalid.
 static llvm::StringRef getCanonicalProcessorName(const llvm::Triple &T,
                                                  llvm::StringRef Processor) {
-  if (T.isAMDGPU())
-    return llvm::AMDGPU::getCanonicalArchName(T, Processor);
-  return Processor;
+  if (!T.isAMDGPU())
+    return Processor;
+
+  if (llvm::StringRef Name = llvm::AMDGPU::getCanonicalArchName(T, Processor);
+      !Name.empty())
+    return Name;
+
+  // Accept the AMDGPU subarch triple spelling (e.g. "amdgpu9.00") as an alias
+  // for the corresponding gfx processor.
+  OffloadArch Arch =
+      getSubArchOffloadArch(llvm::Triple::parseSubArch(Processor));
+  if (Arch.isUnknown())
+    return {};
+  return OffloadArchToString(Arch);
 }
 
 llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
@@ -195,6 +207,26 @@ std::string sanitizeTargetIDInFileName(llvm::StringRef TargetID) {
   if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
     llvm::replace(FileName, ':', '@');
   return FileName;
+}
+
+std::string normalizeForBundler(const llvm::Triple &OrigT,
+                                llvm::StringRef BoundArch) {
+  llvm::Triple T(OrigT);
+  bool HasTargetID = !BoundArch.empty();
+
+  // FIXME: Short-term hack. The HIP runtime hardcodes the legacy
+  // "amdgcn-amd-amdhsa--" prefix when parsing the target IDs embedded in the
+  // fatbin bundle, so force it.
+  if (HasTargetID && T.isAMDGCN()) {
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+  }
+
+  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
+                        T.getOSName() + "-" + T.getEnvironmentName())
+                           .str()
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 } // namespace clang

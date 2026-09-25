@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -61,23 +62,14 @@ constexpr unsigned MaxLookupSearchDepth = 10;
 LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known,
                                const DataLayout &DL,
                                AssumptionCache *AC = nullptr,
-                               const Instruction *CxtI = nullptr,
+                               const Instruction *CtxI = nullptr,
                                const DominatorTree *DT = nullptr,
                                bool UseInstrInfo = true, unsigned Depth = 0);
 
 /// Returns the known bits rather than passing by reference.
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                                     AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
-                                    const DominatorTree *DT = nullptr,
-                                    bool UseInstrInfo = true,
-                                    unsigned Depth = 0);
-
-/// Returns the known bits rather than passing by reference.
-LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                    const DataLayout &DL,
-                                    AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
+                                    const Instruction *CtxI = nullptr,
                                     const DominatorTree *DT = nullptr,
                                     bool UseInstrInfo = true,
                                     unsigned Depth = 0);
@@ -152,7 +144,7 @@ LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 LLVM_ABI bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                                      bool OrZero = false,
                                      AssumptionCache *AC = nullptr,
-                                     const Instruction *CxtI = nullptr,
+                                     const Instruction *CtxI = nullptr,
                                      const DominatorTree *DT = nullptr,
                                      bool UseInstrInfo = true,
                                      unsigned Depth = 0);
@@ -161,9 +153,9 @@ LLVM_ABI bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
                                      const SimplifyQuery &Q,
                                      unsigned Depth = 0);
 
-LLVM_ABI bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
+LLVM_ABI bool isOnlyUsedInZeroComparison(const Instruction *CtxI);
 
-LLVM_ABI bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
+LLVM_ABI bool isOnlyUsedInZeroEqualityComparison(const Instruction *CtxI);
 
 /// Return true if the given value is known to be non-zero when defined. For
 /// vectors, return true if every element is known to be non-zero when
@@ -228,7 +220,7 @@ LLVM_ABI bool MaskedValueIsZero(const Value *V, const APInt &Mask,
 /// bits.
 LLVM_ABI unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
                                      AssumptionCache *AC = nullptr,
-                                     const Instruction *CxtI = nullptr,
+                                     const Instruction *CtxI = nullptr,
                                      const DominatorTree *DT = nullptr,
                                      bool UseInstrInfo = true,
                                      unsigned Depth = 0);
@@ -239,7 +231,7 @@ LLVM_ABI unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
 LLVM_ABI unsigned ComputeMaxSignificantBits(const Value *Op,
                                             const DataLayout &DL,
                                             AssumptionCache *AC = nullptr,
-                                            const Instruction *CxtI = nullptr,
+                                            const Instruction *CtxI = nullptr,
                                             const DominatorTree *DT = nullptr,
                                             unsigned Depth = 0);
 
@@ -279,7 +271,7 @@ LLVM_ABI KnownFPClass computeKnownFPClass(
     const Value *V, const DataLayout &DL,
     FPClassTest InterestedClasses = fcAllFlags,
     const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
-    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
+    const Instruction *CtxI = nullptr, const DominatorTree *DT = nullptr,
     bool UseInstrInfo = true, unsigned Depth = 0);
 
 /// Wrapper to account for known fast math flags at the use instruction.
@@ -376,7 +368,13 @@ inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
   Value *Base =
       Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt, AllowNonInbounds);
 
-  Offset = OffsetAPInt.getSExtValue();
+  std::optional<int64_t> OffsetInt64 = OffsetAPInt.trySExtValue();
+  if (!OffsetInt64) {
+    Offset = 0;
+    return Ptr;
+  }
+
+  Offset = *OffsetInt64;
   return Base;
 }
 inline const Value *
@@ -439,43 +437,55 @@ LLVM_ABI uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 /// the pointer within its underlying object. Offset preservation implies
 /// nullness preservation; pass true when callers reason about either offset or
 /// null equality (e.g. GEP decomposition, dereferenceability, isKnownNonZero).
+/// If \p MustPreserveProvenance is true, the call must preserve the provenance
+/// exactly, as opposed to being only based-on the argument.
 LLVM_ABI const Value *
 getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                     bool MustPreserveOffset);
-inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
-                                                   bool MustPreserveOffset) {
+                                     bool MustPreserveOffset,
+                                     bool MustPreserveProvenance = false);
+inline Value *
+getArgumentAliasingToReturnedPointer(CallBase *Call, bool MustPreserveOffset,
+                                     bool MustPreserveProvenance = false) {
   return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-      const_cast<const CallBase *>(Call), MustPreserveOffset));
+      const_cast<const CallBase *>(Call), MustPreserveOffset,
+      MustPreserveProvenance));
 }
 
-/// {launder,strip}.invariant.group returns pointer that aliases its argument,
-/// and it only captures pointer by returning it.
+/// launder.invariant.group and similar intrinsics return a pointer that
+/// aliases their argument, and only capture the pointer by returning it.
 /// These intrinsics are not marked as nocapture, because returning is
 /// considered as capture. The arguments are not marked as returned neither,
-/// because it would make it useless. If \p MustPreserveOffset is true, the
-/// intrinsic must preserve the byte offset of the pointer within its
-/// underlying object (which excludes `llvm.ptrmask`, since masking off low
-/// bits changes the byte offset while still aliasing the same object).
+/// because it would make it useless. See getArgumentAliasingToReturnedPointer()
+/// for the meaning of \p MustPreserveOffset and \p MustPreserveProvenance.
 LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveOffset);
+    const CallBase *Call, bool MustPreserveOffset,
+    bool MustPreserveProvenance = false);
 
 /// This method strips off any GEP address adjustments, pointer casts
 /// or `llvm.threadlocal.address` from the specified value \p V, returning the
 /// original object being addressed. Note that the returned value has pointer
 /// type if the specified value does. If the \p MaxLookup value is non-zero, it
 /// limits the number of instructions to be stripped off.
+/// If \p MustPreserveProvenance is true, return a pointer with the exactly
+/// same provenance as \p V, as opposed to \p V only being based-on the
+/// underlying object.
 LLVM_ABI const Value *
-getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth);
+getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth,
+                    bool MustPreserveProvenance = false);
 inline Value *getUnderlyingObject(Value *V,
-                                  unsigned MaxLookup = MaxLookupSearchDepth) {
+                                  unsigned MaxLookup = MaxLookupSearchDepth,
+                                  bool MustPreserveProvenance = false) {
   // Force const to avoid infinite recursion.
   const Value *VConst = V;
-  return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
+  return const_cast<Value *>(
+      getUnderlyingObject(VConst, MaxLookup, MustPreserveProvenance));
 }
 
 /// Like getUnderlyingObject(), but will try harder to find a single underlying
 /// object. In particular, this function also looks through selects and phis.
-LLVM_ABI const Value *getUnderlyingObjectAggressive(const Value *V);
+LLVM_ABI const Value *
+getUnderlyingObjectAggressive(const Value *V,
+                              bool MustPreserveProvenance = false);
 
 /// This method is similar to getUnderlyingObject except that it can
 /// look through phi and select instructions and return multiple objects.
@@ -512,6 +522,10 @@ LLVM_ABI void getUnderlyingObjects(const Value *V,
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
+///
+/// Return true if each of the underlying objects is identified. \p Objects is
+/// never cleared, so may contain unidentified objects when the return value is
+/// false.
 LLVM_ABI bool getUnderlyingObjectsForCodeGen(const Value *V,
                                              SmallVectorImpl<Value *> &Objects);
 
@@ -554,7 +568,7 @@ LLVM_ABI bool isNotCrossLaneOperation(const Instruction *I);
 /// and returns true if it is safe to execute the instruction immediately
 /// before the CtxI. If the instruction has (transitive) operands that don't
 /// dominate CtxI, the analysis is performed under the assumption that these
-/// operands will also be speculated to a point before CxtI.
+/// operands will also be speculated to a point before CtxI.
 ///
 /// If the CtxI is NOT specified this method only looks at the instruction
 /// itself and its operands, so if this method returns true, it is safe to
@@ -635,19 +649,19 @@ LLVM_ABI bool isAssumeLikeIntrinsic(const Instruction *I);
 
 /// Return true if it is valid to use the assumptions provided by an
 /// assume intrinsic, I, at the point in the control-flow identified by the
-/// context instruction, CxtI. By default, ephemeral values of the assumption
+/// context instruction, CtxI. By default, ephemeral values of the assumption
 /// are treated as an invalid context, to prevent the assumption from being used
 /// to optimize away its argument. If the caller can ensure that this won't
 /// happen, it can call with AllowEphemerals set to true to get more valid
 /// assumptions.
 LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
-                                      const Instruction *CxtI,
+                                      const Instruction *CtxI,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
 inline bool isValidAssumeForContext(const Instruction *I,
                                     const SimplifyQuery &Q) {
-  return isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.AllowEphemerals);
+  return isValidAssumeForContext(I, Q.CtxI, Q.DT, Q.AllowEphemerals);
 }
 
 /// Returns true, if no instruction between \p Assume and \p CtxI may free

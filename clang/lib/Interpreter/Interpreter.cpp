@@ -31,6 +31,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
@@ -287,17 +288,18 @@ IncrementalCompilerBuilder::create(std::string TT,
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateCpp() {
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
-  Argv.push_back("wasm32-unknown-emscripten");
+  Argv.push_back(TT.c_str());
   Argv.push_back("-fvisibility=default");
 #endif
   llvm::append_range(Argv, UserArgs);
 
-  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
@@ -580,6 +582,12 @@ Interpreter::Parse(llvm::StringRef Code) {
     return TuOrErr.takeError();
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
+
+  // Under -emit-llvm, print the module IR.
+  if (InitPTUSize && LastPTU.TheModule &&
+      getCompilerInstance()->getFrontendOpts().ProgramAction ==
+          frontend::EmitLLVM)
+    LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
   return LastPTU;
 }

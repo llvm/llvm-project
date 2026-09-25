@@ -258,8 +258,15 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   }
   case Instruction::And: {
     Constant *ShAmt;
-    // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
-    if (match(I, m_And(m_OneUse(m_TruncOrSelf(
+    // sub(0,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),0)
+    // Only applies when this is a true negation (LHS is zero).  For the
+    // general sub(y,and(lshr(x,C),1)) case the rewrite replaces one 2-insn
+    // sequence with another without reducing instruction count, and the
+    // resulting shl/ashr form prevents later target-specific combines (e.g.
+    // on PowerPC the original lshr+and maps to a single rldicl, while the
+    // shl+ashr form requires sldi+sradi).
+    if (IsTrulyNegation &&
+        match(I, m_And(m_OneUse(m_TruncOrSelf(
                            m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
                        m_One()))) {
       unsigned BW = X->getType()->getScalarSizeInBits();
@@ -564,13 +571,6 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
                     << "\n         NEW: " << *Res->second << "\n");
   ++NegatorNumTreesNegated;
 
-  // We must temporarily unset the 'current' insertion point and DebugLoc of the
-  // InstCombine's IRBuilder so that it won't interfere with the ones we have
-  // already specified when producing negated instructions.
-  InstCombiner::BuilderTy::InsertPointGuard Guard(IC.Builder);
-  IC.Builder.ClearInsertionPoint();
-  IC.Builder.SetCurrentDebugLocation(DebugLoc());
-
   // And finally, we must add newly-created instructions into the InstCombine's
   // worklist (in a proper order!) so it can attempt to combine them.
   LLVM_DEBUG(dbgs() << "Negator: Propagating " << Res->first.size()
@@ -578,9 +578,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   NegatorMaxInstructionsCreated.updateMax(Res->first.size());
   NegatorNumInstructionsNegatedSuccess += Res->first.size();
 
-  // They are in def-use order, so nothing fancy, just insert them in order.
   for (Instruction *I : Res->first)
-    IC.Builder.Insert(I, I->getName());
+    IC.addToWorklist(I);
 
   // And return the new root.
   return Res->second;

@@ -111,9 +111,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
         // ANY data in case there is data cached in the container plug-ins
         // (like BSD archives caching the contained objects within an
         // file).
-        ObjectFileSP object_file_sp = CreateObjectFromContainer(
-            module_sp, file, file_offset, file_size,
-            extractor_sp->GetSharedDataBuffer(), data_offset);
+        ObjectFileSP object_file_sp =
+            CreateObjectFromContainer(module_sp, file, file_offset, file_size,
+                                      DataBufferSP(), data_offset);
         if (object_file_sp)
           return object_file_sp;
         // We failed to find any cached object files in the container plug-
@@ -220,22 +220,29 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
 ModuleSpecList ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t file_offset, lldb::offset_t file_size) {
+  ModuleSpecList specs;
+
+  // A container can be embedded in an otherwise valid object file. Preserve
+  // the object file's specifications and also query the container plug-ins.
+
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
-    ModuleSpecList specs = cbs.get_module_specifications(
+    ModuleSpecList object_specs = cbs.get_module_specifications(
         file, extractor_sp, file_offset, file_size);
-    if (specs.GetSize() > 0)
-      return specs;
+    if (object_specs.GetSize() > 0) {
+      specs.Append(object_specs);
+      break;
+    }
   }
 
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
-    ModuleSpecList specs = cbs.get_module_specifications(
+    ModuleSpecList container_specs = cbs.get_module_specifications(
         file, extractor_sp, file_offset, file_size);
-    if (specs.GetSize() > 0)
-      return specs;
+    if (container_specs.GetSize() > 0)
+      specs.Append(container_specs);
   }
-  return {};
+  return specs;
 }
 
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,

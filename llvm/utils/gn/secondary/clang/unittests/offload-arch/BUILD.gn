@@ -8,8 +8,9 @@ unittest("OffloadArchTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
-    "OffloadArchTest.cpp",
     "//clang/tools/offload-arch/AMDGPUArchByKFD.cpp",
+    "//clang/tools/offload-arch/LevelZeroArch.cpp",
+    "OffloadArchTest.cpp",
   ]
 
   if (current_os == "win") {

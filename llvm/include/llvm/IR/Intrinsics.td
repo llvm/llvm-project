@@ -136,9 +136,7 @@ class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// DefaultValue - A value carrier paired with ImmArg to declare a default for
-// a missing trailing argument. AutoUpgrade fills the default when an old
-// .bc / .ll file is loaded.
+// Default value for a trailing ImmArg, materialized by AutoUpgrade.
 class DefaultValue<int val> {
   int Value = val;
 }
@@ -173,12 +171,36 @@ class ReadNone<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// A RangeSet specifies a union of ordered and disjoint closed ranges that an
+// immediate argument must be in.
+class RangeSet<ArgIndex idx, list<list<int>> ranges> : IntrinsicProperty {
+  list<list<int>> ValidRanges = !filter(r, ranges, !eq(!size(r), 2));
+
+  assert !not(!empty(ranges)), "RangeSet requires at least one range";
+  assert !eq(!size(ValidRanges), !size(ranges)),
+         "RangeSet requires each range to have exactly two bounds";
+  assert !empty(!filter(r, ValidRanges, !lt(r[1], r[0]))),
+         "RangeSet requires lower <= upper for each range";
+  assert !empty(!filter(i, !range(1, !size(ValidRanges)),
+                        !le(ValidRanges[i][0],
+                            ValidRanges[!sub(i, 1)][1]))),
+         "RangeSet requires ordered and non-overlapping ranges";
+
+  int ArgNo = idx.Value;
+  list<list<int>> Ranges = ranges;
+}
+
 // The return value or argument is in the range [lower, upper),
 // where lower and upper are interpreted as signed integers.
 class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int ArgNo = idx.Value;
   int Lower = lower;
   int Upper = upper;
+}
+
+// The underlying object of the argument/return can not be freed.
+class NoFreeObj<AttrIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
 }
 
 // ArgProperty - Base class for argument properties that can be specified in
@@ -1623,6 +1645,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_pdep : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_smulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_umulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {
@@ -1892,11 +1918,6 @@ def int_launder_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                     [IntrInaccessibleMemOnly,
                                      IntrSpeculatable]>;
 
-
-def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                                          [LLVMMatchType<0>],
-                                          [IntrSpeculatable, IntrNoMem]>;
-
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
@@ -1962,7 +1983,7 @@ def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
     [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
      llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
     []>;
-def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
+def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], [IntrNoMem]>;
 def int_coro_id_async : Intrinsic<[llvm_token_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
   []>;
@@ -1983,10 +2004,10 @@ def int_coro_suspend_async
 def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                        [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
-                               [WriteOnly<ArgIndex<1>>]>;
+                               [IntrArgMemOnly, WriteOnly<ArgIndex<1>>]>;
 def int_coro_begin_custom_abi : Intrinsic<[llvm_ptr_ty],
                                   [llvm_token_ty, llvm_ptr_ty, llvm_i32_ty],
-                                  [WriteOnly<ArgIndex<1>>]>;
+                                  [IntrArgMemOnly, WriteOnly<ArgIndex<1>>]>;
 def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                               [IntrReadMem, IntrArgMemOnly,
                                ReadOnly<ArgIndex<1>>,
@@ -2110,7 +2131,9 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 // out of the block it probes.
 def int_pseudoprobe : DefaultAttrsIntrinsic<[],
                         [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
-                        [IntrInaccessibleMemOnly]>;
+                        [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
+                         ImmArg<ArgIndex<3>>]>;
 
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
@@ -2476,6 +2499,19 @@ def int_masked_srem:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
+// Speculatively load a value from memory.
+def int_speculative_load:
+  DefaultAttrsIntrinsic<[llvm_any_ty],
+            [llvm_anyptr_ty, llvm_i1_ty, llvm_vararg_ty],
+            [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+             ImmArg<ArgIndex<1>>]>;
+
+// Returns true if it's safe to speculatively load 'num_bytes' from 'ptr'.
+def int_can_load_speculatively:
+  DefaultAttrsIntrinsic<[llvm_i1_ty],
+            [llvm_anyptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty],
                       [llvm_ptr_ty, llvm_metadata_ty],
@@ -2623,6 +2659,12 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
   def int_vector_reduce_fmaximum: DefaultAttrsIntrinsic<
                                          [LLVMVectorElementType<0>],
                                          [llvm_any_vector_float_ty]>;
+  def int_vector_reduce_fminimumnum: DefaultAttrsIntrinsic<
+                                         [LLVMVectorElementType<0>],
+                                         [llvm_any_vector_float_ty]>;
+  def int_vector_reduce_fmaximumnum: DefaultAttrsIntrinsic<
+                                         [LLVMVectorElementType<0>],
+                                         [llvm_any_vector_float_ty]>;
 }
 
 //===------ Matrix intrinsics ---------------------------------------------===//
@@ -2768,6 +2810,12 @@ foreach n = 2...8 in {
                               [llvm_anyvector_ty],
                               [IntrNoMem, IntrSpeculatable]>;
 }
+
+// vector_repeat( SrcVector )
+// Repeat a fixed-length vector to fill its "vscale x" equivalent.
+def int_vector_repeat : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [llvm_anyvector_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
 
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 

@@ -42,7 +42,7 @@ define i32 @foo2(ptr noundef %0) {
 ; CHECK-NEXT:    movem.w %d0, (4,%sp)
 ; CHECK-NEXT:    and.b #1, %d0
 ; CHECK-NEXT:    movem.w %d0, (6,%sp)
-; CHECK-NEXT:    sub.b #1, %d0
+; CHECK-NEXT:    cmpi.b #1, %d0
 ; CHECK-NEXT:    bgt .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if
 ; CHECK-NEXT:    movem.w (4,%sp), %d1

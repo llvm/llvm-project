@@ -130,6 +130,14 @@ static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";
 }
 
+/// Attribute naming the submodule that defines a separate module procedure.
+/// Such a procedure is mangled with the module that declares its interface, so
+/// this is the only record of where it is really defined. It is only set when
+/// full debug information is requested.
+static constexpr llvm::StringRef getDefiningSubmoduleAttrName() {
+  return "fir.defining_submodule";
+}
+
 /// Attribute containing the original name of a function from before the
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {
@@ -146,6 +154,12 @@ static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
 static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
+
+/// Attribute holding the unique name of the Fortran entity an allocation
+/// belongs to. It is an inherent attribute of the FIR allocation operations,
+/// and may also be carried by allocation operations of other dialects that
+/// FIR allocations were rewritten into.
+static constexpr llvm::StringRef getUniqNameAttrName() { return "uniq_name"; }
 
 /// Attribute to mark coarray Fortran entities with the CORANK attribute.
 constexpr llvm::StringRef getCorankAttrName() { return "fir.corank"; }

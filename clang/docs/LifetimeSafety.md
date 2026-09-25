@@ -1,12 +1,9 @@
 # Lifetime Safety Analysis
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
-Clang Lifetime Safety Analysis is a C++ language extension which warns about
+Clang Lifetime Safety Analysis is a C and C++ language extension which warns about
 potential dangling pointer defects in code. The analysis aims to detect
 when a pointer, reference or view type (such as `std::string_view`) refers to an object
 that is no longer alive, a condition that leads to use-after-free bugs and
@@ -60,6 +57,24 @@ The analysis flags the assignment `v = s` as defective because `s` is
 destroyed while `v` is still alive and points to `s`, and adds a note
 to where `v` is used after `s` has been destroyed.
 
+```c
+#include <stdio.h>
+void simple_dangle() {
+  int *ptr = NULL;
+  {
+    int i = 5;
+    ptr = &i;   // warning: local variable 'i' does not live long enough
+  }             // note: local variable 'i' is destroyed here
+  *ptr = 6;     // note: later used here
+}
+```
+
+This example demonstrates a simples use-after-scope bug in C. The `ptr` pointer
+is set to `NULL` in the outer scope. In the inner scope ptr points to `i`, but
+its lifetime ends at the end of the inner block which causes `ptr` to dangle
+when it is set to 6.
+
+
 ### Running The Analysis
 
 To run the analysis, compile with the `-Wlifetime-safety-permissive` flag, e.g.
@@ -69,7 +84,9 @@ clang -c -Wlifetime-safety-permissive example.cpp
 ```
 
 This flag enables a core set of lifetime safety checks. For more fine-grained
-control over warnings, see {ref}`warning_flags`.
+control over warnings, see {ref}`warning_flags`. The analysis runs for both
+C and C++ by default. Use `-fno-lifetime-safety-c` to disable the analysis
+for C code.
 
 ## Lifetime Annotations
 
@@ -209,22 +226,6 @@ or visitors that are only used during the call and not stored.
 For more details, see [noescape](https://clang.llvm.org/docs/AttributeReference.html#noescape).
 
 ## Checks Performed
-
-```{raw} html
-<style>
-/* Align text to left and add red/green colors */
-table.colored-code-table td, table.colored-code-table th { text-align: left !important; }
-table.colored-code-table td:first-child, table.colored-code-table th:first-child { background-color: #ffeaea !important; }
-table.colored-code-table td:nth-child(2), table.colored-code-table th:nth-child(2) { background-color: #eafaea !important; }
-table.colored-code-table td .highlight, table.colored-code-table td pre { background-color: transparent !important; border: none !important; }
-
-div.bad-code { background-color: #ffeaea !important; padding: 5px; border-left: 4px solid #ff6b6b; text-align: left !important; }
-div.bad-code .highlight, div.bad-code pre { background-color: transparent !important; border: none !important; }
-
-div.good-code { background-color: #eafaea !important; padding: 5px; border-left: 4px solid #51cf66; text-align: left !important; }
-div.good-code .highlight, div.good-code pre { background-color: transparent !important; border: none !important; }
-</style>
-```
 
 ### Use after scope
 
