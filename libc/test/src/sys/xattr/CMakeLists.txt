@@ -1,20 +1,24 @@
 add_custom_target(libc_sys_xattr_unittests)
 
 add_libc_test(
-  flistxattr_test
+  fxattr_test
   SUITE
     libc_sys_xattr_unittests
   SRCS
-    flistxattr_test.cpp
+    fxattr_test.cpp
   DEPENDS
     libc.hdr.sys_stat_macros
-    libc.include.sys_xattr
+    libc.hdr.sys_xattr_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.CPP.scope
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
     libc.src.errno.errno
     libc.src.fcntl.creat
+    libc.src.sys.xattr.fgetxattr
     libc.src.sys.xattr.flistxattr
+    libc.src.sys.xattr.fsetxattr
     libc.src.unistd.close
     libc.src.unistd.unlink
     libc.test.UnitTest.ErrnoCheckingTest
@@ -22,20 +26,24 @@ add_libc_test(
 )
 
 add_libc_test(
-  listxattr_test
+  lxattr_test
   SUITE
     libc_sys_xattr_unittests
   SRCS
-    listxattr_test.cpp
+    lxattr_test.cpp
   DEPENDS
     libc.hdr.sys_stat_macros
-    libc.include.sys_xattr
+    libc.hdr.sys_xattr_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.CPP.scope
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
     libc.src.errno.errno
     libc.src.fcntl.creat
-    libc.src.sys.xattr.listxattr
+    libc.src.sys.xattr.lgetxattr
+    libc.src.sys.xattr.llistxattr
+    libc.src.sys.xattr.lsetxattr
     libc.src.unistd.close
     libc.src.unistd.symlink
     libc.src.unistd.unlink
@@ -44,20 +52,24 @@ add_libc_test(
 )
 
 add_libc_test(
-  llistxattr_test
+  xattr_test
   SUITE
     libc_sys_xattr_unittests
   SRCS
-    llistxattr_test.cpp
+    xattr_test.cpp
   DEPENDS
     libc.hdr.sys_stat_macros
-    libc.include.sys_xattr
+    libc.hdr.sys_xattr_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.CPP.scope
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
     libc.src.errno.errno
     libc.src.fcntl.creat
-    libc.src.sys.xattr.llistxattr
+    libc.src.sys.xattr.getxattr
+    libc.src.sys.xattr.listxattr
+    libc.src.sys.xattr.setxattr
     libc.src.unistd.close
     libc.src.unistd.symlink
     libc.src.unistd.unlink

@@ -180,9 +180,12 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
   Register CurMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
 
   B.setInsertPt(MBB, I);
-  B.buildInstr(LMC->AndN2Opc, {PrevMaskedReg}, {PrevRegCopy, LMC->ExecReg});
-  B.buildInstr(LMC->AndOpc, {CurMaskedReg}, {LMC->ExecReg, CurRegCopy});
-  B.buildInstr(LMC->OrOpc, {DstReg}, {PrevMaskedReg, CurMaskedReg});
+  B.buildInstr(LMC->AndN2Opc, {PrevMaskedReg}, {PrevRegCopy, LMC->ExecReg})
+      .setOperandDead(3);
+  B.buildInstr(LMC->AndOpc, {CurMaskedReg}, {LMC->ExecReg, CurRegCopy})
+      .setOperandDead(3);
+  B.buildInstr(LMC->OrOpc, {DstReg}, {PrevMaskedReg, CurMaskedReg})
+      .setOperandDead(3);
 }
 
 // GlobalISel has to constrain S1 incoming taken as-is with lane mask register

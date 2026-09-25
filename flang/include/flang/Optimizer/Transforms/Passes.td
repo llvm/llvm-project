@@ -588,13 +588,22 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
-                           "mlir::DLTIDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
+                           "mlir::gpu::GPUDialect", "mlir::DLTIDialect"];
+  let options = [Option<
+      "deferAccRoutineDataTransfers", "defer-acc-routine-data-transfers",
+      "bool", /*default=*/"false",
+      "Do not convert cuf.data_transfer operations in the host copy of an "
+      "OpenACC routine. The routine is later specialized for host and device, "
+      "after which each copy can be handled according to its execution "
+      "context.">];
 }
 
 def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
   let summary = "Convert CUF operations to runtime calls late in the pipeline";
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect"
+  ];
 }
 
 def CUFDeviceGlobal :

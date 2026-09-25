@@ -9615,6 +9615,13 @@ def err_atomic_builtin_must_be_pointer : Error<
 def err_atomic_builtin_must_be_pointer_intptr : Error<
   "address argument to atomic builtin must be a pointer to integer or pointer"
   " (%0 invalid)">;
+
+def err_atomic_hint_builtin_must_be_pointer : Error<
+  "address argument to atomic hint builtin must be a pointer to a scalar "
+  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+def err_atomic_hint_has_invalid_hint_type : Error<
+   "invalid hint type argument to atomic hint operation (%0)">;
+
 def err_atomic_builtin_cannot_be_const : Error<
   "address argument to atomic builtin cannot be const-qualified (%0 invalid)">;
 def err_atomic_builtin_must_be_pointer_intfltptr : Error<
@@ -9683,6 +9690,13 @@ def err_atomic_op_needs_atomic_int : Error<
 def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
+def err_atomic_op_hint_data_size : Error<
+  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+def err_atomic_hint_has_invalid_memory_order : Error<
+   "invalid memory order argument to atomic hint operation (%0 invalid)">;
+def warn_atomic_hint_has_invalid_hint_type : Warning<
+   "unrecognised hint type argument to atomic hint operation (%0)">,
+  InGroup<DiagGroup<"atomic-hint-type">>;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
@@ -11532,6 +11546,13 @@ def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
 def err_ppc_invalid_arg_type : Error<
   "argument %0 must be of type %1">;
+def err_ppc_feature_no_runtime_detection : Error<
+  "feature '%0' cannot be used with 'target_clones' because it has no "
+  "runtime detection; use 'target' attribute instead">;
+def err_ppc_multiple_negative_disableable : Error<
+  "only one negative form of runtime-disableable features (vsx, htm) is allowed in 'target_clones'; "
+  "'%0' conflicts with '%1'">;
+
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_reserved_vunpackb_imm : Error<
@@ -13409,7 +13430,7 @@ def err_builtin_invalid_arg_type: Error<
   // An 'or' if non-empty second and third components are combined
   "%plural{0:|:%plural{0:|:or }2}3"
   // Third component: floating-point types
-  "%select{|floating-point|16 or 32 bit floating-point}3"
+  "%select{|floating-point|16 or 32 bit floating-point|32 bit floating-point}3"
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;

@@ -109,6 +109,10 @@ private:
     uint32_t HashValue;
     uint64_t EntryOffset;
     std::vector<BOLTDWARF5AccelTableData *> Values;
+    /// Points at the name this entry was keyed by. Invalid before finalize()
+    const std::string *Name = nullptr;
+    /// New name (not in .debug_str). StrOffset is invalid before finalize()
+    bool NeedsStrOffset = false;
   };
   using HashList = std::vector<HashData *>;
   using BucketList = std::vector<HashList>;
@@ -170,6 +174,8 @@ private:
   getSecondIndexForEntry(const BOLTDWARF5AccelTableData &Value) const;
   /// Uniquify Entries.
   void finalize();
+  /// Append the new names that are not already in .debug_str
+  void assignStrOffsets();
   /// Computes bucket count.
   void computeBucketCount();
   /// Populate Abbreviations Map.

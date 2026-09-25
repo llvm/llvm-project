@@ -38,6 +38,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
@@ -151,6 +152,14 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     result_valobj_sp = ValueObjectConstResult::Create(
         exe_ctx.GetBestExecutionContextScope(), std::move(error));
   };
+
+  if (!PolicyStack::Get().Current().capabilities.can_evaluate_expressions) {
+    LLDB_LOG(log, "== [UserExpression::Evaluate] The current policy doesn't "
+                  "allow evaluating expressions ==");
+    set_error(Status::FromErrorString(
+        "expression evaluation is not allowed in this context"));
+    return lldb::eExpressionSetupError;
+  }
 
   if (ctx_obj) {
     static unsigned const ctx_type_mask = lldb::TypeFlags::eTypeIsClass |

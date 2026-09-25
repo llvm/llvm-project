@@ -5,14 +5,14 @@
 subroutine pointer_runtime(n)
   integer :: n
   character(:), pointer :: scalar, array(:)
-  ! CHECK-DAG: %[[aBoxAddr0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFpointer_runtimeEarray"}
+  ! CHECK-DAG: %[[aBoxAddr0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>> <{{{.*}}uniq_name = "_QFpointer_runtimeEarray"}>
   ! CHECK-DAG: %[[aNullAddr:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.char<1,?>>>
   ! CHECK-DAG: %[[aNullShape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK-DAG: %[[aInitBox:.*]] = fir.embox %[[aNullAddr]](%[[aNullShape]]) typeparams %c0{{.*}} : (!fir.ptr<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK-DAG: fir.store %[[aInitBox]] to %[[aBoxAddr0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK-DAG: %[[aBoxAddr:.*]]:2 = hlfir.declare %[[aBoxAddr0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointer_runtimeEarray"}
 
-  ! CHECK-DAG: %[[sBoxAddr0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFpointer_runtimeEscalar"}
+  ! CHECK-DAG: %[[sBoxAddr0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,?>>> <{{{.*}}uniq_name = "_QFpointer_runtimeEscalar"}>
   ! CHECK-DAG: %[[sNullAddr:.*]] = fir.zero_bits !fir.ptr<!fir.char<1,?>>
   ! CHECK-DAG: %[[sInitBox:.*]] = fir.embox %[[sNullAddr]] typeparams %c0{{.*}} : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
   ! CHECK-DAG: fir.store %[[sInitBox]] to %[[sBoxAddr0]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>

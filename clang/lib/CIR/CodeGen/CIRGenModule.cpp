@@ -148,6 +148,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
+      !sdkVersion.empty())
+    theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
+                       builder.getStringAttr(sdkVersion.getAsString()));
   // TODO(CIR): These attributes should eventually be replaced by
   // TypeSizeInfoAttr once it is upstreamed.
   theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),

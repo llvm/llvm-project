@@ -149,7 +149,8 @@ public:
                                            bool TransposeArg = false);
   BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
-                                        StringRef BuiltinName);
+                                        StringRef BuiltinName,
+                                        bool RequiresOriginalValue = false);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
