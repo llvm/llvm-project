@@ -85,8 +85,13 @@ void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
                                               const CastExpr *CE,
                                               const EnumDecl *E) const {
   assert(E && "valid EnumDecl* is expected");
-  if (const ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    std::string ValueStr = "", NameStr = "the enum";
+    auto &SM = C.getSourceManager();
+
+    if (SM.isInSystemHeader(CE->getExprLoc()))
+      return;
+
+    if (const ExplodedNode *N = C.generateNonFatalErrorNode()) {
+      std::string ValueStr = "", NameStr = "the enum";
 
     // Try to add details to the message:
     const auto ConcreteValue =
@@ -101,7 +106,6 @@ void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
     std::string Msg = formatv("The value{0} provided to the cast expression is "
                               "not in the valid range of values for {1}",
                               ValueStr, NameStr);
-
     auto BR = std::make_unique<PathSensitiveBugReport>(EnumValueCastOutOfRange,
                                                        Msg, N);
     bugreporter::trackExpressionValue(N, CE->getSubExpr(), *BR);
