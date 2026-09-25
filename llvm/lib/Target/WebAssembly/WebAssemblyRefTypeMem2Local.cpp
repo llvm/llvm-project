@@ -12,7 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssembly.h"
 #include "llvm/IR/Analysis.h"
@@ -22,6 +21,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-ref-type-mem2local"
