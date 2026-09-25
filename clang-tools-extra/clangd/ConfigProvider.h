@@ -83,7 +83,7 @@ public:
   /// A provider that includes fragments from all the supplied providers.
   /// Order is preserved; later providers take precedence over earlier ones.
   static std::unique_ptr<Provider>
-  combine(std::vector<std::unique_ptr<Provider>>);
+      combine(std::vector<std::unique_ptr<Provider>>);
 
   /// Returns providers for the configuration files that clangd tools read by
   /// default: project config (ancestor `.clangd` files) and the user's
