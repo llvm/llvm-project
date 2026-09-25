@@ -9,6 +9,7 @@
 #include "RISCV.h"
 #include "../Clang.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
@@ -212,6 +213,19 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     return;
   for (const std::string &TF : TuneFeatures)
     Features.push_back(Args.MakeArgString(TF));
+
+  if (Args.getLastArg(options::OPT_msave_restore)) {
+    auto FCFArgVal = Args.getLastArgValue(options::OPT_fcf_protection_EQ);
+    if (Args.hasArg(options::OPT_fcf_protection) || FCFArgVal == "return" ||
+        FCFArgVal == "full")
+#if 0
+  if (Args.getLastArg(options::OPT_msave_restore) &&
+      (Args.hasArg(options::OPT_fcf_protection) ||
+       Args.getLastArgValue(options::OPT_fcf_protection_EQ) == "return")) {
+#endif
+      D.Diag(clang::diag::warn_opt_unsupported_with_feature_on_target)
+          << "-fcf-protection=return" << "-msave-restore" << "RISC-V";
+  }
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.

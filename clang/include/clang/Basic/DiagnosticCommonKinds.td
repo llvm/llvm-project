@@ -367,6 +367,9 @@ def warn_invalid_feature_combination : Warning<
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
+def warn_opt_unsupported_with_feature_on_target : Warning<
+    "option %0 is not supported with feature %1 on %2 targets">,
+    InGroup<InvalidCommandLineArgument>;
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
 
