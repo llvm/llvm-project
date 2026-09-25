@@ -492,9 +492,9 @@ const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc) {
   return getVLdStIdxOpcodeInfoByOpcodeImpl(Opc);
 }
 
-const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByKey(uint16_t BitWidth,
-                                                     bool IsStore) {
-  return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore);
+const VLdStIdxOpcodeInfo *
+getVLdStIdxOpcodeInfoByKey(uint16_t BitWidth, bool IsStore, bool IsGPRIdx) {
+  return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore, IsGPRIdx);
 }
 
 int getMTBUFBaseOpcode(unsigned Opc) {
