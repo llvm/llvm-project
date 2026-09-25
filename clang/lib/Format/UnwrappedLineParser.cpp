@@ -2892,11 +2892,17 @@ static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
   return nullptr;
 }
 
+static bool containsPPDirective(const UnwrappedLine &Line) {
+  return llvm::any_of(
+      llvm::drop_begin(Line.Tokens),
+      [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
   if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
-      PreprocessorDirectives.empty() && FormatTok->isNot(tok::semi)) {
+      !containsPPDirective(*Line) && FormatTok->isNot(tok::semi)) {
     Tok = Style.BraceWrapping.AfterControlStatement == FormatStyle::BWACS_Never
               ? getLastNonComment(*Line)
               : Line->Tokens.back().Tok;
@@ -2910,6 +2916,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   }
 
   addUnwrappedLine();
+  const size_t BodyStart = CurrentLines->size();
   ++Line->Level;
   ++Line->UnbracedBodyLevel;
   parseStructuralElement();
@@ -2917,15 +2924,31 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
 
   if (Tok) {
     assert(!Line->InPPDirective);
+    FormatToken *const LBraceTok = Tok;
     Tok = nullptr;
-    for (const auto &L : llvm::reverse(*CurrentLines)) {
+    size_t BodyEnd = CurrentLines->size();
+    while (BodyEnd > 0) {
+      const auto &L = (*CurrentLines)[--BodyEnd];
       if (!L.InPPDirective && getLastNonComment(L)) {
         Tok = L.Tokens.back().Tok;
         break;
       }
     }
     assert(Tok);
-    ++Tok->BraceCount;
+    // Don't insert the braces if they would enclose preprocessor directives.
+    bool EnclosesPPDirective = false;
+    for (size_t I = BodyStart; I <= BodyEnd && !EnclosesPPDirective; ++I) {
+      const auto &L = (*CurrentLines)[I];
+      EnclosesPPDirective =
+          L.InPPDirective ||
+          llvm::any_of(L.Tokens, [](const UnwrappedLineNode &Node) {
+            return Node.Tok->FirstAfterPPLine;
+          });
+    }
+    if (EnclosesPPDirective)
+      LBraceTok->BraceCount = 0;
+    else
+      ++Tok->BraceCount;
   }
 
   if (CheckEOF && eof())
