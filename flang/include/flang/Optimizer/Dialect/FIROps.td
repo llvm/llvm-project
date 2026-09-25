@@ -2083,7 +2083,7 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     AllTypesMatch<["lowerBound", "upperBound", "step"]>,
     DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getYieldedValuesMutable"]>,
+        ["getStaticTripCount", "getYieldedValuesMutable"]>,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "generalized loop operation";

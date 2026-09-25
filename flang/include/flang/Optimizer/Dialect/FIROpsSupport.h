@@ -198,6 +198,14 @@ bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 /// Unwrap an integer constant from an mlir::Value as an APInt.
 std::optional<llvm::APInt> getIntIfConstant(mlir::Value value);
 
+/// Compute the static trip count of a loop with the given bounds and stride.
+/// Returns std::nullopt if any of \p lb, \p ub or \p step is not a compile-time
+/// integer constant, or if \p step is zero. \p inclusive selects whether \p ub
+/// belongs to the iteration space (as in a Fortran do loop) or is excluded (a
+/// half-open range, as in a default omp.loop_nest).
+std::optional<llvm::APInt> computeTripCount(mlir::Value lb, mlir::Value ub,
+                                            mlir::Value step, bool inclusive);
+
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
 }
