@@ -45,9 +45,6 @@ void thread_id_too_wide(uint4 ID : SV_GroupID) {}
 void thread_id_float(float3 ID : SV_GroupID) {}
 // expected-error@-1 {{semantic 'SV_GroupID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float3' (aka 'vector<float, 3>'))}}
 
-// SV_Position on a vertex input is arbitrary, so double4 is allowed.
+// SV_Position on a vertex input is arbitrary, so int4 is allowed.
 [shader("vertex")]
-float4 position_vs_in(double4 P : SV_Position) : SV_Position { return (float4)P; }
-
-[shader("pixel")]
-float4 user_double(double4 P : USER) : SV_Target { return (float4)P; }
+float4 position_vs_in(int4 P : SV_Position) : SV_Position { return (float4)P; }

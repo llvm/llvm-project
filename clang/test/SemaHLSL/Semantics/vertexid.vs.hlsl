@@ -16,9 +16,9 @@ uint3 bad_type_vector(uint3 id : SV_VertexID) : A {
 }
 
 [shader("vertex")]
-uint64_t bad_type_size(uint64_t id : SV_VertexID) : A {
+uint bad_type_size(uint64_t id : SV_VertexID) : A {
 // expected-error@-1 {{semantic 'SV_VertexID' must be a scalar of 16 or 32 bit integer type (was 'uint64_t' (aka 'unsigned long'))}}
-  return id;
+  return (uint)id;
 }
 
 [shader("vertex")]

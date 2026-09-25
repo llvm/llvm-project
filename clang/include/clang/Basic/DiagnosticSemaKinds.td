@@ -13680,6 +13680,9 @@ def err_hlsl_semantic_index_out_of_range
     : Error<"semantic %0 index %1 exceeds the maximum supported index %2">;
 def err_hlsl_semantic_zero_sized_array
     : Error<"semantic %0 cannot be applied to a zero-sized array">;
+def err_hlsl_semantic_64bit_type
+    : Error<"semantic %0 cannot use 64-bit component types in DXIL shader inputs "
+            "or outputs (was %1)">;
 def err_hlsl_semantic_invalid_type
     : Error<"semantic %0 must be a "
             "%select{scalar|scalar or vector of up to %2 components}1 of "

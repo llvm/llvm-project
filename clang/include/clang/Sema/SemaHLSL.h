@@ -330,9 +330,8 @@ private:
                              llvm::dxbc::PSV::SemanticKind SemanticKind,
                              unsigned ElementCount);
 
-  void diagnoseSystemSemanticType(const Decl *D,
-                                  const HLSLAppliedSemanticAttr *A,
-                                  llvm::dxbc::PSV::SemanticKind SemanticKind);
+  void diagnoseSemanticType(const Decl *D, const HLSLAppliedSemanticAttr *A,
+                            llvm::dxbc::PSV::SemanticKind SemanticKind);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 

@@ -1106,13 +1106,8 @@ void SemaHLSL::checkSemanticAnnotation(
     return;
   }
 
-  // SV_-prefixed names can have arbitrary interpretations, e.g. SV_Position
-  // on a vertex input. Do not apply system-value constraints to them.
-  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
-    return;
-
   diagnoseSemanticIndex(SemanticAttr, Kind, ElementCount);
-  diagnoseSystemSemanticType(Param, SemanticAttr, Kind);
+  diagnoseSemanticType(Param, SemanticAttr, Kind);
 }
 
 void SemaHLSL::diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
@@ -1175,11 +1170,10 @@ static bool isIntUpTo32Element(const ASTContext &Ctx, QualType Elem) {
          isIntElementOfWidth(Ctx, Elem, 32);
 }
 
-void SemaHLSL::diagnoseSystemSemanticType(const Decl *D,
-                                          const HLSLAppliedSemanticAttr *A,
-                                          SemanticKind Kind) {
-  assert(Kind != SemanticKind::Invalid && Kind != SemanticKind::Arbitrary &&
-         "expected a recognized system semantic");
+void SemaHLSL::diagnoseSemanticType(const Decl *D,
+                                    const HLSLAppliedSemanticAttr *A,
+                                    SemanticKind Kind) {
+  assert(Kind != SemanticKind::Invalid && "expected a valid semantic");
   ASTContext &Ctx = getASTContext();
 
   QualType T;
@@ -1209,30 +1203,39 @@ void SemaHLSL::diagnoseSystemSemanticType(const Decl *D,
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 3
           << /* 16 or 32 bit integer */ 0 << DeclaredTy;
-    break;
+    return;
   case SemanticKind::GroupIndex:
     if (!isIntElementOfWidth(Ctx, ElemTy, 32) || Components != 1)
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar */ 0 << 1 << /* 32 bit integer */ 1
           << DeclaredTy;
-    break;
+    return;
   case SemanticKind::VertexID:
     if (!isIntUpTo32Element(Ctx, ElemTy) || Components != 1)
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar */ 0 << 1
           << /* 16 or 32 bit integer */ 0 << DeclaredTy;
-    break;
+    return;
   case SemanticKind::Position:
   case SemanticKind::Target:
     if (!isFloatOrHalfElement(ElemTy) || Components > 4)
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 4
           << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
-    break;
+    return;
   default:
-    // Other recognized system semantics do not yet have type checks.
+    // Other semantics only have the general signature type restrictions.
     break;
   }
+
+  // DXIL signatures cannot carry 64-bit components, even for arbitrary
+  // semantics. SPIR-V interfaces do support these types.
+  QualType ScalarTy = getElementTypeOf(T, /*IncludeMatrix=*/true);
+  if (Ctx.getTargetInfo().getTriple().isDXIL() &&
+      (ScalarTy->isSpecificBuiltinType(BuiltinType::Double) ||
+       isIntElementOfWidth(Ctx, ScalarTy, 64)))
+    Diag(A->getLoc(), diag::err_hlsl_semantic_64bit_type)
+        << A->getAttrName() << DeclaredTy;
 }
 
 void SemaHLSL::diagnoseAttrStageMismatch(
