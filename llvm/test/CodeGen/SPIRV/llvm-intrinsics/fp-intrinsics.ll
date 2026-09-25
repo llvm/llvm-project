@@ -211,7 +211,11 @@ declare float @llvm.maxnum.f32(float, float)
 ; CHECK: OpFunction
 ; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
 ; CHECK: %[[#y:]] = OpFunctionParameter %[[#]]
-; CHECK: %[[#res:]] = OpExtInst %[[#]] %[[#]] fmin %[[#x]] %[[#y]]
+; CHECK: %[[#minmax:]] = OpExtInst %[[#var1]] %[[#extinst_id]] fmin %[[#x]] %[[#y]]
+; CHECK: %[[#ord:]] = OpOrdered %[[#]] %[[#x]] %[[#y]]
+; CHECK: %[[#nan:]] = OpSelect %[[#var1]] %[[#ord]] %[[#minmax]] %[[#]]
+; CHECK: %[[#iszero:]] = OpFOrdEqual %[[#]] %[[#nan]] %[[#]]
+; CHECK: %[[#res:]] = OpSelect %[[#var1]] %[[#iszero]] %[[#]] %[[#nan]]
 ; CHECK: OpReturnValue %[[#res]]
 
 define spir_func float @TestMinimum(float %x, float %y) {
@@ -225,7 +229,11 @@ declare float @llvm.minimum.f32(float, float)
 ; CHECK: OpFunction
 ; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
 ; CHECK: %[[#y:]] = OpFunctionParameter %[[#]]
-; CHECK: %[[#res:]] = OpExtInst %[[#]] %[[#]] fmax %[[#x]] %[[#y]]
+; CHECK: %[[#minmax:]] = OpExtInst %[[#var1]] %[[#extinst_id]] fmax %[[#x]] %[[#y]]
+; CHECK: %[[#ord:]] = OpOrdered %[[#]] %[[#x]] %[[#y]]
+; CHECK: %[[#nan:]] = OpSelect %[[#var1]] %[[#ord]] %[[#minmax]] %[[#]]
+; CHECK: %[[#iszero:]] = OpFOrdEqual %[[#]] %[[#nan]] %[[#]]
+; CHECK: %[[#res:]] = OpSelect %[[#var1]] %[[#iszero]] %[[#]] %[[#nan]]
 ; CHECK: OpReturnValue %[[#res]]
 
 define spir_func float @TestMaximum(float %x, float %y) {
