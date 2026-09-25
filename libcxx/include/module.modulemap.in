@@ -2471,6 +2471,9 @@ module std {
         header "__pstl/cpu_algos/stable_sort.h"
         export std_core.utility_core.empty
       }
+      module transform_inclusive_scan_init {
+        header "__pstl/cpu_algos/transform_inclusive_scan_init.h"
+      }
       module transform {
         header "__pstl/cpu_algos/transform.h"
       }
@@ -2481,6 +2484,7 @@ module std {
         header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
     }
+    module decoupled_lookback { header "__pstl/decoupled_lookback.h" }
     module dispatch           { header "__pstl/dispatch.h" }
     module handle_exception   { header "__pstl/handle_exception.h" }
   }

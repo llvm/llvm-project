@@ -51,8 +51,10 @@
 #include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
+#include <__pstl/cpu_algos/transform_inclusive_scan_init.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__pstl/cpu_algos/uninitialized_algorithms.h>
+#include <__pstl/decoupled_lookback.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -272,6 +274,33 @@ struct __cpu_traits<__libdispatch_backend_tag> {
         __combiner);
   }
 
+  template <class _Value, class _RandomAccessIterator1, class _PartitionScan>
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty>
+  __lookback_scan(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _PartitionScan __scan) {
+    if (__first == __last)
+      return __empty{}; // nothing to do
+
+    // Partition the input and allocate the lookback storage
+    __libdispatch::__chunk_partitions __partitions = __libdispatch::__partition_chunks(__last - __first);
+    __decoupled_lookback<_Value> __lookback{static_cast<size_t>(__partitions.__chunk_count_ - 1)};
+    if (__partitions.__chunk_count_ > 1 && __lookback.__size() == 0) {
+      return nullopt; // failed to allocate the lookback storage
+    }
+
+    // Run the single-pass scan with decoupled lookback
+    atomic<size_t> __next_chunk{0};
+    __libdispatch::__dispatch_apply(__partitions.__chunk_count_, [&](size_t /*__apply_chunk_out_of_order*/) {
+      size_t __chunk         = __next_chunk.fetch_add(1, std::memory_order_relaxed);
+      auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
+      auto __index           = __chunk == 0 ? 0
+                                            : (__chunk * __partitions.__chunk_size_) +
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+      __scan(__first + __index, __first + __index + __this_chunk_size, __chunk, __lookback);
+    });
+
+    return __empty{};
+  }
+
   template <class _RandomAccessIterator, class _Comp, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
   __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
@@ -423,6 +452,10 @@ struct __transform<__libdispatch_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __transform_binary<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan_init<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_inclusive_scan_init<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy>

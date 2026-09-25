@@ -316,6 +316,39 @@ void f(non_input_iterator non_input,
   }
 
   {
+    (void)std::transform_inclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        func,
+        func,
+        val); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        func,
+        func,
+        val); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+  }
+
+  {
     (void)std::adjacent_difference(
         pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: adjacent_difference}}
     (void)std::adjacent_difference(

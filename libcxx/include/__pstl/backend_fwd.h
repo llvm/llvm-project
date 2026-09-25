@@ -258,6 +258,27 @@ struct __transform_binary;
 //                       _BinaryOperation __op) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _UnaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _UnaryOperation __transform) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan_init;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _UnaryOperation, class _Tp>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _UnaryOperation __transform,
+//                       _Tp __init) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __replace_copy_if;
 // template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Predicate, class _Tp>
 // optional<__empty>
