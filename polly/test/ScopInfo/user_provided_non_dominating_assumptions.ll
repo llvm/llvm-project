@@ -3,6 +3,7 @@
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [i, N, M] -> {  : N <= i or (N > i and N >= 0) }
 ; CHECK-NEXT: remark: <unknown>:0:0: Inbounds assumption:    [i, N, M] -> {  : N <= i or (N > i and M <= 100) }
+; CHECK-NEXT: remark: <unknown>:0:0: Finite loop restriction: [i, N, M] -> {  : N > i and M < 0 }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 ;
 ;    void f(int *restrict A, int *restrict B, int i, int N, int M, int C[100][100]) {
