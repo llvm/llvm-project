@@ -27,6 +27,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __locale {
 
 using __lconv_t _LIBCPP_NODEBUG = std::lconv;
@@ -153,6 +154,9 @@ private:
   __lconv_storage* __lc_ = nullptr;
 };
 
+// Forward declared for use below.
+inline _LIBCPP_HIDE_FROM_ABI __locale_t __get_c_locale();
+
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::_free_locale(__loc); }
@@ -163,6 +167,7 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __loc
   return __new_locale;
 }
 _LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
+_LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
@@ -170,20 +175,30 @@ _LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
 //
 
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
 #if defined(_LIBCPP_MSVCRT)
-inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return ::_strtof_l(__nptr, __endptr, __loc);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+  return ::_strtof_l(__nptr, __endptr, __get_c_locale());
 }
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return ::_strtold_l(__nptr, __endptr, __loc);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  return ::_strtold_l(__nptr, __endptr, __get_c_locale());
 }
 #else
-_LIBCPP_EXPORTED_FROM_ABI float __strtof(const char*, char**, __locale_t);
-_LIBCPP_EXPORTED_FROM_ABI long double __strtold(const char*, char**, __locale_t);
+template <>
+_LIBCPP_EXPORTED_FROM_ABI float __str_to_float_c_locale<float>(const char*, char**);
+
+template <>
+_LIBCPP_EXPORTED_FROM_ABI long double __str_to_float_c_locale<long double>(const char*, char**);
 #endif
 
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return ::_strtod_l(__nptr, __endptr, __loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  return ::_strtod_l(__nptr, __endptr, __get_c_locale());
 }
 
 //
@@ -304,6 +319,11 @@ struct __locale_guard {
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
+
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
+
+#include <__locale_dir/support/default/get_c_locale.h>
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_WINDOWS_H

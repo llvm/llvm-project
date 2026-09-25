@@ -229,11 +229,11 @@ raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
 
 struct SubRegRange {
-  uint16_t Size;
-  uint16_t Offset;
+  uint32_t Size;
+  uint32_t Offset;
 
   SubRegRange(const Record *R);
-  SubRegRange(uint16_t Size, uint16_t Offset) : Size(Size), Offset(Offset) {}
+  SubRegRange(uint32_t Size, uint32_t Offset) : Size(Size), Offset(Offset) {}
 };
 
 struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {

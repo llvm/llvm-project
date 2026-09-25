@@ -60,7 +60,7 @@ struct __non_trivially_default_constructible_if<true, _Unique> {
 
 template <class _Tp>
 class allocator
-// TODO(LLVM 24): Remove the opt-out
+// TODO(LLVM 25): Remove the opt-out
 #ifdef _LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR
     : __non_trivially_default_constructible_if<!is_void<_Tp>::value, allocator<_Tp> >
 #endif

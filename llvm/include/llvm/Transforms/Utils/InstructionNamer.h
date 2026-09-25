@@ -12,8 +12,8 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct InstructionNamerPass : PassInfoMixin<InstructionNamerPass> {
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+struct InstructionNamerPass : OptionalPassInfoMixin<InstructionNamerPass> {
+  LLVM_ABI PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 } // namespace llvm
 

@@ -74,8 +74,7 @@ public:
     requires default_initializable<_View>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23
-  drop_view(_View __base, range_difference_t<_View> __count)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit drop_view(_View __base, range_difference_t<_View> __count)
       : __count_(__count), __base_(std::move(__base)) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count_ >= 0, "count must be greater than or equal to zero.");
   }

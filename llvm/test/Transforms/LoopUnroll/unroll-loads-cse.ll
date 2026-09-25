@@ -167,12 +167,13 @@ define void @cse_volatile_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_4:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[SRC_12:%.*]] = getelementptr i8, ptr [[SRC]], i64 12
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP2]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP2]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]

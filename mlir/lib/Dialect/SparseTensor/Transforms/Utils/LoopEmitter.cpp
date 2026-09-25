@@ -824,12 +824,9 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
       // Following loops continue iteration from the break point of the
       // current while loop.
       whileRes = it.linkNewScope(whileRes);
-    } else {
-      // Make sure randomly accessible (dense) iterator is set to the right
-      // position according to the universal index.
-      Value uniIdx = whileOp.getResults().back();
-      it.locate(builder, loc, uniIdx);
     }
+    // Note: random-accessible (dense) iterators are located after the while
+    // loop exits; see below.
   }
 
   // Reduction value from users.
@@ -853,6 +850,18 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
     YIELD(operands);
 
   builder.setInsertionPointAfter(whileOp);
+
+  // Locate random-accessible (dense) iterators at the final universal index.
+  // This must happen after the while loop exits so that the while results are
+  // in scope. Doing it inside the after block (using while results there) would
+  // cause domination violations when the iterator is later dereferenced.
+  for (auto [tid, lvl] : unpackTensorLevelRange(loopInfo.tidLvls)) {
+    SparseIterator &it = getCurIterator(tid, lvl);
+    if (it.randomAccessible()) {
+      Value uniIdx = whileOp.getResults().back();
+      it.locate(builder, loc, uniIdx);
+    }
+  }
 }
 
 void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
@@ -990,4 +999,6 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
 #undef ANDI
 #undef SUBI
 #undef MULI
+#undef REMUI
+#undef DIVUI
 #undef SELECT

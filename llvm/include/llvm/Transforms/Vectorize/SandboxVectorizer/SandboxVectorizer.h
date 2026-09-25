@@ -21,7 +21,8 @@ namespace llvm {
 
 class TargetTransformInfo;
 
-class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
+class SandboxVectorizerPass
+    : public OptionalPassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;

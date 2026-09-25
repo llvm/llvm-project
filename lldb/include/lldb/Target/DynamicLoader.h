@@ -20,8 +20,12 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
+
 #include <cstddef>
 #include <cstdint>
+#include <string>
 namespace lldb_private {
 class ModuleList;
 class Process;
@@ -212,72 +216,137 @@ public:
                                              lldb::addr_t base_addr,
                                              bool base_addr_is_offset);
 
-  /// Find/load a binary into lldb given a UUID and the address where it is
-  /// loaded in memory, or a slide to be applied to the file address.
-  /// May force an expensive search on the computer to find the binary by
-  /// UUID, should not be used for a large number of binaries - intended for
-  /// an environment where there may be one, or a few, binaries resident in
-  /// memory.
+  /// A binary to find and load into a Target.
   ///
-  /// Given a UUID, search for a binary and load it at the address provided,
-  /// or with the slide applied, or at the file address unslid.
+  /// The leading fields are inputs, filled in by the caller.  The trailing
+  /// fields are outputs: searching for the binary records its results in them,
+  /// and loading the binary into the Target consumes them.
+  struct BinarySpec {
+    /// Name of the binary, if available.  If no matching binary can be found on
+    /// the debug host, a module may be created out of live memory and given
+    /// this name.  If empty, a name is constructed from the address the binary
+    /// is loaded at.
+    std::string name;
+
+    /// UUID of the binary to be loaded.  May be empty, in which case, if a load
+    /// address is supplied, the binary is read out of memory to get a UUID to
+    /// look for.  There is a performance cost to doing this, it is not
+    /// preferable.
+    UUID uuid;
+
+    /// Address where the binary should be loaded, or read out of memory.  Or a
+    /// slide value, to be applied to the file addresses of the binary.
+    lldb::addr_t value = LLDB_INVALID_ADDRESS;
+
+    /// A flag indicating that \a value is an address, or an offset to be
+    /// applied to the file addresses.
+    bool value_is_offset = false;
+
+    /// Allow the search to do a possibly expensive external search for the
+    /// ObjectFile and/or SymbolFile.
+    bool force_symbol_search = false;
+
+    /// Whether ModulesDidLoad should be called once the binary has been added
+    /// to the Target.  A caller loading several binaries may prefer to batch
+    /// those up.
+    bool notify = false;
+
+    /// Whether the address of the binary should be set in the Target if it is
+    /// added.  A caller that wants to set the section addresses individually
+    /// leaves this false, and is then responsible for setting the load address
+    /// for the binary or its segments in the Target.
+    bool set_address_in_target = false;
+
+    /// If no better binary image can be found, allow reading the binary out of
+    /// memory, if possible, and create the Module based on that.  May be slow
+    /// to read a binary out of memory, and for unusual environments, there may
+    /// be no symbols mapped in memory at all.
+    bool allow_memory_image_last_resort = false;
+
+    /// The module found for the binary, or empty if it was not found.  It is
+    /// not registered with the Target until LoadBinaryInTarget.
+    lldb::ModuleSP module_sp;
+
+    /// The binary as it was read out of the process' memory, if it had to be,
+    /// so that it is not read a second time.
+    lldb::ModuleSP memory_module_sp;
+
+    /// What an external symbol server had to say about this binary.  The search
+    /// records it rather than reporting it, so that it reaches the user in the
+    /// caller's order.
+    Status error;
+  };
+
+  /// Find a binary and load it into a Target.
   ///
-  /// Given an address, try to read the binary out of memory, get the UUID,
-  /// find the file if possible and load it unslid, or add the memory module.
+  /// Given a UUID, search for a binary and load it at the address provided, or
+  /// with the slide applied, or at the file address unslid.
+  ///
+  /// Given an address, try to read the binary out of memory, get the UUID, find
+  /// the file if possible and load it unslid, or add the memory module.
+  ///
+  /// May force an expensive search on the host system to find the binary by
+  /// UUID.  To load more than one binary, use LocateBinaries and
+  /// LoadBinaryInTarget instead: the search is the expensive part, and those
+  /// let all of the searching happen before any of the binaries are added to
+  /// the Target.
   ///
   /// \param[in] process
   ///     The process to add this binary to.
   ///
-  /// \param[in] name
-  ///     Name of the binary, if available.  If this method cannot find a
-  ///     matching binary on the debug host, it may create a memory module
-  ///     out of live memory, and the provided name will be used.  If an
-  ///     empty StringRef is provided, a name will be constructed for the module
-  ///     based on the address it is loaded at.
-  ///
-  /// \param[in] uuid
-  ///     UUID of the binary to be loaded.  UUID may be empty, and if a
-  ///     load address is supplied, will read the binary from memory, get
-  ///     a UUID and try to find a local binary.  There is a performance
-  ///     cost to doing this, it is not preferable.
-  ///
-  /// \param[in] value
-  ///     Address where the binary should be loaded, or read out of memory.
-  ///     Or a slide value, to be applied to the file addresses of the binary.
-  ///
-  /// \param[in] value_is_offset
-  ///     A flag indicating that \p value is an address, or an offset to
-  ///     be applied to the file addresses.
-  ///
-  /// \param[in] force_symbol_search
-  ///     Allow the search to do a possibly expensive external search for
-  ///     the ObjectFile and/or SymbolFile.
-  ///
-  /// \param[in] notify
-  ///     Whether ModulesDidLoad should be called when a binary has been added
-  ///     to the Target.  The caller may prefer to batch up these when loading
-  ///     multiple binaries.
-  ///
-  /// \param[in] set_address_in_target
-  ///     Whether the address of the binary should be set in the Target if it
-  ///     is added.  The caller may want to set the section addresses
-  ///     individually, instead of loading the binary the entire based on the
-  ///     start address or slide.  The caller is responsible for setting the
-  ///     load address for the binary or its segments in the Target if it passes
-  ///     true.
-  ///
-  /// \param[in] allow_memory_image_last_resort
-  ///     If no better binary image can be found, allow reading the binary
-  ///     out of memory, if possible, and create the Module based on that.
-  ///     May be slow to read a binary out of memory, and for unusual
-  ///     environments, may be no symbols mapped in memory at all.
+  /// \param[in,out] bin_spec
+  ///     The binary to find and load, with its input fields filled in by the
+  ///     caller.
   ///
   /// \return
-  ///     Returns a shared pointer for the Module that has been added.
-  static lldb::ModuleSP LoadBinaryWithUUIDAndAddress(
-      Process *process, llvm::StringRef name, UUID uuid, lldb::addr_t value,
-      bool value_is_offset, bool force_symbol_search, bool notify,
-      bool set_address_in_target, bool allow_memory_image_last_resort);
+  ///     The module that was added to the Target, or an error saying why the
+  ///     binary could not be found and loaded.
+  static llvm::Expected<lldb::ModuleSP>
+  LocateAndLoadBinary(Process *process, BinarySpec &bin_spec);
+
+  /// Search for a batch of binaries, without mutating the Target.
+  ///
+  /// The entries are searched for independently, and stay in the order they
+  /// were given in.  A binary that cannot be found leaves its
+  /// BinarySpec::module_sp empty and has no effect on the others.  Its
+  /// BinarySpec::memory_module_sp is set only when the binary's header had to
+  /// be read out of memory to get the UUID.  Nothing is registered with the
+  /// Target, see LoadBinaryInTarget.
+  ///
+  /// \param[in] process
+  ///     The process the binaries belong to.  Used to read a binary's header
+  ///     out of memory when its UUID isn't known, and otherwise only read from.
+  ///
+  /// \param[in,out] bin_specs
+  ///     The binaries to search for, with their input fields filled in by the
+  ///     caller.
+  static void LocateBinaries(Process *process,
+                             llvm::MutableArrayRef<BinarySpec> bin_specs);
+
+  /// Add a binary that LocateBinaries searched for to the Target, and set its
+  /// load address.
+  ///
+  /// This mutates the Target and may read the process' memory, so it has to be
+  /// called for one binary at a time.  Call it over the batch in the order the
+  /// batch was built in: that order decides the Target's module order, which
+  /// binary gets to set the Target's architecture, and the order in which
+  /// messages reach the user.
+  ///
+  /// Whether a failure is worth telling the user about is left to the caller,
+  /// which knows whether it went looking for a binary that has to be there.  A
+  /// symbol server's word on a binary that was found anyway is reported here.
+  ///
+  /// \param[in] process
+  ///     The process to add this binary to.
+  ///
+  /// \param[in,out] bin_spec
+  ///     A binary that LocateBinaries has searched for.
+  ///
+  /// \return
+  ///     The module that was added to the Target, or an error saying why the
+  ///     binary could not be found and loaded.
+  static llvm::Expected<lldb::ModuleSP>
+  LoadBinaryInTarget(Process *process, BinarySpec &bin_spec);
 
   /// Get information about the shared cache for a process, if possible.
   ///
@@ -317,16 +386,16 @@ public:
   /// \return
   ///     Returns false if this DynamicLoader cannot gather information
   ///     about the shared cache / has no concept of a shared cache.
-  virtual bool
-  GetSharedCacheInformation(lldb::addr_t &base_address, UUID &uuid,
-                            LazyBool &using_shared_cache,
-                            LazyBool &private_shared_cache,
-                            lldb_private::FileSpec &shared_cache_path) {
+  virtual bool GetSharedCacheInformation(
+      lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
+      LazyBool &private_shared_cache, lldb_private::FileSpec &shared_cache_path,
+      std::optional<uint64_t> &size) {
     base_address = LLDB_INVALID_ADDRESS;
     uuid.Clear();
     using_shared_cache = eLazyBoolCalculate;
     private_shared_cache = eLazyBoolCalculate;
     shared_cache_path.Clear();
+    size.reset();
     return false;
   }
 
@@ -359,8 +428,8 @@ public:
 protected:
   // Utility methods for derived classes
 
-  /// Find a module in the target that matches the given file.
-  lldb::ModuleSP FindModuleViaTarget(const FileSpec &file);
+  /// Find a module in the target that matches the given module spec.
+  lldb::ModuleSP FindModuleViaTarget(const ModuleSpec &module_spec);
 
   /// Checks to see if the target module has changed, updates the target
   /// accordingly and returns the target executable module.

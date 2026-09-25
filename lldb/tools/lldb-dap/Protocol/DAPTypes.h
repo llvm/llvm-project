@@ -20,6 +20,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
 
@@ -28,8 +29,7 @@ namespace lldb_dap::protocol {
 enum ReferenceKind : uint8_t {
   eReferenceKindTemporary = 0,
   eReferenceKindPermanent = 1,
-  eReferenceKindScope = 1 << 1,
-  eReferenceKindInvalid = 0xFF
+  eReferenceKindInvalid = 0xFF,
 };
 
 /// The var_ref_t hold two values, the `ReferenceKind` and the
@@ -44,13 +44,14 @@ private:
   static constexpr uint32_t k_kind_mask = 0xFF;
 
 public:
-  static constexpr uint32_t k_invalid_var_ref = UINT32_MAX;
-  static constexpr uint32_t k_no_child = 0;
+  static const var_ref_t k_invalid_var_ref;
+  static const var_ref_t k_no_child;
 
   explicit constexpr var_ref_t(uint32_t reference, ReferenceKind kind)
       : reference(reference), kind(kind) {}
 
-  explicit constexpr var_ref_t(uint32_t masked_ref = k_invalid_var_ref)
+  explicit constexpr var_ref_t(
+      uint32_t masked_ref = k_invalid_var_ref.AsUInt32())
       : reference(masked_ref & k_reference_bit_mask),
         kind((masked_ref >> k_reference_bit_size) & k_kind_mask) {}
 
@@ -63,7 +64,6 @@ public:
     switch (current_kind) {
     case eReferenceKindTemporary:
     case eReferenceKindPermanent:
-    case eReferenceKindScope:
       return current_kind;
     default:
       return eReferenceKindInvalid;
@@ -71,6 +71,10 @@ public:
   }
 
   [[nodiscard]] constexpr uint32_t Reference() const { return reference; }
+
+  friend constexpr bool operator==(var_ref_t lhs, var_ref_t rhs) {
+    return lhs.AsUInt32() == rhs.AsUInt32();
+  }
 
   // We should be able to store at least 8 million variables for each store
   // type at every stopped state.
@@ -88,9 +92,15 @@ private:
 static_assert(sizeof(var_ref_t) == sizeof(uint32_t) &&
               "the size of var_ref_t must be equal to the size of uint32_t.");
 
+inline constexpr var_ref_t var_ref_t::k_no_child{0};
+inline constexpr var_ref_t var_ref_t::k_invalid_var_ref{UINT32_MAX};
+
 bool fromJSON(const llvm::json::Value &, var_ref_t &, llvm::json::Path);
 inline llvm::json::Value toJSON(const var_ref_t &var_ref) {
   return var_ref.AsUInt32();
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, var_ref_t ref) {
+  return os << ref.AsUInt32();
 }
 
 /// Data used to help lldb-dap resolve breakpoints persistently across different

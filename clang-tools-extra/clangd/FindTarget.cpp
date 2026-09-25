@@ -128,6 +128,14 @@ bool shouldSkipTypedef(const TypedefNameDecl *TD) {
 //      template<class X> using pvec = vector<x*>; pvec<int> x;
 //    There's no Decl `pvec<int>`, we must choose `pvec<X>` or `vector<int*>`
 //    and both are lossy. We must know upfront what the caller ultimately wants.
+
+static const TemplateDecl *getReferencedConcept(const ConceptReference *CR) {
+  TemplateName TN = CR->getNamedConcept();
+  if (const TemplateDecl *TD = TN.getAsTemplateDecl())
+    return TD;
+  return TN.getAsTemplateTemplateParmDecl();
+}
+
 struct TargetFinder {
   using RelSet = DeclRelationSet;
   using Rel = DeclRelation;
@@ -519,7 +527,7 @@ public:
   }
 
   void add(const ConceptReference *CR, RelSet Flags) {
-    add(CR->getNamedConcept(), Flags);
+    add(getReferencedConcept(CR), Flags);
   }
 };
 
@@ -552,6 +560,10 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(PL->getProtocol(), Flags);
   else if (const ConceptReference *CR = N.get<ConceptReference>())
     Finder.add(CR, Flags);
+  else if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
+    if (OON->getKind() == OffsetOfNode::Field)
+      Finder.add(OON->getField(), Flags);
+  }
   return Finder.takeDecls();
 }
 
@@ -845,14 +857,14 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
 
     void VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc L) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
-                                  L.getLocalSourceRange().getBegin(),
+                                  L.getNameLoc(),
                                   /*IsDecl=*/false,
                                   {L.getDecl()}});
     }
 
     void VisitUsingTypeLoc(UsingTypeLoc L) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
-                                  L.getLocalSourceRange().getBegin(),
+                                  L.getNameLoc(),
                                   /*IsDecl=*/false,
                                   {L.getDecl()}});
     }
@@ -1019,6 +1031,11 @@ public:
     return true;
   }
 
+  bool VisitOffsetOfNode(const OffsetOfNode *N) {
+    visitNode(DynTypedNode::create(*N));
+    return true;
+  }
+
 private:
   /// Obtain information about a reference directly defined in \p N. Does not
   /// recurse into child nodes, e.g. do not expect references for constructor
@@ -1072,7 +1089,15 @@ private:
       return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
                            CR->getConceptNameLoc(),
                            /*IsDecl=*/false,
-                           {CR->getNamedConcept()}}};
+                           {getReferencedConcept(CR)}}};
+    if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Field)
+        return {ReferenceLoc{NestedNameSpecifierLoc(),
+                             OON->getEndLoc(),
+                             /*IsDecl=*/false,
+                             {OON->getField()}}};
+      return {};
+    }
 
     // We do not have location information for other nodes (QualType, etc)
     return {};

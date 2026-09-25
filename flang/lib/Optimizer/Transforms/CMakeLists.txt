@@ -5,16 +5,17 @@ add_flang_library(FIRTransforms
   AffineDemotion.cpp
   AffinePromotion.cpp
   AlgebraicSimplification.cpp
+  AllocationPlacement.cpp
   AnnotateConstant.cpp
-  ArrayValueCopy.cpp
-  ArrayValueCopy.cpp
   AssumedRankOpConversion.cpp
   CUDA/CUFAddConstructor.cpp
   CUDA/CUFAllocationConversion.cpp
   CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFAllocDelay.cpp
   CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
+  CUDA/CUFDuplicateDeviceFunc.cpp
   CUDA/CUFFunctionRewrite.cpp
   CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
@@ -26,7 +27,9 @@ add_flang_library(FIRTransforms
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   ConvertComplexPow.cpp
+  CudaHeapAllocPromotion.cpp
   DebugTypeGenerator.cpp
+  EmitMIFGlobalCtors.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
   FIRToMemRef.cpp
@@ -43,6 +46,7 @@ add_flang_library(FIRTransforms
   GenRuntimeCallsForTest.cpp
   LoopInvariantCodeMotion.cpp
   LoopVersioning.cpp
+  SelectOpsConversion.cpp
   MIFOpConversion.cpp
   MemRefDataFlowOpt.cpp
   MemoryAllocation.cpp
@@ -87,8 +91,8 @@ add_flang_library(FIRTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMathTransforms
+  MLIRNVVMDialect
   MLIROpenACCDialect
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
   MLIRTransformUtils
 )

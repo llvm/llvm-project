@@ -292,9 +292,9 @@ public:
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
   bool isUnknownAnalyzerConfig(llvm::StringRef Name) {
-    static std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = []() {
+    static const auto AnalyzerConfigCmdFlags = []() {
       // Create an array of all -analyzer-config command line options.
-      std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = {
+      std::array AnalyzerConfigCmdFlags{
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
@@ -390,6 +390,11 @@ public:
 
   ExplorationStrategyKind getExplorationStrategy() const;
   CTUPhase1InliningKind getCTUPhase1Inlining() const;
+
+  bool analyzerSymbolicIntegerCasts() const {
+    return ShouldSupportSymbolicIntegerCasts ||
+           AnalysisConstraintsOpt == Z3ConstraintsModel;
+  }
 
   /// Returns the inter-procedural analysis mode.
   IPAKind getIPAMode() const;

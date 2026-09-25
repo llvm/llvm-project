@@ -1,0 +1,76 @@
+#ifndef _TUPLE_
+#define _TUPLE_
+
+#include <utility>
+
+namespace std {
+
+struct _Swallow_assign
+{
+  template<class _Tp>
+      const _Swallow_assign&
+    operator=(const _Tp&) const
+    { return *this; }
+};
+
+constexpr _Swallow_assign ignore{};
+
+template <typename... Ts>
+class tuple {
+public:
+  tuple() = default;
+  tuple(const tuple &) = default;
+  tuple(tuple &&) = default;
+  tuple &operator=(const tuple &) = default;
+  tuple &operator=(tuple &&) = default;
+
+  tuple(const Ts &...) {}
+  tuple(Ts &&...) {}
+
+  template <typename... Us>
+  tuple(const tuple<Us...> &) {}
+  template <typename... Us>
+  tuple(tuple<Us...> &&) {}
+
+  template <typename U1, typename U2>
+  tuple(const pair<U1, U2> &) {}
+  template <typename U1, typename U2>
+  tuple(pair<U1, U2> &&) {}
+};
+
+template <typename T>
+struct tuple_size;
+
+template <typename... Ts>
+struct tuple_size<tuple<Ts...>>
+    : integral_constant<size_t, sizeof...(Ts)> {};
+
+template <size_t I, typename T>
+struct tuple_element;
+
+template <size_t I, typename... Ts>
+struct tuple_element<I, tuple<Ts...>> {
+  using type = __type_pack_element<I, Ts...>;
+};
+
+template <size_t I, typename... Ts>
+typename tuple_element<I, tuple<Ts...>>::type
+get(const tuple<Ts...> &);
+
+template <size_t I, typename... Ts>
+typename tuple_element<I, tuple<Ts...>>::type
+get(tuple<Ts...> &&);
+
+template <typename... Ts>
+tuple<typename remove_reference<Ts>::type...> make_tuple(Ts &&...) {
+  return {};
+}
+
+template<typename... Args>
+tuple<Args...> tie(Args&... args) {
+  return tuple<Args...>(args...);
+}
+
+} // namespace std
+
+#endif // _TUPLE_

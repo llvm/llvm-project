@@ -177,6 +177,8 @@ class SafeStack {
 
   bool IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
                           const Value *AllocaPtr, uint64_t AllocaSize);
+  bool IsAccessSafe(Value *Addr, TypeSize Size, const Value *AllocaPtr,
+                    uint64_t AllocaSize);
   bool IsAccessSafe(Value *Addr, uint64_t Size, const Value *AllocaPtr,
                     uint64_t AllocaSize);
 
@@ -202,6 +204,16 @@ uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
     if (Size->isFixed())
       return Size->getFixedValue();
   return 0;
+}
+
+bool SafeStack::IsAccessSafe(Value *Addr, TypeSize AccessSize,
+                             const Value *AllocaPtr, uint64_t AllocaSize) {
+  if (AccessSize.isScalable()) {
+    // In case we don't know the size at compile time we cannot verify if the
+    // access is safe.
+    return false;
+  }
+  return IsAccessSafe(Addr, AccessSize.getFixedValue(), AllocaPtr, AllocaSize);
 }
 
 bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
@@ -544,7 +556,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
     IRB.SetInsertPoint(BasePointer->getNextNode());
-    BasePointer = IRB.CreateIntrinsic(
+    BasePointer = IRB.CreateIntrinsicWithoutFolding(
         StackPtrTy, Intrinsic::ptrmask,
         {BasePointer, ConstantInt::get(AddrTy, ~(FrameAlignment.value() - 1))});
   }
@@ -736,8 +748,12 @@ void SafeStack::TryInlinePointerAddress() {
   if (!ShouldInlinePointerAddress(*CI))
     return;
 
+  // InlineFunction can modify the callers CFG, but it has no DomTreeUpdater
+  // hook. Since SafeStack preserves the DominatorTree, we must rebuild it
+  // after a successful inline instead of leaving the cached tree stale.
   InlineFunctionInfo IFI;
-  InlineFunction(*CI, IFI);
+  if (InlineFunction(*CI, IFI).isSuccess() && DTU)
+    DTU->recalculate(F);
 }
 
 bool SafeStack::run() {
@@ -958,7 +974,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {
@@ -968,7 +984,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*Subtarget);
+      getLibcallLowering(*LibcallLowering, *Subtarget);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 

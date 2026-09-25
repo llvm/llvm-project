@@ -12,15 +12,17 @@
 #include "__futex_word.h"
 #include "pid_t.h"
 typedef struct {
-  unsigned __is_pshared : 1;
-  unsigned __preference : 1;
-  int __state;
+  struct {
+    unsigned __is_pshared : 1;
+    unsigned __preference : 1;
+    int __state;
+    __futex_word __wait_queue_mutex;
+    __futex_word __pending_readers;
+    __futex_word __pending_writers;
+    __futex_word __reader_serialization;
+    __futex_word __writer_serialization;
+  } __raw;
   pid_t __writer_tid;
-  __futex_word __wait_queue_mutex;
-  __futex_word __pending_readers;
-  __futex_word __pending_writers;
-  __futex_word __reader_serialization;
-  __futex_word __writer_serialization;
 } pthread_rwlock_t;
 
 #endif // LLVM_LIBC_TYPES_PTHREAD_RWLOCK_T_H

@@ -18,6 +18,21 @@ define dso_local i32 @test_beqi(i32 %a) nounwind {
 ; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    ret
 ;
+; RV32IXQCIBI-LABEL: test_beqi:
+; RV32IXQCIBI:       # %bb.0: # %entry
+; RV32IXQCIBI-NEXT:    qc.beqi a0, 7, .LBB0_2
+; RV32IXQCIBI-NEXT:  # %bb.1: # %if.then
+; RV32IXQCIBI-NEXT:    li a0, 1
+; RV32IXQCIBI-NEXT:  .LBB0_2: # %if.end
+; RV32IXQCIBI-NEXT:    ret
+;
+; RV32IXQCIBILI-LABEL: test_beqi:
+; RV32IXQCIBILI:       # %bb.0: # %entry
+; RV32IXQCIBILI-NEXT:    qc.beqi a0, 7, .LBB0_2
+; RV32IXQCIBILI-NEXT:  # %bb.1: # %if.then
+; RV32IXQCIBILI-NEXT:    li a0, 1
+; RV32IXQCIBILI-NEXT:  .LBB0_2: # %if.end
+; RV32IXQCIBILI-NEXT:    ret
 ; RV32IXQC-LABEL: test_beqi:
 ; RV32IXQC:       # %bb.0: # %entry
 ; RV32IXQC-NEXT:    qc.beqi a0, 7, .LBB0_2
@@ -47,6 +62,21 @@ define dso_local i32 @test_e_beqi(i32 %a) nounwind {
 ; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    ret
 ;
+; RV32IXQCIBI-LABEL: test_e_beqi:
+; RV32IXQCIBI:       # %bb.0: # %entry
+; RV32IXQCIBI-NEXT:    qc.e.beqi a0, 40, .LBB1_2
+; RV32IXQCIBI-NEXT:  # %bb.1: # %if.then
+; RV32IXQCIBI-NEXT:    li a0, 1
+; RV32IXQCIBI-NEXT:  .LBB1_2: # %if.end
+; RV32IXQCIBI-NEXT:    ret
+;
+; RV32IXQCIBILI-LABEL: test_e_beqi:
+; RV32IXQCIBILI:       # %bb.0: # %entry
+; RV32IXQCIBILI-NEXT:    qc.e.beqi a0, 40, .LBB1_2
+; RV32IXQCIBILI-NEXT:  # %bb.1: # %if.then
+; RV32IXQCIBILI-NEXT:    li a0, 1
+; RV32IXQCIBILI-NEXT:  .LBB1_2: # %if.end
+; RV32IXQCIBILI-NEXT:    ret
 ; RV32IXQC-LABEL: test_e_beqi:
 ; RV32IXQC:       # %bb.0: # %entry
 ; RV32IXQC-NEXT:    qc.e.beqi a0, 40, .LBB1_2
@@ -67,14 +97,13 @@ if.end:
 define dso_local i32 @test_e_beqi_li(i32 %a) nounwind {
 ; RV32I-LABEL: test_e_beqi_li:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, -96
-; RV32I-NEXT:    bne a0, a1, .LBB2_2
-; RV32I-NEXT:  # %bb.1: # %if.end
-; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB2_2: # %if.then
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    addi a0, a0, -96
+; RV32I-NEXT:    beq a1, a0, .LBB2_2
+; RV32I-NEXT:  # %bb.1: # %if.then
 ; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:  .LBB2_2: # %if.end
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBI-LABEL: test_e_beqi_li:

@@ -22,6 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include <vector>
 
 using namespace mlir;
 using namespace testing;
@@ -408,6 +409,101 @@ TEST(Remark, TestRemarkFinal) {
             std::string::npos); // shown (passed, diff loc)
 }
 
+/// Streamer that records "<remark name>: <Remark arg>" for every remark it
+/// receives, independent of how Remark::print formats its output.
+class RecordingStreamer : public remark::detail::MLIRRemarkStreamerBase {
+public:
+  explicit RecordingStreamer(std::vector<std::string> &out) : out(out) {}
+  void streamOptimizationRemark(const remark::detail::Remark &remark) override {
+    std::string entry = remark.getRemarkName().str();
+    for (const remark::detail::Remark::Arg &arg : remark.getArgs())
+      if (arg.key == "Remark")
+        entry += ": " + arg.val;
+    out.push_back(std::move(entry));
+  }
+
+private:
+  std::vector<std::string> &out;
+};
+
+static LogicalResult enableFinalPolicy(MLIRContext &context,
+                                       std::vector<std::string> &emitted,
+                                       StringRef category) {
+  mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                      /*passed=*/category.str(),
+                                      /*missed=*/std::nullopt,
+                                      /*analysis=*/category.str(),
+                                      /*failed=*/std::nullopt};
+  return remark::enableOptimizationRemarks(
+      context, std::make_unique<RecordingStreamer>(emitted),
+      std::make_unique<remark::RemarkEmittingPolicyFinal>(), cats,
+      /*printAsEmitRemarks=*/false);
+}
+
+// finalize() drains the stored remarks. mlir-opt calls it explicitly and the
+// engine destructor calls it again; each call emits only the remarks reported
+// since the previous one, and an identity drained by one call can be reported
+// again for the next.
+TEST(Remark, TestRemarkFinalDrains) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    auto *policy = context.getRemarkEngine()->getRemarkEmittingPolicy();
+    auto first = remark::RemarkOpts::name("First").category("LoopUnroll");
+    auto second = remark::RemarkOpts::name("Second").category("LoopUnroll");
+
+    remark::passed(loc, first) << "first";
+    remark::passed(loc, second) << "second";
+    policy->finalize();
+    EXPECT_THAT(emitted,
+                UnorderedElementsAre("First: first", "Second: second"));
+
+    // Nothing pending: a repeated call emits nothing.
+    policy->finalize();
+    EXPECT_EQ(emitted.size(), 2u);
+
+    // A drained identity can be reported again; it waits for the next call,
+    // which here is the engine destructor's.
+    remark::passed(loc, first) << "first again";
+    EXPECT_EQ(emitted.size(), 2u);
+  }
+  ASSERT_EQ(emitted.size(), 3u);
+  EXPECT_EQ(emitted[2], "First: first again");
+}
+
+// A RelatedTo link only resolves between remarks drained by the same
+// finalize() call. A parent reported after its child was drained is emitted
+// without the child being repeated.
+TEST(Remark, TestRemarkFinalLinkAcrossDrains) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    auto *policy = context.getRemarkEngine()->getRemarkEmittingPolicy();
+
+    remark::RemarkId analysisId;
+    {
+      // The remark is reported when the InFlightRemark goes out of scope.
+      auto analysis = remark::analysis(
+          loc, remark::RemarkOpts::name("Analysis").category("LoopUnroll"));
+      analysis << "trip count 128";
+      analysisId = analysis.getId();
+    }
+    policy->finalize();
+    EXPECT_THAT(emitted, ElementsAre("Analysis: trip count 128"));
+
+    remark::passed(loc, remark::RemarkOpts::name("Unroller")
+                            .category("LoopUnroll")
+                            .relatedTo(analysisId))
+        << "unrolled";
+  }
+  EXPECT_THAT(emitted,
+              ElementsAre("Analysis: trip count 128", "Unroller: unrolled"));
+}
+
 TEST(Remark, TestArgWithAttribute) {
   MLIRContext context;
 
@@ -516,6 +612,110 @@ TEST(Remark, TestRemarkOwnsStringData) {
       << "Expected function not found in output. Got: " << errOut;
   EXPECT_NE(errOut.find(expectedMessage), std::string::npos)
       << "Expected message not found in output. Got: " << errOut;
+}
+
+// Test that the engine exposes which remark kinds and categories are enabled,
+// so that external remark producers can query the filters before building
+// remarks.
+TEST(Remark, TestEngineFilterQueries) {
+  using remark::RemarkKind;
+
+  // No filter is set: nothing is enabled.
+  {
+    MLIRContext context;
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                        /*passed=*/std::nullopt,
+                                        /*missed=*/std::nullopt,
+                                        /*analysis=*/std::nullopt,
+                                        /*failed=*/std::nullopt};
+    ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+        context, nullptr, std::make_unique<remark::RemarkEmittingPolicyAll>(),
+        cats)));
+    remark::detail::RemarkEngine *engine = context.getRemarkEngine();
+    ASSERT_TRUE(engine);
+    EXPECT_FALSE(engine->isAnyRemarkEnabled());
+    EXPECT_FALSE(engine->isAnyRemarkEnabled("Vectorizer"));
+    EXPECT_FALSE(engine->isPassedOptRemarkEnabled("Vectorizer"));
+  }
+
+  // Empty filter strings are equivalent to unset filters.
+  {
+    MLIRContext context;
+    mlir::remark::RemarkCategories cats{/*all=*/"", /*passed=*/"",
+                                        /*missed=*/"", /*analysis=*/"",
+                                        /*failed=*/""};
+    ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+        context, nullptr, std::make_unique<remark::RemarkEmittingPolicyAll>(),
+        cats)));
+    remark::detail::RemarkEngine *engine = context.getRemarkEngine();
+    ASSERT_TRUE(engine);
+    EXPECT_FALSE(engine->isAnyRemarkEnabled());
+  }
+
+  // Per-kind filters are matched against the whole category name.
+  {
+    MLIRContext context;
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                        /*passed=*/"Vectorizer",
+                                        /*missed=*/"Unroll|Inliner",
+                                        /*analysis=*/std::nullopt,
+                                        /*failed=*/std::nullopt};
+    ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+        context, nullptr, std::make_unique<remark::RemarkEmittingPolicyAll>(),
+        cats)));
+    remark::detail::RemarkEngine *engine = context.getRemarkEngine();
+    ASSERT_TRUE(engine);
+
+    EXPECT_TRUE(engine->isAnyRemarkEnabled());
+
+    EXPECT_TRUE(engine->isPassedOptRemarkEnabled("Vectorizer"));
+    EXPECT_FALSE(engine->isPassedOptRemarkEnabled("Vectorizer2"));
+    EXPECT_FALSE(engine->isPassedOptRemarkEnabled("Unroll"));
+
+    EXPECT_TRUE(engine->isMissedOptRemarkEnabled("Unroll"));
+    EXPECT_TRUE(engine->isMissedOptRemarkEnabled("Inliner"));
+    EXPECT_FALSE(engine->isMissedOptRemarkEnabled("Vectorizer"));
+
+    EXPECT_FALSE(engine->isAnalysisOptRemarkEnabled("Vectorizer"));
+    EXPECT_FALSE(engine->isFailedOptRemarkEnabled("Vectorizer"));
+
+    EXPECT_TRUE(engine->isAnyRemarkEnabled("Vectorizer"));
+    EXPECT_TRUE(engine->isAnyRemarkEnabled("Unroll"));
+    EXPECT_FALSE(engine->isAnyRemarkEnabled("Register"));
+
+    EXPECT_TRUE(
+        engine->isRemarkEnabled(RemarkKind::RemarkPassed, "Vectorizer"));
+    EXPECT_TRUE(engine->isRemarkEnabled(RemarkKind::RemarkMissed, "Unroll"));
+    EXPECT_FALSE(
+        engine->isRemarkEnabled(RemarkKind::RemarkAnalysis, "Vectorizer"));
+    EXPECT_FALSE(
+        engine->isRemarkEnabled(RemarkKind::RemarkFailure, "Vectorizer"));
+    EXPECT_FALSE(
+        engine->isRemarkEnabled(RemarkKind::RemarkUnknown, "Vectorizer"));
+  }
+
+  // The `all` filter enables every kind for the matching categories.
+  {
+    MLIRContext context;
+    mlir::remark::RemarkCategories cats{/*all=*/"loop-.*",
+                                        /*passed=*/std::nullopt,
+                                        /*missed=*/"",
+                                        /*analysis=*/"",
+                                        /*failed=*/""};
+    ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+        context, nullptr, std::make_unique<remark::RemarkEmittingPolicyAll>(),
+        cats)));
+    remark::detail::RemarkEngine *engine = context.getRemarkEngine();
+    ASSERT_TRUE(engine);
+
+    EXPECT_TRUE(engine->isAnyRemarkEnabled());
+    // `passed` is unset, so `all` does not enable it.
+    EXPECT_FALSE(engine->isPassedOptRemarkEnabled("loop-unroll"));
+    EXPECT_TRUE(engine->isMissedOptRemarkEnabled("loop-unroll"));
+    EXPECT_TRUE(engine->isAnalysisOptRemarkEnabled("loop-vectorize"));
+    EXPECT_TRUE(engine->isFailedOptRemarkEnabled("loop-unroll"));
+    EXPECT_FALSE(engine->isMissedOptRemarkEnabled("inline"));
+  }
 }
 
 // Test that remarks can be linked together using RemarkId.

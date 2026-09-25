@@ -70,7 +70,7 @@ void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
   EXPECT_TRUE(error.Success());
 }
-void DAPTestBase::TeatUpTestSuite() { SBDebugger::Terminate(); }
+void DAPTestBase::TearDownTestSuite() { SBDebugger::Terminate(); }
 
 bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
   EXPECT_TRUE(dap->debugger);
@@ -89,7 +89,7 @@ bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
 }
 
 void DAPTestBase::CreateDebugger() {
-  dap->debugger = lldb::SBDebugger::Create();
+  dap->debugger = lldb::SBDebugger::Create(/*source_init_files=*/false);
   ASSERT_TRUE(dap->debugger);
   dap->target = dap->debugger.GetDummyTarget();
 

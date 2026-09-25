@@ -3,6 +3,6 @@
 
 ; Test that nested zero-size arrays are legalized to a pointer.
 
-@nested_zero_array = global [2 x [0 x i32]] zeroinitializer
+@nested_zero_array = addrspace(1) global [2 x [0 x i32]] zeroinitializer
 
-; CHECK: @nested_zero_array = global ptr addrspace(4) null
+; CHECK: @nested_zero_array = addrspace(1) global ptr addrspace(4) null

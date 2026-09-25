@@ -1692,7 +1692,7 @@ define i177 @lshr_out_of_range(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-NEXT:    [[B4:%.*]] = sext i1 [[TMP1]] to i177
 ; CHECK-NEXT:    [[C8:%.*]] = icmp ugt i177 [[Y]], [[B4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[C8]] to i64
-; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr [8 x i8], ptr [[A2:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret i177 0
 ;
@@ -1716,7 +1716,7 @@ define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-LABEL: @lshr_out_of_range2(
 ; CHECK-NEXT:    [[C8:%.*]] = icmp ne i177 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[C8]] to i64
-; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr [8 x i8], ptr [[A2:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret i177 0
 ;
@@ -1738,18 +1738,18 @@ define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 
 ; OSS Fuzz #5032
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5032
-define void @ashr_out_of_range(ptr %A) "instcombine-no-verify-fixpoint" {
+define void @ashr_out_of_range(ptr %A) {
 ; CHECK-LABEL: @ashr_out_of_range(
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr [24 x i8], ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 4
 ; CHECK-NEXT:    [[L7_FROZEN:%.*]] = freeze i177 [[L7]]
 ; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7_FROZEN]], 0
-; CHECK-NEXT:    [[C17:%.*]] = select i1 [[TMP1]], i1 [[C171]], i1 false
+; CHECK-NEXT:    [[C17:%.*]] = and i1 [[TMP1]], [[C171]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr [24 x i8], ptr [[G11]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP4]], i177 0, i177 [[L7_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
@@ -1780,10 +1780,10 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[L_FROZEN]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [24 x i8], ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -24
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr [24 x i8], ptr [[G11]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP6]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
@@ -2097,12 +2097,92 @@ define i32 @shl1_cttz_extra_use(i32 %x) {
 
 define i32 @shl2_cttz(i32 %x) {
 ; CHECK-LABEL: @shl2_cttz(
-; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; C=4: different constant, should also fold
+define i32 @shl4_cttz(i32 %x) {
+; CHECK-LABEL: @shl4_cttz(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl i32 4, %tz
+  ret i32 %shl
+}
+
+; negative test: cttz has multiple uses, should not fold
+define i32 @shl2_cttz_multiuse(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_multiuse(
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use_i32(i32 [[TZ]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  call void @use_i32(i32 %tz)
+  %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; is_zero_poison = false is also optimized (LLVM auto-upgrades to true when used as shift amount)
+define i32 @shl2_cttz_zero_poison_false(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_zero_poison_false(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; variable LHS operand
+define i32 @shl_var_cttz(i32 %x, i32 %a) {
+; CHECK-LABEL: @shl_var_cttz(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = mul i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl i32 %a, %tz
+  ret i32 %shl
+}
+
+; nuw flag propagation
+define i32 @shl_cttz_nuw(i32 %x, i32 %a) {
+; CHECK-LABEL: @shl_cttz_nuw(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = mul nuw i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl nuw i32 %a, %tz
+  ret i32 %shl
+}
+
+; New test: constant with nuw flag
+define i32 @shl2_cttz_nuw(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_nuw(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl nuw i32 2, %tz
   ret i32 %shl
 }
 

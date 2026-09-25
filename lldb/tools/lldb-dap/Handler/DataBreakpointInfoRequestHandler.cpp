@@ -42,7 +42,7 @@ DataBreakpointInfoRequestHandler::Run(
     const protocol::DataBreakpointInfoArguments &args) const {
   protocol::DataBreakpointInfoResponseBody response;
   const var_ref_t arg_var_ref =
-      args.variablesReference.value_or(var_ref_t(var_ref_t::k_no_child));
+      args.variablesReference.value_or(var_ref_t::k_no_child);
 
   lldb::SBValue variable =
       dap.reference_storage.FindVariable(arg_var_ref, args.name);

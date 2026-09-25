@@ -9,10 +9,16 @@
 #ifndef LLVM_CLANG_CIR_CIRGENACTION_H
 #define LLVM_CLANG_CIR_CIRGENACTION_H
 
+#include "clang/CodeGen/ModuleLinker.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
+
+namespace llvm {
+class LLVMContext;
+} // namespace llvm
 
 namespace mlir {
 class MLIRContext;
@@ -39,8 +45,13 @@ private:
 
   mlir::MLIRContext *MLIRCtx;
 
+  std::unique_ptr<llvm::LLVMContext> Ctx;
+  llvm::SmallVector<clang::LinkModule> LinkModules;
+
 protected:
   CIRGenAction(OutputType Action, mlir::MLIRContext *MLIRCtx = nullptr);
+
+  bool BeginSourceFileAction(clang::CompilerInstance &CI) override;
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI,

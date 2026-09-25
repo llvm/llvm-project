@@ -97,6 +97,16 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
     return reportError(argv0, "error opening " + DependFilename + ":" +
                                   EC.message() + "\n");
   DepOut.os() << OutputFilename << ":";
+
+  // Emit the primary input file as a dependency. This matches C compilers like
+  // Clang and GCC. Without it, a .td file with no `include` directives would
+  // produce a depfile listing zero dependencies. CMake's
+  // `cmake_transform_depfile` then collapses that to a 0-byte file, which Ninja
+  // treats as a missing depfile and re-runs the rule on every incremental
+  // build.
+  if (InputFilename != "-")
+    DepOut.os() << ' ' << InputFilename;
+
   for (const auto &Dep : Parser.getDependencies()) {
     DepOut.os() << ' ' << Dep;
   }

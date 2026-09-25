@@ -20,11 +20,12 @@ for those requirements.
 ### Requirements for Building with Nvidia GPU support
 
 The CUDA SDK is required on the machine that will build and execute the
-offloading application. Normally this is only required at runtime by dynamically
-opening the CUDA driver API. This can be disabled in the build by omitting
-`cuda` from the [`LIBOMPTARGET_DLOPEN_PLUGINS`](LIBOMPTARGET_DLOPEN_PLUGINS)
-list which is present by default. With this setting we will instead find the
-CUDA library at LLVM build time and link against it directly.
+offloading application. The CUDA driver must support CUDA 11.8.0 or later.
+Normally this is only required at runtime when the CUDA driver API is
+dynamically opened. This can be disabled in the build by omitting `cuda` from
+the [`LIBOMPTARGET_DLOPEN_PLUGINS`](LIBOMPTARGET_DLOPEN_PLUGINS) list which is
+present by default. With this setting we will instead find the CUDA library at
+LLVM build time and link against it directly.
 
 
 ### Requirements for Building with AMD GPU support
@@ -378,7 +379,11 @@ This option is `OFF` if this feature is not supported for the platform.
 ### Options for `libompd`
 
 **LIBOMP_OMPD_SUPPORT**:BOOL
-: Enable building the libompd library.
+: Enable building the libompd library. The GDB plugin loads `libompd.so` with
+LLVM Support `DynamicLibrary` (not POSIX `dlopen`). On Linux the plugin's
+RUNPATH includes `$ORIGIN` and the relative path to `CMAKE_INSTALL_LIBDIR`
+so GDB can load LLVM Support without extra `LD_LIBRARY_PATH` when LLVM and
+OpenMP share an install prefix.
 
 **LIBOMPD_LD_STD_FLAGS**:STRING
 : Use `-stdlibc++` instead of `-libc++` library for C++.

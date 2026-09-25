@@ -276,7 +276,7 @@ long long f() { return c().y; }
 
 // EVAL-FN-NONEXPR-LABEL: define {{.*}} i64 @_ZN4virt1fEv()
 // EVAL-FN-NONEXPR-NEXT: entry:
-// EVAL-FN-NONEXPR-NEXT: load i64, ptr getelementptr inbounds nuw (%"struct.virt::B", ptr getelementptr (i8, ptr @_ZN4virt1dE, i64 8), i32 0, i32 2), align 8
+// EVAL-FN-NONEXPR-NEXT: load i64, ptr getelementptr inbounds nuw (i8, ptr @_ZN4virt1dE, i64 24), align 8
 // EVAL-FN-NONEXPR-NEXT: ret i64
 } // namespace virt
 

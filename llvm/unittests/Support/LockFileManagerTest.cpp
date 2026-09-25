@@ -104,4 +104,32 @@ TEST(LockFileManagerTest, RelativePath) {
   ASSERT_FALSE(chdir(OrigPath));
 }
 
+TEST(LockFileManagerTest, NonExistentDirectory) {
+  TempDir LockFileManagerTestDir("LockFileManagerTestDir", /*Unique*/ true);
+
+  SmallString<64> NonExistentDir(LockFileManagerTestDir.path());
+  sys::path::append(NonExistentDir, "does_not_exist");
+
+  SmallString<64> LockedFile(NonExistentDir);
+  sys::path::append(LockedFile, "file");
+
+  SmallString<64> FileLock(LockedFile);
+  FileLock += ".lock";
+
+  // Ensure directory truly does not exist before test
+  EXPECT_FALSE(sys::fs::exists(NonExistentDir));
+
+  {
+    LockFileManager Locked(LockedFile);
+    EXPECT_THAT_EXPECTED(Locked.tryLock(), HasValue(true));
+
+    // Directory and lock file should now exist
+    EXPECT_TRUE(sys::fs::exists(NonExistentDir));
+    EXPECT_TRUE(sys::fs::exists(FileLock));
+  }
+
+  // After destruction, lock file should be removed
+  EXPECT_FALSE(sys::fs::exists(FileLock));
+}
+
 } // end anonymous namespace

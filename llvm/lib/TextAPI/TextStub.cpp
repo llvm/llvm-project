@@ -13,6 +13,7 @@
 #include "TextAPIContext.h"
 #include "TextStubCommon.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -313,6 +314,12 @@ template <> struct MappingTraits<UndefinedSection> {
 template <> struct MappingTraits<SymbolSection> {
   static void mapping(IO &IO, SymbolSection &Section) {
     IO.mapRequired("targets", Section.Targets);
+    // With SkipUnknownTriples, ScalarTraits of Target accepts unknown
+    // arch/platform scalars without erroring, leaving invalid Targets in the
+    // vector. Drop them so downstream code only sees valid Targets.
+    if (!IO.outputting())
+      llvm::erase_if(Section.Targets,
+                     [](const Target &T) { return !T.isValid(); });
     IO.mapOptional("symbols", Section.Symbols);
     IO.mapOptional("objc-classes", Section.Classes);
     IO.mapOptional("objc-eh-types", Section.ClassEHs);
@@ -325,6 +332,9 @@ template <> struct MappingTraits<SymbolSection> {
 template <> struct MappingTraits<UmbrellaSection> {
   static void mapping(IO &IO, UmbrellaSection &Section) {
     IO.mapRequired("targets", Section.Targets);
+    if (!IO.outputting())
+      llvm::erase_if(Section.Targets,
+                     [](const Target &T) { return !T.isValid(); });
     IO.mapRequired("umbrella", Section.Umbrella);
   }
 };
@@ -341,6 +351,9 @@ struct MappingContextTraits<MetadataSection, MetadataSection::Option> {
   static void mapping(IO &IO, MetadataSection &Section,
                       MetadataSection::Option &OptionKind) {
     IO.mapRequired("targets", Section.Targets);
+    if (!IO.outputting())
+      llvm::erase_if(Section.Targets,
+                     [](const Target &T) { return !T.isValid(); });
     switch (OptionKind) {
     case MetadataSection::Option::Clients:
       IO.mapRequired("clients", Section.Values);
@@ -377,7 +390,7 @@ template <> struct ScalarTraits<Target> {
     }
   }
 
-  static StringRef input(StringRef Scalar, void *, Target &Value) {
+  static StringRef input(StringRef Scalar, void *Ctx, Target &Value) {
     auto Result = Target::create(Scalar);
     if (!Result) {
       consumeError(Result.takeError());
@@ -385,10 +398,11 @@ template <> struct ScalarTraits<Target> {
     }
 
     Value = *Result;
-    if (Value.Arch == AK_unknown)
-      return "unknown architecture";
-    if (Value.Platform == PLATFORM_UNKNOWN)
-      return "unknown platform";
+
+    const bool SkipUnknownTriples =
+        reinterpret_cast<TextAPIContext *>(Ctx)->SkipUnknownTriples;
+    if (!Value.isValid() && !SkipUnknownTriples)
+      return "unknown target";
 
     return {};
   }
@@ -563,7 +577,10 @@ template <> struct MappingTraits<const InterfaceFile *> {
           if ((Architecture == AK_i386) && (Platform == PLATFORM_MACCATALYST))
             continue;
 
-          Targets.emplace_back(Architecture, Platform);
+          Target T(Architecture, Platform);
+          if (!T.isValid())
+            continue;
+          Targets.push_back(T);
         }
       }
       return Targets;
@@ -602,6 +619,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       for (const auto &Section : Exports) {
         const auto Targets =
             synthesizeTargets(Section.Architectures, Platforms);
+        if (Targets.empty())
+          continue;
 
         for (const auto &Lib : Section.AllowableClients)
           for (const auto &Target : Targets)
@@ -646,6 +665,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       for (const auto &Section : Undefineds) {
         const auto Targets =
             synthesizeTargets(Section.Architectures, Platforms);
+        if (Targets.empty())
+          continue;
         for (auto &Symbol : Section.Symbols) {
           if (Ctx->FileKind != FileType::TBD_V3 &&
               Symbol.value.starts_with(ObjC2EHTypePrefix))
@@ -769,8 +790,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
       auto Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
       assert(Ctx);
       TBDVersion = Ctx->FileKind >> 4;
-      Targets.insert(Targets.begin(), File->targets().begin(),
-                     File->targets().end());
+      for (auto &T : File->targets())
+        if (T.isValid())
+          Targets.push_back(T);
       InstallName = File->getInstallName();
       CurrentVersion = File->getCurrentVersion();
       CompatibilityVersion = File->getCompatibilityVersion();
@@ -789,7 +811,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       {
         std::map<std::string, TargetList> valueToTargetList;
         for (const auto &it : File->umbrellas())
-          valueToTargetList[it.second].emplace_back(it.first);
+          if (it.first.isValid())
+            valueToTargetList[it.second].emplace_back(it.first);
 
         for (const auto &it : valueToTargetList) {
           UmbrellaSection CurrentSection;
@@ -809,7 +832,11 @@ template <> struct MappingTraits<const InterfaceFile *> {
             std::set<TargetList> TargetSet;
             std::map<const Symbol *, TargetList> SymbolToTargetList;
             for (const auto *Symbol : Symbols) {
-              TargetList Targets(Symbol->targets());
+              TargetList Targets;
+              for (auto &T : Symbol->targets())
+                if (T.isValid())
+                  Targets.push_back(T);
+
               SymbolToTargetList[Symbol] = Targets;
               TargetSet.emplace(std::move(Targets));
             }
@@ -899,6 +926,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
         const SymbolFlags Flag = InputFlag | SymbolFlags::Data;
 
         for (const auto &CurrentSection : CurrentSections) {
+          if (CurrentSection.Targets.empty())
+            continue;
+
           for (auto &sym : CurrentSection.Symbols)
             File->addSymbol(EncodeKind::GlobalSymbol, sym,
                             CurrentSection.Targets, Flag);
@@ -1019,6 +1049,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
     IO.mapTag("!tapi-tbd", true);
     IO.mapRequired("tbd-version", Keys->TBDVersion);
     IO.mapRequired("targets", Keys->Targets);
+    if (!IO.outputting())
+      llvm::erase_if(Keys->Targets,
+                     [](const Target &T) { return !T.isValid(); });
     IO.mapOptional("uuids", EmptyUUID);
     IO.mapOptional("flags", Keys->Flags, TBDFlags::None);
     IO.mapRequired("install-name", Keys->InstallName);
@@ -1095,8 +1128,10 @@ Expected<FileType> TextAPIReader::canRead(MemoryBufferRef InputBuffer) {
 }
 
 Expected<std::unique_ptr<InterfaceFile>>
-TextAPIReader::get(MemoryBufferRef InputBuffer) {
+TextAPIReader::get(MemoryBufferRef InputBuffer, bool SkipUnknownTriples) {
   TextAPIContext Ctx;
+
+  Ctx.SkipUnknownTriples = SkipUnknownTriples;
   Ctx.Path = std::string(InputBuffer.getBufferIdentifier());
   if (auto FTOrErr = canRead(InputBuffer))
     Ctx.FileKind = *FTOrErr;

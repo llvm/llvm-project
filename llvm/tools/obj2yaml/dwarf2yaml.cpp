@@ -376,8 +376,9 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     if (auto StmtOffset =
             dwarf::toSectionOffset(CUDIE.find(dwarf::DW_AT_stmt_list))) {
       DWARFYAML::LineTable DebugLines;
+      unsigned AddressSize = CU->getAddressByteSize();
       DataExtractor LineData(DCtx.getDWARFObj().getLineSection().Data,
-                             DCtx.isLittleEndian(), CU->getAddressByteSize());
+                             DCtx.isLittleEndian());
       uint64_t Offset = *StmtOffset;
       uint64_t LengthOrDWARF64Prefix = LineData.getU32(&Offset);
       if (LengthOrDWARF64Prefix == dwarf::DW_LENGTH_DWARF64) {
@@ -438,7 +439,7 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
           switch (NewOp.SubOpcode) {
           case dwarf::DW_LNE_set_address:
           case dwarf::DW_LNE_set_discriminator:
-            NewOp.Data = LineData.getAddress(&Offset);
+            NewOp.Data = LineData.getUnsigned(&Offset, AddressSize);
             break;
           case dwarf::DW_LNE_define_file:
             dumpFileEntry(LineData, Offset, NewOp.FileEntry);

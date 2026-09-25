@@ -1,5 +1,5 @@
 // RUN: mkdir -p %t-dir
-// RUN: %clangxx -DSHARED %s -shared -o %t-dir/get_module_and_offset_for_pc.so -fPIC
+// RUN: %clangxx -DSHARED_LIB %s -shared -o %t-dir/get_module_and_offset_for_pc.so -fPIC
 // RUN: %clangxx -DSO_DIR=\"%t-dir\" -O0 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
@@ -13,7 +13,7 @@
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 
-#ifdef SHARED
+#ifdef SHARED_LIB
 extern "C" {
 int foo() { return 1; }
 }

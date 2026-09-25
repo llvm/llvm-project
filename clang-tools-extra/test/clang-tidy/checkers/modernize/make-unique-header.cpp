@@ -2,10 +2,9 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:     {modernize-make-unique.MakeSmartPtrFunction: 'my::MakeUnique', \
 // RUN:      modernize-make-unique.MakeSmartPtrFunctionHeader: 'make_unique_util.h' \
-// RUN:     }}" \
-// RUN:   -- -I %S/Inputs/smart-ptr
+// RUN:     }}"
 
-#include "unique_ptr.h"
+#include <memory>
 // CHECK-FIXES: #include "make_unique_util.h"
 
 void f() {

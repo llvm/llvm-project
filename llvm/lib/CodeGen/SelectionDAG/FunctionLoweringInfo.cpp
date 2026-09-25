@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -33,9 +32,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -92,6 +93,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   UA = DAG->getUniformityInfo();
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionModel = Fn->getParent()->getExceptionModel();
+  if (ExceptionModel == ExceptionHandling::Default)
+    ExceptionModel = MF->getTarget().getExceptionModel();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -332,27 +337,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       UME.Handler = getMBB(cast<const BasicBlock *>(UME.Handler));
     for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap)
       CME.Handler = getMBB(cast<const BasicBlock *>(CME.Handler));
-  } else if (Personality == EHPersonality::Wasm_CXX) {
-    WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
-    calculateWasmEHInfo(&fn, EHInfo);
-
-    // Map all BB references in the Wasm EH data to MBBs.
-    DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
-    for (auto &KV : EHInfo.SrcToUnwindDest) {
-      const auto *Src = cast<const BasicBlock *>(KV.first);
-      const auto *Dest = cast<const BasicBlock *>(KV.second);
-      SrcToUnwindDest[getMBB(Src)] = getMBB(Dest);
-    }
-    EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
-    DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
-    for (auto &KV : EHInfo.UnwindDestToSrcs) {
-      const auto *Dest = cast<const BasicBlock *>(KV.first);
-      MachineBasicBlock *DestMBB = getMBB(Dest);
-      auto &Srcs = UnwindDestToSrcs[DestMBB];
-      for (const auto P : KV.second)
-        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
-    }
-    EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
 }
 
@@ -407,7 +391,7 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 }
 
 Register FunctionLoweringInfo::CreateRegs(const Value *V) {
-  return CreateRegs(V->getType(), UA && UA->isDivergent(V) &&
+  return CreateRegs(V->getType(), UA && UA->isDivergentAtDef(V) &&
                                       !TLI->requiresUniformRegister(*MF, V));
 }
 

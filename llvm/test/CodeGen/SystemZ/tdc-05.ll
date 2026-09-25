@@ -69,7 +69,7 @@ define i32 @f2(float %x) {
 ; CHECK-NEXT:    br %r14
   %cast = bitcast float %x to i32
   %sign = icmp sgt i32 %cast, -1
-  %fcmp = fcmp ult float %x, 0x7ff0000000000000
+  %fcmp = fcmp ult float %x, +inf
   %res = and i1 %sign, %fcmp
   %xres = zext i1 %res to i32
   ret i32 %xres
@@ -103,7 +103,7 @@ define i32 @f4(float %x) {
 ; CHECK-NEXT:    br %r14
   %y = call float @llvm.fabs.f32(float %x)
   %ord = fcmp ord float %x, 0.0
-  %a = fcmp ult float %y, 0x7ff0000000000000
+  %a = fcmp ult float %y, +inf
   %b = fcmp uge float %y, 0x3810000000000000
   %c = and i1 %a, %b
   %res = and i1 %ord, %c
@@ -139,7 +139,7 @@ define i32 @f6(double %x) {
 ; CHECK-NEXT:    br %r14
   %y = call double @llvm.fabs.f64(double %x)
   %ord = fcmp ord double %x, 0.0
-  %a = fcmp ult double %y, 0x7ff0000000000000
+  %a = fcmp ult double %y, +inf
   %b = fcmp uge double %y, 0x0010000000000000
   %c = and i1 %ord, %a
   %res = and i1 %b, %c
@@ -157,7 +157,7 @@ define i32 @f7(double %x) {
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-NEXT:    br %r14
   %y = call double @llvm.fabs.f64(double %x)
-  %a = fcmp oeq double %y, 0x7ff0000000000000
+  %a = fcmp oeq double %y, +inf
   %b = fcmp uno double %x, 0.0
   %res = or i1 %a, %b
   %xres = zext i1 %res to i32

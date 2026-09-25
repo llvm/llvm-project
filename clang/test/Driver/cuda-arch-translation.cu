@@ -27,40 +27,6 @@
 // RUN: | FileCheck -check-prefixes=CUDA,SM62 %s
 // RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_70 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CUDA,SM70 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx600 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX600 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx601 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX601 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx602 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX602 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx700 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX700 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx701 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX701 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx702 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX702 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx703 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX703 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx704 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX704 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx705 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX705 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx801 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX801 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx802 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX802 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx803 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX803 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx805 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX805 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx810 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX810 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx900 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX900 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx902 -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,GFX902 %s
-// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=amdgcnspirv -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=HIP,SPIRV %s
 
 // CUDA: ptxas
 // CUDA-SAME: -m64
@@ -81,20 +47,3 @@
 // SM61:--image3=kind=elf,sm=61{{.*}}
 // SM62:--image3=kind=elf,sm=62{{.*}}
 // SM70:--image3=kind=elf,sm=70{{.*}}
-// GFX600:triple=amdgcn-amd-amdhsa,arch=gfx600
-// GFX601:triple=amdgcn-amd-amdhsa,arch=gfx601
-// GFX602:triple=amdgcn-amd-amdhsa,arch=gfx602
-// GFX700:triple=amdgcn-amd-amdhsa,arch=gfx700
-// GFX701:triple=amdgcn-amd-amdhsa,arch=gfx701
-// GFX702:triple=amdgcn-amd-amdhsa,arch=gfx702
-// GFX703:triple=amdgcn-amd-amdhsa,arch=gfx703
-// GFX704:triple=amdgcn-amd-amdhsa,arch=gfx704
-// GFX705:triple=amdgcn-amd-amdhsa,arch=gfx705
-// GFX801:triple=amdgcn-amd-amdhsa,arch=gfx801
-// GFX802:triple=amdgcn-amd-amdhsa,arch=gfx802
-// GFX803:triple=amdgcn-amd-amdhsa,arch=gfx803
-// GFX805:triple=amdgcn-amd-amdhsa,arch=gfx805
-// GFX810:triple=amdgcn-amd-amdhsa,arch=gfx810
-// GFX900:triple=amdgcn-amd-amdhsa,arch=gfx900
-// GFX902:triple=amdgcn-amd-amdhsa,arch=gfx902
-// SPIRV:triple=spirv64-amd-amdhsa,arch=amdgcnspirv

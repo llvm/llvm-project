@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/CUDA/kernel.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 
@@ -76,8 +77,14 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
+  cudaError_t err = cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
       stream != nullptr ? (cudaStream_t)(*stream) : defaultStream);
+  if (Fortran::runtime::executionEnvironment.cudaCheckError &&
+      err != cudaSuccess) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash(
+        "cudaLaunchKernel failed with error %s", cudaGetErrorName(err));
+  }
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
@@ -153,7 +160,13 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   launchAttr[0].val.clusterDim.z = clusterZ;
   config.numAttrs = 1;
   config.attrs = launchAttr;
-  cudaLaunchKernelExC(&config, kernel, params);
+  cudaError_t err = cudaLaunchKernelExC(&config, kernel, params);
+  if (Fortran::runtime::executionEnvironment.cudaCheckError &&
+      err != cudaSuccess) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash(
+        "cudaLaunchKernelExC failed with error %s", cudaGetErrorName(err));
+  }
 }
 
 void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
@@ -218,8 +231,14 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  cudaLaunchCooperativeKernel(kernel, gridDim, blockDim, params, smem,
-      stream != nullptr ? (cudaStream_t)*stream : defaultStream);
+  cudaError_t err = cudaLaunchCooperativeKernel(kernel, gridDim, blockDim,
+      params, smem, stream != nullptr ? (cudaStream_t)*stream : defaultStream);
+  if (Fortran::runtime::executionEnvironment.cudaCheckError &&
+      err != cudaSuccess) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("cudaLaunchCooperativeKernel failed with error %s",
+        cudaGetErrorName(err));
+  }
 }
 
 } // extern "C"

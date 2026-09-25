@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class CompileUnitAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test(self):
         """Exercise some SBCompileUnit APIs."""
         self.build()
@@ -33,9 +35,65 @@ class CompileUnitAPITestCase(TestBase):
         main_cu = sc_list.compile_units[0]
         self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
 
+        a_mod: lldb.SBModule = target.FindModule(lldb.SBFileSpec("a.out"))
+        main_cu_by_index = a_mod.compile_unit[0]
+        self.assertTrue(main_cu_by_index.IsValid(), "Main executable CU is not valid")
+
+        main_cu_by_name = a_mod.compile_unit["main.c"]
+        self.assertTrue(main_cu_by_name.IsValid(), "Main executable CU is not valid")
+
+        main_cu_by_regex_list = a_mod.compile_unit[re.compile(r".*main.*")]
+        self.assertEqual(len(main_cu_by_regex_list), 1)
+        [main_cu_by_regex] = main_cu_by_regex_list
+        self.assertTrue(main_cu_by_regex.IsValid(), "Main executable CU is not valid")
+
         self.assertEqual(
             main_cu.FindLineEntryIndex(line_entry, True),
             main_cu.FindLineEntryIndex(
                 0, line_entry.GetLine(), line_entry.GetFileSpec(), True
             ),
         )
+
+        self.assertNotEqual(main_cu.GetIDInModule(), lldb.LLDB_INVALID_INDEX32)
+        self.assertEqual(main_cu.GetIDInModule(), main_cu_by_name.GetIDInModule())
+        self.assertEqual(
+            main_cu.GetIDInModule(), frame0.GetCompileUnit().GetIDInModule()
+        )
+        self.assertEqual(
+            lldb.SBCompileUnit().GetIDInModule(), lldb.LLDB_INVALID_INDEX32
+        )
+
+        self.assertEqual(a_mod.GetCompileUnitAtIndex(main_cu.GetIDInModule()), main_cu)
+
+    def find_main_compile_unit(self) -> lldb.SBCompileUnit:
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        main_cu = target.FindModule(lldb.SBFileSpec("a.out")).compile_unit["main.c"]
+        self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
+        return main_cu
+
+    def test_is_optimized(self):
+        """A compile unit built with optimization reports it."""
+        self.build(dictionary={"CFLAGS_EXTRAS": "-O1"})
+        self.assertTrue(self.find_main_compile_unit().GetIsOptimized())
+
+    def test_is_not_optimized(self):
+        """A compile unit built without optimization reports it."""
+        self.build()
+        self.assertFalse(self.find_main_compile_unit().GetIsOptimized())
+
+    def test_id_is_unique_per_module(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        module = target.FindModule(lldb.SBFileSpec("a.out"))
+
+        num_cus = module.GetNumCompileUnits()
+        self.assertGreater(num_cus, 1, "test needs a module with several CUs")
+
+        ids = set()
+        for i in range(num_cus):
+            cu = module.GetCompileUnitAtIndex(i)
+            self.assertEqual(cu.GetIDInModule(), i)
+            ids.add(cu.GetIDInModule())
+        self.assertEqual(len(ids), num_cus, "IDs must be unique")

@@ -45,7 +45,7 @@ static bool matchNVarDeclStartingWith(
   const size_t N = InnerMatchers.size();
   size_t Count = 0;
 
-  auto Matches = [&](const Decl *VD) {
+  const auto Matches = [&](const Decl *VD) {
     // We don't want redundant decls in DeclStmt.
     if (Count == N)
       return false;
@@ -100,7 +100,7 @@ enum TransferType : uint8_t {
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
 /// following two VarDecls matching the inner matcher.
 AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
   const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
@@ -119,7 +119,7 @@ AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
 /// followed by two VarDecls matching the inner matcher.
 AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
   const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
@@ -138,7 +138,7 @@ AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
 /// Matches a CompoundStmt which has two VarDecls matching the inner matcher in
 /// the beginning.
 AST_MATCHER_P(CompoundStmt, hasFirstTwoVarDecl,
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
   return matchNVarDeclStartingWith(Node.body_begin(), Node.body_end(),
                                    InnerMatchers, Finder, Builder);
@@ -204,32 +204,33 @@ static auto typeOrLValueReferenceTo(
 }
 
 void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
-  auto PairType = qualType(unless(isVolatileQualified()),
-                           hasUnqualifiedDesugaredType(recordType(
-                               hasDeclaration(cxxRecordDecl(isPairType())))));
+  const auto PairType =
+      qualType(unless(isVolatileQualified()),
+               hasUnqualifiedDesugaredType(
+                   recordType(hasDeclaration(cxxRecordDecl(isPairType())))));
 
   auto UnlessShouldBeIgnored =
       unless(anyOf(hasAnySpecifiersShouldBeIgnored(), isInMacro()));
 
-  auto VarInitWithFirstMember =
+  const auto VarInitWithFirstMember =
       getVarInitWithMemberMatcher(PairDeclName, "first", FirstTypeName,
                                   FirstVarDeclName, UnlessShouldBeIgnored);
-  auto VarInitWithSecondMember =
+  const auto VarInitWithSecondMember =
       getVarInitWithMemberMatcher(PairDeclName, "second", SecondTypeName,
                                   SecondVarDeclName, UnlessShouldBeIgnored);
 
-  auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name) {
+  const auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name) {
     return declRefExpr(to(varDecl(UnlessShouldBeIgnored).bind(Name)));
   };
 
-  auto HasAnyLambdaCaptureThisVar =
+  const auto HasAnyLambdaCaptureThisVar =
       [](const ast_matchers::internal::Matcher<VarDecl> &VDMatcher) {
         return compoundStmt(hasDescendant(
             lambdaExpr(hasAnyCapture(capturesVar(varDecl(VDMatcher))))));
       };
 
   // Captured structured bindings are a C++20 extension
-  auto UnlessFirstVarOrSecondVarIsCapturedByLambda =
+  const auto UnlessFirstVarOrSecondVarIsCapturedByLambda =
       getLangOpts().CPlusPlus20
           ? compoundStmt()
           : compoundStmt(unless(HasAnyLambdaCaptureThisVar(
@@ -253,7 +254,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                   hasRHS(expr(hasType(PairType))))
                   .bind(StdTieAssignStmtName)),
           hasPreTwoVarDecl(
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   varDecl(equalsBoundNode(std::string(FirstVarDeclName))),
                   varDecl(equalsBoundNode(std::string(SecondVarDeclName)))}),
           hasParent(compoundStmt(UnlessFirstVarOrSecondVarIsCapturedByLambda)
@@ -274,7 +275,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                                     expr().bind(InitExprName))))
                             .bind(PairDeclName)),
           hasNextTwoVarDecl(
-              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+              SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   VarInitWithFirstMember, VarInitWithSecondMember}),
           hasParent(compoundStmt(UnlessFirstVarOrSecondVarIsCapturedByLambda)
                         .bind(ScopeBlockName))),
@@ -293,13 +294,12 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                       hasInitializer(ignoringCopyCtorAndImplicitCast(
                           expr().bind(InitExprName))))
                   .bind(PairDeclName)),
-          hasBody(
-              compoundStmt(
-                  hasFirstTwoVarDecl(llvm::SmallVector<
-                                     ast_matchers::internal::Matcher<VarDecl>>{
-                      VarInitWithFirstMember, VarInitWithSecondMember}),
-                  UnlessFirstVarOrSecondVarIsCapturedByLambda)
-                  .bind(ScopeBlockName)))
+          hasBody(compoundStmt(
+                      hasFirstTwoVarDecl(
+                          SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+                              VarInitWithFirstMember, VarInitWithSecondMember}),
+                      UnlessFirstVarOrSecondVarIsCapturedByLambda)
+                      .bind(ScopeBlockName)))
           .bind(ForRangeStmtName),
       this);
 }
@@ -334,9 +334,10 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ScopeBlock = Result.Nodes.getNodeAs<CompoundStmt>(ScopeBlockName);
 
   const auto *CFRS = Result.Nodes.getNodeAs<CXXForRangeStmt>(ForRangeStmtName);
-  auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
-                     this](SourceLocation DiagLoc, SourceRange ReplaceRange,
-                           TransferType TT = TT_ByVal) {
+  const auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
+                           this](SourceLocation DiagLoc,
+                                 SourceRange ReplaceRange,
+                                 TransferType TT = TT_ByVal) {
     const auto Prefix = [&TT]() -> StringRef {
       switch (TT) {
       case TT_ByVal:
@@ -388,8 +389,8 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Check PairVar is not used except for assignment members to firstVar and
   // SecondVar.
-  if (auto AllRef = utils::decl_ref_expr::allDeclRefExprs(*PairVar, *ScopeBlock,
-                                                          *Result.Context);
+  if (const auto AllRef = utils::decl_ref_expr::allDeclRefExprs(
+          *PairVar, *ScopeBlock, *Result.Context);
       AllRef.size() != 2)
     return;
 

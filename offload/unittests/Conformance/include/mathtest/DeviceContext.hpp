@@ -40,7 +40,8 @@ const llvm::SetVector<llvm::StringRef> &getPlatforms();
 
 namespace detail {
 
-void allocManagedMemory(ol_device_handle_t DeviceHandle, std::size_t Size,
+void allocManagedMemory(ol_context_handle_t Context,
+                        ol_device_handle_t DeviceHandle, std::size_t Size,
                         void **AllocationOut) noexcept;
 } // namespace detail
 
@@ -56,14 +57,17 @@ public:
 
   explicit DeviceContext(llvm::StringRef Platform, std::size_t DeviceId = 0);
 
+  ~DeviceContext();
+
   template <typename T>
   ManagedBuffer<T> createManagedBuffer(std::size_t Size) const noexcept {
     void *UntypedAddress = nullptr;
 
-    detail::allocManagedMemory(DeviceHandle, Size * sizeof(T), &UntypedAddress);
+    detail::allocManagedMemory(Context, DeviceHandle, Size * sizeof(T),
+                               &UntypedAddress);
     T *TypedAddress = static_cast<T *>(UntypedAddress);
 
-    return ManagedBuffer<T>(TypedAddress, Size);
+    return ManagedBuffer<T>(Context, TypedAddress, Size);
   }
 
   [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
@@ -103,16 +107,22 @@ public:
                   "device");
 
     if constexpr (sizeof...(Args) == 0) {
-      launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, nullptr, 0);
+      launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, 0, nullptr,
+                       nullptr);
     } else {
-      auto KernelArgs = makeKernelArgsPack(std::forward<ArgTypes>(Args)...);
-
       static_assert(
           (std::is_trivially_copyable_v<std::decay_t<ArgTypes>> && ...),
           "Argument types provided to launchKernel must be trivially copyable");
 
-      launchKernelImpl(Kernel.Handle, NumGroups, GroupSize, &KernelArgs,
-                       sizeof(KernelArgs));
+      ProvidedTypes ArgsTuple(std::forward<ArgTypes>(Args)...);
+      std::apply(
+          [&](auto &...A) {
+            void *ArgPtrs[] = {static_cast<void *>(&A)...};
+            size_t ArgSizes[] = {sizeof(A)...};
+            launchKernelImpl(Kernel.Handle, NumGroups, GroupSize,
+                             sizeof...(Args), ArgPtrs, ArgSizes);
+          },
+          ArgsTuple);
     }
   }
 
@@ -126,11 +136,12 @@ private:
                   llvm::StringRef KernelName) const noexcept;
 
   void launchKernelImpl(ol_symbol_handle_t KernelHandle, uint32_t NumGroups,
-                        uint32_t GroupSize, const void *KernelArgs,
-                        std::size_t KernelArgsSize) const noexcept;
+                        uint32_t GroupSize, size_t NumArgs, void **ArgPtrs,
+                        const size_t *ArgSizes) const noexcept;
 
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
+  ol_context_handle_t Context = nullptr;
 };
 } // namespace mathtest
 

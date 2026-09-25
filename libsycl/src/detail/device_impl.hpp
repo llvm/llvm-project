@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the DeviceImpl class, which implements
+/// sycl::device functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_DEVICE_IMPL
 #define _LIBSYCL_DEVICE_IMPL
@@ -65,7 +71,7 @@ public:
   /// Returns the backend associated with this device.
   ///
   /// \return the sycl::backend associated with this device.
-  backend getBackend() const;
+  backend getBackend() const noexcept;
 
   /// Returns the implementation class object of platform associated with this
   /// device.
@@ -114,6 +120,9 @@ public:
     } else
       static_assert(false && "Info descriptor is not properly supported");
   }
+
+  /// \return the corresponding liboffload device handle.
+  ol_device_handle_t getOLHandle() const { return MOffloadDevice; }
 
 private:
   ol_device_handle_t MOffloadDevice = {};

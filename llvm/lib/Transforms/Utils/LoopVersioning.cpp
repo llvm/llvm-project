@@ -18,6 +18,9 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -29,6 +32,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <memory>
 
 using namespace llvm;
 
@@ -43,15 +47,19 @@ static cl::opt<bool>
 LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
                                ArrayRef<RuntimePointerCheck> Checks, Loop *L,
                                LoopInfo *LI, DominatorTree *DT,
-                               ScalarEvolution *SE)
+                               ScalarEvolution *SE, MemorySSAUpdater *MSSAU)
     : VersionedLoop(L), AliasChecks(Checks), Preds(LAI.getPSE().getPredicate()),
-      LAI(LAI), LI(LI), DT(DT), SE(SE) {}
+      LAI(LAI), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU) {}
 
 void LoopVersioning::versionLoop(
     const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
   assert(VersionedLoop->getUniqueExitBlock() && "No single exit block");
   assert(VersionedLoop->isLoopSimplifyForm() &&
          "Loop is not in loop-simplify form");
+  // Assert that the loop is in LCSSA form. This is a precondition of
+  // versioning.
+  assert(VersionedLoop->isRecursivelyLCSSAForm(*DT, *LI) &&
+         "Loop is not in LCSSA form");
 
   Value *MemRuntimeCheck;
   Value *SCEVRuntimeCheck;
@@ -91,8 +99,8 @@ void LoopVersioning::versionLoop(
   // Create empty preheader for the loop (and after cloning for the
   // non-versioned loop).
   BasicBlock *PH =
-      SplitBlock(RuntimeCheckBB, RuntimeCheckBB->getTerminator(), DT, LI,
-                 nullptr, VersionedLoop->getHeader()->getName() + ".ph");
+      SplitBlock(RuntimeCheckBB, RuntimeCheckBB->getTerminator(), DT, LI, MSSAU,
+                 VersionedLoop->getHeader()->getName() + ".ph");
 
   // Clone the loop including the preheader.
   //
@@ -119,11 +127,29 @@ void LoopVersioning::versionLoop(
   // memchecking block.
   DT->changeImmediateDominator(VersionedLoop->getExitBlock(), RuntimeCheckBB);
 
+  // Update MemorySSA, if it is needed.
+  if (MSSAU) {
+    LoopBlocksRPO LoopRPOT(VersionedLoop);
+    LoopRPOT.perform(LI);
+    MSSAU->updateForClonedLoop(LoopRPOT, /*ExitBlocks=*/{}, VMap);
+
+    // Update MemorySSA for new CFG edges reaching the new NonVersionedLoop as
+    // well as exiting it.
+    SmallVector<CFGUpdate, 4> Updates;
+    Updates.push_back({cfg::UpdateKind::Insert, RuntimeCheckBB,
+                       NonVersionedLoop->getLoopPreheader()});
+    SmallVector<LoopInfo::Edge, 4> ExitEdges;
+    LI->getExitEdges(*NonVersionedLoop, ExitEdges);
+    for (auto [Exiting, Exit] : ExitEdges)
+      Updates.push_back({cfg::UpdateKind::Insert, Exiting, Exit});
+    MSSAU->applyInsertUpdates(Updates, *DT);
+  }
+
   // Adds the necessary PHI nodes for the versioned loops based on the
   // loop-defined values used outside of the loop.
   addPHINodes(DefsUsedOutside);
-  formDedicatedExitBlocks(NonVersionedLoop, DT, LI, nullptr, true);
-  formDedicatedExitBlocks(VersionedLoop, DT, LI, nullptr, true);
+  formDedicatedExitBlocks(NonVersionedLoop, DT, LI, MSSAU, true);
+  formDedicatedExitBlocks(VersionedLoop, DT, LI, MSSAU, true);
   assert(NonVersionedLoop->isLoopSimplifyForm() &&
          VersionedLoop->isLoopSimplifyForm() &&
          "The versioned loops should be in simplify form.");
@@ -270,7 +296,7 @@ void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
 
 namespace {
 bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
-             ScalarEvolution *SE) {
+             ScalarEvolution *SE, MemorySSAUpdater *MSSAU) {
   // Build up a worklist of inner-loops to version. This is necessary as the
   // act of versioning a loop creates new loops and can invalidate iterators
   // across the loops.
@@ -292,11 +318,12 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
-      if (!L->isLCSSAForm(*DT))
-       formLCSSARecursively(*L, *DT, LI, SE);
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, SE);
 
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
-                          LI, DT, SE);
+                          LI, DT, SE, MSSAU);
       LVer.versionLoop();
       LVer.annotateLoopWithNoAlias();
       Changed = true;
@@ -315,7 +342,22 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (runImpl(&LI, LAIs, &DT, &SE))
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+  // Keep MemorySSA up to date if it is available.
+  auto *MSSAAnalysis = AM.getCachedResult<MemorySSAAnalysis>(F);
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (MSSAAnalysis)
+    MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAAnalysis->getMSSA());
+
+  if (!runImpl(&LI, LAIs, &DT, &SE, MSSAU.get()))
+    return PreservedAnalyses::all();
+
+  if (MSSAAnalysis && VerifyMemorySSA)
+    MSSAAnalysis->getMSSA().verifyMemorySSA();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  if (MSSAAnalysis)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }

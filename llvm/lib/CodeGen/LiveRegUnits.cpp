@@ -42,6 +42,9 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 }
 
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
+  assert(!MI.isDebugInstr() &&
+         "Debug instructions must not affect liveness calculation");
+
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isReg()) {
@@ -102,17 +105,8 @@ static void addBlockLiveOuts(LiveRegUnits &LiveUnits,
 static void addCalleeSavedRegs(LiveRegUnits &LiveUnits,
                                const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR) {
-    const unsigned N = *CSR;
-
-    const auto &CSI = MFI.getCalleeSavedInfo();
-    auto Info =
-        llvm::find_if(CSI, [N](auto Info) { return Info.getReg() == N; });
-    // If we have no info for this callee-saved register, assume it is liveout
-    if (Info == CSI.end() || Info->isRestored())
-      LiveUnits.addReg(N);
-  }
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
+    LiveUnits.addReg(*CSR);
 }
 
 void LiveRegUnits::addPristines(const MachineFunction &MF) {
@@ -150,8 +144,14 @@ void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB) {
   // For the return block: Add all callee saved registers.
   if (MBB.isReturnBlock()) {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (MFI.isCalleeSavedInfoValid())
+    if (MFI.isCalleeSavedInfoValid()) {
       addCalleeSavedRegs(*this, MF);
+      // We assume callee-saved registers without CalleeSavedInfo are liveout.
+      for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+        if (!Info.isRestored())
+          removeReg(Info.getReg());
+      }
+    }
   }
 }
 

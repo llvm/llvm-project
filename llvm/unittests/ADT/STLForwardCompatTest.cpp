@@ -168,6 +168,62 @@ TEST(TransformTest, TransformCategory) {
   });
 }
 
+// Checks that pointer to member is a valid argument
+TEST(TransformTest, TransformToMember) {
+  struct StructA {
+    int x = 1;
+    int y = 2;
+  };
+  std::optional<StructA> Opt{StructA{}};
+  auto OptX = transformOptional(Opt, &StructA::x);
+  ASSERT_TRUE(OptX.has_value());
+  EXPECT_EQ(*OptX, 1);
+
+  auto OptY = transformOptional(Opt, &StructA::y);
+  ASSERT_TRUE(OptY.has_value());
+  EXPECT_EQ(*OptY, 2);
+
+  Opt = std::nullopt;
+  OptX = transformOptional(Opt, &StructA::x);
+  EXPECT_FALSE(OptX.has_value());
+}
+
+// Checks that pointer to member function is a valid argument
+TEST(TransformTest, TransformToMemberFunc) {
+  struct Foo {
+    int bar() const { return 42; }
+  };
+  std::optional<Foo> Opt{Foo{}};
+  auto OptRes = transformOptional(Opt, &Foo::bar);
+  ASSERT_TRUE(OptRes.has_value());
+  EXPECT_EQ(*OptRes, 42);
+}
+
+// Checks that callable is forwarded properly
+TEST(TransformTest, TransformRvalueRef) {
+  struct Foo {
+    int operator()(int x) && { return 42; }
+    int operator()(int x) & { return 43; }
+  };
+  std::optional<int> Opt = 1;
+  Foo foo;
+  auto Res = transformOptional(Opt, foo);
+  EXPECT_EQ(Res.value_or(0), 43);
+  Res = transformOptional(Opt, std::move(foo));
+  EXPECT_EQ(Res.value_or(0), 42);
+}
+
+// Checks constexpr
+TEST(TransformTest, TransfornConstexpr) {
+  constexpr std::optional<int> Opt1 = 42;
+  auto PlusOne = [](int x) { return x + 1; };
+  constexpr auto Res1 = transformOptional(Opt1, PlusOne);
+  EXPECT_EQ(Res1.value_or(0), 43);
+  constexpr std::optional<int> Opt2;
+  constexpr auto Res2 = transformOptional(Opt2, PlusOne);
+  EXPECT_FALSE(Res2.has_value());
+}
+
 TEST(TransformTest, ToUnderlying) {
   enum E { A1 = 0, B1 = -1 };
   static_assert(llvm::to_underlying(A1) == 0);

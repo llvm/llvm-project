@@ -62,7 +62,8 @@ private:
   };
 
 public:
-  DynamicAllocator() = default;
+  DynamicAllocator(llvm::BumpPtrAllocator &DescAlloc)
+      : DescAllocator(DescAlloc) {}
   DynamicAllocator(DynamicAllocator &) = delete;
   DynamicAllocator(DynamicAllocator &&) = delete;
   ~DynamicAllocator();
@@ -80,8 +81,7 @@ public:
 
   /// Deallocate the given source+block combination.
   /// Returns \c true if anything has been deallocatd, \c false otherwise.
-  bool deallocate(const Expr *Source, const Block *BlockToDelete,
-                  InterpState &S);
+  bool deallocate(const Expr *Source, const Block *BlockToDelete);
 
   /// Checks whether the allocation done at the given source is an array
   /// allocation.
@@ -106,8 +106,7 @@ private:
   // to them.
   llvm::SmallVector<Allocation> DeadAllocations;
 
-  using PoolAllocTy = llvm::BumpPtrAllocator;
-  PoolAllocTy DescAllocator;
+  llvm::BumpPtrAllocator &DescAllocator;
 
   /// Allocates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {

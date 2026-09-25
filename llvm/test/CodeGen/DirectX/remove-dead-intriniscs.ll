@@ -1,5 +1,5 @@
 
-; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
+; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library -o - | FileCheck %s
 
 declare void @llvm.lifetime.start.p0(i64, ptr) #1
 declare void @llvm.lifetime.end.p0(i64, ptr) #1

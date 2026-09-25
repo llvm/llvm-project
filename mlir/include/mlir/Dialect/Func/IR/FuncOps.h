@@ -10,9 +10,9 @@
 #define MLIR_DIALECT_FUNC_IR_OPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -28,8 +28,6 @@ class PatternRewriter;
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Func/IR/FuncOps.h.inc"
 
-#include "mlir/Dialect/Func/IR/FuncOpsDialect.h.inc"
-
 namespace llvm {
 
 /// Allow stealing the low bits of FuncOp.
@@ -41,7 +39,7 @@ struct PointerLikeTypeTraits<mlir::func::FuncOp> {
   static inline mlir::func::FuncOp getFromVoidPointer(void *p) {
     return mlir::func::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 } // namespace llvm
 

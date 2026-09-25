@@ -605,3 +605,56 @@ func.func @invalid_symbol() {
   }
   return
 }
+
+
+// -----
+
+// Regression test: affine.for with step 0 must be rejected by the parser.
+// https://github.com/llvm/llvm-project/issues/107812
+func.func @affine_for_zero_step_parser(%mem : memref<8xf32>) {
+  // expected-error@+1 {{expected step to be representable as a positive signed integer}}
+  affine.for %i = 0 to 8 step 0 {
+    affine.load %mem[%i] : memref<8xf32>
+  }
+  return
+}
+
+// -----
+
+// Regression test: affine.for with step 0 constructed via generic syntax must
+// be rejected by the verifier.
+// https://github.com/llvm/llvm-project/issues/107812
+func.func @affine_for_zero_step_verifier() {
+  // expected-error@+1 {{'affine.for' op expected step to be a positive integer, got 0}}
+  "affine.for"() <{lowerBoundMap = affine_map<() -> (0)>, operandSegmentSizes = array<i32: 0, 0, 0>, step = 0 : index, upperBoundMap = affine_map<() -> (8)>}> ({
+  ^bb0(%i : index):
+    "affine.yield"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @affine_for_missing_induction_var() {
+  // expected-error@+1 {{'affine.for' op expected body to have an index argument for the induction variable}}
+  "affine.for"() <{lowerBoundMap = affine_map<() -> (0)>, operandSegmentSizes = array<i32: 0, 0, 0>, step = 1 : index, upperBoundMap = affine_map<() -> (2)>}> ({
+    "affine.yield"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @affine_load_alignment_not_power_of_2(%M : memref<10xi32>) {
+  // expected-error@+1 {{'affine.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %v = affine.load %M[0] { alignment = 12 } : memref<10xi32>
+  return
+}
+
+// -----
+
+func.func @affine_store_alignment_not_power_of_2(%M : memref<10xi32>, %v : i32) {
+  // expected-error@+1 {{'affine.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  affine.store %v, %M[0] { alignment = 12 } : memref<10xi32>
+  return
+}

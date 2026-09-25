@@ -3,6 +3,7 @@ GlobalValueMap:
   42:
     - Live: true
       ImportType: 0
+      NoRenameOnPromotion: true
       TypeTestAssumeVCalls:
         - GUID: 123
           Offset: 0
@@ -26,6 +27,7 @@ GlobalValueMap:
   43:
     - Live: true
       ImportType : 1
+      NoRenameOnPromotion: false
 TypeIdMap:
   typeid1:
     WPDRes:

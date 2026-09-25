@@ -11,7 +11,7 @@ module {
       : !llvm.array<16 x i32>
 
   llvm.func @entry() -> i32 {
-    %c0 = llvm.mlir.constant(0 : index) : i64
+    %c0 = llvm.mlir.constant(0 : i64) : i64
 
     %1 = llvm.mlir.addressof @const16 : !llvm.ptr
     %ptr = llvm.getelementptr %1[%c0, %c0]

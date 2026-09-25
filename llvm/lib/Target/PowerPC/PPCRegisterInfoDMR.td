@@ -133,32 +133,35 @@ let SubRegIndices = [sub_dmr0, sub_dmr1] in {
   def DMRp3 : DMRp<3, "dmrp3", [DMR6, DMR7]>, DwarfRegNum<[-1, -1]>;
 }
 
-def DMRROWRC :  RegisterClass<"PPC", [v128i1], 128,
-                               (add (sequence "DMRROW%u", 0, 63))> {
-  let Size = 128;
-}
+def DMRROWRC : PPCRegisterClassWithSize<[v128i1], 128,
+                 (add (sequence "DMRROW%u", 0, 63)), 128>;
 
-def DMRROWpRC :  RegisterClass<"PPC", [v256i1], 128,
-                               (add (sequence "DMRROWp%u", 0, 31))> {
-  let Size = 256;
-}
+def DMRROWpRC : PPCRegisterClassWithSize<[v256i1], 128,
+                  (add (sequence "DMRROWp%u", 0, 31)), 256>;
 
-def WACCRC : RegisterClass<"PPC", [v512i1], 128,
-                           (add (sequence "WACC%u", 0, 7))> {
-  let Size = 512;
-}
+def WACCRC : PPCRegisterClassWithSize<[v512i1], 128,
+               (add (sequence "WACC%u", 0, 7)), 512>;
 
-def WACC_HIRC : RegisterClass<"PPC", [v512i1], 128,
-                              (add (sequence "WACC_HI%u", 0, 7))> {
-  let Size = 512;
-}
+def WACC_HIRC : PPCRegisterClassWithSize<[v512i1], 128,
+                  (add (sequence "WACC_HI%u", 0, 7)), 512>;
 
-def DMRRC : RegisterClass<"PPC", [v1024i1], 128,
-                           (add (sequence "DMR%u", 0, 7))> {
-  let Size = 1024;
-}
+def DMRRC : PPCRegisterClassWithSize<[v1024i1], 128,
+              (add (sequence "DMR%u", 0, 7)), 1024>;
 
-def DMRpRC : RegisterClass<"PPC", [v2048i1], 128,
-                           (add DMRp0, DMRp1, DMRp2, DMRp3)> {
-  let Size = 2048;
+def DMRpRC : PPCRegisterClassWithSize<[v2048i1], 128,
+               (add DMRp0, DMRp1, DMRp2, DMRp3), 2048>;
+
+// Register Operand Definitions.
+
+defm DMRROWRC : PPCRegOperand<"isDMRROWRegNumber", "dmrrow">;
+defm DMRROWpRC : PPCRegOperand<"isDMRROWpRegNumber", "dmrrowp">;
+defm DMRRC : PPCRegOperand<"isDMRRegNumber", "dmr">;
+defm DMRpRC : PPCRegOperand<"isDMRpRegNumber", "dmrp">;               
+
+// ACC Register Operands share the same AsmOperandClass.
+def wacc : RegisterOperand<WACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+def wacc_hi : RegisterOperand<WACC_HIRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
 }

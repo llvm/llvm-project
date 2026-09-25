@@ -65,14 +65,6 @@ func.func @rewrite_resource_tensor() -> tensor<4xf32> {
 
 // -----
 
-// CHECK-LABEL: func.func @rewrite_quant_tensor
-// CHECK: %[[CST:.*]] = "tosa.const"() <{values = dense<[10, 20]> : tensor<2xui8>}> : () -> tensor<2xui8>
-func.func @rewrite_quant_tensor() -> tensor<2xui8> {
-  %c = arith.constant dense<[10, 20]> : tensor<2xui8>
-  return %c : tensor<2xui8>
-}
-
-// -----
 
 // CHECK-LABEL: func.func @rewrite_quant_uniform_tensor
 // CHECK: %[[CST:.*]] = "tosa.const"() <{values = dense<["10", "20"]> : tensor<2x!quant.uniform<i8:f32, 5.000000e-01>>}> : () -> tensor<2x!quant.uniform<i8:f32, 5.000000e-01>>

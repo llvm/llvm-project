@@ -6,9 +6,9 @@ define void @scmp_i32(i32 %arg1, i32 %arg2) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[SCMP:%[0-9]+]]:_(s4) = G_SCMP [[COPY]](s32), [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[SCMP:%[0-9]+]]:_(i4) = G_SCMP [[COPY]](i32), [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR
   %res4 = call i4 @llvm.scmp.i4.i32(i32 %arg1, i32 %arg2)
   ret void
@@ -19,9 +19,9 @@ define void @scmp_4_32i(<4 x i32> %arg1, <4 x i32> %arg2) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-  ; CHECK-NEXT:   [[SCMP:%[0-9]+]]:_(<4 x s32>) = G_SCMP [[COPY]](<4 x s32>), [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+  ; CHECK-NEXT:   [[SCMP:%[0-9]+]]:_(<4 x i32>) = G_SCMP [[COPY]](<4 x i32>), [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR
   %res4 = call <4 x i32> @llvm.scmp.v4i32.i32(<4 x i32> %arg1, <4 x i32> %arg2)
   ret void
@@ -32,9 +32,9 @@ define void @ucmp_i32(i32 %arg1, i32 %arg2) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[UCMP:%[0-9]+]]:_(s4) = G_UCMP [[COPY]](s32), [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[UCMP:%[0-9]+]]:_(i4) = G_UCMP [[COPY]](i32), [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR
   %res4 = call i4 @llvm.ucmp.i4.i32(i32 %arg1, i32 %arg2)
   ret void
@@ -45,9 +45,9 @@ define void @ucmp_4_32i(<4 x i32> %arg1, <4 x i32> %arg2) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-  ; CHECK-NEXT:   [[UCMP:%[0-9]+]]:_(<4 x s32>) = G_UCMP [[COPY]](<4 x s32>), [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+  ; CHECK-NEXT:   [[UCMP:%[0-9]+]]:_(<4 x i32>) = G_UCMP [[COPY]](<4 x i32>), [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR
   %res4 = call <4 x i32> @llvm.ucmp.v4i32.i32(<4 x i32> %arg1, <4 x i32> %arg2)
   ret void

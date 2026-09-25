@@ -44,6 +44,8 @@ static Base getBase(StringRef IntegerLiteral) {
 std::pair<tooling::Replacements, unsigned>
 IntegerLiteralSeparatorFixer::process(const Environment &Env,
                                       const FormatStyle &Style) {
+  const auto LangOpts = getFormattingLangOpts(Style);
+
   switch (Style.Language) {
   case FormatStyle::LK_CSharp:
   case FormatStyle::LK_Java:
@@ -53,11 +55,10 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   case FormatStyle::LK_C:
   case FormatStyle::LK_Cpp:
   case FormatStyle::LK_ObjC:
-    if (Style.Standard >= FormatStyle::LS_Cpp14) {
-      Separator = '\'';
-      break;
-    }
-    [[fallthrough]];
+    if (!LangOpts.AllowLiteralDigitSeparator)
+      return {};
+    Separator = '\'';
+    break;
   default:
     return {};
   }
@@ -94,7 +95,6 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   AffectedRangeManager AffectedRangeMgr(SourceMgr, Env.getCharRanges());
 
   const auto ID = Env.getFileID();
-  const auto LangOpts = getFormattingLangOpts(Style);
   Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
   Lex.SetCommentRetentionState(true);
 

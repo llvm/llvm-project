@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec --code-model=small < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK64 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
@@ -10,7 +10,7 @@
 ; RUN: llvm-objdump -r -d --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefixes=CHECKRELOC,CHECKRELOC32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -filetype=obj -o %t64.o < %s
+; RUN:     -mattr=-altivec --code-model=small -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
 ; RUN: llvm-objdump -r -d --symbol-description %t64.o | FileCheck -D#NFA=2 --check-prefixes=CHECKRELOC,CHECKRELOC64 %s
 

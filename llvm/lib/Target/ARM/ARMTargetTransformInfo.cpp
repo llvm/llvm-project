@@ -92,73 +92,6 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
                                    Align(Alignment));
 }
 
-bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
-                                     const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // To inline a callee, all features not in the allowed list must match exactly.
-  bool MatchExact = (CallerBits & ~InlineFeaturesAllowed) ==
-                    (CalleeBits & ~InlineFeaturesAllowed);
-  // For features in the allowed list, the callee's features must be a subset of
-  // the callers'.
-  bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
-                     (CalleeBits & InlineFeaturesAllowed);
-
-  LLVM_DEBUG({
-    if (!MatchExact || !MatchSubset) {
-      dbgs() << "=== Inline compatibility debug ===\n";
-      dbgs() << "Caller: " << Caller->getName() << "\n";
-      dbgs() << "Callee: " << Callee->getName() << "\n";
-
-      // Bit diffs
-      FeatureBitset MissingInCaller = CalleeBits & ~CallerBits; // callee-only
-      FeatureBitset ExtraInCaller = CallerBits & ~CalleeBits;   // caller-only
-
-      // Counts
-      dbgs() << "Only-in-caller bit count: " << ExtraInCaller.count() << "\n";
-      dbgs() << "Only-in-callee bit count: " << MissingInCaller.count() << "\n";
-
-      dbgs() << "Only-in-caller feature indices [";
-      {
-        bool First = true;
-        for (size_t I = 0, E = ExtraInCaller.size(); I < E; ++I) {
-          if (ExtraInCaller.test(I)) {
-            if (!First)
-              dbgs() << ", ";
-            dbgs() << I;
-            First = false;
-          }
-        }
-      }
-      dbgs() << "]\n";
-
-      dbgs() << "Only-in-callee feature indices [";
-      {
-        bool First = true;
-        for (size_t I = 0, E = MissingInCaller.size(); I < E; ++I) {
-          if (MissingInCaller.test(I)) {
-            if (!First)
-              dbgs() << ", ";
-            dbgs() << I;
-            First = false;
-          }
-        }
-      }
-      dbgs() << "]\n";
-
-      // Indices map to features as found in
-      // llvm-project/(your_build)/lib/Target/ARM/ARMGenSubtargetInfo.inc
-      dbgs() << "MatchExact=" << (MatchExact ? "true" : "false")
-             << " MatchSubset=" << (MatchSubset ? "true" : "false") << "\n";
-    }
-  });
-  return MatchExact && MatchSubset;
-}
-
 TTI::AddressingModeKind
 ARMTTIImpl::getPreferredAddressingMode(const Loop *L,
                                        ScalarEvolution *SE) const {
@@ -540,7 +473,7 @@ InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
                                            const Instruction *I) const {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
-    // FIXME: The vectorizer is highly sensistive to the cost of these
+    // FIXME: The vectorizer is highly sensitive to the cost of these
     // instructions, which suggests that it may be using the costs incorrectly.
     // But, for now, just make them free to avoid performance regressions for
     // vector targets.
@@ -1229,7 +1162,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
     const Align DstAlign = MC->getDestAlign().valueOrOne();
     const Align SrcAlign = MC->getSourceAlign().valueOrOne();
 
-    MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
+    // Use the most restrictive of memset, memcpy, memmove.
+    MOp = MemOp::Move(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
                       /*IsVolatile*/ false);
     DstAddrSpace = MC->getDestAddressSpace();
     SrcAddrSpace = MC->getSourceAddressSpace();
@@ -1290,13 +1224,11 @@ InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
   return NumOps;
 }
 
-InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
-                                           TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost ARMTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -1374,6 +1306,17 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                               ISD::VECTOR_SHUFFLE, LT.second))
         return LT.first * Entry->Cost;
     }
+
+    // Check for other shuffles that are not SK_ kinds but we have native
+    // instructions for, for example REV.
+    if (!Mask.empty()) {
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      if (LT.second.isVector() &&
+          Mask.size() <= LT.second.getVectorNumElements() &&
+          (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
+           isVREVMask(Mask, LT.second, 64)))
+        return LT.first;
+    }
   }
   if (ST->hasMVEIntegerOps()) {
     if (Kind == TTI::SK_Broadcast) {
@@ -1413,7 +1356,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // store(interleaving-shuffle). The shuffle cost could potentially be
       // free, but we model it with a cost of LT.first so that ST2/ST4 have a
       // higher cost than just the store.
-      if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+      if (CtxI && CtxI->hasOneUse() && isa<StoreInst>(*CtxI->user_begin()) &&
           (LT.second.getScalarSizeInBits() == 8 ||
            LT.second.getScalarSizeInBits() == 16 ||
            LT.second.getScalarSizeInBits() == 32) &&
@@ -1440,14 +1383,14 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   int BaseCost = ST->hasMVEIntegerOps() && SrcTy->isVectorTy()
                      ? ST->getMVEVectorCostFactor(CostKind)
                      : 1;
-  return BaseCost * BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind,
+  return BaseCost * BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask,
                                           Index, SubTp);
 }
 
 InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
     // Make operations on i1 relatively expensive as this often involves
@@ -1535,13 +1478,13 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     if (ST->isThumb1Only() || Ty->isVectorTy())
       return false;
 
-    if (!CxtI || !CxtI->hasOneUse() || !CxtI->isShift())
+    if (!CtxI || !CtxI->hasOneUse() || !CtxI->isShift())
       return false;
     if (!Op2Info.isUniform() || !Op2Info.isConstant())
       return false;
 
     // Folded into a ADC/ADD/AND/BIC/CMP/EOR/MVN/ORR/ORN/RSB/SBC/SUB
-    switch (cast<Instruction>(CxtI->user_back())->getOpcode()) {
+    switch (cast<Instruction>(CtxI->user_back())->getOpcode()) {
     case Instruction::Add:
     case Instruction::Sub:
     case Instruction::And:
@@ -1610,7 +1553,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     return false;
   };
 
-  if (MulInDSPMLALPattern(CxtI, Opcode, Ty))
+  if (MulInDSPMLALPattern(CtxI, Opcode, Ty))
     return 0;
 
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
@@ -1647,6 +1590,11 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -2172,7 +2120,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     bool IsSigned = Opc == Intrinsic::fptosi_sat;
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
     EVT MTy = TLI->getValueType(DL, ICA.getReturnType());
-    // Check for the legal types, with the corect subtarget features.
+    // Check for the legal types, with the correct subtarget features.
     if ((ST->hasVFP2Base() && LT.second == MVT::f32 && MTy == MVT::i32) ||
         (ST->hasFP64() && LT.second == MVT::f64 && MTy == MVT::i32) ||
         (ST->hasFullFP16() && LT.second == MVT::f16 && MTy == MVT::i32))
@@ -2484,7 +2432,7 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
   // so is not tail predicated as per the condition above. In order to get the
   // same performance we treat min and max the same as an icmp for tailpred
   // purposes for the moment (we often rely on non-tailpred and higher VF's to
-  // pick more optimial instructions like VQDMULH. They need to be recognized
+  // pick more optimal instructions like VQDMULH. They need to be recognized
   // directly by the vectorizer).
   if (auto *II = dyn_cast<IntrinsicInst>(&I))
     if ((II->getIntrinsicID() == Intrinsic::smin ||
@@ -2562,8 +2510,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      if (isa<PHINode>(&I))
+    for (Instruction &I : *BB) {
+      if (isa<PHINode>(I) || isa<PseudoProbeInst>(I))
         continue;
       if (!canTailPredicateInstruction(I, ICmpCount)) {
         LLVM_DEBUG(dbgs() << "Instruction not allowed: "; I.dump());
@@ -2616,14 +2564,14 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool ARMTTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!EnableTailPredication) {
-    LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
+    LLVM_DEBUG(dbgs() << "Tail-folding not enabled.\n");
     return false;
   }
 
-  // Creating a predicated vector loop is the first step for generating a
-  // tail-predicated hardware loop, for which we need the MVE masked
+  // Creating a tail-folded vector loop is the first step for generating a
+  // tail-folded hardware loop, for which we need the MVE masked
   // load/stores instructions:
   if (!ST->hasMVEIntegerOps())
     return false;
@@ -2633,17 +2581,18 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
 
   // For now, restrict this to single block loops.
   if (L->getNumBlocks() > 1) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: not a single block "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: not a single block "
                          "loop.\n");
     return false;
   }
 
-  assert(L->isInnermost() && "preferPredicateOverEpilogue: inner-loop expected");
+  assert(L->isInnermost() &&
+         "preferTailFoldingOverEpilogue: inner-loop expected");
 
   LoopInfo *LI = LVL->getLoopInfo();
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "analyzable.\n");
     return false;
   }
@@ -2654,14 +2603,14 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // This checks if we have the low-overhead branch architecture
   // extension, and if we will create a hardware-loop:
   if (!isHardwareLoopProfitable(L, *SE, *AC, TFI->TLI, HWLoopInfo)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "profitable.\n");
     return false;
   }
 
   DominatorTree *DT = LVL->getDominatorTree();
   if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "a candidate.\n");
     return false;
   }
@@ -2670,8 +2619,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
                               *LVL->getDominatorTree());
 }
 
-TailFoldingStyle
-ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
+TailFoldingStyle ARMTTIImpl::getPreferredTailFoldingStyle() const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
     return TailFoldingStyle::DataWithoutLaneMask;
 
@@ -2778,7 +2726,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // innermost loop is often detrimental to performance. In these cases the loop
   // remainder gets unrolled into a series of compare-and-jump blocks, which in
   // deeply nested loops get executed multiple times, negating the benefits of
-  // LOB. This is particularly noticable when the loop trip count of the
+  // LOB. This is particularly noticeable when the loop trip count of the
   // innermost loop varies within the outer loop, such as in the case of
   // triangular matrix decompositions. In these cases we will prefer to not
   // unroll the innermost loop, with the intention for it to be executed as a
@@ -2786,7 +2734,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   bool Runtime = true;
   if (ST->hasLOB()) {
     if (SE.hasLoopInvariantBackedgeTakenCount(L)) {
-      const auto *BETC = SE.getBackedgeTakenCount(L);
+      const SCEV *BETC = SE.getBackedgeTakenCount(L);
       auto *Outer = L->getOutermostLoop();
       if ((L != Outer && Outer != L->getParentLoop()) ||
           (L != Outer && BETC && !SE.isLoopInvariant(BETC, Outer))) {
@@ -2851,6 +2799,13 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return 0;
   }
   return InstructionCost::getInvalid();
+}
+
+bool ARMTTIImpl::shouldConsiderVectorizationRegPressure() const {
+  // MVE only has 8 vector registers, so we should consider register pressure to
+  // avoid vectorizing when the cost of spills exceeds the gains from
+  // vectorization.
+  return ST->hasMVEIntegerOps();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

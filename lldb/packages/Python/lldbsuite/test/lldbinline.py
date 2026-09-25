@@ -140,8 +140,23 @@ class InlineTest(TestBase):
         parser.parse_source_files(source_files)
         parser.set_breakpoints(target)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertSuccess(error, "Failed to launch process: %s" % error.GetCString())
         self.assertIsNotNone(process, PROCESS_IS_VALID)
+        self.assertNotEqual(
+            process.GetState(),
+            lldb.eStateExited,
+            "Process exited directly after launch with status %d"
+            % process.GetExitStatus(),
+        )
+        self.assertState(
+            process.GetState(),
+            lldb.eStateStopped,
+            "Process is not stopped under debugger control after launch",
+        )
 
         hit_breakpoints = 0
 
@@ -152,9 +167,15 @@ class InlineTest(TestBase):
                 parser.handle_breakpoint(self, bp_id)
             process.Continue()
 
-        self.assertTrue(
-            hit_breakpoints > 0, "inline test did not hit a single breakpoint"
-        )
+        if hit_breakpoints == 0:
+            state = process.GetState()
+            details = "process state: %s" % lldbutil.state_type_to_str(state)
+            if state == lldb.eStateExited:
+                details += ", exit status: %d" % process.GetExitStatus()
+            self.fail(
+                "inline test did not hit a single breakpoint (%s)\n%s"
+                % (details, lldbutil.print_stacktraces(process, string_buffer=True))
+            )
         # Either the process exited or the stepping plan is complete.
         self.assertTrue(
             process.GetState() in [lldb.eStateStopped, lldb.eStateExited],
@@ -197,7 +218,9 @@ def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=Non
         file_basename = os.path.basename(__file)
         name, _ = os.path.splitext(file_basename)
 
-    test_func = ApplyDecoratorsToFunction(InlineTest._test, decorators)
+    test_func = ApplyDecoratorsToFunction(
+        FreshTestFunction(InlineTest._test), decorators
+    )
     # Build the test case
     test_class = type(
         name, (InlineTest,), dict(test=test_func, name=name, _build_dict=build_dict)

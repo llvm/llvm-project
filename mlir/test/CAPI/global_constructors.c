@@ -12,6 +12,7 @@
  */
 /* REQUIRES: host-supports-jit
  */
+// XFAIL: system-aix
 
 #include "mlir-c/Conversion.h"
 #include "mlir-c/ExecutionEngine.h"

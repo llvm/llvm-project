@@ -26,15 +26,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
   MLIRAMDGPUTransforms
 )
 
-add_mlir_upstream_c_api_library(MLIRCAPIAMX
-  AMX.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRCAPIIR
-  MLIRAMXDialect
-)
-
 add_mlir_upstream_c_api_library(MLIRCAPIArith
   Arith.cpp
   ArithPasses.cpp

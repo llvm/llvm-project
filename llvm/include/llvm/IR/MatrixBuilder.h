@@ -141,6 +141,28 @@ public:
     return B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
   }
 
+  /// Create a column-major matrix from a row-major matrix with the given
+  /// logical dimensions by transposing it.
+  /// Assumes the matrix transpose assumes column-major matrix memory layout,
+  /// which is true in the case of the DirectX and SPIRV backends, but not
+  /// necessarily true in the case of the LowerMatrixIntrinsics pass.
+  CallInst *CreateRowMajorToColumnMajorTransform(Value *Matrix, unsigned Rows,
+                                                 unsigned Columns,
+                                                 const Twine &Name = "") {
+    return CreateMatrixTranspose(Matrix, Columns, Rows, Name);
+  }
+
+  /// Create a row-major matrix from a column-major matrix with the given
+  /// logical dimensions by transposing it.
+  /// Assumes the matrix transpose assumes column-major matrix memory layout,
+  /// which is true in the case of the DirectX and SPIRV backends, but not
+  /// necessarily true in the case of the LowerMatrixIntrinsics pass.
+  CallInst *CreateColumnMajorToRowMajorTransform(Value *Matrix, unsigned Rows,
+                                                 unsigned Columns,
+                                                 const Twine &Name = "") {
+    return CreateMatrixTranspose(Matrix, Rows, Columns, Name);
+  }
+
   /// Insert a single element \p NewVal into \p Matrix at indices (\p RowIdx, \p
   /// ColumnIdx).
   Value *CreateMatrixInsert(Value *Matrix, Value *NewVal, Value *RowIdx,

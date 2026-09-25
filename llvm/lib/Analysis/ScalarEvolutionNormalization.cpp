@@ -46,13 +46,13 @@ struct NormalizeDenormalizeRewriter
 
 const SCEV *
 NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
-  SmallVector<const SCEV *, 8> Operands;
+  SmallVector<SCEVUse, 8> Operands;
 
   transform(AR->operands(), std::back_inserter(Operands),
-            [&](const SCEV *Op) { return visit(Op); });
+            [&](SCEVUse Op) { return visit(Op.getPointer()); });
 
   if (!Pred(AR))
-    return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
+    return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagNone);
 
   // Normalization and denormalization are fancy names for decrementing and
   // incrementing a SCEV expression with respect to a set of loops.  Since
@@ -91,7 +91,7 @@ NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
       Operands[i] = SE.getMinusSCEV(Operands[i], Operands[i + 1]);
   }
 
-  return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
+  return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagNone);
 }
 
 const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,

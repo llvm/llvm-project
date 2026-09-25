@@ -5,8 +5,10 @@ define <16 x i8> @interleave_masked_select(ptr %mask, ptr %src) nounwind {
 ; X64-LABEL: interleave_masked_select:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw (%rdi), %k1
-; X64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X64-NEXT:    vpunpcklbw {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3],xmm0[4],mem[4],xmm0[5],mem[5],xmm0[6],mem[6],xmm0[7],mem[7]
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; X64-NEXT:    vmovdqu8 (%rsi), %xmm0 {%k1}
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpunpcklbw {{.*#+}} xmm0 {%k1} {z} = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X64-NEXT:    retq
   %mask_vec = load <16 x i1>, ptr %mask
   %vec2 = load <16 x i8>, ptr %src
@@ -19,12 +21,13 @@ define <16 x i8> @interleave_masked_select(ptr %mask, ptr %src) nounwind {
 define <16 x i1> @interleave_masked_blend(i16 %mask, ptr %src1, ptr %src2) nounwind {
 ; X64-LABEL: interleave_masked_blend:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rsi), %xmm0
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpunpcklbw {{.*#+}} xmm2 {%k1} {z} = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3],xmm1[4],mem[4],xmm1[5],mem[5],xmm1[6],mem[6],xmm1[7],mem[7]
-; X64-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; X64-NEXT:    vpcmpeqb %xmm0, %xmm2, %xmm0
+; X64-NEXT:    vmovdqa (%rsi), %xmm0
+; X64-NEXT:    vpblendmb (%rdx), %xmm0, %xmm1 {%k1}
+; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vpunpcklbw {{.*#+}} xmm1 {%k1} {z} = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; X64-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; X64-NEXT:    vpcmpeqb %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %mask_vec = bitcast i16 %mask to <16 x i1>
   %vec1 = load <16 x i8>, ptr %src1

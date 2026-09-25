@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 namespace std {
 struct type_info{};
@@ -247,9 +247,6 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
     x;
   };
   static_assert(ErrorRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}} \
-  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'ErrorRequires'}} \
-  //   since-cxx20-note@#cwg2565-expr {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
   concept NestedErrorInRequires = requires (T x) { // #cwg2565-NEIR
@@ -261,9 +258,6 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
     };
   };
   static_assert(NestedErrorInRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}} \
-  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'NestedErrorInRequires'}} \
-  //   since-cxx20-note-re@#cwg2565-NEIR-inner {{because {{.*}} would be invalid: constraint depends on a previously diagnosed expression}}
 
 #endif
 } // namespace cwg2565
@@ -378,7 +372,7 @@ struct Literal { constexpr Literal() {} };
 union union6 { NonLiteral NL; Literal L; };
 static_assert(__is_literal(union6), "");
 
-#if __cplusplus >= 202003L
+#if __cplusplus >= 202002L
 struct A { A(); };
 union U {
   A a;

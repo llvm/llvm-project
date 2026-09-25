@@ -29,12 +29,12 @@ end module
 !CHECK:    pdt2, PUBLIC: DerivedType components: j2,a2
 !CHECK:    sm, PUBLIC size=4 offset=0: ObjectEntity type: INTEGER(4)
 !CHECK:    DerivedType scope: pdt1
-!CHECK:      a1, ALLOCATABLE: ObjectEntity type: TYPE(pdt2(int(k1,kind=4),int(l1,kind=4)))
+!CHECK:      a1, ALLOCATABLE: ObjectEntity type: TYPE(pdt2(__builtin_int(k1,kind=4),__builtin_int(l1,kind=4)))
 !CHECK:      k1: TypeParam type:INTEGER(4) Kind
 !CHECK:      l1: TypeParam type:INTEGER(4) Len
 !CHECK:    DerivedType scope: pdt2
-!CHECK:      a2: ObjectEntity type: TYPE(pdt1(k1=int(k2,kind=4),l1=int(l2,kind=4))) shape: 1_8:k2
-!CHECK:      j2: ObjectEntity type: INTEGER(int(int(k2,kind=4),kind=8))
+!CHECK:      a2: ObjectEntity type: TYPE(pdt1(k1=__builtin_int(k2,kind=4),l1=__builtin_int(l2,kind=4))) shape: 1_8:k2
+!CHECK:      j2: ObjectEntity type: INTEGER(__builtin_int(__builtin_int(k2,kind=4),kind=8))
 !CHECK:      k2: TypeParam type:INTEGER(4) Kind
 !CHECK:      l2: TypeParam type:INTEGER(4) Len
 !CHECK:    Subprogram scope: mf size=112 alignment=8
@@ -44,32 +44,32 @@ end module
 !CHECK:      str, INTENT(IN) size=24 offset=8: ObjectEntity dummy type: CHARACTER(n,1)
 !CHECK:      x1, INTENT(IN) size=40 offset=32: ObjectEntity dummy type: TYPE(pdt1(k1=1_4,l1=n))
 !CHECK:      DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=n)
-!CHECK:        a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=int(l1,kind=4)))
+!CHECK:        a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=__builtin_int(l1,kind=4)))
 !CHECK:        k1: TypeParam type:INTEGER(4) Kind init:1_4
 !CHECK:        l1: TypeParam type:INTEGER(4) Len init:n
-!CHECK:        DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=1_4,l2=int(l1,kind=4))
-!CHECK:          a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=1_4,l1=int(l2,kind=4))) shape: 1_8:1_8
+!CHECK:        DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=1_4,l2=__builtin_int(l1,kind=4))
+!CHECK:          a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=1_4,l1=__builtin_int(l2,kind=4))) shape: 1_8:1_8
 !CHECK:          j2 size=1 offset=0: ObjectEntity type: INTEGER(1)
 !CHECK:          k2: TypeParam type:INTEGER(4) Kind init:1_4
-!CHECK:          l2: TypeParam type:INTEGER(4) Len init:int(l1,kind=4)
-!CHECK:          DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=int(l2,kind=4))
-!CHECK:            a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=int(l1,kind=4)))
+!CHECK:          l2: TypeParam type:INTEGER(4) Len init:__builtin_int(l1,kind=4)
+!CHECK:          DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=__builtin_int(l2,kind=4))
+!CHECK:            a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=__builtin_int(l1,kind=4)))
 !CHECK:            k1: TypeParam type:INTEGER(4) Kind init:1_4
-!CHECK:            l1: TypeParam type:INTEGER(4) Len init:int(l2,kind=4)
+!CHECK:            l1: TypeParam type:INTEGER(4) Len init:__builtin_int(l2,kind=4)
 !CHECK:      DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=2_4,l2=n)
-!CHECK:        a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=int(l2,kind=4))) shape: 1_8:2_8
+!CHECK:        a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=__builtin_int(l2,kind=4))) shape: 1_8:2_8
 !CHECK:        j2 size=2 offset=0: ObjectEntity type: INTEGER(2)
 !CHECK:        k2: TypeParam type:INTEGER(4) Kind init:2_4
 !CHECK:        l2: TypeParam type:INTEGER(4) Len init:n
-!CHECK:        DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=2_4,l1=int(l2,kind=4))
-!CHECK:          a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=2_4,l2=int(l1,kind=4)))
+!CHECK:        DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=2_4,l1=__builtin_int(l2,kind=4))
+!CHECK:          a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=2_4,l2=__builtin_int(l1,kind=4)))
 !CHECK:          k1: TypeParam type:INTEGER(4) Kind init:2_4
-!CHECK:          l1: TypeParam type:INTEGER(4) Len init:int(l2,kind=4)
-!CHECK:          DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=2_4,l2=int(l1,kind=4))
-!CHECK:            a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=int(l2,kind=4))) shape: 1_8:2_8
+!CHECK:          l1: TypeParam type:INTEGER(4) Len init:__builtin_int(l2,kind=4)
+!CHECK:          DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=2_4,l2=__builtin_int(l1,kind=4))
+!CHECK:            a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=__builtin_int(l2,kind=4))) shape: 1_8:2_8
 !CHECK:            j2 size=2 offset=0: ObjectEntity type: INTEGER(2)
 !CHECK:            k2: TypeParam type:INTEGER(4) Kind init:2_4
-!CHECK:            l2: TypeParam type:INTEGER(4) Len init:int(l1,kind=4)
+!CHECK:            l2: TypeParam type:INTEGER(4) Len init:__builtin_int(l1,kind=4)
 
 submodule(m) sm
  contains
@@ -92,32 +92,32 @@ end submodule
 !CHECK:        str, INTENT(IN) size=24 offset=8: ObjectEntity dummy type: CHARACTER(n,1)
 !CHECK:        x1, INTENT(IN) size=40 offset=32: ObjectEntity dummy type: TYPE(pdt1(k1=1_4,l1=n))
 !CHECK:        DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=2_4,l2=n)
-!CHECK:          a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=int(l2,kind=4))) shape: 1_8:2_8
+!CHECK:          a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=__builtin_int(l2,kind=4))) shape: 1_8:2_8
 !CHECK:          j2 size=2 offset=0: ObjectEntity type: INTEGER(2)
 !CHECK:          k2: TypeParam type:INTEGER(4) Kind init:2_4
 !CHECK:          l2: TypeParam type:INTEGER(4) Len init:n
-!CHECK:          DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=2_4,l1=int(l2,kind=4))
-!CHECK:            a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=2_4,l2=int(l1,kind=4)))
+!CHECK:          DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=2_4,l1=__builtin_int(l2,kind=4))
+!CHECK:            a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=2_4,l2=__builtin_int(l1,kind=4)))
 !CHECK:            k1: TypeParam type:INTEGER(4) Kind init:2_4
-!CHECK:            l1: TypeParam type:INTEGER(4) Len init:int(l2,kind=4)
-!CHECK:            DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=2_4,l2=int(l1,kind=4))
-!CHECK:              a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=int(l2,kind=4))) shape: 1_8:2_8
+!CHECK:            l1: TypeParam type:INTEGER(4) Len init:__builtin_int(l2,kind=4)
+!CHECK:            DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=2_4,l2=__builtin_int(l1,kind=4))
+!CHECK:              a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=2_4,l1=__builtin_int(l2,kind=4))) shape: 1_8:2_8
 !CHECK:              j2 size=2 offset=0: ObjectEntity type: INTEGER(2)
 !CHECK:              k2: TypeParam type:INTEGER(4) Kind init:2_4
-!CHECK:              l2: TypeParam type:INTEGER(4) Len init:int(l1,kind=4)
+!CHECK:              l2: TypeParam type:INTEGER(4) Len init:__builtin_int(l1,kind=4)
 !CHECK:        DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=n)
-!CHECK:          a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=int(l1,kind=4)))
+!CHECK:          a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=__builtin_int(l1,kind=4)))
 !CHECK:          k1: TypeParam type:INTEGER(4) Kind init:1_4
 !CHECK:          l1: TypeParam type:INTEGER(4) Len init:n
-!CHECK:          DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=1_4,l2=int(l1,kind=4))
-!CHECK:            a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=1_4,l1=int(l2,kind=4))) shape: 1_8:1_8
+!CHECK:          DerivedType scope: size=72 alignment=8 instantiation of pdt2(k2=1_4,l2=__builtin_int(l1,kind=4))
+!CHECK:            a2 size=64 offset=8: ObjectEntity type: TYPE(pdt1(k1=1_4,l1=__builtin_int(l2,kind=4))) shape: 1_8:1_8
 !CHECK:            j2 size=1 offset=0: ObjectEntity type: INTEGER(1)
 !CHECK:            k2: TypeParam type:INTEGER(4) Kind init:1_4
-!CHECK:            l2: TypeParam type:INTEGER(4) Len init:int(l1,kind=4)
-!CHECK:            DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=int(l2,kind=4))
-!CHECK:              a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=int(l1,kind=4)))
+!CHECK:            l2: TypeParam type:INTEGER(4) Len init:__builtin_int(l1,kind=4)
+!CHECK:            DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=__builtin_int(l2,kind=4))
+!CHECK:              a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=__builtin_int(l1,kind=4)))
 !CHECK:              k1: TypeParam type:INTEGER(4) Kind init:1_4
-!CHECK:              l1: TypeParam type:INTEGER(4) Len init:int(l2,kind=4)
+!CHECK:              l1: TypeParam type:INTEGER(4) Len init:__builtin_int(l2,kind=4)
 
 program test
   use m

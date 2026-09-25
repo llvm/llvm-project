@@ -236,6 +236,13 @@ TEST_F(LlvmLibcPowfTest, SpecialNumbers) {
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-0.015625f, 26.0f));
 }
 
+TEST_F(LlvmLibcPowfTest, SubnormalBase) {
+  EXPECT_FP_EQ(0x1.0p-32f, LIBC_NAMESPACE::powf(0x1.0p-128f, 0.25f));
+  EXPECT_FP_EQ(0x1.0p96f, LIBC_NAMESPACE::powf(0x1.0p-128f, -0.75f));
+  EXPECT_FP_EQ(0x1.90a962p-33f, LIBC_NAMESPACE::powf(0x1.8p-130f, 0.25f));
+  EXPECT_FP_EQ(0x1.47238cp+32f, LIBC_NAMESPACE::powf(0x1.8p-130f, -0.25f));
+}
+
 #ifdef LIBC_TEST_FTZ_DAZ
 
 using namespace LIBC_NAMESPACE::testing;

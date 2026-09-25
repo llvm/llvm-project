@@ -5,8 +5,7 @@
 // RUN: %libomptarget-compileopt-generic %t.so && %libomptarget-run-generic 2>&1 | %fcheck-generic
 //
 // REQUIRES: gpu
-// https://github.com/llvm/llvm-project/issues/182119
-// UNSUPPORTED: intelgpu
+
 // clang-format on
 
 #ifdef SHARED

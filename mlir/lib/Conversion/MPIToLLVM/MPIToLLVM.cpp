@@ -15,7 +15,7 @@
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -55,24 +55,33 @@ std::pair<Value, Value> getRawPtrAndSize(const Location loc,
                                          Value memRef, int64_t rank,
                                          Type elType) {
   Type ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
+  Type i32Type = rewriter.getI32Type();
+  auto descriptorType = cast<LLVM::LLVMStructType>(memRef.getType());
+  // The offset and the sizes of a memref descriptor have the converted index
+  // type, which is not necessarily `i64`. Take it from the descriptor itself.
+  auto indexType = cast<IntegerType>(descriptorType.getBody()[2]);
+
   Value dataPtr =
       LLVM::ExtractValueOp::create(rewriter, loc, ptrType, memRef, 1);
-  Value offset = LLVM::ExtractValueOp::create(rewriter, loc,
-                                              rewriter.getI64Type(), memRef, 2);
+  Value offset =
+      LLVM::ExtractValueOp::create(rewriter, loc, indexType, memRef, 2);
   Value resPtr =
       LLVM::GEPOp::create(rewriter, loc, ptrType, elType, dataPtr, offset);
-  Value size = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
-                                        rewriter.getIndexAttr(1));
-  if (cast<LLVM::LLVMStructType>(memRef.getType()).getBody().size() > 3) {
+  Value size = LLVM::ConstantOp::create(rewriter, loc, i32Type,
+                                        rewriter.getI32IntegerAttr(1));
+  if (descriptorType.getBody().size() > 3) {
     for (int64_t i = 0; i < rank; ++i) {
       Value dim = LLVM::ExtractValueOp::create(rewriter, loc, memRef,
                                                ArrayRef<int64_t>{3, i});
-      dim = LLVM::TruncOp::create(rewriter, loc, rewriter.getI32Type(), dim);
-      size =
-          LLVM::MulOp::create(rewriter, loc, rewriter.getI32Type(), dim, size);
+      // The MPI interface counts elements in an `i32`, so adjust the
+      // index-typed extent to that width. Extents are non-negative, hence the
+      // zero extension.
+      if (indexType.getWidth() > 32)
+        dim = LLVM::TruncOp::create(rewriter, loc, i32Type, dim);
+      else if (indexType.getWidth() < 32)
+        dim = LLVM::ZExtOp::create(rewriter, loc, i32Type, dim);
+      size = LLVM::MulOp::create(rewriter, loc, i32Type, dim, size);
     }
-  } else {
-    size = arith::ConstantIntOp::create(rewriter, loc, 1, 32);
   }
   return {resPtr, size};
 }
@@ -912,12 +921,87 @@ struct AllReduceOpLowering : public ConvertOpToLLVMPattern<mpi::AllReduceOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ReduceScatterBlockOpLowering
+//===----------------------------------------------------------------------===//
+
+struct ReduceScatterBlockOpLowering
+    : public ConvertOpToLLVMPattern<mpi::ReduceScatterBlockOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(mpi::ReduceScatterBlockOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
+    Type i64 = rewriter.getI64Type();
+    Type elemType = op.getSendbuf().getType().getElementType();
+    int64_t sRank = op.getSendbuf().getType().getRank();
+    int64_t rRank = op.getRecvbuf().getType().getRank();
+
+    // ptrType `!llvm.ptr`
+    Type ptrType = LLVM::LLVMPointerType::get(context);
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+    auto mpiTraits = MPIImplTraits::get(moduleOp);
+    auto [sendPtr, sendSize] =
+        getRawPtrAndSize(loc, rewriter, adaptor.getSendbuf(), sRank, elemType);
+    auto [recvPtr, recvSize] =
+        getRawPtrAndSize(loc, rewriter, adaptor.getRecvbuf(), rRank, elemType);
+
+    // If input and output are the same, request in-place operation.
+    if (adaptor.getSendbuf() == adaptor.getRecvbuf()) {
+      sendPtr = LLVM::ConstantOp::create(
+          rewriter, loc, i64,
+          reinterpret_cast<int64_t>(mpiTraits->getInPlace()));
+      sendPtr = LLVM::IntToPtrOp::create(rewriter, loc, ptrType, sendPtr);
+    }
+
+    Value dataType = mpiTraits->getDataType(loc, rewriter, elemType);
+    Value mpiOp = mpiTraits->getMPIOp(loc, rewriter, op.getOp());
+    Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
+
+    Value nRanks =
+        createOrFoldCommSize(rewriter, loc, op.getComm(), adaptor.getComm());
+    Value totalExpected =
+        LLVM::MulOp::create(rewriter, loc, i32, recvSize, nRanks);
+    Value sizeIsValid = LLVM::ICmpOp::create(
+        rewriter, loc, LLVM::ICmpPredicate::eq, sendSize, totalExpected);
+    cf::AssertOp::create(rewriter, loc, sizeIsValid,
+                         "Send buffer's size must be the receive buffer's size "
+                         "times the number of ranks");
+
+    // 'int MPI_Reduce_scatter_block(const void *sendbuf, void *recvbuf,
+    //     int recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)'
+    auto funcType = LLVM::LLVMFunctionType::get(
+        i32, {ptrType, ptrType, i32, dataType.getType(), mpiOp.getType(),
+              comm.getType()});
+    // get or create function declaration:
+    LLVM::LLVMFuncOp funcDecl = getOrDefineFunction(
+        moduleOp, loc, rewriter, "MPI_Reduce_scatter_block", funcType);
+
+    // replace op with function call
+    auto funcCall = LLVM::CallOp::create(
+        rewriter, loc, funcDecl,
+        ValueRange{sendPtr, recvPtr, recvSize, dataType, mpiOp, comm});
+
+    if (op.getRetval())
+      rewriter.replaceOp(op, funcCall.getResult());
+    else
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertToLLVMPatternInterface implementation
 //===----------------------------------------------------------------------===//
 
 /// Implement the interface to convert Func to LLVM.
 struct FuncToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  FuncToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   void populateConvertToLLVMConversionPatterns(
@@ -943,7 +1027,7 @@ void mpi::populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
   patterns.add<CommRankOpLowering, CommSizeOpLowering, CommSplitOpLowering,
                CommWorldOpLowering, FinalizeOpLowering, InitOpLowering,
                SendOpLowering, RecvOpLowering, AllGatherOpLowering,
-               AllReduceOpLowering>(converter);
+               AllReduceOpLowering, ReduceScatterBlockOpLowering>(converter);
 }
 
 void mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {

@@ -890,6 +890,21 @@ TEST(ParameterHints, DeducingThis) {
                        ExpectedHint{"Param: ", "3"}, ExpectedHint{"C: ", "4"});
 }
 
+TEST(ParameterHints, DependentDeducingThis) {
+  assertParameterHints(R"cpp(
+   template <typename T>
+   struct S {
+      void f1(this S& obj);
+      void f2(this S& obj, int x, int y);
+      void g(S s) {
+        s.f1();  // no crash
+        s.f2($x[[42]], $y[[43]]);
+      }
+    };
+  )cpp",
+                       ExpectedHint{"x: ", "x"}, ExpectedHint{"y: ", "y"});
+}
+
 TEST(ParameterHints, Macros) {
   // Handling of macros depends on where the call's argument list comes from.
 
@@ -1236,6 +1251,21 @@ TEST(ParameterHints, IncludeAtNonGlobalScope) {
       0u);
 }
 
+TEST(ParameterHints, Issue220359_NoCrash) {
+  assertParameterHints(R"cpp(
+    struct S { 
+      S(int, ...);
+    };
+    template <typename... Args>
+    void f(Args... args) {
+      S s(1, args...);
+    }
+    void c() {
+      f(2);
+    }
+  )cpp");
+}
+
 TEST(TypeHints, Smoke) {
   assertTypeHints(R"cpp(
     auto $waldo[[waldo]] = 42;
@@ -1303,6 +1333,17 @@ TEST(TypeHints, Lambda) {
   assertTypeHints("auto $L[[x]] = <:$ret[[:>]]{return 42;};",
                   ExpectedHint{": (lambda)", "L"},
                   ExpectedHint{"-> int", "ret"});
+
+  // The return type follows the noexcept specifier in a lambda declarator.
+  // https://github.com/clangd/clangd/issues/2696
+  assertTypeHints(R"cpp(
+    void f() {
+      []() $ret[[noexcept]] {};
+      [] $retNoParams[[noexcept]] {};
+    }
+  )cpp",
+                  ExpectedHint{"-> void", "ret"},
+                  ExpectedHint{"-> void", "retNoParams"});
 }
 
 // Structured bindings tests.
@@ -1397,6 +1438,8 @@ TEST(TypeHints, ReturnTypeDeduction) {
 
     auto f5($noreturn[[)]] {}
 
+    auto f6() $retNoexcept[[noexcept]] { return 42; }
+
     // `auto` conversion operator
     struct A {
       operator auto($retConv[[)]] { return 42; }
@@ -1410,7 +1453,7 @@ TEST(TypeHints, ReturnTypeDeduction) {
   )cpp",
       ExpectedHint{"-> int", "ret1a"}, ExpectedHint{"-> int", "ret1b"},
       ExpectedHint{"-> int &", "ret2"}, ExpectedHint{"-> void", "noreturn"},
-      ExpectedHint{"-> int", "retConv"});
+      ExpectedHint{"-> int", "retNoexcept"}, ExpectedHint{"-> int", "retConv"});
 }
 
 TEST(TypeHints, DependentType) {

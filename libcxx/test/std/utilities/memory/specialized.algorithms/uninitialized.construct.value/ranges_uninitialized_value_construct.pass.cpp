@@ -41,6 +41,54 @@ struct NotDefaultCtrable {
 static_assert(
     !std::is_invocable_v<decltype(std::ranges::uninitialized_value_construct), NotDefaultCtrable*, NotDefaultCtrable*>);
 
+TEST_CONSTEXPR_CXX26 bool test() {
+  constexpr int n = 3;
+  std::allocator<int> alloc;
+
+  // (iter, sentinel) overload.
+  {
+    int* out    = alloc.allocate(n);
+    auto result = std::ranges::uninitialized_value_construct(out, out + n);
+    assert(result == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i] == 0);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // (range) overload.
+  {
+    int* out       = alloc.allocate(n);
+    auto out_range = std::ranges::subrange(out, out + n);
+    auto result    = std::ranges::uninitialized_value_construct(out_range);
+    assert(result == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i] == 0);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // Any existing values should be overwritten by value constructors.
+  {
+    constexpr int N = 5;
+    int buffer[N]   = {42, 42, 42, 42, 42};
+
+    std::ranges::uninitialized_value_construct(buffer, buffer + 1);
+    assert(buffer[0] == 0);
+    assert(buffer[1] == 42);
+
+    std::ranges::uninitialized_value_construct(buffer, buffer + N);
+    assert(buffer[0] == 0);
+    assert(buffer[1] == 0);
+    assert(buffer[2] == 0);
+    assert(buffer[3] == 0);
+    assert(buffer[4] == 0);
+  }
+  return true;
+}
+
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
   {
@@ -132,23 +180,6 @@ int main(int, char**) {
     Counted::reset();
   }
 
-  // Any existing values should be overwritten by value constructors.
-  {
-    constexpr int N = 5;
-    int buffer[N] = {42, 42, 42, 42, 42};
-
-    std::ranges::uninitialized_value_construct(buffer, buffer + 1);
-    assert(buffer[0] == 0);
-    assert(buffer[1] == 42);
-
-    std::ranges::uninitialized_value_construct(buffer, buffer + N);
-    assert(buffer[0] == 0);
-    assert(buffer[1] == 0);
-    assert(buffer[2] == 0);
-    assert(buffer[3] == 0);
-    assert(buffer[4] == 0);
-  }
-
   // An exception is thrown while objects are being created -- the existing objects should stay
   // valid. (iterator, sentinel) overload.
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -182,6 +213,11 @@ int main(int, char**) {
     Counted::reset();
   }
 #endif // TEST_HAS_NO_EXCEPTIONS
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif // TEST_STD_VER >= 26
 
   return 0;
 }

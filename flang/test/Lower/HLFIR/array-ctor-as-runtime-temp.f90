@@ -8,8 +8,8 @@ subroutine test_loops()
 end subroutine
 ! CHECK-LABEL:   func.func @_QMarrayctorPtest_loops() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xi64> {bindc_name = ".rt.arrayctor.vector"}
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".tmp.arrayctor"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".tmp.arrayctor"}>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
@@ -63,10 +63,9 @@ subroutine test_arrays(a)
   call takes_int([a, a])
 end subroutine
 ! CHECK-LABEL: func.func @_QMarrayctorPtest_arrays(
-! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.array<10xi64> {bindc_name = ".rt.arrayctor.vector"}
-! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".tmp.arrayctor"}
+! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
+! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".tmp.arrayctor"}>
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ea"
-! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
@@ -74,10 +73,9 @@ end subroutine
 ! CHECK:  %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_8]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#1 : (index) -> i64
 ! CHECK:  %[[VAL_11:.*]] = arith.muli %[[VAL_7]], %[[VAL_10]] : i64
-! CHECK:  %[[VAL_12:.*]] = arith.addi %[[VAL_4]], %[[VAL_11]] : i64
-! CHECK:  %[[VAL_20:.*]] = arith.addi %[[VAL_12]], %{{.*}} : i64
+! CHECK:  %[[VAL_20:.*]] = arith.addi %[[VAL_11]], %{{.*}} : i64
 ! CHECK:  %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> index
-! CHECK:  %[[VAL_22:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] {bindc_name = ".tmp.arrayctor", uniq_name = ""}
+! CHECK:  %[[VAL_22:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_21]] <{bindc_name = ".tmp.arrayctor", uniq_name = ""}>
 ! CHECK:  %[[VAL_23:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_23]]) {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:  %[[VAL_25:.*]] = fir.embox %[[VAL_24]]#1(%[[VAL_23]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -96,8 +94,8 @@ end subroutine
 subroutine test_arrays_unpredictable_size()
   call takes_int([rank1(), rank3(), rank1()])
 ! CHECK-LABEL: func.func @_QMarrayctorPtest_arrays_unpredictable_size() {
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<10xi64> {bindc_name = ".rt.arrayctor.vector"}
-! CHECK:  %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".tmp.arrayctor"}
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<10xi64> <{bindc_name = ".rt.arrayctor.vector"}>
+! CHECK:  %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".tmp.arrayctor"}>
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>

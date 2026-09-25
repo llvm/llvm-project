@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx801 < %s | FileCheck -check-prefixes=CHECK,GFX801 %s
+; RUN: llc -mtriple=amdgpu9.0a--amdhsa < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.08--amdhsa < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
+; RUN: llc -mtriple=amdgpu8.01--amdhsa < %s | FileCheck -check-prefixes=CHECK,GFX801 %s
 
 ; COM: Adapted from agpr-register-count.ll
 ; COM: GFX900 and below should not have .agpr_count present in the metadata

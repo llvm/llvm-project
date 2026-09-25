@@ -17,7 +17,7 @@
 func.func @sparse_foreach_constant() -> () {
   %cst = arith.constant sparse<[[2, 1], [1, 1], [1, 2]], [1.0, 5.0, 6.0]> : tensor<8x7xf32>
   // Make use the sparse constant are properly sorted based on the requested order.
-  sparse_tensor.foreach in %cst { order = affine_map<(d0, d1) -> (d1, d0)> } : tensor<8x7xf32> do {
+  sparse_tensor.foreach in %cst order = affine_map<(d0, d1) -> (d1, d0)> : tensor<8x7xf32> do {
   ^bb0(%arg0: index, %arg1: index, %arg2: f32):
     "test.use" (%arg0, %arg1, %arg2): (index,index,f32)->()
   }
@@ -42,13 +42,13 @@ func.func @sparse_foreach_constant() -> () {
 // C_HECK-SAME:                                       %[[VAL_0:.*]]: tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // C_HECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// C_HECK-DAG:       %[[VAL_3:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?xf64,
-// C_HECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf64,
+// C_HECK-DAG:       %[[VAL_3:.*]] = sparse_tensor.positions %[[VAL_0]] level = 0 : tensor<?x?xf64,
+// C_HECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 0 : tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.slice.offset %[[VAL_0]] at 0 : tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.slice.stride %[[VAL_0]] at 0 : tensor<?x?xf64,
-// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<?x?xf64,
-// C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xf64,
+// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1 : tensor<?x?xf64,
+// C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 1 : tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.slice.offset %[[VAL_0]] at 1 : tensor<?x?xf64,
 // C_HECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.slice.stride %[[VAL_0]] at 1 : tensor<?x?xf64,
@@ -102,10 +102,10 @@ func.func @foreach_print_slice_dyn(%A: tensor<?x?xf64, #CSR_SLICE_DYN>) {
 // C_HECK-DAG:       %[[VAL_2:.*]] = arith.constant 2 : index
 // C_HECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // C_HECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
-// C_HECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<4x4xf64,
-// C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<4x4xf64,
-// C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<4x4xf64,
-// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<4x4xf64,
+// C_HECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] level = 0 : tensor<4x4xf64,
+// C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 0 : tensor<4x4xf64,
+// C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1 : tensor<4x4xf64,
+// C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 1 : tensor<4x4xf64,
 // C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<4x4xf64,
 // C_HECK-DAG:       %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // C_HECK:           %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -149,7 +149,7 @@ func.func @foreach_print_slice(%A: tensor<4x4xf64, #CSR_SLICE>) {
 // C_HECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // C_HECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // C_HECK-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
-// C_HECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<4x4x4xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// C_HECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1 : tensor<4x4x4xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // C_HECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<4x4x4xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // C_HECK:           scf.for %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_1]] step %[[VAL_3]] {
 // C_HECK:             %[[VAL_8:.*]] = arith.muli %[[VAL_7]], %[[VAL_4]] : index
@@ -169,4 +169,17 @@ func.func @foreach_bcoo(%A: tensor<4x4x4xf64, #BCOO>) {
     "test.use" (%v) : (f64) -> ()
   }
   return
+}
+
+#Symbolic = #sparse_tensor.encoding<{
+  map = [c](i, j) -> (c * 3 * i : dense, i : dense, j : compressed)
+}>
+
+// CHECK-LABEL: func.func @symbolic_crd_translate(
+// CHECK: sparse_tensor.crd_translate dim_to_lvl
+func.func @symbolic_crd_translate(%i: index, %j: index)
+    -> (index, index, index) {
+  %l0, %l1, %l2 = sparse_tensor.crd_translate dim_to_lvl [%i, %j]
+      as #Symbolic : index, index, index
+  return %l0, %l1, %l2 : index, index, index
 }

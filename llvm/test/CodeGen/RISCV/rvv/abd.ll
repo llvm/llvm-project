@@ -112,9 +112,7 @@ define <vscale x 4 x i32> @sabd_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) 
 ; ZVABD-LABEL: sabd_s:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; ZVABD-NEXT:    vmin.vv v12, v8, v10
-; ZVABD-NEXT:    vmax.vv v8, v8, v10
-; ZVABD-NEXT:    vsub.vv v8, v8, v12
+; ZVABD-NEXT:    vabd.vv v8, v8, v10
 ; ZVABD-NEXT:    ret
   %a.sext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %b.sext = sext <vscale x 4 x i32> %b to <vscale x 4 x i64>
@@ -161,9 +159,7 @@ define <vscale x 2 x i64> @sabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) 
 ; ZVABD-LABEL: sabd_d:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; ZVABD-NEXT:    vmin.vv v12, v8, v10
-; ZVABD-NEXT:    vmax.vv v8, v8, v10
-; ZVABD-NEXT:    vsub.vv v8, v8, v12
+; ZVABD-NEXT:    vabd.vv v8, v8, v10
 ; ZVABD-NEXT:    ret
   %a.sext = sext <vscale x 2 x i64> %a to <vscale x 2 x i128>
   %b.sext = sext <vscale x 2 x i64> %b to <vscale x 2 x i128>
@@ -187,9 +183,7 @@ define <vscale x 2 x i64> @sabd_d_promoted_ops(<vscale x 2 x i32> %a, <vscale x 
 ; ZVABD-LABEL: sabd_d_promoted_ops:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v10, v8, v10
+; ZVABD-NEXT:    vabd.vv v10, v8, v9
 ; ZVABD-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v8, v10
 ; ZVABD-NEXT:    ret
@@ -308,9 +302,7 @@ define <vscale x 4 x i32> @uabd_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) 
 ; ZVABD-LABEL: uabd_s:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; ZVABD-NEXT:    vminu.vv v12, v8, v10
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v10
-; ZVABD-NEXT:    vsub.vv v8, v8, v12
+; ZVABD-NEXT:    vabdu.vv v8, v8, v10
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %b.zext = zext <vscale x 4 x i32> %b to <vscale x 4 x i64>
@@ -357,9 +349,7 @@ define <vscale x 2 x i64> @uabd_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) 
 ; ZVABD-LABEL: uabd_d:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; ZVABD-NEXT:    vminu.vv v12, v8, v10
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v10
-; ZVABD-NEXT:    vsub.vv v8, v8, v12
+; ZVABD-NEXT:    vabdu.vv v8, v8, v10
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 2 x i64> %a to <vscale x 2 x i128>
   %b.zext = zext <vscale x 2 x i64> %b to <vscale x 2 x i128>
@@ -383,9 +373,7 @@ define <vscale x 2 x i64> @uabd_d_promoted_ops(<vscale x 2 x i32> %a, <vscale x 
 ; ZVABD-LABEL: uabd_d_promoted_ops:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v10, v8, v10
+; ZVABD-NEXT:    vabdu.vv v10, v8, v9
 ; ZVABD-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v8, v10
 ; ZVABD-NEXT:    ret
@@ -412,9 +400,7 @@ define <vscale x 4 x i32> @uabd_non_matching_extension(<vscale x 4 x i32> %a, <v
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf4 v12, v10
-; ZVABD-NEXT:    vminu.vv v10, v8, v12
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v12
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vabdu.vv v8, v8, v12
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %b.zext = zext <vscale x 4 x i8> %b to <vscale x 4 x i64>
@@ -471,15 +457,115 @@ define <vscale x 4 x i32> @uabd_non_matching_promotion(<vscale x 4 x i8> %a, <vs
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf4 v10, v8
 ; ZVABD-NEXT:    vsext.vf4 v12, v9
-; ZVABD-NEXT:    vmin.vv v8, v10, v12
-; ZVABD-NEXT:    vmax.vv v10, v10, v12
-; ZVABD-NEXT:    vsub.vv v8, v10, v8
+; ZVABD-NEXT:    vabd.vv v8, v10, v12
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.zext = sext <vscale x 4 x i8> %b to <vscale x 4 x i32>
   %sub = sub <vscale x 4 x i32> %a.zext, %b.zext
   %abs = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> %sub, i1 true)
   ret <vscale x 4 x i32> %abs
+}
+
+define <vscale x 8 x i16> @vwabda(<vscale x 8 x i16> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: vwabda:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmin.vv v12, v10, v11
+; CHECK-NEXT:    vmax.vv v10, v10, v11
+; CHECK-NEXT:    vsub.vv v10, v10, v12
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: vwabda:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vwabda.vv v8, v10, v11
+; ZVABD-NEXT:    ret
+  %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
+  %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
+  %sub = sub <vscale x 8 x i16> %a.sext, %b.sext
+  %abs = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %sub, i1 true)
+  %ret = add <vscale x 8 x i16> %acc, %abs
+  ret <vscale x 8 x i16> %ret
+}
+
+define <vscale x 8 x i16> @vwabdau(<vscale x 8 x i16> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: vwabdau:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vminu.vv v12, v10, v11
+; CHECK-NEXT:    vmaxu.vv v10, v10, v11
+; CHECK-NEXT:    vsub.vv v10, v10, v12
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: vwabdau:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; ZVABD-NEXT:    vwabdau.vv v8, v10, v11
+; ZVABD-NEXT:    ret
+  %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
+  %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
+  %sub = sub <vscale x 8 x i16> %a.zext, %b.zext
+  %abs = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %sub, i1 true)
+  %ret = add <vscale x 8 x i16> %acc, %abs
+  ret <vscale x 8 x i16> %ret
+}
+
+define <vscale x 8 x i32> @vwabda_sext_diff(<vscale x 8 x i32> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: vwabda_sext_diff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmin.vv v14, v12, v13
+; CHECK-NEXT:    vmax.vv v12, v12, v13
+; CHECK-NEXT:    vsub.vv v14, v12, v14
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v14
+; CHECK-NEXT:    vwaddu.wv v8, v8, v12
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: vwabda_sext_diff:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vsext.vf2 v14, v13
+; ZVABD-NEXT:    vsext.vf2 v16, v12
+; ZVABD-NEXT:    vwabda.vv v8, v16, v14
+; ZVABD-NEXT:    ret
+  %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
+  %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
+  %sub = sub <vscale x 8 x i16> %a.sext, %b.sext
+  %abs = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %sub, i1 true)
+  %abs.zext = zext <vscale x 8 x i16> %abs to <vscale x 8 x i32>
+  %ret = add <vscale x 8 x i32> %acc, %abs.zext
+  ret <vscale x 8 x i32> %ret
+}
+
+define <vscale x 8 x i32> @vwabdau_zext_diff(<vscale x 8 x i32> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: vwabdau_zext_diff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vminu.vv v14, v12, v13
+; CHECK-NEXT:    vmaxu.vv v12, v12, v13
+; CHECK-NEXT:    vsub.vv v14, v12, v14
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v14
+; CHECK-NEXT:    vwaddu.wv v8, v8, v12
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: vwabdau_zext_diff:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v14, v13
+; ZVABD-NEXT:    vzext.vf2 v16, v12
+; ZVABD-NEXT:    vwabdau.vv v8, v16, v14
+; ZVABD-NEXT:    ret
+  %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
+  %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
+  %sub = sub <vscale x 8 x i16> %a.zext, %b.zext
+  %abs = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %sub, i1 true)
+  %abs.zext = zext <vscale x 8 x i16> %abs to <vscale x 8 x i32>
+  %ret = add <vscale x 8 x i32> %acc, %abs.zext
+  ret <vscale x 8 x i32> %ret
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

@@ -31,6 +31,10 @@ void DynamicLoaderWasmDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
+void DynamicLoaderWasmDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
+
 llvm::StringRef DynamicLoaderWasmDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
          "loads/unloads in WebAssembly engines.";

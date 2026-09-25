@@ -3,7 +3,7 @@
 // RUN: clang-tidy %s -checks=-*,modernize-redundant-void-arg -- -std=c17 -Wno-strict-prototypes | count 0
 // RUN: %check_clang_tidy -std=c23-or-later -check-suffixes=C23 %s modernize-redundant-void-arg %t
 
-#define NULL 0
+#include <stddef.h>
 
 extern int i;
 

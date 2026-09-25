@@ -11,8 +11,8 @@ declare void @llvm.reset.fpmode()
 define i64 @func_get_fpenv() #0 {
   ; CHECK-LABEL: name: func_get_fpenv
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[GET_FPENV:%[0-9]+]]:_(s64) = G_GET_FPENV
-  ; CHECK-NEXT:   $x0 = COPY [[GET_FPENV]](s64)
+  ; CHECK-NEXT:   [[GET_FPENV:%[0-9]+]]:_(i64) = G_GET_FPENV
+  ; CHECK-NEXT:   $x0 = COPY [[GET_FPENV]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
   %fpenv = call i64 @llvm.get.fpenv.i64()
@@ -24,8 +24,8 @@ define void @func_set_fpenv(i64 %fpenv) #0 {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   G_SET_FPENV [[COPY]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   G_SET_FPENV [[COPY]](i64)
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   call void @llvm.set.fpenv.i64(i64 %fpenv)
@@ -45,8 +45,8 @@ entry:
 define i32 @func_get_fpmode() #0 {
   ; CHECK-LABEL: name: func_get_fpmode
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[GET_FPMODE:%[0-9]+]]:_(s32) = G_GET_FPMODE
-  ; CHECK-NEXT:   $w0 = COPY [[GET_FPMODE]](s32)
+  ; CHECK-NEXT:   [[GET_FPMODE:%[0-9]+]]:_(i32) = G_GET_FPMODE
+  ; CHECK-NEXT:   $w0 = COPY [[GET_FPMODE]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %fpmode = call i32 @llvm.get.fpmode.i32()
@@ -58,8 +58,8 @@ define void @func_set_fpmode(i32 %fpmode) #0 {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   G_SET_FPMODE [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   G_SET_FPMODE [[COPY]](i32)
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   call void @llvm.set.fpmode.i32(i32 %fpmode)

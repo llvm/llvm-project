@@ -109,6 +109,19 @@ auto k = c_<1>; // expected-note {{in instantiation of variable}}
 
 }
 
+namespace GH207565 {
+    template <auto... Cs> struct S {
+    static constexpr auto cl  = [](auto... args) { return (..., (Cs(), args)); };
+    static constexpr auto cl2 = []() { return (..., Cs()); }; // expected-error {{called object type 'int' is not a function or function pointer}} \
+                                                             // expected-note {{while substituting into a lambda expression here}}
+};
+
+template struct S<>;
+template struct S<1>; // expected-note {{in instantiation}}
+
+}
+
+
 #endif
 #if __cplusplus >= 201702L
 

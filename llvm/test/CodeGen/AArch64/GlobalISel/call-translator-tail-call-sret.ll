@@ -54,8 +54,8 @@ define void @dont_tail_call_explicit_sret_alloca_dummyusers(ptr %ptr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.ptr)
-  ; CHECK-NEXT:   G_STORE [[LOAD]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %ir.l)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[COPY]](p0) :: (load (i64) from %ir.ptr)
+  ; CHECK-NEXT:   G_STORE [[LOAD]](i64), [[FRAME_INDEX]](p0) :: (store (i64) into %ir.l)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
@@ -74,8 +74,8 @@ define void @dont_tail_call_tailcall_explicit_sret_gep(ptr %ptr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](i64)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x8 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
@@ -94,8 +94,8 @@ define i64 @dont_tail_call_sret_alloca_returned() {
   ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.l)
-  ; CHECK-NEXT:   $x0 = COPY [[LOAD]](s64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (i64) from %ir.l)
+  ; CHECK-NEXT:   $x0 = COPY [[LOAD]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %l = alloca i64, align 8
   tail call void @test_explicit_sret(ptr %l)

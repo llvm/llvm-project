@@ -16,7 +16,7 @@ define void @test_tc_too_small(ptr %ptr.1, ptr %ptr.2, ptr %ptr.3, ptr %ptr.4, i
 entry:
   br label %loop
 
-loop:                                             ; preds = %bb54, %bb37
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.1 = getelementptr inbounds i16, ptr %ptr.1, i64 %iv
   %lv.1 = load i16, ptr %gep.1, align 2
@@ -71,7 +71,7 @@ define void @test_tc_big_enough(ptr %ptr.1, ptr %ptr.2, ptr %ptr.3, ptr %ptr.4, 
 entry:
   br label %loop
 
-loop:                                             ; preds = %bb54, %bb37
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.1 = getelementptr inbounds i16, ptr %ptr.1, i64 %iv
   %lv.1 = load i16, ptr %gep.1, align 2
@@ -126,7 +126,7 @@ define void @test_tc_unknown(ptr %ptr.1, ptr %ptr.2, ptr %ptr.3, ptr %ptr.4, i64
 entry:
   br label %loop
 
-loop:                                             ; preds = %bb54, %bb37
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.1 = getelementptr inbounds i16, ptr %ptr.1, i64 %iv
   %lv.1 = load i16, ptr %gep.1, align 2

@@ -150,8 +150,6 @@ protected:
 
   iterator FindIteratorForPath(ConstString path);
 
-  const_iterator FindIteratorForPath(ConstString path) const;
-
   collection m_pairs;
   mutable std::mutex m_pairs_mutex;
 

@@ -126,6 +126,20 @@ void MarkLive::run() {
       enqueueRetainedSegments(obj);
     }
 
+  // `__wasm_{get,set}_tls_base` are called from synthetic init functions (e.g.
+  // `__wasm_init_tls`, `__wasm_init_memory`) via raw `call` instructions that
+  // carry no relocations, so the mark phase below cannot discover the functions
+  // they in turn call (e.g. the cooperative-threading
+  // `context.get`/`context.set` builtins). They are already marked live, but
+  // their defining chunks were never enqueued; enqueue them here so their
+  // relocations are followed. This mirrors the handling of ctor functions
+  // reached via `__wasm_call_ctors`.
+  for (Symbol *sym : {static_cast<Symbol *>(ctx.sym.getTLSBase),
+                      static_cast<Symbol *>(ctx.sym.setTLSBase)})
+    if (sym)
+      if (InputChunk *c = sym->getChunk())
+        enqueue(c);
+
   mark();
 
   // If we have any non-discarded init functions, mark `__wasm_call_ctors` as

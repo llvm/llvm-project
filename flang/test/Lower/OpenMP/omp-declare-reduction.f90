@@ -4,7 +4,7 @@
 
 subroutine declare_red()
   integer :: my_var
-!CHECK: omp.declare_reduction @my_red : i32 init {
+!CHECK: omp.declare_reduction @_QQFdeclare_redmy_red_i32 : i32 init {
 !CHECK: ^bb0(%[[OMP_ORIG_ARG_I:.*]]: i32):
 !CHECK:    %[[OMP_PRIV:.*]] = fir.alloca i32
 !CHECK:    %[[OMP_ORIG:.*]] = fir.alloca i32

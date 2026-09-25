@@ -28,7 +28,7 @@ end subroutine
   call s2()
 end
 
-! CHECK: fir.global common @var_storage_(dense<0> : vector<1xi8>) {alignment = 1 : i64} : !fir.array<1xi8>
+! CHECK: fir.global common @var_storage_(dense<0> : vector<1xi8>) <{alignment = 1 : i64}> : !fir.array<1xi8>
 
 ! CHECK-LABEL: func.func @_QPs1
 ! CHECK: hlfir.declare %{{.*}} typeparams %c1 storage(%{{.*}}[0]) {uniq_name = "_QMm_common_varEvar"} : (!fir.ref<!fir.char<1>>, index, !fir.ref<!fir.array<1xi8>>) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)

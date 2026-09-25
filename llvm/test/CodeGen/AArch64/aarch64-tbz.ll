@@ -135,8 +135,8 @@ define void @test3(i64 %A, i64 %B) {
 ; CHECK-GIO0-NEXT:  .LBB2_1: // %entry
 ; CHECK-GIO0-NEXT:    ldr x0, [sp] // 8-byte Reload
 ; CHECK-GIO0-NEXT:    mov w8, w0
-; CHECK-GIO0-NEXT:    tbnz w8, #28, .LBB2_3
-; CHECK-GIO0-NEXT:    b .LBB2_2
+; CHECK-GIO0-NEXT:    tbz w8, #28, .LBB2_2
+; CHECK-GIO0-NEXT:    b .LBB2_3
 ; CHECK-GIO0-NEXT:  .LBB2_2: // %if.then2
 ; CHECK-GIO0-NEXT:    ldr x1, [sp, #8] // 8-byte Reload
 ; CHECK-GIO0-NEXT:    ldr x0, [sp] // 8-byte Reload
@@ -187,8 +187,8 @@ define void @test4(i64 %A, i64 %B) {
 ; CHECK-GIO0-NEXT:    b .LBB3_1
 ; CHECK-GIO0-NEXT:  .LBB3_1: // %entry
 ; CHECK-GIO0-NEXT:    ldr x8, [sp] // 8-byte Reload
-; CHECK-GIO0-NEXT:    tbnz x8, #35, .LBB3_3
-; CHECK-GIO0-NEXT:    b .LBB3_2
+; CHECK-GIO0-NEXT:    tbz x8, #35, .LBB3_2
+; CHECK-GIO0-NEXT:    b .LBB3_3
 ; CHECK-GIO0-NEXT:  .LBB3_2: // %if.then2
 ; CHECK-GIO0-NEXT:    ldr x1, [sp, #8] // 8-byte Reload
 ; CHECK-GIO0-NEXT:    ldr x0, [sp] // 8-byte Reload
@@ -227,8 +227,8 @@ define i32 @tbzfromextract(<8 x i8> %b) {
 ; CHECK-GIO0-NEXT:    // implicit-def: $q0
 ; CHECK-GIO0-NEXT:    fmov d0, d1
 ; CHECK-GIO0-NEXT:    umov w8, v0.b[0]
-; CHECK-GIO0-NEXT:    tbnz w8, #31, .LBB4_2
-; CHECK-GIO0-NEXT:    b .LBB4_1
+; CHECK-GIO0-NEXT:    tbz w8, #31, .LBB4_1
+; CHECK-GIO0-NEXT:    b .LBB4_2
 ; CHECK-GIO0-NEXT:  .LBB4_1: // %land.rhs
 ; CHECK-GIO0-NEXT:    mov w0, #1 // =0x1
 ; CHECK-GIO0-NEXT:    ret

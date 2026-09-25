@@ -1,7 +1,5 @@
-; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
-
-target triple = "amdgcn-amd-amdhsa"
+; RUN: opt -passes=amdgpu-attributor -mtriple=amdgpu7.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: opt -passes=amdgpu-attributor -mtriple=amdgpu9.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 

@@ -25,7 +25,6 @@
 
 namespace clang {
 namespace interp {
-class Program;
 class ByteCodeEmitter;
 class Pointer;
 enum PrimType : uint8_t;
@@ -37,10 +36,10 @@ class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
+    /// Descriptor of the local.
+    const Descriptor *Desc;
     /// Offset of the local in frame.
     unsigned Offset;
-    /// Descriptor of the local.
-    Descriptor *Desc;
     /// If the cleanup for this local should be emitted.
     bool EnabledByDefault = true;
   };
@@ -101,6 +100,7 @@ public:
   enum class FunctionKind {
     Normal,
     Ctor,
+    CopyOrMoveCtor,
     Dtor,
     LambdaStaticInvoker,
     LambdaCallOperator,
@@ -109,10 +109,14 @@ public:
 
   struct ParamDescriptor {
     const Descriptor *Desc;
+    /// Offset on the stack.
     unsigned Offset;
+    /// Offset in the InterpFrame.
+    unsigned BlockOffset;
     PrimType T;
-    ParamDescriptor(const Descriptor *Desc, unsigned Offset, PrimType T)
-        : Desc(Desc), Offset(Offset), T(T) {}
+    ParamDescriptor(const Descriptor *Desc, unsigned Offset,
+                    unsigned BlockOffset, PrimType T)
+        : Desc(Desc), Offset(Offset), BlockOffset(BlockOffset), T(T) {}
   };
 
   /// Returns the size of the function's local stack.
@@ -143,7 +147,9 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Offset) const;
+  const ParamDescriptor &getParamDescriptor(unsigned Index) const {
+    return ParamDescriptors[Index];
+  }
 
   /// Checks if the first argument is a RVO pointer.
   bool hasRVO() const { return HasRVO; }
@@ -171,7 +177,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call.
-  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
+  bool isValid() const { return IsValid; }
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
@@ -179,7 +185,13 @@ public:
   bool isConstexpr() const { return Constexpr; }
 
   /// Checks if the function is a constructor.
-  bool isConstructor() const { return Kind == FunctionKind::Ctor; }
+  bool isConstructor() const {
+    return Kind == FunctionKind::Ctor || Kind == FunctionKind::CopyOrMoveCtor;
+  }
+  bool isCopyOrMoveConstructor() const {
+    return Kind == FunctionKind::CopyOrMoveCtor;
+  }
+
   /// Checks if the function is a destructor.
   bool isDestructor() const { return Kind == FunctionKind::Dtor; }
   /// Checks if the function is copy or move operator.
@@ -211,6 +223,12 @@ public:
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
   bool hasThisPointer() const { return HasThisPointer; }
+  bool hasExplicitThisPointer() const {
+    return HasThisPointer && ExplicitThisPointer;
+  }
+  bool hasImplicitThisPointer() const {
+    return HasThisPointer && !ExplicitThisPointer;
+  }
 
   /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
@@ -219,37 +237,25 @@ public:
   bool isDefined() const { return Defined; }
 
   bool isVariadic() const { return Variadic; }
-
-  unsigned getNumParams() const { return ParamDescriptors.size(); }
+  /// Returs the full number of parameters, including implicit instance and RVO
+  /// pointers.
+  unsigned getNumParams() const {
+    return ParamDescriptors.size() + hasThisPointer() + hasRVO();
+  }
 
   /// Returns the number of parameter this function takes when it's called,
   /// i.e excluding the instance pointer and the RVO pointer.
   unsigned getNumWrittenParams() const {
     assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
-    return getNumParams() - hasThisPointer() - hasRVO();
+    return ParamDescriptors.size();
   }
   unsigned getWrittenArgSize() const {
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
   }
 
-  bool isThisPointerExplicit() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            dyn_cast<const FunctionDecl *>(Source)))
-      return MD->isExplicitObjectMemberFunction();
-    return false;
-  }
-
-  unsigned getParamOffset(unsigned ParamIndex) const {
-    return ParamDescriptors[ParamIndex].Offset;
-  }
-
-  PrimType getParamType(unsigned ParamIndex) const {
-    return ParamDescriptors[ParamIndex].T;
-  }
-
 private:
   /// Construct a function representing an actual function.
-  Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
+  Function(FunctionDeclTy Source, unsigned ArgSize,
            llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
            bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker);
 
@@ -275,26 +281,22 @@ private:
   friend class ByteCodeEmitter;
   friend class Context;
 
-  /// Program reference.
-  Program &P;
-  /// Function Kind.
-  FunctionKind Kind;
   /// Declaration this function was compiled from.
   FunctionDeclTy Source;
-  /// Local area size: storage + metadata.
-  unsigned FrameSize = 0;
-  /// Size of the argument stack.
-  unsigned ArgSize;
   /// Program code.
   llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
   llvm::SmallVector<Scope, 2> Scopes;
-  /// List of all parameters, including RVO and instance pointer.
+  /// List of all parameters, excluding RVO and instance pointer.
   llvm::SmallVector<ParamDescriptor> ParamDescriptors;
-  /// Map from Parameter offset to parameter descriptor.
-  llvm::DenseMap<unsigned, ParamDescriptor> Params;
+  /// Local area size: storage + metadata.
+  unsigned FrameSize = 0;
+  /// Size of the argument stack.
+  unsigned ArgSize;
+  /// Function Kind.
+  FunctionKind Kind;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
@@ -306,6 +308,8 @@ private:
   /// as the first implicit argument
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasThisPointer : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExplicitThisPointer : 1;
   /// Whether this function has Return Value Optimization, i.e.
   /// the return value is constructed in the caller's stack frame.
   /// This is done for functions that return non-primive values.
@@ -327,7 +331,8 @@ private:
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump(CodePtr PC = {}) const;
+  void dump() const { dump({}); }
+  void dump(CodePtr PC) const;
   void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 

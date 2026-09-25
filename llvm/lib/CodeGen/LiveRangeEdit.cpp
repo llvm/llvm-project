@@ -81,14 +81,12 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, SlotIndex UseIdx) {
   return true;
 }
 
-SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator MI,
-                                         Register DestReg, const Remat &RM,
-                                         const TargetRegisterInfo &tri,
-                                         bool Late, unsigned SubIdx,
-                                         MachineInstr *ReplaceIndexMI) {
+SlotIndex LiveRangeEdit::rematerializeAt(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    const Remat &RM, const TargetRegisterInfo &tri, bool Late, unsigned SubIdx,
+    MachineInstr *ReplaceIndexMI, LaneBitmask UsedLanes) {
   assert(RM.OrigMI && "Invalid remat");
-  TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI);
+  TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI, UsedLanes);
   // DestReg of the cloned instruction cannot be Dead. Set isDead of DestReg
   // to false anyway in case the isDead flag of RM.OrigMI's dest register
   // is true.
@@ -153,11 +151,13 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   if (UseMI->readsWritesVirtualRegister(LI->reg(), &Ops).second)
     return false;
 
-  MachineInstr *FoldMI = TII.foldMemoryOperand(*UseMI, Ops, *DefMI, &LIS);
+  MachineInstr *CopyMI = nullptr;
+  MachineInstr *FoldMI =
+      TII.foldMemoryOperand(*UseMI, Ops, *DefMI, CopyMI, &LIS, VRM);
   if (!FoldMI)
     return false;
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
-  LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
+  SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
   // Update the call info.
   if (UseMI->shouldUpdateAdditionalCallInfo())
     UseMI->getMF()->moveAdditionalCallInfo(UseMI, FoldMI);
@@ -165,12 +165,35 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   DefMI->addRegisterDead(LI->reg(), nullptr);
   Dead.push_back(DefMI);
   ++NumDCEFoldedLoads;
+  if (CopyMI) {
+    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
+    Register CopyDstReg = CopyMI->getOperand(0).getReg();
+    LiveInterval &CopyDstLI = LIS.getInterval(CopyDstReg);
+
+    // The addSegment below extends CopyDstLI. If this vreg is already
+    // assigned in the LiveRegMatrix, the matrix becomes inconsistent.
+    // Notify the delegate so it can unassign and re-enqueue the vreg.
+    if (TheDelegate && CopyDstReg.isVirtual() && VRM &&
+        VRM->hasPhys(CopyDstReg))
+      TheDelegate->LRE_WillShrinkVirtReg(CopyDstReg);
+
+    VNInfo *VNI = CopyDstLI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+    CopyDstLI.addSegment(
+        LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+
+    Register R = CopyMI->getOperand(1).getReg();
+    if (R.isVirtual()) {
+      LiveInterval &SrcLI = LIS.getInterval(R);
+      LIS.shrinkToUses(&SrcLI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
+    }
+  }
   return true;
 }
 
-bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
+bool LiveRangeEdit::useIsKill(const LiveInterval &LI, const MachineInstr &MI,
                               const MachineOperand &MO) const {
-  const MachineInstr &MI = *MO.getParent();
   SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
   if (LI.Query(Idx).isKill())
     return true;
@@ -259,7 +282,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // Always shrink COPY uses that probably come from live range splitting.
     if ((MI->readsVirtualRegister(Reg) &&
          (MO.isDef() || TII.isCopyInstr(*MI))) ||
-        (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, MO))))
+        (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, *MI, MO))))
       ToShrink.insert(&LI);
     else if (MO.readsReg())
       HasLiveVRegUses = true;

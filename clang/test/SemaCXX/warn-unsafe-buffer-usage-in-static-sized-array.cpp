@@ -157,3 +157,12 @@ void array_indexed_const_expr(unsigned idx) {
   k = arr[get_const(5)];
   k = arr[get_const(4)];
 }
+
+void safe_pointer_arithmetic() {
+  int arr[10];
+
+  int *p1 = arr + 0;
+  int *p2 = arr + 5;
+  int *p3 = arr + 9;
+  int *p4 = 5 + arr;
+}

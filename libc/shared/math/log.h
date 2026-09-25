@@ -11,12 +11,13 @@
 
 #include "shared/libc_common.h"
 #include "src/__support/math/log.h"
+
 namespace LIBC_NAMESPACE_DECL {
-
 namespace shared {
-using math::log;
-} // namespace shared
 
+using math::log;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SHARED_MATH_LOG_H

@@ -229,4 +229,24 @@ module {
   // CHECK-NEXT:    %[[P:.+]] = cir.const #cir.poison : !u32i
   // CHECK-NEXT:    cir.return %[[P]] : !u32i
   // CHECK-NEXT:  }
+
+  cir.func @involution_bitreverse(%arg0 : !u32i) -> !u32i {
+    %0 = cir.bitreverse %arg0 : !u32i
+    %1 = cir.bitreverse %0 : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @involution_bitreverse
+  // CHECK-SAME:  (%[[X:.+]]: !u32i)
+  // CHECK-NEXT:    cir.return %[[X]] : !u32i
+  // CHECK-NEXT:  }
+
+  cir.func @involution_byte_swap(%arg0 : !u32i) -> !u32i {
+    %0 = cir.byte_swap %arg0 : !u32i
+    %1 = cir.byte_swap %0 : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK-LABEL: @involution_byte_swap
+  // CHECK-SAME:  (%[[X:.+]]: !u32i)
+  // CHECK-NEXT:    cir.return %[[X]] : !u32i
+  // CHECK-NEXT:  }
 }

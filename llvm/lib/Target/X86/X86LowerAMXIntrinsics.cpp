@@ -120,8 +120,8 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
       BasicBlock::Create(Ctx, Name + ".latch", Header->getParent(), Exit);
 
   Type *I16Ty = Type::getInt16Ty(Ctx);
-  BranchInst::Create(Body, Header);
-  BranchInst::Create(Latch, Body);
+  UncondBrInst::Create(Body, Header);
+  UncondBrInst::Create(Latch, Body);
   PHINode *IV =
       PHINode::Create(I16Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I16Ty, 0), Preheader);
@@ -129,7 +129,7 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   B.SetInsertPoint(Latch);
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
-  auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
+  auto *BR = CondBrInst::Create(Cond, Header, Exit, Latch);
   if (!ProfcheckDisableMetadataFixes) {
     if (auto *BoundInt = dyn_cast<ConstantInt>(Bound)) {
       assert(Step->getZExtValue() != 0 &&
@@ -144,9 +144,9 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   }
   IV->addIncoming(Inc, Latch);
 
-  BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
-  BasicBlock *Tmp = PreheaderBr->getSuccessor(0);
-  PreheaderBr->setSuccessor(0, Header);
+  UncondBrInst *PreheaderBr = cast<UncondBrInst>(Preheader->getTerminator());
+  BasicBlock *Tmp = PreheaderBr->getSuccessor();
+  PreheaderBr->setSuccessor(Header);
   DTU.applyUpdatesPermissive({
       {DominatorTree::Delete, Preheader, Tmp},
       {DominatorTree::Insert, Header, Body},

@@ -14,10 +14,11 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
-#include "RegisterContextWindows_x64.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
-#include "TargetThreadWindows.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "ProcessWindowsLog.h"
+#include "RegisterContextWindows_x64.h"
+#include "TargetThreadWindows.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -34,10 +35,10 @@ using namespace lldb_private;
 
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 8, 0, eEncodingUint, eFormatBinary
 #define DEFINE_FPU_XMM(reg)                                                    \
-  #reg, NULL, 16, 0, eEncodingUint, eFormatVectorOfUInt64,                     \
-  {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,            \
-   LLDB_INVALID_REGNUM, lldb_##reg##_x86_64},                                  \
-  nullptr, nullptr, nullptr,
+  #reg, nullptr, 16, 0, eEncodingUint, eFormatVectorOfUInt64,                  \
+      {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,        \
+       LLDB_INVALID_REGNUM, lldb_##reg##_x86_64},                              \
+      nullptr, nullptr, nullptr,
 
 #define DEFINE_GPR_PSEUDO_32(reg)                                              \
 {                                                                              \
@@ -319,7 +320,7 @@ const RegisterInfo *
 RegisterContextWindows_x64::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_register_infos)
     return &g_register_infos[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextWindows_x64::GetRegisterSetCount() {
@@ -494,7 +495,10 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
   if (!CacheAllRegisterValues())
     return false;
 
-  switch (reg_info->kinds[eRegisterKindLLDB]) {
+  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+
+  Log *log = GetLog(WindowsLog::Registers);
+  switch (reg) {
   case lldb_rax_x86_64:
     m_context.Rax = reg_value.GetAsUInt64();
     break;
@@ -597,6 +601,10 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
   case lldb_xmm15_x86_64:
     memcpy(&m_context.Xmm15, reg_value.GetBytes(), 16);
     break;
+  default:
+    LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
+             reg_value.GetAsUInt32(), reg);
+    return false;
   }
 
   // Physically update the registers in the target process.

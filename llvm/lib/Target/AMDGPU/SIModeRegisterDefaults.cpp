@@ -15,13 +15,11 @@ SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
                                                const GCNSubtarget &ST) {
   *this = getDefaultForCallingConv(F.getCallingConv());
 
-  if (ST.hasIEEEMode()) {
+  if (ST.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
     StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
     if (!IEEEAttr.empty())
       IEEE = IEEEAttr == "true";
-  }
 
-  if (ST.hasDX10ClampMode()) {
     StringRef DX10ClampAttr =
         F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
     if (!DX10ClampAttr.empty())

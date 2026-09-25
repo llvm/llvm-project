@@ -1,8 +1,8 @@
-# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-linux-gnu %s | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-CPU --match-full-lines
-# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=generic %s | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-CPU --match-full-lines
-# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=apple-m1 %s | FileCheck %s -check-prefixes=ALL,ZCM-FPR128-CPU --match-full-lines
-# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 %s | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-ATTR --match-full-lines
-# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 %s | FileCheck %s -check-prefixes=ALL,ZCM-FPR128-ATTR --match-full-lines
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-linux-gnu %s | FileCheck %s --match-full-lines -check-prefixes=ALL,NOZCM-FPR128-CPU
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=generic %s | FileCheck %s --match-full-lines -check-prefixes=ALL,NOZCM-FPR128-CPU
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=apple-m1 %s | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCM-FPR128-CPU
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 %s | FileCheck %s --match-full-lines -check-prefixes=ALL,NOZCM-FPR128-ATTR
+# RUN: llc -o - -run-pass=postrapseudos -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 %s | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCM-FPR128-ATTR
 
 ---
 name: zero_cycle_regmove_FPR8

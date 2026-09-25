@@ -298,6 +298,95 @@ std::optional<Expr<SomeType>> FoldTransfer(
   return std::nullopt;
 }
 
+// Fold a Consequent expression in place.
+static void FoldConsequent(
+    FoldingContext &context, ActualArgument::ConditionalArg::Consequent &cons) {
+  if (cons) {
+    cons->value() = Fold(context, std::move(cons->value()));
+  }
+}
+
+// Returned by FoldConditionalArgImpl when the entire ConditionalArg chain
+// resolves to a single consequent.  Wraps Consequent in a named type so
+// callers can distinguish "fully resolved" from std::nullopt, which means
+// "chain still has at least one non-constant condition".
+// Note: a ResolvedConsequent whose value is std::nullopt represents .NIL.
+// (an absent optional argument), which is a valid resolved outcome.
+namespace {
+struct ResolvedConsequent {
+  ActualArgument::ConditionalArg::Consequent value;
+};
+} // namespace
+
+// Recursively fold a ConditionalArg chain.
+//   Returns ResolvedConsequent  — entire chain resolved to one consequent.
+//   Returns std::nullopt        — chain still has non-constant conditions;
+//                                 all reachable sub-expressions folded in
+//                                 place.
+static std::optional<ResolvedConsequent> FoldConditionalArgImpl(
+    FoldingContext &context, ActualArgument::ConditionalArg &condArg) {
+  using ConditionalArg = ActualArgument::ConditionalArg;
+  using Consequent = ConditionalArg::Consequent;
+
+  condArg.condition() = Fold(context, std::move(condArg.condition()));
+
+  // Condition is constant - select appropriate branch and recursively fold it.
+  if (auto constCond{
+          GetScalarConstantValue<LogicalResult>(condArg.condition())}) {
+    if (constCond->IsTrue()) {
+      // .TRUE. — select this consequent.
+      FoldConsequent(context, condArg.consequent());
+      return ResolvedConsequent{std::move(condArg.consequent())};
+    }
+    // .FALSE. — skip to the tail.
+    return condArg.VisitTail(
+        [&](ConditionalArg &inner) -> std::optional<ResolvedConsequent> {
+          auto folded{FoldConditionalArgImpl(context, inner)};
+          if (!folded) {
+            // Inner chain not fully resolved — promote it to replace
+            // the current condArg (peeling off the .FALSE. prefix).
+            // Move to a local first to avoid self-referential assignment.
+            auto promoted{std::move(inner)};
+            condArg = std::move(promoted);
+          }
+          return folded;
+        },
+        [&](Consequent &cons) -> std::optional<ResolvedConsequent> {
+          FoldConsequent(context, cons);
+          return ResolvedConsequent{std::move(cons)};
+        });
+  }
+
+  // Condition is not constant — fold all sub-expressions in place.
+  FoldConsequent(context, condArg.consequent());
+  condArg.VisitTail(
+      [&](ConditionalArg &inner) {
+        if (auto resolved{FoldConditionalArgImpl(context, inner)}) {
+          // Inner chain fully resolved — replace tail with its consequent.
+          condArg.tail() = std::move(resolved->value);
+        }
+      },
+      [&](Consequent &cons) { FoldConsequent(context, cons); });
+
+  // The condition was not a compile-time constant, so the chain could not be
+  // collapsed. All reachable sub-expressions have been folded in place above.
+  return std::nullopt;
+}
+
+void FoldConditionalArg(
+    FoldingContext &context, std::optional<ActualArgument> &arg) {
+  auto *condArg{arg ? arg->GetConditionalArg() : nullptr};
+  if (!condArg) {
+    return;
+  }
+  if (auto resolved{FoldConditionalArgImpl(context, *condArg)}) {
+    // Fully resolved to a single consequent.
+    // operator=(Expr&&) preserves keyword_, attrs_, and dummyIntent_.
+    resolved->value ? void(*arg = std::move(resolved->value->value()))
+                    : void(arg = std::nullopt); // .NIL. — absent argument
+  }
+}
+
 template class ExpressionBase<SomeDerived>;
 template class ExpressionBase<SomeType>;
 

@@ -298,7 +298,7 @@ void MipsBranchExpansion::initMBBInfo() {
     MachineBasicBlock *MBB = MFp->getBlockNumbered(I);
 
     // Compute size of MBB.
-    for (MachineInstr &MI : MBB->instrs())
+    for (MachineInstr &MI : *MBB)
       MBBInfos[I].Size += TII->getInstSizeInBytes(MI);
   }
 }
@@ -866,7 +866,7 @@ bool MipsBranchExpansion::handleLoadDelaySlot() {
 }
 
 bool MipsBranchExpansion::handlePossibleLongBranch() {
-  if (STI->inMips16Mode() || !STI->enableLongBranchPass())
+  if (STI->inMips16Mode())
     return false;
 
   if (SkipLongBranch)

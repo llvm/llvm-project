@@ -10,11 +10,10 @@ define void @pr141907(ptr %0) nounwind {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    addi a3, sp, 20
 ; CHECK-NEXT:    li a4, 12
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
@@ -22,7 +21,7 @@ define void @pr141907(ptr %0) nounwind {
 ; CHECK-NEXT:    vs4r.v v8, (a2)
 ; CHECK-NEXT:    vsetvli a1, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v9, v8, 0
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a3), a4
 ; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma

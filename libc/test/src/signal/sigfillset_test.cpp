@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
+#include "hdr/types/sigset_t.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigfillset.h"
 #include "src/signal/sigprocmask.h"
-
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 TEST(LlvmLibcSigfillset, Invalid) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

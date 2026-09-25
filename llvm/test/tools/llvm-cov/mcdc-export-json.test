@@ -1,11 +1,19 @@
 // RUN: llvm-profdata merge %S/Inputs/mcdc-general.proftext -o %t.profdata
-// RUN: llvm-cov export --format=text %S/Inputs/mcdc-general.o -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --format=text %S/Inputs/mcdc-general.o -instr-profile %t.profdata | FileCheck %s --check-prefix=DEFAULT
 
-// CHECK: 12,7,12,27,2,4,0,0,5,[true,true,true,true],[{"conditions":[false,null,false,null],"executed":true,"result":false},{"conditions":[true,false,false,null],"executed":true,"result":false},{"conditions":[false,null,true,false],"executed":true,"result":false},{"conditions":[true,false,true,false],"executed":true,"result":false},{"conditions":[true,false,true,true],"executed":true,"result":true},{"conditions":[true,true,null,null],"executed":true,"result":true}]
-// CHECK: 15,7,15,13,1,2,0,0,5,[true,true],[{"conditions":[false,null],"executed":true,"result":false},{"conditions":[true,false],"executed":true,"result":false},{"conditions":[true,true],"executed":true,"result":true}]
-// CHECK: 15,19,15,25,1,1,0,0,5,[true,false],[{"conditions":[false,null],"executed":true,"result":false},{"conditions":[true,true],"executed":true,"result":true}]
-// CHECK: 18,7,19,15,1,3,0,0,5,[true,true,false,true],[{"conditions":[false,null,null,null],"executed":true,"result":false},{"conditions":[true,false,null,null],"executed":true,"result":false},{"conditions":[true,true,true,false],"executed":true,"result":false},{"conditions":[true,true,true,true],"executed":true,"result":true}]
-// CHECK: "mcdc":{"count":12,"covered":10,"notcovered":2,"percent":83.333333333333343}
+// DEFAULT: 12,7,12,27,2,4,0,0,5,[true,true,true,true],[{"conditions":[false,null,false,null],"executed":true,"result":false},{"conditions":[true,false,false,null],"executed":true,"result":false},{"conditions":[false,null,true,false],"executed":true,"result":false},{"conditions":[true,false,true,false],"executed":true,"result":false},{"conditions":[true,false,true,true],"executed":true,"result":true},{"conditions":[true,true,null,null],"executed":true,"result":true}]
+// DEFAULT: 15,7,15,13,1,2,0,0,5,[true,true],[{"conditions":[false,null],"executed":true,"result":false},{"conditions":[true,false],"executed":true,"result":false},{"conditions":[true,true],"executed":true,"result":true}]
+// DEFAULT: 15,19,15,25,1,1,0,0,5,[true,false],[{"conditions":[false,null],"executed":true,"result":false},{"conditions":[true,true],"executed":true,"result":true}]
+// DEFAULT: 18,7,19,15,1,3,0,0,5,[true,true,false,true],[{"conditions":[false,null,null,null],"executed":true,"result":false},{"conditions":[true,false,null,null],"executed":true,"result":false},{"conditions":[true,true,true,false],"executed":true,"result":false},{"conditions":[true,true,true,true],"executed":true,"result":true}]
+// DEFAULT: "mcdc":{"count":12,"covered":10,"notcovered":2,"percent":83.333333333333343}
+
+// RUN: llvm-cov export --format=text --show-mcdc-non-executed-vectors %S/Inputs/mcdc-general.o -instr-profile %t.profdata | FileCheck %s --check-prefix=ALL
+
+// ALL: 12,7,12,27,2,4,0,0,5,[true,true,true,true],[{"conditions":[false,null,false,null],"executed":true,"result":false},{"conditions":[true,false,false,null],"executed":true,"result":false},{"conditions":[false,null,true,false],"executed":true,"result":false},{"conditions":[true,false,true,false],"executed":true,"result":false},{"conditions":[true,false,true,true],"executed":true,"result":true},{"conditions":[true,true,null,null],"executed":true,"result":true},{"conditions":[false,null,true,true],"executed":false,"result":true}]
+// ALL: 15,7,15,13,1,2,0,0,5,[true,true],[{"conditions":[false,null],"executed":true,"result":false},{"conditions":[true,false],"executed":true,"result":false},{"conditions":[true,true],"executed":true,"result":true}]
+// ALL: 15,19,15,25,1,1,0,0,5,[true,false],[{"conditions":[false,null],"executed":true,"result":false},{"conditions":[true,true],"executed":true,"result":true},{"conditions":[true,false],"executed":false,"result":false}]
+// ALL: 18,7,19,15,1,3,0,0,5,[true,true,false,true],[{"conditions":[false,null,null,null],"executed":true,"result":false},{"conditions":[true,false,null,null],"executed":true,"result":false},{"conditions":[true,true,true,false],"executed":true,"result":false},{"conditions":[true,true,true,true],"executed":true,"result":true},{"conditions":[true,true,false,null],"executed":false,"result":false}]
+// ALL: "mcdc":{"count":12,"covered":10,"notcovered":2,"percent":83.333333333333343}
 
 Instructions for regenerating the test:
 
@@ -13,6 +21,6 @@ Instructions for regenerating the test:
 cp mcdc-general.cpp /tmp
 
 clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -fcoverage-mapping /tmp/mcdc-general.cpp -o /tmp/mcdc-const.o
+    -fcoverage-mapping /tmp/mcdc-general.cpp -o /tmp/mcdc-general.o
 
 mv /tmp/mcdc-general.o %S/Inputs

@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE float16 f16addf(float x, float y) {
+LIBC_INLINE constexpr float16 f16addf(float x, float y) {
   return fputil::generic::add<float16>(x, y);
 }
 

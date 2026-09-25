@@ -10,7 +10,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
+#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -80,7 +80,7 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
 
   DataExtractor poe_data = getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
   struct poe_regs {
-    uint64_t por_reg;
+    uint64_t por_el0_reg;
   };
   if (poe_data.GetByteSize() >= sizeof(poe_regs))
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPOE);
@@ -113,11 +113,11 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
         is_freebsd ? std::nullopt
                    : aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
 
-    m_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
-                                           auxv_at_hwcap2.value_or(0),
-                                           auxv_at_hwcap3.value_or(0));
-    m_register_flags_detector.UpdateRegisterInfo(GetRegisterInfo(),
-                                                 GetRegisterCount());
+    m_register_type_detector.DetectTypes(auxv_at_hwcap.value_or(0),
+                                         auxv_at_hwcap2.value_or(0),
+                                         auxv_at_hwcap3.value_or(0));
+    m_register_type_detector.UpdateRegisterInfo(GetRegisterInfo(),
+                                                GetRegisterCount());
   }
 
   m_gpr_data.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),

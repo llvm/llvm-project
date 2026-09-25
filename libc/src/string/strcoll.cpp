@@ -20,7 +20,7 @@ LLVM_LIBC_FUNCTION(int, strcoll, (const char *left, const char *right)) {
   LIBC_CRASH_ON_NULLPTR(right);
   for (; *left && *left == *right; ++left, ++right)
     ;
-  return static_cast<int>(*left) - static_cast<int>(*right);
+  return static_cast<unsigned char>(*left) - static_cast<unsigned char>(*right);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -299,7 +299,7 @@ MCSymbol *ARMAsmPrinter::GetCPISymbol(unsigned CPID) const {
   // The AsmPrinter::GetCPISymbol superclass method tries to use CPID as
   // indexes in MachineConstantPool, which isn't in sync with indexes used here.
   const DataLayout &DL = getDataLayout();
-  return OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return OutContext.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                       "CPI" + Twine(getFunctionNumber()) + "_" +
                                       Twine(CPID));
 }
@@ -310,7 +310,7 @@ MCSymbol *ARMAsmPrinter::
 GetARMJTIPICJumpTableLabel(unsigned uid) const {
   const DataLayout &DL = getDataLayout();
   SmallString<60> Name;
-  raw_svector_ostream(Name) << DL.getPrivateGlobalPrefix() << "JTI"
+  raw_svector_ostream(Name) << DL.getInternalSymbolPrefix() << "JTI"
                             << getFunctionNumber() << '_' << uid;
   return OutContext.getOrCreateSymbol(Name);
 }
@@ -420,7 +420,7 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       // 'Q' should correspond to the low order register and 'R' to the high
       // order register.  Whether this corresponds to the upper or lower half
-      // depends on the endianess mode.
+      // depends on the endianness mode.
       if (ExtraCode[0] == 'Q')
         FirstHalf = ATM.isLittleEndian();
       else
@@ -660,6 +660,15 @@ static bool checkDenormalAttributeConsistency(const Module &M,
   });
 }
 
+// Returns true if any function definition in the module has the strictfp
+// attribute, which taints the whole module: such code may change the FP
+// rounding mode at run time.
+static bool checkModuleHasStrictFP(const Module &M) {
+  return any_of(M, [](const Function &F) {
+    return !F.isDeclaration() && F.isStrictFP();
+  });
+}
+
 // Returns true if all functions have different denormal modes.
 static bool checkDenormalAttributeInconsistency(const Module &M) {
   auto F = M.functions().begin();
@@ -698,8 +707,10 @@ void ARMAsmPrinter::emitAttributes() {
   }
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
+  FloatABI::ABIType FloatABI = ATM.getFloatABI(*MMI->getModule());
+  ARM::ARMABI ABI = ATM.getEffectiveABI(*MMI->getModule());
   const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
-                         ATM.isLittleEndian());
+                         ATM.isLittleEndian(), FloatABI, ABI);
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);
@@ -779,16 +790,15 @@ void ARMAsmPrinter::emitAttributes() {
     if (unsigned TagVal = Ex->getZExtValue())
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, TagVal);
   } else if (checkFunctionsAttributeConsistency(*MMI->getModule(),
-                                                "no-trapping-math", "true") ||
-             TM.Options.NoTrappingFPMath)
+                                                "no-trapping-math", "true"))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
   else {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, ARMBuildAttrs::Allowed);
 
-    // If the user has permitted this code to choose the IEEE 754
-    // rounding at run-time, emit the rounding attribute.
-    if (TM.Options.HonorSignDependentRoundingFPMathOption)
+    // If any function may change the FP rounding mode at run time the code
+    // cannot assume the default rounding, so emit the rounding attribute.
+    if (checkModuleHasStrictFP(*MMI->getModule()))
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_rounding, ARMBuildAttrs::Allowed);
   }
 
@@ -807,7 +817,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (getTM().isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
+  if (STI.isAAPCS_ABI() && STI.isTargetHardFloat())
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the
@@ -820,13 +830,13 @@ void ARMAsmPrinter::emitAttributes() {
   if (const Module *SourceModule = MMI->getModule()) {
     // ABI_PCS_wchar_t to indicate wchar_t width
     // FIXME: There is no way to emit value 0 (wchar_t prohibited).
+    int WCharWidth = TM.getTargetTriple().getDefaultWCharSize();
     if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
-            SourceModule->getModuleFlag("wchar_size"))) {
-      int WCharWidth = WCharWidthValue->getZExtValue();
-      assert((WCharWidth == 2 || WCharWidth == 4) &&
-             "wchar_t width must be 2 or 4 bytes");
-      ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
-    }
+            SourceModule->getModuleFlag("wchar_size")))
+      WCharWidth = WCharWidthValue->getZExtValue();
+    assert((WCharWidth == 2 || WCharWidth == 4) &&
+           "wchar_t width must be 2 or 4 bytes");
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
 
     // ABI_enum_size to indicate enum width
     // FIXME: There is no way to emit value 0 (enums prohibited) or value 3
@@ -1016,6 +1026,41 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     unsigned char TF =
         TM.getTargetTriple().isOSBinFormatMachO() ? ARMII::MO_NONLAZY : 0;
     MCSym = GetARMGVSymbol(GV, TF);
+
+    // For dso_local weak symbols in ELF PIC mode, the assembler would eagerly
+    // resolve a PC-relative expression like sym-(LPC+8) when the symbol and
+    // reference are in the same section, preventing the linker from overriding
+    // a weak definition with a non-weak definition from another section. Use a
+    // .reloc directive rather than a fixup to force the generation of a
+    // relocation (R_ARM_REL32) so the linker can perform the override. This is
+    // restricted to dso_local, non-TLS symbols: a preemptible/external weak
+    // symbol (e.g. an extern_weak reference) must use the GOT, as R_ARM_REL32
+    // against an external symbol cannot be used when making a shared object;
+    // and TLS symbols require TLS-specific relocations, not R_ARM_REL32.
+    if (GV->isWeakForLinker() && GV->isDSOLocal() && !GV->isThreadLocal() &&
+        TM.getTargetTriple().isOSBinFormatELF() && TM.isPositionIndependent() &&
+        ACPV->getPCAdjustment() != 0) {
+      MCSymbol *CPILabel = OutContext.createTempSymbol();
+      OutStreamer->emitLabel(CPILabel);
+      // Emit local-only expression: CPILabel - (LPC+PCAdj)
+      const MCExpr *LocalExpr = MCSymbolRefExpr::create(CPILabel, OutContext);
+      MCSymbol *PCLabel =
+          getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
+                      ACPV->getLabelId(), OutContext);
+      const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
+      PCRelExpr = MCBinaryExpr::createAdd(
+          PCRelExpr,
+          MCConstantExpr::create(ACPV->getPCAdjustment(), OutContext),
+          OutContext);
+      LocalExpr = MCBinaryExpr::createSub(LocalExpr, PCRelExpr, OutContext);
+      OutStreamer->emitValue(LocalExpr, Size);
+      // Emit .reloc to force linker resolution of the weak symbol.
+      const MCExpr *CPIExpr = MCSymbolRefExpr::create(CPILabel, OutContext);
+      const MCExpr *SymExpr = MCSymbolRefExpr::create(MCSym, OutContext);
+      OutStreamer->emitRelocDirective(*CPIExpr, "R_ARM_REL32", SymExpr,
+                                      SMLoc());
+      return;
+    }
   } else if (ACPV->isMachineBasicBlock()) {
     const MachineBasicBlock *MBB = cast<ARMConstantPoolMBB>(ACPV)->getMBB();
     MCSym = MBB->getSymbol();
@@ -1031,7 +1076,7 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
 
   if (ACPV->getPCAdjustment()) {
     MCSymbol *PCLabel =
-        getPICLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                     ACPV->getLabelId(), OutContext);
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
     PCRelExpr =
@@ -1366,7 +1411,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       PadBefore = -MI->getOperand(4).getImm() - 8;
       break;
     }
-    if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+    if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
       if (PadBefore)
         ATS.emitPad(PadBefore);
       ATS.emitRegSave(RegList, Opc == ARM::VSTMDDB_UPD);
@@ -1417,7 +1462,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         break;
       }
 
-      if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+      if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
         if (DstReg == FramePtr && FramePtr != ARM::SP)
           // Set-up of the frame pointer. Positive values correspond to "add"
           // instruction.
@@ -1915,12 +1960,8 @@ void ARMAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   const MachineInstr &Call = *std::next(MI.getIterator());
 
   // Adjust the offset for patchable-function-prefix.
-  int64_t PrefixNops = 0;
-  MI.getMF()
-      ->getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixNops);
+  int64_t PrefixNops = MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // Emit the appropriate instruction sequence based on the opcode variant.
   switch (MI.getOpcode()) {
@@ -2110,7 +2151,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCExpr *GVSymExpr = MCSymbolRefExpr::create(GVSym, OutContext);
 
     MCSymbol *LabelSym =
-        getPICLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                     MI->getOperand(2).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVi16_ga_pcrel) ? 8 : 4;
@@ -2146,7 +2187,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCExpr *GVSymExpr = MCSymbolRefExpr::create(GVSym, OutContext);
 
     MCSymbol *LabelSym =
-        getPICLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                     MI->getOperand(3).getImm(), OutContext);
     const MCExpr *LabelSymExpr= MCSymbolRefExpr::create(LabelSym, OutContext);
     unsigned PCAdj = (Opc == ARM::MOVTi16_ga_pcrel) ? 8 : 4;
@@ -2175,7 +2216,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This is a Branch Future instruction.
 
     const MCExpr *BranchLabel = MCSymbolRefExpr::create(
-        getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+        getBFLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                    MI->getOperand(0).getIndex(), OutContext),
         OutContext);
 
@@ -2205,7 +2246,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (Opc == ARM::t2BFic) {
       const MCExpr *ElseLabel = MCSymbolRefExpr::create(
-          getBFLabel(DL.getPrivateGlobalPrefix(), getFunctionNumber(),
+          getBFLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
                      MI->getOperand(2).getIndex(), OutContext),
           OutContext);
       MCInst.addExpr(ElseLabel);
@@ -2222,9 +2263,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This is a pseudo op for a label used by a branch future instruction
 
     // Emit the label.
-    OutStreamer->emitLabel(getBFLabel(DL.getPrivateGlobalPrefix(),
-                                       getFunctionNumber(),
-                                       MI->getOperand(0).getIndex(), OutContext));
+    OutStreamer->emitLabel(
+        getBFLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
+                   MI->getOperand(0).getIndex(), OutContext));
     return;
   }
   case ARM::tPICADD: {
@@ -2234,7 +2275,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getInternalSymbolPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -2255,7 +2296,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // This adds the address of LPC0 to r0.
 
     // Emit the label.
-    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getInternalSymbolPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -2286,7 +2327,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // a PC-relative address at the ldr instruction.
 
     // Emit the label.
-    OutStreamer->emitLabel(getPICLabel(DL.getPrivateGlobalPrefix(),
+    OutStreamer->emitLabel(getPICLabel(DL.getInternalSymbolPrefix(),
                                        getFunctionNumber(),
                                        MI->getOperand(2).getImm(), OutContext));
 
@@ -2407,7 +2448,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)

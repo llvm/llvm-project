@@ -25,10 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
-#include <cstdlib>
-#include <cstring>
 #include <iterator>
 #include <vector>
 

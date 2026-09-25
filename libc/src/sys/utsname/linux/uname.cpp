@@ -8,13 +8,12 @@
 
 #include "src/sys/utsname/uname.h"
 
+#include "hdr/types/struct_utsname.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers.
-#include <sys/utsname.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

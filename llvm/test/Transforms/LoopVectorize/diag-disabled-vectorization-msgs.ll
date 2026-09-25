@@ -63,7 +63,7 @@ exit:
   ret void
 }
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 false}
+!1 = !{!"llvm.loop.vectorize.disable"}
 
 ; ALL-LABEL: 'disable_nonforced' from <stdin>
 ; ALL-NOT: LV: We can vectorize this loop

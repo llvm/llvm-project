@@ -110,3 +110,12 @@ void Inst() {
   TemplUses(i, Arr, C); // #TEMPL_USES_INST
   NTTP<5, NTTP_REFed>(); // #NTTP_INST
 }
+
+struct Incomplete;
+
+void incomplete_use(Incomplete &i) {
+  // expected-error@+2{{incomplete type 'Incomplete' where a complete type is required}}
+  // expected-note@-4{{forward declaration}}
+#pragma acc parallel firstprivate(i)
+  while (1);
+}

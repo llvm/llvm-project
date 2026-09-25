@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/isatty.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/stat.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

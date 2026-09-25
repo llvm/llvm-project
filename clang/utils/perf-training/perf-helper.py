@@ -276,6 +276,9 @@ def get_cc1_command_for_args(cmd, env):
             or ln.startswith(" (in-process)")
             or ln.startswith("Configuration file:")
             or ln.startswith("Build config:")
+            or ln.startswith("clang: warning:")
+            or ln.startswith("clang: note:")
+            or ln.startswith("clang: remark:")
             or " version " in ln
         ):
             continue

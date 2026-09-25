@@ -63,7 +63,7 @@ static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
 #endif
 
 #ifndef __SYCL2020_DEPRECATED
-#  if SYCL_LANGUAGE_VERSION == 202012L &&                                      \
+#  if defined(SYCL_LANGUAGE_VERSION) && SYCL_LANGUAGE_VERSION == 202012L &&    \
       !defined(SYCL2020_DISABLE_DEPRECATION_WARNINGS)
 #    define __SYCL2020_DEPRECATED(message) [[deprecated(message)]]
 #  else

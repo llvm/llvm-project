@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -regalloc=fast -optimize-regalloc=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -regalloc=fast | FileCheck %s
 
 ; CHECK: @bork
 ; CHECK: blr

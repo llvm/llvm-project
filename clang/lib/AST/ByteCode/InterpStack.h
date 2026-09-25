@@ -57,6 +57,7 @@ public:
     }
     shrink(aligned_size<T>());
   }
+  void discardSlow();
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
@@ -124,10 +125,30 @@ private:
     return Object;
   }
 
+  void *peekDataSlow(size_t Size) const;
   /// Returns a pointer from the top of the stack.
-  void *peekData(size_t Size) const;
+  void *peekData(size_t Size) const {
+    assert(Chunk && "Stack is empty!");
+    if (LLVM_LIKELY(Size <= Chunk->size()))
+      return reinterpret_cast<void *>(Chunk->start() + Chunk->Size - Size);
+
+    return peekDataSlow(Size);
+  }
+
+  void shrinkSlow(size_t Size);
   /// Shrinks the stack.
-  void shrink(size_t Size);
+  void shrink(size_t Size) {
+    assert(Chunk && "Chunk is empty!");
+
+    // Likely case is that we simply remove something from the current chunk.
+    if (LLVM_LIKELY(Size <= Chunk->size())) {
+      Chunk->Size -= Size;
+      StackSize -= Size;
+      return;
+    }
+
+    shrinkSlow(Size);
+  }
 
   /// Allocate stack space in 1Mb chunks.
   static constexpr size_t ChunkSize = 1024 * 1024;
@@ -174,29 +195,24 @@ private:
     else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, Boolean>)
       return PT_Bool;
     else if constexpr (std::is_same_v<T, int8_t> ||
-                       std::is_same_v<T, Integral<8, true>>)
+                       std::is_same_v<T, Char<true>>)
       return PT_Sint8;
     else if constexpr (std::is_same_v<T, uint8_t> ||
-                       std::is_same_v<T, Integral<8, false>>)
+                       std::is_same_v<T, Char<false>>)
       return PT_Uint8;
-    else if constexpr (std::is_same_v<T, int16_t> ||
-                       std::is_same_v<T, Integral<16, true>>)
+    else if constexpr (std::is_same_v<T, Integral<16, true>>)
       return PT_Sint16;
-    else if constexpr (std::is_same_v<T, uint16_t> ||
-                       std::is_same_v<T, Integral<16, false>>)
+    else if constexpr (std::is_same_v<T, Integral<16, false>>)
       return PT_Uint16;
-    else if constexpr (std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, Integral<32, true>>)
+    else if constexpr (std::is_same_v<T, Integral<32, true>>)
       return PT_Sint32;
-    else if constexpr (std::is_same_v<T, uint32_t> ||
-                       std::is_same_v<T, Integral<32, false>>)
+    else if constexpr (std::is_same_v<T, Integral<32, false>>)
       return PT_Uint32;
-    else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, Integral<64, true>>)
+    else if constexpr (std::is_same_v<T, Integral<64, true>>)
       return PT_Sint64;
-    else if constexpr (std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, Integral<64, false>>)
+    else if constexpr (std::is_same_v<T, Integral<64, false>>)
       return PT_Uint64;
+
     else if constexpr (std::is_same_v<T, Floating>)
       return PT_Float;
     else if constexpr (std::is_same_v<T, IntegralAP<true>>)

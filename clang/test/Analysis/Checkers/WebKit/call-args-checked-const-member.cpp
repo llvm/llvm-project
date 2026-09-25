@@ -17,7 +17,7 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'CheckedObj::method') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 }
 
 } // namespace call_args_const_checkedptr_member
@@ -37,7 +37,7 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'CheckedObj::method') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
 }
 
 } // namespace call_args_const_checkedref_member
@@ -91,10 +91,10 @@ private:
 void Foo::bar() {
   m_obj1->method();
   m_obj2->method();
-  // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
+  // expected-warning@-1{{Function argument 'this->m_obj2' (parameter 'this' to 'CheckedObj::method') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   ensureObj3().method();
   badEnsureObj4().method();
-  // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
+  // expected-warning@-1{{Function argument 'this->badEnsureObj4()' (parameter 'this' to 'CheckedObj::method') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   ensureObj5()->method();
   ensureObj6()->method();
 }

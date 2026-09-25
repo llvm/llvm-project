@@ -20,11 +20,19 @@
   AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
 #endif
 
+#ifndef AMDGPU_FEATURE_PREDICATE_TYPE
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align) \
+  AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
+#endif
+
 AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", AMDGPUBufferRsrc, AMDGPUBufferRsrcTy, 128, 128, 8)
 AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_texture_t", AMDGPUTexture, AMDGPUTextureTy, 256, 256, 0)
 
 AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_workgroup_barrier_t", AMDGPUNamedWorkgroupBarrier, AMDGPUNamedWorkgroupBarrierTy, 128, 32, 0)
 
+AMDGPU_FEATURE_PREDICATE_TYPE("__amdgpu_feature_predicate_t", AMDGPUFeaturePredicate, AMDGPUFeaturePredicateTy, 1, 1)
+
 #undef AMDGPU_TYPE
 #undef AMDGPU_OPAQUE_PTR_TYPE
 #undef AMDGPU_NAMED_BARRIER_TYPE
+#undef AMDGPU_FEATURE_PREDICATE_TYPE

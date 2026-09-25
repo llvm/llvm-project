@@ -1,0 +1,51 @@
+; REQUIRES: x86
+
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: llvm-as main.ll -o main.obj
+; RUN: llvm-as puts.ll -o puts.obj
+; RUN: llvm-mc -filetype=obj -triple=x86_64-pc-windows-msvc printf.s -o printf.obj
+; RUN: llvm-ar rcs libc.lib puts.obj printf.obj
+
+;; Ensure that no printf->puts translation occurs during LTO because puts is in
+;; bitcode, but was not brought into the link. This would fail the link by
+;; extracting bitcode after LTO.
+; RUN: lld-link -out:out.exe -entry:main -subsystem:console -lldmap:- -nodefaultlib main.obj libc.lib | FileCheck %s
+
+;; Test the same behavior with lazy objects.
+; RUN: lld-link -out:out-lazy.exe -entry:main -subsystem:console -lldmap:- -nodefaultlib main.obj /start-lib puts.obj /end-lib printf.obj | FileCheck %s
+
+;; Test that translation DOES occur when puts is extracted and brought into the link.
+; RUN: lld-link -out:out-extracted.exe -entry:main -subsystem:console -lldmap:- -nodefaultlib main.obj puts.obj printf.obj | FileCheck %s --check-prefix=EXTRACTED
+
+; CHECK-NOT: puts
+; CHECK: printf
+
+; EXTRACTED: printf
+; EXTRACTED: puts
+
+;--- puts.ll
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+define i32 @puts(ptr nocapture readonly %0) noinline {
+  call void asm sideeffect "", ""()
+  ret i32 0
+}
+
+;--- printf.s
+.globl printf
+printf:
+  ret
+
+;--- main.ll
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+@str = constant [5 x i8] c"foo\0A\00"
+
+define i32 @main() {
+  %call = call i32 (ptr, ...) @printf(ptr @str)
+  ret i32 0
+}
+
+declare i32 @printf(ptr, ...)

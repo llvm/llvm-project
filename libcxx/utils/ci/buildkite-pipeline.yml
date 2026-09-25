@@ -41,7 +41,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: aarch64
     <<: *common
 
@@ -51,7 +51,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: aarch64
     <<: *common
 
@@ -61,7 +61,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: armv8l
     <<: *common
 
@@ -71,7 +71,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: armv8l
     <<: *common
 
@@ -81,7 +81,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: armv8l
     <<: *common
 
@@ -91,7 +91,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: armv8l
     <<: *common
 
@@ -101,7 +101,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: aarch64
     <<: *common
 
@@ -111,7 +111,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-linaro-arm
+      queue: libcxx-builders-arm
       arch: aarch64
     <<: *common
 
@@ -141,11 +141,11 @@ steps:
 
 - group: ':freebsd: FreeBSD'
   steps:
-  - label: FreeBSD 13 amd64
+  - label: FreeBSD 15.1 amd64
     command: libcxx/utils/ci/run-buildbot generic-cxx26
     env:
-      CC: clang20
-      CXX: clang++20
+      CC: clang21
+      CXX: clang++21
     agents:
       queue: libcxx-builders
       os: freebsd
@@ -153,8 +153,8 @@ steps:
 
 - group: ':android: Android'
   steps:
-  - label: Android 5.0, x86 NDK
-    command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
+  - label: Android 6.0, x86 NDK
+    command: libcxx/utils/ci/run-buildbot android-ndk-23-def-x86
     env:
       CC: /opt/android/clang/clang-current/bin/clang
       CXX: /opt/android/clang/clang-current/bin/clang++

@@ -29,13 +29,14 @@ DEFINE_OPCODE(0x11, "if", if)
 DEFINE_OPCODE(0x12, "ifelse", ifelse)
 DEFINE_OPCODE(0x13, "return", return)
 
-DEFINE_OPCODE(0x20, nullptr, lit_uint)
-DEFINE_OPCODE(0x21, nullptr, lit_int)
+DEFINE_OPCODE(0x20, nullptr, lit_uint) // Deprecated: use lit_integer.
+DEFINE_OPCODE(0x21, nullptr, lit_int)  // Deprecated: use lit_integer.
 DEFINE_OPCODE(0x22, nullptr, lit_string)
 DEFINE_OPCODE(0x23, nullptr, lit_selector)
+DEFINE_OPCODE(0x24, nullptr, lit_integer)
 
-DEFINE_OPCODE(0x2a, "as_int", as_int)
-DEFINE_OPCODE(0x2b, "as_uint", as_uint)
+DEFINE_OPCODE(0x2a, "as_int", as_int)   // Deprecated.
+DEFINE_OPCODE(0x2b, "as_uint", as_uint) // Deprecated.
 DEFINE_OPCODE(0x2c, "is_null", is_null)
 
 DEFINE_OPCODE(0x30, "+", plus)
@@ -68,6 +69,7 @@ DEFINE_SELECTOR(0x10, get_num_children)
 DEFINE_SELECTOR(0x11, get_child_at_index)
 DEFINE_SELECTOR(0x12, get_child_with_name)
 DEFINE_SELECTOR(0x13, get_child_index)
+DEFINE_SELECTOR(0x14, get_parent)
 DEFINE_SELECTOR(0x15, get_type)
 DEFINE_SELECTOR(0x16, get_template_argument_type)
 DEFINE_SELECTOR(0x17, cast)
@@ -78,6 +80,7 @@ DEFINE_SELECTOR(0x20, get_value)
 DEFINE_SELECTOR(0x21, get_value_as_unsigned)
 DEFINE_SELECTOR(0x22, get_value_as_signed)
 DEFINE_SELECTOR(0x23, get_value_as_address)
+DEFINE_SELECTOR(0x24, clone)
 
 DEFINE_SELECTOR(0x40, read_memory_byte)
 DEFINE_SELECTOR(0x41, read_memory_uint32)

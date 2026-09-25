@@ -100,4 +100,4 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT: 1.     3     3.0    3.0    0.0       vpcmpeqw	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: 2.     3     2.0    2.0    1.0       vpcmpeqd	%xmm2, %xmm2, %xmm3
 # CHECK-NEXT: 3.     3     4.0    0.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm0
-# CHECK-NEXT:        3     2.6    1.6    0.4       <total>
+# CHECK-NEXT:        12    2.6    1.6    0.4       <total>

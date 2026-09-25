@@ -16,19 +16,19 @@ program acc_atomic_update_test
     a=>c
     b=>d
 
-!CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFEa"}
+!CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "a", uniq_name = "_QFEa"}>
 !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!CHECK: %[[B:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "b", uniq_name = "_QFEb"}
+!CHECK: %[[B:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "b", uniq_name = "_QFEb"}>
 !CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK: %[[C_ADDR:.*]] = fir.address_of(@_QFEc) : !fir.ref<i32>
 !CHECK: %[[D_ADDR:.*]] = fir.address_of(@_QFEd) : !fir.ref<i32>
-!CHECK: %[[I1:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFEi1"}
+!CHECK: %[[I1:.*]] = fir.alloca i8 <{bindc_name = "i1", uniq_name = "_QFEi1"}>
 !CHECK: %[[I1_DECL:.*]]:2 = hlfir.declare %[[I1]] {uniq_name = "_QFEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
-!CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+!CHECK: %[[X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFEx"}>
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+!CHECK: %[[Y:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFEy"}>
 !CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
+!CHECK: %[[Z:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFEz"}>
 !CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[LOAD_A:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[BOX_ADDR_A:.*]] = fir.box_addr %[[LOAD_A]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>

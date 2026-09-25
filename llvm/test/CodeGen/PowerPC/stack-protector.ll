@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux < %s | FileCheck -check-prefix=LINUX64 %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux < %s | FileCheck -check-prefix=LINUX64 %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck -check-prefix=AIX32 %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck -check-prefix=AIX64 %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck -check-prefix=AIX64 %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-freebsd13 < %s | FileCheck -check-prefix=FREEBSD32 %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpcle-unknown-freebsd13 < %s | FileCheck -check-prefix=FREEBSD32 %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-freebsd13 < %s | FileCheck -check-prefix=FREEBSD64 %s

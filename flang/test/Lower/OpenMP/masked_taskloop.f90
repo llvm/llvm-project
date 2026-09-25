@@ -13,7 +13,7 @@
 
 ! CHECK-LABEL:  func.func @_QPtest_masked_taskloop() {
 ! CHECK:          %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_masked_taskloopEi"}
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_masked_taskloopEi"}>
 ! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]]
 ! CHECK-SAME:         {uniq_name = "_QFtest_masked_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[ALLOCA_J:.*]] = fir.address_of(@_QFtest_masked_taskloopEj) : !fir.ref<i32>
@@ -22,18 +22,21 @@
 ! CHECK:            %[[C1_I32:.*]] = arith.constant 1 : i32
 ! CHECK:            %[[C10_I32:.*]] = arith.constant 10 : i32
 ! CHECK:            %[[C1_I32_0:.*]] = arith.constant 1 : i32
-! CHECK:            omp.taskloop private(
-! CHECK-SAME:          @[[J_FIRSTPRIVATE]] %[[DECL_J]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK:              omp.loop_nest (%arg2) : i32 = (%[[C1_I32]]) to (%[[C10_I32]]) inclusive step (%[[C1_I32_0]]) {
-! CHECK:                %[[VAL1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFtest_masked_taskloopEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                %[[VAL2:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFtest_masked_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                hlfir.assign %arg2 to %[[VAL2]]#0 : i32, !fir.ref<i32>
-! CHECK:                %[[LOAD_J:.*]] = fir.load %[[VAL1]]#0 : !fir.ref<i32>
-! CHECK:                %[[C1_I32_1:.*]] = arith.constant 1 : i32
-! CHECK:                %[[RES_J:.*]] = arith.addi %[[LOAD_J]], %[[C1_I32_1]] : i32
-! CHECK:                hlfir.assign %[[RES_J]] to %[[VAL1]]#0 : i32, !fir.ref<i32>
-! CHECK:                omp.yield
+! CHECK:            omp.taskloop.context private(
+! CHECK-SAME:            @[[J_FIRSTPRIVATE]] %[[DECL_J]]#0 -> %[[ARG0:[^ ]+]], @[[I_PRIVATE]] %[[DECL_I]]#0 -> %[[ARG1:[^ ]+]] : !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK:              omp.taskloop.wrapper {
+! CHECK:                omp.loop_nest (%[[IV:.*]]) : i32 = (%[[C1_I32]]) to (%[[C10_I32]]) inclusive step (%[[C1_I32_0]]) {
+! CHECK:                  %[[VAL1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFtest_masked_taskloopEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                  %[[VAL2:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFtest_masked_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                  hlfir.assign %[[IV]] to %[[VAL2]]#0 : i32, !fir.ref<i32>
+! CHECK:                  %[[LOAD_J:.*]] = fir.load %[[VAL1]]#0 : !fir.ref<i32>
+! CHECK:                  %[[C1_I32_1:.*]] = arith.constant 1 : i32
+! CHECK:                  %[[RES_J:.*]] = arith.addi %[[LOAD_J]], %[[C1_I32_1]] : i32
+! CHECK:                  hlfir.assign %[[RES_J]] to %[[VAL1]]#0 : i32, !fir.ref<i32>
+! CHECK:                  omp.yield
+! CHECK:                }
 ! CHECK:              }
+! CHECK:              omp.terminator
 ! CHECK:            }
 ! CHECK:            omp.terminator
 ! CHECK:          }

@@ -10,7 +10,7 @@ end function
 
 ! CHECK-LABEL:   func.func @foo() -> !fir.char<1>
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1> {bindc_name = "foo", uniq_name = "_QFfooEfoo"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1> <{bindc_name = "foo", uniq_name = "_QFfooEfoo"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_0]] {uniq_name = "_QFfooEfoo"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_3]] {uniq_name = "_QFfooEbar"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
@@ -56,7 +56,7 @@ end function
 
 ! CHECK-LABEL:   func.func @bar2() -> !fir.char<1>
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1> {bindc_name = "foo2", uniq_name = "_QFfoo2Efoo2"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1> <{bindc_name = "foo2", uniq_name = "_QFfoo2Efoo2"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_0]] {uniq_name = "_QFfoo2Efoo2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_3]] {uniq_name = "_QFfoo2Ebar2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)

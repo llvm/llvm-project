@@ -17,16 +17,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto std_unique_copy      = [](auto first, auto last, auto out) { return std::unique_copy(first, last, out); };
   auto std_unique_copy_pred = [](auto first, auto last, auto out) {
-    return std::unique_copy(first, last, out, [](auto a, auto b) {
-      benchmark::DoNotOptimize(a);
-      benchmark::DoNotOptimize(b);
-      return a == b;
-    });
+    return std::unique_copy(first, last, out, [](auto a, auto b) { return a == b; });
   };
 
   // Create a sequence of the form xxxxxxxxxxyyyyyyyyyy and unique the
@@ -35,7 +32,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto unique_copy) {
       benchmark::RegisterBenchmark(
           name,
-          [unique_copy](auto& st) {
+          [unique_copy](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c(size);
@@ -75,7 +72,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto unique_copy) {
       benchmark::RegisterBenchmark(
           name,
-          [unique_copy](auto& st) {
+          [unique_copy](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c(size);

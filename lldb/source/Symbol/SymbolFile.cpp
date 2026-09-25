@@ -16,6 +16,7 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
@@ -59,11 +60,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
 
     uint32_t best_symfile_abilities = 0;
 
-    SymbolFileCreateInstance create_callback;
-    for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetSymbolFileCreateCallbackAtIndex(
-              idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetSymbolFileCreateCallbacks()) {
       std::unique_ptr<SymbolFile> curr_symfile_up(create_callback(objfile_sp));
 
       if (curr_symfile_up) {
@@ -100,6 +97,16 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
       // Let the winning symbol file parser initialize itself more completely
       // now that it has been chosen
       best_symfile_up->InitializeObject();
+
+      // Register the object file's directory so the module can lazily search
+      // for a compilation-prefix-map.json when source paths are first remapped.
+      if (ObjectFile *obj = best_symfile_up->GetMainObjectFile())
+        if (ModuleSP mod = obj->GetModule()) {
+          FileSpec dir = obj->GetFileSpec();
+          dir.ClearFilename();
+          if (dir)
+            mod->AddPrefixMapSearchDir(std::move(dir));
+        }
     }
   }
   return best_symfile_up.release();
@@ -203,8 +210,11 @@ CompUnitSP SymbolFileCommon::GetCompileUnitAtIndex(uint32_t idx) {
   if (idx >= num)
     return nullptr;
   lldb::CompUnitSP &cu_sp = (*m_compile_units)[idx];
-  if (!cu_sp)
+  if (!cu_sp) {
     cu_sp = ParseCompileUnitAtIndex(idx);
+    if (cu_sp)
+      cu_sp->SetIndex(idx);
+  }
   return cu_sp;
 }
 
@@ -222,6 +232,8 @@ void SymbolFileCommon::SetCompileUnitAtIndex(uint32_t idx,
   // unit.
   assert((*m_compile_units)[idx] == nullptr);
   (*m_compile_units)[idx] = cu_sp;
+  if (cu_sp)
+    cu_sp->SetIndex(idx);
 }
 
 llvm::Expected<TypeSystemSP>

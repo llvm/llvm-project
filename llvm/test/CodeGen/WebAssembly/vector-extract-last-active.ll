@@ -24,18 +24,14 @@ define i32 @extract_last_active_v4i32(<4 x i32> %a, <4 x i1> %c) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.store 0
 ; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i32.const 3
-; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.or
@@ -83,18 +79,14 @@ define i32 @extract_last_active_v4i32_no_default(<4 x i32> %a, <4 x i1> %c) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.store 0
 ; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i32.const 3
-; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.const 2
+; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.or

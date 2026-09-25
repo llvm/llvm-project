@@ -348,3 +348,14 @@ func.func @store_with_a_loop_region_after_containing_a_store(%arg0: memref<f32>)
   memref.store %1, %arg0[] {tag_name = "post"} : memref<f32>
   return {tag = "return"} %arg0 : memref<f32>
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/128333:
+// In interprocedural analysis mode, private functions that are never called
+// should not cause an assertion failure when querying the dense lattice.
+// Instead, the pass should gracefully report "<not computed>".
+// CHECK-LABEL: test_tag: tag_in_unreachable_private
+// CHECK-NEXT:   - <not computed>
+func.func private @unreachable_private(%arg0: i32) {
+  %cond = arith.index_cast %arg0 {tag = "tag_in_unreachable_private"} : i32 to index
+  return
+}

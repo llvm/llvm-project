@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/issignalingf16.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/issignalingf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, issignalingf16, (float16 x)) {
-  return fputil::issignaling_impl(x);
+  return math::issignalingf16(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

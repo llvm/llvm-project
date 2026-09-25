@@ -226,14 +226,6 @@ public:
     SU->addPred(D);
   }
 
-  /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  /// Updates the topological ordering if required.
-  void AddPred(SUnit *SU, const SDep &D) {
-    Topo.AddPred(SU, D.getSUnit());
-    SU->addPred(D);
-  }
-
   /// RemovePred - removes a predecessor edge from SUnit SU.
   /// This returns true if an edge was removed.
   /// Updates the topological ordering if required.
@@ -712,6 +704,7 @@ void ScheduleDAGRRList::EmitNode(SUnit *SU) {
   case ISD::CopyToReg:
   case ISD::CopyFromReg:
   case ISD::EH_LABEL:
+  case ISD::ANNOTATION_LABEL:
     // Noops don't affect the scoreboard state. Copies are likely to be
     // removed.
     return;
@@ -1267,29 +1260,6 @@ void ScheduleDAGRRList::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
   ++NumPRCopies;
 }
 
-/// getPhysicalRegisterVT - Returns the ValueType of the physical register
-/// definition of the specified node.
-/// FIXME: Move to SelectionDAG?
-static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
-                                 const TargetInstrInfo *TII) {
-  unsigned NumRes;
-  if (N->getOpcode() == ISD::CopyFromReg) {
-    // CopyFromReg has: "chain, Val, glue" so operand 1 gives the type.
-    NumRes = 1;
-  } else {
-    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(!MCID.implicit_defs().empty() &&
-           "Physical reg def must be in implicit def list!");
-    NumRes = MCID.getNumDefs();
-    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
-      if (Reg == ImpDef)
-        break;
-      ++NumRes;
-    }
-  }
-  return N->getSimpleValueType(NumRes);
-}
-
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
 static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
@@ -1560,9 +1530,7 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
     assert(LRegs.size() == 1 && "Can't handle this yet!");
     unsigned Reg = LRegs[0];
     SUnit *LRDef = LiveRegDefs[Reg];
-    MVT VT = getPhysicalRegisterVT(LRDef->getNode(), Reg, TII);
-    const TargetRegisterClass *RC =
-      TRI->getMinimalPhysRegClass(Reg, VT);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
     // If cross copy register class is the same as RC, then it must be possible
@@ -1771,8 +1739,8 @@ public:
       RegPressure.resize(NumRC);
       llvm::fill(RegLimit, 0);
       llvm::fill(RegPressure, 0);
-      for (const TargetRegisterClass *RC : TRI->regclasses())
-        RegLimit[RC->getID()] = tri->getRegPressureLimit(RC, MF);
+      for (const TargetRegisterClass &RC : TRI->regclasses())
+        RegLimit[RC.getID()] = tri->getRegPressureLimit(&RC, MF);
     }
   }
 
@@ -2080,11 +2048,11 @@ unsigned RegReductionPQBase::getNodePriority(const SUnit *SU) const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegReductionPQBase::dumpRegPressure() const {
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    unsigned Id = RC->getID();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    unsigned Id = RC.getID();
     unsigned RP = RegPressure[Id];
     if (!RP) continue;
-    LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << ": " << RP << " / "
+    LLVM_DEBUG(dbgs() << TRI->getRegClassName(&RC) << ": " << RP << " / "
                       << RegLimit[Id] << '\n');
   }
 }

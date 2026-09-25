@@ -247,7 +247,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: class DerivedVirtual1 : virtual public Class {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- DerivedVirtual2
-// CHECK-NEXT: class DerivedVirtual2 : public DerivedVirtual1, virtual public Class, virtual public OneMember {
+// CHECK-NEXT: class DerivedVirtual2 : public DerivedVirtual1, virtual public OneMember {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- EnumInt
 // CHECK-NEXT: enum EnumInt {

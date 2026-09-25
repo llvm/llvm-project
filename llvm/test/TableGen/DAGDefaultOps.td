@@ -3,6 +3,7 @@
 // RUN: FileCheck --check-prefix=ADDINT %s < %t
 // RUN: FileCheck --check-prefix=SUB %s < %t
 // RUN: FileCheck --check-prefix=MULINT %s < %t
+// RUN: FileCheck --check-prefix=MUL %s < %t
 
 include "llvm/Target/Target.td"
 
@@ -102,7 +103,7 @@ def MulIRRPat : Pat<(mul i32:$x, i32:$y), (MulIRR Reg:$x, Reg:$y)>;
 // MULINT-NEXT: OPC_MorphNodeTo1Chain, TARGET_VAL(::MulRRI)
 
 // MUL: SwitchOpcode{{.*}}TARGET_VAL(ISD::MUL)
-// MUL-NEXT: OPC_EmitIntegerI32, 0
 // MUL-NEXT: OPC_RecordChild0
 // MUL-NEXT: OPC_RecordChild1
-// MUL-NEXT: OPC_MorphNodeTo1Chain, TARGET_VAL(::MulRRI)
+// MUL-NEXT: OPC_EmitIntegerI32, 0
+// MUL-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(::MulIRR)

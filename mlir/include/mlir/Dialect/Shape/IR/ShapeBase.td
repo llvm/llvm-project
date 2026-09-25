@@ -22,6 +22,7 @@ include "mlir/IR/OpBase.td"
 
 def ShapeDialect : Dialect {
   let name = "shape";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   let summary = "Types and operations for shape dialect";
   let description = [{

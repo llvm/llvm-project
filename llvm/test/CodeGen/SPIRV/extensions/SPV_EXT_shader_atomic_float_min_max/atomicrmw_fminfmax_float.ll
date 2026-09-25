@@ -1,6 +1,7 @@
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_EXT_shader_atomic_float_min_max %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_EXT_shader_atomic_float_min_max %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: The atomic float instruction requires the following SPIR-V extension: SPV_EXT_shader_atomic_float_min_max
 
@@ -11,14 +12,15 @@
 ; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstantNull %[[TyFP32]]
 ; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP32]] 42{{$}}
 ; CHECK-DAG: %[[ScopeAllSvmDevices:[0-9]+]] = OpConstantNull %[[TyInt32]]
-; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
+; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 528{{$}}
+; CHECK-DAG: %[[MemRaw16:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
 ; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[TyFP32Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyFP32]]
 ; CHECK-DAG: %[[DblPtr:[0-9]+]] = OpVariable %[[TyFP32Ptr]] {{[a-zA-Z]+}} %[[Const0]]
 ; CHECK: OpAtomicFMinEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]
 ; CHECK: OpAtomicFMaxEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]
-; CHECK: OpAtomicFMinEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
-; CHECK: OpAtomicFMaxEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
+; CHECK: OpAtomicFMinEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[MemRaw16]] %[[Const42]]
+; CHECK: OpAtomicFMaxEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[MemRaw16]] %[[Const42]]
 
 @f = common dso_local local_unnamed_addr addrspace(1) global float 0.000000e+00, align 8
 

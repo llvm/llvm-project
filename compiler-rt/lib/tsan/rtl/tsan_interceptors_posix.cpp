@@ -116,6 +116,7 @@ const int PTHREAD_MUTEX_RECURSIVE_NP = 2;
 #endif
 #if !SANITIZER_FREEBSD && !SANITIZER_APPLE && !SANITIZER_NETBSD
 const int EPOLL_CTL_ADD = 1;
+const int EPOLL_CTL_MOD = 3;
 #endif
 const int SIGILL = 4;
 const int SIGTRAP = 5;
@@ -2082,7 +2083,7 @@ TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
     FdAccess(thr, pc, epfd);
   if (epfd >= 0 && fd >= 0)
     FdAccess(thr, pc, fd);
-  if (op == EPOLL_CTL_ADD && epfd >= 0) {
+  if ((op == EPOLL_CTL_ADD || op == EPOLL_CTL_MOD) && epfd >= 0) {
     FdPollAdd(thr, pc, epfd, fd);
     FdRelease(thr, pc, epfd);
   }
@@ -2596,9 +2597,9 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 
 #define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
   ({                                              \
-    CheckNoDeepBind(filename, flag);              \
+    OnDlOpen(filename, flag);                     \
     ThreadIgnoreBegin(thr, 0);                    \
-    void *res = REAL(dlopen)(filename, flag);     \
+    void* res = REAL(dlopen)(filename, flag);     \
     ThreadIgnoreEnd(thr);                         \
     res;                                          \
   })

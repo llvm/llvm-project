@@ -14,9 +14,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
-#include <cstring>
 #include <string>
-#include <tuple>
 #include <vector>
 
 namespace Fortran::parser {

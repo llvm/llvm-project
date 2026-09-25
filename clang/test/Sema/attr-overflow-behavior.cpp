@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Wconstant-conversion -Woverflow-behavior-conversion -verify -fsyntax-only
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Wconstant-conversion -Woverflow-behavior-conversion -verify -fsyntax-only -fexperimental-new-constant-interpreter
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -119,7 +120,7 @@ void cpp_constexpr_bracket_initialization() {
   constexpr short __ob_wrap cx2 = {100000}; // expected-error {{constant expression evaluates to 100000 which cannot be narrowed to type '__ob_wrap short'}}
 
   constexpr short __ob_trap cx3 = {(int)100000}; // expected-error {{constant expression evaluates to 100000 which cannot be narrowed to type '__ob_trap short'}}
-  // expected-warning@-1 {{implicit conversion from 'int' to '__ob_trap short const' changes value from 100000 to -31072}}
+  // expected-warning@-1 {{implicit conversion from 'int' to 'const __ob_trap short' changes value from 100000 to -31072}}
 
   constexpr short cx4 = {(int __ob_trap)100000}; // expected-error {{constant expression evaluates to 100000 which cannot be narrowed to type 'short'}}
   // expected-warning@-1 {{implicit conversion from '__ob_trap int' to '__ob_trap const short' changes value from 100000 to -31072}}

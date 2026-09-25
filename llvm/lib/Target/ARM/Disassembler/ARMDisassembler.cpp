@@ -1988,7 +1988,7 @@ static DecodeStatus DecodeBranchImmInstruction(MCInst &Inst, unsigned Insn,
     Inst.addOperand(MCOperand::createImm(SignExtend32<26>(imm)));
 
   // We already have BL_pred for BL w/ predicate, no need to add addition
-  // predicate opreands for BL
+  // predicate operands for BL
   if (Inst.getOpcode() != ARM::BL)
     if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
       return MCDisassembler::Fail;
@@ -6110,7 +6110,7 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
                                             DecodeStatus Result) {
   switch (MI.getOpcode()) {
     case ARM::HVC: {
-      // HVC is undefined if condition = 0xf otherwise upredictable
+      // HVC is undefined if condition = 0xf otherwise unpredictable
       // if condition != 0xe
       uint32_t Cond = (Insn >> 28) & 0xF;
       if (Cond == 0xF)

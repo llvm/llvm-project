@@ -12,7 +12,7 @@ from lldbsuite.test.lldbtest import *
 class TestDarwinSignalHandlers(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_ignored_thread(self):
         """It isn't possible to convert an EXC_BAD_ACCESS to a signal when
         running under the debugger, which makes debugging SIGBUS handlers

@@ -11,21 +11,21 @@ template <typename T> void summable(T a) {
   }
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG_A:.*]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
 // CIR:   %[[CONST_TRUE:.*]] = cir.const #true
 // CIR:   cir.if %[[CONST_TRUE]] {
-// CIR:     %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR:     %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR:     %[[TMP_A_1:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[TMP_A_2:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:     %[[RESULT:.*]] = cir.binop(add, %[[TMP_A_1]], %[[TMP_A_2]]) nsw : !s32i
+// CIR:     %[[RESULT:.*]] = cir.add nsw %[[TMP_A_1]], %[[TMP_A_2]] : !s32i
 // CIR:     cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[ARG_A:.*]], ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[IF_COND:.*]]
 // LLVM: [[IF_COND]]:

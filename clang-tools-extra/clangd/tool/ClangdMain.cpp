@@ -525,6 +525,14 @@ opt<bool> PreambleParseForwardingFunctions{
     init(ParseOptions().PreambleParseForwardingFunctions),
 };
 
+opt<bool> SkipPreambleBuild{
+    "skip-preamble-build",
+    cat(Misc),
+    desc("If ture, skip preamble build"),
+    Hidden,
+    init(ParseOptions().SkipPreambleBuild),
+};
+
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
 opt<bool> EnableMallocTrim{
     "malloc-trim",
@@ -589,30 +597,31 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    path::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(testDir(), Path);
     return std::string(Path);
   }
 
   llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
     llvm::StringRef Body = AbsolutePath;
-    if (!Body.consume_front(TestScheme::TestDir))
+    if (!Body.consume_front(testDir()))
       return error("Path {0} doesn't start with root {1}", AbsolutePath,
-                   TestDir);
+                   testDir());
 
     return URI("test", /*Authority=*/"",
                llvm::sys::path::convert_to_slash(Body));
   }
 
 private:
-  const static char TestDir[];
-};
-
+  static llvm::StringRef testDir() {
 #ifdef _WIN32
-const char TestScheme::TestDir[] = "C:\\clangd-test";
+    static const std::string TestDir = llvm::sys::path::native("C:/clangd-test");
+    return TestDir;
 #else
-const char TestScheme::TestDir[] = "/clangd-test";
+    return "/clangd-test";
 #endif
+  }
+};
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
@@ -903,6 +912,26 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     log("argv[{0}]: {1}", I, argv[I]);
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
+  // Log environment variables that influence how clangd finds system headers.
+  // This helps diagnose missing-include issues, especially on Windows.
+  for (const char *EnvVar : {
+           // MSVC environment variables (set by vcvarsall.bat)
+           "INCLUDE",
+           "LIB",
+           "LIBPATH",
+           "CL",
+           "_CL_",
+           // GCC/Clang environment variables
+           "CPATH",
+           "C_INCLUDE_PATH",
+           "CPLUS_INCLUDE_PATH",
+           "OBJC_INCLUDE_PATH",
+           "LIBRARY_PATH",
+           "GCC_EXEC_PREFIX",
+       }) {
+    if (auto Val = llvm::sys::Process::GetEnv(EnvVar))
+      log("Env {0}: {1}", EnvVar, *Val);
+  }
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
@@ -1005,6 +1034,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  Opts.SkipPreambleBuild = SkipPreambleBuild;
   Opts.ImportInsertions = ImportInsertions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {

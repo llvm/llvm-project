@@ -46,7 +46,7 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_test() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFsimple_testEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFsimple_testEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFsimple_testEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 10 : i64
@@ -78,7 +78,7 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_6:.*]] = arith.cmpi sgt, %[[VAL_4]], %[[VAL_5]] : index
 ! CHECK:           %[[VAL_7:.*]] = arith.select %[[VAL_6]], %[[VAL_4]], %[[VAL_5]] : index
-! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_7]] {bindc_name = "x", uniq_name = "_QFarg_testEx"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_7]] <{bindc_name = "x", uniq_name = "_QFarg_testEx"}>
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QFarg_testEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {uniq_name = "_QFarg_testFarray_func_2En"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)

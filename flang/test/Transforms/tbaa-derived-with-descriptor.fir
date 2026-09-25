@@ -36,9 +36,9 @@ func.func @_QPtest() {
   fir.do_loop %arg0 = %c1 to %c1 step %c1 unordered {
     %27 = fir.array_coor %16(%15) %arg0 : (!fir.ref<!fir.array<1xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     %28 = fir.declare %2 {uniq_name = ".tmp"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK: fir.load %{{.*}} {tbaa = {{.*}}} : !fir.ref<f32>
+// CHECK: fir.load %{{.*}} <{tbaa = {{.*}>}} : !fir.ref<f32>
     %29 = fir.load %27 : !fir.ref<f32>
-// CHECK: fir.store %{{.*}} {tbaa = {{.*}}} : !fir.ref<f32>
+// CHECK: fir.store %{{.*}} <{tbaa = {{.*}>}} : !fir.ref<f32>
     fir.store %29 to %28 : !fir.ref<f32>
     %30 = fir.call @_QFtestPcallee(%28) proc_attrs<elemental, pure> fastmath<fast> : (!fir.ref<f32>) -> !fir.type<_QFtestTt{f:!fir.box<!fir.heap<f32>>}>
     fir.save_result %30 to %3 : !fir.type<_QFtestTt{f:!fir.box<!fir.heap<f32>>}>, !fir.ref<!fir.type<_QFtestTt{f:!fir.box<!fir.heap<f32>>}>>

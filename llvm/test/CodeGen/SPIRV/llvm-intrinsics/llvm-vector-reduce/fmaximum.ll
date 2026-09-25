@@ -17,10 +17,10 @@ target triple = "spir64-unknown-unknown"
 
 ; CHECK: OpFunction
 ; CHECK: %[[ParamVec2Half:.*]] = OpFunctionParameter %[[HalfVec2]]
-; CHECK: %[[Vec2HalfItem0:.*]] = OpCompositeExtract %[[Half]] %[[ParamVec2Half]] 0
-; CHECK: %[[Vec2HalfItem1:.*]] = OpCompositeExtract %[[Half]] %[[ParamVec2Half]] 1
-; CHECK: %[[Vec2HalfR1:.*]] = OpExtInst %[[Half]] %[[#]] fmax %[[Vec2HalfItem0]] %[[Vec2HalfItem1]]
-; CHECK: OpReturnValue %[[Vec2HalfR1]]
+; CHECK: %[[Vec2HalfShuf:.*]] = OpVectorShuffle %[[HalfVec2]] %[[ParamVec2Half]] %[[#]] 1 0xFFFFFFFF
+; CHECK: %[[Vec2HalfR1:.*]] = OpExtInst %[[HalfVec2]] %[[#]] fmax %[[ParamVec2Half]] %[[Vec2HalfShuf]]
+; CHECK: %[[Vec2HalfR2:.*]] = OpCompositeExtract %[[Half]] %[[Vec2HalfR1]] 0
+; CHECK: OpReturnValue %[[Vec2HalfR2]]
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
@@ -35,10 +35,10 @@ target triple = "spir64-unknown-unknown"
 
 ; CHECK: OpFunction
 ; CHECK: %[[ParamVec2Float:.*]] = OpFunctionParameter %[[FloatVec2]]
-; CHECK: %[[Vec2FloatItem0:.*]] = OpCompositeExtract %[[Float]] %[[ParamVec2Float]] 0
-; CHECK: %[[Vec2FloatItem1:.*]] = OpCompositeExtract %[[Float]] %[[ParamVec2Float]] 1
-; CHECK: %[[Vec2FloatR1:.*]] = OpExtInst %[[Float]] %[[#]] fmax %[[Vec2FloatItem0]] %[[Vec2FloatItem1]]
-; CHECK: OpReturnValue %[[Vec2FloatR1]]
+; CHECK: %[[Vec2FloatShuf:.*]] = OpVectorShuffle %[[FloatVec2]] %[[ParamVec2Float]] %[[#]] 1 0xFFFFFFFF
+; CHECK: %[[Vec2FloatR1:.*]] = OpExtInst %[[FloatVec2]] %[[#]] fmax %[[ParamVec2Float]] %[[Vec2FloatShuf]]
+; CHECK: %[[Vec2FloatR2:.*]] = OpCompositeExtract %[[Float]] %[[Vec2FloatR1]] 0
+; CHECK: OpReturnValue %[[Vec2FloatR2]]
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
@@ -53,10 +53,10 @@ target triple = "spir64-unknown-unknown"
 
 ; CHECK: OpFunction
 ; CHECK: %[[ParamVec2Double:.*]] = OpFunctionParameter %[[DoubleVec2]]
-; CHECK: %[[Vec2DoubleItem0:.*]] = OpCompositeExtract %[[Double]] %[[ParamVec2Double]] 0
-; CHECK: %[[Vec2DoubleItem1:.*]] = OpCompositeExtract %[[Double]] %[[ParamVec2Double]] 1
-; CHECK: %[[Vec2DoubleR1:.*]] = OpExtInst %[[Double]] %[[#]] fmax %[[Vec2DoubleItem0]] %[[Vec2DoubleItem1]]
-; CHECK: OpReturnValue %[[Vec2DoubleR1]]
+; CHECK: %[[Vec2DoubleShuf:.*]] = OpVectorShuffle %[[DoubleVec2]] %[[ParamVec2Double]] %[[#]] 1 0xFFFFFFFF
+; CHECK: %[[Vec2DoubleR1:.*]] = OpExtInst %[[DoubleVec2]] %[[#]] fmax %[[ParamVec2Double]] %[[Vec2DoubleShuf]]
+; CHECK: %[[Vec2DoubleR2:.*]] = OpCompositeExtract %[[Double]] %[[Vec2DoubleR1]] 0
+; CHECK: OpReturnValue %[[Vec2DoubleR2]]
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction

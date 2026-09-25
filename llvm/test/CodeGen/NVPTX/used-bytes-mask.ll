@@ -26,10 +26,10 @@ define i32 @global_8xi32(ptr %a, ptr %b) {
 ; MASK-NEXT:    .reg .b64 %rd<2>;
 ; MASK-EMPTY:
 ; MASK-NEXT:  // %bb.0:
-; MASK-NEXT:    ld.param.b64 %rd1, [global_8xi32_param_0];
+; MASK-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_param_0];
 ; MASK-NEXT:    .pragma "used_bytes_mask 0xfff";
 ; MASK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; MASK-NEXT:    st.param.b32 [func_retval0], %r1;
+; MASK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; MASK-NEXT:    ret;
   %a.load = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 %a, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> poison)
   %first = extractelement <4 x i32> %a.load, i32 0

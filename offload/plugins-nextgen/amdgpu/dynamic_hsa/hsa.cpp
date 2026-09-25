@@ -70,9 +70,18 @@ DLWRAP(hsa_amd_register_system_event_handler, 2)
 DLWRAP(hsa_amd_signal_create, 5)
 DLWRAP(hsa_amd_signal_async_handler, 5)
 DLWRAP(hsa_amd_pointer_info, 5)
+DLWRAP(hsa_amd_profiling_get_dispatch_time, 3)
+DLWRAP(hsa_amd_profiling_set_profiler_enabled, 2)
 DLWRAP(hsa_code_object_reader_create_from_memory, 3)
 DLWRAP(hsa_code_object_reader_destroy, 1)
 DLWRAP(hsa_executable_load_agent_code_object, 5)
+DLWRAP(hsa_amd_vmem_address_reserve, 4)
+DLWRAP(hsa_amd_vmem_address_free, 2)
+DLWRAP(hsa_amd_vmem_handle_create, 5)
+DLWRAP(hsa_amd_vmem_handle_release, 1)
+DLWRAP(hsa_amd_vmem_map, 5)
+DLWRAP(hsa_amd_vmem_unmap, 2)
+DLWRAP(hsa_amd_vmem_set_access, 4)
 
 DLWRAP_FINALIZE()
 
@@ -90,10 +99,15 @@ DLWRAP_FINALIZE()
 static bool checkForHSA() {
   // return true if dlopen succeeded and all functions found
 
-  const char *HsaLib = DYNAMIC_HSA_PATH;
+  const char *HsaLib = DYNAMIC_HSA_PATH ".1";
   std::string ErrMsg;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    HsaLib = DYNAMIC_HSA_PATH;
+    DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  }
   if (!DynlibHandle->isValid()) {
     ODBG(OLDT_Init) << "Unable to load library '" << HsaLib << "': " << ErrMsg;
     return false;

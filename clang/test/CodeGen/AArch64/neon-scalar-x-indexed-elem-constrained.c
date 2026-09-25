@@ -91,11 +91,11 @@ float32_t test_vfmss_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[V]] to i64
-// UNCONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__S2_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -110,11 +110,11 @@ float32_t test_vfmss_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[V]] to i64
-// CONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// CONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__S2_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -133,12 +133,12 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg <1 x double> [[B]]
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG]] to i64
-// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[V]] to i64
-// UNCONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__S2_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -153,12 +153,12 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg <1 x double> [[B]]
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG]] to i64
-// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[V]] to i64
-// CONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// CONSTRAINED-NEXT:    [[__S2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__S2_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -177,9 +177,9 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <2 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
 // UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -196,9 +196,9 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <2 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
 // CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -219,10 +219,10 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <2 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg <1 x double> [[B]]
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG]] to i64
-// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// UNCONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
 // UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -239,10 +239,10 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <2 x double> noundef [[V:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg <1 x double> [[B]]
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG]] to i64
-// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CONSTRAINED-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
 // CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>

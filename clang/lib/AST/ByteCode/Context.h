@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_CONTEXT_H
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
+#include "FrameAllocator.h"
 #include "InterpStack.h"
 #include "clang/AST/ASTContext.h"
 
@@ -37,12 +38,17 @@ struct ParamOffset {
   bool IsPtr;
 };
 
+struct FuncParam {
+  unsigned Index;
+  bool IsPtr;
+};
+
 class EvalIDScope;
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
 public:
   /// Initialises the constexpr VM.
-  Context(ASTContext &Ctx);
+  explicit Context(ASTContext &Ctx);
 
   /// Cleans up the constexpr VM.
   ~Context();
@@ -62,6 +68,10 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
+  void registerRedecl(const VarDecl *VD, const APValue &V);
+
+  /// Evaluates the destruction of a variable.
+  bool evaluateDestruction(State &Parent, const VarDecl *VD, APValue Value);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
@@ -87,7 +97,13 @@ public:
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
-                                                unsigned Kind);
+                                                unsigned Kind, bool IsDynamic);
+
+  std::optional<bool> evaluateWithSubstitution(State &Parent,
+                                               const FunctionDecl *Callee,
+                                               ArrayRef<const Expr *> Args,
+                                               const Expr *This,
+                                               const Expr *Condition);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -113,10 +129,12 @@ public:
   }
 
   bool canClassify(QualType T) const {
+    T = T.getCanonicalType();
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
-      if (BT->getKind() == BuiltinType::Bool)
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
         return true;
     }
     if (T->isPointerOrReferenceType())
@@ -125,6 +143,10 @@ public:
     if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
         T->isVectorType())
       return false;
+
+    if (T->isEnumeralType())
+      return true;
+
     return classify(T) != std::nullopt;
   }
   bool canClassify(const Expr *E) const {
@@ -180,6 +202,8 @@ private:
   ASTContext &Ctx;
   /// Interpreter stack, shared across invocations.
   InterpStack Stk;
+  /// (Function) frame allocator, also shared.
+  FrameAllocator FrameAlloc;
   /// Constexpr program.
   std::unique_ptr<Program> P;
   /// ID identifying an evaluation.
@@ -195,6 +219,8 @@ class EvalIDScope {
 public:
   EvalIDScope(Context &Ctx) : Ctx(Ctx), OldID(Ctx.EvalID) { ++Ctx.EvalID; }
   ~EvalIDScope() { Ctx.EvalID = OldID; }
+  EvalIDScope(const EvalIDScope &) = delete;
+  EvalIDScope &operator=(const EvalIDScope &) = delete;
 
 private:
   Context &Ctx;

@@ -9,8 +9,10 @@
 
 // Check that the driver passes include paths to cc1 on FreeBSD in C++ mode.
 // RUN: %clang -### -xc++ %s --target=x86_64-unknown-freebsd13.1 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/install_tree_without_libcxx/bin \
+// RUN:     --sysroot=%S/Inputs/basic_freebsd_libcxx_tree \
 // RUN:   | FileCheck %s --check-prefix=DRIVER-PASS-INCLUDES-CXX
 // DRIVER-PASS-INCLUDES-CXX:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
-// DRIVER-PASS-INCLUDES-CXX-SAME: "-internal-isystem" "/usr/include/c++/v1"
+// DRIVER-PASS-INCLUDES-CXX-SAME: "-internal-isystem" "{{.*}}/usr/include/c++/v1"
 // DRIVER-PASS-INCLUDES-CXX-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
-// DRIVER-PASS-INCLUDES-CXX-SAME: {{^}} "-internal-externc-isystem" "/usr/include"
+// DRIVER-PASS-INCLUDES-CXX-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/usr/include"

@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -debug-only=gcn-subtarget < %s 2>&1 | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefixes=WARNING %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -debug-only=gcn-subtarget < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa < %s 2>&1 | FileCheck -check-prefixes=WARNING %s
 
 ; CHECK: Post-MI-sched direction (postra-sched-topdown): topdown
 define float @postra-sched-topdown(float %input) nounwind #0 {

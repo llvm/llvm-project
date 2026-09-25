@@ -8,7 +8,7 @@
 define void @foo(ptr %this, ptr %p, i32 %add7) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[ADD7:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[ADD7:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[TMP0]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    switch i32 undef, label [[SW_EPILOG:%.*]] [

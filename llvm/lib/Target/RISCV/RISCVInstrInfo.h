@@ -63,6 +63,7 @@ enum CondCode {
 };
 
 CondCode getInverseBranchCondition(CondCode);
+unsigned getInverseBranchOpcode(unsigned BCC);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
@@ -84,6 +85,11 @@ public:
   explicit RISCVInstrInfo(const RISCVSubtarget &STI);
 
   const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &RISCV::GPRRegClass;
+  }
 
   MCInst getNop() const override;
 
@@ -127,16 +133,17 @@ public:
 
   using TargetInstrInfo::foldMemoryOperandImpl;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineInstr &LoadMI,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -173,6 +180,8 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
+
+  int getJumpTableIndex(const MachineInstr &MI) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -231,6 +240,7 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  // Return true if the candidate should be discarded from outlining.
   bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -253,6 +263,10 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
+
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
@@ -330,6 +344,15 @@ public:
   /// or any kind of vector registers when \p LMul is zero.
   bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
 
+  /// Return true if the instruction requires an NTL hint to be emitted.
+  bool requiresNTLHint(const MachineInstr &MI) const;
+
+  /// Return true if moving \p From down to \p To won't cause any physical
+  /// register reads or writes to be clobbered and no visible side effects are
+  /// affected. From and To must be in the same block.
+  static bool isSafeToMove(const MachineInstr &From,
+                           const MachineBasicBlock::iterator &To);
+
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);
 
@@ -353,8 +376,6 @@ protected:
   const RISCVSubtarget &STI;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
                                          bool Invert = false) const;
   bool areRVVInstsReassociable(const MachineInstr &MI1,
@@ -396,7 +417,8 @@ unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 static constexpr int64_t VLMaxSentinel = -1LL;
 
 /// Given two VL operands, do we know that LHS <= RHS?
-bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
+bool isVLKnownLE(const MachineRegisterInfo &MRI, const MachineOperand &LHS,
+                 const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;

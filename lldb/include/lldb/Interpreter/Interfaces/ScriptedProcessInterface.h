@@ -22,11 +22,15 @@ namespace lldb_private {
 class ScriptedProcessInterface : virtual public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     ExecutionContext &exe_ctx,
                      StructuredData::Generic *script_obj = nullptr) = 0;
 
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
+
+  /// The number of bits this process uses for addressing, as a dictionary
+  /// with optional "lowmem" and "highmem" keys.
+  virtual StructuredData::DictionarySP GetAddressableBits() { return {}; }
 
   virtual Status Attach(const ProcessAttachInfo &attach_info) {
     return Status::FromErrorString("ScriptedProcess did not attach");

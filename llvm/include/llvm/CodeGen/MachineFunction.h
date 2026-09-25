@@ -32,6 +32,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
 #include <cassert>
@@ -69,9 +70,9 @@ class PseudoSourceValueManager;
 class raw_ostream;
 class SlotIndexes;
 class StringRef;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetSubtargetInfo;
-struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
@@ -270,20 +271,11 @@ private:
   std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
 };
 
-struct SEHHandler {
-  /// Filter or finally function. Null indicates a catch-all.
-  const Function *FilterOrFinally;
-
-  /// Address of block to recover at. Null for a finally handler.
-  const BlockAddress *RecoverBA;
-};
-
 /// This structure is used to retain landing pad info for the current function.
 struct LandingPadInfo {
   MachineBasicBlock *LandingPadBlock;      // Landing pad block.
   SmallVector<MCSymbol *, 1> BeginLabels;  // Labels prior to invoke.
   SmallVector<MCSymbol *, 1> EndLabels;    // Labels after invoke.
-  SmallVector<SEHHandler, 1> SEHHandlers;  // SEH handlers active at this lpad.
   MCSymbol *LandingPadLabel = nullptr;     // Label at beginning of landing pad.
   std::vector<int> TypeIds;                // List of type ids (filters negative).
 
@@ -316,11 +308,6 @@ class LLVM_ABI MachineFunction {
   // Keep track of the function section.
   MCSection *Section = nullptr;
 
-  // Catchpad unwind destination info for wasm EH.
-  // Keeps track of Wasm exception handling related data. This will be null for
-  // functions that aren't using a wasm EH personality.
-  WasmEHFuncInfo *WasmEHInfo = nullptr;
-
   // Keeps track of Windows exception handling related data. This will be null
   // for functions that aren't using a funclet-based EH personality.
   WinEHFuncInfo *WinEHInfo = nullptr;
@@ -330,9 +317,12 @@ class LLVM_ABI MachineFunction {
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
 
-  // MBBNumbering epoch, incremented after renumbering to detect use of old
-  // block numbers.
-  unsigned MBBNumberingEpoch = 0;
+  // Analysis number epoch, currently never changed as we don't renumber the
+  // block numbers used for analyses.
+  unsigned AnalysisNumberingEpoch = 0;
+
+  // Next MBB analysis number.
+  unsigned NextAnalysisNumber = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -422,6 +412,10 @@ class LLVM_ABI MachineFunction {
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
 
+  /// Prefetch targets in this function. This includes targets that are mapped
+  /// to a basic block and dangling targets.
+  DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargets;
+
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
 
@@ -430,8 +424,6 @@ class LLVM_ABI MachineFunction {
 
   /// List of the indices in FilterIds corresponding to filter terminators.
   std::vector<unsigned> FilterEnds;
-
-  EHPersonality PersonalityTypeCache = EHPersonality::Unknown;
 
   /// \}
 
@@ -764,6 +756,16 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
+  void
+  setPrefetchTargets(const DenseMap<UniqueBBID, SmallVector<unsigned>> &V) {
+    PrefetchTargets = V;
+  }
+
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &
+  getPrefetchTargets() const {
+    return PrefetchTargets;
+  }
+
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
   /// function.
   void assignBeginEndSections();
@@ -792,6 +794,14 @@ public:
   MachineFrameInfo &getFrameInfo() { return *FrameInfo; }
   const MachineFrameInfo &getFrameInfo() const { return *FrameInfo; }
 
+  /// Returns true if frame pointer elimination should be disabled for this
+  /// function.
+  bool disableFramePointerElim() const;
+
+  /// Returns true if the frame pointer must always either point to a new frame
+  /// record or be un-modified in this function.
+  bool framePointerIsReserved() const;
+
   /// getJumpTableInfo - Return the jump table info object for the current
   /// function.  This object contains information about jump tables in the
   /// current function.  If the current function has no jump tables, this will
@@ -807,12 +817,6 @@ public:
   /// function.
   MachineConstantPool *getConstantPool() { return ConstantPool; }
   const MachineConstantPool *getConstantPool() const { return ConstantPool; }
-
-  /// getWasmEHFuncInfo - Return information about how the current function uses
-  /// Wasm exception handling. Returns null for functions that don't use wasm
-  /// exception handling.
-  const WasmEHFuncInfo *getWasmEHFuncInfo() const { return WasmEHInfo; }
-  WasmEHFuncInfo *getWasmEHFuncInfo() { return WasmEHInfo; }
 
   /// getWinEHFuncInfo - Return information about how the current function uses
   /// Windows exception handling. Returns null for functions that don't use
@@ -895,12 +899,7 @@ public:
 
   MachineFunctionInfo *cloneInfoFrom(
       const MachineFunction &OrigMF,
-      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
-    assert(!MFInfo && "new function already has MachineFunctionInfo");
-    if (!OrigMF.MFInfo)
-      return nullptr;
-    return OrigMF.MFInfo->clone(Allocator, *this, Src2DstMBB);
-  }
+      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB);
 
   /// Returns the denormal handling type for the default rounding mode of the
   /// function.
@@ -922,10 +921,14 @@ public:
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
-  /// Return the numbering "epoch" of block numbers, incremented after each
-  /// numbering. Intended for asserting that no renumbering was performed when
-  /// used by, e.g., preserved analyses.
-  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
+  /// Return the numbering "epoch" of analysis block numbers.
+  unsigned getAnalysisBlockNumberEpoch() const {
+    return AnalysisNumberingEpoch;
+  }
+
+  unsigned assignAnalysisNumber() { return NextAnalysisNumber++; }
+
+  unsigned getMaxAnalysisBlockNumber() const { return NextAnalysisNumber; }
 
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
@@ -1108,35 +1111,35 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
 
@@ -1150,7 +1153,7 @@ public:
                                           int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
         MMO, Offset,
-        !Size.hasValue() ? LLT()
+        !Size.isPrecise() ? LLT()
         : Size.isScalable()
             ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
@@ -1251,6 +1254,10 @@ public:
   }
 
   [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
+
+  /// Replace all references to register \param From with register \param To in
+  /// frame instructions. Note that .cfi_escape instructions will be left as-is.
+  void replaceFrameInstRegister(MCRegister From, MCRegister To);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used
@@ -1528,10 +1535,10 @@ template <> struct GraphTraits<MachineFunction*> :
   static unsigned       size       (MachineFunction *F) { return F->size(); }
 
   static unsigned getMaxNumber(MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<const MachineFunction*> :
@@ -1554,10 +1561,10 @@ template <> struct GraphTraits<const MachineFunction*> :
   }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 
@@ -1573,10 +1580,10 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   }
 
   static unsigned getMaxNumber(MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
@@ -1586,10 +1593,10 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 

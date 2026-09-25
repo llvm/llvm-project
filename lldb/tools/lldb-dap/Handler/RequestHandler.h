@@ -234,8 +234,8 @@ public:
                                uint32_t start_column, uint32_t end_line,
                                uint32_t end_column) const;
   std::vector<std::pair<uint32_t, uint32_t>>
-  GetAssemblyBreakpointLocations(int64_t source_reference, uint32_t start_line,
-                                 uint32_t end_line) const;
+  GetAssemblyBreakpointLocations(src_ref_t source_reference,
+                                 uint32_t start_line, uint32_t end_line) const;
 };
 
 class CompletionsRequestHandler
@@ -473,14 +473,13 @@ public:
 
 class CompileUnitsRequestHandler
     : public RequestHandler<
-          std::optional<protocol::CompileUnitsArguments>,
+          protocol::CompileUnitsArguments,
           llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
   llvm::Expected<protocol::CompileUnitsResponseBody>
-  Run(const std::optional<protocol::CompileUnitsArguments> &args)
-      const override;
+  Run(const protocol::CompileUnitsArguments &args) const override;
 };
 
 class ModulesRequestHandler final

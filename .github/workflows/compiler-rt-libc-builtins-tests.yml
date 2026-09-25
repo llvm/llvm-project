@@ -1,0 +1,56 @@
+# Pre-commit CI for the compiler-rt + LLVM-libc builtins integration.
+name: compiler-rt + libc Builtins Tests
+permissions:
+  contents: read
+on:
+  pull_request:
+    paths:
+      - "compiler-rt/lib/builtins/**"
+      - "compiler-rt/test/builtins/**"
+      - "libc/shared/builtins.h"
+      - "libc/shared/builtins/**"
+      - "libc/src/__support/builtins/**"
+      - "libc/src/__support/FPUtil/**"
+      - ".github/workflows/compiler-rt-libc-builtins-tests.yml"
+
+jobs:
+  build:
+    name: builtins (${{ matrix.os }})
+    if: github.repository_owner == 'llvm'
+    runs-on: ${{ matrix.os }}
+    container:
+      image: ${{ (startsWith(matrix.os, 'ubuntu-26.04-arm') &&
+        'ghcr.io/llvm/arm64v8/libc-ubuntu-26.04:latest@sha256:8597b484c4041a6f61374ad12820d7786e3279111a94dc13ccba0b57a3c508da') ||
+        'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, ubuntu-26.04-arm]
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Configure CMake
+        run: |
+          cmake \
+            -B build \
+            -S runtimes \
+            -DLLVM_ENABLE_RUNTIMES=compiler-rt \
+            -G Ninja \
+            -DCMAKE_C_COMPILER=clang-23 \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCOMPILER_RT_STANDALONE_BUILD=ON \
+            -DCOMPILER_RT_USE_LIBC_MATH=ON \
+            -DLLVM_EXTERNAL_LIT=$(which lit-23) \
+            -DCOMPILER_RT_INCLUDE_TESTS=ON
+
+      - name: Test compiler-rt builtins
+        run: |
+          cmake \
+            --build build \
+            --parallel \
+            --target check-builtins

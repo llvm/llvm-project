@@ -22,18 +22,16 @@ define i32 @optimize_illegal_bitcast_v32i8(<32 x i8> %x) {
 ; CHECK-LABEL: optimize_illegal_bitcast_v32i8:
 ; CHECK:         .functype optimize_illegal_bitcast_v32i8 (v128, v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push2=, 16
-; CHECK-NEXT:    v128.const $push10=, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32
-; CHECK-NEXT:    local.tee $push9=, $2=, $pop10
-; CHECK-NEXT:    i8x16.eq $push0=, $0, $pop9
+; CHECK-NEXT:    v128.const $push8=, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32
+; CHECK-NEXT:    local.tee $push7=, $2=, $pop8
+; CHECK-NEXT:    i8x16.eq $push0=, $0, $pop7
 ; CHECK-NEXT:    i8x16.bitmask $push1=, $pop0
-; CHECK-NEXT:    i32.const $push8=, 16
-; CHECK-NEXT:    i32.add $push3=, $pop1, $pop8
-; CHECK-NEXT:    i32.shl $push4=, $pop2, $pop3
-; CHECK-NEXT:    i8x16.eq $push5=, $1, $2
-; CHECK-NEXT:    i8x16.bitmask $push6=, $pop5
-; CHECK-NEXT:    i32.add $push7=, $pop4, $pop6
-; CHECK-NEXT:    return $pop7
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i8x16.eq $push4=, $1, $2
+; CHECK-NEXT:    i8x16.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.or $push6=, $pop3, $pop5
+; CHECK-NEXT:    return $pop6
     %z = icmp eq <32 x i8> %x, splat (i8 32)
     %res = bitcast <32 x i1> %z to i32
     ret i32 %res
@@ -44,18 +42,16 @@ define i32 @optimize_illegal_bitcast_v32i8_const_step_vec(<32 x i8> %x) {
 ; CHECK-LABEL: optimize_illegal_bitcast_v32i8_const_step_vec:
 ; CHECK:         .functype optimize_illegal_bitcast_v32i8_const_step_vec (v128, v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push3=, 16
 ; CHECK-NEXT:    v128.const $push0=, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
 ; CHECK-NEXT:    i8x16.eq $push1=, $0, $pop0
 ; CHECK-NEXT:    i8x16.bitmask $push2=, $pop1
-; CHECK-NEXT:    i32.const $push10=, 16
-; CHECK-NEXT:    i32.add $push4=, $pop2, $pop10
-; CHECK-NEXT:    i32.shl $push5=, $pop3, $pop4
-; CHECK-NEXT:    v128.const $push6=, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
-; CHECK-NEXT:    i8x16.eq $push7=, $1, $pop6
-; CHECK-NEXT:    i8x16.bitmask $push8=, $pop7
-; CHECK-NEXT:    i32.add $push9=, $pop5, $pop8
-; CHECK-NEXT:    return $pop9
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    v128.const $push5=, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+; CHECK-NEXT:    i8x16.eq $push6=, $1, $pop5
+; CHECK-NEXT:    i8x16.bitmask $push7=, $pop6
+; CHECK-NEXT:    i32.or $push8=, $pop4, $pop7
+; CHECK-NEXT:    return $pop8
     %const_step_vec =  add <32 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8,
                               i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16,
                               i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24,
@@ -70,16 +66,14 @@ define i32 @optimize_illegal_bitcast_v32i8_non_const_vec(<32 x i8> %x, <32 x i8>
 ; CHECK-LABEL: optimize_illegal_bitcast_v32i8_non_const_vec:
 ; CHECK:         .functype optimize_illegal_bitcast_v32i8_non_const_vec (v128, v128, v128, v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push2=, 16
 ; CHECK-NEXT:    i8x16.eq $push0=, $0, $2
 ; CHECK-NEXT:    i8x16.bitmask $push1=, $pop0
-; CHECK-NEXT:    i32.const $push8=, 16
-; CHECK-NEXT:    i32.add $push3=, $pop1, $pop8
-; CHECK-NEXT:    i32.shl $push4=, $pop2, $pop3
-; CHECK-NEXT:    i8x16.eq $push5=, $1, $3
-; CHECK-NEXT:    i8x16.bitmask $push6=, $pop5
-; CHECK-NEXT:    i32.add $push7=, $pop4, $pop6
-; CHECK-NEXT:    return $pop7
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i8x16.eq $push4=, $1, $3
+; CHECK-NEXT:    i8x16.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.or $push6=, $pop3, $pop5
+; CHECK-NEXT:    return $pop6
     %z = icmp eq <32 x i8> %x, %y
     %res = bitcast <32 x i1> %z to i32
     ret i32 %res
@@ -92,31 +86,28 @@ define i64 @optimize_illegal_bitcast_v64i8(<64 x i8> %x) {
 ; CHECK-LABEL: optimize_illegal_bitcast_v64i8:
 ; CHECK:         .functype optimize_illegal_bitcast_v64i8 (v128, v128, v128, v128) -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i64.const $push3=, 16
-; CHECK-NEXT:    i64.const $push24=, 16
-; CHECK-NEXT:    i64.const $push23=, 16
-; CHECK-NEXT:    v128.const $push22=, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
-; CHECK-NEXT:    local.tee $push21=, $4=, $pop22
-; CHECK-NEXT:    i8x16.eq $push0=, $0, $pop21
+; CHECK-NEXT:    v128.const $push21=, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
+; CHECK-NEXT:    local.tee $push20=, $4=, $pop21
+; CHECK-NEXT:    i8x16.eq $push0=, $0, $pop20
 ; CHECK-NEXT:    i8x16.bitmask $push1=, $pop0
-; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
-; CHECK-NEXT:    i64.const $push20=, 16
-; CHECK-NEXT:    i64.add $push4=, $pop2, $pop20
-; CHECK-NEXT:    i64.shl $push5=, $pop23, $pop4
-; CHECK-NEXT:    i8x16.eq $push6=, $1, $4
-; CHECK-NEXT:    i8x16.bitmask $push7=, $pop6
-; CHECK-NEXT:    i64.extend_i32_u $push8=, $pop7
-; CHECK-NEXT:    i64.add $push9=, $pop5, $pop8
-; CHECK-NEXT:    i64.shl $push10=, $pop24, $pop9
-; CHECK-NEXT:    i8x16.eq $push11=, $2, $4
-; CHECK-NEXT:    i8x16.bitmask $push12=, $pop11
-; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
-; CHECK-NEXT:    i64.add $push14=, $pop10, $pop13
-; CHECK-NEXT:    i64.shl $push15=, $pop3, $pop14
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i8x16.eq $push4=, $1, $4
+; CHECK-NEXT:    i8x16.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.or $push6=, $pop3, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 32
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i8x16.eq $push10=, $2, $4
+; CHECK-NEXT:    i8x16.bitmask $push11=, $pop10
+; CHECK-NEXT:    i64.extend_i32_u $push12=, $pop11
+; CHECK-NEXT:    i64.const $push13=, 16
+; CHECK-NEXT:    i64.shl $push14=, $pop12, $pop13
+; CHECK-NEXT:    i64.or $push15=, $pop9, $pop14
 ; CHECK-NEXT:    i8x16.eq $push16=, $3, $4
 ; CHECK-NEXT:    i8x16.bitmask $push17=, $pop16
 ; CHECK-NEXT:    i64.extend_i32_u $push18=, $pop17
-; CHECK-NEXT:    i64.add $push19=, $pop15, $pop18
+; CHECK-NEXT:    i64.or $push19=, $pop15, $pop18
 ; CHECK-NEXT:    return $pop19
     %z = icmp eq <64 x i8> %x, splat (i8 64)
     %res = bitcast <64 x i1> %z to i64

@@ -10,4 +10,4 @@
 
 #include "src/math/getpayloadf.h"
 
-LIST_GETPAYLOAD_TESTS(float, LIBC_NAMESPACE::getpayloadf)
+LIST_GETPAYLOAD_TESTS(Getpayloadf, float, LIBC_NAMESPACE::getpayloadf)

@@ -214,8 +214,13 @@ int main(int argc, char *argv[]) {
     return 0;                                                                  \
   }
 
-  TEST(char);
-  // RUN: %run %t char 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
+  // As currently written, this test is UB for char:
+  // warning: second argument to 'va_arg' is of promotable type 'char'; this
+  // va_arg has undefined behavior because arguments will be promoted to 'int'
+  // [-Wvarargs]
+  //
+  // TODO: rewrite the test to explicitly handle promotion?
+  // TEST(char);
 
   TEST(int);
   // RUN: %run %t int 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
@@ -223,8 +228,15 @@ int main(int argc, char *argv[]) {
   TEST(void*);
   // RUN: %run %t "void*" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
-  TEST(float);
-  // RUN: %run %t float 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
+  // As currently written, this test is UB for float:
+  // warning: second argument to 'va_arg' is of promotable type 'float'; this
+  // va_arg has undefined behavior because arguments will be promoted to
+  // 'double' [-Wvarargs]
+  //
+  // We do not bother rewriting the test to explicitly handle the promotion,
+  // because MSan need not guarantee that cast<float>(cast<double>(float)) will
+  // maintain the original shadow.
+  // TEST(float);
 
   TEST(double);
   // RUN: %run %t double 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"

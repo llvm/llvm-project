@@ -2,8 +2,8 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -- %s
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 // Radar 8945514
 
 class SVal {
@@ -16,7 +16,7 @@ public:
 void bar(SVal &v) {}
 class A {
 public:
-  void foo(SVal v) { bar(v); } // DexLabel('foo')
+  void foo(SVal v) { bar(v); } // !dex_label foo
 };
 
 int main() {
@@ -28,17 +28,14 @@ int main() {
   return 0;
 }
 
-/*
-DexExpectProgramState({
-  'frames': [
-    {
-      'location': { 'lineno': ref('foo') },
-      'watches': {
-        'v.Data == 0': 'true',
-        'v.Kind': '2142'
-      }
-    }
-  ]
-})
-*/
+// CHECK-DAG: seen_values: 2
+// CHECK-DAG: correct_step_coverage: 100.0%
 
+/*
+---
+!where {lines: !label foo}:
+  !value v:
+    Kind: 2142
+  !value "v.Data == 0": "true"
+...
+*/

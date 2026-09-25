@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/integer/clc_add_sat.h>
+#include "clc/integer/clc_add_sat.h"
 
 #define __CLC_FUNCTION add_sat
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY "clc/shared/binary_def.inc"
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"

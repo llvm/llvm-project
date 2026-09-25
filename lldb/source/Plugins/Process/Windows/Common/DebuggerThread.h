@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 
 #include "ForwardDecl.h"
 #include "lldb/Host/HostProcess.h"
@@ -34,13 +35,19 @@ public:
 
   HostProcess GetProcess() const { return m_process; }
   HostThread GetMainThread() const { return m_main_thread; }
-  std::weak_ptr<ExceptionRecord> GetActiveException() {
-    return m_active_exception;
-  }
+
+  /// Returns the exception the debug loop is currently reporting, or null if
+  /// there is none. Safe to call from any thread.
+  ExceptionRecordSP GetActiveException();
 
   Status StopDebugging(bool terminate);
 
   void ContinueAsyncException(ExceptionResult result);
+
+  /// Release a HandleLoadDllEvent / HandleUnloadDllEvent that is parked on
+  /// m_dll_event_pred. The delegate's Resume() path calls this to let the
+  /// debug loop issue ContinueDebugEvent. Mirrors ContinueAsyncException.
+  void ContinueAsyncDllEvent();
 
 private:
   void FreeProcessHandles();
@@ -69,12 +76,17 @@ private:
   // The image file of the process being debugged.
   HANDLE m_image_file = nullptr;
 
-  // The current exception waiting to be handled
+  // The current exception waiting to be handled.
   ExceptionRecordSP m_active_exception;
+  std::mutex m_active_exception_mutex;
 
   // A predicate which gets signalled when an exception is finished processing
   // and the debug loop can be continued.
   Predicate<ExceptionResult> m_exception_pred;
+
+  // Predicate gated by HandleLoadDllEvent / HandleUnloadDllEvent when the
+  // delegate asks them to park.
+  Predicate<bool> m_dll_event_pred;
 
   // An event which gets signalled by the debugger thread when it exits the
   // debugger loop and is detached from the inferior.
@@ -97,5 +109,5 @@ private:
   DebuggerThreadAttachRoutine(lldb::pid_t pid,
                               const ProcessAttachInfo &launch_info);
 };
-}
+} // namespace lldb_private
 #endif

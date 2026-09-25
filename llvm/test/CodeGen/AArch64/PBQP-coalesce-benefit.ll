@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 -mattr=+neon -fp-contract=fast -regalloc=pbqp -pbqp-coalescing | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 -mattr=+neon -regalloc=pbqp -pbqp-coalescing | FileCheck %s
 
 ; CHECK-LABEL: test:
 define i32 @test(i32 %acc, ptr nocapture readonly %c) {

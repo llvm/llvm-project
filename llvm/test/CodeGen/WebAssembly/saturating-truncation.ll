@@ -56,12 +56,19 @@ bb2:
   ret <8 x i16> %3
 }
 
-define <16 x i8> @i16_unsigned(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: i16_unsigned:
-; CHECK:         .functype i16_unsigned (v128, v128) -> (v128)
+; NOTE: unsigned narrow uses *signed* saturation, the manual unsigned saturation cannot be optimized out.
+define <16 x i8> @i16_unsigned_sat_unsigned_truncate(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: i16_unsigned_sat_unsigned_truncate:
+; CHECK:         .functype i16_unsigned_sat_unsigned_truncate (v128, v128) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0: # %bb2
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i16x8.min_u
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i16x8.min_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
 bb2:
@@ -71,12 +78,19 @@ bb2:
   ret <16 x i8> %2
 }
 
-define <8 x i16> @i32_unsigned(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: i32_unsigned:
-; CHECK:         .functype i32_unsigned (v128, v128) -> (v128)
+; NOTE: unsigned narrow uses *signed* saturation, the manual unsigned saturation cannot be optimized out.
+define <8 x i16> @i32_unsigned_sat_unsigned_truncate(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: i32_unsigned_sat_unsigned_truncate:
+; CHECK:         .functype i32_unsigned_sat_unsigned_truncate (v128, v128) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0: # %bb2
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 bb2:
@@ -84,4 +98,54 @@ bb2:
   %1 = tail call <8 x i32> @llvm.umin.v8i32(<8 x i32> %0, <8 x i32> splat (i32 65535))
   %2 = trunc nsw <8 x i32> %1 to <8 x i16>
   ret <8 x i16> %2
+}
+
+; NOTE: narrow_i16x8_u uses *signed* saturation, the manual unsigned saturation cannot be optimized out.
+define <16 x i8> @narrow_with_manual_unsigned_sat(<8 x i16> %a) {
+; CHECK-LABEL: narrow_with_manual_unsigned_sat:
+; CHECK:         .functype narrow_with_manual_unsigned_sat (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
+; CHECK-NEXT:    i16x8.min_u
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %0 = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 255))
+  %_21 = tail call <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(<8 x i16> %0, <8 x i16> %0)
+  ret <16 x i8> %_21
+}
+
+define <16 x i8> @i16_signed_sat_unsigned_truncate(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: i16_signed_sat_unsigned_truncate:
+; CHECK:         .functype i16_signed_sat_unsigned_truncate (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %bb2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+bb2:
+  %0 = shufflevector <8 x i16> %a, <8 x i16> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %1 = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %0, <16 x i16> zeroinitializer)
+  %2 = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> %1, <16 x i16> splat (i16 255))
+  %3 = trunc nuw <16 x i16> %2 to <16 x i8>
+  ret <16 x i8> %3
+}
+
+define <8 x i16> @i32_signed_sat_unsigned_truncate(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: i32_signed_sat_unsigned_truncate:
+; CHECK:         .functype i32_signed_sat_unsigned_truncate (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %bb2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+bb2:
+  %0 = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %1 = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> %0, <8 x i32> splat (i32 65535))
+  %2 = tail call <8 x i32> @llvm.smax.v8i32(<8 x i32> %1, <8 x i32> zeroinitializer)
+  %3 = trunc nuw <8 x i32> %2 to <8 x i16>
+  ret <8 x i16> %3
 }

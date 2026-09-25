@@ -42,11 +42,7 @@ static LogicalResult verifyAtomicUpdateOp(Operation *op) {
                              << stringifyTypeName<ExpectedElementType>()
                              << " value, found " << elementType;
 
-  StringAttr semanticsAttrName =
-      AtomicOpTy::getSemanticsAttrName(op->getName());
-  auto memorySemantics =
-      op->getAttrOfType<spirv::MemorySemanticsAttr>(semanticsAttrName)
-          .getValue();
+  spirv::MemorySemantics memorySemantics = cast<AtomicOpTy>(op).getSemantics();
   if (failed(verifyMemorySemantics(op, memorySemantics))) {
     return failure();
   }

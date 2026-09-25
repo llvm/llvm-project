@@ -1919,21 +1919,21 @@ bb4:
 ;     foo();
 ;  }
 ;  return 45;
-define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) "instcombine-no-verify-fixpoint" !prof !14 {
+define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
 ; CHECK-LABEL: @test_chr_21(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[K:%.*]] = freeze i64 [[K1:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[J:%.*]], [[K2:%.*]]
-; CHECK-NEXT:    [[CMP0:%.*]] = freeze i1 [[CMP1]]
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ne i64 [[J]], [[K]]
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[K]], 86
-; CHECK-NEXT:    [[CMP3:%.*]] = freeze i1 [[CMP4]]
+; CHECK-NEXT:    [[I_FR:%.*]] = freeze i64 [[I:%.*]]
+; CHECK-NEXT:    [[K_FR:%.*]] = freeze i64 [[K2:%.*]]
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i64 [[K]], [[K_FR]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[K]], [[I_FR]]
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[I_FR]], 86
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMP0]], [[CMP3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[CMP_I]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[K]], 2
-; CHECK-NEXT:    switch i64 [[K]], label [[BB2:%.*]] [
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[I_FR]], 2
+; CHECK-NEXT:    switch i64 [[I_FR]], label [[BB2:%.*]] [
 ; CHECK-NEXT:      i64 2, label [[BB3_NONCHR2:%.*]]
 ; CHECK-NEXT:      i64 86, label [[BB2_NONCHR1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF20:![0-9]+]]
@@ -1956,13 +1956,13 @@ define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) "instcombine-no-verify-fixpoint"
 ; CHECK:       entry.split.nonchr:
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[BB1_NONCHR:%.*]], label [[BB10]], !prof [[PROF16]]
 ; CHECK:       bb1.nonchr:
-; CHECK-NEXT:    [[CMP2_NONCHR:%.*]] = icmp eq i64 [[K]], 2
+; CHECK-NEXT:    [[CMP2_NONCHR:%.*]] = icmp eq i64 [[I_FR]], 2
 ; CHECK-NEXT:    br i1 [[CMP2_NONCHR]], label [[BB3_NONCHR:%.*]], label [[BB2_NONCHR:%.*]], !prof [[PROF17]]
 ; CHECK:       bb3.nonchr:
-; CHECK-NEXT:    [[CMP_I_NONCHR:%.*]] = icmp eq i64 [[K]], 86
+; CHECK-NEXT:    [[CMP_I_NONCHR:%.*]] = icmp eq i64 [[I_FR]], 86
 ; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB6_NONCHR:%.*]], label [[BB4_NONCHR:%.*]], !prof [[PROF17]]
 ; CHECK:       bb6.nonchr:
-; CHECK-NEXT:    [[CMP3_NONCHR:%.*]] = icmp eq i64 [[J]], [[K]]
+; CHECK-NEXT:    [[CMP3_NONCHR:%.*]] = icmp eq i64 [[K]], [[I_FR]]
 ; CHECK-NEXT:    br i1 [[CMP3_NONCHR]], label [[BB8_NONCHR:%.*]], label [[BB7_NONCHR:%.*]], !prof [[PROF17]]
 ; CHECK:       bb8.nonchr:
 ; CHECK-NEXT:    br i1 [[CMP_I_NONCHR]], label [[BB10]], label [[BB9_NONCHR:%.*]], !prof [[PROF17]]

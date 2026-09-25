@@ -81,6 +81,7 @@ group("test") {
     ":lit_unit_site_cfg",
     "//clang-tools-extra/clangd/index/dex/dexp",
     "//clang-tools-extra/clangd/indexer:clangd-indexer",
+    "//clang-tools-extra/clangd/remap:clangd-remap",
     "//clang-tools-extra/clangd/tool:clangd",
     "//clang-tools-extra/clangd/unittests:ClangdTests",
     "//llvm/utils/FileCheck",

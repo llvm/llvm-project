@@ -39,3 +39,20 @@ void do_default_arg_test() {
 }
 
 } // namespace test_func
+
+namespace test_decltype_template {
+
+template <typename> void template_func() {}
+
+// CHECK: define linkonce_odr {{(dso_local )?}}void @_ZN22test_decltype_template21use_decltype_templateIiEEvv(
+// CHECK: call void @_ZN22test_decltype_template13template_funcIPKcEEvv()
+template <typename> void use_decltype_template() {
+  template_func<decltype(__builtin_FUNCTION())>();
+}
+
+// CHECK: define linkonce_odr {{(dso_local )?}}void @_ZN22test_decltype_template13template_funcIPKcEEvv()
+void do_decltype_template_test() {
+  use_decltype_template<int>();
+}
+
+} // namespace test_decltype_template

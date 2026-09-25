@@ -47,6 +47,16 @@ void mlir::transform::ApplyShuffleVectorFMAOpsPatternsOp::populatePatterns(
   x86::populateShuffleVectorFMAOpsPatterns(patterns);
 }
 
+void mlir::transform::ApplyVectorContractToAMXDotProductPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateVectorContractToAMXDotProductPatterns(patterns);
+}
+
+void mlir::transform::ApplyMoveAccumulatorForContractLoopPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateMoveAccumulatorForContractLoopPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

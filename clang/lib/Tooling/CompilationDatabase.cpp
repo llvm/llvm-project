@@ -24,6 +24,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
@@ -50,7 +51,8 @@
 using namespace clang;
 using namespace tooling;
 
-LLVM_INSTANTIATE_REGISTRY(CompilationDatabasePluginRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT,
+                             CompilationDatabasePluginRegistry)
 
 CompilationDatabase::~CompilationDatabase() = default;
 
@@ -247,7 +249,7 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   // The clang executable path isn't required since the jobs the driver builds
   // will not be executed.
   std::unique_ptr<driver::Driver> NewDriver(new driver::Driver(
-      /* ClangExecutable= */ "", llvm::sys::getDefaultTargetTriple(),
+      /* DriverExecutable= */ "", llvm::sys::getDefaultTargetTriple(),
       Diagnostics));
   NewDriver->setCheckInputsExist(false);
 

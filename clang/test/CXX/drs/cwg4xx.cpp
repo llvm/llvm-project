@@ -1,10 +1,10 @@
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++98 %s -triple x86_64-linux-gnu -verify=expected,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -triple x86_64-linux-gnu -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -triple x86_64-linux-gnu -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -triple x86_64-linux-gnu -verify=expected,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++98 %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-17,cxx98
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-17,since-cxx11
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-17,since-cxx11
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx17,cxx98-17,since-cxx11
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx17,since-cxx11
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx17,since-cxx11
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx17,since-cxx11
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -1035,8 +1035,8 @@ namespace cwg468 { // cwg468: 2.7 c++11
     };
   };
   int k = cwg468::template A<int>::template B<char>::C;
-  // cxx98-error@-1 {{'template' keyword outside of a template}}
-  // cxx98-error@-2 {{'template' keyword outside of a template}}
+  // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
+  // cxx98-error@-2 {{use of 'template' keyword outside of a template is a C++11 extension}}
 } // namespace cwg468
 
 namespace cwg469 { // cwg469: no
@@ -1264,7 +1264,7 @@ namespace cwg482 { // cwg482: 3.5
   // expected-warning@-1 {{extra qualification on member 'f'}}
 
   inline namespace X {
-  // cxx98-error@-1 {{inline namespaces are a C++11 feature}}
+  // cxx98-error@-1 {{inline namespaces are a C++11 extension}}
     extern int b;
     void g();
     struct S;

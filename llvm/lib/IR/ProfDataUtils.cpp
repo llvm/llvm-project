@@ -217,10 +217,8 @@ bool llvm::extractBranchWeights(const Instruction &I,
 
 bool llvm::extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
                                 uint64_t &FalseVal) {
-  assert((I.getOpcode() == Instruction::Br ||
-          I.getOpcode() == Instruction::Select) &&
-         "Looking for branch weights on something besides branch, select, or "
-         "switch");
+  assert((isa<CondBrInst, SelectInst>(I)) &&
+         "Looking for branch weights on something besides CondBr or Select");
 
   SmallVector<uint32_t, 2> Weights;
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
@@ -284,15 +282,13 @@ void llvm::setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
   F = F ? F : I.getFunction();
   assert(F && "Either pass a instruction attached to a Function, or explicitly "
               "pass the Function that it will be attached to");
-  if (std::optional<Function::ProfileCount> EC = F->getEntryCount();
-      EC && EC->getCount() > 0)
+  if (std::optional<uint64_t> EC = F->getEntryCount(); EC && *EC > 0)
     setExplicitlyUnknownBranchWeights(I, PassName);
 }
 
 MDNode *llvm::getExplicitlyUnknownBranchWeightsIfProfiled(Function &F,
                                                           StringRef PassName) {
-  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
-      !EC || EC->getCount() == 0)
+  if (std::optional<uint64_t> EC = F.getEntryCount(); !EC || *EC == 0)
     return nullptr;
   MDBuilder MDB(F.getContext());
   return MDNode::get(

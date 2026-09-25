@@ -29,7 +29,7 @@ with worker.run(
             "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
             "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
-            "-DLLVM_ENABLE_PROJECTS=polly",
+            "-DLLVM_ENABLE_PROJECTS=polly;clang",
             "-DLLVM_TARGETS_TO_BUILD=X86",
             "-DLLVM_ENABLE_LLD=ON",
             "-DLLVM_ENABLE_ASSERTIONS=ON",

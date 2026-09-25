@@ -1,5 +1,6 @@
 # RUN: %PYTHON %s | FileCheck %s
 # REQUIRES: python-ge-311
+# UNSUPPORTED: python-stable-abi
 import gc
 from contextlib import contextmanager
 
@@ -27,7 +28,7 @@ def testInferLocations():
         two = arith.constant(IndexType.get(), 2)
 
         # fmt: off
-        # CHECK: loc(callsite("testInferLocations"("{{.*}}[[SEP:[/\\]+]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":{{[0-9]+}}:13 to :43) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":13:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":{{[0-9]+}}:1 to :4))))
+        # CHECK: loc(callsite("testInferLocations"("{{.*}}[[SEP:[/\\]+]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":{{[0-9]+}}:13 to :43) at callsite("run"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":14:4 to :7) at "<module>"("{{.*}}[[SEP]]test[[SEP]]python[[SEP]]ir[[SEP]]auto_location.py":{{[0-9]+}}:1 to :4))))
         # fmt: on
         print(op.location)
 
@@ -94,3 +95,111 @@ def testInferLocations():
         _cext.globals.set_loc_tracebacks_frame_limit(0)
         # CHECK: loc(unknown)
         bar1()
+
+
+# CHECK-LABEL: TEST: testNamelocWrap
+@run
+def testNamelocWrap():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(current_loc_actn=CurrentLocAction.NAMELOC_WRAP):
+            # Build nested NameLoc: TaskA(ResourceB(unknown))
+            inner = Location.name("ResourceB", childLoc=Location.unknown())
+            outer = Location.name("TaskA", childLoc=inner)
+            with outer:
+                op = Operation.create("custom.op1")
+                # fmt: off
+                # CHECK: loc("TaskA"("ResourceB"(callsite(
+                # fmt: on
+                print(op.location)
+
+
+# CHECK-LABEL: TEST: testOnExplicitDefault
+@run
+def testOnExplicitDefault():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks():
+            explicit = Location.file("explicit.py", 1, 1)
+            op = Operation.create("custom.op1", loc=explicit)
+            # CHECK: loc("explicit.py":1:1)
+            print(op.location)
+
+
+# CHECK-LABEL: TEST: testOnExplicitUseTraceback
+@run
+def testOnExplicitUseTraceback():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(on_explicit_actn=OnExplicitAction.USE_TRACEBACK):
+            explicit = Location.file("explicit.py", 1, 1)
+            op = Operation.create("custom.op1", loc=explicit)
+            # fmt: off
+            # CHECK: loc(callsite(
+            # fmt: on
+            print(op.location)
+
+
+# CHECK-LABEL: TEST: testDslProfilingUseCase
+@run
+def testDslProfilingUseCase():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(
+            current_loc_actn=CurrentLocAction.NAMELOC_WRAP,
+            on_explicit_actn=OnExplicitAction.USE_TRACEBACK,
+        ):
+            task_loc = Location.name("Task", childLoc=Location.unknown())
+            with task_loc:
+                op1 = Operation.create("custom.op1", loc=Location.file("x.py", 1, 1))
+                # fmt: off
+                # CHECK: loc("Task"(callsite(
+                # fmt: on
+                print(op1.location)
+
+                op2 = Operation.create("custom.op2")
+                # fmt: off
+                # CHECK: loc("Task"(callsite(
+                # fmt: on
+                print(op2.location)
+
+
+# CHECK-LABEL: TEST: testOnExplicitFallbackWhenTracebacksDisabled
+@run
+def testOnExplicitFallbackWhenTracebacksDisabled():
+    """When on_explicit != use_explicit but tracebacks are disabled,
+    the explicit loc should be returned (not Location.current)."""
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        # Set on_explicit to USE_TRACEBACK WITHOUT enabling tracebacks.
+        _cext.globals.set_traceback_action_on_explicit_loc(
+            OnExplicitAction.USE_TRACEBACK
+        )
+        try:
+            explicit = Location.file("keep_me.py", 42, 1)
+            op = Operation.create("custom.op1", loc=explicit)
+            # CHECK: loc("keep_me.py":42:1)
+            print(op.location)
+        finally:
+            _cext.globals.set_traceback_action_on_explicit_loc(
+                OnExplicitAction.USE_EXPLICIT
+            )
+
+
+# CHECK-LABEL: TEST: testUseExplicitWithNamelocWrap
+@run
+def testUseExplicitWithNamelocWrap():
+    """on_explicit=use_explicit + current_loc=nameloc_wrap should wrap
+    the explicit loc with the NameLoc chain (flags are orthogonal)."""
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        with loc_tracebacks(
+            on_explicit_actn=OnExplicitAction.USE_EXPLICIT,
+            current_loc_actn=CurrentLocAction.NAMELOC_WRAP,
+        ):
+            task_loc = Location.name("Task", childLoc=Location.unknown())
+            with task_loc:
+                explicit = Location.file("framework.py", 10, 1)
+                op = Operation.create("custom.op1", loc=explicit)
+                # CHECK: loc("Task"("framework.py":10:1))
+                print(op.location)

@@ -16,11 +16,15 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 
+#include <functional>
 #include <list>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/PostMortemProcess.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
@@ -78,11 +82,11 @@ public:
   bool WarnBeforeDetach() const override { return false; }
 
   // Process Memory
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Status &error) override;
+  size_t ReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                    size_t size, lldb_private::Status &error) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   // We do not implement DoReadMemoryTags. Instead all the work is done in
   // ReadMemoryTags which avoids having to unpack and repack tags.
@@ -96,6 +100,7 @@ public:
   // Returns AUXV structure found in the core file
   lldb_private::DataExtractor GetAuxvData() override;
 
+  std::optional<Process::CoreArgs> GetCoreFileArgs() override;
   bool GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 
 protected:
@@ -122,8 +127,6 @@ private:
   typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
       VMRangeToFileOffset;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
-      VMRangeToPermissions;
 
   lldb::ModuleSP m_core_module_sp;
   std::string m_dyld_plugin_name;
@@ -140,8 +143,8 @@ private:
   // Address ranges found in the core
   VMRangeToFileOffset m_core_aranges;
 
-  // Permissions for all ranges
-  VMRangeToPermissions m_core_range_infos;
+  // Information for all mapped ranges, ordered by address.
+  std::set<lldb_private::MemoryRegionInfo, std::less<>> m_core_range_infos;
 
   // Memory tag ranges found in the core
   VMRangeToFileOffset m_core_tag_ranges;
@@ -155,6 +158,8 @@ private:
   // Executable name found from the ELF PRPSINFO
   std::string m_executable_name;
 
+  // Command line args found from the ELF PRPSINFO (pr_psargs)
+  Process::CoreArgs m_process_args;
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
@@ -166,10 +171,13 @@ private:
   // Populate gnu uuid for each NT_FILE entry
   void UpdateBuildIdForNTFileEntries();
 
-  lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
+  // Complete memory region information after all program headers are parsed.
+  void FinalizeMemoryRegionInfos();
 
-  // Returns the main executable path.
-  std::string GetMainExecutablePath();
+  bool FindModuleUUID(lldb_private::ModuleSpec &spec) override;
+
+  // Extract the executable module spec for the executable in this core file.
+  bool GetMainExecutableModuleSpec(lldb_private::ModuleSpec &exe_spec);
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
@@ -188,6 +196,12 @@ private:
   llvm::Error parseNetBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseOpenBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseLinuxNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
+
+  /// Find the NT_FILE entry that contains an address.
+  std::optional<NT_FILE_Entry>
+  GetNTFileEntryContainingAddress(lldb::addr_t addr);
+  /// Intelligently find the NT_FILE entry for the executable's ELF header.
+  std::optional<NT_FILE_Entry> GetNTFileEntryForExecutableELFHeader();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H

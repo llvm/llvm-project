@@ -489,6 +489,14 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
   if (!dim) {
     // If DIM is not present, drop the last element which is a null Value.
     operands.truncate(2);
+  } else if (loweredActuals[2] && loweredActuals[2]->handleDynamicOptional()) {
+    // Use getIsPresent() to select between a present DIM value or
+    // the default 1 per Fortran 16.9.68.
+    mlir::Value isPresent = loweredActuals[2]->getIsPresent();
+    mlir::Type dimType = dim.getType();
+    mlir::Value one = builder.createIntegerConstant(loc, dimType, 1);
+    dim = mlir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
+    operands[2] = dim;
   } else {
     // If DIM is present, then dereference it if it is a ref.
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
@@ -509,9 +517,17 @@ mlir::Value HlfirEOShiftLowering::lowerImpl(
   mlir::Value shift = operands[1];
   mlir::Value boundary = operands[2];
   mlir::Value dim = operands[3];
-  // If DIM is present, then dereference it if it is a ref.
-  if (dim)
+  if (loweredActuals[3] && loweredActuals[3]->handleDynamicOptional()) {
+    // Use getIsPresent() to select between a present DIM value or
+    // the default 1 per Fortran 16.9.77.
+    mlir::Value isPresent = loweredActuals[3]->getIsPresent();
+    mlir::Type dimType = dim.getType();
+    mlir::Value one = builder.createIntegerConstant(loc, dimType, 1);
+    dim = mlir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
+  } else if (dim) {
+    // If DIM is statically present, dereference it if it is a ref.
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+  }
 
   mlir::Type resultType = computeResultType(array, stmtResultType);
 

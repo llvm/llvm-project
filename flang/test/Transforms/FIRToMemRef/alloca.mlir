@@ -71,9 +71,10 @@ func.func @alloca_nonconvertible() {
   return
 }
 
+// compiler generated alloca will not preserve declare
 // CHECK-LABEL: func.func @peep_declare
 // CHECK:       [[ALLOCA:%.+]] = memref.alloca() : memref<i32>
-// CHECK-NOT:   fircg.ext_declare
+// CHECK-NOT:   fir.declare
 // CHECK:       memref.store %c1_i32, [[ALLOCA]][] : memref<i32>
 func.func @peep_declare() {
   %c1_i32 = arith.constant 1 : i32
@@ -83,14 +84,33 @@ func.func @peep_declare() {
   return
 }
 
-
 // check that attributes are copied when they exist
-// CHECK-LABEL: func.func @no_peep_declare
-// CHECK:       memref.alloca() {bindc_name = "x", uniq_name = "y"} : memref<i32>
-// CHECK-NOT:   memref.store %c1_i32, %alloca[] : memref<i32>
-func.func @no_peep_declare() {
+// CHECK-LABEL: func.func @preserve_declare
+// CHECK:       [[ALLOCA:%.*]] = memref.alloca() {bindc_name = "x", uniq_name = "y"} : memref<i32>
+// CHECK-NOT:   memref.store %c1_i32, [[ALLOCA]][] : memref<i32>
+func.func @preserve_declare() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "y"}
+  %1 = fir.declare %0 {uniq_name = "some_name"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  fir.store %c1_i32 to %1 : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @copy_cuf_data_attr
+// CHECK:       memref.alloca() {cuf.data_attr = #cuf.cuda<device>} : memref<i32>
+func.func @copy_cuf_data_attr() {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.alloca i32 {cuf.data_attr = #cuf.cuda<device>}
+  %1 = fir.declare %0 {uniq_name = "some_name"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  fir.store %c1_i32 to %1 : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @copy_acc_var_name_attr
+// CHECK:       memref.alloca() {acc.var_name = #acc.var_name<"x">} : memref<i32>
+func.func @copy_acc_var_name_attr() {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.alloca i32 {acc.var_name = #acc.var_name<"x">}
   %1 = fir.declare %0 {uniq_name = "some_name"} : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c1_i32 to %1 : !fir.ref<i32>
   return

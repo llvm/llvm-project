@@ -72,11 +72,8 @@ define i32 @poo(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_preds(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[C:%.*]], i32 0
-; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2_NOT]], i32 0, i32 [[D:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP2_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp1 = icmp slt i32 %a, %b
@@ -91,11 +88,8 @@ define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_preds_reverse(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 0, i32 [[C:%.*]]
-; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2_NOT]], i32 [[D:%.*]], i32 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP2_NOT]], i32 [[D:%.*]], i32 [[C:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp1 = icmp slt i32 %a, %b
@@ -111,10 +105,7 @@ define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
 define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_fcmp_preds(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[C:%.*]], i32 0
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uge float [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 [[D:%.*]], i32 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp1 = fcmp olt float %a, %b
@@ -129,11 +120,8 @@ define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
 
 define <2 x i32> @fold_inverted_icmp_vector_preds(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_vector_preds(
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select <2 x i1> [[CMP1_NOT]], <2 x i32> zeroinitializer, <2 x i32> [[C:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP2]], <2 x i32> [[D:%.*]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[CMP2]], <2 x i32> [[D:%.*]], <2 x i32> [[C:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[OR]]
 ;
   %cmp1 = icmp ne <2 x i32> %a, %b
@@ -413,11 +401,8 @@ define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_multi_uses1_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses1_logical(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[NOT]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], [[AND1]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[NOT:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND1]]
 ;
   %not = xor i1 %c, -1
   %and1 = select i1 %not, i1 %a, i1 false
@@ -618,11 +603,8 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
 
 define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 ; CHECK-LABEL: @allSignBits(
-; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt i32 [[COND:%.*]], 0
-; CHECK-NEXT:    [[A1:%.*]] = select i1 [[ISNEG1]], i32 [[TVAL:%.*]], i32 0
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[COND]], 0
-; CHECK-NEXT:    [[A2:%.*]] = select i1 [[ISNEG]], i32 0, i32 [[FVAL:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A1]], [[A2]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[COND:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISNEG]], i32 [[TVAL:%.*]], i32 [[FVAL:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %bitmask = ashr i32 %cond, 31
@@ -635,11 +617,8 @@ define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 
 define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
 ; CHECK-LABEL: @allSignBits_vec(
-; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
-; CHECK-NEXT:    [[A1:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i8> [[TVAL:%.*]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i8> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[A2:%.*]] = select <4 x i1> [[ISNEG]], <4 x i8> zeroinitializer, <4 x i8> [[FVAL:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = or <4 x i8> [[A2]], [[A1]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[ISNEG]], <4 x i8> [[TVAL:%.*]], <4 x i8> [[FVAL:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[SEL]]
 ;
   %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
@@ -1635,5 +1614,93 @@ define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_tv(<2 x i8> %x) 
   %cmp1 = icmp ne <2 x i8> %x, splat(i8 9)
   %cmp2 = icmp samesign ult <2 x i8> %x, <i8 11, i8 poison>
   %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define i1 @test_logical_and_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_and_trunc_nuw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @test_logical_or_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_or_trunc_nuw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %or = select i1 %c, i1 true, i1 %trunc
+  ret i1 %or
+}
+
+define <2 x i1> @test_logical_and_trunc_nuw_vec(<2 x i1> %c, <2 x i8> noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_and_trunc_nuw_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %trunc = trunc nuw <2 x i8> %x to <2 x i1>
+  %and = select <2 x i1> %c, <2 x i1> %trunc, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define i1 @neg_test_logical_and_trunc_nuw_no_range(i1 %c, i8 noundef %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_no_range(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @neg_test_logical_and_trunc_nuw_no_noundef(i1 %c, i8 range(i8 0,2) %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_no_noundef(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @neg_test_logical_and_trunc_nsw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nsw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nsw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @neg_test_logical_or_trunc_nsw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @neg_test_logical_or_trunc_nsw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %trunc = trunc nsw i8 %x to i1
+  %or = select i1 %c, i1 true, i1 %trunc
+  ret i1 %or
+}
+
+define <2 x i1> @neg_test_logical_and_trunc_nuw_nsw_vec(<2 x i1> %c, <2 x i8> noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_nsw_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[TRUNC]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %trunc = trunc nuw nsw <2 x i8> %x to <2 x i1>
+  %and = select <2 x i1> %c, <2 x i1> %trunc, <2 x i1> zeroinitializer
   ret <2 x i1> %and
 }

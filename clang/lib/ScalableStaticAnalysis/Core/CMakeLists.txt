@@ -1,0 +1,42 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  TargetParser
+  )
+
+add_clang_library(clangScalableStaticAnalysisCore
+  ASTEntityMapping.cpp
+  EntityLinker/EntityLinker.cpp
+  Model/BuildNamespace.cpp
+  Model/EntityId.cpp
+  Model/EntityIdTable.cpp
+  Model/EntityLinkage.cpp
+  Model/EntityName.cpp
+  Model/SummaryName.cpp
+  Serialization/JSONFormat/Artifact.cpp
+  Serialization/JSONFormat/JSONEntitySummaryEncoding.cpp
+  Serialization/JSONFormat/JSONFormatImpl.cpp
+  Serialization/JSONFormat/LUSummary.cpp
+  Serialization/JSONFormat/LUSummaryEncoding.cpp
+  Serialization/JSONFormat/MultiArchStaticLibrary.cpp
+  Serialization/JSONFormat/MultiArchSharedLibrary.cpp
+  Serialization/JSONFormat/StaticLibrary.cpp
+  Serialization/JSONFormat/TUSummary.cpp
+  Serialization/JSONFormat/TUSummaryEncoding.cpp
+  Serialization/JSONFormat/WPASuite.cpp
+  Serialization/SerializationFormatRegistry.cpp
+  SummaryData/LUSummaryConsumer.cpp
+  SummaryData/SummaryDataBuilderRegistry.cpp
+  Support/ErrorBuilder.cpp
+  TUSummary/ExtractorRegistry.cpp
+  TUSummary/TUSummaryBuilder.cpp
+  TUSummary/TUSummaryExtractor.cpp
+  WholeProgramAnalysis/AnalysisDriver.cpp
+  WholeProgramAnalysis/AnalysisName.cpp
+  WholeProgramAnalysis/AnalysisRegistry.cpp
+
+  LINK_LIBS
+  clangAST
+  clangUnifiedSymbolResolution
+
+  DEPENDS
+  )

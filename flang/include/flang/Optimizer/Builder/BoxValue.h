@@ -25,7 +25,6 @@
 
 namespace fir {
 class FirOpBuilder;
-class ArrayLoadOp;
 
 class ArrayBoxValue;
 class BoxValue;
@@ -279,6 +278,8 @@ public:
   bool isUnlimitedPolymorphic() const {
     return fir::isUnlimitedPolymorphicType(getBoxTy());
   }
+
+  unsigned corank() const { return fir::getBoxCorank(getBoxTy()); }
 };
 
 /// An entity described by a fir.box value that cannot be read into
@@ -452,21 +453,11 @@ llvm::SmallVector<mlir::Value> getTypeParams(mlir::Location loc,
                                              FirOpBuilder &builder,
                                              const ExtendedValue &exv);
 
-/// Specialization of get type parameters for an ArrayLoadOp. An array load must
-/// either have all type parameters given as arguments or be a boxed value.
-llvm::SmallVector<mlir::Value>
-getTypeParams(mlir::Location loc, FirOpBuilder &builder, ArrayLoadOp load);
-
 // The generalized function to get a vector of extents is
 /// Get extents from \p box. For fir::BoxValue and
 /// fir::MutableBoxValue, this will generate code to read the extents.
 llvm::SmallVector<mlir::Value>
 getExtents(mlir::Location loc, FirOpBuilder &builder, const ExtendedValue &box);
-
-/// Get exactly one extent for any array-like extended value, \p exv. If \p exv
-/// is not an array or has rank less then \p dim, the result will be a nullptr.
-mlir::Value getExtentAtDimension(mlir::Location loc, FirOpBuilder &builder,
-                                 const ExtendedValue &exv, unsigned dim);
 
 } // namespace factory
 

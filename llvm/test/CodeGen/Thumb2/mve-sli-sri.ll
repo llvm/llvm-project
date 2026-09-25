@@ -4,10 +4,7 @@
 define <8 x i8> @testLeftGood8x8(<8 x i8> %src1, <8 x i8> %src2) {
 ; CHECK-LABEL: testLeftGood8x8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 q2, #0x7
-; CHECK-NEXT:    vshl.i16 q1, q1, #3
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vsli.16 q0, q1, #3
 ; CHECK-NEXT:    bx lr
   %and.i = and <8 x i8> %src1, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %vshl_n = shl <8 x i8> %src2, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -62,10 +59,7 @@ define <8 x i8> @testRightBad8x8(<8 x i8> %src1, <8 x i8> %src2) {
 define <16 x i8> @testLeftGood16x8(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: testLeftGood16x8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i8 q2, #0x7
-; CHECK-NEXT:    vshl.i8 q1, q1, #3
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vsli.8 q0, q1, #3
 ; CHECK-NEXT:    bx lr
   %and.i = and <16 x i8> %src1, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %vshl_n = shl <16 x i8> %src2, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -90,10 +84,7 @@ define <16 x i8> @testLeftBad16x8(<16 x i8> %src1, <16 x i8> %src2) {
 define <16 x i8> @testRightGood16x8(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: testRightGood16x8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i8 q2, #0xe0
-; CHECK-NEXT:    vshr.u8 q1, q1, #3
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vsri.8 q0, q1, #3
 ; CHECK-NEXT:    bx lr
   %and.i = and <16 x i8> %src1, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
   %vshl_n = lshr <16 x i8> %src2, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -118,10 +109,7 @@ define <16 x i8> @testRightBad16x8(<16 x i8> %src1, <16 x i8> %src2) {
 define <4 x i16> @testLeftGood4x16(<4 x i16> %src1, <4 x i16> %src2) {
 ; CHECK-LABEL: testLeftGood4x16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q2, #0x3fff
-; CHECK-NEXT:    vshl.i32 q1, q1, #14
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vsli.32 q0, q1, #14
 ; CHECK-NEXT:    bx lr
   %and.i = and <4 x i16> %src1, <i16 16383, i16 16383, i16 16383, i16 16383>
   %vshl_n = shl <4 x i16> %src2, <i16 14, i16 14, i16 14, i16 14>
@@ -347,10 +335,7 @@ define <2 x i32> @testRightBad2x32(<2 x i32> %src1, <2 x i32> %src2) {
 define <4 x i32> @testLeftGood4x32(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: testLeftGood4x32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i32 q2, #0x3fffff
-; CHECK-NEXT:    vshl.i32 q1, q1, #22
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vsli.32 q0, q1, #22
 ; CHECK-NEXT:    bx lr
   %and.i = and <4 x i32> %src1, <i32 4194303, i32 4194303, i32 4194303, i32 4194303>
   %vshl_n = shl <4 x i32> %src2, <i32 22, i32 22, i32 22, i32 22>
@@ -377,10 +362,7 @@ define <4 x i32> @testLeftBad4x32(<4 x i32> %src1, <4 x i32> %src2) {
 define <4 x i32> @testRightGood4x32(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: testRightGood4x32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmvn.i32 q2, #0x3ff
-; CHECK-NEXT:    vshr.u32 q1, q1, #22
-; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vsri.32 q0, q1, #22
 ; CHECK-NEXT:    bx lr
   %and.i = and <4 x i32> %src1, <i32 4294966272, i32 4294966272, i32 4294966272, i32 4294966272>
   %vshl_n = lshr <4 x i32> %src2, <i32 22, i32 22, i32 22, i32 22>

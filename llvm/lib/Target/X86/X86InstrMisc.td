@@ -300,7 +300,7 @@ def BSR64rm  : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins GR64:$fallback, i64mem
 } // Defs = [EFLAGS]
 
 let SchedRW = [WriteMicrocoded] in {
-let Defs = [EDI,ESI], Uses = [EDI,ESI,DF] in {
+let Defs = [EDI,ESI], Uses = [EDI,ESI,DF], mayLoad = 1, mayStore = 1 in {
 def MOVSB : I<0xA4, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "movsb\t{$src, $dst|$dst, $src}", []>;
 def MOVSW : I<0xA5, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -312,35 +312,35 @@ def MOVSQ : RI<0xA5, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
                Requires<[In64BitMode]>;
 }
 
-let Defs = [EDI], Uses = [AL,EDI,DF] in
+let Defs = [EDI], Uses = [AL,EDI,DF], mayStore = 1 in
 def STOSB : I<0xAA, RawFrmDst, (outs), (ins dstidx8:$dst),
               "stosb\t{%al, $dst|$dst, al}", []>;
-let Defs = [EDI], Uses = [AX,EDI,DF] in
+let Defs = [EDI], Uses = [AX,EDI,DF], mayStore = 1 in
 def STOSW : I<0xAB, RawFrmDst, (outs), (ins dstidx16:$dst),
               "stosw\t{%ax, $dst|$dst, ax}", []>, OpSize16;
-let Defs = [EDI], Uses = [EAX,EDI,DF] in
+let Defs = [EDI], Uses = [EAX,EDI,DF], mayStore = 1 in
 def STOSL : I<0xAB, RawFrmDst, (outs), (ins dstidx32:$dst),
               "stos{l|d}\t{%eax, $dst|$dst, eax}", []>, OpSize32;
-let Defs = [RDI], Uses = [RAX,RDI,DF] in
+let Defs = [RDI], Uses = [RAX,RDI,DF], mayStore = 1 in
 def STOSQ : RI<0xAB, RawFrmDst, (outs), (ins dstidx64:$dst),
                "stosq\t{%rax, $dst|$dst, rax}", []>,
                Requires<[In64BitMode]>;
 
-let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF], mayLoad = 1 in
 def SCASB : I<0xAE, RawFrmDst, (outs), (ins dstidx8:$dst),
               "scasb\t{$dst, %al|al, $dst}", []>;
-let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF], mayLoad = 1 in
 def SCASW : I<0xAF, RawFrmDst, (outs), (ins dstidx16:$dst),
               "scasw\t{$dst, %ax|ax, $dst}", []>, OpSize16;
-let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF], mayLoad = 1 in
 def SCASL : I<0xAF, RawFrmDst, (outs), (ins dstidx32:$dst),
               "scas{l|d}\t{$dst, %eax|eax, $dst}", []>, OpSize32;
-let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF], mayLoad = 1 in
 def SCASQ : RI<0xAF, RawFrmDst, (outs), (ins dstidx64:$dst),
                "scasq\t{$dst, %rax|rax, $dst}", []>,
                Requires<[In64BitMode]>;
 
-let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF] in {
+let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF], mayLoad = 1 in {
 def CMPSB : I<0xA6, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "cmpsb\t{$dst, $src|$src, $dst}", []>;
 def CMPSW : I<0xA7, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -982,7 +982,7 @@ def REPNE_PREFIX : I<0xF2, PrefixByte, (outs),  (ins), "repne", []>;
 }
 
 // String manipulation instructions
-let SchedRW = [WriteMicrocoded] in {
+let SchedRW = [WriteMicrocoded], mayLoad = 1 in {
 let Defs = [AL,ESI], Uses = [ESI,DF] in
 def LODSB : I<0xAC, RawFrmSrc, (outs), (ins srcidx8:$src),
               "lodsb\t{$src, %al|al, $src}", []>;
@@ -1284,6 +1284,31 @@ let Predicates = [HasBMI, NoEGPR] in
 let Predicates = [HasBMI, HasEGPR] in
   defm : Bls_Pats<"_EVEX">;
 
+// BLSI only has GR32/GR64 forms. For an i8 operand we any-extend into a
+// 32-bit register, isolate the lowest set bit with BLSI32, and extract
+// the low byte. Any-extend is safe because BLSI keeps only the lowest
+// set bit, so upper-bit garbage cannot affect the extracted byte.
+let Predicates = [HasBMI] in
+  def : Pat<(and GR8:$src, (ineg_su GR8:$src)),
+            (EXTRACT_SUBREG
+              (BLSI32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                       GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
+// BLSMSK only has GR32/GR64 forms. For an i8 operand we use INSERT_SUBREG
+// with IMPLICIT_DEF (any-extend) rather than SUBREG_TO_REG (zero-extend).
+// Although BLSMSK computes (src XOR (src-1)), dirty upper bits [31:8] cannot
+// corrupt bits [7:0] of the result: borrow from (src-1) only propagates
+// downward through contiguous zeros, and even when [7:0] is zero the
+// EXTRACT_SUBREG still yields the correct all-ones result. This matches the
+// same approach used for BLSI.
+let Predicates = [HasBMI] in
+  def : Pat<(xor GR8:$src, (add GR8:$src, -1)),
+            (EXTRACT_SUBREG
+              (BLSMSK32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                         GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
 multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     X86FoldableSchedWrite sched, string Suffix = ""> {
   let SchedRW = [sched], Form = MRMSrcReg4VOp3 in
@@ -1391,17 +1416,17 @@ multiclass PdepPext<string m, X86TypeInfo t, SDPatternOperator node,
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
-  defm PDEP32 : PdepPext<"pdep", Xi32, X86pdep>, XD, VEX;
-  defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep>, XD, REX_W, VEX;
-  defm PEXT32 : PdepPext<"pext", Xi32, X86pext>, XS, VEX;
-  defm PEXT64 : PdepPext<"pext", Xi64, X86pext>, XS, REX_W, VEX;
+  defm PDEP32 : PdepPext<"pdep", Xi32, pdep>, XD, VEX;
+  defm PDEP64 : PdepPext<"pdep", Xi64, pdep>, XD, REX_W, VEX;
+  defm PEXT32 : PdepPext<"pext", Xi32, pext>, XS, VEX;
+  defm PEXT64 : PdepPext<"pext", Xi64, pext>, XS, REX_W, VEX;
 }
 
 let Predicates = [HasBMI2, HasEGPR] in {
-  defm PDEP32 : PdepPext<"pdep", Xi32, X86pdep, "_EVEX">, XD, EVEX;
-  defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep, "_EVEX">, XD, REX_W, EVEX;
-  defm PEXT32 : PdepPext<"pext", Xi32, X86pext, "_EVEX">, XS, EVEX;
-  defm PEXT64 : PdepPext<"pext", Xi64, X86pext, "_EVEX">, XS, REX_W, EVEX;
+  defm PDEP32 : PdepPext<"pdep", Xi32, pdep, "_EVEX">, XD, EVEX;
+  defm PDEP64 : PdepPext<"pdep", Xi64, pdep, "_EVEX">, XD, REX_W, EVEX;
+  defm PEXT32 : PdepPext<"pext", Xi32, pext, "_EVEX">, XS, EVEX;
+  defm PEXT64 : PdepPext<"pext", Xi64, pext, "_EVEX">, XS, REX_W, EVEX;
 }
 
 //===----------------------------------------------------------------------===//

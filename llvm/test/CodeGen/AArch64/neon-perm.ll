@@ -1792,16 +1792,10 @@ entry:
 }
 
 define <4 x i8> @test_vzip1_v4i8(<8 x i8> %p) {
-; CHECK-SD-LABEL: test_vzip1_v4i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vzip1_v4i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vzip1_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    ret
  %lo = shufflevector <8 x i8> %p, <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
  ret <4 x i8> %lo
 }

@@ -176,11 +176,11 @@ void test_builtin_reduce_addf(float4 vf1, half8 vf2, float start) {
   float r2 = __builtin_reduce_in_order_fadd(vf1, 2.0f);
 
   // CHECK:      [[V2:%.+]] = load <8 x half>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: call reassoc half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[V2:%.+]])
+  // CHECK-NEXT: call reassoc half @llvm.vector.reduce.fadd.v8f16(half -0.000000e+00, <8 x half> [[V2:%.+]])
   _Float16 r3 = __builtin_reduce_assoc_fadd(vf2);
 
   // CHECK:      [[V3:%.+]] = load <8 x half>, ptr %vf2.addr, align 16
-  // CHECK-NEXT: [[RDX:%.+]] = call half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[V3]])
+  // CHECK-NEXT: [[RDX:%.+]] = call half @llvm.vector.reduce.fadd.v8f16(half -0.000000e+00, <8 x half> [[V3]])
   // CHECK-NEXT: fpext half [[RDX]] to float
   float r4 = __builtin_reduce_in_order_fadd(vf2, -0.0f);
 

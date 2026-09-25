@@ -37,13 +37,21 @@ namespace bolt {
 /// Relocation class.
 class Relocation {
 public:
+  static constexpr uint32_t NoJmpRelocationIndex = (1u << 30) - 1;
+
   Relocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
-             uint64_t Value)
-      : Offset(Offset), Symbol(Symbol), Type(Type), Optional(false),
-        Addend(Addend), Value(Value) {}
+             uint64_t Value, bool IsRELR = false,
+             uint32_t JmpRelocationIndex = NoJmpRelocationIndex)
+      : Offset(Offset), Symbol(Symbol), Addend(Addend), Value(Value),
+        Type(Type), JmpRelocationIndex(JmpRelocationIndex), Optional(false),
+        IsRELR(IsRELR) {
+    assert((isRelative() || !isRELR()) &&
+           "Only relative relocations can be relr.");
+  }
 
   Relocation()
-      : Offset(0), Symbol(0), Type(0), Optional(0), Addend(0), Value(0) {}
+      : Offset(0), Symbol(0), Addend(0), Value(0), Type(0),
+        JmpRelocationIndex(NoJmpRelocationIndex), Optional(0), IsRELR(0) {}
 
   static Triple::ArchType Arch; /// set by BinaryContext ctor.
 
@@ -53,15 +61,6 @@ public:
   /// The symbol this relocation is referring to.
   MCSymbol *Symbol;
 
-  /// Relocation type.
-  uint32_t Type;
-
-private:
-  /// Relocations added by optimizations can be optional, meaning they can be
-  /// omitted under certain circumstances.
-  bool Optional = false;
-
-public:
   /// The offset from the \p Symbol base used to compute the final
   /// value of this relocation.
   uint64_t Addend;
@@ -70,12 +69,41 @@ public:
   /// Used to validate relocation correctness.
   uint64_t Value;
 
+  /// Relocation type.
+  uint32_t Type;
+
+private:
+  /// Original index in DT_JMPREL, or NoJmpRelocationIndex for relocations
+  /// originating from other relocation tables.
+  uint32_t JmpRelocationIndex : 30;
+
+  /// Relocations added by optimizations can be optional, meaning they can be
+  /// omitted under certain circumstances.
+  uint32_t Optional : 1;
+
+  /// Track which relocations originate from a relr section. Emit these
+  /// exclusively into the relr section and do not accidentally promote relative
+  /// rela entries, because that would require growing the relr section.
+  uint32_t IsRELR : 1;
+
+public:
+  bool isJmpRelocation() const {
+    return JmpRelocationIndex != NoJmpRelocationIndex;
+  }
+
+  uint32_t getJmpRelocationIndex() const {
+    assert(isJmpRelocation() && "not a DT_JMPREL relocation");
+    return JmpRelocationIndex;
+  }
+
   /// Return size in bytes of the given relocation \p Type.
   static size_t getSizeForType(uint32_t Type);
 
   void setOptional() { Optional = true; }
 
   bool isOptional() { return Optional; }
+
+  bool isRELR() const { return IsRELR; }
 
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }

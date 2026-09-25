@@ -9,12 +9,16 @@
 // https://github.com/llvm/llvm-project/issues/30023
 // compare exchange does not work with types of which the size is not a power of 2
 
-// XFAIL: clang-20, clang-21, apple-clang-17
+// XFAIL: clang-21, apple-clang-21
 // UNSUPPORTED: c++03
 
 // TODO: remove the UNSUPPORTED clang-22 once libc++ CI's clang is updated to include
 // the fix https://github.com/llvm/llvm-project/pull/78707
 // UNSUPPORTED: clang-22
+
+// The ARM Picolibc build does not include implementations of __atomic_load or
+// __atomic_compare_exchange: https://github.com/llvm/llvm-project/issues/191388
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
 #include <atomic>
 #include <cstring>

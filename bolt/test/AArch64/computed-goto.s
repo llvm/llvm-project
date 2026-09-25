@@ -1,12 +1,12 @@
-// This test checks that BOLT creates entry points for addresses
+// This test checks that BOLT recognizes blocks for addresses
 // referenced by dynamic relocations.
 // The test also checks that BOLT can map addresses inside functions.
 
-// Checks for error and entry points.
+// Checks for error and cfg.
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
-# RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-ENTRIES %s
+# RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-CFG %s
 
 // Checks for dynamic relocations.
 # RUN: llvm-readelf -dr %t.bolt > %t.out.txt
@@ -30,13 +30,12 @@
 # CHECK-RELOCS: [[#ADDR]] <unknown>
 # CHECK-RELOCS: [[#ADDR + 8]] <unknown>
 
-// Check that BOLT registers extra entry points for dynamic relocations.
-# CHECK-ENTRIES: Binary Function "main" after building cfg {
-# CHECK-ENTRIES:  IsMultiEntry: 1
-# CHECK-ENTRIES: .Ltmp0 {{.*}}
-# CHECK-ENTRIES-NEXT: Secondary Entry Point: {{.*}}
-# CHECK-ENTRIES: .Ltmp1 {{.*}}
-# CHECK-ENTRIES-NEXT: Secondary Entry Point: {{.*}}
+// Check that BOLT recognizes indirect targeted blocks.
+# CHECK-CFG: Binary Function "main" after building cfg {
+# CHECK-CFG:  IsMultiEntry: 0
+# CHECK-CFG:  BB Count    : 3
+# CHECK-CFG: .Ltmp0 {{.*}}
+# CHECK-CFG: .Ltmp1 {{.*}}
 
 .globl  main
 .p2align        2

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_SETPAYLOADSIG_H
 #define LLVM_LIBC_SHARED_MATH_SETPAYLOADSIG_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/setpayloadsig.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -11,11 +11,11 @@ define double @fun0_fadd(ptr %x) {
 ; CHECK-NEXT:    adb %f0, 8(%r2)
 ; CHECK-NEXT:    ld %f1, 24(%r2)
 ; CHECK-NEXT:    adb %f1, 16(%r2)
+; CHECK-NEXT:    ld %f2, 40(%r2)
+; CHECK-NEXT:    adb %f2, 32(%r2)
+; CHECK-NEXT:    adb %f2, 48(%r2)
 ; CHECK-NEXT:    adbr %f0, %f1
-; CHECK-NEXT:    ld %f1, 40(%r2)
-; CHECK-NEXT:    adb %f1, 32(%r2)
-; CHECK-NEXT:    adb %f1, 48(%r2)
-; CHECK-NEXT:    adbr %f0, %f1
+; CHECK-NEXT:    adbr %f0, %f2
 ; CHECK-NEXT:    adb %f0, 56(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -51,11 +51,11 @@ define float @fun1_fadd(ptr %x) {
 ; CHECK-NEXT:    aeb %f0, 4(%r2)
 ; CHECK-NEXT:    lde %f1, 12(%r2)
 ; CHECK-NEXT:    aeb %f1, 8(%r2)
+; CHECK-NEXT:    lde %f2, 20(%r2)
+; CHECK-NEXT:    aeb %f2, 16(%r2)
+; CHECK-NEXT:    aeb %f2, 24(%r2)
 ; CHECK-NEXT:    aebr %f0, %f1
-; CHECK-NEXT:    lde %f1, 20(%r2)
-; CHECK-NEXT:    aeb %f1, 16(%r2)
-; CHECK-NEXT:    aeb %f1, 24(%r2)
-; CHECK-NEXT:    aebr %f0, %f1
+; CHECK-NEXT:    aebr %f0, %f2
 ; CHECK-NEXT:    aeb %f0, 28(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -89,16 +89,16 @@ define fp128 @fun2_fadd(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
+; CHECK-NEXT:    vl %v2, 32(%r3), 3
+; CHECK-NEXT:    vl %v3, 48(%r3), 3
+; CHECK-NEXT:    vl %v4, 64(%r3), 3
+; CHECK-NEXT:    vl %v5, 80(%r3), 3
 ; CHECK-NEXT:    wfaxb %v0, %v1, %v0
-; CHECK-NEXT:    vl %v1, 32(%r3), 3
-; CHECK-NEXT:    vl %v2, 48(%r3), 3
-; CHECK-NEXT:    wfaxb %v1, %v1, %v2
+; CHECK-NEXT:    wfaxb %v1, %v2, %v3
+; CHECK-NEXT:    wfaxb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r3), 3
 ; CHECK-NEXT:    wfaxb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r3), 3
-; CHECK-NEXT:    vl %v2, 80(%r3), 3
-; CHECK-NEXT:    wfaxb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r3), 3
-; CHECK-NEXT:    wfaxb %v1, %v1, %v2
+; CHECK-NEXT:    wfaxb %v1, %v2, %v3
 ; CHECK-NEXT:    wfaxb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r3), 3
 ; CHECK-NEXT:    wfaxb %v0, %v0, %v1
@@ -135,16 +135,16 @@ define <2 x double> @fun3_fadd(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
+; CHECK-NEXT:    vl %v2, 32(%r2), 3
+; CHECK-NEXT:    vl %v3, 48(%r2), 3
+; CHECK-NEXT:    vl %v4, 64(%r2), 3
+; CHECK-NEXT:    vl %v5, 80(%r2), 3
 ; CHECK-NEXT:    vfadb %v0, %v1, %v0
-; CHECK-NEXT:    vl %v1, 32(%r2), 3
-; CHECK-NEXT:    vl %v2, 48(%r2), 3
-; CHECK-NEXT:    vfadb %v1, %v1, %v2
+; CHECK-NEXT:    vfadb %v1, %v2, %v3
+; CHECK-NEXT:    vfadb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r2), 3
 ; CHECK-NEXT:    vfadb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r2), 3
-; CHECK-NEXT:    vl %v2, 80(%r2), 3
-; CHECK-NEXT:    vfadb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r2), 3
-; CHECK-NEXT:    vfadb %v1, %v1, %v2
+; CHECK-NEXT:    vfadb %v1, %v2, %v3
 ; CHECK-NEXT:    vfadb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r2), 3
 ; CHECK-NEXT:    vfadb %v24, %v0, %v1
@@ -180,16 +180,16 @@ define <4 x float> @fun4_fadd(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
+; CHECK-NEXT:    vl %v2, 32(%r2), 3
+; CHECK-NEXT:    vl %v3, 48(%r2), 3
+; CHECK-NEXT:    vl %v4, 64(%r2), 3
+; CHECK-NEXT:    vl %v5, 80(%r2), 3
 ; CHECK-NEXT:    vfasb %v0, %v1, %v0
-; CHECK-NEXT:    vl %v1, 32(%r2), 3
-; CHECK-NEXT:    vl %v2, 48(%r2), 3
-; CHECK-NEXT:    vfasb %v1, %v1, %v2
+; CHECK-NEXT:    vfasb %v1, %v2, %v3
+; CHECK-NEXT:    vfasb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r2), 3
 ; CHECK-NEXT:    vfasb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r2), 3
-; CHECK-NEXT:    vl %v2, 80(%r2), 3
-; CHECK-NEXT:    vfasb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r2), 3
-; CHECK-NEXT:    vfasb %v1, %v1, %v2
+; CHECK-NEXT:    vfasb %v1, %v2, %v3
 ; CHECK-NEXT:    vfasb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r2), 3
 ; CHECK-NEXT:    vfasb %v24, %v0, %v1
@@ -227,11 +227,11 @@ define double @fun5_fsub(ptr %x) {
 ; CHECK-NEXT:    sdb %f0, 8(%r2)
 ; CHECK-NEXT:    ld %f1, 24(%r2)
 ; CHECK-NEXT:    adb %f1, 16(%r2)
+; CHECK-NEXT:    ld %f2, 40(%r2)
+; CHECK-NEXT:    adb %f2, 32(%r2)
+; CHECK-NEXT:    adb %f2, 48(%r2)
 ; CHECK-NEXT:    sdbr %f0, %f1
-; CHECK-NEXT:    ld %f1, 40(%r2)
-; CHECK-NEXT:    adb %f1, 32(%r2)
-; CHECK-NEXT:    adb %f1, 48(%r2)
-; CHECK-NEXT:    sdbr %f0, %f1
+; CHECK-NEXT:    sdbr %f0, %f2
 ; CHECK-NEXT:    sdb %f0, 56(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -267,11 +267,11 @@ define float @fun6_fsub(ptr %x) {
 ; CHECK-NEXT:    seb %f0, 4(%r2)
 ; CHECK-NEXT:    lde %f1, 12(%r2)
 ; CHECK-NEXT:    aeb %f1, 8(%r2)
+; CHECK-NEXT:    lde %f2, 20(%r2)
+; CHECK-NEXT:    aeb %f2, 16(%r2)
+; CHECK-NEXT:    aeb %f2, 24(%r2)
 ; CHECK-NEXT:    sebr %f0, %f1
-; CHECK-NEXT:    lde %f1, 20(%r2)
-; CHECK-NEXT:    aeb %f1, 16(%r2)
-; CHECK-NEXT:    aeb %f1, 24(%r2)
-; CHECK-NEXT:    sebr %f0, %f1
+; CHECK-NEXT:    sebr %f0, %f2
 ; CHECK-NEXT:    seb %f0, 28(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -305,16 +305,16 @@ define fp128 @fun7_fsub(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
+; CHECK-NEXT:    vl %v2, 32(%r3), 3
+; CHECK-NEXT:    vl %v3, 48(%r3), 3
+; CHECK-NEXT:    vl %v4, 64(%r3), 3
+; CHECK-NEXT:    vl %v5, 80(%r3), 3
 ; CHECK-NEXT:    wfsxb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 32(%r3), 3
-; CHECK-NEXT:    vl %v2, 48(%r3), 3
-; CHECK-NEXT:    wfaxb %v1, %v1, %v2
+; CHECK-NEXT:    wfaxb %v1, %v2, %v3
+; CHECK-NEXT:    wfaxb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r3), 3
 ; CHECK-NEXT:    wfsxb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r3), 3
-; CHECK-NEXT:    vl %v2, 80(%r3), 3
-; CHECK-NEXT:    wfaxb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r3), 3
-; CHECK-NEXT:    wfaxb %v1, %v1, %v2
+; CHECK-NEXT:    wfaxb %v1, %v2, %v3
 ; CHECK-NEXT:    wfsxb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r3), 3
 ; CHECK-NEXT:    wfsxb %v0, %v0, %v1
@@ -351,16 +351,16 @@ define <2 x double> @fun8_fsub(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
+; CHECK-NEXT:    vl %v2, 32(%r2), 3
+; CHECK-NEXT:    vl %v3, 48(%r2), 3
+; CHECK-NEXT:    vl %v4, 64(%r2), 3
+; CHECK-NEXT:    vl %v5, 80(%r2), 3
 ; CHECK-NEXT:    vfsdb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 32(%r2), 3
-; CHECK-NEXT:    vl %v2, 48(%r2), 3
-; CHECK-NEXT:    vfadb %v1, %v1, %v2
+; CHECK-NEXT:    vfadb %v1, %v2, %v3
+; CHECK-NEXT:    vfadb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r2), 3
 ; CHECK-NEXT:    vfsdb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r2), 3
-; CHECK-NEXT:    vl %v2, 80(%r2), 3
-; CHECK-NEXT:    vfadb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r2), 3
-; CHECK-NEXT:    vfadb %v1, %v1, %v2
+; CHECK-NEXT:    vfadb %v1, %v2, %v3
 ; CHECK-NEXT:    vfsdb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r2), 3
 ; CHECK-NEXT:    vfsdb %v24, %v0, %v1
@@ -396,16 +396,16 @@ define <4 x float> @fun9_fsub(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
+; CHECK-NEXT:    vl %v2, 32(%r2), 3
+; CHECK-NEXT:    vl %v3, 48(%r2), 3
+; CHECK-NEXT:    vl %v4, 64(%r2), 3
+; CHECK-NEXT:    vl %v5, 80(%r2), 3
 ; CHECK-NEXT:    vfssb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 32(%r2), 3
-; CHECK-NEXT:    vl %v2, 48(%r2), 3
-; CHECK-NEXT:    vfasb %v1, %v1, %v2
+; CHECK-NEXT:    vfasb %v1, %v2, %v3
+; CHECK-NEXT:    vfasb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r2), 3
 ; CHECK-NEXT:    vfssb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r2), 3
-; CHECK-NEXT:    vl %v2, 80(%r2), 3
-; CHECK-NEXT:    vfasb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r2), 3
-; CHECK-NEXT:    vfasb %v1, %v1, %v2
+; CHECK-NEXT:    vfasb %v1, %v2, %v3
 ; CHECK-NEXT:    vfssb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r2), 3
 ; CHECK-NEXT:    vfssb %v24, %v0, %v1
@@ -443,11 +443,11 @@ define double @fun10_fmul(ptr %x) {
 ; CHECK-NEXT:    mdb %f0, 0(%r2)
 ; CHECK-NEXT:    ld %f1, 24(%r2)
 ; CHECK-NEXT:    mdb %f1, 16(%r2)
+; CHECK-NEXT:    ld %f2, 40(%r2)
+; CHECK-NEXT:    mdb %f2, 32(%r2)
+; CHECK-NEXT:    mdb %f2, 48(%r2)
 ; CHECK-NEXT:    mdbr %f0, %f1
-; CHECK-NEXT:    ld %f1, 40(%r2)
-; CHECK-NEXT:    mdb %f1, 32(%r2)
-; CHECK-NEXT:    mdb %f1, 48(%r2)
-; CHECK-NEXT:    mdbr %f0, %f1
+; CHECK-NEXT:    mdbr %f0, %f2
 ; CHECK-NEXT:    mdb %f0, 56(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -483,11 +483,11 @@ define float @fun11_fmul(ptr %x) {
 ; CHECK-NEXT:    meeb %f0, 0(%r2)
 ; CHECK-NEXT:    lde %f1, 12(%r2)
 ; CHECK-NEXT:    meeb %f1, 8(%r2)
+; CHECK-NEXT:    lde %f2, 20(%r2)
+; CHECK-NEXT:    meeb %f2, 16(%r2)
+; CHECK-NEXT:    meeb %f2, 24(%r2)
 ; CHECK-NEXT:    meebr %f0, %f1
-; CHECK-NEXT:    lde %f1, 20(%r2)
-; CHECK-NEXT:    meeb %f1, 16(%r2)
-; CHECK-NEXT:    meeb %f1, 24(%r2)
-; CHECK-NEXT:    meebr %f0, %f1
+; CHECK-NEXT:    meebr %f0, %f2
 ; CHECK-NEXT:    meeb %f0, 28(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -521,16 +521,16 @@ define fp128 @fun12_fmul(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vl %v1, 16(%r3), 3
+; CHECK-NEXT:    vl %v2, 32(%r3), 3
+; CHECK-NEXT:    vl %v3, 48(%r3), 3
+; CHECK-NEXT:    vl %v4, 64(%r3), 3
+; CHECK-NEXT:    vl %v5, 80(%r3), 3
 ; CHECK-NEXT:    wfmxb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 32(%r3), 3
-; CHECK-NEXT:    vl %v2, 48(%r3), 3
-; CHECK-NEXT:    wfmxb %v1, %v1, %v2
+; CHECK-NEXT:    wfmxb %v1, %v2, %v3
+; CHECK-NEXT:    wfmxb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r3), 3
 ; CHECK-NEXT:    wfmxb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r3), 3
-; CHECK-NEXT:    vl %v2, 80(%r3), 3
-; CHECK-NEXT:    wfmxb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r3), 3
-; CHECK-NEXT:    wfmxb %v1, %v1, %v2
+; CHECK-NEXT:    wfmxb %v1, %v2, %v3
 ; CHECK-NEXT:    wfmxb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r3), 3
 ; CHECK-NEXT:    wfmxb %v0, %v0, %v1
@@ -567,16 +567,16 @@ define <2 x double> @fun13_fmul(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
+; CHECK-NEXT:    vl %v2, 32(%r2), 3
+; CHECK-NEXT:    vl %v3, 48(%r2), 3
+; CHECK-NEXT:    vl %v4, 64(%r2), 3
+; CHECK-NEXT:    vl %v5, 80(%r2), 3
 ; CHECK-NEXT:    vfmdb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 32(%r2), 3
-; CHECK-NEXT:    vl %v2, 48(%r2), 3
-; CHECK-NEXT:    vfmdb %v1, %v1, %v2
+; CHECK-NEXT:    vfmdb %v1, %v2, %v3
+; CHECK-NEXT:    vfmdb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r2), 3
 ; CHECK-NEXT:    vfmdb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r2), 3
-; CHECK-NEXT:    vl %v2, 80(%r2), 3
-; CHECK-NEXT:    vfmdb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r2), 3
-; CHECK-NEXT:    vfmdb %v1, %v1, %v2
+; CHECK-NEXT:    vfmdb %v1, %v2, %v3
 ; CHECK-NEXT:    vfmdb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r2), 3
 ; CHECK-NEXT:    vfmdb %v24, %v0, %v1
@@ -612,16 +612,16 @@ define <4 x float> @fun14_fmul(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vl %v1, 16(%r2), 3
+; CHECK-NEXT:    vl %v2, 32(%r2), 3
+; CHECK-NEXT:    vl %v3, 48(%r2), 3
+; CHECK-NEXT:    vl %v4, 64(%r2), 3
+; CHECK-NEXT:    vl %v5, 80(%r2), 3
 ; CHECK-NEXT:    vfmsb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 32(%r2), 3
-; CHECK-NEXT:    vl %v2, 48(%r2), 3
-; CHECK-NEXT:    vfmsb %v1, %v1, %v2
+; CHECK-NEXT:    vfmsb %v1, %v2, %v3
+; CHECK-NEXT:    vfmsb %v2, %v4, %v5
+; CHECK-NEXT:    vl %v3, 96(%r2), 3
 ; CHECK-NEXT:    vfmsb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 64(%r2), 3
-; CHECK-NEXT:    vl %v2, 80(%r2), 3
-; CHECK-NEXT:    vfmsb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v2, 96(%r2), 3
-; CHECK-NEXT:    vfmsb %v1, %v1, %v2
+; CHECK-NEXT:    vfmsb %v1, %v2, %v3
 ; CHECK-NEXT:    vfmsb %v0, %v0, %v1
 ; CHECK-NEXT:    vl %v1, 112(%r2), 3
 ; CHECK-NEXT:    vfmsb %v24, %v0, %v1

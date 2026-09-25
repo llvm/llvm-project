@@ -10,4 +10,4 @@
 
 #include "src/math/dmull.h"
 
-LIST_MUL_TESTS(double, long double, LIBC_NAMESPACE::dmull)
+LIST_MUL_TESTS(Dmull, double, long double, LIBC_NAMESPACE::dmull)

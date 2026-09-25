@@ -1,16 +1,35 @@
 import os
 
 
-def read_test_times(suite):
-    test_times = {}
+def _get_test_times_path(suite):
     test_times_file = os.path.join(suite.exec_root, ".lit_test_times.txt")
     if not os.path.exists(test_times_file):
         test_times_file = os.path.join(suite.source_root, ".lit_test_times.txt")
+    return test_times_file
+
+
+def read_test_times(suite, lit_config=None):
+    test_times = {}
+    test_times_file = _get_test_times_path(suite)
     if os.path.exists(test_times_file):
+        malformed_data = False
         with open(test_times_file, "r") as time_file:
             for line in time_file:
-                time, path = line.split(maxsplit=1)
-                test_times[path.strip("\n")] = float(time)
+                fields = line.split(maxsplit=1)
+                if len(fields) != 2:
+                    malformed_data = True
+                    continue
+                time, path = fields
+                try:
+                    test_times[path.strip("\n")] = float(time)
+                except ValueError:
+                    malformed_data = True
+                    continue
+        if malformed_data and lit_config:
+            lit_config.fatal(
+                "found malformed timing data in %r; remove the file to "
+                "regenerate it" % (test_times_file,)
+            )
     return test_times
 
 
@@ -21,7 +40,7 @@ def record_test_times(tests, lit_config):
         if t.result.elapsed is None:
             continue
         if not t.suite.exec_root in times_by_suite:
-            times_by_suite[t.suite.exec_root] = read_test_times(t.suite)
+            times_by_suite[t.suite.exec_root] = read_test_times(t.suite, lit_config)
 
         # Mark the elapsed time for failed tests as negative so LIT can distingiush failed from
         # successful test runs just based on the time value. For this heuristic to work for tests

@@ -128,6 +128,17 @@ public:
     return emitBytecodeVersion;
   }
 
+  /// Set the bytecode producer to use.
+  MlirOptMainConfig &emitBytecodeProducer(StringRef producer) {
+    emitBytecodeProducerFlag = producer.str();
+    return *this;
+  }
+  std::optional<StringRef> bytecodeProducerToEmit() const {
+    if (emitBytecodeProducerFlag.empty())
+      return std::nullopt;
+    return emitBytecodeProducerFlag;
+  }
+
   /// Set the callback to populate the pass manager.
   MlirOptMainConfig &
   setPassPipelineSetupFn(std::function<LogicalResult(PassManager &)> callback) {
@@ -308,6 +319,9 @@ protected:
 
   /// Emit bytecode at given version.
   std::optional<int64_t> emitBytecodeVersion = std::nullopt;
+
+  /// Emit bytecode with given producer.
+  std::string emitBytecodeProducerFlag = "";
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;

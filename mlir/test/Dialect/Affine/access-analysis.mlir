@@ -51,7 +51,7 @@ func.func @loop_unsimplified(%A : memref<100xf32>) {
 #map3 = affine_map<(d0) -> (d0 + 1)>
 
 func.func @tiled(%arg0: memref<*xf32>) {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x224x224x64xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<1x224x224x64xf32>
   %cast = memref.cast %arg0 : memref<*xf32> to memref<64xf32>
   affine.for %arg1 = 0 to 4 {
     affine.for %arg2 = 0 to 224 {

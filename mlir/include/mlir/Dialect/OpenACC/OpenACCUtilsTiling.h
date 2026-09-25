@@ -20,23 +20,20 @@
 namespace mlir {
 namespace acc {
 
-/// Uncollapse tile loops with multiple IVs and collapseCount < tileCount.
-/// This is used to prepare loops for tiling when the collapse count is less
-/// than the tile count.
+/// Tile a single fused acc.loop that carries all associated induction
+/// variables (one IV per tile dimension).
 ///
-/// \param origLoop The original loop operation to uncollapse.
-/// \param tileCount The number of tile dimensions.
-/// \param collapseCount The collapse count from the original loop.
-/// \param rewriter The rewriter to use for modifications.
-/// \return A vector of uncollapsed loop operations.
-llvm::SmallVector<mlir::acc::LoopOp>
-uncollapseLoops(mlir::acc::LoopOp origLoop, unsigned tileCount,
-                unsigned collapseCount, mlir::RewriterBase &rewriter);
-
-/// Tile ACC loops according to the given tile sizes.
+/// This produces exactly two multi-IV loops, each carrying all of the tiled
+/// induction variables:
 ///
-/// Tiling a 2-level nested loop will create two 'tile' loops containing two
-/// 'element' loops. The transformation looks like:
+///   - a "tile group" loop that steps over tiles: each step is the
+///     original step multiplied by the tile size. It keeps the original loop's
+///     gang attribute.
+///   - an "element group" loop that walks the iterations inside one tile: it
+///     keeps the original step, its lower bound is the current tile's starting
+///     index, and its upper bound is clamped to min(original upper bound,
+///     tile start + tile extent). It keeps the original loop's vector (or
+///     worker) attribute.
 ///
 /// Before Tiling:
 /// \code
@@ -48,17 +45,15 @@ uncollapseLoops(mlir::acc::LoopOp origLoop, unsigned tileCount,
 ///  }
 /// \endcode
 ///
-/// After Tiling:
+/// After Tiling (each group is one multi-IV loop over all tiled IVs):
 /// \code
-///  for (i = lb1; i < ub1; i += (step1 * tile_size1)) { // tile loop 1
-///    for (j = lb2; j < ub2; j += (step2 * tile_size2)) { // tile loop 2
-///      for (ii = i; ii < min(ub1, (step1 * tile_size1) + i); ii += step1) {
-///      // element loop 1
-///        for (jj = j; jj < min(ub2, (step2 * tile_size2) + j); jj += step2)
-///        { // element loop 2
-///          a[ii,jj] = i + j;
-///        }
-///      }
+///  // tile group
+///  for (i = lb1; i < ub1; i += (step1 * tile_size1),
+///       j = lb2; j < ub2; j += (step2 * tile_size2)) {
+///    // element group
+///    for (ii = i; ii < min(ub1, (step1 * tile_size1) + i); ii += step1,
+///         jj = j; jj < min(ub2, (step2 * tile_size2) + j); jj += step2) {
+///      a[ii,jj] = i + j;
 ///    }
 ///  }
 /// \endcode
@@ -66,13 +61,13 @@ uncollapseLoops(mlir::acc::LoopOp origLoop, unsigned tileCount,
 /// Unknown tile sizes (represented as -1 in acc dialect for `tile(*)`) are
 /// resolved to the provided default tile size.
 ///
-/// \param tileLoops The loops to tile (outermost first).
-/// \param tileSizes The tile sizes for each dimension. Values of -1 are
+/// \param tileLoop The fused loop to tile.
+/// \param tileSizes The tile sizes for each tiled dimension. Values of -1 are
 ///        treated as unknown and resolved to defaultTileSize.
 /// \param defaultTileSize The default tile size to use for unknown (*) tiles.
 /// \param rewriter The rewriter to use for modifications.
-/// \return The outermost loop after tiling.
-mlir::acc::LoopOp tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
+/// \return The tile group loop that is modified in place.
+mlir::acc::LoopOp tileACCLoops(mlir::acc::LoopOp tileLoop,
                                const llvm::SmallVector<mlir::Value> &tileSizes,
                                int32_t defaultTileSize,
                                mlir::RewriterBase &rewriter);

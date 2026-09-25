@@ -29,13 +29,13 @@ define void @testVaCopyArg(ptr %fmt, ...) {
   ; MIPS32-NEXT:   G_STORE [[COPY]](p0), [[FRAME_INDEX3]](p0) :: (store (p0) into %ir.fmt.addr)
   ; MIPS32-NEXT:   G_VASTART [[FRAME_INDEX4]](p0) :: (store (s32) into %ir.ap)
   ; MIPS32-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX5]](p0), [[FRAME_INDEX4]](p0)
-  ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (dereferenceable load (p0) from %ir.aq)
+  ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (p0) from %ir.aq)
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; MIPS32-NEXT:   %13:_(p0) = nuw nusw inbounds G_PTR_ADD [[LOAD]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE %13(p0), [[FRAME_INDEX5]](p0) :: (store (p0) into %ir.aq)
   ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load (p0) from %ir.argp.cur)
   ; MIPS32-NEXT:   G_STORE [[LOAD1]](p0), [[FRAME_INDEX6]](p0) :: (store (p0) into %ir.s)
-  ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX6]](p0) :: (dereferenceable load (p0) from %ir.s)
+  ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (p0) from %ir.s)
   ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   $a0 = COPY [[GV]](p0)
   ; MIPS32-NEXT:   $a1 = COPY [[LOAD2]](p0)

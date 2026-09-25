@@ -2,6 +2,7 @@
 ; type (special case as such lowering uses spv_load/store intrinsics)
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability MemoryAccessAliasingINTEL
 ; CHECK: OpExtension "SPV_INTEL_memory_access_aliasing"

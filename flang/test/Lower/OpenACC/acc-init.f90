@@ -25,7 +25,7 @@ subroutine acc_init
 
   !$acc init device_num(1) device_type(host, multicore)
 !CHECK: [[DEVNUM:%.*]] = arith.constant 1 : i32
-!CHECK: acc.init device_num([[DEVNUM]] : i32) attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
+!CHECK: acc.init device_num([[DEVNUM]] : i32) device_types([#acc.device_type<host>, #acc.device_type<multicore>])
 
   !$acc init if(ifInt)
 !CHECK: %[[IFINT:.*]] = fir.load %{{.*}} : !fir.ref<i32>
@@ -33,9 +33,9 @@ subroutine acc_init
 !CHECK: acc.init if(%[[CONV]])
 
    !$acc init device_type(nvidia)
-!CHECK: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
+!CHECK: acc.init device_types([#acc.device_type<nvidia>])
 
   !$acc init device_type(host) device_type(multicore)
-!CHECK: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
+!CHECK: acc.init device_types([#acc.device_type<host>, #acc.device_type<multicore>])
 
 end subroutine acc_init

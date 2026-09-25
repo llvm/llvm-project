@@ -1,0 +1,28 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": ""
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "None"
+      }
+    }
+  ],
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
+}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -E -std=c++20 %s
+// RUN: %clang_cc1 -E -std=c++20 %s | FileCheck %s
 
 // CHECK: export __preprocessed_module M;
 // CHECK-NEXT: export __preprocessed_import K;

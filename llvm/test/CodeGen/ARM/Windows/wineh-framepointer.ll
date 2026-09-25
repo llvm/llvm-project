@@ -18,7 +18,7 @@
 ; CHECK-NEXT:         mov     r11, sp
 ; CHECK-NEXT:         .seh_save_sp    r11
 ; CHECK-NEXT:         .seh_endprologue
-; CHECK-NEXT:         movw    r4, #1256
+; CHECK-NEXT:         movw    r4, #1254
 ; CHECK-NEXT:         bl      __chkstk
 ; CHECK-NEXT:         sub.w   sp, sp, r4
 ; CHECK-NEXT:         mov     r4, sp
@@ -77,7 +77,7 @@ declare arm_aapcs_vfpcc void @other(i32 noundef, ptr noundef, ptr noundef)
 ; CHECK-NEXT:         mov     r11, sp
 ; CHECK-NEXT:         .seh_save_sp    r11
 ; CHECK-NEXT:         .seh_endprologue
-; CHECK-NEXT:         movw    r4, #1258
+; CHECK-NEXT:         movw    r4, #1256
 ; CHECK-NEXT:         bl      __chkstk
 ; CHECK-NEXT:         sub.w   sp, sp, r4
 ; CHECK-NEXT:         mov     r4, sp
@@ -132,7 +132,7 @@ entry:
 ; CHECK-NEXT:         mov     r11, sp
 ; CHECK-NEXT:         .seh_save_sp    r11
 ; CHECK-NEXT:         .seh_endprologue
-; CHECK-NEXT:         movw    r4, #1259
+; CHECK-NEXT:         movw    r4, #1257
 ; CHECK-NEXT:         bl      __chkstk
 ; CHECK-NEXT:         sub.w   sp, sp, r4
 ; CHECK-NEXT:         mov     r4, sp

@@ -8,6 +8,13 @@ end
 
 subroutine f01(x)
   integer :: x
+  !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
   !ERROR: An exclusive 'step-simple-modifier' modifier cannot be specified together with a modifier of a different type
   !$omp declare simd linear(uval(x) : 2)
+end
+
+subroutine f02(x)
+  integer :: x
+  !ERROR: 'step-simple-modifier' modifier cannot occur multiple times
+  !$omp declare simd linear(x : 2, 2)
 end

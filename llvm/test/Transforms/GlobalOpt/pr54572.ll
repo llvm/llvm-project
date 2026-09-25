@@ -7,8 +7,8 @@
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 ;.
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null
-; CHECK: @[[C:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr constant [2 x ptr] zeroinitializer
+; CHECK: @b = internal unnamed_addr global ptr null
+; CHECK: @c = internal unnamed_addr constant [2 x ptr] zeroinitializer
 ;.
 define void @test() {
 ; CHECK-LABEL: @test(
@@ -19,5 +19,5 @@ define void @test() {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

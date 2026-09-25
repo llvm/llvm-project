@@ -6,10 +6,10 @@ subroutine test_perror()
   character(len=10) :: string
   character(len=1) :: one
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
-  ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.char<1> {bindc_name = "one", uniq_name = "_QFtest_perrorEone"}
+  ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.char<1> <{bindc_name = "one", uniq_name = "_QFtest_perrorEone"}>
   ! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[C1]] {uniq_name = "_QFtest_perrorEone"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
   ! CHECK: %[[C10:.*]] = arith.constant 10 : index
-  ! CHECK: %[[VAL_2:.*]] = fir.alloca !fir.char<1,10> {bindc_name = "string", uniq_name = "_QFtest_perrorEstring"}
+  ! CHECK: %[[VAL_2:.*]] = fir.alloca !fir.char<1,10> <{bindc_name = "string", uniq_name = "_QFtest_perrorEstring"}>
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[C10]] {uniq_name = "_QFtest_perrorEstring"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 
   call perror(string)

@@ -123,7 +123,7 @@ subroutine eq_and_comm_same_offset
   equivalence(arr1,common_arr1),(arr2,common_arr2)
   equivalence(arr3,arr4)
 
-  ! CHECK: %[[arr4Store:.*]] = fir.alloca !fir.array<70756xi8> {uniq_name = "_QFeq_and_comm_same_offsetEarr3"}
+  ! CHECK: %[[arr4Store:.*]] = fir.alloca !fir.array<70756xi8> <{uniq_name = "_QFeq_and_comm_same_offsetEarr3"}>
   ! CHECK: %[[mcbAddr:.*]] = fir.address_of(@my_common_block_) : !fir.ref<!fir.array<1064xi8>>
   ! CHECK: %[[c0:.*]] = arith.constant 0 : index
   ! CHECK: %[[mcbCoor:.*]] = fir.coordinate_of %[[mcbAddr]], %[[c0]] : (!fir.ref<!fir.array<1064xi8>>, index) -> !fir.ref<i8>

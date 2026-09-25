@@ -15,23 +15,12 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math_extras.h"
 #include "src/string/memory_utils/utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
-template <class T> LIBC_INLINE bool mul_overflow(T a, T b, T *res) {
-#if __has_builtin(__builtin_mul_overflow)
-  return __builtin_mul_overflow(a, b, res);
-#else
-  T max = cpp::numeric_limits<T>::max();
-  T min = cpp::numeric_limits<T>::min();
-  bool overflow = (b > 0 && (a > max / b || a < min / b)) ||
-                  (b < 0 && (a < max / b || a > min / b));
-  if (!overflow)
-    *res = a * b;
-  return overflow;
-#endif
-}
+
 // Limit memory size to the max of ssize_t
 class SafeMemSize {
 private:
@@ -68,7 +57,7 @@ public:
     type result;
     if (LIBC_UNLIKELY((value | other.value) < 0))
       result = -1;
-    if (LIBC_UNLIKELY(mul_overflow(value, other.value, &result)))
+    if (LIBC_UNLIKELY(mul_overflow(value, other.value, result)))
       result = -1;
     return SafeMemSize{result};
   }

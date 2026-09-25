@@ -406,9 +406,9 @@ public:
 
 private:
   // Data members:
-  bool m_should_resolve_indirect_functions;
-  bool m_is_reexported;
-  bool m_is_indirect;
+  bool m_should_resolve_indirect_functions = false;
+  bool m_is_reexported = false;
+  bool m_is_indirect = false;
   ///< The address defining this location.
   Address m_address;
   ///< The breakpoint that produced this object.
@@ -424,7 +424,7 @@ private:
   /// by multiple processes.
   std::mutex m_condition_mutex;
   ///< For testing whether the condition source code changed.
-  size_t m_condition_hash;
+  size_t m_condition_hash = 0;
   ///< Breakpoint location ID.
   lldb::break_id_t m_loc_id;
   ///< Number of times this breakpoint location has been hit.

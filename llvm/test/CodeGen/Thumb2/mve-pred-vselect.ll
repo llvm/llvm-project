@@ -280,21 +280,23 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @cmpsltz_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
 ; CHECK-LABEL: cmpsltz_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r2, s9
+; CHECK-NEXT:    vmov r1, s7
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov r2, s11
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r12, s1
+; CHECK-NEXT:    asrs r1, r1, #31
 ; CHECK-NEXT:    cmp.w r3, r2, lsr #31
-; CHECK-NEXT:    vmov r2, s7
-; CHECK-NEXT:    csel r0, r0, r1, ne
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    asr.w r12, r0, #31
-; CHECK-NEXT:    vmov r0, s11
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    asrne r1, r0, #31
+; CHECK-NEXT:    vmov r0, s9
+; CHECK-NEXT:    asrs r2, r2, #31
 ; CHECK-NEXT:    cmp.w r3, r0, lsr #31
-; CHECK-NEXT:    bfi r3, r12, #0, #8
-; CHECK-NEXT:    csel r0, r1, r2, ne
-; CHECK-NEXT:    asrs r0, r0, #31
-; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    asrne.w r2, r12, #31
+; CHECK-NEXT:    bfi r3, r2, #0, #8
+; CHECK-NEXT:    bfi r3, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr

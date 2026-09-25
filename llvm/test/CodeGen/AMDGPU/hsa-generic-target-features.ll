@@ -1,21 +1,27 @@
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic < %s | FileCheck -check-prefix=CU %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic < %s | FileCheck -check-prefix=CU %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic < %s | FileCheck -check-prefix=CU %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-generic < %s | FileCheck -check-prefix=CU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.1-amd-amdhsa -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.1-amd-amdhsa < %s | FileCheck -check-prefix=CU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.3-amd-amdhsa -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.3-amd-amdhsa < %s | FileCheck -check-prefix=CU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11-amd-amdhsa -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11-amd-amdhsa < %s | FileCheck -check-prefix=CU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11.7-amd-amdhsa -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11.7-amd-amdhsa < %s | FileCheck -check-prefix=CU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12-amd-amdhsa -mattr=+cumode < %s | FileCheck -check-prefix=NOCU %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12-amd-amdhsa < %s | FileCheck -check-prefix=CU %s
 
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-generic -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic < %s | FileCheck -check-prefix=W32 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.1-amd-amdhsa -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.1-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.3-amd-amdhsa -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu10.3-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11-amd-amdhsa -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11.7-amd-amdhsa -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11.7-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12-amd-amdhsa -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck -check-prefix=W32 %s
 
-; Checks 10.1, 10.3 and 11 generic targets allow cumode/wave64.
+; Checks 10.1, 10.3, 11, 11.7 and 12 generic targets allow cumode/wave64.
 
 ; NOCU:    .amdhsa_workgroup_processor_mode 0
 ; NOCU:    .workgroup_processor_mode: 0

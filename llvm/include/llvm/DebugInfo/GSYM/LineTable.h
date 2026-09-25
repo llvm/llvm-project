@@ -137,7 +137,7 @@ public:
   /// initialize the line table row prior to parsing any opcodes.
   ///
   /// \returns An LineEntry object if a match is found, error otherwise.
-  LLVM_ABI static Expected<LineEntry> lookup(DataExtractor &Data,
+  LLVM_ABI static Expected<LineEntry> lookup(GsymDataExtractor &Data,
                                              uint64_t BaseAddr, uint64_t Addr);
 
   /// Decode an LineTable object from a binary data stream.
@@ -152,7 +152,7 @@ public:
   ///
   /// \returns An LineTable or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<LineTable> decode(DataExtractor &Data,
+  LLVM_ABI static llvm::Expected<LineTable> decode(GsymDataExtractor &Data,
                                                    uint64_t BaseAddr);
   /// Encode this LineTable object into FileWriter stream.
   ///

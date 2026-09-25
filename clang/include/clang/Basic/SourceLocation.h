@@ -53,7 +53,13 @@ public:
   bool operator>=(const FileID &RHS) const { return RHS <= *this; }
 
   static FileID getSentinel() { return get(-1); }
-  unsigned getHashValue() const { return static_cast<unsigned>(ID); }
+  unsigned getHashValue() const {
+    // Multiply by 37 to spread the keys to avoid clustering in DenseMap.
+    return static_cast<unsigned>(ID) * 37U;
+  }
+
+  /// Returns the raw integer representation of this FileID.
+  int getOpaqueValue() const { return ID; }
 
 private:
   friend class ASTWriter;
@@ -66,8 +72,6 @@ private:
     F.ID = V;
     return F;
   }
-
-  int getOpaqueValue() const { return ID; }
 };
 
 using FileIDAndOffset = std::pair<FileID, unsigned>;
@@ -494,14 +498,6 @@ namespace llvm {
   /// DenseSets.
   template <>
   struct DenseMapInfo<clang::FileID, void> {
-    static clang::FileID getEmptyKey() {
-      return {};
-    }
-
-    static clang::FileID getTombstoneKey() {
-      return clang::FileID::getSentinel();
-    }
-
     static unsigned getHashValue(clang::FileID S) {
       return S.getHashValue();
     }
@@ -515,16 +511,6 @@ namespace llvm {
   /// DenseMap and DenseSet. This trait class is eqivalent to
   /// DenseMapInfo<unsigned> which uses SourceLocation::ID is used as a key.
   template <> struct DenseMapInfo<clang::SourceLocation, void> {
-    static clang::SourceLocation getEmptyKey() {
-      constexpr clang::SourceLocation::UIntTy Zero = 0;
-      return clang::SourceLocation::getFromRawEncoding(~Zero);
-    }
-
-    static clang::SourceLocation getTombstoneKey() {
-      constexpr clang::SourceLocation::UIntTy Zero = 0;
-      return clang::SourceLocation::getFromRawEncoding(~Zero - 1);
-    }
-
     static unsigned getHashValue(clang::SourceLocation Loc) {
       return Loc.getHashValue();
     }
@@ -540,14 +526,6 @@ namespace llvm {
   };
 
   template <> struct DenseMapInfo<clang::SourceRange> {
-    static clang::SourceRange getEmptyKey() {
-      return DenseMapInfo<clang::SourceLocation>::getEmptyKey();
-    }
-
-    static clang::SourceRange getTombstoneKey() {
-      return DenseMapInfo<clang::SourceLocation>::getTombstoneKey();
-    }
-
     static unsigned getHashValue(clang::SourceRange Range) {
       return detail::combineHashValue(Range.getBegin().getHashValue(),
                                       Range.getEnd().getHashValue());

@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@requireExpressionEvaluation
 class TestCase(TestBase):
     def _run_cmd(self, cmd: str) -> str:
         """Run the given lldb command and return its output."""
@@ -78,7 +79,7 @@ class TestCase(TestBase):
         """Test dwim-print with expressions."""
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
-        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)")
+        exprs = ("argc + 1", "(void)argc", "(int)abs(argc)", "argc - 1", "argc > 1")
         for expr in exprs:
             self._expect_cmd(f"dwim-print {expr}", "expression")
 
@@ -192,4 +193,4 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
-        self._expect_cmd("dwim-print gGlobal", "frame variable")
+        self._expect_cmd("dwim-print gGlobal", "expression")

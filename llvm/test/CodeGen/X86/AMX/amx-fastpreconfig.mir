@@ -29,8 +29,9 @@ machineFunctionInfo:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: main
-    ; CHECK: [[AVX512_512_SET0_:%[0-9]+]]:vr512 = AVX512_512_SET0
-    ; CHECK-NEXT: VMOVUPSZmr %stack.2, 1, $noreg, 0, $noreg, [[AVX512_512_SET0_]] :: (store (s512) into %stack.2, align 4)
+    ; CHECK: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vr512 = SUBREG_TO_REG [[AVX512_128_SET0_]], %subreg.sub_xmm
+    ; CHECK-NEXT: VMOVUPSZmr %stack.2, 1, $noreg, 0, $noreg, [[SUBREG_TO_REG]] :: (store (s512) into %stack.2, align 4)
     ; CHECK-NEXT: MOV8mi %stack.2, 1, $noreg, 0, $noreg, 1 :: (store (s512) into %stack.2, align 4)
     ; CHECK-NEXT: [[MOV32ri64_:%[0-9]+]]:gr64_nosp = MOV32ri64 32
     ; CHECK-NEXT: [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0, 1, $noreg, 0, $noreg

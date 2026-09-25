@@ -79,16 +79,16 @@ body:             |
     %2:gpr(p0) = G_LOAD %1(p0) :: (dereferenceable load (p0) from %ir.ptr.addr)
     %15:gpr64(p0) = ADRP target-flags(aarch64-page) @x
     %4:gpr(p0) = G_ADD_LOW %15(p0), target-flags(aarch64-pageoff, aarch64-nc) @x
-    %3:gpr(s32) = G_LOAD %4(p0) :: (dereferenceable load (s32) from @x)
-    %5:gpr(s32) = G_CONSTANT i32 32768
-    %6:gpr(s32) = nsw G_SUB %3, %5
-    %16:gpr(s64) = G_ANYEXT %6(s32)
-    %8:gpr(s64) = G_SEXT_INREG %16, 16
-    %14:gpr(s64) = G_CONSTANT i64 2
-    %10:gpr(s64) = G_SHL %8, %14(s64)
-    %11:gpr(p0) = G_PTR_ADD %2, %10(s64)
-    %13:gpr(s32) = G_LOAD %11(p0) :: (load (s32) from %ir.arrayidx)
-    $w0 = COPY %13(s32)
+    %3:gpr(i32) = G_LOAD %4(p0) :: (dereferenceable load (s32) from @x)
+    %5:gpr(i32) = G_CONSTANT i32 32768
+    %6:gpr(i32) = nsw G_SUB %3, %5
+    %16:gpr(i64) = G_ANYEXT %6(i32)
+    %8:gpr(i64) = G_SEXT_INREG %16, 16
+    %14:gpr(i64) = G_CONSTANT i64 2
+    %10:gpr(i64) = G_SHL %8, %14(i64)
+    %11:gpr(p0) = G_PTR_ADD %2, %10(i64)
+    %13:gpr(i32) = G_LOAD %11(p0) :: (load (s32) from %ir.arrayidx)
+    $w0 = COPY %13(i32)
     RET_ReallyLR implicit $w0
 
 ...

@@ -338,7 +338,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
   MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
   switch (Tail.getOpcode()) {
   default:
-    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
+    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr: "
                       << Tail);
     break;
   case RISCV::ADDI:
@@ -387,6 +387,29 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
   return false;
 }
 
+static void overwriteMachineOperandInPlace(MachineOperand &MO,
+                                           const MachineOperand &ImmOp) {
+  switch (ImmOp.getType()) {
+  case MachineOperand::MO_ConstantPoolIndex:
+    MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_MCSymbol:
+    MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+    MO.setOffset(ImmOp.getOffset());
+    break;
+  case MachineOperand::MO_BlockAddress:
+    MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
+                  ImmOp.getTargetFlags());
+    break;
+  default:
+    report_fatal_error("unsupported machine operand type");
+    break;
+  }
+}
+
 bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
                                                 MachineInstr &Lo) {
   Register DestReg = Lo.getOperand(0).getReg();
@@ -409,7 +432,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   std::optional<int64_t> CommonOffset;
   DenseMap<const MachineInstr *, SmallVector<unsigned>>
       InlineAsmMemoryOpIndexesMap;
-  for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
+  for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(DestReg)) {
     switch (UseMI.getOpcode()) {
     default:
       LLVM_DEBUG(dbgs() << "Not a load or store instruction: " << UseMI);
@@ -446,6 +469,34 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
              "Expected base address use");
       // All load/store instructions must use the same offset.
       int64_t Offset = UseMI.getOperand(2).getImm();
+      if (CommonOffset && Offset != CommonOffset)
+        return false;
+      CommonOffset = Offset;
+      break;
+    }
+    case RISCV::PseudoCCLD:
+    case RISCV::PseudoCCLW:
+    case RISCV::PseudoCCLWU:
+    case RISCV::PseudoCCLH:
+    case RISCV::PseudoCCLHU:
+    case RISCV::PseudoCCLB:
+    case RISCV::PseudoCCLBU: {
+      // The SFB Pseudos are like their non-SFB counterparts but have more
+      // operands.
+      if (UseMI.getOperand(2).isFI())
+        return false;
+      // Register defined by Lo should not be the (tied) false value, or a
+      // register used in the branch predicate.
+      if (DestReg == UseMI.getOperand(1).getReg() ||
+          DestReg == UseMI.getOperand(5).getReg())
+        return false;
+      if (UseMI.getOperand(6).isReg() &&
+          DestReg == UseMI.getOperand(6).getReg())
+        return false;
+      assert(DestReg == UseMI.getOperand(2).getReg() &&
+             "Expected base address use");
+      // All load/store instructions must use the same offset.
+      int64_t Offset = UseMI.getOperand(3).getImm();
       if (CommonOffset && Offset != CommonOffset)
         return false;
       CommonOffset = Offset;
@@ -504,6 +555,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     }
   }
 
+  if (!CommonOffset)
+    return false;
+
   // We found a common offset.
   // Update the offsets in global address lowering.
   // We may have already folded some arithmetic so we need to add to any
@@ -515,6 +569,10 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // We can only fold simm32 offsets.
   if (!isInt<32>(NewOffset))
     return false;
+
+  // Folding changes the value represented by DestReg, so its debug users can
+  // no longer describe the same address.
+  MRI->markUsesInDebugValueAsUndef(DestReg);
 
   Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp =
@@ -532,36 +590,63 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
   // Update the immediate in the load/store instructions to add the offset.
   for (MachineInstr &UseMI :
-       llvm::make_early_inc_range(MRI->use_instructions(DestReg))) {
+       llvm::make_early_inc_range(MRI->use_nodbg_instructions(DestReg))) {
     if (UseMI.getOpcode() == RISCV::INLINEASM ||
         UseMI.getOpcode() == RISCV::INLINEASM_BR) {
       auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];
       for (unsigned I : InlineAsmMemoryOpIndexes) {
         MachineOperand &MO = UseMI.getOperand(I + 1);
-        switch (ImmOp.getType()) {
-        case MachineOperand::MO_GlobalAddress:
-          MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
-          MO.setOffset(ImmOp.getOffset());
-          break;
-        case MachineOperand::MO_BlockAddress:
-          MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        default:
-          report_fatal_error("unsupported machine operand type");
-          break;
-        }
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     } else {
+      unsigned ImmIdx;
+      switch (UseMI.getOpcode()) {
+      case RISCV::INLINEASM:
+      case RISCV::INLINEASM_BR:
+        llvm_unreachable("Should have been dealt with before this else");
+      case RISCV::PseudoCCLD:
+      case RISCV::PseudoCCLW:
+      case RISCV::PseudoCCLWU:
+      case RISCV::PseudoCCLH:
+      case RISCV::PseudoCCLHU:
+      case RISCV::PseudoCCLB:
+      case RISCV::PseudoCCLBU:
+        ImmIdx = 3;
+        break;
+      case RISCV::LB:
+      case RISCV::LH:
+      case RISCV::LH_INX:
+      case RISCV::LW:
+      case RISCV::LW_INX:
+      case RISCV::LBU:
+      case RISCV::LHU:
+      case RISCV::LWU:
+      case RISCV::LD:
+      case RISCV::LD_RV32:
+      case RISCV::FLH:
+      case RISCV::FLW:
+      case RISCV::FLD:
+      case RISCV::SB:
+      case RISCV::SH:
+      case RISCV::SH_INX:
+      case RISCV::SW:
+      case RISCV::SW_INX:
+      case RISCV::SD:
+      case RISCV::SD_RV32:
+      case RISCV::FSH:
+      case RISCV::FSW:
+      case RISCV::FSD:
+        ImmIdx = 2;
+        break;
+      default:
+        llvm_unreachable("Unknown Instruction");
+      }
+
+      MachineOperand &MO = UseMI.getOperand(ImmIdx);
       if (Hi.getOpcode() == RISCV::QC_E_LI) {
-        UseMI.getOperand(2).ChangeToImmediate(0);
+        MO.ChangeToImmediate(0);
       } else {
-        UseMI.removeOperand(2);
-        UseMI.addOperand(ImmOp);
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     }
   }

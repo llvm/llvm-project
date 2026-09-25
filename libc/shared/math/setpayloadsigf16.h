@@ -13,6 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "shared/libc_common.h"
 #include "src/__support/math/setpayloadsigf16.h"
 
 namespace LIBC_NAMESPACE_DECL {

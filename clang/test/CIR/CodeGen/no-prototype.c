@@ -77,7 +77,8 @@ int noProto5();
 int test5(int x) {
   return noProto5();
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto5 : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
-  // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<(!s32i) -> !s32i>> -> !cir.ptr<!cir.func<() -> !s32i>>
+  // CHECK:  [[TO_NOPROTO:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<(!s32i) -> !s32i>> -> !cir.ptr<!cir.func<(...) -> !s32i>>
+  // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[TO_NOPROTO]] : !cir.ptr<!cir.func<(...) -> !s32i>> -> !cir.ptr<!cir.func<() -> !s32i>>
   // CHECK:  {{%.*}} = cir.call [[CAST]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> !s32i
 }
 int noProto5(int x) { return x; }

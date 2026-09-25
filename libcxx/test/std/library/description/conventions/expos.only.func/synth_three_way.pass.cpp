@@ -11,11 +11,8 @@
 // constexpr auto synth-three-way = ...;
 //   via std::tuple<T>(t) <=> std::tuple<U>(u), which exposes its behavior most directly
 
-#include "test_macros.h"
-
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244) // Various truncation warnings
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
 
 #include <cassert>
 #include <compare>
@@ -23,6 +20,8 @@ TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244) // Various truncation warnings
 #include <tuple>
 #include <type_traits>
 #include <utility> // declval
+
+#include "test_macros.h"
 
 template <typename T, typename U = T>
 concept can_synth_three_way = requires(T t, U u) { std::tuple<T>(t) <=> std::tuple<U>(u); };

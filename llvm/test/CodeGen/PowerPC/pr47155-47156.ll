@@ -6,7 +6,7 @@
 define void @pr47155() {
 ; CHECK-LABEL: Machine code for function pr47155
 ; CHECK: *** Final schedule for %bb.0 ***
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-NEXT: pr47155:%bb.0 entry
 ; CHECK:      SU(0):   INLINEASM &"mtlr 31"{{.*}}implicit-def early-clobber $lr
 ; CHECK:      Successors:
@@ -26,7 +26,7 @@ entry:
 define void @pr47156(ptr %fn) {
 ; CHECK-LABEL: Machine code for function pr47156
 ; CHECK: *** Final schedule for %bb.0 ***
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-NEXT: pr47156:%bb.0 entry
 ; CHECK:      SU(0):   INLINEASM &"mtctr 31"{{.*}}implicit-def early-clobber $ctr
 ; CHECK:      Successors:

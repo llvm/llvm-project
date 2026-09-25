@@ -51,6 +51,50 @@ static const std::set<StringRef> NoFoldSet = {
 #include "X86ManualFoldTables.def"
 };
 
+const std::set<StringRef> NoFoldSameMaskPrefixSet = {
+#define NOFOLD_SAME_MASK_PREFIX(PREFIX) #PREFIX,
+#include "X86ManualFoldTables.def"
+};
+
+const std::set<StringRef> NoFoldSameMaskSet = {
+#define NOFOLD_SAME_MASK(INSN) #INSN,
+#include "X86ManualFoldTables.def"
+};
+
+// Check if instruction is unsafe for masked-load folding.
+static bool isNoFoldMaskedInstruction(const CodeGenInstruction *Inst) {
+  StringRef Name = Inst->getName();
+
+  // First check exact instruction name
+  if (NoFoldSameMaskSet.count(Name))
+    return true;
+
+  // Then strip suffixes to get base name for prefix matching
+  // Strip k-register suffix: kz or k
+  if (Name.ends_with("kz"))
+    Name = Name.drop_back(2);
+  else if (Name.ends_with("k"))
+    Name = Name.drop_back(1);
+  else
+    return false; // Not a k-register instruction
+
+  // Strip operand form suffix (check longer patterns first)
+  if (Name.ends_with("rri"))
+    Name = Name.drop_back(3);
+  else if (Name.ends_with("rr") || Name.ends_with("ri"))
+    Name = Name.drop_back(2);
+
+  // Strip vector size suffix: Z128, Z256, or Z
+  if (Name.ends_with("Z128") || Name.ends_with("Z256"))
+    Name = Name.drop_back(4);
+  else if (Name.ends_with("Z"))
+    Name = Name.drop_back(1);
+  else
+    return false; // Not a AVX512 instruction
+
+  return NoFoldSameMaskPrefixSet.count(Name);
+}
+
 static bool isExplicitAlign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitAlign, [Inst](const char *InstStr) {
     return Inst->getName().contains(InstStr);
@@ -195,6 +239,7 @@ class X86FoldTablesEmitter {
   FoldTable BroadcastTable2;
   FoldTable BroadcastTable3;
   FoldTable BroadcastTable4;
+  std::vector<const CodeGenInstruction *> NonFoldableWithSameMaskTable;
 
 public:
   X86FoldTablesEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
@@ -228,6 +273,14 @@ private:
     for (auto &E : Table)
       E.second.print(OS);
 
+    OS << "};\n\n";
+  }
+
+  void printTable(const std::vector<const CodeGenInstruction *> &Instructions,
+                  StringRef TableName, raw_ostream &OS) {
+    OS << "static const unsigned " << TableName << "[] = {\n";
+    for (auto Inst : Instructions)
+      OS << "  X86::" << Inst->getName() << ",\n";
     OS << "};\n\n";
   }
 };
@@ -644,6 +697,13 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
     if (hasRSTRegClass(Inst) || hasPtrTailcallRegClass(Inst))
       continue;
 
+    // Check if this instruction has a prefix in NoFoldSameMaskPrefixSet or is
+    // in NoFoldSameMaskSet (problematic for masked-load folding) and add to
+    // NonFoldableWithSameMaskTable.
+    if (isNoFoldMaskedInstruction(Inst)) {
+      NonFoldableWithSameMaskTable.push_back(Inst);
+    }
+
     // Add all the memory form instructions to MemInsts, and all the register
     // form instructions to RegInsts[Opc], where Opc is the opcode of each
     // instructions. this helps reducing the runtime of the backend.
@@ -749,6 +809,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   PRINT_TABLE(BroadcastTable2)
   PRINT_TABLE(BroadcastTable3)
   PRINT_TABLE(BroadcastTable4)
+  PRINT_TABLE(NonFoldableWithSameMaskTable)
 }
 
 static TableGen::Emitter::OptClass<X86FoldTablesEmitter>

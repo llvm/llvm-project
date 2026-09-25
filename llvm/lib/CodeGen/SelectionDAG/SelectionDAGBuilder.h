@@ -46,12 +46,12 @@ class AtomicCmpXchgInst;
 class AtomicRMWInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallInst;
 class CallBrInst;
 class CatchPadInst;
 class CatchReturnInst;
 class CatchSwitchInst;
+class CondBrInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
@@ -397,8 +397,10 @@ public:
     N = NewN;
   }
 
+  void setValueToPoison(const Value *V, const SDLoc &dl);
+
   bool shouldKeepJumpConditionsTogether(
-      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      const FunctionLoweringInfo &FuncInfo, const CondBrInst &I,
       Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
       TargetLoweringBase::CondMergingParams Params) const;
 
@@ -522,7 +524,8 @@ public:
 private:
   // Terminator instructions.
   void visitRet(const ReturnInst &I);
-  void visitBr(const BranchInst &I);
+  void visitUncondBr(const UncondBrInst &I);
+  void visitCondBr(const CondBrInst &I);
   void visitSwitch(const SwitchInst &I);
   void visitIndirectBr(const IndirectBrInst &I);
   void visitUnreachable(const UnreachableInst &I);
@@ -614,6 +617,9 @@ private:
   void visitGetElementPtr(const User &I);
   void visitSelect(const User &I);
 
+  void visitBitInsert(const User &I);
+  void visitBitExtract(const User &I);
+
   void visitAlloca(const AllocaInst &I);
   void visitLoad(const LoadInst &I);
   void visitStore(const StoreInst &I);
@@ -621,6 +627,7 @@ private:
   void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
   void visitMaskedGather(const CallInst &I);
   void visitMaskedScatter(const CallInst &I);
+  void visitSpeculativeLoad(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
   void visitFence(const FenceInst &I);
@@ -669,7 +676,6 @@ private:
                           const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedStore(const VPIntrinsic &VPIntrin,
                            const SmallVectorImpl<SDValue> &OpValues);
-  void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
   void visitVAStart(const CallInst &I);
@@ -732,8 +738,11 @@ private:
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
 
+public:
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);
+
+private:
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 
@@ -793,14 +802,6 @@ struct RegsForValue {
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
-
-  /// Add the specified values to this one.
-  void append(const RegsForValue &RHS) {
-    ValueVTs.append(RHS.ValueVTs.begin(), RHS.ValueVTs.end());
-    RegVTs.append(RHS.RegVTs.begin(), RHS.RegVTs.end());
-    Regs.append(RHS.Regs.begin(), RHS.Regs.end());
-    RegCount.push_back(RHS.Regs.size());
-  }
 
   /// Emit a series of CopyFromReg nodes that copies from this value and returns
   /// the result as a ValueVTs value. This uses Chain/Flag as the input and

@@ -20,7 +20,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
-#include <cmath>
 
 using namespace llvm;
 
@@ -91,8 +90,6 @@ static cl::opt<bool> SpecializeLiteralConstant(
     cl::desc(
         "Enable specialization of functions that take a literal constant as an "
         "argument"));
-
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
 
@@ -229,8 +226,8 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
   Cost CodeSize = 0;
   if (auto *I = dyn_cast<SwitchInst>(User)) {
     CodeSize = estimateSwitchInst(*I);
-  } else if (auto *I = dyn_cast<BranchInst>(User)) {
-    CodeSize = estimateBranchInst(*I);
+  } else if (auto *I = dyn_cast<CondBrInst>(User)) {
+    CodeSize = estimateCondBrInst(*I);
   } else {
     C = visit(*User);
     if (!C)
@@ -280,7 +277,7 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
   return estimateBasicBlocks(WorkList);
 }
 
-Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
+Cost InstCostVisitor::estimateCondBrInst(CondBrInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
   if (I.getCondition() != LastVisited->first)
@@ -632,12 +629,7 @@ void FunctionSpecializer::cleanUpSSA() {
     removeSSACopy(*F);
 }
 
-
 template <> struct llvm::DenseMapInfo<SpecSig> {
-  static inline SpecSig getEmptyKey() { return {~0U, {}}; }
-
-  static inline SpecSig getTombstoneKey() { return {~1U, {}}; }
-
   static unsigned getHashValue(const SpecSig &S) {
     return static_cast<unsigned>(hash_value(S));
   }
@@ -799,15 +791,14 @@ bool FunctionSpecializer::run() {
       auto &BFI = GetBFI(*Call->getFunction());
       std::optional<uint64_t> Count =
           BFI.getBlockProfileCount(Call->getParent());
-      if (Count && !ProfcheckDisableMetadataFixes) {
-        std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
-            Clone->getEntryCount();
+      if (Count) {
+        std::optional<uint64_t> MaybeCloneCount = Clone->getEntryCount();
         if (MaybeCloneCount) {
-          uint64_t CallCount = *Count + MaybeCloneCount->getCount();
+          uint64_t CallCount = *Count + *MaybeCloneCount;
           Clone->setEntryCount(CallCount);
-          if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
+          if (std::optional<uint64_t> MaybeOriginalCount =
                   S.F->getEntryCount()) {
-            uint64_t OriginalCount = MaybeOriginalCount->getCount();
+            uint64_t OriginalCount = *MaybeOriginalCount;
             if (OriginalCount >= *Count) {
               S.F->setEntryCount(OriginalCount - *Count);
             } else {
@@ -1041,7 +1032,13 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   if (F->isDeclaration() || F->arg_empty())
     return false;
 
+  if (F->isInterposable())
+    return false;
+
   if (F->hasFnAttribute(Attribute::NoDuplicate))
+    return false;
+
+  if (F->hasOptSize())
     return false;
 
   // Do not specialize the cloned function again.
@@ -1074,7 +1071,7 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
 
-  if (F->getEntryCount() && !ProfcheckDisableMetadataFixes)
+  if (F->getEntryCount())
     Clone->setEntryCount(0);
 
   // Initialize the lattice state of the arguments of the function clone,

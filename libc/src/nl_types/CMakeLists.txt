@@ -28,4 +28,3 @@ add_entrypoint_object(
   DEPENDS
     libc.include.llvm-libc-types.nl_catd
 )
-

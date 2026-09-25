@@ -80,7 +80,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     return nullptr;
   }
 
@@ -108,13 +109,21 @@ public:
     return nullptr;
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF, Function *CtxF) const override {
     return nullptr;
   }
 

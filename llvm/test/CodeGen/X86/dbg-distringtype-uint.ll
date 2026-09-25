@@ -1,17 +1,19 @@
 ; RUN: llc -mtriple=x86_64 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
-; Ensure that static local variable elemnt is placed in abstract subprogram DIE.
 ; CHECK:                   DW_TAG_subprogram
 ; CHECK-NOT:               DW_TAG
 ; CHECK:                     DW_AT_inline  (DW_INL_inlined)
-; CHECK-EMPTY:
-; CHECK-NEXT:                DW_TAG_variable
+; CHECK-NOT:                 DW_TAG
+; CHECK: [[SYM:[a-z0-9]+]]:  DW_TAG_formal_parameter
+; CHECK:                       DW_AT_name	("esym")
+; CHECK:                       DW_AT_type	([[TYPE:[a-z0-9]+]] "CHARACTER_1")
+; CHECK-NOT:                 DW_TAG
+; CHECK:                     DW_TAG_formal_parameter
+; CHECK-NOT:                 DW_TAG
+; Ensure that the static local variable is in the abstract subprogram DIE.
+; CHECK:                     DW_TAG_variable
 ; CHECK-NEXT:                  DW_AT_name  ("elemnt")
 
-; CHECK: [[SYM:[a-z0-9]+]]:  DW_TAG_formal_parameter
-; CHECK:                     DW_AT_name	("esym")
-; CHECK:                     DW_AT_type	([[TYPE:[a-z0-9]+]] "CHARACTER_1")
-;
 ; CHECK:                     DW_TAG_formal_parameter
 ; CHECK:                       DW_AT_const_value	(7523094288207667809)
 ; CHECK:                       DW_AT_abstract_origin	([[SYM]] "esym")
@@ -82,10 +84,9 @@ attributes #3 = { nofree nosync nounwind readnone speculatable willreturn }
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIStringType(name: "CHARACTER_0", size: 64)
-!8 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 21.0-2745", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !9, globals: !10, splitDebugInlining: false, nameTableKind: None)
+!8 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 21.0-2745", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !9, splitDebugInlining: false, nameTableKind: None)
 !9 = !{}
-!10 = !{!0}
-!11 = !{!12, !14}
+!11 = !{!0, !12, !14}
 !12 = !DILocalVariable(name: "esym", arg: 1, scope: !2, file: !3, line: 15, type: !13, flags: DIFlagArtificial)
 !13 = !DIStringType(name: "CHARACTER_1", size: 64)
 !14 = !DILocalVariable(name: "i", arg: 2, scope: !2, file: !3, line: 15, type: !15)

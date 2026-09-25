@@ -29,6 +29,19 @@
 
 #include "mlir/Dialect/X86/X86Dialect.h.inc"
 
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/X86/X86Types.h.inc"
+
+namespace mlir {
+namespace x86 {
+namespace amx {
+// Alias to allow access to AMX type through nested namespaces
+// analogously to AMX operations.
+using TileType = mlir::x86::AMXTileType;
+} // namespace amx
+} // namespace x86
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/X86/X86.h.inc"
 

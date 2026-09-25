@@ -63,4 +63,30 @@ define double @ret_fract_no_nan_no_inf(double nofpclass(inf nan) %x) {
   ret double %fract
 }
 
+; Fract must be < 1, so this cannot introduce overflow
+define float @ret_not_inf__fmul__fract(float nofpclass(inf) %not.inf, float %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_not_inf__fmul__fract(
+; CHECK-SAME: float nofpclass(inf) [[NOT_INF:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[FRACT:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NOT_INF]], [[FRACT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %fract = call float @llvm.amdgcn.fract.f32(float %x)
+  %mul = fmul float %not.inf, %fract
+  ret float %mul
+}
+
+; Commuted
+define float @ret_fract__fmul__not_inf(float nofpclass(inf) %not.inf, float %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fract__fmul__not_inf(
+; CHECK-SAME: float nofpclass(inf) [[NOT_INF:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[FRACT:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[FRACT]], [[NOT_INF]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %fract = call float @llvm.amdgcn.fract.f32(float %x)
+  %mul = fmul float %fract, %not.inf
+  ret float %mul
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

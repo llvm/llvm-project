@@ -26,6 +26,13 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+class context;
+class exception_list;
+
+namespace detail {
+void addAsyncException(exception_list &, const std::exception_ptr &);
+}
+
 // int is used as the underlying type for consistency with std::error_code.
 enum class errc : int {
   success = 0,
@@ -47,10 +54,10 @@ enum class errc : int {
 
 /// Constructs an error code using sycl::errc and sycl_category().
 ///
-/// \param E SYCL 2020 error code.
+/// \param e SYCL 2020 error code.
 ///
 /// \returns constructed error code.
-_LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc E) noexcept;
+_LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc e) noexcept;
 
 /// Obtains a reference to the static error category object for SYCL errors.
 ///
@@ -70,17 +77,60 @@ _LIBSYCL_EXPORT const std::error_category &sycl_category() noexcept;
 /// default exception handler. Virtual inheritance is mandated by SYCL 2020.
 class _LIBSYCL_EXPORT exception : public virtual std::exception {
 public:
-  exception(std::error_code, const char *);
-  exception(std::error_code Ec, const std::string &Msg)
-      : exception(Ec, Msg.c_str()) {}
+  /// Constructs a SYCL exception without an associated context.
+  ///
+  /// \param ec Error code identifying the SYCL error.
+  /// \param what_arg Message describing the error condition.
+  exception(std::error_code ec, const char *what_arg)
+      : exception(ec, nullptr, what_arg) {}
 
-  exception(std::error_code EC) : exception(EC, "") {}
-  exception(int EV, const std::error_category &ECat, const std::string &WhatArg)
-      : exception(EV, ECat, WhatArg.c_str()) {}
-  exception(int EV, const std::error_category &ECat, const char *WhatArg)
-      : exception({EV, ECat}, WhatArg) {}
-  exception(int EV, const std::error_category &ECat)
-      : exception({EV, ECat}, "") {}
+  /// \overload
+  exception(std::error_code ec, const std::string &what_arg)
+      : exception(ec, what_arg.c_str()) {}
+
+  /// \overload
+  exception(std::error_code ec) : exception(ec, "") {}
+
+  /// \overload
+  exception(int ev, const std::error_category &ecat,
+            const std::string &what_arg)
+      : exception(ev, ecat, what_arg.c_str()) {}
+
+  /// \overload
+  exception(int ev, const std::error_category &ecat, const char *what_arg)
+      : exception({ev, ecat}, what_arg) {}
+
+  /// \overload
+  exception(int ev, const std::error_category &ecat)
+      : exception({ev, ecat}, "") {}
+
+  // To avoid cross-dependency issues between sycl::context and sycl::exception,
+  // definition of ctors that require a context parameter are moved to
+  // context.hpp.
+
+  /// Constructs a SYCL exception with an associated SYCL context.
+  ///
+  /// \param ctx SYCL context associated with the exception.
+  /// \param ec Error code identifying the SYCL error.
+  /// \param what_arg Message describing the error condition.
+  exception(context ctx, std::error_code ec, const std::string &what_arg);
+
+  /// \overload
+  exception(context ctx, std::error_code ec, const char *what_arg);
+
+  /// \overload
+  exception(context ctx, std::error_code ec);
+
+  /// \overload
+  exception(context ctx, int ev, const std::error_category &ecat,
+            const std::string &what_arg);
+
+  /// \overload
+  exception(context ctx, int ev, const std::error_category &ecat,
+            const char *what_arg);
+
+  /// \overload
+  exception(context ctx, int ev, const std::error_category &ecat);
 
   virtual ~exception();
 
@@ -106,10 +156,19 @@ public:
   /// false if it does not.
   bool has_context() const noexcept;
 
+  /// \return the SYCL context associated with this exception.
+  ///
+  /// \throws exception with sycl::errc::invalid if this exception does not
+  /// have an associated context (has_context() == false).
+  context get_context() const;
+
 private:
+  exception(std::error_code EC, std::shared_ptr<context> SharedPtrCtx,
+            const char *WhatArg);
   // Exceptions must be noexcept copy constructible, so cannot use std::string
-  // directly.
+  // or context directly.
   std::shared_ptr<std::string> MMessage;
+  std::shared_ptr<context> MContext;
   std::error_code MErrC = make_error_code(sycl::errc::invalid);
 };
 
@@ -142,7 +201,15 @@ public:
 
 private:
   std::vector<std::exception_ptr> MList;
+
+  friend void detail::addAsyncException(exception_list &, const_reference);
 };
+
+namespace detail {
+// Default implementation of async_handler used by queue and context when no
+// user-defined async_handler is specified.
+_LIBSYCL_EXPORT void defaultAsyncHandler(exception_list Exceptions);
+} // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 

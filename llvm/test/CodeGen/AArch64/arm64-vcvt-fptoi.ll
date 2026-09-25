@@ -761,8 +761,8 @@ define <8 x i16> @fcvtas_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frinta v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frinta v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
@@ -806,12 +806,12 @@ define <8 x i16> @fcvtas_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frinta v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frinta v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzs v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -925,8 +925,8 @@ define <8 x i16> @fcvtau_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frinta v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frinta v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
@@ -970,12 +970,12 @@ define <8 x i16> @fcvtau_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frinta v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frinta v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -1089,8 +1089,8 @@ define <8 x i16> @fcvtns_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintn v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintn v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
@@ -1134,12 +1134,12 @@ define <8 x i16> @fcvtns_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintn v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintn v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzs v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -1253,8 +1253,8 @@ define <8 x i16> @fcvtnu_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintn v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintn v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
@@ -1298,12 +1298,12 @@ define <8 x i16> @fcvtnu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintn v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintn v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -1417,8 +1417,8 @@ define <8 x i16> @fcvtms_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintm v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
@@ -1462,12 +1462,12 @@ define <8 x i16> @fcvtms_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintm v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzs v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -1581,8 +1581,8 @@ define <8 x i16> @fcvtmu_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintm v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
@@ -1626,12 +1626,12 @@ define <8 x i16> @fcvtmu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintm v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -1745,8 +1745,8 @@ define <8 x i16> @fcvtps_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintp v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintp v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
@@ -1790,12 +1790,12 @@ define <8 x i16> @fcvtps_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintp v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintp v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzs v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -1909,8 +1909,8 @@ define <8 x i16> @fcvtpu_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintp v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintp v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
@@ -1954,12 +1954,12 @@ define <8 x i16> @fcvtpu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintp v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintp v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -2073,8 +2073,8 @@ define <8 x i16> @fcvtzs_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
@@ -2118,12 +2118,12 @@ define <8 x i16> @fcvtzs_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzs v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;
@@ -2237,8 +2237,8 @@ define <8 x i16> @fcvtzu_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v1.8h
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
@@ -2282,12 +2282,12 @@ define <8 x i16> @fcvtzu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn2 v1.8h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
 ; CHECK-NO16-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-NEXT:    ret
 ;

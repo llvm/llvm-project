@@ -67,12 +67,11 @@ void ComparisonInTempFailureRetryCheck::check(
     const SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
     Token Tok;
     if (!Lexer::getRawToken(SM.getSpellingLoc(Invocation), Tok, SM, Opts,
-                            /*IgnoreWhiteSpace=*/true)) {
-      if (Tok.getKind() == tok::raw_identifier &&
-          llvm::is_contained(RetryMacros, Tok.getRawIdentifier())) {
-        RetryMacroName = Tok.getRawIdentifier();
-        break;
-      }
+                            /*IgnoreWhiteSpace=*/true) &&
+        Tok.getKind() == tok::raw_identifier &&
+        llvm::is_contained(RetryMacros, Tok.getRawIdentifier())) {
+      RetryMacroName = Tok.getRawIdentifier();
+      break;
     }
 
     LocStart = Invocation;

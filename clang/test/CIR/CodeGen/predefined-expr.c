@@ -8,15 +8,15 @@
 // CIR: cir.global "private" internal dso_local @staticFuncName.name = #cir.global_view<@".str.4"> : !cir.ptr<!s8i> {alignment = 8 : i64} loc(#loc1)
 // CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.zero : !cir.array<!s8i x 1>
 // CIR: cir.global external @func = #cir.global_view<@".str"> : !cir.ptr<!s8i>
-// CIR: cir.global "private" constant cir_private dso_local @__func__.plainFunction = #cir.const_array<"plainFunction\00" : !cir.array<!s8i x 14>>
-// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.plainFunction = #cir.const_array<"void plainFunction(void)\00" : !cir.array<!s8i x 25>>
-// CIR: cir.global "private" constant cir_private dso_local @__func__.externFunction = #cir.const_array<"externFunction\00" : !cir.array<!s8i x 15>>
-// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.externFunction = #cir.const_array<"void externFunction(void)\00" : !cir.array<!s8i x 26>>
-// CIR: cir.global "private" constant cir_private dso_local @__func__.privateExternFunction = #cir.const_array<"privateExternFunction\00" : !cir.array<!s8i x 22>>
-// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.privateExternFunction = #cir.const_array<"void privateExternFunction(void)\00" : !cir.array<!s8i x 33>>
-// CIR: cir.global "private" constant cir_private dso_local @".str.4" = #cir.const_array<"staticFuncName\00" : !cir.array<!s8i x 15>> : !cir.array<!s8i x 15>
-// CIR: cir.global "private" constant cir_private dso_local @__func__.staticFunction = #cir.const_array<"staticFunction\00" : !cir.array<!s8i x 15>>
-// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.staticFunction = #cir.const_array<"void staticFunction(void)\00" : !cir.array<!s8i x 26>>
+// CIR: cir.global "private" constant cir_private dso_local @__func__.plainFunction = #cir.const_array<"plainFunction" : !cir.array<!s8i x 13>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.plainFunction = #cir.const_array<"void plainFunction(void)" : !cir.array<!s8i x 24>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @__func__.externFunction = #cir.const_array<"externFunction" : !cir.array<!s8i x 14>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.externFunction = #cir.const_array<"void externFunction(void)" : !cir.array<!s8i x 25>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @__func__.privateExternFunction = #cir.const_array<"privateExternFunction" : !cir.array<!s8i x 21>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.privateExternFunction = #cir.const_array<"void privateExternFunction(void)" : !cir.array<!s8i x 32>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @".str.4" = #cir.const_array<"staticFuncName" : !cir.array<!s8i x 14>, trailing_zeros> : !cir.array<!s8i x 15>
+// CIR: cir.global "private" constant cir_private dso_local @__func__.staticFunction = #cir.const_array<"staticFunction" : !cir.array<!s8i x 14>, trailing_zeros>
+// CIR: cir.global "private" constant cir_private dso_local @__PRETTY_FUNCTION__.staticFunction = #cir.const_array<"void staticFunction(void)" : !cir.array<!s8i x 25>, trailing_zeros>
 
 // TODO(cir): These should be unnamed_addr
 // LLVM: @staticFuncName.name = internal global ptr @.str.4, align 8

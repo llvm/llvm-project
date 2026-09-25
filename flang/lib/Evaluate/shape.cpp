@@ -18,6 +18,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/Support/MathExtras.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
@@ -464,7 +465,15 @@ static MaybeExtentExpr GetNonNegativeExtent(
     if (*uval < *lval) {
       return ExtentExpr{0};
     } else {
-      return ExtentExpr{*uval - *lval + 1};
+      // The extent of an oversized dimension, e.g. integer(1)::a(0:huge(0_8)),
+      // does not fit and wraps around; storage sequences that are too large
+      // are diagnosed later, where the original bounds distinguish a wrapped
+      // extent from an empty one.  Compute the same two's complement result
+      // here without signed integer overflow.
+      ConstantSubscript extent;
+      (void)llvm::SubOverflow(*uval, *lval, extent);
+      (void)llvm::AddOverflow(extent, ConstantSubscript{1}, extent);
+      return ExtentExpr{extent};
     }
   } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||
@@ -898,6 +907,46 @@ auto GetShapeHelper::operator()(const CoarrayRef &coarrayRef) const -> Result {
 
 auto GetShapeHelper::operator()(const Substring &substring) const -> Result {
   return (*this)(substring.parent());
+}
+
+auto GetShapeHelper::operator()(const ActualArgument &arg) const -> Result {
+  // For ConditionalArg, compare shapes of all non-.NIL. consequent-args.
+  // C1539 requires the same rank.  If all branches also have the same
+  // static extents, return the common concrete shape; this preserves
+  // useful compile-time checks (e.g. elemental cross-argument conformance,
+  // intrinsic result derivation).  Otherwise return Shape(rank, nullopt) —
+  // correct rank, deferred extents.  Per-consequent checking in
+  // CheckExplicitDataArg handles the primary dummy-vs-actual conformance
+  // regardless.
+  if (const auto *condArg{arg.GetConditionalArg()}) {
+    const auto *firstExpr{condArg->FirstNonNilConsequent()};
+    if (!firstExpr) {
+      return std::nullopt;
+    }
+    Result commonShape{(*this)(*firstExpr)};
+    bool allMatch{true};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (!cons || !allMatch) {
+            return;
+          }
+          Result thisShape{(*this)(cons->value())};
+          if (commonShape != thisShape) {
+            allMatch = false;
+          }
+        });
+    if (allMatch && commonShape) {
+      return commonShape;
+    }
+    return Shape(firstExpr->Rank(), std::nullopt);
+  }
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    return (*this)(*expr);
+  }
+  if (const auto *assumed{arg.GetAssumedTypeDummy()}) {
+    return (*this)(*assumed);
+  }
+  return std::nullopt;
 }
 
 auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {

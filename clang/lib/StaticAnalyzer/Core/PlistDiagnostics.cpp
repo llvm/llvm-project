@@ -25,6 +25,7 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/FileSystem.h"
 #include <memory>
 #include <optional>
 
@@ -835,7 +836,7 @@ getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const SourceManager &SM) {
   if (auto CTUMacroExpCtx =
           CTU.getMacroExpansionContextForSourceLocation(MacroExpansionLoc)) {
-    return CTUMacroExpCtx->getFormattedExpandedText(MacroExpansionLoc);
+    return CTUMacroExpCtx->getExpandedText(MacroExpansionLoc);
   }
-  return MacroExpansions.getFormattedExpandedText(MacroExpansionLoc);
+  return MacroExpansions.getExpandedText(MacroExpansionLoc);
 }

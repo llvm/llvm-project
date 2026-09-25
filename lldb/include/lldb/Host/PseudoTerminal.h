@@ -44,6 +44,11 @@ public:
   /// Close the secondary file descriptor if it is valid.
   void CloseSecondaryFileDescriptor();
 
+  /// Close both file descriptors and clear cached state. Used to recycle a
+  /// PseudoTerminal across multiple launches without invalidating any
+  /// outstanding shared_ptr references.
+  void Reset();
+
   /// Fork a child process that uses pseudo terminals for its stdio.
   ///
   /// In the parent process, a call to this function results in a pid being

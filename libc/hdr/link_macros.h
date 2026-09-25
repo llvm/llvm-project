@@ -17,6 +17,6 @@
 
 #include <link.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_LINK_MACROS_H

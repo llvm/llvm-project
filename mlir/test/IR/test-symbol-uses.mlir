@@ -93,3 +93,15 @@ module {
     return
   }
 }
+
+// -----
+
+// Test that external functions in nested modules are not incorrectly erased
+// from the outer module's symbol table.
+// Regression test for https://github.com/llvm/llvm-project/issues/60583
+module {
+  module {
+    // expected-remark@below {{symbol has no uses}}
+    func.func private @printMemrefF32(%ptr : memref<*xf32>)
+  }
+}

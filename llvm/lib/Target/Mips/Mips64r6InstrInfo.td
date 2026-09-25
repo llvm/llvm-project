@@ -48,35 +48,33 @@ class CRC32CD_ENC : SPECIAL3_2R_SZ_CRC<3,1>;
 //
 //===----------------------------------------------------------------------===//
 
-class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
-                        InstrItinClass itin> {
+class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$rs);
   dag InOperandList = (ins GPROpnd:$rt, uimm16_altrelaxed:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $imm");
   string Constraints = "$rs = $rt";
-  InstrItinClass Itinerary = itin;
 }
 
-class DALIGN_DESC  : ALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3, II_DALIGN>;
-class DAHI_DESC    : AHI_ATI_DESC_BASE<"dahi", GPR64Opnd, II_DAHI>;
-class DATI_DESC    : AHI_ATI_DESC_BASE<"dati", GPR64Opnd, II_DATI>;
-class DAUI_DESC    : AUI_DESC_BASE<"daui", GPR64Opnd, II_DAUI>;
-class DBITSWAP_DESC : BITSWAP_DESC_BASE<"dbitswap", GPR64Opnd, II_DBITSWAP>;
-class DCLO_R6_DESC : CLO_R6_DESC_BASE<"dclo", GPR64Opnd, II_DCLO>;
-class DCLZ_R6_DESC : CLZ_R6_DESC_BASE<"dclz", GPR64Opnd, II_DCLZ>;
-class DDIV_DESC    : DIVMOD_DESC_BASE<"ddiv", GPR64Opnd, II_DDIV, sdiv>;
-class DDIVU_DESC   : DIVMOD_DESC_BASE<"ddivu", GPR64Opnd, II_DDIVU, udiv>;
-class DLSA_R6_DESC : LSA_R6_DESC_BASE<"dlsa", GPR64Opnd, uimm2_plus1, II_DLSA>;
-class DMOD_DESC    : DIVMOD_DESC_BASE<"dmod", GPR64Opnd, II_DMOD, srem>;
-class DMODU_DESC   : DIVMOD_DESC_BASE<"dmodu", GPR64Opnd, II_DMODU, urem>;
-class DMUH_DESC    : MUL_R6_DESC_BASE<"dmuh", GPR64Opnd, II_DMUH, mulhs>;
-class DMUHU_DESC   : MUL_R6_DESC_BASE<"dmuhu", GPR64Opnd, II_DMUHU, mulhu>;
-class DMUL_R6_DESC : MUL_R6_DESC_BASE<"dmul", GPR64Opnd, II_DMUL, mul>;
-class DMULU_DESC   : MUL_R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMUL>;
-class LDPC_DESC    : PCREL_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3, II_LDPC>;
-class LWUPC_DESC   : PCREL_DESC_BASE<"lwupc", GPR32Opnd, simm19_lsl2, II_LWUPC>;
-class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, mem_simm9_exp, II_LLD>;
-class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd, II_SCD>;
+class DALIGN_DESC  : ALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3>;
+class DAHI_DESC    : AHI_ATI_DESC_BASE<"dahi", GPR64Opnd>;
+class DATI_DESC    : AHI_ATI_DESC_BASE<"dati", GPR64Opnd>;
+class DAUI_DESC    : AUI_DESC_BASE<"daui", GPR64Opnd>;
+class DBITSWAP_DESC : BITSWAP_DESC_BASE<"dbitswap", GPR64Opnd>;
+class DCLO_R6_DESC : CLO_R6_DESC_BASE<"dclo", GPR64Opnd>;
+class DCLZ_R6_DESC : CLZ_R6_DESC_BASE<"dclz", GPR64Opnd>;
+class DDIV_DESC    : DIVMOD_DESC_BASE<"ddiv", GPR64Opnd, sdiv>;
+class DDIVU_DESC   : DIVMOD_DESC_BASE<"ddivu", GPR64Opnd, udiv>;
+class DLSA_R6_DESC : LSA_R6_DESC_BASE<"dlsa", GPR64Opnd, uimm2_plus1>;
+class DMOD_DESC    : DIVMOD_DESC_BASE<"dmod", GPR64Opnd, srem>;
+class DMODU_DESC   : DIVMOD_DESC_BASE<"dmodu", GPR64Opnd, urem>;
+class DMUH_DESC    : MUL_R6_DESC_BASE<"dmuh", GPR64Opnd, mulhs>;
+class DMUHU_DESC   : MUL_R6_DESC_BASE<"dmuhu", GPR64Opnd, mulhu>;
+class DMUL_R6_DESC : MUL_R6_DESC_BASE<"dmul", GPR64Opnd, mul>;
+class DMULU_DESC   : MUL_R6_DESC_BASE<"dmulu", GPR64Opnd>;
+class LDPC_DESC    : PCREL_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3>;
+class LWUPC_DESC   : PCREL_DESC_BASE<"lwupc", GPR32Opnd, simm19_lsl2>;
+class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, mem_simm9_exp>;
+class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd>;
 class SELEQZ64_DESC : SELEQNE_Z_DESC_BASE<"seleqz", GPR64Opnd>;
 class SELNEZ64_DESC : SELEQNE_Z_DESC_BASE<"selnez", GPR64Opnd>;
 
@@ -94,20 +92,20 @@ class BEQZC64_DESC : CMP_CBR_EQNE_Z_DESC_BASE<"beqzc", brtarget21, GPR64Opnd>;
 class BNEZC64_DESC : CMP_CBR_EQNE_Z_DESC_BASE<"bnezc", brtarget21, GPR64Opnd>;
 
 class JIALC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
-                                               GPR64Opnd, II_JIALC> {
+                                               GPR64Opnd> {
   bit isCall = 1;
   list<Register> Defs = [RA];
 }
 
-class JIC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16, GPR64Opnd,
-                                             II_JIC> {
+class JIC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16,
+                                             GPR64Opnd> {
   bit isBarrier = 1;
   bit isTerminator = 1;
   list<Register> Defs = [AT];
 }
 
-class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9_exp, II_LL>;
-class SC64_R6_DESC : SC_R6_DESC_BASE<"sc", GPR32Opnd, II_SC>;
+class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9_exp>;
+class SC64_R6_DESC : SC_R6_DESC_BASE<"sc", GPR32Opnd>;
 
 class JR_HB64_R6_DESC : JR_HB_DESC_BASE<"jr.hb", GPR64Opnd> {
   bit isBranch = 1;
@@ -116,11 +114,10 @@ class JR_HB64_R6_DESC : JR_HB_DESC_BASE<"jr.hb", GPR64Opnd> {
   bit isTerminator=1;
   bit isBarrier=1;
   bit isCTI = 1;
-  InstrItinClass Itinerary = II_JR_HB;
 }
 
-class CRC32D_DESC  : CRC_DESC_BASE<"crc32d", GPR32Opnd, II_CRC32D>;
-class CRC32CD_DESC : CRC_DESC_BASE<"crc32cd", GPR32Opnd, II_CRC32CD>;
+class CRC32D_DESC  : CRC_DESC_BASE<"crc32d", GPR32Opnd>;
+class CRC32CD_DESC : CRC_DESC_BASE<"crc32cd", GPR32Opnd>;
 
 //===----------------------------------------------------------------------===//
 //

@@ -495,20 +495,110 @@ struct AttachMapInfo {
         MapType(Type), Pointername(Name) {}
 };
 
-/// Structure to track ATTACH entries and new allocations across recursive calls
-/// (for handling mappers) to targetDataBegin for a given construct.
-struct AttachInfoTy {
-  /// ATTACH map entries for deferred processing.
+/// Structure to track new allocations, ATTACH entries, DELETE entries and
+/// skipped FROM data transfer information for a given construct, across
+/// recursive calls (for handling mappers) to targetDataBegin/targetDataEnd.
+struct StateInfoTy {
+  /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
 
+  /// Host pointers for which new memory was allocated.
   /// Key: host pointer, Value: allocation size.
   llvm::DenseMap<void *, int64_t> NewAllocations;
 
-  AttachInfoTy() = default;
+  /// Host pointers that had a FROM entry, but for which a data transfer was
+  /// skipped due to the ref-count not being zero.
+  /// Key: host pointer, Value: data size.
+  llvm::DenseMap<void *, int64_t> SkippedFromEntries;
+
+  /// Host pointers for which we have triggered a FROM transfer at some point
+  /// during targetDataEnd. It's used to avoid duplicate transfers.
+  /// Key: host pointer, Value: transferred size.
+  llvm::DenseMap<void *, int64_t> TransferredFromEntries;
+
+  /// Starting host address and size of entries whose ref-count went to zero.
+  /// This includes entries released through explicit DELETE, or normal
+  /// ref-count decrements. It's used to ensure transfers are performed for FROM
+  /// entries whose ref-count is already zero when the entry is encountered.
+  /// Key: host pointer, Value: size.
+  llvm::DenseMap<void *, int64_t> ReleasedEntries;
+
+  StateInfoTy() = default;
 
   // Delete copy constructor and copy assignment operator to prevent copying
-  AttachInfoTy(const AttachInfoTy &) = delete;
-  AttachInfoTy &operator=(const AttachInfoTy &) = delete;
+  StateInfoTy(const StateInfoTy &) = delete;
+  StateInfoTy &operator=(const StateInfoTy &) = delete;
+
+private:
+  /// Helper to find an entry in \p EntryMap that contains the pointer.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  findEntryForPtr(void *Ptr,
+                  const llvm::DenseMap<void *, int64_t> &EntryMap) const {
+    for (const auto &Entry : EntryMap) {
+      void *EntryBegin = Entry.first;
+      int64_t EntrySize = Entry.second;
+      if (Ptr >= EntryBegin &&
+          Ptr < static_cast<void *>(static_cast<char *>(EntryBegin) +
+                                    EntrySize)) {
+        return Entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+public:
+  /// Check if a pointer falls within any of the newly allocated ranges.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>> wasNewlyAllocated(void *Ptr) const {
+    return findEntryForPtr(Ptr, NewAllocations);
+  }
+
+  /// Check if a pointer range [Ptr, Ptr+Size) is fully contained within any
+  /// previously completed FROM transfer.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  wasTransferredFrom(void *Ptr, int64_t Size) const {
+    uintptr_t CheckBegin = reinterpret_cast<uintptr_t>(Ptr);
+    uintptr_t CheckEnd = CheckBegin + Size;
+
+    for (const auto &Entry : TransferredFromEntries) {
+      void *RangePtr = Entry.first;
+      int64_t RangeSize = Entry.second;
+      uintptr_t RangeBegin = reinterpret_cast<uintptr_t>(RangePtr);
+      uintptr_t RangeEnd = RangeBegin + RangeSize;
+
+      if (CheckBegin >= RangeBegin && CheckEnd <= RangeEnd) {
+        return Entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Check if a pointer falls within any released entry's range.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  wasPreviouslyReleased(void *Ptr) const {
+    return findEntryForPtr(Ptr, ReleasedEntries);
+  }
+
+  /// Add a skipped FROM entry. Only updates the entry if this is a new pointer
+  /// or if the new size is larger than the existing entry.
+  void addSkippedFromEntry(void *Ptr, int64_t Size) {
+    auto It = SkippedFromEntries.find(Ptr);
+    if (It == SkippedFromEntries.end() || Size > It->second) {
+      SkippedFromEntries[Ptr] = Size;
+    }
+  }
+
+  /// Add a transferred FROM entry. Only updates the entry if this is a new
+  /// pointer or if the new size is larger than the existing entry.
+  void addTransferredFromEntry(void *Ptr, int64_t Size) {
+    auto It = TransferredFromEntries.find(Ptr);
+    if (It == TransferredFromEntries.end() || Size > It->second) {
+      TransferredFromEntries[Ptr] = Size;
+    }
+  }
 };
 
 // Function pointer type for targetData* functions (targetDataBegin,
@@ -516,7 +606,7 @@ struct AttachInfoTy {
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
                                    map_var_info_t *, void **, AsyncInfoTy &,
-                                   AttachInfoTy *, bool);
+                                   StateInfoTy *, bool);
 
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut = false);
@@ -525,24 +615,22 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                    AttachInfoTy *AttachInfo = nullptr,
-                    bool FromMapper = false);
+                    StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                  AttachInfoTy *AttachInfo = nullptr, bool FromMapper = false);
+                  StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                     AttachInfoTy *AttachInfo = nullptr,
-                     bool FromMapper = false);
+                     StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 // Process deferred ATTACH map entries collected during targetDataBegin.
-int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
+int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo);
 
 struct MappingInfoTy {
@@ -583,7 +671,7 @@ struct MappingInfoTy {
       bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
       bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
       AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
-      bool ReleaseHDTTMap = true);
+      bool ReleaseHDTTMap = true, StateInfoTy *StateInfo = nullptr);
 
   /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
   /// ensures exclusive access to the HDTT map.

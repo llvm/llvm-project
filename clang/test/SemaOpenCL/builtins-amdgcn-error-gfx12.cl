@@ -1,12 +1,12 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu hawaii -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu fiji -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx900 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx908 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1030 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu6.00-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu7.01-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu8.03-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.00-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.08-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.10-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.30-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu11.00-- -verify -S -o - %s
 
 typedef unsigned int uint;
 

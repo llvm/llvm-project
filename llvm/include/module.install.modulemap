@@ -34,4 +34,6 @@ module LLVM_Extern_TargetParser_Gen {
   textual header "llvm/TargetParser/ARMTargetParserDef.inc"
   textual header "llvm/TargetParser/AArch64TargetParserDef.inc"
   textual header "llvm/TargetParser/RISCVTargetParserDef.inc"
+  textual header "llvm/TargetParser/R600TargetParserDef.inc"
+  textual header "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 }

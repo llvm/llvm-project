@@ -57,7 +57,9 @@ endif()
 add_clang_library(clangBasic
   ASTSourceDescriptor.cpp
   Attributes.cpp
+  AtomicLineLogger.cpp
   Builtins.cpp
+  BuiltinTraits.cpp
   CLWarnings.cpp
   CharInfo.cpp
   CodeGenOptions.cpp
@@ -66,10 +68,8 @@ add_clang_library(clangBasic
   Diagnostic.cpp
   DiagnosticIDs.cpp
   DiagnosticOptions.cpp
-  ExpressionTraits.cpp
   FileEntry.cpp
   FileManager.cpp
-  FileSystemStatCache.cpp
   IdentifierTable.cpp
   LangOptions.cpp
   LangStandards.cpp
@@ -123,7 +123,6 @@ add_clang_library(clangBasic
   Targets/XCore.cpp
   Targets/Xtensa.cpp
   TokenKinds.cpp
-  TypeTraits.cpp
   Version.cpp
   Warnings.cpp
   XRayInstr.cpp

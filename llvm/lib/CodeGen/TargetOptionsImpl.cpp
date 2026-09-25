@@ -10,50 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
-
-/// DisableFramePointerElim - This returns true if frame pointer elimination
-/// optimization should be disabled for the given machine function.
-bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-
-  Attribute FPAttr = F.getFnAttribute("frame-pointer");
-  if (!FPAttr.isValid())
-    return false;
-  StringRef FP = FPAttr.getValueAsString();
-  if (FP == "all")
-    return true;
-  if (FP == "non-leaf" || FP == "non-leaf-no-reserve")
-    return MF.getFrameInfo().hasCalls();
-  if (FP == "none" || FP == "reserved")
-    return false;
-  llvm_unreachable("unknown frame pointer flag");
-}
-
-bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  Attribute FPAttr = F.getFnAttribute("frame-pointer");
-  if (!FPAttr.isValid())
-    return false;
-
-  return StringSwitch<bool>(FPAttr.getValueAsString())
-      .Cases({"all", "non-leaf", "reserved"}, true)
-      .Case(("non-leaf-no-reserve"), MF.getFrameInfo().hasCalls())
-      .Case("none", false);
-}
-
-/// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
-/// that the rounding mode of the FPU can change from its default.
-bool TargetOptions::HonorSignDependentRoundingFPMath() const {
-  return HonorSignDependentRoundingFPMathOption;
-}
 
 /// NOTE: There are targets that still do not support the debug entry values
 /// production and that is being controlled with the SupportsDebugEntryValues.

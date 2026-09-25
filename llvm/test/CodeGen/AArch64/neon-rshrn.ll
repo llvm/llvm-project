@@ -894,3 +894,79 @@ entry:
   store <1 x i32> %m, ptr %p
   ret void
 }
+
+
+define <16 x i8> @or_rshrn_v16i16_7(<16 x i16> %a) {
+; CHECK-LABEL: or_rshrn_v16i16_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shrn v0.8b, v0.8h, #7
+; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #7
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <16 x i16> %a, <i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64, i16 64>
+  %s = lshr <16 x i16> %b, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
+  %m = trunc <16 x i16> %s to <16 x i8>
+  ret <16 x i8> %m
+}
+
+define <16 x i8> @or_rshrn_v16i16_8(<16 x i16> %a) {
+; CHECK-LABEL: or_rshrn_v16i16_8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <16 x i16> %a, <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>
+  %s = lshr <16 x i16> %b, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %m = trunc <16 x i16> %s to <16 x i8>
+  ret <16 x i8> %m
+}
+
+define <8 x i16> @or_rshrn_v8i32_15(<8 x i32> %a) {
+; CHECK-LABEL: or_rshrn_v8i32_15:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shrn v0.4h, v0.4s, #15
+; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #15
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <8 x i32> %a, <i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384, i32 16384>
+  %s = lshr <8 x i32> %b, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %m = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %m
+}
+
+define <8 x i16> @or_rshrn_v8i32_16(<8 x i32> %a) {
+; CHECK-LABEL: or_rshrn_v8i32_16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <8 x i32> %a, <i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768>
+  %s = lshr <8 x i32> %b, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %m = trunc <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %m
+}
+
+define <4 x i32> @or_rshrn_v4i64_31(<4 x i64> %a) {
+; CHECK-LABEL: or_rshrn_v4i64_31:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    shrn v0.2s, v0.2d, #31
+; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #31
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <4 x i64> %a, <i64 1073741824, i64 1073741824, i64 1073741824, i64 1073741824>
+  %s = lshr <4 x i64> %b, <i64 31, i64 31, i64 31, i64 31>
+  %m = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %m
+}
+
+define <4 x i32> @or_rshrn_v4i64_32(<4 x i64> %a) {
+; CHECK-LABEL: or_rshrn_v4i64_32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %b = or disjoint <4 x i64> %a, <i64 2147483648, i64 2147483648, i64 2147483648, i64 2147483648>
+  %s = lshr <4 x i64> %b, <i64 32, i64 32, i64 32, i64 32>
+  %m = trunc <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %m
+}

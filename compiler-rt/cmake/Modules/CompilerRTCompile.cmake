@@ -101,6 +101,17 @@ function(clang_compile object_file source)
     set(compile_flags ${SOURCE_CFLAGS})
   endif()
 
+  # CMAKE_CXX_STANDARD is not propagated to these custom compile commands
+  # (add_custom_command). Add it explicitly for C++ files so that C++17
+  # features used in headers (e.g. if constexpr) don't trigger warnings.
+  if(is_cxx)
+    if(CMAKE_CXX_STANDARD)
+      list(APPEND compile_flags "-std=c++${CMAKE_CXX_STANDARD}")
+    else()
+      list(APPEND compile_flags "-std=c++17")
+    endif()
+  endif()
+
   string(REGEX MATCH "[.](m|mm)$" is_objc ${source_rpath})
   if (is_objc)
     list(APPEND compile_flags "-ObjC")

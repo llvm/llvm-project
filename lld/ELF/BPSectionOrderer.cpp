@@ -32,6 +32,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   static bool isCodeSection(const Section &sec) {
     return sec.flags & ELF::SHF_EXECINSTR;
   }
+  static StringRef getSectionName(const Section &sec) { return sec.name; }
   ArrayRef<Defined *> getSymbols(const Section &sec) {
     auto it = secToSym.find(&sec);
     if (it == secToSym.end())
@@ -63,9 +64,10 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
 } // namespace
 
 DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
-    Ctx &ctx, StringRef profilePath, bool forFunctionCompression,
-    bool forDataCompression, bool compressionSortStartupFunctions,
-    bool verbose) {
+    Ctx &ctx, StringRef profilePath,
+    ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
+    bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSectionBase *> sections;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
@@ -77,11 +79,10 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
       return;
     auto *sec = dyn_cast_or_null<InputSection>(d->section);
     // Skip section symbols. Skip empty, discarded, ICF folded sections, .bss.
-    // Skipping ICF folded sections reduces duplicate detection work in
-    // BPSectionOrderer.
+    // ICF folded sections are already dead (!isLive()), so no separate check
+    // is needed.
     if (sym.isSection() || !sec || sec->size == 0 || !sec->isLive() ||
-        sec->repl != sec || !sec->content().data() ||
-        !orderer.secToSym.try_emplace(sec, d).second)
+        !sec->content().data() || !orderer.secToSym.try_emplace(sec, d).second)
       return;
     rootSymbolToSectionIdxs[CachedHashStringRef(
                                 lld::utils::getRootSymbol(sym.getName()))]
@@ -94,8 +95,8 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSection(*sym);
-  return orderer.computeOrder(profilePath, forFunctionCompression,
-                              forDataCompression,
+  return orderer.computeOrder(profilePath, compressionSortSpecs,
+                              forFunctionCompression, forDataCompression,
                               compressionSortStartupFunctions, verbose,
                               sections, rootSymbolToSectionIdxs);
 }

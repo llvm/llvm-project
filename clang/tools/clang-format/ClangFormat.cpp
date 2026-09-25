@@ -25,12 +25,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <fstream>
 
 using namespace llvm;
 using clang::tooling::Replacements;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
@@ -343,16 +342,15 @@ static void outputReplacementsXML(const Replacements &Replaces) {
   }
 }
 
-static bool
-emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
-                        const std::unique_ptr<llvm::MemoryBuffer> &Code) {
+static bool emitReplacementWarnings(const Replacements &Replaces,
+                                    StringRef AssumedFileName,
+                                    std::unique_ptr<llvm::MemoryBuffer> Code) {
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
     SourceMgr Mgr;
     const char *StartBuf = Code->getBufferStart();
 
-    Mgr.AddNewSourceBuffer(
-        MemoryBuffer::getMemBuffer(StartBuf, AssumedFileName), SMLoc());
+    Mgr.AddNewSourceBuffer(std::move(Code), SMLoc());
     for (const auto &R : Replaces) {
       SMDiagnostic Diag = Mgr.GetMessage(
           SMLoc::getFromPointer(StartBuf + R.getOffset()),
@@ -505,7 +503,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replaces = Replaces.merge(FormatChanges);
   if (DryRun) {
     return Replaces.size() > (IsJson ? 1u : 0u) &&
-           emitReplacementWarnings(Replaces, AssumedFileName, Code);
+           emitReplacementWarnings(Replaces, AssumedFileName, std::move(Code));
   }
   if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
@@ -637,6 +635,7 @@ static bool isIgnored(StringRef FilePath) {
   if (IgnoreDir.empty())
     return false;
 
+  bool IsIgnored = false;
   const auto Pathname{convert_to_slash(AbsPath)};
   for (const auto &Pat : Patterns) {
     const bool IsNegated = Pat[0] == '!';
@@ -658,11 +657,11 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path;
     }
 
-    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
-      return true;
+    if (clang::format::matchFilePath(Pattern, Pathname))
+      IsIgnored = !IsNegated;
   }
 
-  return false;
+  return IsIgnored;
 }
 
 int main(int argc, const char **argv) {
@@ -681,11 +680,6 @@ int main(int argc, const char **argv) {
       "together with <file>s, the files are edited in-place. Otherwise, the\n"
       "result is written to the standard output.\n");
 
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
-
   if (DumpConfig)
     return dumpConfig();
 
@@ -701,8 +695,15 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (isIgnored(AssumeFileName))
+    if (isIgnored(AssumeFileName)) {
+      // The user should be able to expect that running
+      // `cat foo | clang-format --assume-filename foo` and writing the output
+      // to foo will format foo.
+      // Thus, we need to just output stdin untouched if it is ignored.
+      if (!OutputXML)
+        outs() << MemoryBuffer::getSTDIN()->get()->getBuffer();
       return 0;
+    }
     return clang::format::format("-", FailOnIncompleteFormat);
   }
 
