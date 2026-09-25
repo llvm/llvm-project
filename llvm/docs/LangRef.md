@@ -24239,6 +24239,8 @@ directly. In the **oracle form**, the third argument must be a direct
 reference to a non-variadic function returning `i64` that is `nounwind`,
 `nosync` and `willreturn` and may only read memory through its arguments;
 the remaining arguments are forwarded to it, and its return value is `N`.
+The oracle function must have local linkage, and it may only be used as the
+oracle argument of '`llvm.speculative.load`' calls.
 
 ##### Semantics:
 

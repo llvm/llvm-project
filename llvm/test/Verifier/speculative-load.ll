@@ -13,14 +13,33 @@ declare [4 x i32] @llvm.speculative.load.a4i32.p0(ptr, i1, ...)
 declare <4 x b3> @llvm.speculative.load.v4b3.p0(ptr, i1, ...)
 declare <3 x ptr> @llvm.speculative.load.v3p0.p0(ptr, i1, ...)
 
-declare i32 @bad_oracle_ret(ptr, i64) memory(argmem: read) nounwind nosync willreturn
-declare i64 @good_oracle(ptr, i64) memory(argmem: read) nounwind nosync willreturn
-declare i64 @oracle_i32_param(i32) memory(argmem: read) nounwind nosync willreturn
-declare i64 @side_effecting_oracle(ptr, i64)
-declare i64 @throwing_oracle(ptr, i64) memory(argmem: read) nosync willreturn
-declare i64 @syncing_oracle(ptr, i64) memory(argmem: read) nounwind willreturn
-declare i64 @looping_oracle(ptr, i64) memory(argmem: read) nounwind nosync
-declare i64 @variadic_oracle(i64, ...) memory(argmem: read) nounwind nosync willreturn
+define internal i32 @bad_oracle_ret(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i32 0
+}
+define internal i64 @good_oracle(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+define internal i64 @oracle_i32_param(i32 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 0
+}
+define internal i64 @side_effecting_oracle(ptr %p, i64 %n) {
+  ret i64 %n
+}
+define internal i64 @throwing_oracle(ptr %p, i64 %n) memory(argmem: read) nosync willreturn {
+  ret i64 %n
+}
+define internal i64 @syncing_oracle(ptr %p, i64 %n) memory(argmem: read) nounwind willreturn {
+  ret i64 %n
+}
+define internal i64 @looping_oracle(ptr %p, i64 %n) memory(argmem: read) nounwind nosync {
+  ret i64 %n
+}
+define internal i64 @variadic_oracle(i64 %n, ...) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+; CHECK: oracle function must have local linkage
+; CHECK-NEXT: ptr @external_oracle
+declare i64 @external_oracle(ptr, i64) memory(argmem: read) nounwind nosync willreturn
 
 define i32 @test_non_byte_non_vector_int(ptr %ptr) {
 ; CHECK: llvm.speculative.load return type must be a byte type or a vector type
@@ -127,6 +146,11 @@ define b128 @test_non_function_oracle(ptr %ptr, ptr %not_fn) {
   ret b128 %res
 }
 
+define b128 @test_oracle_external_linkage(ptr %ptr, i64 %n) {
+  %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @external_oracle, ptr %ptr, i64 %n)
+  ret b128 %res
+}
+
 define b128 @test_oracle_side_effects(ptr %ptr, i64 %n) {
 ; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
 ; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @side_effecting_oracle, ptr %ptr, i64 %n)
@@ -182,4 +206,58 @@ define <3 x ptr> @test_vector_of_pointers_size_not_pow2(ptr %ptr) {
 ; CHECK-NEXT: %res = call <3 x ptr> (ptr, i1, ...) @llvm.speculative.load.v3p0.p0(ptr %ptr, i1 false, i64 24)
   %res = call <3 x ptr> (ptr, i1, ...) @llvm.speculative.load.v3p0.p0(ptr %ptr, i1 false, i64 24)
   ret <3 x ptr> %res
+}
+
+; Oracle functions may only be used as the oracle operand of
+; llvm.speculative.load.
+
+@llvm.used = appending global [1 x ptr] [ptr @oracle_in_used], section "llvm.metadata"
+@alias = internal alias i64 (i64), ptr @oracle_aliased
+
+; CHECK: oracle function may only be used as the oracle operand of llvm.speculative.load
+; CHECK-NEXT: ptr @oracle_called
+; CHECK-NEXT: %r = call i64 @oracle_called(i64 %n)
+define internal i64 @oracle_called(i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+
+; CHECK: oracle function may only be used as the oracle operand of llvm.speculative.load
+; CHECK-NEXT: ptr @oracle_stored
+; CHECK-NEXT: store ptr @oracle_stored, ptr %ptr
+define internal i64 @oracle_stored(i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+
+; CHECK: oracle function may only be used as the oracle operand of llvm.speculative.load
+; CHECK-NEXT: ptr @oracle_in_used
+; CHECK-NEXT: [1 x ptr] [ptr @oracle_in_used]
+define internal i64 @oracle_in_used(i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+
+; CHECK: oracle function may only be used as the oracle operand of llvm.speculative.load
+; CHECK-NEXT: ptr @oracle_aliased
+; CHECK-NEXT: ptr @alias
+define internal i64 @oracle_aliased(i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+
+; Operand 2 of an intrinsic other than llvm.speculative.load.
+; CHECK: oracle function may only be used as the oracle operand of llvm.speculative.load
+; CHECK-NEXT: ptr @oracle_other_intrinsic
+; CHECK-NEXT: call void (i64, i32, ...) @llvm.experimental.stackmap(i64 0, i32 0, ptr @oracle_other_intrinsic)
+define internal i64 @oracle_other_intrinsic(i64 %n) memory(argmem: read) nounwind nosync willreturn {
+  ret i64 %n
+}
+
+define b128 @test_oracle_invalid_uses(ptr %ptr, i64 %n) {
+  %r = call i64 @oracle_called(i64 %n)
+  store ptr @oracle_stored, ptr %ptr
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 0, i32 0, ptr @oracle_other_intrinsic)
+  %a = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @oracle_called, i64 %n)
+  %c = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @oracle_stored, i64 %n)
+  %d = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @oracle_in_used, i64 %n)
+  %e = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @oracle_aliased, i64 %n)
+  %f = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @oracle_other_intrinsic, i64 %n)
+  ret b128 %f
 }
