@@ -573,6 +573,9 @@ entry:
 ; too few unordered candidates, the analysis switches to the ordered
 ; reduction, discarding the tracked signs - it must restart without the
 ; fsub flattening (no vector fsub of the z values is emitted).
+; The multiplies are not contractable: otherwise the scalar fmul/fsub and
+; fmul/fadd pairs fuse into fma and vectorizing the multiplies is not
+; profitable, which would hide the restart.
 define double @ordered_switch_restart(ptr %x, ptr %y, ptr %z, ptr %out) {
 ; CHECK-LABEL: define double @ordered_switch_restart(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
@@ -581,7 +584,7 @@ define double @ordered_switch_restart(ptr %x, ptr %y, ptr %z, ptr %out) {
 ; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz <2 x double> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z8]], align 8
 ; CHECK-NEXT:    [[ZSUM:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
 ; CHECK-NEXT:    store double [[ZSUM]], ptr [[OUT]], align 8
@@ -597,11 +600,11 @@ entry:
   %z8 = getelementptr inbounds nuw i8, ptr %z, i64 8
   %x0 = load double, ptr %x, align 8
   %y0 = load double, ptr %y, align 8
-  %mul = fmul reassoc nsz contract double %y0, %x0
+  %mul = fmul reassoc nsz double %y0, %x0
   %z0 = load double, ptr %z, align 8
   %x1 = load double, ptr %x8, align 8
   %y1 = load double, ptr %y8, align 8
-  %mul5 = fmul reassoc nsz contract double %y1, %x1
+  %mul5 = fmul reassoc nsz double %y1, %x1
   %z1 = load double, ptr %z8, align 8
   %zsum = fadd reassoc nsz contract double %z0, %z1
   store double %zsum, ptr %out, align 8
@@ -1266,6 +1269,8 @@ entry:
 ; The scaled repeated value (m0 * 2.0) must not carry contract: as an fma
 ; candidate, the following fadd would block the pairwise vectorization of the
 ; multiplies.
+; The multiplies themselves are not contractable: otherwise m1 fuses into an
+; fma with its fadd user and vectorizing the pair is not profitable.
 define double @scaled_value_no_contract(ptr %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-LABEL: define double @scaled_value_no_contract(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]], ptr [[W:%.*]]) #[[ATTR0]] {
@@ -1273,7 +1278,7 @@ define double @scaled_value_no_contract(ptr %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[W0:%.*]] = load double, ptr [[W]], align 8
 ; CHECK-NEXT:    [[N:%.*]] = fneg reassoc nsz contract double [[W0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
@@ -1289,11 +1294,11 @@ entry:
   %y1 = getelementptr inbounds double, ptr %y, i64 1
   %x0v = load double, ptr %x, align 8
   %y0v = load double, ptr %y, align 8
-  %m0 = fmul reassoc nsz contract double %x0v, %y0v
+  %m0 = fmul reassoc nsz double %x0v, %y0v
   %z0 = load double, ptr %z, align 8
   %x1v = load double, ptr %x1, align 8
   %y1v = load double, ptr %y1, align 8
-  %m1 = fmul reassoc nsz contract double %x1v, %y1v
+  %m1 = fmul reassoc nsz double %x1v, %y1v
   %w0 = load double, ptr %w, align 8
   %n = fneg reassoc nsz contract double %w0
   %s0 = fadd reassoc nsz contract double %m1, %n

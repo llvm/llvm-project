@@ -40,6 +40,14 @@ public:
     return false;
   }
 
+  bool VisitBinaryOperator(BinaryOperator *e) {
+    if (e->isLogicalOp()) {
+      foundConditional = true;
+      return false;
+    }
+    return true;
+  }
+
   bool VisitCXXNewExpr(CXXNewExpr *e) {
     // If the new expression has an initializer, the initializer may contain a
     // a temporary expression that requires deferred cleanup. If we're emitting
@@ -85,7 +93,9 @@ Address CIRGenFunction::createCleanupActiveFlag() {
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-    builder.createFlagStore(loc, false, active.getPointer());
+    cir::StoreOp store =
+        builder.createFlagStore(loc, false, active.getPointer());
+    outermostConditional->advanceInsertPoint(store);
   }
 
   // Set to true at the current location (inside the conditional branch).

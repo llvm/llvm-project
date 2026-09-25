@@ -9,6 +9,11 @@
 // UNSUPPORTED: no-threads
 // REQUIRES: linux
 
+// __cxa_thread_atexit_impl is defined strongly in thread.cpp.o alongside
+// internal::call_atexit_callbacks, causing a multiple definition error when
+// statically linking against llvm-libc's libc.a.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <assert.h>
 #include <cxxabi.h>
 

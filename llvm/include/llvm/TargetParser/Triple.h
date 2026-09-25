@@ -157,6 +157,7 @@ public:
     ARMSubArch_v4t,
 
     AArch64SubArch_arm64e,
+    AArch64SubArch_arm64e_x1,
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
 
@@ -1220,6 +1221,11 @@ public:
            getSubArch() == Triple::AArch64SubArch_arm64e;
   }
 
+  bool isArm64e_x1() const {
+    return getArch() == Triple::aarch64 &&
+           getSubArch() == Triple::AArch64SubArch_arm64e_x1;
+  }
+
   // Tests whether the target is N32.
   bool isABIN32() const {
     EnvironmentType Env = getEnvironment();
@@ -1257,6 +1263,10 @@ public:
 
   /// Tests if the target's default floating-point ABI is hard float.
   bool isHardFloatABI() const { return getDefaultFloatABI() == FloatABI::Hard; }
+
+  /// Returns the default threading model for this target triple, i.e. the model
+  /// used when the "thread-model" module flag is absent.
+  LLVM_ABI ThreadModel getDefaultThreadModel() const;
 
   /// Returns the default floating-point format for the "long double" type. A
   /// particular module may override this default.

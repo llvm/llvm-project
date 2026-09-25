@@ -26,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -541,10 +542,8 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   mlir::Value input = emitScalarExpr(e->getArg(0));
   mlir::Value amount = emitScalarExpr(e->getArg(1));
 
-  // TODO(cir): MSVC flavor bit rotate builtins use different types for input
-  // and amount, but cir.rotate requires them to have the same type. Cast amount
-  // to the type of input when necessary.
-  assert(!cir::MissingFeatures::msvcBuiltins());
+  if (amount.getType() != input.getType())
+    amount = builder.createIntCast(amount, input.getType());
 
   auto r = cir::RotateOp::create(builder, getLoc(e->getSourceRange()), input,
                                  amount, isRotateLeft);
@@ -566,8 +565,7 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
 template <class Operation>
 static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
-  auto call =
-      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  auto call = Operation::create(cgf.getBuilder(), arg.getLoc(), arg);
   return RValue::get(call->getResult(0));
 }
 
@@ -1237,6 +1235,20 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   return cir::FuncType::get(context, argTypes, resultTy, isVarArg);
 }
 
+void CIRGenFunction::checkTargetFeatures(const CallExpr *e,
+                                         const FunctionDecl *targetDecl) {
+  const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  CodeGenUtils::checkTargetFeatures(getContext(), cgm.getDiags(), getLangOpts(),
+                                    e, fd, targetDecl);
+}
+
+void CIRGenFunction::checkTargetFeatures(SourceLocation loc,
+                                         const FunctionDecl *targetDecl) {
+  const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  CodeGenUtils::checkTargetFeatures(getContext(), cgm.getDiags(), getLangOpts(),
+                                    loc, fd, targetDecl);
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -1711,13 +1723,58 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
     return emitRotate(e, /*isRotateLeft=*/true);
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
     return emitRotate(e, /*isRotateLeft=*/false);
+
+  // stdc_memreverse8u8 is a no-op (single byte, nothing to swap).
+  case Builtin::BIstdc_memreverse8u8:
+    return RValue::get(emitScalarExpr(e->getArg(0)));
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    return RValue::get(cir::ByteSwapOp::create(builder, loc, arg));
+  }
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8: {
+    Expr::EvalResult result;
+    if (e->getArg(0)->EvaluateAsInt(result, getContext())) {
+      uint64_t size = result.Val.getInt().getZExtValue();
+      if (size <= 1) {
+        emitIgnoredExpr(e->getArg(1));
+        return RValue::get(nullptr);
+      }
+      if (size == 2 || size == 4 || size == 8) {
+        mlir::Location loc = getLoc(e->getSourceRange());
+        Address ptrAddr = emitPointerWithAlignment(e->getArg(1));
+        mlir::Type intTy = builder.getUIntNTy(size * 8);
+        Address addr = builder.createElementBitCast(loc, ptrAddr, intTy);
+        mlir::Value val = builder.createLoad(loc, addr);
+        mlir::Value swapped = cir::ByteSwapOp::create(builder, loc, val);
+        builder.createStore(loc, swapped, addr);
+        return RValue::get(nullptr);
+      }
+    }
+    // General case: fall back to the library function stdc_memreverse8.
+    break;
+  }
 
   case Builtin::BI__builtin_coro_id:
     return RValue::get(emitCoroIDBuiltinCall(e).getResult());
@@ -2090,12 +2147,39 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                 cir::OverflowBehavior::Saturated);
     return RValue::get(val);
   }
-  case Builtin::BI__builtin_elementwise_max:
-  case Builtin::BI__builtin_elementwise_min:
+  case Builtin::BI__builtin_elementwise_max: {
+    if (cir::isIntOrVectorOfIntType(convertType(e->getArg(0)->getType()))) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      mlir::Value op0 = emitScalarExpr(e->getArg(0));
+      mlir::Value op1 = emitScalarExpr(e->getArg(1));
+      return RValue::get(builder.createMax(loc, op0, op1));
+    }
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(*this, *e));
+  }
+  case Builtin::BI__builtin_elementwise_min: {
+    if (cir::isIntOrVectorOfIntType(convertType(e->getArg(0)->getType()))) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      mlir::Value op0 = emitScalarExpr(e->getArg(0));
+      mlir::Value op1 = emitScalarExpr(e->getArg(1));
+      return RValue::get(builder.createMin(loc, op0, op1));
+    }
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(*this, *e));
+  }
   case Builtin::BI__builtin_elementwise_maxnum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_minnum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_maximum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaximumOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_minimum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinimumOp>(*this, *e));
+
   case Builtin::BI__builtin_elementwise_maximumnum:
   case Builtin::BI__builtin_elementwise_minimumnum:
   case Builtin::BI__builtin_reduce_max:
@@ -2998,6 +3082,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (getContext().BuiltinInfo.isPredefinedLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            emitScalarExpr(e->getCallee()).getDefiningOp());
+
+  // Check that a call to a target specific builtin has the correct target
+  // features.
+  // This is down here to avoid non-target specific builtins, however, if
+  // generic builtins start to require generic target features then we
+  // can move this up to the beginning of the function.
+  checkTargetFeatures(e, fd);
 
   // See if we have a target specific intrinsic.
   std::string name = getContext().BuiltinInfo.getName(builtinID);

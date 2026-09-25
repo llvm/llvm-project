@@ -20,13 +20,13 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
                           outs(%output: tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise addition.
-  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %biased = linalg.elementwise <add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
-  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+  %relued = linalg.elementwise <max_signed>
     ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -34,7 +34,7 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
 
 // CHECK: func @outlined
 // CHECK:   linalg.matmul
-// CHECK:   linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK:   linalg.elementwise <add>
 
 // CHECK-LABEL: func @fc_relu
 // CHECK: scf.forall
@@ -48,7 +48,7 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
 // CHECK-NOT: linalg.matmul
 // CHECK-NOT: linalg.elementwise
 // CHECK:     scf.forall.in_parallel
-// CHECK:   linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+// CHECK:   linalg.elementwise <max_signed>
 // CHECK:   scf.forall.in_parallel
 
 // Declaration of the "microkernel" function that we will be targeting.

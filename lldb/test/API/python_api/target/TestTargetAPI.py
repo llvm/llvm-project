@@ -241,28 +241,14 @@ class TargetAPITestCase(TestBase):
 
     def find_global_variables(self, exe_name):
         """Exercise SBTarget.FindGlobalVariables() API."""
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         # rdar://problem/9700873
         # Find global variable value fails for dwarf if inferior not started
         # (Was CrashTracer: [USER] 1 crash in Python at _lldb.so: lldb_private::MemoryCache::Read + 94)
-        #
         # Remove the lines to create a breakpoint and to start the inferior
         # which are workarounds for the dwarf case.
-
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line1)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-        # Make sure we hit our breakpoint:
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line1, exe_name=exe_name
+        )
 
         value_list = target.FindGlobalVariables("my_global_var_of_char_type", 3)
         self.assertEqual(value_list.GetSize(), 1)
