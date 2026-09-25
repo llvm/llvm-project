@@ -2668,26 +2668,12 @@ static void emitAlignedClause(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::EmitOMPPrivateLoopCounters(
-    const OMPLoopDirective &S, CodeGenFunction::OMPPrivateScope &LoopScope,
-    bool OnlyUnresolved) {
+    const OMPLoopDirective &S, CodeGenFunction::OMPPrivateScope &LoopScope) {
   if (!HaveInsertPoint())
     return;
   auto I = S.private_counters().begin();
   for (const Expr *E : S.counters()) {
-    const auto *DRE = cast<DeclRefExpr>(E);
-    const auto *VD = cast<VarDecl>(DRE->getDecl());
-    // Skip counters that already resolve, mirroring EmitDeclRefLValue's
-    // handling for these cases.
-    if (OnlyUnresolved) {
-      const VarDecl *Canonical = VD->getCanonicalDecl();
-      if (!DRE->refersToEnclosingVariableOrCapture() || !CapturedStmtInfo ||
-          LocalDeclMap.count(Canonical) ||
-          CapturedStmtInfo->lookup(Canonical)) {
-        ++I;
-        continue;
-      }
-    }
-
+    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl());
     // Emit var without initialization.
     AutoVarEmission VarEmission = EmitAutoVarAlloca(*PrivateVD);
