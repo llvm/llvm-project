@@ -161,12 +161,6 @@ enum FormattingFlags {
 enum MiscFlags {             // Miscellaneous flags to adjust argument
   CommaSeparated = 0x01,     // Should this cl::list split between commas?
   PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
-
-  // Can this option group with other options?
-  // If this is enabled, multiple letter options are allowed to bunch together
-  // with only a single hyphen for the whole group.  This allows emulation
-  // of the behavior that ls uses for example: ls -la === ls -l -a
-  Grouping = 0x08,
 };
 
 //===----------------------------------------------------------------------===//
@@ -1331,11 +1325,7 @@ template <> struct applicator<FormattingFlags> {
 };
 
 template <> struct applicator<MiscFlags> {
-  static void opt(MiscFlags MF, Option &O) {
-    assert((MF != Grouping || O.ArgStr.size() == 1) &&
-           "cl::Grouping can only apply to single character Options.");
-    O.setMiscFlag(MF);
-  }
+  static void opt(MiscFlags MF, Option &O) { O.setMiscFlag(MF); }
 };
 
 // Apply modifiers to an option in a type safe way.

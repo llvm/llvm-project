@@ -3156,6 +3156,7 @@ cc_library(
         ":cir_dialect",
         "//llvm:Support",
         "//mlir:Analysis",
+        "//mlir:DataLayoutInterfaces",
         "//mlir:IR",
         "//mlir:SideEffectInterfaces",
     ],

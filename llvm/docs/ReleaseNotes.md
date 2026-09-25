@@ -195,6 +195,16 @@ Makes programs 10x faster by doing Special New Thing.
   enabling Clang or MLIR retains the project's complete build, test, and
   install behavior.
 
+* LLVM's documentation has largely been rewritten from [reStructuredText] to
+  Markdown, and our Sphinx documentation build now has a hard dependency on the
+  [`myst-parser` package]. Vendors packaging LLVM will need to install
+  `myst-parser` to generate HTML or man page documentation. For convenience, we
+  now release a `llvm_man_pages-${VER}.tar.xz` tarball if you need man page
+  docs on a minimal system without Sphinx or `myst-parser`.
+
+[reStructuredText]: https://devguide.python.org/documentation/markup/
+[myst-parser package]: https://pypi.org/project/myst-parser/
+
 ### Changes to the Windows installer
 
 * The project has migrated to MSI installers. Previous installations of LLVM,

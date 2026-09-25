@@ -157,6 +157,7 @@ jobs:
         continue-on-error: true
         uses: ./.github/workflows/libcxx/build-at-commit
         with:
+          git-repo: ${{ github.workspace }}
           commit: ${{ inputs.commit }}
           install-dir: ${{ env.INSTALL_DIR }}
           compiler: ${{ matrix.cxx }}

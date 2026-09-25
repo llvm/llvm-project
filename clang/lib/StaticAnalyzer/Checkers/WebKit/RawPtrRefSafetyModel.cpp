@@ -152,12 +152,18 @@ public:
   const char *typeName() const override { return "CanBorrow type"; }
 
   void describeHazard(llvm::raw_ostream &Os, const Expr *Origin,
-                      QualType) const override {
+                      QualType SinkType) const override {
+    QualType SinkObject = pointeeType(SinkType);
+    if (!SinkObject.isNull() && isBorrowType(SinkObject)) {
+      Os << "Borrow that does not travel with the lambda";
+      return;
+    }
+
     Os << "loan on ";
     QualType OriginType = Origin ? pointeeType(Origin->getType()) : QualType();
 
     // Name the borrowed type, not the Borrow<T> guard, when the loan was
-    // taken from a Borrow<T> temporary.
+    // taken from a Borrow<T>.
     if (!OriginType.isNull() && isBorrowType(OriginType))
       OriginType = borrowedType(OriginType);
 

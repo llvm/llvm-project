@@ -115,13 +115,28 @@ jobs:
       LNT_MACHINE: ${{ matrix.lnt-machine }}
       PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
       PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
+      TOOLING: ${{ github.workspace }}/tooling
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Checkout the PR
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
           fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
+
+      # This workflow is always taken from the default branch. Check out the tooling from the corresponding
+      # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
+      # code and the test suite (including its testing configuration) are taken from the PR head.
+      - name: Checkout the tooling from ${{ github.sha }}
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: tooling
+          sparse-checkout: |
+            .github/workflows/libcxx
+            libcxx/utils
 
       - name: Install Python
         if: runner.os == 'Linux' # installed via Homebrew on macOS
@@ -151,23 +166,25 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install -r libcxx/utils/requirements.txt
+          pip install -r "${TOOLING}/libcxx/utils/requirements.txt"
 
       - name: Determine the baseline commit
         id: baseline
         run: echo "commit=$(git merge-base "${PR_BASE}" "${PR_HEAD}")" >> "${GITHUB_OUTPUT}"
 
       - name: Build the baseline
-        uses: ./.github/workflows/libcxx/build-at-commit
+        uses: ./tooling/.github/workflows/libcxx/build-at-commit
         with:
+          git-repo: ${{ github.workspace }}
           commit: ${{ steps.baseline.outputs.commit }}
           install-dir: ${{ github.workspace }}/install/baseline
           compiler: ${{ matrix.cxx }}
           cmake-cache: ${{ matrix.cmake-cache }}
 
       - name: Build the candidate
-        uses: ./.github/workflows/libcxx/build-at-commit
+        uses: ./tooling/.github/workflows/libcxx/build-at-commit
         with:
+          git-repo: ${{ github.workspace }}
           commit: ${{ needs.extract-info.outputs.pr_head }}
           install-dir: ${{ github.workspace }}/install/candidate
           compiler: ${{ matrix.cxx }}
@@ -186,16 +203,16 @@ jobs:
           # Run 5 times so we can pick the median, and interleave baseline and candidate to mitigate the impact of
           # environmental noise
           for _ in $(seq 1 5); do
-            ./libcxx/utils/test-at-commit --test-config "${PWD}/libcxx/test/configs/installed-libc++.cfg.in" -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
-            ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-            ./libcxx/utils/test-at-commit --test-config "${PWD}/libcxx/test/configs/installed-libc++.cfg.in" -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
-            ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
+            "${TOOLING}/libcxx/utils/test-at-commit" --test-config installed-libc++.cfg.in -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
+            "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/baseline | tee -a baseline.lnt
+            "${TOOLING}/libcxx/utils/test-at-commit" --test-config installed-libc++.cfg.in -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
+            "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/candidate | tee -a candidate.lnt
           done
 
       - name: Compare baseline and candidate runs
         run: |
           source .venv/bin/activate
-          ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
+          "${TOOLING}/libcxx/utils/compare-benchmarks" baseline.lnt candidate.lnt | tee results.txt
 
       - name: Update comment with results
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0

@@ -11,6 +11,9 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include <memory>
+#include <optional>
 #include <string>
 
 namespace mlir {
@@ -52,6 +55,12 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// `AnalysisHeuristic::Fuzzer`. The fuzzer should be used only with
   /// `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
+
+  /// Whether the IR contains a region with more than one block. When unset,
+  /// the analysis walks the IR to compute it.
+  /// Note: If the IR contains unstructured control flow, but this flag is set
+  /// to "false", the bufferization may produce incorrect IR.
+  std::optional<bool> mayHaveUnstructuredControlFlow = std::nullopt;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
@@ -66,7 +75,7 @@ public:
 
   OneShotAnalysisState(const OneShotAnalysisState &) = delete;
 
-  ~OneShotAnalysisState() override = default;
+  ~OneShotAnalysisState() override;
 
   static bool classof(const AnalysisState *base) {
     return base->getType() == TypeID::get<OneShotAnalysisState>();
@@ -77,6 +86,10 @@ public:
     return static_cast<const OneShotBufferizationOptions &>(
         AnalysisState::getOptions());
   }
+
+  /// True if any region in the analyzed IR has more than one block. Taken from
+  /// the options when set; otherwise computed by walking the IR.
+  bool mayHaveUnstructuredControlFlow() const { return mayHaveUnstructuredCF; }
 
   /// Analyze the given op and its nested ops.
   LogicalResult analyzeOp(Operation *op, const DominanceInfo &domInfo);
@@ -130,6 +143,20 @@ public:
   /// Find the definitions of the given operand's value or
   /// retrieve them from the cache.
   const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
+
+  /// Return true if `to` is reachable from `from` without crossing `barriers`.
+  /// Results are cached; the cache is cleared by `resetCache`.
+  bool
+  isReachableCached(Block *from, Block *to,
+                    const llvm::SmallPtrSetImpl<Block *> *barriers = nullptr);
+
+  /// Cached `canUseOpDominanceDueToBlocks`. The result depends only on the
+  /// blocks that contain the read, the write, and the definitions, not on the
+  /// ops themselves. `defBlocks` must be sorted and unique. `compute` runs
+  /// only on a cache miss. Cleared by `resetCache`.
+  bool canUseOpDominanceDueToBlocksCached(Block *readBlock, Block *writeBlock,
+                                          llvm::ArrayRef<Block *> defBlocks,
+                                          function_ref<bool()> compute);
 
   /// Return whether `uRead` and `uConflictingWrite` are non-conflicting
   /// subsets, with caching.
@@ -236,6 +263,18 @@ private:
 
   /// Cache definitions of tensor values.
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
+
+  /// True if any region has more than one block.
+  bool mayHaveUnstructuredCF = false;
+
+  /// Cached CFG reachability. Defined out-of-line to keep BitVector out of
+  /// this header.
+  class CFGReachabilityCache;
+  std::unique_ptr<CFGReachabilityCache> cfgReachabilityCache;
+
+  /// Cached block-granularity op-dominance decisions. Defined out-of-line.
+  class OpDominanceBlockCache;
+  std::unique_ptr<OpDominanceBlockCache> opDominanceBlockCache;
 
   /// Cache results of areNonConflictingSubsets checks. The bool value is `true`
   /// if the operands are non-conflicting subsets, `false` if they are

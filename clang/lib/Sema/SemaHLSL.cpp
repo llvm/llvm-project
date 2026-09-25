@@ -4300,9 +4300,33 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
     assert(TheCall->getNumArgs() == 3 && "expected 3 args");
-    QualType MainHandleTy = TheCall->getArg(0)->getType();
     // Update return type to be the attributed resource type from arg0
     // with added IsCounter flag.
+    QualType MainHandleTy = TheCall->getArg(0)->getType();
+    QualType CounterHandleTy =
+        createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
+    TheCall->setType(CounterHandleTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefromheap: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    // Update return type to be the attributed resource type from arg0.
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
+    if (SemaRef.checkArgCount(TheCall, 1) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0))
+      return true;
+    // Update return type to be the attributed resource type from arg0
+    // with added IsCounter flag.
+    QualType MainHandleTy = TheCall->getArg(0)->getType();
     QualType CounterHandleTy =
         createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
     TheCall->setType(CounterHandleTy);
@@ -4615,6 +4639,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
   case Builtin::BI__builtin_hlsl_interlocked_and:
+  case Builtin::BI__builtin_hlsl_interlocked_exchange:
   case Builtin::BI__builtin_hlsl_interlocked_max:
   case Builtin::BI__builtin_hlsl_interlocked_min:
   case Builtin::BI__builtin_hlsl_interlocked_or:
@@ -4626,22 +4651,35 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
     // builtin by its mangled name and would otherwise reach CodeGen unchecked.
-    if (TheCall->getNumArgs() < 2) {
-      SemaRef.Diag(TheCall->getEndLoc(),
-                   diag::err_typecheck_call_too_few_args_at_least)
-          << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
-          << /*is_non_object=*/0 << TheCall->getSourceRange();
-      return true;
+    // InterlockedExchange always reports the previous value, so it requires
+    // `original_value` instead of accepting it as an optional argument.
+    if (BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
+      if (SemaRef.checkArgCount(TheCall, 3))
+        return true;
+    } else {
+      if (TheCall->getNumArgs() < 2) {
+        SemaRef.Diag(TheCall->getEndLoc(),
+                     diag::err_typecheck_call_too_few_args_at_least)
+            << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
+            << /*is_non_object=*/0 << TheCall->getSourceRange();
+        return true;
+      }
+      if (SemaRef.checkArgCountAtMost(TheCall, 3))
+        return true;
     }
-    if (SemaRef.checkArgCountAtMost(TheCall, 3))
-      return true;
 
     QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
-    if (!DestTy->isIntegerType()) {
+    // InterlockedExchange also operates on float. DXIL lowers that as a
+    // bitwise exchange of the value's bit pattern, and DXC accepts 32-bit
+    // float only, so half and double are rejected.
+    const bool AllowsFloat =
+        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange;
+    if (!DestTy->isIntegerType() &&
+        !(AllowsFloat && DestTy->isSpecificBuiltinType(BuiltinType::Float))) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
-          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
-          << DestTy;
+          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1
+          << /*32 bit floating-point*/ (AllowsFloat ? 3 : 0) << DestTy;
       return true;
     }
 

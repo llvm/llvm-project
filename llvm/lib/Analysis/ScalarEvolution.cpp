@@ -16321,6 +16321,13 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
       return Map.lookup_or(Expr, Expr);
     }
 
+    const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitPtrToAddrExpr(
+          Expr);
+    }
+
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
       if (const SCEV *S = Map.lookup(Expr))
         return S;

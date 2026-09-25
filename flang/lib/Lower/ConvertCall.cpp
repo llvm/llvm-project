@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertCall.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -1745,7 +1746,6 @@ void prepareUserCallArguments(
       caller.placeInput(arg, builder.genAbsentOp(loc, argTy));
       continue;
     }
-
     switch (arg.passBy) {
     case PassBy::Value: {
       // True pass-by-value semantics.
@@ -3152,6 +3152,34 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   return genIntrinsicRef(intrinsic, *intrinsicEntry, callContext);
 }
 
+static bool isCUDADeviceDummy(
+    const Fortran::evaluate::characteristics::DummyArgument *dummy) {
+  if (!dummy)
+    return false;
+  return Fortran::common::visit(
+      Fortran::common::visitors{
+          [](const Fortran::evaluate::characteristics::DummyDataObject
+                 &object) {
+            return object.cudaDataAttr == Fortran::common::CUDADataAttr::Device;
+          },
+          [](const auto &) { return false; },
+      },
+      dummy->u);
+}
+
+/// Make the objects of \p expr that are mapped by an enclosing structured
+/// OpenACC data construct denote their device copy in the current symbol map
+/// scope. Returns true if any such binding was found, in which case \p expr
+/// must be lowered while that scope is alive.
+static bool mapOpenACCDeviceBindings(const Fortran::lower::SomeExpr &expr,
+                                     Fortran::lower::SymMap &symMap) {
+  bool found = false;
+  for (const Fortran::semantics::Symbol &symbol :
+       Fortran::evaluate::GetSymbolVector(expr))
+    found |= symMap.copyDeviceBindingToCurrentScope(symbol);
+  return found;
+}
+
 /// Main entry point to lower procedure references, regardless of what they are.
 static std::optional<hlfir::EntityWithAttributes>
 genProcedureRef(CallContext &callContext) {
@@ -3179,6 +3207,10 @@ genProcedureRef(CallContext &callContext) {
                                          callContext.converter);
   mlir::FunctionType callSiteType = caller.genFunctionType();
   const bool isElemental = callContext.isElementalProcWithArrayArgs();
+  // A kernel launch already maps its arguments onto the device through the
+  // CUDA Fortran launch lowering. Substituting an OpenACC device binding here
+  // would pass an address the launch does not expect.
+  const bool isKernelLaunch = !callContext.procRef.chevrons().empty();
   Fortran::lower::PreparedActualArguments loweredActuals;
   // Lower the actual arguments
   for (const Fortran::lower::CallInterface<
@@ -3247,9 +3279,24 @@ genProcedureRef(CallContext &callContext) {
         continue;
       }
 
+      // An object mapped by an enclosing structured OpenACC data construct is
+      // associated with a CUDA DEVICE dummy through its device copy. The
+      // binding must be in place for this lowering, which is the only one of
+      // the actual argument: lowering it again would duplicate any side
+      // effect of its subscripts.
+      std::optional<Fortran::lower::SymMapScope> deviceScope;
+      if (!isKernelLaunch && isCUDADeviceDummy(arg.characteristics) &&
+          Fortran::evaluate::IsVariable(*expr)) {
+        deviceScope.emplace(callContext.symMap);
+        if (!mapOpenACCDeviceBindings(*expr, callContext.symMap))
+          deviceScope.reset();
+      }
+
       auto loweredActual = Fortran::lower::convertExprToHLFIR(
           loc, callContext.converter, *expr, callContext.symMap,
           callContext.stmtCtx);
+      deviceScope.reset();
+
       std::optional<mlir::Value> isPresent;
       if (arg.isOptional())
         isPresent = genIsPresentIfArgMaybeAbsent(

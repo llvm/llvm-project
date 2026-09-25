@@ -140,15 +140,6 @@ static SmallString<8> argPrefix(StringRef ArgName, size_t Pad = DefaultPad) {
   return Prefix;
 }
 
-// Option predicates...
-static inline bool isGrouping(const Option *O) {
-  return O->getMiscFlags() & cl::Grouping;
-}
-static inline bool isPrefixedOrGrouping(const Option *O) {
-  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
-         O->getFormattingFlag() == cl::AlwaysPrefix;
-}
-
 using OptionsMapTy = DenseMap<StringRef, Option *>;
 
 namespace {
@@ -393,7 +384,8 @@ private:
   Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
                            bool LongOptionsUseDoubleDash, bool HaveDoubleDash) {
     Option *Opt = LookupOption(Sub, Arg, Value);
-    if (Opt && LongOptionsUseDoubleDash && !HaveDoubleDash && !isGrouping(Opt))
+    if (Opt && LongOptionsUseDoubleDash && !HaveDoubleDash &&
+        Opt->ArgStr.size() != 1)
       return nullptr;
     return Opt;
   }
@@ -456,8 +448,6 @@ void Option::setArgStr(StringRef S) {
     globalParser().updateArgStr(this, S);
   assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
-  if (ArgStr.size() == 1)
-    setMiscFlag(Grouping);
 }
 
 void Option::addCategory(OptionCategory &C) {
@@ -688,92 +678,44 @@ bool llvm::cl::ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
   return ProvideOption(Handler, Handler->ArgStr, Arg, 0, nullptr, Dummy);
 }
 
-// getOptionPred - Check to see if there are any options that satisfy the
-// specified predicate with names that are the prefixes in Name.  This is
-// checked by progressively stripping characters off of the name, checking to
-// see if there options that satisfy the predicate.  If we find one, return it,
-// otherwise return null.
-//
-static Option *getOptionPred(StringRef Name, size_t &Length,
-                             bool (*Pred)(const Option *),
-                             const OptionsMapTy &OptionsMap) {
-  auto OMI = OptionsMap.find(Name);
-  if (OMI != OptionsMap.end() && !Pred(OMI->second))
-    OMI = OptionsMap.end();
-
-  // Loop while we haven't found an option and Name still has at least two
-  // characters in it (so that the next iteration will not be the empty
-  // string.
-  while (OMI == OptionsMap.end() && Name.size() > 1) {
-    Name = Name.drop_back();
-    OMI = OptionsMap.find(Name);
-    if (OMI != OptionsMap.end() && !Pred(OMI->second))
-      OMI = OptionsMap.end();
+// Find the cl::Prefix or cl::AlwaysPrefix option whose name is the longest
+// prefix of Name.
+static Option *findPrefixOption(StringRef Name, size_t &Length,
+                                const OptionsMapTy &OptionsMap) {
+  for (; !Name.empty(); Name = Name.drop_back()) {
+    Option *O = OptionsMap.lookup(Name);
+    if (O && (O->getFormattingFlag() == cl::Prefix ||
+              O->getFormattingFlag() == cl::AlwaysPrefix)) {
+      Length = Name.size();
+      return O;
+    }
   }
-
-  if (OMI != OptionsMap.end() && Pred(OMI->second)) {
-    Length = Name.size();
-    return OMI->second; // Found one!
-  }
-  return nullptr; // No option found!
+  return nullptr;
 }
 
-/// HandlePrefixedOrGroupedOption - The specified argument string (which started
-/// with at least one '-') does not fully match an available option.  Check to
-/// see if this is a prefix or grouped option.  If so, split arg into output an
-/// Arg/Value pair and return the Option to parse it with.
-static Option *HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
-                                             bool &ErrorParsing,
-                                             const OptionsMapTy &OptionsMap) {
+/// The specified argument string (which started with at least one '-') does not
+/// fully match an available option.  Check to see if this is a prefix option.
+/// If so, split arg into output an Arg/Value pair and return the Option to
+/// parse it with.
+static Option *HandlePrefixedOption(StringRef &Arg, StringRef &Value,
+                                    const OptionsMapTy &OptionsMap) {
   if (Arg.size() == 1)
     return nullptr;
 
-  // Do the lookup!
   size_t Length = 0;
-  Option *PGOpt = getOptionPred(Arg, Length, isPrefixedOrGrouping, OptionsMap);
-  if (!PGOpt)
+  Option *POpt = findPrefixOption(Arg, Length, OptionsMap);
+  if (!POpt)
     return nullptr;
 
-  do {
-    StringRef MaybeValue =
-        (Length < Arg.size()) ? Arg.substr(Length) : StringRef();
-    Arg = Arg.substr(0, Length);
-    assert(OptionsMap.count(Arg) && OptionsMap.find(Arg)->second == PGOpt);
+  StringRef MaybeValue =
+      (Length < Arg.size()) ? Arg.substr(Length) : StringRef();
+  Arg = Arg.substr(0, Length);
 
-    // cl::Prefix options do not preserve '=' when used separately.
-    // The behavior for them with grouped options should be the same.
-    if (MaybeValue.empty() || PGOpt->getFormattingFlag() == cl::AlwaysPrefix ||
-        (PGOpt->getFormattingFlag() == cl::Prefix && MaybeValue[0] != '=')) {
-      Value = MaybeValue;
-      return PGOpt;
-    }
-
-    if (MaybeValue[0] == '=') {
-      Value = MaybeValue.substr(1);
-      return PGOpt;
-    }
-
-    // This must be a grouped option.
-    assert(isGrouping(PGOpt) && "Broken getOptionPred!");
-
-    // Grouping options inside a group can't have values.
-    if (PGOpt->getValueExpectedFlag() == cl::ValueRequired) {
-      ErrorParsing |= PGOpt->error("may not occur within a group!");
-      return nullptr;
-    }
-
-    // Because the value for the option is not required, we don't need to pass
-    // argc/argv in.
-    int Dummy = 0;
-    ErrorParsing |= ProvideOption(PGOpt, Arg, StringRef(), 0, nullptr, Dummy);
-
-    // Get the next grouping option.
-    Arg = MaybeValue;
-    PGOpt = getOptionPred(Arg, Length, isGrouping, OptionsMap);
-  } while (PGOpt);
-
-  // We could not find a grouping option in the remainder of Arg.
-  return nullptr;
+  // cl::Prefix options do not preserve '=' when used separately.
+  if (POpt->getFormattingFlag() == cl::Prefix && MaybeValue.starts_with("="))
+    MaybeValue = MaybeValue.drop_front();
+  Value = MaybeValue;
+  return POpt;
 }
 
 static bool RequiresValue(const Option *O) {
@@ -1651,10 +1593,9 @@ bool CommandLineParser::ParseCommandLineOptions(
         Handler = LookupLongOption(SubCommand::getTopLevel(), ArgName, Value,
                                    LongOptionsUseDoubleDash, HaveDoubleDash);
 
-      // Check to see if this "option" is really a prefixed or grouped argument.
+      // Check to see if this "option" is really a prefixed argument.
       if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
-        Handler = HandlePrefixedOrGroupedOption(ArgName, Value, ErrorParsing,
-                                                OptionsMap);
+        Handler = HandlePrefixedOption(ArgName, Value, OptionsMap);
 
       // Otherwise, look for the closest available option to report to the user
       // in the upcoming error.
