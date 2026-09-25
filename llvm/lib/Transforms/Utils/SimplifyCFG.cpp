@@ -1181,13 +1181,14 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       continue;
 
     Instruction *NewBonusInst = BonusInst.clone();
+    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
 
     if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
       // Unless the instruction has the same !dbg location as the original
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
       // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc::getDropped());
+      NewBonusInst->dropLocation();
     } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
       mapAtomInstance(DL, VMap);
     }
@@ -1202,7 +1203,6 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     // location the call is moved to.
     NewBonusInst->dropUBImplyingAttrsAndMetadata();
 
-    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
     RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -4301,7 +4301,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
   const unsigned PredCount = Preds.size();
   // Speculated instructions will be inserted before the terminator of the
   // predecessor. Only handle the simple case of one predecessor.
-  const Instruction *CxtI =
+  const Instruction *CtxI =
       PredCount == 1 ? Preds[0]->getTerminator() : nullptr;
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
@@ -4314,7 +4314,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     if (isa<PseudoProbeInst>(I))
       continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I, CxtI, AC))
+    if (!isSafeToSpeculativelyExecute(&I, CtxI, AC))
       return false;
     SawVectorOp |= isVectorOp(I);
 
@@ -8085,10 +8085,10 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
   // in the default block, we can make some nice simplifications to the
   // switch.
   BasicBlock *Default = SI->getDefaultDest();
-  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  const Instruction *CtxI = &*Default->getFirstNonPHIIt();
   const KnownBits Known = computeKnownBits(
       SI->getCondition(),
-      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CtxI).allowEphemerals(true));
   if (!Known.isConstant())
     return false;
 

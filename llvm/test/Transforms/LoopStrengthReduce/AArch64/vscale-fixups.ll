@@ -201,17 +201,16 @@ for.exit:
 define void @mixed_offsets_fixed_then_scalable(ptr %src, ptr %dst, i64 %count) #0 {
 ; COMMON-LABEL: mixed_offsets_fixed_then_scalable:
 ; COMMON:       // %bb.0: // %entry
-; COMMON-NEXT:    ptrue p0.s
 ; COMMON-NEXT:    rdvl x8, #4
+; COMMON-NEXT:    ptrue p0.b
 ; COMMON-NEXT:    mov x9, #8 // =0x8
-; COMMON-NEXT:    ptrue p1.b
 ; COMMON-NEXT:    orr x8, x8, #0x20
 ; COMMON-NEXT:  .LBB4_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    ldr z0, [x0]
 ; COMMON-NEXT:    ld1w { z1.s }, p0/z, [x0, x9, lsl #2]
 ; COMMON-NEXT:    decw x2
-; COMMON-NEXT:    ld1b { z2.b }, p1/z, [x0, x8]
+; COMMON-NEXT:    ld1b { z2.b }, p0/z, [x0, x8]
 ; COMMON-NEXT:    incb x0
 ; COMMON-NEXT:    add z0.s, z0.s, z1.s
 ; COMMON-NEXT:    add z0.s, z0.s, z2.s

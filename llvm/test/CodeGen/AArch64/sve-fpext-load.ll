@@ -20,7 +20,6 @@ define <vscale x 4 x double> @ext4_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
 ; CHECK-NEXT:    movprfx z0, z1

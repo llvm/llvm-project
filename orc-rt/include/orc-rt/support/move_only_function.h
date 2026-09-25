@@ -67,6 +67,9 @@ class CallableImpl;
 template <typename CallableT, bool IsNoexcept, typename RetT, typename... ArgTs>
 class CallableImpl<CallableT, false, IsNoexcept, RetT, ArgTs...>
     : public Callable<false, IsNoexcept, RetT, ArgTs...> {
+
+  static_assert(std::is_same_v<CallableT, std::decay_t<CallableT>>);
+
 public:
   template <typename CallableInitT>
   CallableImpl(CallableInitT &&Callable)
@@ -88,6 +91,9 @@ private:
 template <typename CallableT, bool IsNoexcept, typename RetT, typename... ArgTs>
 class CallableImpl<CallableT, true, IsNoexcept, RetT, ArgTs...>
     : public Callable<true, IsNoexcept, RetT, ArgTs...> {
+
+  static_assert(std::is_same_v<CallableT, std::decay_t<CallableT>>);
+
 public:
   template <typename CallableInitT>
   CallableImpl(CallableInitT &&Callable)
@@ -182,7 +188,7 @@ public:
 
   template <typename CallableT> move_only_function(CallableT &&C) {
     using WrappedCallable = typename move_only_function_detail::MOFBase<
-        FnT>::template WrappedCallable<CallableT>;
+        FnT>::template WrappedCallable<std::decay_t<CallableT>>;
     this->C = std::make_unique<WrappedCallable>(std::forward<CallableT>(C));
   }
 };
