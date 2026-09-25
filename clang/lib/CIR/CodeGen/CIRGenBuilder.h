@@ -195,9 +195,12 @@ public:
     return op;
   }
 
-  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
-                             mlir::Value src, mlir::Value len) {
-    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  cir::MemCpyOp createMemCpy(mlir::Location loc, Address dst, Address src,
+                             mlir::Value len) {
+    return cir::MemCpyOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
@@ -322,7 +325,7 @@ public:
   cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::FP16Type getFp16Ty() { return typeCache.fP16Ty; }
-  cir::BF16Type getBfloat6Ty() { return typeCache.bFloat16Ty; }
+  cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
 

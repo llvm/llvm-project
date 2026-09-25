@@ -2817,8 +2817,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return true;
     }
 
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       Value *ArgVal = II->getArgOperand(0);
       auto it = LargeOffsetGEPMap.find(II);
       if (it != LargeOffsetGEPMap.end()) {
@@ -9100,8 +9099,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
           auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", CmpI->getIterator());
           F->takeName(FI);
           CmpI->setOperand(Const0 ? 1 : 0, F);
-          CmpI->dropPoisonGeneratingFlags();
         }
+        CmpI->dropPoisonGeneratingFlags();
         replaceAllUsesWith(FI, CmpI, FreshBBs, IsHugeFunc);
         FI->eraseFromParent();
         return true;

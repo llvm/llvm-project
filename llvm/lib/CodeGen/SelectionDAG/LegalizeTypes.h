@@ -286,6 +286,7 @@ private:
   SDValue PromoteIntRes_VECTOR_REVERSE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SPLICE(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_REPEAT(SDNode *N);
   SDValue PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntRes_ScalarOp(SDNode *N);
@@ -354,6 +355,7 @@ private:
   SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_PEXT(SDNode *N);
   SDValue PromoteIntRes_PDEP(SDNode *N);
+  SDValue PromoteIntRes_MULH(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -418,6 +420,7 @@ private:
   SDValue PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue PromoteIntOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
+  SDValue PromoteIntOp_VECTOR_REPEAT(SDNode *N);
   SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue PromoteIntOp_MaskedBinOp(SDNode *N, unsigned OpNo);
 
@@ -499,6 +502,7 @@ private:
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -787,6 +791,7 @@ private:
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
   SDValue SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N);
+  SDValue SoftPromoteHalfOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);
@@ -949,6 +954,7 @@ private:
   void SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VECTOR_REPEAT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N, SDValue &Lo,
                                   SDValue &Hi);
@@ -1097,6 +1103,7 @@ private:
   bool WidenVectorOperand(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_BITCAST(SDNode *N);
   SDValue WidenVecOp_CONCAT_VECTORS(SDNode *N);
+  SDValue WidenVecOp_VECTOR_REPEAT(SDNode *N);
   SDValue WidenVecOp_EXTEND(SDNode *N);
   SDValue WidenVecOp_CMP(SDNode *N);
   SDValue WidenVecOp_EXTRACT_VECTOR_ELT(SDNode *N);
@@ -1123,7 +1130,6 @@ private:
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
-  SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_CttzElements(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
@@ -1165,9 +1171,34 @@ private:
   /// By default, the vector will be widened with undefined values.
   SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
 
+  /// Adjust element width (sign-extend/truncate) and element count
+  /// (extract/concat) of Mask to match ToMaskVT.
+  SDValue adjustMaskToType(SDValue Mask, EVT ToMaskVT);
+
+  /// Pick an intermediate VT and adjust both operands to it, minimizing
+  /// extend/truncate overhead given the final target ToVT.
+  ///
+  /// IsOpLenient flags retain information on whether the corresponding
+  /// Op can be cheaply materialized to whatever type. If one of the
+  /// operands lenient, we force cast it to match other operand's type.
+  EVT unifyMaskTypes(SDValue &Op0, bool IsOpLenient0, SDValue &Op1,
+                     bool IsOpLenient1, EVT ToVT);
+
   /// Return a mask of vector type MaskVT to replace InMask. Also adjust
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
+
+  /// Recursively convert a mask expression tree to ToVT, walking through
+  /// mask-preserving operations down to SETCC leaves. Avoids redundant
+  /// extend/truncate chains that arise when each node is converted
+  /// independently. Returns SDValue() if the tree cannot be converted.
+  SDValue convertMaskTree(SDValue V, EVT ToVT);
+
+  /// Recursive implementation of convertMaskTree.
+  /// In addition to the value returns a boolean flag signifying whether the
+  /// tree can be materialized with any type.
+  std::pair<SDValue, bool> convertMaskTreeImpl(SDValue V, EVT ToVT,
+                                               unsigned Depth = 0);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp

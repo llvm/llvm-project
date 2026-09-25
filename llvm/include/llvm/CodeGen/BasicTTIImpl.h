@@ -450,11 +450,6 @@ public:
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }
 
-  bool isSingleThreaded() const override {
-    return getTLI()->getTargetMachine().Options.ThreadModel ==
-           ThreadModel::Single;
-  }
-
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override {
     return getTLI()->getTargetMachine().getPredicatedAddrSpace(V);
@@ -1099,7 +1094,7 @@ public:
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override {
+      const Instruction *CtxI = nullptr) const override {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1109,7 +1104,7 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
                                            Opd1Info, Opd2Info,
-                                           Args, CxtI);
+                                           Args, CtxI);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1160,7 +1155,7 @@ public:
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CxtI);
+          Args, CtxI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -1231,7 +1226,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override {
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))
@@ -2760,6 +2757,12 @@ public:
     case Intrinsic::clmul:
       ISD = ISD::CLMUL;
       break;
+    case Intrinsic::smulh:
+      ISD = ISD::MULHS;
+      break;
+    case Intrinsic::umulh:
+      ISD = ISD::MULHU;
+      break;
     case Intrinsic::masked_udiv:
     case Intrinsic::masked_sdiv:
     case Intrinsic::masked_urem:
@@ -3145,6 +3148,25 @@ public:
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
       return BW * PerBitCost;
+    }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh: {
+      unsigned BW = RetTy->getScalarSizeInBits();
+      Type *WideTy = RetTy->getWithNewBitWidth(BW * 2);
+      bool IsSigned = IID == Intrinsic::smulh;
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
+      InstructionCost Cost = 0;
+      Cost +=
+          2 * thisT()->getCastInstrCost(ExtOp, WideTy, RetTy,
+                                        TTI::CastContextHint::None, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, WideTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, WideTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getCastInstrCost(Instruction::Trunc, RetTy, WideTy,
+                                        TTI::CastContextHint::None, CostKind);
+      return Cost;
     }
     default:
       break;

@@ -20,7 +20,6 @@ class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 class PredicatedScalarEvolution;
-class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
@@ -44,9 +43,16 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(const VPValue *V,
-                                  PredicatedScalarEvolution &PSE,
-                                  const Loop *L = nullptr);
+LLVM_ABI_FOR_TEST const SCEV *
+getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
+                      const Loop *L = nullptr);
+
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                         PredicatedScalarEvolution &PSE,
+                                         const Loop *L);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
@@ -62,7 +68,7 @@ bool isSingleScalar(const VPValue *VPV);
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
-bool isUniformAcrossVFsAndUFs(const VPValue *V);
+LLVM_ABI_FOR_TEST bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
@@ -130,15 +136,24 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
 /// Extracts and returns NoWrap and FastMath flags from the induction binop in
-/// \p ID.
+/// \p ID, for use on a wide induction, which adds the step.
 inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
   if (ID.getKind() == InductionDescriptor::IK_FpInduction)
     return ID.getInductionBinOp()->getFastMathFlags();
 
-  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
-          ID.getInductionBinOp()))
-    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
-                                  OBO->hasNoSignedWrap());
+  if (auto *AddO = dyn_cast_if_present<AddOperator>(ID.getInductionBinOp())) {
+    return VPIRFlags::WrapFlagsTy(AddO->hasNoUnsignedWrap(),
+                                  AddO->hasNoSignedWrap());
+  }
+
+  // The step of a sub induction is negated, so NUW cannot be preserved. NSW
+  // can, if the step is not the signed minimum.
+  if (auto *SubO = dyn_cast_if_present<SubOperator>(ID.getInductionBinOp())) {
+    ConstantInt *Step = ID.getConstIntStepValue();
+    return VPIRFlags::WrapFlagsTy(false,
+                                  SubO->hasNoSignedWrap() && Step &&
+                                      !Step->isMinValue(/*IsSigned=*/true));
+  }
 
   assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
          "Expected int induction");
@@ -244,7 +259,8 @@ BranchProbability getExecutionProbability(BlockFrequency Freq);
 /// the frequency with which it executes relative to the first (header) block,
 /// and whether that frequency was composed using any estimated branch weights.
 /// The frequency of a block is the sum over its incoming edges, or std::nullopt
-/// if any edge on a path reaching it lacks branch weights.
+/// if any edge on a path reaching it lacks branch weights. Edges to blocks
+/// outside \p Blocks are ignored.
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
@@ -325,11 +341,8 @@ public:
     assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      Pred->replaceSuccessor(BlockPtr, NewBlock);
-      NewBlock->appendPredecessor(Pred);
-    }
-    BlockPtr->clearPredecessors();
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors()))
+      replaceSuccessor(Pred, BlockPtr, NewBlock);
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -381,6 +394,16 @@ public:
     To->removePredecessor(From);
   }
 
+  /// Redirect the edge from \p From to \p OldSucc to \p NewSucc, keeping \p
+  /// From's successor order. \p From is removed from \p OldSucc's predecessors
+  /// and appended to \p NewSucc's.
+  static void replaceSuccessor(VPBlockBase *From, VPBlockBase *OldSucc,
+                               VPBlockBase *NewSucc) {
+    From->replaceSuccessor(OldSucc, NewSucc);
+    OldSucc->removePredecessor(From);
+    NewSucc->appendPredecessor(From);
+  }
+
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
@@ -414,18 +437,7 @@ public:
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-
-    // We need the pointee range over (const) BlocktTy & instead of (const)
-    // BlockTy * for filter_range to work properly.
-    auto Filter =
-        make_filter_range(make_pointee_range(Range),
-                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
+    return make_isa_range<BlockTy>(std::forward<T>(Range));
   }
 
   /// Return an iterator range over \p Range with each block cast to \p

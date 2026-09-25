@@ -173,7 +173,7 @@ char SILowerControlFlowLegacy::ID = 0;
 INITIALIZE_PASS(SILowerControlFlowLegacy, DEBUG_TYPE, "SI lower control flow",
                 false, false)
 
-static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
+static void setImpSCCDefDead(MachineInstr &MI, bool IsDead = true) {
   MachineOperand &ImpDefSCC = MI.getOperand(3);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
 
@@ -252,7 +252,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(Cond.getReg(), MI, *And);
 
-  setImpSCCDefDead(*And, true);
+  setImpSCCDefDead(*And);
 
   MachineInstr *Xor = nullptr;
   if (!SimpleIf) {
@@ -756,8 +756,24 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
   }
   MBB.removeSuccessor(Succ);
   if (LIS) {
+    // Registers live across MBB have intervals spanning it, which must be
+    // recomputed once it is erased. removeMBBifRedundant only runs from
+    // optimizeEndCf, so defer to the pass-wide RecomputeRegs handling.
+    SlotIndex StartIdx = LIS->getMBBStartIdx(&MBB);
+    for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+      Register Reg = Register::index2VirtReg(I);
+      if (!LIS->hasInterval(Reg))
+        continue;
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      if (LI.liveAt(StartIdx) || LI.liveAt(StartIdx.getPrevSlot()))
+        RecomputeRegs.insert(Reg);
+    }
+
     for (auto &I : MBB.instrs())
       LIS->RemoveMachineInstrFromMaps(I);
+
+    // Drop MBB from the slot index maps before it is erased.
+    LIS->getSlotIndexes()->removeMBBFromMaps(MBB);
   }
   if (MDT)
     MDT->applyUpdates(DTUpdates);

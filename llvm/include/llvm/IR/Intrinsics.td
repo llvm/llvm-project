@@ -1645,6 +1645,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_pdep : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_smulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_umulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {
@@ -1914,11 +1918,6 @@ def int_launder_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                     [IntrInaccessibleMemOnly,
                                      IntrSpeculatable]>;
 
-
-def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                                          [LLVMMatchType<0>],
-                                          [IntrSpeculatable, IntrNoMem]>;
-
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
@@ -2132,7 +2131,9 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 // out of the block it probes.
 def int_pseudoprobe : DefaultAttrsIntrinsic<[],
                         [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
-                        [IntrInaccessibleMemOnly]>;
+                        [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
+                         ImmArg<ArgIndex<3>>]>;
 
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
@@ -2498,6 +2499,19 @@ def int_masked_srem:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
+// Speculatively load a value from memory.
+def int_speculative_load:
+  DefaultAttrsIntrinsic<[llvm_any_ty],
+            [llvm_anyptr_ty, llvm_i1_ty, llvm_vararg_ty],
+            [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+             ImmArg<ArgIndex<1>>]>;
+
+// Returns true if it's safe to speculatively load 'num_bytes' from 'ptr'.
+def int_can_load_speculatively:
+  DefaultAttrsIntrinsic<[llvm_i1_ty],
+            [llvm_anyptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty],
                       [llvm_ptr_ty, llvm_metadata_ty],
@@ -2796,6 +2810,12 @@ foreach n = 2...8 in {
                               [llvm_anyvector_ty],
                               [IntrNoMem, IntrSpeculatable]>;
 }
+
+// vector_repeat( SrcVector )
+// Repeat a fixed-length vector to fill its "vscale x" equivalent.
+def int_vector_repeat : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [llvm_anyvector_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
 
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 

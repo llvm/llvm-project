@@ -348,6 +348,14 @@ __device__ void test_class_f64(bool* out, double a, int b) {
   *out = __builtin_amdgcn_class(a, b);
 }
 
+// CIR-LABEL: @_Z14test_fmed3_f32Pffff
+// CIR: cir.call_llvm_intrinsic "amdgcn.fmed3" {{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_fmed3_f32Pffff
+// LLVM: call{{.*}} float @llvm.amdgcn.fmed3.f32(float %{{.+}}, float %{{.+}}, float %{{.+}})
+__device__ void test_fmed3_f32(float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_fmed3f(a, b, c);
+}
+
 // CIR-LABEL: @_Z9test_lerpPjjjj
 // CIR: cir.call_llvm_intrinsic "amdgcn.lerp" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
 // LLVM: define{{.*}} void @_Z9test_lerpPjjjj
@@ -373,4 +381,13 @@ __device__ void test_ubfe(unsigned int* out, unsigned int src0, unsigned int src
 __device__ void test_sbfe(unsigned int* out, unsigned int src0, unsigned int src1,
                           unsigned int src2) {
   *out = __builtin_amdgcn_sbfe(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z17test_wave_shufflePiii
+// CIR: cir.call_llvm_intrinsic "amdgcn.wave.shuffle" {{.*}} : (!s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z17test_wave_shufflePiii
+// LLVM: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32(i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_wave_shuffle(int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_wave_shuffle(a, b);
 }

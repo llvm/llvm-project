@@ -649,7 +649,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     // Set PGO options based on command line flags
     setPGOOptions(*Target);
 
-    return Target->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout(Options.MCOptions.getABIName());
   };
   if (InputLanguage == "mir" ||
       (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {
@@ -754,9 +754,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  PM.add(new RuntimeLibraryInfoWrapper(
-      Target->Options.ExceptionModel, Target->Options.EABIVersion,
-      Options.MCOptions.ABIName, Target->Options.VecLib));
+  PM.add(new RuntimeLibraryInfoWrapper(Options.MCOptions.ABIName,
+                                       Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

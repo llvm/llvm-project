@@ -926,37 +926,31 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
   }
   case APValue::Struct: {
     Out << '{';
-    bool First = true;
+    llvm::ListSeparator Comma;
     const auto *RD = Ty->castAsRecordDecl();
     if (unsigned N = getStructNumBases()) {
       const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
       CXXRecordDecl::base_class_const_iterator BI = CD->bases_begin();
       for (unsigned I = 0; I != N; ++I, ++BI) {
         assert(BI != CD->bases_end());
-        if (!First)
-          Out << ", ";
+        Out << Comma;
         getStructBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
-        First = false;
       }
     }
     for (const auto *FI : RD->fields()) {
-      if (!First)
-        Out << ", ";
+      Out << Comma;
       if (FI->isUnnamedBitField())
         continue;
-      getStructField(FI->getFieldIndex()).
-        printPretty(Out, Policy, FI->getType(), Ctx);
-      First = false;
+      getStructField(FI->getFieldIndex())
+          .printPretty(Out, Policy, FI->getType(), Ctx);
     }
     if (unsigned N = getStructNumVirtualBases()) {
       const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
       CXXRecordDecl::base_class_const_iterator BI = CD->vbases_begin();
       for (unsigned I = 0; I != N; ++I, ++BI) {
         assert(BI != CD->vbases_end());
-        if (!First)
-          Out << ", ";
+        Out << Comma;
         getStructVirtualBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
-        First = false;
       }
     }
     Out << '}';

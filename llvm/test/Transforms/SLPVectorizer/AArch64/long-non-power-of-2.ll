@@ -6,7 +6,6 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]], i64 [[ARG2:%.*]], ptr [[ARG3:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ARG1]], i64 [[ARG2]]
-; CHECK-NEXT:    [[GETELEMENTPTR4:%.*]] = getelementptr i8, ptr null, i64 0
 ; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i8, ptr null, i64 -32
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[ARG3]], i64 -440
 ; CHECK-NEXT:    [[GETELEMENTPTR7:%.*]] = getelementptr i8, ptr [[ARG1]], i64 0
@@ -17,17 +16,9 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-NEXT:    [[OP_RDX18:%.*]] = and i1 [[ICMP9]], false
 ; CHECK-NEXT:    [[ICMP11:%.*]] = icmp ult ptr [[GETELEMENTPTR7]], null
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = and i1 [[ICMP11]], false
-; CHECK-NEXT:    [[ICMP14:%.*]] = icmp ult ptr [[GETELEMENTPTR4]], [[GETELEMENTPTR8]]
-; CHECK-NEXT:    [[AND15:%.*]] = and i1 false, [[ICMP14]]
-; CHECK-NEXT:    [[ICMP71:%.*]] = icmp ult ptr null, null
-; CHECK-NEXT:    [[ICMP18:%.*]] = icmp ult ptr null, [[GETELEMENTPTR8]]
-; CHECK-NEXT:    [[AND19:%.*]] = and i1 [[ICMP71]], [[ICMP18]]
-; CHECK-NEXT:    [[ICMP21:%.*]] = icmp ult ptr null, [[GETELEMENTPTR8]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = and i1 false, [[ICMP21]]
-; CHECK-NEXT:    [[ICMP24:%.*]] = icmp ult ptr null, [[GETELEMENTPTR8]]
-; CHECK-NEXT:    [[AND86:%.*]] = and i1 false, [[ICMP24]]
 ; CHECK-NEXT:    [[ICMP39:%.*]] = icmp ult ptr [[GETELEMENTPTR7]], [[GETELEMENTPTR5]]
 ; CHECK-NEXT:    [[ICMP44:%.*]] = icmp ult ptr [[ARG]], [[GETELEMENTPTR8]]
+; CHECK-NEXT:    [[ICMP51:%.*]] = icmp ult ptr null, null
 ; CHECK-NEXT:    [[ICMP58:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
 ; CHECK-NEXT:    [[ICMP62:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
 ; CHECK-NEXT:    [[ICMP84:%.*]] = icmp ult ptr null, [[TMP32]]
@@ -39,7 +30,8 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <16 x ptr> splat (ptr null), [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 poison, i1 poison, i1 poison, i1 poison, i1 false, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison, i1 false, i1 false>, i1 [[ICMP39]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i1> [[TMP4]], i1 [[ICMP44]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i1> [[TMP5]], <16 x i1> <i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 17, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i1> [[TMP5]], i1 false, i64 6
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i1> [[TMP12]], i1 [[ICMP51]], i64 7
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i1> [[TMP6]], i1 [[ICMP58]], i64 9
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i1> [[TMP7]], i1 [[ICMP62]], i64 10
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i1> [[TMP8]], i1 [[ICMP84]], i64 11
@@ -49,13 +41,19 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-NEXT:    [[ICMP85:%.*]] = icmp ult ptr null, [[TMP32]]
 ; CHECK-NEXT:    [[AND85:%.*]] = and i1 false, [[ICMP85]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP16]])
-; CHECK-NEXT:    [[OP_RDX19:%.*]] = or i1 [[TMP37]], [[AND]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = or i1 [[OP_RDX18]], [[OP_RDX3]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i1 [[AND15]], [[AND19]]
-; CHECK-NEXT:    [[OP_RDX20:%.*]] = or i1 [[OP_RDX6]], [[AND86]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = or i1 [[OP_RDX19]], [[OP_RDX5]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i1 [[TMP37]], [[AND]]
+; CHECK-NEXT:    [[OP_RDX20:%.*]] = or i1 [[OP_RDX18]], [[OP_RDX3]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x ptr> poison, ptr [[GETELEMENTPTR8]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x ptr> [[TMP15]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult <2 x ptr> splat (ptr null), [[TMP24]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and <2 x i1> zeroinitializer, [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ult <2 x ptr> splat (ptr null), [[TMP24]]
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i1> <i1 poison, i1 false>, i1 false, i64 0
+; CHECK-NEXT:    [[TMP21:%.*]] = and <2 x i1> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP22:%.*]] = or <2 x i1> [[TMP18]], [[TMP21]]
 ; CHECK-NEXT:    [[OP_RDX8:%.*]] = or i1 [[OP_RDX2]], [[OP_RDX20]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = or i1 [[OP_RDX4]], [[OP_RDX8]]
+; CHECK-NEXT:    [[TMP23:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP22]])
+; CHECK-NEXT:    [[OP_RDX9:%.*]] = or i1 [[OP_RDX8]], [[TMP23]]
 ; CHECK-NEXT:    [[OP_RDX7:%.*]] = or i1 [[OP_RDX9]], [[AND85]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX7]]
 ;

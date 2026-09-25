@@ -132,7 +132,7 @@ add_libc_test(
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.munlock
-    libc.src.unistd.sysconf
+    libc.src.unistd.getpagesize
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -159,7 +159,7 @@ add_libc_test(
     libc.src.sys.mman.munlockall
     libc.hdr.sys_resource_macros
     libc.src.sys.resource.getrlimit
-    libc.src.unistd.sysconf
+    libc.src.unistd.getpagesize
     libc.src.__support.OSUtil.osutil
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -182,7 +182,7 @@ add_libc_test(
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.munlock
-    libc.src.unistd.sysconf
+    libc.src.unistd.getpagesize
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -209,7 +209,7 @@ else()
       libc.src.sys.mman.munmap
       libc.src.fcntl.open
       libc.src.unistd.close
-      libc.src.unistd.sysconf
+      libc.src.unistd.getpagesize
   )
 endif()
 

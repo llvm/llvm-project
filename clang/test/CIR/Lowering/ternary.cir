@@ -2,6 +2,7 @@
 // RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
 // REQUIRES: target={{x86_64-linux}}
 
+!s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 
 module  {
@@ -14,6 +15,23 @@ module  {
       cir.yield %b : !u32i
     }) : (!cir.bool) -> !u32i
     cir.return %0 : !u32i
+  }
+
+  // The stride of a cir.ptr_stride is narrower than the pointer index width, so
+  // it has to be widened to i64. The widening peephole looks through a "sub 0, x"
+  // to find a unary minus, which must not assume the subtraction's LHS has a
+  // defining operation -- here it is the phi materialized for the ternary.
+  cir.func @ternary_result_as_ptr_stride(%arg0: !cir.ptr<!s32i>, %arg1: !cir.bool,
+                                         %arg2: !s32i) -> !cir.ptr<!s32i> {
+    %0 = cir.ternary(%arg1, true {
+      %a = cir.const #cir.int<1> : !s32i
+      cir.yield %a : !s32i
+    }, false {
+      cir.yield %arg2 : !s32i
+    }) : (!cir.bool) -> !s32i
+    %1 = cir.sub %0, %arg2 : !s32i
+    %2 = cir.ptr_stride %arg0, %1 : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+    cir.return %2 : !cir.ptr<!s32i>
   }
 }
 

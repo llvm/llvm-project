@@ -84,6 +84,7 @@ public:
   }
 
   void testEdgeCases(FxDiviFunc func) {
+    constexpr int int_digits = cpp::numeric_limits<IntType>::digits;
     constexpr IntType int_max = cpp::numeric_limits<IntType>::max();
 
     EXPECT_EQ(func(0, 10), fx_zero);
@@ -91,7 +92,7 @@ public:
       EXPECT_EQ(func(0, -10), fx_zero);
     }
 
-    if constexpr (is_signed && (F < cpp::numeric_limits<IntType>::digits)) {
+    if constexpr (is_signed && (F < int_digits)) {
       constexpr IntType edge = static_cast<IntType>(1) << F;
       EXPECT_EQ(func(-edge, edge), static_cast<FXType>(-1));
       if constexpr (has_integral) {
@@ -105,16 +106,24 @@ public:
       EXPECT_EQ(func(int_max, int_max), static_cast<FXType>(1));
       EXPECT_TRUE(abs_diff(func(int_max - 1, int_max),
                            static_cast<FXType>(1) - epsilon) <= epsilon);
-      EXPECT_EQ(func(int_max, 1), fx_max);
+      // Integer extrema need not overflow the fixed-point result type.
+      if constexpr (int_digits <= FXRep::INTEGRAL_LEN)
+        EXPECT_EQ(func(int_max, 1), static_cast<FXType>(int_max));
+      else
+        EXPECT_EQ(func(int_max, 1), fx_max);
     } else {
       EXPECT_EQ(func(int_max, int_max), fx_max);
-      EXPECT_EQ(func(int_max - 1, int_max), fx_max);
+      // When the integer and fraction precisions match, this quotient can
+      // round to one ulp below fx_max.
+      if constexpr (int_digits == F)
+        EXPECT_TRUE(abs_diff(func(int_max - 1, int_max), fx_max) <= epsilon);
+      else
+        EXPECT_EQ(func(int_max - 1, int_max), fx_max);
       EXPECT_EQ(func(27, 23), fx_max);
     }
 
-    // Cannot EXPECT_EQ even though int_max is a power of 2 because rounding
-    // direction for magnitudes smaller than the representable precision is
-    // implementation defined. The result must be within 1 ulp.
+    // Rounding direction for magnitudes smaller than the representable
+    // precision is implementation defined. The result must be within 1 ulp.
     EXPECT_TRUE(abs_diff(func(1, int_max), fx_zero) <= epsilon);
 
     if constexpr (is_signed) {
@@ -129,15 +138,25 @@ public:
         EXPECT_EQ(func(int_min, int_min), fx_max);
       }
 
-      EXPECT_EQ(func(int_min, 1), fx_min);
+      if constexpr (int_digits <= FXRep::INTEGRAL_LEN) {
+        EXPECT_EQ(func(int_min, 1), static_cast<FXType>(int_min));
+        EXPECT_EQ(func(int_max, -1), -static_cast<FXType>(int_max));
+      } else {
+        EXPECT_EQ(func(int_min, 1), fx_min);
+        EXPECT_EQ(func(int_max, -1), fx_min);
+      }
 
       // Cannot EXPECT_EQ even though int_min is a power of 2 because rounding
       // direction for magnitudes smaller than the representable precision is
       // implementation defined. The result must be within 1 ulp.
       EXPECT_TRUE(abs_diff(func(1, int_min), fx_zero) <= epsilon);
 
-      EXPECT_EQ(func(int_min, -1), fx_max);
-      EXPECT_EQ(func(int_max, -1), fx_min);
+      // The positive magnitude of int_min needs one more integral bit than
+      // int_max. Convert before negating to avoid integer overflow.
+      if constexpr (int_digits < FXRep::INTEGRAL_LEN)
+        EXPECT_EQ(func(int_min, -1), -static_cast<FXType>(int_min));
+      else
+        EXPECT_EQ(func(int_min, -1), fx_max);
     }
 
     if constexpr (has_integral) {
@@ -166,13 +185,14 @@ public:
       }
     }
 
-    if constexpr (has_integral) {
-      constexpr IntType over_max =
-          static_cast<IntType>(6) *
-          (static_cast<IntType>(1) << FXRep::INTEGRAL_LEN);
-      EXPECT_EQ(func(over_max, 3), fx_max);
+    // Construct saturation operands only when they fit in IntType.
+    if constexpr (has_integral && FXRep::INTEGRAL_LEN < int_digits) {
       constexpr IntType at_max = static_cast<IntType>(1) << FXRep::INTEGRAL_LEN;
       EXPECT_EQ(func(at_max, 1), fx_max);
+      if constexpr (at_max <= int_max / 6) {
+        constexpr IntType over_max = static_cast<IntType>(6) * at_max;
+        EXPECT_EQ(func(over_max, 3), fx_max);
+      }
     }
   }
 
@@ -196,7 +216,7 @@ public:
     }
   }
 
-  void testInvalidNumbers(FxDiviFunc func) {
+  void testInvalidNumbers([[maybe_unused]] FxDiviFunc func) {
     EXPECT_DEATH([func] { func(1, 0); }, WITH_SIGNAL(-1));
     if constexpr (is_signed) {
       EXPECT_DEATH([func] { func(-1, 0); }, WITH_SIGNAL(-1));

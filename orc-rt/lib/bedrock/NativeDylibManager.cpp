@@ -50,7 +50,7 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
 
   // Capture S by reference, rather than this, so that the callback remains
   // valid even if the NativeDylibManager is destroyed prior to shutdown.
-  S.addOnShutdown([&S = this->S, Handle = *H]() {
+  S.addOnShutdown([&S = this->S, Handle = *H]() noexcept {
     if (auto Err = sys::unloadLibrary(Handle))
       S.reportError(std::move(Err));
   });

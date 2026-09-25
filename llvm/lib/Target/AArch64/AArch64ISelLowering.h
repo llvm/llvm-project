@@ -354,6 +354,8 @@ public:
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
                               AtomicOrdering Ord) const override;
+  Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                  Value *SizeInBytes) const override;
 
   void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 
@@ -763,6 +765,7 @@ private:
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_REPEAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
@@ -981,6 +984,11 @@ namespace AArch64 {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                          const TargetLibraryInfo *libInfo,
                          const LibcallLoweringInfo *libcallLowering);
+
+// Determine the effective TLS model for an ELF global, applying
+// AArch64-specific restrictions and configuration.
+TLSModel::Model getELFTLSModel(const GlobalValue *GV, const TargetMachine &TM,
+                               bool HasELFSignedGOT);
 } // end namespace AArch64
 
 } // end namespace llvm

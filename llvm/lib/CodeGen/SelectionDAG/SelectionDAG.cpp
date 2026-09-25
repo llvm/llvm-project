@@ -4286,12 +4286,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     const unsigned Index = Op.getConstantOperandVal(1);
     const unsigned EltBitWidth = Op.getValueSizeInBits();
 
-    // Remove low part of known bits mask
-    Known.Zero = Known.Zero.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-    Known.One = Known.One.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-
-    // Remove high part of known bit mask
-    Known = Known.trunc(EltBitWidth);
+    Known = Known.extractBits(EltBitWidth, Index * EltBitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -4320,6 +4315,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(InVec, DemandedSrcElts, Depth + 1);
     if (BitWidth > EltBitWidth)
       Known = Known.anyext(BitWidth);
+    break;
+  }
+  case ISD::BUILD_PAIR: {
+    // Operand 0 is the low half and operand 1 the high half,
+    // KnownBits::concat places its argument in the low bits.
+    Known = computeKnownBits(Op.getOperand(0), Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known = Known2.concat(Known);
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
@@ -5814,8 +5817,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   }
 
   case ISD::SCALAR_TO_VECTOR:
-    // Check upper (known undef) elements.
-    if (DemandedElts.ugt(1) && includesUndef(Kind))
+    // Check upper (known poison) elements.
+    if (DemandedElts.ugt(1) && includesPoison(Kind))
       return false;
     // Check element zero.
     if (DemandedElts[0] &&
@@ -6092,8 +6095,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
            !isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
-    // Check if we demand any upper (undef) elements.
-    return includesUndef(Kind) && DemandedElts.ugt(1);
+    // Check if we demand any upper (poison) elements.
+    return includesPoison(Kind) && DemandedElts.ugt(1);
 
   case ISD::INSERT_VECTOR_ELT:
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -7124,6 +7127,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
+  case ISD::PARITY:
   case ISD::CTLS:
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:
@@ -7443,6 +7447,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
     break;
+  case ISD::VECTOR_REPEAT:
+    assert(N1.getValueType().isFixedLengthVector() &&
+           "VECTOR_REPEAT requires a fixed-length vector operand");
+    assert(VT.isScalableVector() &&
+           "VECTOR_REPEAT requires a scalable vector result");
+    assert(N1.getValueType().getVectorNumElements() ==
+               VT.getVectorMinNumElements() &&
+           "VECTOR_REPEAT operand and result element counts must match");
+    if (VT.getVectorMinNumElements() == 1)
+      return getSplatVector(
+          VT, DL, getExtractVectorElt(DL, VT.getVectorElementType(), N1, 0));
+    break;
   case ISD::SPLAT_VECTOR:
     assert(VT.isVector() && "Wrong return type!");
     // FIXME: Hexagon uses i32 scalar for a floating point zero vector so allow
@@ -7699,6 +7715,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                            C->isOpaque());
       case ISD::CTPOP:
         return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::PARITY:
+        return getConstant(Val.popcount() & 1, DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLZ:
       case ISD::CTLZ_ZERO_POISON:
@@ -15151,7 +15170,8 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
     SDValue NegRHS = getNode(ISD::FNEG, DL, RHS.getValueType(), RHS);
     return getNode(Opc, DL, AccVT, Acc, LHS, NegRHS);
   }
-  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA) &&
+  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA ||
+          Opc == ISD::PARTIAL_REDUCE_SUMLA) &&
          "Unexpected opcode");
   SDValue NegAcc = getNegative(Acc, DL, AccVT);
   SDValue MLA = getNode(Opc, DL, AccVT, NegAcc, LHS, RHS);
