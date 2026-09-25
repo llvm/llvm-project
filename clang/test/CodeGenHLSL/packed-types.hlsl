@@ -13,12 +13,22 @@ void f(int8_t4_packed s_arg, uint8_t4_packed u_arg) {
   // CHECK: %{{.*}} = alloca [10 x i32], align 4
   uint8_t4_packed u2[10];
 
-  // CHECK: store i32
-  uint32_t a = s_arg;
-  // CHECK: store i32
-  uint32_t b = u_arg;
-  // CHECK: store i32
+  // CHECK: [[LOAD:%.*]] = load i32, ptr
+  // CHECK-NEXT: store i32 [[LOAD]], ptr
+  uint a = s_arg;
+  // CHECK-NEXT: [[LOAD:%.*]] = load i32, ptr
+  // CHECK-NEXT: store i32 [[LOAD]], ptr
+  uint b = u_arg;
+  // CHECK-NEXT: [[LOAD:%.*]] = load i32, ptr
+  // CHECK-NEXT: store i32 [[LOAD]], ptr
+  uint c = (uint)s_arg;
+  // CHECK-NEXT: [[LOAD:%.*]] = load i32, ptr
+  // CHECK-NEXT: store i32 [[LOAD]], ptr
+  uint d = (uint)u_arg;
+  // CHECK-NEXT: [[LOAD:%.*]] = load i32, ptr
+  // CHECK-NEXT: store i32 [[LOAD]], ptr
   int8_t4_packed u_to_s = u_arg;
-  // CHECK: store i32
+  // CHECK-NEXT: [[LOAD:%.*]] = load i32, ptr
+  // CHECK-NEXT: store i32 [[LOAD]], ptr
   uint8_t4_packed s_to_u = s_arg;
 }
