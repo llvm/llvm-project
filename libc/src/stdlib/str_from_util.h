@@ -17,7 +17,6 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 
-#include "include/llvm-libc-types/float128.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/converter_atlas.h"
