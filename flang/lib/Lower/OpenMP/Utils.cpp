@@ -588,28 +588,34 @@ void insertChildMapInfoIntoParent(
           mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
-      // Once explicit members are attached to a parent map, do not also invoke
-      // a declare mapper on it, otherwise the mapper would remap the same
-      // components leading to duplicate mappings at runtime.
-      if (!indices.second.memberMap.empty() && mapOp.getMapperIdAttr())
-        mapOp.setMapperIdAttr(nullptr);
+      // A parent may have only iterator-driven children (e.g. `map(v)` next
+      // to `map(iterator(i=1:1): v%a(i))`); those don't populate memberMap
+      // (they're tracked via mapIterated instead), so there are no static
+      // members to attach to the existing explicit parent map here.
+      if (!indices.second.memberMap.empty()) {
+        // Once explicit members are attached to a parent map, do not also
+        // invoke a declare mapper on it, otherwise the mapper would remap
+        // the same components leading to duplicate mappings at runtime.
+        if (mapOp.getMapperIdAttr())
+          mapOp.setMapperIdAttr(nullptr);
 
-      // NOTE: To maintain appropriate SSA ordering, we move the parent map
-      // which will now have references to its children after the last
-      // of its members to be generated. This is necessary when a user
-      // has defined a series of parent and children maps where the parent
-      // precedes the children. An alternative, may be to do
-      // delayed generation of map info operations from the clauses and
-      // organize them first before generation. Or to use the
-      // topologicalSort utility which will enforce a stronger SSA
-      // dominance ordering at the cost of efficiency/time.
-      mapOp->moveAfter(indices.second.memberMap.back());
+        // NOTE: To maintain appropriate SSA ordering, we move the parent map
+        // which will now have references to its children after the last
+        // of its members to be generated. This is necessary when a user
+        // has defined a series of parent and children maps where the parent
+        // precedes the children. An alternative, may be to do
+        // delayed generation of map info operations from the clauses and
+        // organize them first before generation. Or to use the
+        // topologicalSort utility which will enforce a stronger SSA
+        // dominance ordering at the cost of efficiency/time.
+        mapOp->moveAfter(indices.second.memberMap.back());
 
-      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
-        mapOp.getMembersMutable().append(memberMap.getResult());
+        for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+          mapOp.getMembersMutable().append(memberMap.getResult());
 
-      mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
-          indices.second.memberPlacementIndices));
+        mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
+            indices.second.memberPlacementIndices));
+      }
     } else {
       // NOTE: We do not assign default mapped parents a map type, as
       // selecting a child can result in the incorrect map type being

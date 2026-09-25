@@ -3029,12 +3029,18 @@ public:
       /// Size) triple, given the loop's linear induction variable (0-based,
       /// i64). Owning (not function_ref): the callable is typically a
       /// lambda temporary assigned in after construction, which would
-      /// otherwise dangle by the time this is invoked.
-      std::function<SmallVector<Value *, 3>(IRBuilderBase &, Value *)> GenEntry;
+      /// otherwise dangle by the time this is invoked. Returns an Error if the
+      /// entry could not be computed, e.g. on region conversion failure.
+      std::function<Expected<SmallVector<Value *, 3>>(IRBuilderBase &, Value *)>
+          GenEntry;
       /// Map type/HasAttachPtr, constant across the segment.
       omp::OpenMPOffloadMappingFlags Type =
           omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
       bool HasAttachPtr = false;
+      /// User-defined mapper to invoke for this segment's component, if the
+      /// underlying map clause carries one (mirrors CustomMapperCB for the
+      /// statically-known components above).
+      Function *ChildMapperFn = nullptr;
     };
     SmallVector<DynamicSegment, 0> DynamicSegments;
 

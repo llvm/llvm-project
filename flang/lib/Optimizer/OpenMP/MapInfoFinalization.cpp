@@ -793,10 +793,7 @@ class MapInfoFinalizationPass
            "single users or up to two users when those users"
            "are a MapInfoOp and Target mapping directive");
     for (auto *user : mapOp->getUsers()) {
-      if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
-                    mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
-                    mlir::omp::TargetEnterDataOp,
-                    mlir::omp::DeclareMapperInfoOp>(user))
+      if (llvm::isa<mlir::omp::MapClauseOwningOpInterface>(user))
         return user;
 
       if (auto mapUser = llvm::dyn_cast<mlir::omp::MapInfoOp>(user))
@@ -810,11 +807,7 @@ class MapInfoFinalizationPass
         if (auto iterOp = llvm::dyn_cast_if_present<mlir::omp::IteratorOp>(
                 user->getParentOp())) {
           for (auto *iterUser : iterOp.getIterated().getUsers())
-            if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
-                          mlir::omp::TargetUpdateOp,
-                          mlir::omp::TargetExitDataOp,
-                          mlir::omp::TargetEnterDataOp,
-                          mlir::omp::DeclareMapperInfoOp>(iterUser))
+            if (llvm::isa<mlir::omp::MapClauseOwningOpInterface>(iterUser))
               return iterUser;
         }
       }

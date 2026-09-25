@@ -10919,13 +10919,17 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     auto BodyGen = [&](InsertPointTy BodyIP,
                        Value *LinearIV) -> Expected<InsertPointTy> {
       Builder.restoreIP(BodyIP);
-      SmallVector<Value *, 3> Entry = Seg.GenEntry(Builder, LinearIV);
+      Expected<SmallVector<Value *, 3>> EntryOrErr =
+          Seg.GenEntry(Builder, LinearIV);
+      if (!EntryOrErr)
+        return EntryOrErr.takeError();
+      SmallVector<Value *, 3> &Entry = *EntryOrErr;
       BasicBlock *EndBB = pushComponent(
           Entry[0], Entry[1], Entry[2],
           Constant::getNullValue(Builder.getPtrTy()),
           static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
               Seg.Type),
-          Seg.HasAttachPtr, /*ChildMapperFn=*/nullptr);
+          Seg.HasAttachPtr, Seg.ChildMapperFn);
       return InsertPointTy(EndBB, EndBB->end());
     };
     InsertPointOrErrorTy AfterIP =

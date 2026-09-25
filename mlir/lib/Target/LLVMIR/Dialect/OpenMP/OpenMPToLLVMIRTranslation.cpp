@@ -8353,20 +8353,32 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       // the lb/ub/step values in the (already cleared) ModuleTranslation
       // value map.
       seg.GenEntry = [&moduleTranslation, itersOp, mapInfoOp, sizeVal,
-                      iterInfo](llvm::IRBuilderBase &b,
-                                llvm::Value *linearIV) mutable
-          -> llvm::SmallVector<llvm::Value *, 3> {
+                      iterInfo](llvm::IRBuilderBase &b, llvm::Value *linearIV)
+          mutable -> llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> {
         mlir::Block &iteratorRegionBlock = itersOp.getRegion().front();
         if (failed(convertIteratorRegion(
                 linearIV, iterInfo, iteratorRegionBlock, b, moduleTranslation)))
-          return {};
+          return llvm::make_error<PreviouslyReportedError>();
         // `mapInfoOp` (the omp.yield operand) has no translated value of its
         // own; its runtime address is its var_ptr operand.
         llvm::Value *addr =
             moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
         moduleTranslation.forgetMapping(itersOp.getRegion());
-        return {addr, addr, sizeVal};
+        return llvm::SmallVector<llvm::Value *, 3>{addr, addr, sizeVal};
       };
+
+      if (mapInfoOp.getMapperId()) {
+        auto childMapperOp =
+            SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+                mapInfoOp, mapInfoOp.getMapperIdAttr());
+        llvm::Expected<llvm::Function *> childMapperFn =
+            getOrCreateUserDefinedMapperFunc(childMapperOp, builder,
+                                             moduleTranslation,
+                                             targetDirective);
+        if (!childMapperFn)
+          return childMapperFn.takeError();
+        seg.ChildMapperFn = *childMapperFn;
+      }
     }
 
     return combinedInfo;
