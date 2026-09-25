@@ -67,8 +67,15 @@ void Initialize() {
   if (UNLIKELY(!Offload::Get().Ready()))                                       \
     return REAL(name)(__VA_ARGS__);
 
-// PPC cannot transparently tail-call an indirect dlsym target for RTLD_NEXT.
-#if !SANITIZER_PPC
+// The dlsym interceptor is only transparent if it can tail-call, which PPC and
+// compilers without musttail cannot guarantee.
+#if defined(__has_cpp_attribute)
+#if __has_cpp_attribute(clang::musttail) && !SANITIZER_PPC
+#define UBSAN_INTERCEPT_DLSYM 1
+#endif
+#endif
+
+#if UBSAN_INTERCEPT_DLSYM
 #define UBSAN_HSA_WRAPS(X)                                                     \
   X(hsa_init)                                                                  \
   X(hsa_shut_down)                                                             \
@@ -96,20 +103,17 @@ static void BindRealDlsym();
 // OpenMP and sometimes HIP access HSA through 'dlsym' so we need to intercept
 // it here if we want to reliably override its definitions.
 INTERCEPTOR(void *, dlsym, void *Handle, const char *Name) {
-  Initialize();
   BindRealDlsym();
 
-  // This interceptor interferes with the order of 'RTLD_NEXT'. Force a tail
-  // call to bypass this process in the stack.
-  if (Handle == RTLD_NEXT) [[clang::musttail]]
+  // glibc resolves 'RTLD_NEXT' and 'RTLD_DEFAULT' relative to the caller's
+  // scope and attributes the new dependency to it. Tail call to preserve it.
+  void *Wrapper = Name ? WrapperFor(Name) : nullptr;
+  if (Handle == RTLD_NEXT || !Wrapper) [[clang::musttail]]
     return REAL(dlsym)(Handle, Name);
 
+  Initialize();
   void *Sym = REAL(dlsym)(Handle, Name);
-  if (!Sym || !Name)
-    return Sym;
-
-  void *Wrapper = WrapperFor(Name);
-  if (!Wrapper || !FromHsa(Sym))
+  if (!Sym || !FromHsa(Sym))
     return Sym;
   return Wrapper;
 }
