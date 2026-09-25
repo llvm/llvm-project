@@ -7,6 +7,7 @@ program omp_reduction
   integer :: i
   integer :: k = 10
   integer :: a(10), b(10,10,10)
+  complex :: z(10)
 
   !ERROR: Reference to 'a' must be a contiguous object
   !$omp parallel do reduction(+:a(1:10:3))
@@ -24,6 +25,20 @@ program omp_reduction
 
   !ERROR: Reference to 'b' must be a contiguous object
   !$omp parallel do reduction(+:b(1:10:1,1:8:2,1:5:1))
+  do i = 1, 10
+    k = k + 1
+  end do
+  !$omp end parallel do
+
+  !ERROR: Reference to 're' must be a contiguous object
+  !$omp parallel do reduction(+:z(:)%re)
+  do i = 1, 10
+    k = k + 1
+  end do
+  !$omp end parallel do
+
+  !ERROR: Reference to 'im' must be a contiguous object
+  !$omp parallel do reduction(+:z(2:8)%im)
   do i = 1, 10
     k = k + 1
   end do

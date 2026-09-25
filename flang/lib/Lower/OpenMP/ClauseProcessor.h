@@ -56,6 +56,9 @@ public:
                   const List<Clause> &clauses)
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
+  /// Diagnose unsupported reduction objects before implicit target mapping.
+  void checkReductionObjects(mlir::Location currentLocation) const;
+
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processAlign(mlir::omp::AlignClauseOps &result) const;
   bool processAllocator(lower::StatementContext &stmtCtx,
