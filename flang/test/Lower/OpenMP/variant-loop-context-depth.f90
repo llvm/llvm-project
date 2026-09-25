@@ -22,6 +22,11 @@ contains
     value = 0
   end function
 
+  integer function requiring_do()
+    !$omp declare variant(do_value) match(construct={do})
+    requiring_do = 0
+  end function
+
   ! At depth one CPU scores 3, below the user selector's score of 4.
   ! Counting the DO twice would select TASKYIELD instead.
   ! CHECK-LABEL: func.func @_QMloop_depthPbare_do(
@@ -56,23 +61,27 @@ contains
   end subroutine
 
   ! Intervening code is outside the innermost DO evaluation, but shares the
-  ! same OpenMP construct context as the collapsed loop body.
+  ! same OpenMP construct context as the collapsed loop body. The competing
+  ! call rejects a duplicated DO; the DO-only call rejects a missing DO.
   ! CHECK-LABEL: func.func @_QMloop_depthPcollapsed(
   ! CHECK: omp.parallel
   ! CHECK: omp.wsloop
   ! CHECK: fir.call @_QMloop_depthPscored_value()
+  ! CHECK: fir.call @_QMloop_depthPdo_value()
   ! CHECK: fir.call @_QMloop_depthPscored_value()
+  ! CHECK: fir.call @_QMloop_depthPdo_value()
   ! CHECK: fir.call @_QMloop_depthPscored_value()
+  ! CHECK: fir.call @_QMloop_depthPdo_value()
   ! CHECK: return
   subroutine collapsed(n, a)
     integer :: n, i, j, a(n, n)
     !$omp parallel do collapse(2)
     do i = 1, n
-      a(i, 1) = value()
+      a(i, 1) = value() + requiring_do()
       do j = 1, n
-        a(i, j) = value()
+        a(i, j) = value() + requiring_do()
       end do
-      a(i, n) = value()
+      a(i, n) = value() + requiring_do()
     end do
   end subroutine
 
