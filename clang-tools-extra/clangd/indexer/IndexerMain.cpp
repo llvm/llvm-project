@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdServer.h"
 #include "CompileCommands.h"
 #include "Compiler.h"
-#include "Config.h"
 #include "ConfigProvider.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
@@ -61,41 +61,6 @@ static llvm::cl::opt<bool> EnableConfig{
     llvm::cl::desc(config::Provider::EnableConfigFlagDesc),
     llvm::cl::init(false),
 };
-
-std::function<Context(llvm::StringRef)>
-createConfiguredContextProvider(const config::Provider *Provider) {
-  if (!Provider)
-    return [](llvm::StringRef) { return Context::current().clone(); };
-
-  return [Provider](llvm::StringRef File) {
-    config::Params Params;
-    llvm::SmallString<256> PosixPath;
-    if (!File.empty()) {
-      assert(llvm::sys::path::is_absolute(File));
-      llvm::sys::path::native(File, PosixPath, llvm::sys::path::Style::posix);
-      Params.Path = PosixPath.str();
-    }
-
-    Config C = Provider->getConfig(Params, [](const llvm::SMDiagnostic &D) {
-      switch (D.getKind()) {
-      case llvm::SourceMgr::DK_Error:
-        elog("config error at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
-             D.getColumnNo(), D.getMessage());
-        break;
-      case llvm::SourceMgr::DK_Warning:
-        log("config warning at {0}:{1}:{2}: {3}", D.getFilename(),
-            D.getLineNo(), D.getColumnNo(), D.getMessage());
-        break;
-      case llvm::SourceMgr::DK_Note:
-      case llvm::SourceMgr::DK_Remark:
-        vlog("config note at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
-             D.getColumnNo(), D.getMessage());
-        break;
-      }
-    });
-    return Context::current().derive(Config::Key, std::move(C));
-  };
-}
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
@@ -209,7 +174,8 @@ int main(int argc, const char **argv) {
   auto ConfigProvider =
       clang::clangd::config::Provider::combine(std::move(ProviderStack));
   auto ContextProvider =
-      clang::clangd::createConfiguredContextProvider(ConfigProvider.get());
+      clang::clangd::ClangdServer::createConfiguredContextProvider(
+          ConfigProvider.get(), /*Callbacks=*/nullptr);
 
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
