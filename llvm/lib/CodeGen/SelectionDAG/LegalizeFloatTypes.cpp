@@ -920,7 +920,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
     NewL = DAG.getLoad(L->getAddressingMode(), ISD::EXTLOAD, NVT, dl,
                        L->getChain(), L->getBasePtr(), L->getOffset(),
                        L->getPointerInfo(), MemVT, L->getBaseAlign(), MMOFlags,
-                       L->getAAInfo());
+                       L->getNonRangeMMOMetadata());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -931,7 +931,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   NewL = DAG.getLoad(L->getAddressingMode(), ISD::NON_EXTLOAD, L->getMemoryVT(),
                      dl, L->getChain(), L->getBasePtr(), L->getOffset(),
                      L->getPointerInfo(), L->getMemoryVT(), L->getBaseAlign(),
-                     MMOFlags, L->getAAInfo());
+                     MMOFlags, L->getNonRangeMMOMetadata());
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -2822,7 +2822,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_LOAD(SDNode *N) {
       DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), MVT::i16,
                   SDLoc(N), L->getChain(), L->getBasePtr(), L->getOffset(),
                   L->getPointerInfo(), MVT::i16, L->getBaseAlign(),
-                  L->getMemOperand()->getFlags(), L->getAAInfo());
+                  L->getMemOperand()->getFlags(), L->getNonRangeMMOMetadata());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));

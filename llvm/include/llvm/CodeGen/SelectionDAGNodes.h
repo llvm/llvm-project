@@ -1493,6 +1493,13 @@ public:
     return getMemOperand()->getMemCacheHint();
   }
 
+  /// Returns LLVM IR metadata carried by this memory access, except for range
+  /// metadata. Range metadata describes a loaded value and cannot be blindly
+  /// transferred when an access is split or its type changes.
+  MMOMetadata getNonRangeMMOMetadata() const {
+    return MMOMetadata(getAAInfo(), /*Ranges=*/nullptr, getMemCacheHint());
+  }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return getMemOperand()->getSyncScopeID();

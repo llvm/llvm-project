@@ -254,19 +254,20 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  AAMDNodes AAInfo = LD->getAAInfo();
+  MMOMetadata Metadata = LD->getNonRangeMMOMetadata();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
 
-  Lo = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(),
-                   LD->getBaseAlign(), LD->getMemOperand()->getFlags(), AAInfo);
+  Lo =
+      DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(), LD->getBaseAlign(),
+                  LD->getMemOperand()->getFlags(), Metadata);
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
-  Hi = DAG.getLoad(NVT, dl, Chain, Ptr,
-                   LD->getPointerInfo().getWithOffset(IncrementSize),
-                   LD->getBaseAlign(), LD->getMemOperand()->getFlags(), AAInfo);
+  Hi = DAG.getLoad(
+      NVT, dl, Chain, Ptr, LD->getPointerInfo().getWithOffset(IncrementSize),
+      LD->getBaseAlign(), LD->getMemOperand()->getFlags(), Metadata);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -482,7 +483,7 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = St->getChain();
   SDValue Ptr = St->getBasePtr();
-  AAMDNodes AAInfo = St->getAAInfo();
+  MMOMetadata Metadata = St->getNonRangeMMOMetadata();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
@@ -495,12 +496,12 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
 
   Lo =
       DAG.getStore(Chain, dl, Lo, Ptr, St->getPointerInfo(), St->getBaseAlign(),
-                   St->getMemOperand()->getFlags(), AAInfo);
+                   St->getMemOperand()->getFlags(), Metadata);
 
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
   Hi = DAG.getStore(
       Chain, dl, Hi, Ptr, St->getPointerInfo().getWithOffset(IncrementSize),
-      St->getBaseAlign(), St->getMemOperand()->getFlags(), AAInfo);
+      St->getBaseAlign(), St->getMemOperand()->getFlags(), Metadata);
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
 }
