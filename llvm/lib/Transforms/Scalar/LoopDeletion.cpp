@@ -419,6 +419,23 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   return LoopDeletionResult::Deleted;
 }
 
+/// Return true if the loop defines a token-like value that is used outside of
+/// it. Such a value cannot be replaced by a PHI node in the exit block, so
+/// LCSSA form leaves the use where it is.
+static bool hasLiveOutToken(const Loop *L) {
+  for (const BasicBlock *BB : L->blocks())
+    for (const Instruction &I : *BB) {
+      if (!I.getType()->isTokenLikeTy())
+        continue;
+      // A token-like value cannot be an operand of a PHI node, so the block of
+      // the user is where the use happens.
+      for (const User *U : I.users())
+        if (!L->contains(cast<Instruction>(U)->getParent()))
+          return true;
+    }
+  return false;
+}
+
 /// Remove a loop if it is dead.
 ///
 /// A loop is considered dead either if it does not impact the observable
@@ -456,6 +473,16 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // case.
   if (ExitBlock && ExitBlock->isEHPad()) {
     LLVM_DEBUG(dbgs() << "Cannot delete loop exiting to EH pad.\n");
+    return LoopDeletionResult::Unmodified;
+  }
+
+  // Deleting the loop erases the instructions in it. The checks below rely on
+  // LCSSA form to find the values that are used after the loop, but token-like
+  // values are exempt from it because they cannot be used by a PHI node. Bail
+  // out on them here, or such a use would be left behind: dangling if it is
+  // reachable, and set to a token poison that no intrinsic produced if not.
+  if (hasLiveOutToken(L)) {
+    LLVM_DEBUG(dbgs() << "Cannot delete loop with a live-out token value.\n");
     return LoopDeletionResult::Unmodified;
   }
 
