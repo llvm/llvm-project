@@ -30,7 +30,12 @@ class TestSharedPtr(TestBase):
             result_children=[ValueCheck(name="pointer")],
         )
         self.expect_expr("*w.lock()", result_type="element_type", result_value="3")
-        self.expect_expr("*w.lock() = 5", result_type="element_type", result_value="5")
+        self.expect_expr(
+            "*w.lock() = 5",
+            result_type="element_type",
+            result_value="5",
+            stop_on_fail=True,
+        )
         self.expect_expr("*w.lock()", result_type="element_type", result_value="5")
         self.expect_expr("w.use_count()", result_type="long", result_value="1")
         self.expect("expr w.reset()")

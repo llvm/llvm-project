@@ -25,7 +25,7 @@ class TestCase(TestBase):
 
         # Evaluate an expression in a member function. Store the type of the
         # 'this' pointer in a persistent variable.
-        self.expect_expr("A $p = *this; $p", result_type="A")
+        self.expect_expr("A $p = *this; $p", result_type="A", stop_on_fail=True)
 
         breakpoint = self.target().BreakpointCreateBySourceRegex(
             "// break in main", lldb.SBFileSpec("main.cpp")

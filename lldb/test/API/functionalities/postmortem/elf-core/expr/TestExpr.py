@@ -44,7 +44,7 @@ class CoreExprTestCase(TestBase):
     def test_context_object(self):
         """Test expression evaluation in context of an object."""
 
-        val_outer = self.expect_expr("outer", result_type="Outer")
+        val_outer = self.expect_expr("outer", result_type="Outer", stop_on_fail=True)
 
         val_inner = val_outer.EvaluateExpression("inner")
         self.assertTrue(val_inner.IsValid())
