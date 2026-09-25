@@ -10,7 +10,7 @@ func:
 
 // ABS:      Relocations [
 // ABS-NEXT:   Section ({{.*}}) .rela.eh_frame {
-// ABS-NEXT:     R_HEX_32
+// ABS-NEXT:     R_HEX_32{{[[:space:]]}}
 // ABS-NEXT:   }
 // ABS-NEXT: ]
 
