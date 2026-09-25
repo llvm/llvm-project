@@ -188,10 +188,9 @@ namespace ReadFromNullBlockPtr {
     constexpr S s = {&x}; // both-error {{must be initialized by a constant expression}} \
                           // both-note {{reference to temporary}} \
                           // both-note {{created here}} \
-                          // ref-note {{declared here}} \
-                          // expected-note {{created here}}
+                          // ref-note {{declared here}}
     static_assert(s.t == &x, ""); // both-error {{not an integral constant expression}} \
-                                  // expected-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}} \
+                                  // expected-note {{read of dereferenced null pointer}} \
                                   // ref-note {{initializer of 's' is not a constant expression}}
   }
 }

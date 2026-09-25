@@ -751,7 +751,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         if (I->hasNoSignedWrap()) {
           unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
           unsigned SignBits =
-              ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+              ComputeNumSignBits(I->getOperand(0), Q.CtxI, Depth + 1);
           if (SignBits > ShiftAmt && SignBits - ShiftAmt >= NumHiDemandedBits)
             return I->getOperand(0);
         }
@@ -833,7 +833,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         // need to shift.
         unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
         unsigned SignBits =
-            ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+            ComputeNumSignBits(I->getOperand(0), Q.CtxI, Depth + 1);
         if (SignBits >= NumHiDemandedBits)
           return I->getOperand(0);
 
@@ -884,7 +884,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     break;
   }
   case Instruction::AShr: {
-    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Q.CtxI, Depth + 1);
 
     // If we only want bits that already match the signbit then we don't need
     // to shift.
@@ -2462,7 +2462,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // fadd x, x can be handled more aggressively.
     if (I->getOperand(0) == I->getOperand(1) &&
         I->getOpcode() == Instruction::FAdd &&
-        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
+        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CtxI, SQ.DT,
                                  Depth + 1)) {
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
@@ -2588,7 +2588,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       SrcDemandedMask |= fcNormal | fcSubnormal;
 
     if (X == Y &&
-        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1)) {
+        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, SQ,
                                   Depth + 1))
         return I;
@@ -2733,7 +2733,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
     if (X == Y &&
-        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1)) {
+        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
       // If the source is 0, inf or nan, the result is a nan
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
@@ -2982,7 +2982,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       Type *EltTy = VTy->getScalarType();
       if (CI->getArgOperand(0) == CI->getArgOperand(1) &&
-          isGuaranteedNotToBeUndef(CI->getArgOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
+          isGuaranteedNotToBeUndef(CI->getArgOperand(0), SQ.AC, SQ.CtxI, SQ.DT,
                                    Depth + 1)) {
         if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc[0], SQ,
                                     Depth + 1) ||

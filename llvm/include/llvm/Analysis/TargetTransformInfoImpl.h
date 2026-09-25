@@ -733,7 +733,7 @@ public:
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) const {
+      ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr) const {
     // Widenable conditions will eventually lower into constants, so some
     // operations with them will be trivially optimized away.
     auto IsWidenableCondition = [](const Value *V) {
@@ -781,7 +781,7 @@ public:
       TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
       TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
       VectorType *SubTp, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr,
+      const Instruction *CtxI = nullptr,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }

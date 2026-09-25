@@ -1124,3 +1124,14 @@ func.func @test_create_box_2d(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb0: index,
 fir.module_debug_imports "debug_mod" {
   fir.use_stmt "used_mod"
 }
+
+// A submodule records the module at the root of its ancestry and its parent.
+// CHECK-LABEL: fir.module_debug_imports "debug_sub" in "debug_mod" parent "debug_mod"
+// CHECK-NEXT: }
+fir.module_debug_imports "debug_sub" in "debug_mod" parent "debug_mod" {
+}
+
+// CHECK-LABEL: fir.module_debug_imports "debug_deep" in "debug_mod" parent "debug_sub"
+// CHECK-NEXT: }
+fir.module_debug_imports "debug_deep" in "debug_mod" parent "debug_sub" {
+}

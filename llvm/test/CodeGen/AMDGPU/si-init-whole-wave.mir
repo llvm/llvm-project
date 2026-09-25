@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; CHECK-NEXT:   undef [[COPY1:%[0-9]+]].sub0:ccr_sgpr_64 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]].sub1:ccr_sgpr_64 = COPY $sgpr2
@@ -76,7 +76,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr8, $vgpr9
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; CHECK-NEXT:   undef [[COPY1:%[0-9]+]].sub0:ccr_sgpr_64 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]].sub1:ccr_sgpr_64 = COPY $sgpr2

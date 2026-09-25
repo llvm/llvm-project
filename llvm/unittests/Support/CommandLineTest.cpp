@@ -1741,11 +1741,6 @@ TEST(CommandLineTest, LongOptions) {
   const char *args2[] = {"prog", "-a", "--ab", "val1"};
   const char *args3[] = {"prog", "-ab", "--ab", "val1"};
 
-  //
-  // The following tests treat `-` and `--` the same, and always match the
-  // longest string.
-  //
-
   EXPECT_TRUE(
       cl::ParseCommandLineOptions(4, args1, StringRef(), &OS));
   EXPECT_TRUE(OptA);
@@ -1765,33 +1760,7 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `val1` is unexpected.
   EXPECT_FALSE(
       cl::ParseCommandLineOptions(4, args3, StringRef(), &OS));
-  outs()<< Errs << "\n";
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  //
-  // The following tests treat `-` and `--` differently, with `-` for short, and
-  // `--` for long options.
-  //
-
-  // Fails because `-ab` is neither a short option nor `--ab`, and `val1` is
-  // unexpected.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(), &OS, nullptr,
-                                           nullptr, true));
-  EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Works because `-a` is treated differently than `--ab`.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(), &OS, nullptr,
-                                          nullptr, true));
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Fails because `-ab` is not `--ab`.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args3, StringRef(), &OS, nullptr,
-                                           nullptr, true));
-  EXPECT_FALSE(Errs.empty());
-  Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
 

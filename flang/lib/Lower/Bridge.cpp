@@ -310,9 +310,27 @@ emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
 
+  // A submodule is named after its ancestor module in the debug info, and has
+  // access to everything in the submodule directly above it, so record both.
+  mlir::StringAttr ancestorNameAttr;
+  mlir::StringAttr parentNameAttr;
+  if (const auto *details{
+          modSym->detailsIf<Fortran::semantics::ModuleDetails>()};
+      details && details->isSubmodule()) {
+    if (const Fortran::semantics::Scope *ancestor{details->ancestor()};
+        ancestor && ancestor->symbol())
+      ancestorNameAttr = mlir::StringAttr::get(
+          builder.getContext(), ancestor->symbol()->name().ToString());
+    if (const Fortran::semantics::Scope *parent{details->parent()};
+        parent && parent->symbol())
+      parentNameAttr = mlir::StringAttr::get(
+          builder.getContext(), parent->symbol()->name().ToString());
+  }
+
   auto op = fir::ModuleDebugImportsOp::create(
       builder, loc,
-      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()),
+      ancestorNameAttr, parentNameAttr);
   mlir::Region &region = op.getUses();
   mlir::Block *block = new mlir::Block();
   region.push_back(block);
@@ -331,6 +349,32 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Scope &scope = funit.getScope();
   for (const auto &preservedStmt : funit.preservedUseStmts)
     emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
+}
+
+/// Record the submodule that defines a separate module procedure. Its name is
+/// mangled with the module that declares its interface, so the submodule would
+/// otherwise be lost and its debug info would point at the module instead.
+static void setDefiningSubmoduleForDebug(
+    Fortran::lower::AbstractConverter &converter, mlir::func::FuncOp func,
+    const Fortran::lower::pft::FunctionLikeUnit &funit) {
+  // This option is set whenever more than line tables are asked for, which is
+  // also when a module is described, so it stands in for full debug info here.
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+
+  const Fortran::semantics::Scope &scope = funit.getScope();
+  if (!scope.parent().IsSubmodule())
+    return;
+  const Fortran::semantics::Symbol *sym = scope.symbol();
+  if (!sym || !sym->attrs().test(Fortran::semantics::Attr::MODULE))
+    return;
+  const Fortran::semantics::Symbol *submodule = scope.parent().symbol();
+  if (!submodule)
+    return;
+
+  func->setAttr(
+      fir::getDefiningSubmoduleAttrName(),
+      mlir::StringAttr::get(func.getContext(), submodule->name().ToString()));
 }
 
 /// Helper class to generate the runtime type info global data and the
@@ -6298,6 +6342,7 @@ private:
 
     // Emit USE statement operations for debug info generation
     emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
+    setDefiningSubmoduleForDebug(*this, func, funit);
 
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())

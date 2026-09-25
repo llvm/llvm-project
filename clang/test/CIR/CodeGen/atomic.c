@@ -3991,7 +3991,7 @@ void store_atomic_different_size(S a) {
  // CIR: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[A_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
  // CIR: %[[ATOMIC_TMP:.*]] = cir.cast bitcast %[[ATOMIC_TMP_ADDR]] : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!void>
  // CIR: %[[MEMCPY_SIZE:.*]] = cir.const #cir.int<3> : !u64i
- // CIR: cir.libc.memcpy %[[MEMCPY_SIZE]] bytes from %[[A_VOID_PTR]] to %[[ATOMIC_TMP]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+ // CIR: cir.libc.memcpy %[[MEMCPY_SIZE]] bytes from %[[A_VOID_PTR]] align(1) to %[[ATOMIC_TMP]] align(4) : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
  // CIR: %[[ATOMIC_TMP_U32:.*]] = cir.cast bitcast %[[ATOMIC_TMP]] : !cir.ptr<!void> -> !cir.ptr<!u32i>
  // CIR: %[[DATA:.*]] = cir.load {{.*}} %[[ATOMIC_TMP_U32]] : !cir.ptr<!u32i>, !u32i
  // CIR: cir.store {{.*}} syncscope(system) atomic(seq_cst) %[[DATA]], %[[B_VOID_PTR]] : !u32i, !cir.ptr<!u32i>
@@ -4006,7 +4006,7 @@ void store_atomic_different_size(S a) {
  // LLVM: store %struct.S %[[A]], ptr %[[A_ADDR]], align 1
  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
  // LLVM: call void @llvm.memset.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i8 0, i64 4, i1 false)
- // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[ATOMIC_TMP_ADDR]], ptr %[[A_ATOMIC_TMP_ADDR]], i64 3, i1 false)
+ // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i64 3, i1 false)
  // LLVM: %[[ATOMIC_TMP:.*]] = load i32, ptr %[[ATOMIC_TMP_ADDR]], align 4
  // LLVM: store atomic i32 %[[ATOMIC_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
 

@@ -11,14 +11,14 @@ define void @test(ptr %out, ptr %in, double %a, double %b, double %c, double %d)
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[S6:%.*]] = fmul double [[A]], 1.250000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[IN]], align 8
 ; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], 1.000000e+00
+; CHECK-NEXT:    [[S9:%.*]] = fadd double [[A]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[IN]], align 8
+; CHECK-NEXT:    [[S2:%.*]] = fadd double [[C]], [[A]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[S6]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[S2:%.*]] = fadd double [[C]], [[A]]
 ; CHECK-NEXT:    [[S3:%.*]] = fadd double [[B]], 1.000000e+00
-; CHECK-NEXT:    [[S9:%.*]] = fadd double [[A]], [[A]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double poison, double poison, double 1.000000e+00, double poison>, double [[S9]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[S3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[S2]], i64 3
@@ -94,20 +94,20 @@ define void @subtree_gathers_do_not_define_order(ptr %out, ptr %in, double %a, d
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[S2:%.*]] = fadd double [[Z1]], [[A]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[A]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[B]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    [[V0_1:%.*]] = fadd double [[C]], [[Z1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[A]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP5]], splat (double 1.250000e+00)
-; CHECK-NEXT:    [[V0_1:%.*]] = fadd double [[C]], [[Z1]]
-; CHECK-NEXT:    [[S2:%.*]] = fadd double [[Z1]], [[A]]
-; CHECK-NEXT:    [[S7:%.*]] = fmul double [[C]], [[A]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double -1.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[V1_1:%.*]] = fadd double [[V0_1]], [[A]]
 ; CHECK-NEXT:    [[V2_0:%.*]] = fadd double [[Z1]], 1.000000e+00
+; CHECK-NEXT:    [[S7:%.*]] = fmul double [[C]], [[A]]
+; CHECK-NEXT:    [[V1_1:%.*]] = fadd double [[V0_1]], [[A]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[V2_0]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[V1_1]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

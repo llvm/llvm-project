@@ -135,15 +135,15 @@ public:
   LLVM_ABI bool computeValueKnownInPredecessorsImpl(
       Value *V, BasicBlock *BB, jumpthreading::PredValueInfo &Result,
       jumpthreading::ConstantPreference Preference,
-      SmallPtrSet<Value *, 4> &RecursionSet, Instruction *CxtI = nullptr);
+      SmallPtrSet<Value *, 4> &RecursionSet, Instruction *CtxI = nullptr);
   bool
   computeValueKnownInPredecessors(Value *V, BasicBlock *BB,
                                   jumpthreading::PredValueInfo &Result,
                                   jumpthreading::ConstantPreference Preference,
-                                  Instruction *CxtI = nullptr) {
+                                  Instruction *CtxI = nullptr) {
     SmallPtrSet<Value *, 4> RecursionSet;
     return computeValueKnownInPredecessorsImpl(V, BB, Result, Preference,
-                                               RecursionSet, CxtI);
+                                               RecursionSet, CtxI);
   }
 
   LLVM_ABI Constant *evaluateOnPredecessorEdge(BasicBlock *BB,
@@ -157,7 +157,7 @@ public:
   LLVM_ABI bool
   processThreadableEdges(Value *Cond, BasicBlock *BB,
                          jumpthreading::ConstantPreference Preference,
-                         Instruction *CxtI = nullptr);
+                         Instruction *CtxI = nullptr);
 
   LLVM_ABI bool processBranchOnPHI(PHINode *PN);
   LLVM_ABI bool processBranchOnXOR(BinaryOperator *BO);

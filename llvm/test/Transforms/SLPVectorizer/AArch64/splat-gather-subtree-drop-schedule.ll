@@ -3,20 +3,19 @@
 
 ; The broadcast scalars %b0 and %a1 form a splat gather subtree that the cost
 ; analysis drops. The bundle scheduled for the dropped subtree must not survive
-; into the final schedule: it would still group %b0 with %a1, sink %a1 below
-; %b0 and hoist the address computation above the scalar chain, i.e. reorder
-; scalar code that is not vectorized at all. The scalars keep their original
-; order.
+; into the final schedule: it would still group %b0 with %a1, i.e. reorder
+; scalar code that is not vectorized at all. The scalars are scheduled as
+; separate instructions and keep their original order.
 
 define double @dropped_splat_subtree_keeps_scalar_order(ptr %p) {
 ; CHECK-LABEL: define double @dropped_splat_subtree_keeps_scalar_order(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[P]], i64 16
-; CHECK-NEXT:    [[A0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[A1:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[B0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double [[A0]])
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A1]], i64 0
+; CHECK-NEXT:    [[B0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double [[A1]])
+; CHECK-NEXT:    [[A2:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A2]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[B0]], i64 0
@@ -24,7 +23,7 @@ define double @dropped_splat_subtree_keeps_scalar_order(ptr %p) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP4]], <2 x double> zeroinitializer, <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP5]], <2 x double> zeroinitializer)
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[GEP0]], align 8
-; CHECK-NEXT:    ret double [[A1]]
+; CHECK-NEXT:    ret double [[A2]]
 ;
 entry:
   %a0 = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)

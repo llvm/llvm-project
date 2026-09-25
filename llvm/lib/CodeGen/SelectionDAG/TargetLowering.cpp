@@ -822,6 +822,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!VT.isScalableVector() && !DemandedElts[0])
+      return DAG.getPOISON(VT);
+    break;
+  }
   case ISD::AND: {
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);

@@ -110,12 +110,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, [[COPY]], implicit $exec
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[COPY1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -158,7 +158,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, [[COPY]], implicit $exec
-  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, [[V_CMP_EQ_U32_e64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[COPY1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -230,7 +230,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term]]
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)

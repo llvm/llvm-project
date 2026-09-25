@@ -9,6 +9,7 @@ add_object_library(
     libc.hdr.types.struct_in_addr
     libc.hdr.types.struct_in6_addr
     libc.hdr.inet_address_macros
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.CPP.optional

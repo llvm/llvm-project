@@ -268,8 +268,8 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = fsub double [[FNEG]], [[C1:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C1]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C1:%.*]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = fsub double [[FNEG]], [[C1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[ADD]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0

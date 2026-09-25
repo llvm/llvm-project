@@ -79,7 +79,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term]]
-  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
@@ -130,7 +130,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term]]
   ; GCN-NEXT:   S_NOP 0
-  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
@@ -191,7 +191,7 @@ body:             |
   ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11:0x0000000000000003
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term]]
-  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
@@ -253,7 +253,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term]]
-  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
@@ -315,7 +315,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term]]
   ; GCN-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 32
-  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
@@ -374,7 +374,7 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
+  ; GCN-NEXT:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)

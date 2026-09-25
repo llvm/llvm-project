@@ -59,6 +59,19 @@ static NamedAttrList getAttrsForPrinting(Operation *op) {
   return attrs;
 }
 
+// TODO: Split inherent attributes from discardable attributes in the assembly
+// syntax of GlobalOp and AliasOp. For now, print the selected inherent
+// attributes in the regular attribute dictionary.
+static NamedAttrList
+getAttrsForPrinting(Operation *op, ArrayRef<StringAttr> inherentAttrNames) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  for (StringAttr name : inherentAttrNames)
+    if (std::optional<Attribute> attr = op->getInherentAttr(name);
+        attr && *attr)
+      attrs.set(name, *attr);
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -2502,7 +2515,13 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      getAttrsForPrinting(
+          *this, {getDsoLocalAttrName(), getExternallyInitializedAttrName(),
+                  getAlignmentAttrName(), getAddrSpaceAttrName(),
+                  getSectionAttrName(), getAssociatedAttrName(),
+                  getAbsoluteSymbolAttrName(), getDbgExprsAttrName(),
+                  getTargetSpecificAttrsAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
       {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
        getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
        getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
@@ -2883,10 +2902,13 @@ void AliasOp::print(OpAsmPrinter &p) {
   printCommonGlobalAndAlias<AliasOp>(p, *this);
 
   p.printSymbolName(getSymName());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {getSymNameAttrName(), getAliasTypeAttrName(),
-                           getLinkageAttrName(), getUnnamedAddrAttrName(),
-                           getTlsModeAttrName(), getVisibility_AttrName()});
+  p.printOptionalAttrDict(
+      getAttrsForPrinting(*this,
+                          {getDsoLocalAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
+      {getSymNameAttrName(), getAliasTypeAttrName(), getLinkageAttrName(),
+       getUnnamedAddrAttrName(), getTlsModeAttrName(),
+       getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';

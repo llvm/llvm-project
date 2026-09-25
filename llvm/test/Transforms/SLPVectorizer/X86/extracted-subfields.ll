@@ -388,3 +388,41 @@ start:
   store i16 %b3, ptr %out, align 2
   ret i16 %a7
 }
+
+define void @vectorized_src(ptr %p, ptr %a, i64 %x) {
+; CHECK-LABEL: define void @vectorized_src(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[A:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P]], align 8
+; CHECK-NEXT:    [[LD1:%.*]] = load i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[LD1]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP5]] to <2 x double>
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP2]], [[TMP6]]
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[A]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ld0 = load i64, ptr %p, align 8
+  %gep = getelementptr inbounds nuw i8, ptr %p, i64 8
+  %ld1 = load i64, ptr %gep, align 8
+  %t0 = trunc i64 %ld1 to i32
+  %c0 = sitofp i32 %t0 to double
+  %t1 = trunc i64 %ld0 to i32
+  %c1 = sitofp i32 %t1 to double
+  %sub0 = fsub double %c0, %c1
+  store double %sub0, ptr %a, align 8
+  %s = lshr i64 %ld1, 32
+  %t2 = trunc nuw i64 %s to i32
+  %c2 = sitofp i32 %t2 to double
+  %t3 = trunc i64 %x to i32
+  %c3 = sitofp i32 %t3 to double
+  %sub1 = fsub double %c2, %c3
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 8
+  store double %sub1, ptr %gep.a, align 8
+  ret void
+}

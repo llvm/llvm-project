@@ -276,11 +276,18 @@ void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
 // Print the stack of reasons that the given symbol is live.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
-  // Skip dead symbols. A symbol is dead if it belongs to a dead section.
+  // Skip dead symbols. A symbol is dead if it belongs to a dead section or if
+  // it refers to a dead mergeable section piece.
   if (auto *d = dyn_cast<Defined>(s)) {
-    auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
-    if (sec && !sec->isLive())
-      return;
+    if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
+      if (!sec->isLive())
+        return;
+
+      if (!d->isSection())
+        if (auto *ms = dyn_cast<MergeInputSection>(sec);
+            ms && !ms->getSectionPiece(d->value).live)
+          return;
+    }
   }
 
   auto msg = Msg(ctx);

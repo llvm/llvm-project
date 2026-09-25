@@ -62,14 +62,14 @@ constexpr unsigned MaxLookupSearchDepth = 10;
 LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known,
                                const DataLayout &DL,
                                AssumptionCache *AC = nullptr,
-                               const Instruction *CxtI = nullptr,
+                               const Instruction *CtxI = nullptr,
                                const DominatorTree *DT = nullptr,
                                bool UseInstrInfo = true, unsigned Depth = 0);
 
 /// Returns the known bits rather than passing by reference.
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                                     AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
+                                    const Instruction *CtxI = nullptr,
                                     const DominatorTree *DT = nullptr,
                                     bool UseInstrInfo = true,
                                     unsigned Depth = 0);
@@ -144,7 +144,7 @@ LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 LLVM_ABI bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                                      bool OrZero = false,
                                      AssumptionCache *AC = nullptr,
-                                     const Instruction *CxtI = nullptr,
+                                     const Instruction *CtxI = nullptr,
                                      const DominatorTree *DT = nullptr,
                                      bool UseInstrInfo = true,
                                      unsigned Depth = 0);
@@ -153,9 +153,9 @@ LLVM_ABI bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
                                      const SimplifyQuery &Q,
                                      unsigned Depth = 0);
 
-LLVM_ABI bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
+LLVM_ABI bool isOnlyUsedInZeroComparison(const Instruction *CtxI);
 
-LLVM_ABI bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
+LLVM_ABI bool isOnlyUsedInZeroEqualityComparison(const Instruction *CtxI);
 
 /// Return true if the given value is known to be non-zero when defined. For
 /// vectors, return true if every element is known to be non-zero when
@@ -220,7 +220,7 @@ LLVM_ABI bool MaskedValueIsZero(const Value *V, const APInt &Mask,
 /// bits.
 LLVM_ABI unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
                                      AssumptionCache *AC = nullptr,
-                                     const Instruction *CxtI = nullptr,
+                                     const Instruction *CtxI = nullptr,
                                      const DominatorTree *DT = nullptr,
                                      bool UseInstrInfo = true,
                                      unsigned Depth = 0);
@@ -231,7 +231,7 @@ LLVM_ABI unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
 LLVM_ABI unsigned ComputeMaxSignificantBits(const Value *Op,
                                             const DataLayout &DL,
                                             AssumptionCache *AC = nullptr,
-                                            const Instruction *CxtI = nullptr,
+                                            const Instruction *CtxI = nullptr,
                                             const DominatorTree *DT = nullptr,
                                             unsigned Depth = 0);
 
@@ -271,7 +271,7 @@ LLVM_ABI KnownFPClass computeKnownFPClass(
     const Value *V, const DataLayout &DL,
     FPClassTest InterestedClasses = fcAllFlags,
     const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
-    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
+    const Instruction *CtxI = nullptr, const DominatorTree *DT = nullptr,
     bool UseInstrInfo = true, unsigned Depth = 0);
 
 /// Wrapper to account for known fast math flags at the use instruction.
@@ -568,7 +568,7 @@ LLVM_ABI bool isNotCrossLaneOperation(const Instruction *I);
 /// and returns true if it is safe to execute the instruction immediately
 /// before the CtxI. If the instruction has (transitive) operands that don't
 /// dominate CtxI, the analysis is performed under the assumption that these
-/// operands will also be speculated to a point before CxtI.
+/// operands will also be speculated to a point before CtxI.
 ///
 /// If the CtxI is NOT specified this method only looks at the instruction
 /// itself and its operands, so if this method returns true, it is safe to
@@ -649,19 +649,19 @@ LLVM_ABI bool isAssumeLikeIntrinsic(const Instruction *I);
 
 /// Return true if it is valid to use the assumptions provided by an
 /// assume intrinsic, I, at the point in the control-flow identified by the
-/// context instruction, CxtI. By default, ephemeral values of the assumption
+/// context instruction, CtxI. By default, ephemeral values of the assumption
 /// are treated as an invalid context, to prevent the assumption from being used
 /// to optimize away its argument. If the caller can ensure that this won't
 /// happen, it can call with AllowEphemerals set to true to get more valid
 /// assumptions.
 LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
-                                      const Instruction *CxtI,
+                                      const Instruction *CtxI,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
 inline bool isValidAssumeForContext(const Instruction *I,
                                     const SimplifyQuery &Q) {
-  return isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.AllowEphemerals);
+  return isValidAssumeForContext(I, Q.CtxI, Q.DT, Q.AllowEphemerals);
 }
 
 /// Returns true, if no instruction between \p Assume and \p CtxI may free

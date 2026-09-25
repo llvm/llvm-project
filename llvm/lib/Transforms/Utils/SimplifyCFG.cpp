@@ -4301,7 +4301,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
   const unsigned PredCount = Preds.size();
   // Speculated instructions will be inserted before the terminator of the
   // predecessor. Only handle the simple case of one predecessor.
-  const Instruction *CxtI =
+  const Instruction *CtxI =
       PredCount == 1 ? Preds[0]->getTerminator() : nullptr;
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
@@ -4314,7 +4314,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     if (isa<PseudoProbeInst>(I))
       continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I, CxtI, AC))
+    if (!isSafeToSpeculativelyExecute(&I, CtxI, AC))
       return false;
     SawVectorOp |= isVectorOp(I);
 
@@ -8085,10 +8085,10 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
   // in the default block, we can make some nice simplifications to the
   // switch.
   BasicBlock *Default = SI->getDefaultDest();
-  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  const Instruction *CtxI = &*Default->getFirstNonPHIIt();
   const KnownBits Known = computeKnownBits(
       SI->getCondition(),
-      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CtxI).allowEphemerals(true));
   if (!Known.isConstant())
     return false;
 

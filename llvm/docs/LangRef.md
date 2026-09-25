@@ -1378,6 +1378,7 @@ Currently, only the following parameter attributes are defined:
     interpreted as a call to memcpy with the allocation size of the specified type,
     instead of loading from the pointee and storing back into the copy in the type.
     In particular, the padding between field types of a struct type is still copied.
+    The type's allocation size must be known at compile time.
 
     The byval attribute also supports specifying an alignment with the
     `align` attribute. It indicates the alignment of the stack slot to
@@ -2528,6 +2529,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
     Annotated functions may still raise an exception, i.a., `nounwind` is not implied.
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
+
+    If the annotated function has observable behavior (such as I/O or a volatile
+    access), note that the annotation can cause UB to time-travel around such
+    behavior, i.e., code that is after the function can cause UB to occur before
+    the observable behavior of the function. See the {doc}`UB documentation
+    <UndefinedBehavior>` for further details.
 
 `nosync`
 :   This function attribute indicates that the function does not introduce any
@@ -20803,6 +20810,28 @@ indices. If this condition cannot be determined statically but is false at
 runtime, then the result vector is a {ref}`poison value <poisonvalues>`. The
 `idx` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
+
+#### '`llvm.vector.repeat`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %vec)
+```
+
+##### Overview:
+
+The '`llvm.vector.repeat.*`' intrinsic repeatedly copies the elements of the
+source fixed-length vector, in order, until the result scalable vector is
+filled. For example, repeating `<A, B>` produces a scalable vector containing
+`vscale` copies of `<A, B>`.
+
+##### Arguments:
+
+The argument must be a fixed-length vector (i.e. `<N x Ty>`) and the result a
+scalable vector that is exactly `vscale` times longer (i.e.
+`<vscale x N x Ty>`).
 
 #### '`llvm.vector.reverse`' Intrinsic
 

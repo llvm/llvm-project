@@ -726,7 +726,7 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
 Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
                                             Value *LHS1, CmpPredicate PredR,
                                             Value *RHS0, Value *RHS1,
-                                            Instruction *CxtI, bool Inverted) {
+                                            Instruction *CtxI, bool Inverted) {
   // Check the lower range comparison, e.g. x >= 0
   // InstCombine already ensured that if there is a constant it's on the RHS.
   ConstantInt *RangeStart = dyn_cast<ConstantInt>(LHS1);
@@ -772,7 +772,7 @@ Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
   }
 
   // This simplification is only valid if the upper range is not negative.
-  KnownBits Known = computeKnownBits(RangeEnd, CxtI);
+  KnownBits Known = computeKnownBits(RangeEnd, CtxI);
   if (!Known.isNonNegative())
     return nullptr;
 
@@ -856,9 +856,9 @@ static Value *foldAndOrOfICmpsWithPow2AndWithZero(
 static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
                                         Value *LHS1, CmpPredicate PredR,
                                         Value *RHS0, Value *RHS1,
-                                        Instruction &CxtI,
+                                        Instruction &CtxI,
                                         InstCombiner::BuilderTy &Builder) {
-  assert(CxtI.getOpcode() == Instruction::And);
+  assert(CtxI.getOpcode() == Instruction::And);
 
   // Match  icmp ult (add %arg, C01), C1   (C1 == C01 << 1; powers of two)
   auto tryToMatchSignedTruncationCheck = [](CmpPredicate Pred, Value *LHS,
@@ -943,7 +943,7 @@ static Value *foldSignedTruncationCheck(CmpPredicate PredL, Value *LHS0,
 
   // %r = icmp ult %X, SignBit
   return Builder.CreateICmpULT(X, ConstantInt::get(X->getType(), HighestBit),
-                               CxtI.getName() + ".simplified");
+                               CtxI.getName() + ".simplified");
 }
 
 /// Fold (icmp eq ctpop(X) 1) | (icmp eq X 0) into (icmp ult ctpop(X) 2) and

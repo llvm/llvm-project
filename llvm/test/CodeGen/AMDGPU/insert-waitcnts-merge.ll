@@ -64,17 +64,17 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr8_sgpr9 = S_AND_B64 $exec, renamable $sgpr6_sgpr7, implicit-def $scc
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr8_sgpr9, killed renamable $sgpr4_sgpr5, implicit-def $scc
-  ; CHECK-NEXT:   $exec = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def dead $scc
+  ; CHECK-NEXT:   renamable $sgpr8_sgpr9 = S_AND_B64 $exec, renamable $sgpr6_sgpr7, implicit-def dead $scc
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr8_sgpr9, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; CHECK-NEXT:   renamable $vgpr4 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr20_sgpr21_sgpr22_sgpr23, 0, 0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(5) null`, addrspace 5)
   ; CHECK-NEXT:   S_WAITCNT .Vmcnt_1

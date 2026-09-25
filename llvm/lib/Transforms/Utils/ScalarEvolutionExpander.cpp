@@ -2371,7 +2371,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
       OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
 
       // The type Ty is already encoded in AbsStep.
-      InsertedOverflowChecks[Key] = std::pair<Value *, Value *>(MulV, OfMul);
+      InsertedOverflowChecks[Key] = {MulV, OfMul};
     }
 
     Value *Add = nullptr, *Sub = nullptr;

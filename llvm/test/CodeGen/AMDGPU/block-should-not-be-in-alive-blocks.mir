@@ -61,10 +61,10 @@ body:             |
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.7(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 killed [[S_XOR_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 killed [[S_XOR_B32_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
-  ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, [[S_OR_SAVEEXEC_B32_]], implicit-def $scc
-  ; CHECK-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_B32_1]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, [[S_OR_SAVEEXEC_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -75,7 +75,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed [[S_AND_B32_1]], implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed [[S_AND_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.2(0x40000000), %bb.5(0x40000000)

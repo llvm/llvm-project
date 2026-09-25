@@ -216,7 +216,7 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr,
 
     tmp = tmp.withElementType(builder, cgf.cgm.voidTy);
     builder.createMemCpy(
-        loc, tmp.getPointer(), addr.getPointer(),
+        loc, tmp, addr,
         builder.getConstInt(loc, cgf.cgm.uInt64Ty,
                             std::min(atomicSizeInBits, sourceSizeInBits) / 8));
     addr = tmp;

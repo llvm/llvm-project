@@ -493,7 +493,12 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
       CapturedVars.push_back(CV);
     } else {
       assert(CurCap->capturesVariable() && "Expected capture by reference.");
-      CapturedVars.push_back(EmitLValue(*I).getAddress().emitRawPointer(*this));
+      llvm::Value *Addr = EmitLValue(*I).getAddress().emitRawPointer(*this);
+      // Sema strips the address space from the type of the captured field.
+      llvm::Type *ArgTy = ConvertType(CurField->getType());
+      if (Addr->getType() != ArgTy)
+        Addr = performAddrSpaceCast(Addr, ArgTy);
+      CapturedVars.push_back(Addr);
     }
   }
 }

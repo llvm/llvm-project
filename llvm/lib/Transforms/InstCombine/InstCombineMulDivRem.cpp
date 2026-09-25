@@ -45,7 +45,7 @@ using namespace PatternMatch;
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
 static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
-                                        Instruction &CxtI) {
+                                        Instruction &CtxI) {
   // If V has multiple uses, then we would have to do more analysis to determine
   // if this is safe.  For example, the use could be in dynamically unreached
   // code.
@@ -66,13 +66,13 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
   // inexact.  Similarly for <<.
   BinaryOperator *I = dyn_cast<BinaryOperator>(V);
   if (I && I->isLogicalShift() &&
-      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CxtI)) {
+      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CtxI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     {
       IRBuilderBase::InsertPointGuard Guard(IC.Builder);
       IC.Builder.SetInsertPoint(I);
-      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
+      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CtxI)) {
         IC.replaceOperand(*I, 0, V2);
         MadeChange = true;
       }

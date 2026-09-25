@@ -466,38 +466,38 @@ public:
   virtual Instruction *eraseInstFromFunction(Instruction &I) = 0;
 
   void computeKnownBits(const Value *V, KnownBits &Known,
-                        const Instruction *CxtI, unsigned Depth = 0) const {
-    llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CxtI), Depth);
+                        const Instruction *CtxI, unsigned Depth = 0) const {
+    llvm::computeKnownBits(V, Known, SQ.getWithInstruction(CtxI), Depth);
   }
 
-  KnownBits computeKnownBits(const Value *V, const Instruction *CxtI,
+  KnownBits computeKnownBits(const Value *V, const Instruction *CtxI,
                              unsigned Depth = 0) const {
-    return llvm::computeKnownBits(V, SQ.getWithInstruction(CxtI), Depth);
+    return llvm::computeKnownBits(V, SQ.getWithInstruction(CtxI), Depth);
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
-                              const Instruction *CxtI = nullptr,
+                              const Instruction *CtxI = nullptr,
                               unsigned Depth = 0) {
-    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CxtI),
+    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, SQ.getWithInstruction(CtxI),
                                         Depth);
   }
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                         const Instruction *CxtI = nullptr,
+                         const Instruction *CtxI = nullptr,
                          unsigned Depth = 0) const {
-    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
+    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CtxI), Depth);
   }
 
   unsigned ComputeNumSignBits(const Value *Op,
-                              const Instruction *CxtI = nullptr,
+                              const Instruction *CtxI = nullptr,
                               unsigned Depth = 0) const {
-    return llvm::ComputeNumSignBits(Op, DL, &AC, CxtI, &DT, Depth);
+    return llvm::ComputeNumSignBits(Op, DL, &AC, CtxI, &DT, Depth);
   }
 
   unsigned ComputeMaxSignificantBits(const Value *Op,
-                                     const Instruction *CxtI = nullptr,
+                                     const Instruction *CtxI = nullptr,
                                      unsigned Depth = 0) const {
-    return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
+    return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CtxI, &DT, Depth);
   }
 
   /// Return true if the cast from integer to FP can be proven to be exact
@@ -505,49 +505,49 @@ public:
   LLVM_ABI bool isKnownExactCastIntToFP(CastInst &I) const;
   LLVM_ABI bool
   canBeCastedExactlyIntToFP(Value *V, Type *FPTy, bool IsSigned,
-                            const Instruction *CxtI = nullptr) const;
+                            const Instruction *CtxI = nullptr) const;
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI,
+                                               const Instruction *CtxI,
                                                bool IsNSW = false) const {
     return llvm::computeOverflowForUnsignedMul(
-        LHS, RHS, SQ.getWithInstruction(CxtI), IsNSW);
+        LHS, RHS, SQ.getWithInstruction(CtxI), IsNSW);
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
+                                             const Instruction *CtxI) const {
     return llvm::computeOverflowForSignedMul(LHS, RHS,
-                                             SQ.getWithInstruction(CxtI));
+                                             SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult
   computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
                                 const WithCache<const Value *> &RHS,
-                                const Instruction *CxtI) const {
+                                const Instruction *CtxI) const {
     return llvm::computeOverflowForUnsignedAdd(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult
   computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
                               const WithCache<const Value *> &RHS,
-                              const Instruction *CxtI) const {
+                              const Instruction *CtxI) const {
     return llvm::computeOverflowForSignedAdd(LHS, RHS,
-                                             SQ.getWithInstruction(CxtI));
+                                             SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI) const {
+                                               const Instruction *CtxI) const {
     return llvm::computeOverflowForUnsignedSub(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               SQ.getWithInstruction(CtxI));
   }
 
   OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
+                                             const Instruction *CtxI) const {
     return llvm::computeOverflowForSignedSub(LHS, RHS,
-                                             SQ.getWithInstruction(CxtI));
+                                             SQ.getWithInstruction(CtxI));
   }
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,

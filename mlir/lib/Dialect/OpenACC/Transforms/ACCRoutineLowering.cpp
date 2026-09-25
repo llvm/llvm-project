@@ -107,7 +107,8 @@ static func::FuncOp createFunctionForDeviceStaging(func::FuncOp hostFunc,
   FunctionType funcType = hostFunc.getFunctionType();
   func::FuncOp deviceFunc =
       func::FuncOp::create(rewriter, loc, hostFunc.getName(), funcType);
-  deviceFunc->setAttrs(hostFunc->getAttrs());
+  deviceFunc->copyProperties(hostFunc->getPropertiesStorage());
+  deviceFunc->setDiscardableAttrs(hostFunc->getDiscardableAttrDictionary());
   deviceFunc->removeDiscardableAttr(getRoutineInfoAttrName());
   deviceFunc->setDiscardableAttr(
       getSpecializedRoutineAttrName(),

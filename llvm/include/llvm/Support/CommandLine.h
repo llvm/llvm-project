@@ -67,8 +67,7 @@ LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
                                       vfs::FileSystem *VFS = nullptr,
-                                      const char *EnvVar = nullptr,
-                                      bool LongOptionsUseDoubleDash = false);
+                                      const char *EnvVar = nullptr);
 
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;

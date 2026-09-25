@@ -255,7 +255,7 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
 InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // vXi8 multiplications are always promoted to vXi16.
   // Sub-128-bit types can be extended/packed more efficiently.
@@ -782,7 +782,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // Variable divisors lower through a float divide. strictfp needs SAE
   // rounding which is 512-bit only.
   bool IsStrictFP =
-      CxtI && CxtI->getFunction()->hasFnAttribute(Attribute::StrictFP);
+      CtxI && CtxI->getFunction()->hasFnAttribute(Attribute::StrictFP);
   bool IsDivRem = ISD == ISD::UDIV || ISD == ISD::SDIV || ISD == ISD::UREM ||
                   ISD == ISD::SREM;
   bool VarDivToFP = IsDivRem && !Op2Info.isConstant() &&
@@ -824,15 +824,15 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // queries, so the cost cannot disagree with what codegen emits.
   bool IsSignedDiv = ISD == ISD::SDIV || ISD == ISD::SREM;
   auto OperandsFit = [&](unsigned Mantissa) {
-    if (Args.size() != 2 || !CxtI)
+    if (Args.size() != 2 || !CtxI)
       return false;
     unsigned EltBits = LT.second.getScalarSizeInBits();
-    const DataLayout &DL = CxtI->getDataLayout();
+    const DataLayout &DL = CtxI->getDataLayout();
     auto Fits = [&](const Value *V) {
       if (IsSignedDiv)
-        return ComputeNumSignBits(V, DL, /*AC=*/nullptr, CxtI) + Mantissa >
+        return ComputeNumSignBits(V, DL, /*AC=*/nullptr, CtxI) + Mantissa >
                EltBits;
-      return computeKnownBits(V, DL, /*AC=*/nullptr, CxtI)
+      return computeKnownBits(V, DL, /*AC=*/nullptr, CtxI)
                  .countMaxActiveBits() <= Mantissa;
     };
     return Fits(Args[0]) && Fits(Args[1]);
@@ -1933,7 +1933,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 InstructionCost
@@ -1948,7 +1948,7 @@ X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
 InstructionCost X86TTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&

@@ -577,7 +577,7 @@ static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -636,12 +636,12 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation.
-    if (CxtI && CxtI->hasOneUse()) {
-      const auto *FAddSub = dyn_cast<BinaryOperator>(*CxtI->user_begin());
+    if (CtxI && CtxI->hasOneUse()) {
+      const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
            FAddSub->getOpcode() == Instruction::FSub) &&
-          isFusedFMul(*TLI, Ty, CxtI, FAddSub))
+          isFusedFMul(*TLI, Ty, CtxI, FAddSub))
         return TargetTransformInfo::TCC_Free;
     }
     [[fallthrough]];
@@ -696,7 +696,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && (CxtI && CxtI->hasApproxFunc())) {
+    if (SLT == MVT::f32 && (CtxI && CtxI->hasApproxFunc())) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
@@ -726,7 +726,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16
@@ -1412,7 +1412,7 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 InstructionCost GCNTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   if (!isa<FixedVectorType>(SrcTy))
     return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,

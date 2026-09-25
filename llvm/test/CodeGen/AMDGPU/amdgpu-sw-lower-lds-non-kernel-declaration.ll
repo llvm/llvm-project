@@ -6,8 +6,8 @@ declare void @non_kernel_declaration() sanitize_address
 ;.
 ; CHECK: @llvm.amdgcn.sw.lds.k1 = internal addrspace(3) global ptr poison, no_sanitize_address, align 8, !absolute_symbol [[META0:![0-9]+]]
 ; CHECK: @llvm.amdgcn.sw.lds.k1.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.k1.md.type { %llvm.amdgcn.sw.lds.k1.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.k1.md.item { i32 32, i32 5, i32 32 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.k1], no_sanitize_address
-; @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [1 x [1 x ptr addrspace(1)]] [[1 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (%llvm.amdgcn.sw.lds.k1.md.type, ptr addrspace(1) @llvm.amdgcn.sw.lds.k1.md, i32 0, i32 1, i32 0)]], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.k1], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.offset.table = internal addrspace(1) constant [1 x [1 x ptr addrspace(1)]] {{\[\[}}1 x ptr addrspace(1)] [ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k1.md, i64 12)]], no_sanitize_address
 ;.
 define void @non_kernel_function() sanitize_address {
 ; CHECK-LABEL: define void @non_kernel_function(

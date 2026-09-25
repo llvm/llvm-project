@@ -15,8 +15,8 @@ define  void @foo (ptr %A, ptr %B, ptr %Result) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], ptr [[B:%.*]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], ptr [[B]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP22]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP8]], [[TMP10]]

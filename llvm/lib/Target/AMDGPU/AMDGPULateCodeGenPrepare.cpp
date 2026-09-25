@@ -65,11 +65,11 @@ public:
   // whole AccessSize-byte range at Base to be dereferenceable, not just Base
   // itself aligned.
   bool isSafeToWidenLoad(const Value *Base, uint64_t AccessSize,
-                         const Instruction *CxtI) const {
+                         const Instruction *CtxI) const {
     return isDereferenceableAndAlignedPointer(
         Base, Align(4),
         APInt(DL.getIndexTypeSizeInBits(Base->getType()), AccessSize),
-        SimplifyQuery(DL, /*TLI=*/nullptr, /*DT=*/nullptr, AC, CxtI));
+        SimplifyQuery(DL, /*TLI=*/nullptr, /*DT=*/nullptr, AC, CtxI));
   }
 
   bool canWidenScalarExtLoad(LoadInst &LI) const;

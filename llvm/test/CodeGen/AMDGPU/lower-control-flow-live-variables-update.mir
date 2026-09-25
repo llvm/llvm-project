@@ -33,7 +33,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -121,7 +121,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_64_xexec = COPY killed [[COPY5]]
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY6]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY6]], implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
@@ -208,7 +208,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
   ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1
-  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)

@@ -516,6 +516,41 @@ define { i64, i64 } @avgr_8_u16_alt(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerc
 ; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[TMP17]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]
 ;
+; AVX-LABEL: @avgr_8_u16_alt(
+; AVX-NEXT:  entry:
+; AVX-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[A_COERCE0:%.*]], i64 0
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = lshr <4 x i64> [[TMP1]], <i64 0, i64 16, i64 32, i64 48>
+; AVX-NEXT:    [[TMP3:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; AVX-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> poison, i64 [[B_COERCE0:%.*]], i64 0
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP6:%.*]] = lshr <4 x i64> [[TMP5]], <i64 0, i64 16, i64 32, i64 48>
+; AVX-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i16>
+; AVX-NEXT:    [[TMP8:%.*]] = lshr <4 x i16> [[TMP3]], splat (i16 1)
+; AVX-NEXT:    [[TMP9:%.*]] = lshr <4 x i16> [[TMP7]], splat (i16 1)
+; AVX-NEXT:    [[TMP10:%.*]] = add nuw <4 x i16> [[TMP9]], [[TMP8]]
+; AVX-NEXT:    [[TMP11:%.*]] = or <4 x i16> [[TMP7]], [[TMP3]]
+; AVX-NEXT:    [[TMP12:%.*]] = and <4 x i16> [[TMP11]], splat (i16 1)
+; AVX-NEXT:    [[TMP13:%.*]] = add nuw <4 x i16> [[TMP10]], [[TMP12]]
+; AVX-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
+; AVX-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP14]], 0
+; AVX-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[A_COERCE1:%.*]], i64 0
+; AVX-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i64> [[TMP15]], <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP17:%.*]] = lshr <4 x i64> [[TMP16]], <i64 0, i64 16, i64 32, i64 48>
+; AVX-NEXT:    [[TMP18:%.*]] = trunc <4 x i64> [[TMP17]] to <4 x i16>
+; AVX-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> poison, i64 [[B_COERCE1:%.*]], i64 0
+; AVX-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i64> [[TMP19]], <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP21:%.*]] = lshr <4 x i64> [[TMP20]], <i64 0, i64 16, i64 32, i64 48>
+; AVX-NEXT:    [[TMP22:%.*]] = trunc <4 x i64> [[TMP21]] to <4 x i16>
+; AVX-NEXT:    [[TMP23:%.*]] = lshr <4 x i16> [[TMP18]], splat (i16 1)
+; AVX-NEXT:    [[TMP24:%.*]] = lshr <4 x i16> [[TMP22]], splat (i16 1)
+; AVX-NEXT:    [[TMP25:%.*]] = add nuw <4 x i16> [[TMP24]], [[TMP23]]
+; AVX-NEXT:    [[TMP26:%.*]] = or <4 x i16> [[TMP22]], [[TMP18]]
+; AVX-NEXT:    [[TMP27:%.*]] = and <4 x i16> [[TMP26]], splat (i16 1)
+; AVX-NEXT:    [[TMP28:%.*]] = add nuw <4 x i16> [[TMP25]], [[TMP27]]
+; AVX-NEXT:    [[TMP29:%.*]] = bitcast <4 x i16> [[TMP28]] to i64
+; AVX-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[TMP29]], 1
+; AVX-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]
 entry:
   %retval = alloca %"struct.std::array8", align 2
   %a = alloca %"struct.std::array8", align 2

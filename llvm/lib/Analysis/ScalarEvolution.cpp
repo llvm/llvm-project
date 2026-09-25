@@ -5228,7 +5228,7 @@ struct BinaryOp {
 static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
                                              AssumptionCache &AC,
                                              const DominatorTree &DT,
-                                             const Instruction *CxtI) {
+                                             const Instruction *CtxI) {
   auto *Op = dyn_cast<Operator>(V);
   if (!Op)
     return std::nullopt;
@@ -13824,16 +13824,24 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   bool MaxOrZero = false;
   if (isa<SCEVConstant>(BECount)) {
     ConstantMaxBECount = BECount;
-  } else if (isa<SCEVConstant>(BECountIfBackedgeTaken)) {
-    // If we know exactly how many times the backedge will be taken if it's
-    // taken at least once, then the backedge count will either be that or
-    // zero.
-    ConstantMaxBECount = BECountIfBackedgeTaken;
-    MaxOrZero = true;
   } else {
     ConstantMaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned,
         /*Invert=*/false);
+    // If we know exactly how many times the backedge will be taken if it's
+    // taken at least once, then the backedge count will either be that or
+    // zero. If that count exceeds the range-based bound, the backedge can
+    // never be taken.
+    const APInt *IfTaken, *RangeMax;
+    if (match(BECountIfBackedgeTaken, m_scev_APInt(IfTaken))) {
+      if (match(ConstantMaxBECount, m_scev_APInt(RangeMax)) &&
+          IfTaken->ugt(*RangeMax)) {
+        ConstantMaxBECount = getZero(BECountIfBackedgeTaken->getType());
+      } else {
+        ConstantMaxBECount = BECountIfBackedgeTaken;
+        MaxOrZero = true;
+      }
+    }
   }
 
   if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&

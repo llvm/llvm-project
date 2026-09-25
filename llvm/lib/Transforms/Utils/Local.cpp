@@ -1557,13 +1557,13 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
 Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                        const DataLayout &DL,
-                                       const Instruction *CxtI,
+                                       const Instruction *CtxI,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
-  KnownBits Known = computeKnownBits(V, DL, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, AC, CtxI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as

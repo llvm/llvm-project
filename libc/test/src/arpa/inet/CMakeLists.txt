@@ -73,6 +73,21 @@ add_libc_test(
 )
 
 add_libc_test(
+  inet_pton
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_pton_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_in_addr
+    libc.src.arpa.inet.inet_pton
+    libc.src.__support.libc_errno
+    libc.hdr.sys_socket_macros
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   ntohl
   SUITE
     libc_arpa_inet_unittests
