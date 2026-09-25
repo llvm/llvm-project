@@ -206,7 +206,8 @@ bool WasmEHPrepareImpl::prepareThrows(Function &F) {
 
 bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   Module &M = *F.getParent();
-  IRBuilder<> IRB(F.getContext());
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
 
   SmallVector<BasicBlock *, 16> CatchPads;
   SmallVector<BasicBlock *, 16> CleanupPads;
@@ -242,10 +243,16 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
 
   LPadIndexField = LPadContextGV;
-  LSDAField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContextGV, 0, 1,
-                                             "lsda_gep");
-  SelectorField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContextGV,
-                                                 0, 2, "selector_gep");
+  LSDAField =
+      ConstantExpr::getGetElementPtr(DL, LPadContextTy, LPadContextGV,
+                                     {ConstantInt::get(Ctx, APInt(32, 0)),
+                                      ConstantInt::get(Ctx, APInt(32, 1))},
+                                     GEPNoWrapFlags::inBounds());
+  SelectorField =
+      ConstantExpr::getGetElementPtr(DL, LPadContextTy, LPadContextGV,
+                                     {ConstantInt::get(Ctx, APInt(32, 0)),
+                                      ConstantInt::get(Ctx, APInt(32, 2))},
+                                     GEPNoWrapFlags::inBounds());
 
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
   LPadIndexF =
@@ -264,8 +271,8 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // instruction selection.
   CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
 
-  auto *PersPrototype =
-      FunctionType::get(IRB.getInt32Ty(), {IRB.getPtrTy()}, false);
+  auto *PersPrototype = FunctionType::get(Type::getInt32Ty(Ctx),
+                                          {PointerType::getUnqual(Ctx)}, false);
   PersonalityF =
       M.getOrInsertFunction(getEHPersonalityName(Personality), PersPrototype);
 

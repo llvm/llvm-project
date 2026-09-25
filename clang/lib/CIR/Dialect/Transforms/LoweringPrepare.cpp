@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include <map>
@@ -308,6 +309,29 @@ struct LoweringPreparePass
   const clang::LangOptions &getLangOpts() const {
     assert(lowerModule && "LoweringPrepare requires a module with LangOptions");
     return lowerModule->getLangOpts();
+  }
+
+  /// Platform SDK version recorded on the module by CIRGen. An absent attribute
+  /// yields an empty VersionTuple, which is what a compilation without
+  /// -target-sdk-version behaves like: no version-gated feature is enabled.
+  /// Returns std::nullopt if the attribute is present but unparseable; an error
+  /// has been emitted and the pass marked as failed, so the caller must bail
+  /// out.
+  std::optional<llvm::VersionTuple> getSDKVersion() {
+    auto sdkVersionAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
+        CIRDialect::getSDKVersionAttrName());
+    if (!sdkVersionAttr)
+      return llvm::VersionTuple();
+
+    llvm::VersionTuple sdkVersion;
+    if (sdkVersion.tryParse(sdkVersionAttr.getValue())) {
+      mlirModule->emitError("cannot parse platform SDK version from ")
+          << CIRDialect::getSDKVersionAttrName() << " = '"
+          << sdkVersionAttr.getValue() << "'";
+      signalPassFailure();
+      return std::nullopt;
+    }
+    return sdkVersion;
   }
 
   /// Tracks current module.
@@ -2722,9 +2746,11 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     // From CUDA 10.1 onwards, we must call this function to end registration:
     //      void __cudaRegisterFatBinaryEnd(void **fatbinHandle);
     // This is CUDA-specific, so no need to use `addUnderscoredPrefix`.
+    std::optional<llvm::VersionTuple> sdkVersion = getSDKVersion();
+    if (!sdkVersion)
+      return;
     if (clang::CudaFeatureEnabled(
-            astCtx->getTargetInfo().getSDKVersion(),
-            clang::CudaFeature::CUDA_USES_FATBIN_REGISTER_END)) {
+            *sdkVersion, clang::CudaFeature::CUDA_USES_FATBIN_REGISTER_END)) {
       cir::CIRBaseBuilderTy globalBuilder(getContext());
       globalBuilder.setInsertionPointToStart(mlirModule.getBody());
       FuncOp endFunc =

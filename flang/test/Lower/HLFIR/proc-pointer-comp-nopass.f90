@@ -23,7 +23,7 @@ real function test1(x)
   test1 = x%p(42.)
 end function
 ! CHECK-LABEL:   func.func @_QPtest1(
-! CHECK:           %[[VAL_1:.*]] = fir.alloca f32 {bindc_name = "test1", uniq_name = "_QFtest1Etest1"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca f32 <{bindc_name = "test1", uniq_name = "_QFtest1Etest1"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]]  {{.*}}Etest1
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ex
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4.200000e+01 : f32

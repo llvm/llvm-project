@@ -75,13 +75,13 @@ end subroutine test_unknown_char_len_result
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x3x!fir.char<1,3>> {bindc_name = "w", uniq_name = "_QFtest_unknown_char_len_resultEw"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x3x!fir.char<1,3>> <{bindc_name = "w", uniq_name = "_QFtest_unknown_char_len_resultEw"}>
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) typeparams %[[VAL_0]] {uniq_name = "_QFtest_unknown_char_len_resultEw"} : (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>, !fir.shape<2>, index) -> (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>, !fir.ref<!fir.array<3x3x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3x3x!fir.char<1,2>> {bindc_name = "w2", uniq_name = "_QFtest_unknown_char_len_resultEw2"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3x3x!fir.char<1,2>> <{bindc_name = "w2", uniq_name = "_QFtest_unknown_char_len_resultEw2"}>
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_7]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) typeparams %[[VAL_6]] {uniq_name = "_QFtest_unknown_char_len_resultEw2"} : (!fir.ref<!fir.array<3x3x!fir.char<1,2>>>, !fir.shape<2>, index) -> (!fir.ref<!fir.array<3x3x!fir.char<1,2>>>, !fir.ref<!fir.array<3x3x!fir.char<1,2>>>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index

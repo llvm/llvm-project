@@ -2618,6 +2618,22 @@ StringMap<bool> sys::getHostCPUFeatures() {
       Query[2].Value == /*RISCV_HWPROBE_MISALIGNED_SCALAR_FAST=*/3)
     Features["unaligned-scalar-mem"] = true;
 
+  // Infer Zvl from vlenb CSR.
+  if (Features["v"] || Features["zve32x"]) {
+#if __riscv_xlen == 64
+    uint64_t VLen;
+#elif __riscv_xlen == 32
+    uint32_t VLen;
+#else
+#error "Unknown XLEN"
+#endif
+    // Use the raw CSR number in case assembler doesn't know vlenb.
+    __asm__ volatile("csrr %0, 0xc22" : "=r"(VLen));
+    VLen *= 8;
+    std::string ZvlFeature = (Twine("zvl") + Twine(VLen) + "b").str();
+    Features[ZvlFeature] = true;
+  }
+
   return Features;
 }
 #else

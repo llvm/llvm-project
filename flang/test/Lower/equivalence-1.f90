@@ -4,7 +4,7 @@
 SUBROUTINE s1
   INTEGER i
   REAL r
-  ! CHECK: %[[group:.*]] = fir.alloca !fir.array<4xi8> {uniq_name = "_QFs1Ei"}
+  ! CHECK: %[[group:.*]] = fir.alloca !fir.array<4xi8> <{uniq_name = "_QFs1Ei"}>
   EQUIVALENCE (r,i)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[group]], %c0{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[iloc:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<i32>
@@ -59,7 +59,7 @@ SUBROUTINE s3
 END SUBROUTINE s3
 
 ! test that equivalence in main program containing arrays are placed in global memory.
-! CHECK: fir.global internal @_QFEa {alignment = 64 : i64} : !fir.array<400000000xi8>
+! CHECK: fir.global internal @_QFEa <{alignment = 64 : i64}> : !fir.array<400000000xi8>
   integer :: a, b(100000000)
   equivalence (a, b)
   b(1) = 42

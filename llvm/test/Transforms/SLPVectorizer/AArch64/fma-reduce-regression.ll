@@ -7,8 +7,8 @@ define float @test(float %arg, <2 x float> %arg1, i64 %arg2) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[ARG2:%.*]] to i16
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ARG2]], 16
 ; CHECK-NEXT:    [[LSHR6:%.*]] = lshr i64 [[ARG2]], 32
-; CHECK-NEXT:    [[TRUNC7:%.*]] = trunc i64 [[LSHR6]] to i16
 ; CHECK-NEXT:    [[TRUNC5:%.*]] = trunc i64 [[LSHR]] to i16
+; CHECK-NEXT:    [[TRUNC7:%.*]] = trunc i64 [[LSHR6]] to i16
 ; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i16 [[TRUNC7]] to float
 ; CHECK-NEXT:    [[UITOFP8:%.*]] = uitofp i16 [[TRUNC5]] to float
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[UITOFP]], i64 0

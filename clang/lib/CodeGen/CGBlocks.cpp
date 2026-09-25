@@ -1094,7 +1094,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       auto *EWC = llvm::dyn_cast_or_null<ExprWithCleanups>(RetExpr);
       if (EWC)
         for (auto &C : EWC->getObjects())
-          if (auto *BD = C.dyn_cast<BlockDecl *>())
+          if (auto *BD = dyn_cast<BlockDecl *>(C))
             if (BD == blockDecl)
               return true;
       return false;

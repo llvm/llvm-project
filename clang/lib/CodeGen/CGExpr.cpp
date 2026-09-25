@@ -69,7 +69,7 @@ namespace clang {
 // TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
 //       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
-    "ubsan-guard-checks", llvm::cl::Optional,
+    "ubsan-guard-checks",
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang

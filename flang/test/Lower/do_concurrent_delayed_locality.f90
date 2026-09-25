@@ -23,10 +23,10 @@ end subroutine
 ! CHECK:         fir.local {type = local} @[[LOCAL_SYM:.*]] : i32
 
 ! CHECK-LABEL:   func.func @_QPdo_concurrent_with_locality_specs() {
-! CHECK:           %[[ORIG_LOCAL_INIT_ALLOC:.*]] = fir.alloca i32 {bindc_name = "local_init_var", {{.*}}}
+! CHECK:           %[[ORIG_LOCAL_INIT_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "local_init_var", {{.*}}}>
 ! CHECK:           %[[ORIG_LOCAL_INIT_DECL:.*]]:2 = hlfir.declare %[[ORIG_LOCAL_INIT_ALLOC]]
 
-! CHECK:           %[[ORIG_LOCAL_ALLOC:.*]] = fir.alloca i32 {bindc_name = "local_var", {{.*}}}
+! CHECK:           %[[ORIG_LOCAL_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "local_var", {{.*}}}>
 ! CHECK:           %[[ORIG_LOCAL_DECL:.*]]:2 = hlfir.declare %[[ORIG_LOCAL_ALLOC]]
 
 ! CHECK:           fir.do_concurrent {

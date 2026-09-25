@@ -139,10 +139,10 @@ U *test_nothrow_new_temp() {
 // CHECK: cir.func {{.*}} @_Z21test_nothrow_new_tempv()
 // CHECK:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_T>
 // CHECK:   %[[TMP_ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CHECK:   %[[ALLOC:.*]] = cir.call @_ZnwmRKSt9nothrow_t({{.*}}) nothrow
+// CHECK:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CHECK:   %[[IS_NOT_NULL:.*]] = cir.cmp ne %[[ALLOC]], %[[NULL]] : !cir.ptr<!void>
 // CHECK:   cir.cleanup.scope {
-// CHECK:     %[[ALLOC:.*]] = cir.call @_ZnwmRKSt9nothrow_t({{.*}}) nothrow
-// CHECK:     %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CHECK:     %[[IS_NOT_NULL:.*]] = cir.cmp ne %[[ALLOC]], %[[NULL]] : !cir.ptr<!void>
 // CHECK:     %[[FALSE:.*]] = cir.const #false
 // CHECK:     cir.store %[[FALSE]], %[[TMP_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:     cir.if %[[IS_NOT_NULL]] {
@@ -249,10 +249,10 @@ U *test_nothrow_new_nested_temps() {
 // CHECK:   %[[INNER_TMP:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_InnerT>
 // CHECK:   %[[INNER_ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CHECK:   %[[OUTER_ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CHECK:   %[[ALLOC:.*]] = cir.call @_ZnwmRKSt9nothrow_t({{.*}}) nothrow
+// CHECK:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CHECK:   %[[IS_NOT_NULL:.*]] = cir.cmp ne %[[ALLOC]], %[[NULL]] : !cir.ptr<!void>
 // CHECK:   cir.cleanup.scope {
-// CHECK:     %[[ALLOC:.*]] = cir.call @_ZnwmRKSt9nothrow_t({{.*}}) nothrow
-// CHECK:     %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CHECK:     %[[IS_NOT_NULL:.*]] = cir.cmp ne %[[ALLOC]], %[[NULL]] : !cir.ptr<!void>
 // CHECK:     %[[FALSE:.*]] = cir.const #false
 // CHECK:     cir.store %[[FALSE]], %[[INNER_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:     %[[FALSE2:.*]] = cir.const #false
