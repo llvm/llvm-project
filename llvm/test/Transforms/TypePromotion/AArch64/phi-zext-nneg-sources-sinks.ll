@@ -216,21 +216,20 @@ exit:
   ret i64 %result
 }
 
-; A zeroext return attribute describes the ABI, not the signedness of the
-; i16 payload. A returned negative sentinel must still exit the loop.
+; A zeroext call does not match signed promotion. Leave the loop narrow
+; rather than introducing a sign extension of the return value.
 define i64 @phi_call_source() {
 ; CHECK-LABEL: define i64 @phi_call_source() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[HEAD:%.*]] = call zeroext i16 @read_index()
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[HEAD]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -618,21 +617,20 @@ exit:
   ret i64 %result
 }
 
-; The same signext call can feed unsigned promotion. The call attribute
-; does not replace the explicit zero extension of its narrow result.
+; A signext call does not match unsigned promotion. Leave the loop narrow
+; rather than introducing a zero extension of the return value.
 define i64 @phi_call_source_signext_unsigned() {
 ; CHECK-LABEL: define i64 @phi_call_source_signext_unsigned() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[HEAD:%.*]] = call signext i16 @read_signed_index()
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[HEAD]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
@@ -745,5 +743,47 @@ body:
 
 exit:
   %result = phi i64 [ %signed, %loop ], [ %sum.next, %body ]
+  ret i64 %result
+}
+
+; A zeroext call matches unsigned promotion and can supply the widened PHI.
+define i64 @phi_call_source_zeroext_unsigned() {
+; CHECK-LABEL: define i64 @phi_call_source_zeroext_unsigned() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[HEAD:%.*]] = call zeroext i16 @read_index()
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[IDX]]
+; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[SUM]], %[[LOOP]] ], [ [[SUM_NEXT]], %[[BODY]] ]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  %head = call zeroext i16 @read_index()
+  br label %loop
+
+loop:
+  %idx = phi i16 [ %head, %entry ], [ 0, %body ]
+  %sum = phi i64 [ 0, %entry ], [ %sum.next, %body ]
+  %negative = icmp slt i16 %idx, 0
+  br i1 %negative, label %exit, label %body
+
+body:
+  %wide = zext i16 %idx to i64
+  %sum.next = add i64 %sum, %wide
+  %again = icmp ne i64 %wide, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %sum, %loop ], [ %sum.next, %body ]
   ret i64 %result
 }
