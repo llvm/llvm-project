@@ -1,0 +1,135 @@
+## Linux livepatch relocations are allocated but reference .symtab, not .dynsym.
+## Preserve their names, flags and symbol references when copying or stripping.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t.copy
+# RUN: llvm-readobj --sections --symbols --relocations %t.copy | FileCheck %s
+# RUN: echo added > %t.data
+# RUN: llvm-objcopy --add-section .extra=%t.data %t %t.add
+# RUN: llvm-readobj --sections --symbols --relocations %t.add | FileCheck %s --check-prefixes=CHECK,ADD
+
+## Removing debug sections and an unreferenced symbol changes section and
+## symbol indices. Both kinds of relocation must still have valid references.
+# RUN: llvm-objcopy --strip-unneeded %t %t.strip
+# RUN: llvm-readobj --sections --symbols --relocations %t.strip | FileCheck %s --implicit-check-not=unused
+# RUN: llvm-strip --strip-unneeded %t -o %t.strip
+# RUN: llvm-readobj --sections --symbols --relocations %t.strip | FileCheck %s --implicit-check-not=unused
+# RUN: not llvm-objcopy --strip-symbol='.klp.sym.vmlinux.foo,0' %t %t.bad 2>&1 | FileCheck %s --check-prefix=REFERENCED
+# REFERENCED: not stripping symbol '.klp.sym.vmlinux.foo,0' because it is named in a relocation
+
+## GNU/Linux OSABI is also accepted, although Linux modules normally use NONE.
+# RUN: yaml2obj %s -DABI=ELFOSABI_GNU -o %t.gnu
+# RUN: llvm-objcopy %t.gnu %t.copy
+# RUN: llvm-readobj --sections --symbols --relocations %t.copy | FileCheck %s
+
+# CHECK:      Name: .text
+# CHECK:      Name: .rela.text
+# CHECK:      Index: [[RELOC:[0-9]+]]
+# CHECK-NEXT: Name: .klp.rela.vmlinux..text
+# CHECK-NEXT: Type: SHT_RELA
+# CHECK-NEXT: Flags [ (0x100042)
+# CHECK:      Link: [[SYMTAB:[0-9]+]]
+# CHECK-NEXT: Info: 1
+# CHECK:      Index: [[SYMTAB]]
+# CHECK-NEXT: Name: .symtab
+# ADD:        Name: .extra
+# CHECK:      Relocations [
+# CHECK:      Section ({{[0-9]+}}) .rela.text {
+# CHECK-NEXT:   0x0 R_X86_64_NONE .klp.tombstone.foo 0x0
+# CHECK-NEXT:   0x8 R_X86_64_64 regular 0x0
+# CHECK-NEXT: }
+# CHECK-NEXT: Section ([[RELOC]]) .klp.rela.vmlinux..text {
+# CHECK-NEXT:   0x0 R_X86_64_64 .klp.sym.vmlinux.foo,0 0x7
+# CHECK-NEXT: }
+# CHECK:      Name: .klp.sym.vmlinux.foo,0
+# CHECK-NEXT: Value: 0x0
+# CHECK-NEXT: Size: 0
+# CHECK-NEXT: Binding: Local
+# CHECK-NEXT: Type: Object
+# CHECK-NEXT: Other: 0
+# CHECK-NEXT: Section: {{.*}} (0xFF20)
+# CHECK:      Name: .klp.tombstone.foo
+# CHECK-NEXT: Value: 0x0
+# CHECK-NEXT: Size: 0
+# CHECK-NEXT: Binding: Weak
+# CHECK-NEXT: Type: None
+# CHECK-NEXT: Other: 0
+# CHECK-NEXT: Section: {{.*}} (0xFF20)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  OSABI:   [[ABI=ELFOSABI_NONE]]
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '00000000000000000000000000000000'
+  - Name: .debug_info
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text
+    Relocations:
+      - Offset: 0
+        Symbol: .klp.tombstone.foo
+        Type:   R_X86_64_NONE
+      - Offset: 8
+        Symbol: regular
+        Type:   R_X86_64_64
+  - Name:    .klp.rela.vmlinux..text
+    Type:    SHT_RELA
+    ShFlags: 0x100042 # SHF_ALLOC | SHF_INFO_LINK | SHF_RELA_LIVEPATCH
+    Link:    .symtab
+    Info:    .text
+    Relocations:
+      - Offset: 0
+        Symbol: .klp.sym.vmlinux.foo,0
+        Type:   R_X86_64_64
+        Addend: 7
+Symbols:
+  - Name:  unused
+    Index: SHN_ABS
+  - Name:  .klp.sym.vmlinux.foo,0
+    Type:  STT_OBJECT
+    Index: 0xff20 # SHN_LIVEPATCH
+  # objtool also marks the symbols in disabled ordinary relocations.
+  - Name:    .klp.tombstone.foo
+    Binding: STB_WEAK
+    Index:   0xff20
+  - Name:    regular
+    Binding: STB_GLOBAL
+    Section: .text
+
+## A livepatch symbol can also be recognized without a relocation section.
+# RUN: yaml2obj --docnum=2 %s -o %t.sym
+# RUN: llvm-objcopy %t.sym %t.copy
+# RUN: llvm-readobj --symbols %t.copy | FileCheck %s --check-prefix=SYMBOL
+# SYMBOL:      Name: .klp.sym.vmlinux.foo,0
+# SYMBOL:      Section: {{.*}} (0xFF20)
+
+## Do not interpret an arbitrary OS-specific index as Linux livepatch, even
+## with a livepatch symbol name, or accept an unrecognized use of 0xff20.
+# RUN: yaml2obj --docnum=2 %s -DABI=ELFOSABI_FREEBSD -o %t.bad
+# RUN: not llvm-objcopy %t.bad %t.copy 2>&1 | FileCheck %s --check-prefix=INDEX-ERR -DINDEX=65312
+# RUN: yaml2obj --docnum=2 %s -DTYPE=ET_EXEC -o %t.bad
+# RUN: not llvm-objcopy %t.bad %t.copy 2>&1 | FileCheck %s --check-prefix=INDEX-ERR -DINDEX=65312
+# RUN: yaml2obj --docnum=2 %s -DINDEX=0xff21 -o %t.bad
+# RUN: not llvm-objcopy %t.bad %t.copy 2>&1 | FileCheck %s --check-prefix=INDEX-ERR -DINDEX=65313
+# RUN: yaml2obj --docnum=2 %s -DNAME=foo -o %t.bad
+# RUN: not llvm-objcopy %t.bad %t.copy 2>&1 | FileCheck %s --check-prefix=INDEX-ERR -DINDEX=65312
+# INDEX-ERR: symbol '{{.*}}' has unsupported value greater than or equal to SHN_LORESERVE: [[INDEX]]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    [[TYPE=ET_REL]]
+  Machine: EM_X86_64
+  OSABI:   [[ABI=ELFOSABI_NONE]]
+Symbols:
+  - Name:  [[NAME=.klp.sym.vmlinux.foo,0]]
+    Index: [[INDEX=0xff20]]
