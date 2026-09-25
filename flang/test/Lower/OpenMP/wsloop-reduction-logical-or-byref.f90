@@ -24,9 +24,9 @@
 
 ! CHECK-LABEL:   func.func @_QPsimple_reduction(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_reductionEi"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_reductionEi"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFsimple_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.logical<4> {bindc_name = "x", uniq_name = "_QFsimple_reductionEx"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x", uniq_name = "_QFsimple_reductionEx"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 100 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -68,9 +68,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_reduction_switch_order(
 ! CHECK-SAME:                                                %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_reduction_switch_orderEi"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_reduction_switch_orderEi"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFsimple_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.logical<4> {bindc_name = "x", uniq_name = "_QFsimple_reduction_switch_orderEx"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x", uniq_name = "_QFsimple_reduction_switch_orderEx"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 100 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -112,16 +112,16 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_reductions(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "w"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFmultiple_reductionsEi"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_reductionsEi"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFmultiple_reductionsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmultiple_reductionsEw"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.logical<4> {bindc_name = "x", uniq_name = "_QFmultiple_reductionsEx"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x", uniq_name = "_QFmultiple_reductionsEx"}>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.logical<4> {bindc_name = "y", uniq_name = "_QFmultiple_reductionsEy"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "y", uniq_name = "_QFmultiple_reductionsEy"}>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z", uniq_name = "_QFmultiple_reductionsEz"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z", uniq_name = "_QFmultiple_reductionsEz"}>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFmultiple_reductionsEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant true
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i1) -> !fir.logical<4>

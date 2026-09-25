@@ -272,6 +272,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  renameat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.renameat
+)
+
+add_entrypoint_object(
   fdopen
   ALIAS
   DEPENDS

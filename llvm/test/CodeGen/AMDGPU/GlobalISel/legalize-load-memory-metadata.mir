@@ -28,9 +28,10 @@
   }
 
   !0 = !{i24 0, i24 1048575}
-  !1 = !{!"omnipotent char", !2}
+  !1 = !{!4, !4, i64 0}
   !2 = !{!"Simple C/C++ TBAA"}
   !3 = !{i24 0, i24 1048575}
+  !4 = !{!"omnipotent char", !2}
 ...
 
 # Make sure range metadata is not preserved when widening loads, but
@@ -44,7 +45,7 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !0, addrspace 1)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
     ; SI-NEXT: $vgpr0 = COPY [[AND]](s32)
@@ -65,7 +66,7 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !0, addrspace 1)
     ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !range !3, !tbaa !1)
@@ -81,7 +82,7 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !0, addrspace 1)
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
     ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
     ; SI-NEXT: $vgpr0 = COPY [[AND]](s32)
@@ -102,7 +103,7 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !0, addrspace 1)
     ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !tbaa !1)

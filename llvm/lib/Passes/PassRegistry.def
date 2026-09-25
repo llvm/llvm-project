@@ -574,6 +574,7 @@ FUNCTION_PASS("view-dom", DomViewer())
 FUNCTION_PASS("view-dom-only", DomOnlyViewer())
 FUNCTION_PASS("view-post-dom", PostDomViewer())
 FUNCTION_PASS("view-post-dom-only", PostDomOnlyViewer())
+FUNCTION_PASS("win-eh-prepare", WinEHPreparePass())
 FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #undef FUNCTION_PASS
 
@@ -735,12 +736,6 @@ FUNCTION_PASS_WITH_PARAMS(
       return StructurizeCFGPass(SkipUniformRegions);
     },
     parseStructurizeCFGPassOptions, "skip-uniform-regions")
-FUNCTION_PASS_WITH_PARAMS(
-    "win-eh-prepare", "WinEHPreparePass",
-    [](bool DemoteCatchSwitchPHIOnly) {
-      return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
-    },
-    parseWinEHPrepareOptions, "demote-catchswitch-only")
 FUNCTION_PASS_WITH_PARAMS(
     "bounds-checking", "BoundsCheckingPass",
     [](BoundsCheckingPass::Options Options) {

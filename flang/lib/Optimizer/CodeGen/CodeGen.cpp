@@ -1182,31 +1182,19 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        if (options.unsafeFPConversion) {
-          // Under unsafe FP math (e.g. -ffast-math), use plain fptosi/fptoui
-          // instead of saturating intrinsics. This avoids expensive
-          // overflow/NAN checking in the generated code.
-          mlir::Value res;
-          if (toFirTy.isUnsignedInteger())
-            res = mlir::LLVM::FPToUIOp::create(rewriter, loc, toTy, op0);
-          else
-            res = mlir::LLVM::FPToSIOp::create(rewriter, loc, toTy, op0);
-          rewriter.replaceOp(convert, res);
+        // NOTE: We are checking the fir type here because toTy is an LLVM type
+        // which is signless, and we need to use the intrinsic that matches the
+        // sign of the output in fir.
+        if (toFirTy.isUnsignedInteger()) {
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
         } else {
-          // NOTE: We are checking the fir type here because toTy is an LLVM
-          // type which is signless, and we need to use the intrinsic that
-          // matches the sign of the output in fir.
-          if (toFirTy.isUnsignedInteger()) {
-            auto intrinsicName =
-                mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
-            rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-                convert, toTy, intrinsicName, op0);
-          } else {
-            auto intrinsicName =
-                mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
-            rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-                convert, toTy, intrinsicName, op0);
-          }
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
         }
         return mlir::success();
       }
@@ -1517,6 +1505,22 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
       size = integerCast(loc, rewriter, mallocTy, size);
 
     std::optional<uint64_t> alignment = heap.getAlignment();
+    // Alignment is inherent to fir.allocmem, so add it explicitly before
+    // synthesizing the LLVM call operand segment properties from the number of
+    // call operands. Set the callee directly on the typed LLVM call property.
+    auto getRuntimeCallBuilderAttributes = [&](int32_t numCallOperands,
+                                               mlir::SymbolRefAttr callee) {
+      llvm::SmallVector<mlir::NamedAttribute> runtimeCallAttrs(
+          heap->getDiscardableAttrDictionary().getValue());
+      if (mlir::IntegerAttr alignmentAttr = heap.getAlignmentAttr())
+        runtimeCallAttrs.emplace_back(heap.getAlignmentAttrName(),
+                                      alignmentAttr);
+      auto builderAttrs = getLLVMCallBuilderAttributes(
+          rewriter, runtimeCallAttrs, numCallOperands);
+      builderAttrs.properties.callee =
+          mlir::cast<mlir::FlatSymbolRefAttr>(callee);
+      return builderAttrs;
+    };
     if (alignment && *alignment > 16) {
       auto mod = heap->getParentOfType<mlir::ModuleOp>();
       llvm::Triple triple = mod ? fir::getTargetTriple(mod) : llvm::Triple{};
@@ -1547,10 +1551,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
           mlir::Value nullPtr =
               mlir::LLVM::ZeroOp::create(rewriter, loc, ptrTy);
           mlir::LLVM::StoreOp::create(rewriter, loc, nullPtr, memptr);
-          heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy,
-                                                   this->options));
-          auto builderAttrs =
-              getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 3);
+          auto builderAttrs = getRuntimeCallBuilderAttributes(
+              3, getPosixMemalign(heap, rewriter, mallocTy, this->options));
           mlir::LLVM::CallOp::create(rewriter, loc,
                                      mlir::TypeRange{mlir::IntegerType::get(
                                          rewriter.getContext(), 32)},
@@ -1572,10 +1574,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
                                   ~static_cast<std::int64_t>(*alignment - 1));
         mlir::Value roundedSize = mlir::LLVM::AndOp::create(
             rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
-        heap->setAttr("callee",
-                      getAlignedAlloc(heap, rewriter, mallocTy, this->options));
-        auto builderAttrs =
-            getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 2);
+        auto builderAttrs = getRuntimeCallBuilderAttributes(
+            2, getAlignedAlloc(heap, rewriter, mallocTy, this->options));
         rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
             heap, mlir::TypeRange{::getLlvmPtrType(heap.getContext())},
             mlir::ValueRange{alignVal, roundedSize}, builderAttrs.properties,
@@ -1584,9 +1584,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
       }
     }
 
-    heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy, this->options));
-    auto builderAttrs =
-        getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 1);
+    auto builderAttrs = getRuntimeCallBuilderAttributes(
+        1, getMalloc(heap, rewriter, mallocTy, this->options));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, mlir::TypeRange{::getLlvmPtrType(heap.getContext())},
         mlir::ValueRange{size}, builderAttrs.properties,
@@ -1659,9 +1658,10 @@ struct FreeMemOpConversion : public fir::FIROpConversion<fir::FreeMemOp> {
   matchAndRewrite(fir::FreeMemOp freemem, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = freemem.getLoc();
-    freemem->setAttr("callee", getFree(freemem, rewriter, this->options));
-    auto builderAttrs =
-        getLLVMCallBuilderAttributes(rewriter, freemem->getAttrs(), 1);
+    auto builderAttrs = getLLVMCallBuilderAttributes(
+        rewriter, freemem->getDiscardableAttrDictionary().getValue(), 1);
+    builderAttrs.properties.callee = mlir::cast<mlir::FlatSymbolRefAttr>(
+        getFree(freemem, rewriter, this->options));
     mlir::LLVM::CallOp::create(rewriter, loc, mlir::TypeRange{},
                                mlir::ValueRange{adaptor.getHeapref()},
                                builderAttrs.properties,
@@ -3864,11 +3864,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     // Apply all non-Fir::GlobalOp attributes to the LLVM::GlobalOp, preserving
     // them; whilst taking care not to apply attributes that are lowered in
     // other ways.
-    llvm::SmallDenseSet<llvm::StringRef> elidedAttrsSet(
-        global.getAttributeNames().begin(), global.getAttributeNames().end());
-    for (auto &attr : global->getAttrs())
-      if (!elidedAttrsSet.contains(attr.getName().strref()))
-        g->setAttr(attr.getName(), attr.getValue());
+    g->setDiscardableAttrs(global->getDiscardableAttrDictionary());
 
     auto &gr = g.getInitializerRegion();
     rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
@@ -4065,13 +4061,11 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
 
       rewriter.replaceOp(load, newBoxStorage);
     } else {
-      auto builderAttrs = splitBuilderAttributes<mlir::LLVM::LoadOp>(
-          rewriter, load->getAttrs());
       mlir::LLVM::LoadOp loadOp = mlir::LLVM::LoadOp::create(
-          rewriter, load.getLoc(), mlir::TypeRange{llvmLoadTy},
-          adaptor.getOperands(), builderAttrs.properties,
-          builderAttrs.discardableAttributes);
+          rewriter, load.getLoc(), llvmLoadTy, adaptor.getOperands().front());
+      loadOp->setDiscardableAttrs(load->getDiscardableAttrDictionary());
       loadOp.setVolatile_(isVolatile);
+      loadOp.setNontemporal(load.getNontemporal());
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         loadOp.setTBAATags(*optionalTag);
       else
@@ -4921,9 +4915,6 @@ public:
       options.unifiedHeapAllocSuffix = unifiedHeapAllocSuffix;
     if (!managedHeapAllocSuffix.empty())
       options.managedHeapAllocSuffix = managedHeapAllocSuffix;
-
-    if (unsafeFPConversion)
-      options.unsafeFPConversion = unsafeFPConversion;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
