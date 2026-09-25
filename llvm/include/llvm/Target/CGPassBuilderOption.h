@@ -86,6 +86,7 @@ struct CGPassBuilderOption {
 
   cl::boolOrDefault VerifyMachineCode = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableRegAllocFastTied = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault DebugifyAndStripAll = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
