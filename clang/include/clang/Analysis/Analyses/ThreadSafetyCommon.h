@@ -267,18 +267,12 @@ private:
   PostOrderCFGView *SortedGraph = nullptr;
 };
 
-// TODO: move this back into ThreadSafety.cpp
-// This is specific to thread safety.  It is here because
-// translateAttrExpr needs it, but that should be moved too.
 class CapabilityExpr {
 private:
   static constexpr unsigned FlagNegative = 1u << 0;
   static constexpr unsigned FlagReentrant = 1u << 1;
 
-  /// The capability expression and flags.
   llvm::PointerIntPair<const til::SExpr *, 2, unsigned> CapExpr;
-
-  /// The kind of capability as specified by @ref CapabilityAttr::getName.
   StringRef CapKind;
 
 public:
@@ -286,10 +280,9 @@ public:
   CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg, bool Reentrant)
       : CapExpr(E, (Neg ? FlagNegative : 0) | (Reentrant ? FlagReentrant : 0)),
         CapKind(Kind) {}
-  // Infers `Kind` and `Reentrant` from `QT`.
+
   CapabilityExpr(const til::SExpr *E, QualType QT, bool Neg);
 
-  // Don't allow implicitly-constructed StringRefs since we'll capture them.
   template <typename T>
   CapabilityExpr(const til::SExpr *, T, bool, bool) = delete;
 
@@ -298,51 +291,16 @@ public:
   bool negative() const { return CapExpr.getInt() & FlagNegative; }
   bool reentrant() const { return CapExpr.getInt() & FlagReentrant; }
 
-  CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative(),
-                          reentrant());
-  }
-
-  bool equals(const CapabilityExpr &other) const {
-    return (negative() == other.negative()) &&
-           sx::equals(sexpr(), other.sexpr());
-  }
-
-  bool matches(const CapabilityExpr &other) const {
-    return (negative() == other.negative()) &&
-           sx::matches(sexpr(), other.sexpr());
-  }
-
-  bool matchesUniv(const CapabilityExpr &CapE) const {
-    return isUniversal() || matches(CapE);
-  }
-
-  bool partiallyMatches(const CapabilityExpr &other) const {
-    return (negative() == other.negative()) &&
-           sx::partiallyMatches(sexpr(), other.sexpr());
-  }
-
-  const ValueDecl* valueDecl() const {
-    if (negative() || sexpr() == nullptr)
-      return nullptr;
-    if (const auto *P = dyn_cast<til::Project>(sexpr()))
-      return P->clangDecl();
-    if (const auto *P = dyn_cast<til::LiteralPtr>(sexpr()))
-      return P->clangDecl();
-    return nullptr;
-  }
-
-  std::string toString() const {
-    if (negative())
-      return "!" + sx::toString(sexpr());
-    return sx::toString(sexpr());
-  }
-
-  bool shouldIgnore() const { return sexpr() == nullptr; }
-
-  bool isInvalid() const { return isa_and_nonnull<til::Undefined>(sexpr()); }
-
-  bool isUniversal() const { return isa_and_nonnull<til::Wildcard>(sexpr()); }
+  CapabilityExpr operator!() const;
+  bool equals(const CapabilityExpr &other) const;
+  bool matches(const CapabilityExpr &other) const;
+  bool matchesUniv(const CapabilityExpr &CapE) const;
+  bool partiallyMatches(const CapabilityExpr &other) const;
+  const ValueDecl* valueDecl() const;
+  std::string toString() const;
+  bool shouldIgnore() const;
+  bool isInvalid() const;
+  bool isUniversal() const;
 };
 
 // Translate clang::Expr to til::SExpr.
