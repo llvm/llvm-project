@@ -302,6 +302,10 @@ class Preprocessor {
   /// True if we are currently preprocessing a #if or #elif directive
   bool ParsingIfOrElifDirective;
 
+  /// True if we are preprocessing the parameters of an #embed directive or a
+  /// __has_embed expression.
+  bool ParsingEmbedParameters;
+
   /// True if we are pre-expanding macro arguments.
   bool InMacroArgPreExpansion;
 

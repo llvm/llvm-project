@@ -93,15 +93,41 @@ const unsigned char *null_ptr_3 = {
 #embed <null_byte.bin>
 };
 
+// Test macro expansions:
 #define FILE_NAME <null_byte.bin>
 #define LIMIT 1
 #define OFFSET 0
 #define EMPTY_SUFFIX suffix()
+#define VALUE 7
+#define SUFFIX_TOKENS ,VALUE
 
 constexpr unsigned char ch =
 #embed FILE_NAME limit(LIMIT) clang::offset(OFFSET) EMPTY_SUFFIX
 ;
 static_assert(ch == 0);
+
+const int nums1[] = {
+#embed "numbers.txt" limit(LIMIT) prefix(VALUE,) suffix(SUFFIX_TOKENS)
+};
+static_assert(sizeof(nums1) / sizeof(int) == LIMIT + 2);
+
+constexpr int empty_val =
+#embed "numbers.txt" limit(0) if_empty(VALUE)
+;
+static_assert(empty_val == VALUE);
+
+#define PARAM_LIST limit(VALUE) prefix(8,) suffix(,9)
+#define PARAM_ALIAS if_empty
+
+const int nums2[] = {
+#embed "numbers.txt" PARAM_LIST
+};
+static_assert(sizeof(nums2) / sizeof(int) == VALUE + 2);
+
+constexpr int only_prefix =
+#embed "numbers.txt" limit(0) PARAM_ALIAS(7)
+;
+static_assert(only_prefix == 7);
 
 void foobar(float x, char y, char z);
 void g1() { foobar((float)

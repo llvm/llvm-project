@@ -492,6 +492,14 @@ def warn_compat_pp_embed_directive : Warning<
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
+def err_pp_embed_parameter_is_macro : Error<
+  "cannot use %0 as %select{an '#embed'|a '__has_embed'}1 parameter if also"
+  " defined as a macro">;
+def warn_c_pp_embed_parameter_is_macro : ExtWarn<
+  "%0 is defined as a macro and gets expanded when used as "
+  "%select{an '#embed'|a '__has_embed'}1 parameter in C; this is "
+  "ill-formed in C++">,
+  InGroup<EmbedParameterIsMacro>, DefaultIgnore;
 def err_pp_embed_device_file : Error<
   "device files are not yet supported by '#embed' directive">;
 
