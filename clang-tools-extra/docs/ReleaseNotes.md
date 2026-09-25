@@ -307,8 +307,14 @@ infrastructure are described first, followed by tool-specific sections.
   `atomic_compare_exchange_strong()`.
 
 - Improved {doc}`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
-  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive on the required parentheses of `typeof` and
+    `typeof_unqual` operands.
+
+  - Fixed false positives on parentheses that determine the deduced type in
+    `decltype((x))` and in the initializers and return statements of
+    `decltype(auto)` declarations.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
