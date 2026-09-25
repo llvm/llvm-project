@@ -980,7 +980,7 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {
   }
 }
 
-multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, ValueType vt> {
+multiclass ScalarSubwordLoadPat <string Instr, SDPatternOperator node, ValueType vt> {
    // 1. IMM offset
    def : GCNPat <
      (node (SMRDImm i64:$sbase, i32:$offset)),
@@ -1041,12 +1041,19 @@ multiclass ScalarBufferLoadIntrinsicPat <SDPatternOperator name, string Instr> {
 // selector to prefer those.
 let AddedComplexity = 100 in {
 
-defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_extloadi8, i32>;
-defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_zextloadi8, i32>;
-defm : ScalarLoadWithExtensionPat <"S_LOAD_I8", smrd_sextloadi8, i32>;
-defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_extloadi16, i32>;
-defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_zextloadi16, i32>;
-defm : ScalarLoadWithExtensionPat <"S_LOAD_I16", smrd_sextloadi16, i32>;
+// Extending subword loads
+defm : ScalarSubwordLoadPat <"S_LOAD_U8", smrd_extloadi8, i32>;
+defm : ScalarSubwordLoadPat <"S_LOAD_U8", smrd_zextloadi8, i32>;
+defm : ScalarSubwordLoadPat <"S_LOAD_I8", smrd_sextloadi8, i32>;
+defm : ScalarSubwordLoadPat <"S_LOAD_U16", smrd_extloadi16, i32>;
+defm : ScalarSubwordLoadPat <"S_LOAD_U16", smrd_zextloadi16, i32>;
+defm : ScalarSubwordLoadPat <"S_LOAD_I16", smrd_sextloadi16, i32>;
+
+// Non-extending subword loads
+foreach vt = Reg16Types.types in {
+  defm : ScalarSubwordLoadPat <"S_LOAD_U16", smrd_load, vt>;
+}
+
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_byte, "S_BUFFER_LOAD_I8">;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ubyte, "S_BUFFER_LOAD_U8">;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_short, "S_BUFFER_LOAD_I16">;
