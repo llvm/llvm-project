@@ -21,7 +21,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include <string>
 #include <type_traits>
 
 namespace llvm {
@@ -38,8 +37,8 @@ inline bool parseArgValue(StringRef S, bool &V) {
   return true;
 }
 
-inline bool parseArgValue(StringRef S, std::string &V) {
-  V = S.str();
+inline bool parseArgValue(StringRef S, StringRef &V) {
+  V = S;
   return true;
 }
 

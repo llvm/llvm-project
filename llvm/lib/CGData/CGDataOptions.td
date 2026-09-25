@@ -16,7 +16,7 @@ defm CodeGenDataThinLTOTwoRounds : BoolField<"codegen-data-thinlto-two-rounds",
   "false", "Enable two-round ThinLTO code generation. The first round emits "
   "codegen data, while the second round uses the emitted codegen data for "
   "further optimizations.">;
-defm CodeGenDataUsePath : ValueField<"codegen-data-use-path", "std::string",
+defm CodeGenDataUsePath : ValueField<"codegen-data-use-path", "StringRef",
   "", "File path to where .cgdata file is read">;
 defm GlobalMergingCallOverhead : ValueField<"global-merging-call-overhead",
   "double", "1.0", "The overhead cost associated with each function call when "

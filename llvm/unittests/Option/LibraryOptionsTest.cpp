@@ -81,7 +81,7 @@ TEST(LibraryOptionsTest, Parser) {
     std::string Err = toString(P.parse(Argv, Consumed));
     return std::to_string(Consumed) + " " + Err;
   };
-  EXPECT_EQ(Parse({"-lib-count", "5", "-lib-enable"}), "2 ");
+  EXPECT_EQ(Parse({"-lib-count", "5"}), "2 ");
   EXPECT_EQ(TestLibraryOptions::Global.Count, 5u);
   EXPECT_EQ(Parse({"-lib-count=x", "-lib-enable"}),
             "1 invalid value 'x' in '-lib-count=x'");
@@ -98,13 +98,18 @@ TEST(LibraryOptionsTest, Register) {
   cl::ResetCommandLineParser();
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
   const TestLibraryOptions &G = TestLibraryOptions::Global;
-  const char *Args[] = {"prog", "-lib-count", "5", "-lib-enable"};
+  std::string Path = "-lib-path=q";
+  const char *Args[] = {"prog", "-lib-count", "5", "-lib-enable", Path.c_str()};
   EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
   EXPECT_EQ(G.Count, 5u);
   EXPECT_TRUE(G.Enable);
+  // A StringRef member does not refer to the caller's argument.
+  Path.assign(Path.size(), 'x');
+  EXPECT_EQ(G.Path, "q");
   cl::ResetAllOptionOccurrences();
   EXPECT_EQ(G.Count, 3u);
   EXPECT_FALSE(G.Enable);
+  EXPECT_EQ(G.Path, "p");
   cl::ResetCommandLineParser();
 }
 

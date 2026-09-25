@@ -162,12 +162,6 @@ enum FormattingFlags {
 enum MiscFlags {             // Miscellaneous flags to adjust argument
   CommaSeparated = 0x01,     // Should this cl::list split between commas?
   PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
-
-  // Can this option group with other options?
-  // If this is enabled, multiple letter options are allowed to bunch together
-  // with only a single hyphen for the whole group.  This allows emulation
-  // of the behavior that ls uses for example: ls -la === ls -l -a
-  Grouping = 0x08,
 };
 
 //===----------------------------------------------------------------------===//
@@ -1332,11 +1326,7 @@ template <> struct applicator<FormattingFlags> {
 };
 
 template <> struct applicator<MiscFlags> {
-  static void opt(MiscFlags MF, Option &O) {
-    assert((MF != Grouping || O.ArgStr.size() == 1) &&
-           "cl::Grouping can only apply to single character Options.");
-    O.setMiscFlag(MF);
-  }
+  static void opt(MiscFlags MF, Option &O) { O.setMiscFlag(MF); }
 };
 
 // Apply modifiers to an option in a type safe way.
@@ -2319,7 +2309,9 @@ LLVM_ABI bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
 
 /// The options of a library that declares them in TableGen rather than as
 /// cl::opt (see llvm/Option/LibraryOptions.h). ParseCommandLineOptions hands
-/// every argument naming one of them to parse().
+/// every argument naming one of them to parse(). This lets libraries move off
+/// cl::opt while tools still parse argv with cl::, and goes away once tools
+/// parse argv without cl::.
 class LLVM_ABI LibraryOptions {
 public:
   /// Calls \p Fn with the spelling of each option without its prefix (e.g.
@@ -2329,7 +2321,8 @@ public:
           Fn) const = 0;
 
   /// Parses the option spelled by Args[0], which may take Args[1] as its
-  /// value, and sets \p Consumed to the number of arguments it spans.
+  /// value, and sets \p Consumed to the number of arguments it spans. The
+  /// strings in \p Args remain valid until reset().
   virtual Error parse(ArrayRef<const char *> Args, unsigned &Consumed) = 0;
 
   /// Restores the default values.

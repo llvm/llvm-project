@@ -236,7 +236,7 @@ static void emitOptionsStruct(const Record &Struct,
                               ArrayRef<const Record *> Groups,
                               ArrayRef<const Record *> Opts, raw_ostream &OS) {
   struct Member {
-    StringRef Name, Type, Default, HelpText;
+    StringRef Name, Type, Default;
   };
   std::vector<const Record *> Fields;
   for (const Record *R : Opts) {
@@ -264,8 +264,7 @@ static void emitOptionsStruct(const Record &Struct,
   StringMap<unsigned> MemberIndex;
   for (const Record *R : ByID) {
     Member M{R->getValueAsString("FieldName"), R->getValueAsString("FieldType"),
-             R->getValueAsString("FieldDefault"),
-             getOptionalString(*R, "HelpText")};
+             R->getValueAsString("FieldDefault")};
     auto [It, Inserted] = MemberIndex.try_emplace(M.Name, Members.size());
     if (Inserted) {
       Members.push_back(M);
@@ -276,24 +275,16 @@ static void emitOptionsStruct(const Record &Struct,
       PrintFatalError(R->getLoc(), "member '" + M.Name +
                                        "' is declared with a different type "
                                        "or default");
-    if (Prev.HelpText.empty())
-      Prev.HelpText = M.HelpText;
   }
 
   StringRef Name = Struct.getName();
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
-  OS << "#include <string>\n\n";
+  OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
         "class OptTable;\n} // namespace opt\n\n";
   OS << "struct " << Name << " {\n";
-  for (const Member &M : Members) {
-    if (!M.HelpText.empty()) {
-      std::string Help = M.HelpText.str();
-      llvm::replace(Help, '\n', ' ');
-      OS << "  /// " << Help << "\n";
-    }
+  for (const Member &M : Members)
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
-  }
   OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
   OS << "  static " << Name << " Global;\n\n";
   OS << "  static const opt::OptTable &optTable();\n";

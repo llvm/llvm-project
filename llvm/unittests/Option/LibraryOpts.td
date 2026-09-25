@@ -13,4 +13,4 @@ def TestLibraryOptions : OptionsStruct;
 defm Enable : BoolField<"lib-enable", "false", "A bool">;
 defm Count : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
 defm Ratio : ValueField<"lib-ratio", "double", "0.5", "A double">;
-defm Path : ValueField<"lib-path", "std::string", "\"p\"", "A string">;
+defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;

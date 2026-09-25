@@ -17,7 +17,7 @@ fir.global @_QMtest_0Edata_int {test = "string_attribute_maintained"} : i32 {
   fir.has_value %c10_i32 : i32
 }
 
-// READ-OUT: fir.global @sectioned {section = ".my_section"} : i32
+// READ-OUT: fir.global @sectioned <{section = ".my_section"}> : i32
 // GENERIC: "fir.global"() <{section = ".my_section"
 // CHECK: llvm.mlir.global external @sectioned() {{{.*}}section = ".my_section"{{.*}}} : i32
 fir.global @sectioned {section = ".my_section"} : i32

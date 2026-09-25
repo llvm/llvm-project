@@ -141,6 +141,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdatasync
+  SRCS
+    fdatasync.cpp
+  HDRS
+    ../fdatasync.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fdatasync
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fork
   SRCS
     fork.cpp

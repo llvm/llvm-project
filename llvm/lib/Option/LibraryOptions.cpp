@@ -34,8 +34,6 @@ void LibraryOptionsParser::forEachOption(
 
 Error LibraryOptionsParser::parse(ArrayRef<const char *> Args,
                                   unsigned &Consumed) {
-  // An option takes at most one separate value.
-  Args = Args.take_front(2);
   InputArgList List(Args.begin(), Args.end());
   Consumed = 0;
   std::unique_ptr<Arg> A = Table().ParseOneArg(List, Consumed);

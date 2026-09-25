@@ -76,6 +76,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # poll.h entrypoints
     libc.src.poll.poll
+    libc.src.poll.ppoll
 
     # pwd.h entrypoints
     libc.src.pwd.endpwent
@@ -289,6 +290,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.printf
     libc.src.stdio.remove
     libc.src.stdio.rename
+    libc.src.stdio.renameat
     libc.src.stdio.scanf
     libc.src.stdio.vscanf
     libc.src.stdio.snprintf
@@ -465,6 +467,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fchown
+    libc.src.unistd.fdatasync
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate

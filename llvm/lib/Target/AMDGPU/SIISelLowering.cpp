@@ -7322,11 +7322,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
-  case AMDGPU::V_ADD_CO_U32_e32:
-  case AMDGPU::V_SUB_CO_U32_e32:
-  case AMDGPU::V_SUBREV_CO_U32_e32:
-    // TODO: Remove usesCustomInserter from these instructions.
-    return BB;
   case AMDGPU::V_ADDC_U32_e32:
   case AMDGPU::V_SUBB_U32_e32:
   case AMDGPU::V_SUBBREV_U32_e32:
@@ -20485,6 +20480,13 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // at any given point.
       Known.Zero.setHighBits(
           llvm::countl_zero(getSubtarget()->getAddressableLocalMemorySize()));
+      break;
+    }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane: {
+      // Result is the data operand's value from some lane.
+      VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
+                              Depth + 1);
       break;
     }
     }

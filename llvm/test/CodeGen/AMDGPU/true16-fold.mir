@@ -40,6 +40,45 @@ body:             |
 ...
 
 ---
+name:            fold_16bit_subreg_3
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: fold_16bit_subreg_3
+    ; CHECK: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_CMP_EQ_F16_t16_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_EQ_F16_t16_e64 0, killed [[DEF1]], 2, [[DEF]].sub3, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_EQ_F16_t16_e64_]]
+    %0:sgpr_128 = IMPLICIT_DEF
+    %1:sgpr_lo16 = COPY %0.sub3_lo16:sgpr_128
+    %2:vgpr_16 = COPY %1:sgpr_lo16
+    %3:vgpr_16 = IMPLICIT_DEF
+    %4:sreg_32 = nofpexcept V_CMP_EQ_F16_t16_e64 0, killed %3:vgpr_16, 2, killed %2:vgpr_16, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %4
+...
+
+---
+name:            fold_16bit_no_subreg
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: fold_16bit_no_subreg
+    ; CHECK: [[DEF:%[0-9]+]]:sgpr_lo16 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[DEF]]
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_CMP_EQ_F16_t16_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_EQ_F16_t16_e64 0, killed [[DEF1]], 2, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_EQ_F16_t16_e64_]]
+    %0:sgpr_lo16 = IMPLICIT_DEF
+    %1:sgpr_lo16 = COPY %0:sgpr_lo16
+    %2:vgpr_16 = COPY %1:sgpr_lo16
+    %3:vgpr_16 = IMPLICIT_DEF
+    %4:sreg_32 = nofpexcept V_CMP_EQ_F16_t16_e64 0, killed %3:vgpr_16, 2, killed %2:vgpr_16, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %4
+...
+
+---
 name:            sgpr_lo16
 tracksRegLiveness: true
 registers:
