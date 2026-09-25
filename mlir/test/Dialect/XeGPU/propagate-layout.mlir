@@ -194,6 +194,64 @@ func.func @scatter_ops(%src: memref<256xf16>) {
   return
 }
 }
+
+// -----
+// `contiguity` is what turns into `lane_data`. Compare with `@scatter_ops`
+// above, which has no `contiguity` and gets `lane_data = [1]`.
+gpu.module @test {
+// CHECK-LABEL: func.func @scatter_ops_contiguity_2(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xf16>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} dense<true> : vector<32xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} dense<12> : vector<32xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 2 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : memref<512xf16>, vector<32xindex>, vector<32xi1> -> vector<32xf16>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 2 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : vector<32xf16>, memref<512xf16>, vector<32xindex>, vector<32xi1>
+func.func @scatter_ops_contiguity_2(%src: memref<512xf16>) {
+  %1 = arith.constant dense<1>: vector<32xi1>
+  %offset = arith.constant dense<12> : vector<32xindex>
+  %3 = xegpu.load %src[%offset], %1 <{contiguity = 2}> : memref<512xf16>, vector<32xindex>, vector<32xi1> -> vector<32xf16>
+  xegpu.store %3, %src[%offset], %1 <{contiguity = 2}> : vector<32xf16>, memref<512xf16>, vector<32xindex>, vector<32xi1>
+  return
+}
+}
+
+// -----
+// A different `contiguity` gives a different `lane_data`.
+gpu.module @test {
+// CHECK-LABEL: func.func @scatter_ops_contiguity_4(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xf16>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [4]>} dense<true> : vector<64xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [4]>} dense<12> : vector<64xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 4 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [4]>}> : memref<512xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 4 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [4]>}> : vector<64xf16>, memref<512xf16>, vector<64xindex>, vector<64xi1>
+func.func @scatter_ops_contiguity_4(%src: memref<512xf16>) {
+  %1 = arith.constant dense<1>: vector<64xi1>
+  %offset = arith.constant dense<12> : vector<64xindex>
+  %3 = xegpu.load %src[%offset], %1 <{contiguity = 4}> : memref<512xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+  xegpu.store %3, %src[%offset], %1 <{contiguity = 4}> : vector<64xf16>, memref<512xf16>, vector<64xindex>, vector<64xi1>
+  return
+}
+}
+
+// -----
+// `contiguity` is an upper bound, not the final per-lane width. Here 32 is
+// capped to what one lane can access in one instruction, so `lane_data` is
+// [16] and not [32]. The `contiguity` attribute itself is left alone.
+gpu.module @test {
+// CHECK-LABEL: func.func @scatter_ops_contiguity_capped(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xi8>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [16]>} dense<true> : vector<512xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [16]>} dense<12> : vector<512xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 32 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [16]>}> : memref<512xi8>, vector<512xindex>, vector<512xi1> -> vector<512xi8>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 32 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [16]>}> : vector<512xi8>, memref<512xi8>, vector<512xindex>, vector<512xi1>
+func.func @scatter_ops_contiguity_capped(%src: memref<512xi8>) {
+  %1 = arith.constant dense<1>: vector<512xi1>
+  %offset = arith.constant dense<12> : vector<512xindex>
+  %3 = xegpu.load %src[%offset], %1 <{contiguity = 32}> : memref<512xi8>, vector<512xindex>, vector<512xi1> -> vector<512xi8>
+  xegpu.store %3, %src[%offset], %1 <{contiguity = 32}> : vector<512xi8>, memref<512xi8>, vector<512xindex>, vector<512xi1>
+  return
+}
+}
+
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_custom_perm_layout(
@@ -641,8 +699,8 @@ gpu.module @test{
     %5 = vector.broadcast %3 : index to vector<1xindex>
     %6 = arith.addi %4, %5 : vector<1xindex>
     %7 = vector.broadcast %6 : vector<1xindex> to vector<1x1x1x16xindex>
-    xegpu.store %cst, %0[%7], %cst_0 <{chunk_size = 1 : i64}> : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
-    xegpu.store %cst, %0[%7], %cst_0 <{chunk_size = 1 : i64}> : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
+    xegpu.store %cst, %0[%7], %cst_0 : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
+    xegpu.store %cst, %0[%7], %cst_0 : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
     gpu.return
   }
 }

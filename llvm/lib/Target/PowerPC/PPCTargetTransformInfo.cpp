@@ -599,7 +599,7 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
 InstructionCost PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Ty, nullptr);
@@ -609,7 +609,7 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+                                         Op2Info, Args, CtxI);
 
   // Fallback to the default implementation.
   InstructionCost Cost = BaseT::getArithmeticInstrCost(
@@ -617,13 +617,11 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   return Cost * CostFactor;
 }
 
-InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost PPCTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, SrcTy, nullptr);
@@ -983,9 +981,8 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
 bool PPCTTIImpl::isNumRegsMajorCostOfLSR() const { return false; }
 
 bool PPCTTIImpl::shouldBuildRelLookupTables() const {
-  const PPCTargetMachine &TM = ST->getTargetMachine();
   // XCOFF hasn't implemented lowerRelativeReference, disable non-ELF for now.
-  if (!TM.isELFv2ABI())
+  if (!ST->isELFv2ABI())
     return false;
   return BaseT::shouldBuildRelLookupTables();
 }

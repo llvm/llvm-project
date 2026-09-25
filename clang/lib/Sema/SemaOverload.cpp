@@ -10980,7 +10980,7 @@ static bool sameFunctionParameterTypeLists(Sema &S, FunctionDecl *Fn1,
     if (Mem1->isInstance() && Mem2->isInstance() &&
         !S.getASTContext().hasSameType(
             Mem1->getFunctionObjectParameterReferenceType(),
-            Mem1->getFunctionObjectParameterReferenceType()))
+            Mem2->getFunctionObjectParameterReferenceType()))
       return false;
   }
   return true;
@@ -12447,10 +12447,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  TemplateSpecCandidateSetKind CandidateSetKind =
                                      TemplateSpecCandidateSetKind::Normal) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
-  NamedDecl *ParamD;
-  (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
-  (ParamD = Param.dyn_cast<NonTypeTemplateParmDecl*>()) ||
-  (ParamD = Param.dyn_cast<TemplateTemplateParmDecl*>());
+  NamedDecl *ParamD = dyn_cast_if_present<TemplateTypeParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<NonTypeTemplateParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<TemplateTemplateParmDecl *>(Param);
   switch (DeductionFailure.getResult()) {
   case TemplateDeductionResult::Success:
     llvm_unreachable(
@@ -16851,12 +16852,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
       = cast<CXXConversionDecl>(
                          Best->Conversions[0].UserDefined.ConversionFunction);
 
+    // FoundDecl may be a UsingShadowDecl naming the conversion function.
+    assert(Conv == Best->FoundDecl.getDecl()->getUnderlyingDecl() &&
+           "Found Decl & conversion-to-functionptr should be same, right?!");
     CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
                               Best->FoundDecl);
-    if (DiagnoseUseOfDecl(Best->FoundDecl, LParenLoc))
+    if (DiagnoseUseOfDecl(Conv, LParenLoc))
       return ExprError();
-    assert(Conv == Best->FoundDecl.getDecl() &&
-             "Found Decl & conversion-to-functionptr should be same, right?!");
     // We selected one of the surrogate functions that converts the
     // object parameter to a function pointer. Perform the conversion
     // on the object argument, then let BuildCallExpr finish the job.

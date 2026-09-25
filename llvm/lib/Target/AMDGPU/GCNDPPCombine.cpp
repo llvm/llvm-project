@@ -769,19 +769,18 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     // Without DPALU DPP there are no 64-bit DPP encodings. The 64-bit move is
     // rejected above, but a 32-bit move folded into a source of a 64-bit
     // instruction reaches here, so the operands have to be checked too.
-    if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP) &&
-        (AMDGPU::isDPALU_DPP32BitOpc(OrigOp) ||
-         AMDGPU::hasAny64BitVGPROperands(TII->get(OrigOp), *TII, *ST))) {
-      LLVM_DEBUG(dbgs() << "  " << OrigMI
-                        << "  failed: DPP ALU DPP is not supported\n");
-      break;
-    }
+    if (AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
+      if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP)) {
+        LLVM_DEBUG(dbgs() << "  " << OrigMI
+                          << "  failed: DPP ALU DPP is not supported\n");
+        break;
+      }
 
-    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal) &&
-        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
-      LLVM_DEBUG(dbgs() << "  " << OrigMI
-                        << "  failed: not valid 64-bit DPP control value\n");
-      break;
+      if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal)) {
+        LLVM_DEBUG(dbgs() << "  " << OrigMI
+                          << "  failed: not valid 64-bit DPP control value\n");
+        break;
+      }
     }
 
     LLVM_DEBUG(dbgs() << "  combining: " << OrigMI);

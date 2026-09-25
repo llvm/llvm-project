@@ -31,7 +31,7 @@ def Libm : LibcallLibrary<"libm", (add sqrt,
 
 // One standalone implementation function is emitted per LibcallLibrary.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_memcpy, // memcpy
@@ -55,7 +55,7 @@ def Libm : LibcallLibrary<"libm", (add sqrt,
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_sqrt, // sqrt

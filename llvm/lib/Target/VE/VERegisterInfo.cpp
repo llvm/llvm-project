@@ -92,11 +92,6 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-const TargetRegisterClass *
-VERegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &VE::I64RegClass;
-}
-
 static unsigned offsetToDisp(MachineInstr &MI) {
   // Default offset in instruction's operands (reg+reg+imm).
   unsigned OffDisp = 2;

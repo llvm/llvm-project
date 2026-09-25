@@ -13,13 +13,23 @@
 
 namespace llvm {
 
-struct InferAddressSpacesPass : OptionalPassInfoMixin<InferAddressSpacesPass> {
-  LLVM_ABI InferAddressSpacesPass();
-  LLVM_ABI InferAddressSpacesPass(unsigned AddressSpace);
+class InferAddressSpacesPass
+    : public OptionalPassInfoMixin<InferAddressSpacesPass> {
+  unsigned FlatAddrSpace = 0;
+
+  /// The default address space is assumed as the flat address space. This is
+  /// mainly for test purpose.
+  const bool AssumeDefaultIsFlatAddressSpace;
+
+public:
+  LLVM_ABI InferAddressSpacesPass(bool AssumeDefaultIsFlatAddressSpace = false);
+  LLVM_ABI InferAddressSpacesPass(unsigned AddressSpace,
+                                  bool AssumeDefaultIsFlatAddressSpace = false);
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-private:
-  unsigned FlatAddrSpace = 0;
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

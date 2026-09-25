@@ -70,10 +70,38 @@ public:
       }
 
       bool TraverseDecl(Decl *D) override {
+        // A template pattern is checked through its instantiations, which are
+        // traversed from the TemplateDecl itself. In the pattern the callee of
+        // a call may still be an unresolved overload set and the type of an
+        // expression may still be dependent, neither of which can be reasoned
+        // about, so don't enter it at all.
+        if (D && !isa<TemplateDecl>(D) && D->isTemplated())
+          return true;
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
+      bool TraverseLambdaExpr(LambdaExpr *L) override {
+        auto *FTD = L->getLambdaClass()->getDependentLambdaCallOperator();
+        if (!FTD)
+          return DynamicRecursiveASTVisitor::TraverseLambdaExpr(L);
+        // The body of a generic lambda is the pattern of its call operator,
+        // but it is reached from the LambdaExpr as a statement, so TraverseDecl
+        // never gets to skip it. Traverse the capture initializers, which are
+        // evaluated in the enclosing scope, and then the call operator itself,
+        // of which the pattern is skipped like any other and the instantiations
+        // are traversed. The initializers are traversed as expressions because
+        // the variable of an init capture is declared in the pattern.
+        for (unsigned I = 0, N = L->capture_size(); I != N; ++I) {
+          if (!(L->capture_begin() + I)->isExplicit())
+            continue;
+          if (auto *Init = L->capture_init_begin()[I];
+              Init && !TraverseStmt(Init))
+            return false;
+        }
+        return TraverseDecl(FTD);
       }
 
       bool VisitCallExpr(CallExpr *CE) override {
@@ -104,24 +132,21 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  template <typename CallOrConstrcut>
-  void visitCallOrConstructExpr(const CallOrConstrcut *CE,
+  template <typename CallOrConstruct>
+  void visitCallOrConstructExpr(const CallOrConstruct *CE,
                                 const FunctionDecl *F, const Decl *D) const {
     if (F) {
-      // Skip the first argument for overloaded member operators (e. g. lambda
-      // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
-
-      if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
+      unsigned ArgIdx = 0;
+      if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
         checkThisArg(F, MemberCallExpr, D);
-
-      if (ArgIdx) {
-        auto *Arg = CE->getArg(0);
-        QualType ArgType = Arg->getType().getCanonicalType();
-        std::optional<bool> IsUnsafe = Model->isUnsafeType(ArgType);
-        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Arg))
-          reportBugOnThis(F, Arg, D);
+      } else if (isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(F)) {
+        // An overloaded member operator (e.g. lambda or std::function call
+        // operator) receives the receiver object as argument 0; start the
+        // parameter loop at 1 so we don't match it against the operator's
+        // first declared parameter.
+        auto *Receiver = CE->getArg(0);
+        checkThisArg(F, Receiver, Receiver->getType(), D);
+        ArgIdx = 1;
       }
 
       for (auto P = F->param_begin();
@@ -178,13 +203,11 @@ public:
 
     if (auto *Receiver = E->getInstanceReceiver()) {
       std::optional<bool> IsUnsafe = Model->isUnsafePtr(E->getReceiverType());
-      if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
+      const Expr *Origin = nullptr;
+      if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver, &Origin)) {
         if (isAllocInit(E))
           return;
-        auto SelectorName = E->getSelector().getNameForSlot(0);
-        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
-          return;
-        reportBugOnReceiver(E->getMethodDecl(), Receiver, D);
+        reportBugOnReceiver(E->getMethodDecl(), Receiver, D, Origin);
       }
     }
 
@@ -201,33 +224,47 @@ public:
       std::optional<bool> IsUnsafe = Model->isUnsafePtr(ArgType);
       if (!IsUnsafe || !(*IsUnsafe))
         continue;
-      if (isPtrOriginSafe(Arg))
+      const Expr *Origin = nullptr;
+      if (isPtrOriginSafe(Arg, &Origin))
         continue;
-      reportBug(MethodDecl, Arg, Param, D);
+      reportBug(MethodDecl, Arg, Param, D, Origin);
     }
+  }
+
+  static bool isRefCountingOperation(const CXXMethodDecl *MD) {
+    if (!MD)
+      return false;
+    auto name = safeGetName(MD);
+    return name == "ref" || name == "deref" ||
+           name == "incrementCheckedPtrCount" ||
+           name == "decrementCheckedPtrCount";
   }
 
   void checkThisArg(const NamedDecl *Callee,
                     const CXXMemberCallExpr *MemberCallExpr,
                     const Decl *DeclWithIssue) const {
-    if (auto *MD = MemberCallExpr->getMethodDecl()) {
-      auto name = safeGetName(MD);
-      if (name == "ref" || name == "deref")
-        return;
-      if (name == "incrementCheckedPtrCount" ||
-          name == "decrementCheckedPtrCount")
-        return;
-    }
-    auto *ThisExpr = MemberCallExpr->getImplicitObjectArgument();
-    QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
-    std::optional<bool> IsUnsafe = Model->isUnsafeType(ArgType);
+    if (isRefCountingOperation(MemberCallExpr->getMethodDecl()))
+      return;
+    checkThisArg(Callee, MemberCallExpr->getImplicitObjectArgument(),
+                 MemberCallExpr->getObjectType(), DeclWithIssue);
+  }
+
+  void checkThisArg(const NamedDecl *Callee, const Expr *Receiver,
+                    QualType ReceiverType, const Decl *DeclWithIssue) const {
+    // There is no ParmVarDecl for the implicit object parameter, so
+    // synthesize its type ('T&' per [over.match.funcs]) for the model to
+    // classify.
+    QualType ParamType = BR->getContext().getLValueReferenceType(
+        ReceiverType.getCanonicalType());
+    std::optional<bool> IsUnsafe = Model->isUnsafePtr(ParamType);
     if (!IsUnsafe || !*IsUnsafe)
       return;
 
-    if (isPtrOriginSafe(ThisExpr))
+    const Expr *Origin = nullptr;
+    if (isPtrOriginSafe(Receiver, &Origin))
       return;
 
-    reportBugOnThis(Callee, ThisExpr, DeclWithIssue);
+    reportBugOnThis(Callee, Receiver, DeclWithIssue, Origin);
   }
 
   void checkArg(const NamedDecl *Callee, const Expr *Arg, QualType ParamType,
@@ -239,15 +276,17 @@ public:
     if (auto *DefaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
       Arg = DefaultArg->getExpr();
 
-    if (isPtrOriginSafe(Arg))
+    const Expr *Origin = nullptr;
+    if (isPtrOriginSafe(Arg, &Origin))
       return;
 
-    reportBug(Callee, Arg, Param, DeclWithIssue);
+    reportBug(Callee, Arg, Param, DeclWithIssue, Origin);
   }
 
-  bool isPtrOriginSafe(const Expr *Arg) const {
+  bool isPtrOriginSafe(const Expr *Arg, const Expr **Origin = nullptr) const {
     return tryToFindPtrOrigin(
         Arg, /*StopAtFirstRefCountedObj=*/true,
+        Model->checksForInteriorDestruction(),
         [&](const clang::CXXRecordDecl *Record) {
           return Model->isSafePtr(Record);
         },
@@ -255,7 +294,11 @@ public:
         [&](const clang::Decl *D) {
           return Model->isSafeDecl(D, BR->getSourceManager());
         },
-        [&](const clang::Expr *ArgOrigin, bool IsSafe) {
+        // A temporary on the path to an argument's origin is safe: the full
+        // expression does not end until the call returns.
+        [&](const clang::Expr *ArgOrigin, bool IsSafe,
+            bool /*OriginDependsOnFullExpressionTemporary*/,
+            bool PtrIsLifetimeBoundToOrigin) {
           if (IsSafe)
             return true;
           if (isNullPtr(ArgOrigin))
@@ -269,7 +312,8 @@ public:
             return true;
           if (isa<ObjCStringLiteral>(ArgOrigin))
             return true;
-          if (isASafeCallArg(ArgOrigin))
+          if (!Model->checksForInteriorDestruction() &&
+              originOutlivesCall(ArgOrigin))
             return true;
           if (EFA.isACallToEnsureFn(ArgOrigin)) {
             auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
@@ -277,8 +321,10 @@ public:
             if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
               return true;
           }
-          if (Model->isSafeExpr(ArgOrigin))
+          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin))
             return true;
+          if (Origin && !*Origin)
+            *Origin = ArgOrigin;
           return false;
         });
   }
@@ -380,7 +426,8 @@ public:
   }
 
   void reportBug(const NamedDecl *Callee, const Expr *CallArg,
-                 const ParmVarDecl *Param, const Decl *DeclWithIssue) const {
+                 const ParmVarDecl *Param, const Decl *DeclWithIssue,
+                 const Expr *Origin) const {
     assert(CallArg);
 
     SmallString<100> Buf;
@@ -404,22 +451,7 @@ public:
     if (!paramName.empty() || Callee)
       Os << ")";
     Os << " is a ";
-    auto *ArgType = CallArg->getType().getTypePtr();
-
-    if (printPointer(Os, ArgType) == PrintDeclKind::Pointer) {
-      auto *RTC = Model->retainTypeChecker();
-      assert(RTC);
-      if (auto *Decl = RTC->getCanonicalDecl(CallArg->getType())) {
-        printQuotedQualifiedName(Os, Decl);
-      } else {
-        auto Typedef = ArgType->getAs<TypedefType>();
-        assert(Typedef);
-        printQuotedQualifiedName(Os, Typedef->getDecl());
-      }
-    } else {
-      Os << " ";
-      printTypeName(Os, CallArg->getType());
-    }
+    Model->describeHazard(Os, Origin, CallArg->getType());
 
     bool usesDefaultArgValue = isa<CXXDefaultArgExpr>(CallArg) && Param;
     const SourceLocation SrcLocToReport =
@@ -434,7 +466,7 @@ public:
   }
 
   void reportBugOnThis(const NamedDecl *Callee, const Expr *CallArg,
-                       const Decl *DeclWithIssue) const {
+                       const Decl *DeclWithIssue, const Expr *Origin) const {
     assert(CallArg);
 
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
@@ -448,8 +480,8 @@ public:
       Os << " to ";
       printQuotedQualifiedName(Os, Callee);
     }
-    Os << ") is a raw pointer to " << Model->typeName() << " ";
-    printTypeName(Os, CallArg->getType());
+    Os << ") is a ";
+    printHazardOrPointerTo(Os, CallArg, Origin);
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -459,7 +491,8 @@ public:
   }
 
   void reportBugOnReceiver(const NamedDecl *Callee, const Expr *CallArg,
-                           const Decl *DeclWithIssue) const {
+                           const Decl *DeclWithIssue,
+                           const Expr *Origin) const {
     assert(CallArg);
 
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
@@ -473,14 +506,26 @@ public:
       printQuotedQualifiedName(Os, Callee);
       Os << ")";
     }
-    Os << " is a raw pointer to " << Model->typeName() << " ";
-    printTypeName(Os, CallArg->getType());
+    Os << " is a ";
+    printHazardOrPointerTo(Os, CallArg, Origin);
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(CallArg->getSourceRange());
     Report->setDeclWithIssue(DeclWithIssue);
     BR->emitReport(std::move(Report));
+  }
+
+  void printHazardOrPointerTo(llvm::raw_svector_ostream &Os,
+                              const Expr *CallArg, const Expr *Origin) const {
+    if (Model->checksForInteriorDestruction()) {
+      Model->describeHazard(Os, Origin, CallArg->getType());
+      return;
+    }
+    // 'this' is a pointer even when the call is spelled with '.', so don't
+    // infer pointer vs reference from the argument type.
+    Os << "raw pointer to " << Model->typeName() << " ";
+    printTypeName(Os, CallArg->getType());
   }
 
   void printArgument(llvm::raw_svector_ostream &Os, const Expr *Arg) const {
@@ -496,22 +541,6 @@ public:
       Os << " '" << ArgCode << "...'";
     else
       Os << " '" << ArgCode << "'";
-  }
-
-  enum class PrintDeclKind { Pointee, Pointer };
-  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
-                             const Type *T) const {
-    // Retain/OS types are frequently spelled through a typedef (e.g. CFXXXRef);
-    // print the typedef name rather than desugaring to the pointee.
-    if (Model->retainTypeChecker() && isa<TypedefType>(T)) {
-      Os << Model->typeName() << " ";
-      return PrintDeclKind::Pointer;
-    }
-    T = T->getUnqualifiedDesugaredType();
-    bool IsPtr = isa<PointerType, ObjCObjectPointerType>(T);
-    Os << "raw " << (IsPtr ? "pointer" : "reference") << " to "
-       << Model->typeName();
-    return PrintDeclKind::Pointee;
   }
 };
 
@@ -539,6 +568,14 @@ public:
                                  makeRetainPtrSafetyModel()) {}
 };
 
+class UnborrowedCallArgsChecker final : public RawPtrRefCallArgsChecker {
+public:
+  UnborrowedCallArgsChecker()
+      : RawPtrRefCallArgsChecker("Loan on a CanBorrow object not guarded by "
+                                 "a Borrow",
+                                 makeBorrowSafetyModel()) {}
+};
+
 } // namespace
 
 void ento::registerUncountedCallArgsChecker(CheckerManager &Mgr) {
@@ -562,5 +599,13 @@ void ento::registerUnretainedCallArgsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUnretainedCallArgsChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerUnborrowedCallArgsChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnborrowedCallArgsChecker>();
+}
+
+bool ento::shouldRegisterUnborrowedCallArgsChecker(const CheckerManager &) {
   return true;
 }

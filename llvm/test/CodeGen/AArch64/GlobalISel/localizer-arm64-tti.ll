@@ -65,54 +65,6 @@ if.end:
   ret i32 0
 }
 
-@tls_gv = common thread_local global i32 0, align 4
-
-; This test checks that we don't try to localize TLS variables on Darwin.
-; If the user happens to be inside a call sequence, we could end up rematerializing
-; below a physreg write, clobbering it (TLS accesses on Darwin need a function call).
-; For now, we check we don't localize at all. We could in theory make sure that
-; we don't localize into the middle of a call sequence instead.
-define i32 @darwin_tls() {
-  ; CHECK-LABEL: name: darwin_tls
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @tls_gv
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[GV2]](p0) :: (load (i32) from @var1)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[LOAD]](i32), [[C1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.2
-  ; CHECK-NEXT:   G_BR %bb.3
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[GV]](p0) :: (load (i32) from @tls_gv)
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   G_STORE [[LOAD1]](i32), [[GV3]](p0) :: (store (i32) into @var2)
-  ; CHECK-NEXT:   G_BR %bb.3
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.end:
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   $w0 = COPY [[C2]](i32)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
-entry:
-  %0 = load i32, ptr @var1, align 4
-  %cmp = icmp eq i32 %0, 1
-  br i1 %cmp, label %if.then, label %if.end
-
-if.then:
-  %tls = load i32, ptr @tls_gv, align 4
-  store i32 %tls, ptr @var2, align 4
-  br label %if.end
-
-if.end:
-  ret i32 0
-}
-
 define i32 @imm_cost_too_large_cost_of_2() {
   ; CHECK-LABEL: name: imm_cost_too_large_cost_of_2
   ; CHECK: bb.1.entry:

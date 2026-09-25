@@ -70,7 +70,7 @@ func.func @_QPtest1() {
   return
 }
 // CHECK-LABEL:   func.func @_QPtest1() {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}> {bindc_name = ".result"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}> <{bindc_name = ".result"}>
 // CHECK:           %[[VAL_1:.*]] = fir.address_of(@_QFtest1Ex) : !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>, !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>)
 // CHECK:           %[[VAL_3:.*]] = fir.call @_QPnew_obj() fastmath<contract> : () -> !fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>
@@ -131,7 +131,7 @@ func.func @_QPtest2() {
 }
 // CHECK-LABEL:   func.func @_QPtest2() {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>> {bindc_name = ".result"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>> <{bindc_name = ".result"}>
 // CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFtest2Exa) : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_3]]) {uniq_name = "_QFtest2Exa"} : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>)
@@ -225,7 +225,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:           %[[VAL_2:.*]] = fir.alloca i64
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>> {bindc_name = ".result"}
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>> <{bindc_name = ".result"}>
 // CHECK:           %[[VAL_6:.*]] = fir.address_of(@_QFtest3Ex) : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
 // CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_7]]) {uniq_name = "_QFtest3Ex"} : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>)

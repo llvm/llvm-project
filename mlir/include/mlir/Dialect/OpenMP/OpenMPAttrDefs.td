@@ -43,8 +43,8 @@ def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
 
 def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
   let parameters =
-      (ins OptionalEnumAttrParameter<DeclareTargetDeviceTypeAttr>:$device_type,
-          OptionalEnumAttrParameter<DeclareTargetCaptureClauseAttr>:$capture_clause,
+      (ins "mlir::omp::DeclareTargetDeviceType":$device_type,
+          "mlir::omp::DeclareTargetCaptureClause":$capture_clause,
           DefaultValuedParameter<"bool", "false">:$automap,
           DefaultValuedParameter<"bool", "false">:$implicit);
 

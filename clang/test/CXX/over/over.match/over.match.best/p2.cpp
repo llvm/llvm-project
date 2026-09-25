@@ -18,3 +18,19 @@ namespace PR44761 {
   // expected-note@#2 {{candidate function has been explicitly deleted}}
   // expected-note@#2 {{candidate function (with reversed parameter order) has been explicitly deleted}}
 }
+
+namespace ambiguous_resolution {
+  template<class T> struct S {
+    int f() const requires true { return 1; } // #S-const-overload
+    int f() volatile { return 2; } // #S-volatile-overload
+  };
+  int test() {
+    // Here, we have two overloads: `const S&` and `volatile S&`
+    // Neither conversion should win the tie-break, and so we should
+    // instead error on ambiguous overloads
+    S<int> s; return s.f();
+    // expected-error@-1 {{call to member function 'f' is ambiguous}}
+    // expected-note@#S-const-overload {{candidate function}}
+    // expected-note@#S-volatile-overload {{candidate function}}
+  }
+}

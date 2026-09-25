@@ -608,28 +608,6 @@ mlir::isRankReducedType(ShapedType originalType,
   return SliceVerificationResult::Success;
 }
 
-bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
-  // Empty attribute is allowed as default memory space.
-  if (!memorySpace)
-    return true;
-
-  // Supported built-in attributes.
-  if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
-    return true;
-
-  // Allow opaque attributes if unregistered dialects are allowed.
-  // They hold unregistered custom dialect attributes.
-  if (memorySpace.getContext()->allowsUnregisteredDialects() &&
-      isa<OpaqueAttr>(memorySpace))
-    return true;
-
-  // Allow custom dialect attributes.
-  if (!isa<BuiltinDialect>(memorySpace.getDialect()))
-    return true;
-
-  return false;
-}
-
 Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
                                                MLIRContext *ctx) {
   if (memorySpace == 0)
@@ -785,9 +763,6 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (failed(layout.verifyLayout(shape, emitError)))
     return failure();
 
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
-
   return success();
 }
 
@@ -913,9 +888,6 @@ UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType, Attribute memorySpace) {
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
-
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
 
   return success();
 }

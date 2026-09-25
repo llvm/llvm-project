@@ -84,7 +84,7 @@ end subroutine
 ! CHECK-DAG:  %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[I_DECL:.*]] = fir.declare %[[I_REF]] {{.*}}
-! CHECK-DAG:  %[[J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFstructured_loop_in_infiniteEj"}
+! CHECK-DAG:  %[[J_REF:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFstructured_loop_in_infiniteEj"}>
 ! CHECK-DAG:  %[[J_DECL:.*]] = fir.declare %[[J_REF]] {{.*}}
 ! CHECK:  cf.br ^[[BODY1:.*]]
 ! CHECK: ^[[BODY1]]:

@@ -71,6 +71,10 @@ struct RISCVTuneInfo {
   unsigned MaxLoadsPerMemcmpOptSize;
   unsigned MaxLoadsPerMemcmp;
 
+  // How many vector elements can be coalesced if on the
+  // same cache line
+  uint8_t MaxVectorCoalesceElts;
+
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
 
@@ -202,8 +206,6 @@ public:
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
-
-  bool hasCZEROLike() const { return HasStdExtZicond; }
 
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
@@ -392,7 +394,6 @@ public:
   unsigned getMispredictionPenalty() const override;
   unsigned getLoadLatency() const override;
 
-  unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
@@ -448,6 +449,10 @@ public:
   unsigned getMaxLoadsPerMemcmp(bool OptSize) const {
     return OptSize ? TuneInfo->MaxLoadsPerMemcmpOptSize
                    : TuneInfo->MaxLoadsPerMemcmp;
+  }
+
+  uint8_t getMaxVectorCoalesceElts() const {
+    return TuneInfo->MaxVectorCoalesceElts;
   }
 
   MISched::Direction getPostRASchedDirection() const {

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=precxx26,expected -Wc++26-extensions %s
-// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=cxx26,expected -Wpre-c++26-compat %s
+// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=cxx26,expected -Wpre-c++26-compat-pedantic %s
 
 int main() {
   (void) R"abc`@$(foobar)abc`@$";

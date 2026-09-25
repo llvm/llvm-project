@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -32,6 +33,35 @@ static llvm::cl::opt<std::uint64_t> allocationPlacementStackLimit(
         "by the allocation-placement pass"),
     llvm::cl::init(fir::AllocationPolicy::totalStackLimitBytesDefault),
     llvm::cl::Hidden);
+
+fir::AllocationSizeContext fir::getAllocationSizeContext(mlir::Operation *op) {
+  auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (!module)
+    module = op->getParentOfType<mlir::ModuleOp>();
+  if (!module)
+    return {std::nullopt, std::nullopt};
+  return {fir::support::getOrSetMLIRDataLayout(module,
+                                               /*allowDefaultLayout=*/false),
+          fir::getKindMapping(module)};
+}
+
+bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
+                                  const AllocationPolicy &allocationPolicy,
+                                  const AllocationSizeContext &sizeContext) {
+  if (fir::hasDynamicSize(sequenceType) || !sizeContext.dataLayout ||
+      !sizeContext.kindMap)
+    return false;
+  auto sizeAndAlignment = fir::getTypeSizeAndAlignment(
+      loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
+  if (!sizeAndAlignment)
+    return false;
+  PendingAllocationInfo info{
+      /*isTemporary=*/true, /*isDynamic=*/false,
+      static_cast<std::int64_t>(sizeAndAlignment->first)};
+  AllocationPolicy copyInPolicy = allocationPolicy;
+  copyInPolicy.stackArrays = false;
+  return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
+}
 
 bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
                                 const AllocationPolicy &policy,
@@ -91,12 +121,17 @@ fir::AllocationPolicy fir::getCommandLineAllocationPolicy(bool stackArrays) {
   return policy;
 }
 
+void fir::setAllocationPolicy(mlir::Operation *op,
+                              const fir::AllocationPolicy &policy) {
+  op->setAttr(allocationPolicyName, fir::AllocationPolicyAttr::get(
+                                        op->getContext(), policy.stackArrays,
+                                        policy.smallArrayThresholdBytes,
+                                        policy.totalStackLimitBytes));
+}
+
 void fir::setAllocationPolicy(mlir::ModuleOp mod,
                               const fir::AllocationPolicy &policy) {
-  mod->setAttr(allocationPolicyName, fir::AllocationPolicyAttr::get(
-                                         mod.getContext(), policy.stackArrays,
-                                         policy.smallArrayThresholdBytes,
-                                         policy.totalStackLimitBytes));
+  setAllocationPolicy(mod.getOperation(), policy);
 }
 
 fir::AllocationPolicy fir::getAllocationPolicy(mlir::ModuleOp mod) {
@@ -109,11 +144,23 @@ fir::AllocationPolicy fir::getAllocationPolicy(mlir::ModuleOp mod) {
                                attr.getTotalStackLimit()};
 }
 
+std::optional<fir::AllocationPolicy>
+fir::getLocalAllocationPolicy(mlir::Operation *op) {
+  auto attr =
+      op->getAttrOfType<fir::AllocationPolicyAttr>(allocationPolicyName);
+  if (!attr)
+    return std::nullopt;
+  return fir::AllocationPolicy{attr.getStackArrays(),
+                               attr.getSmallArrayThreshold(),
+                               attr.getTotalStackLimit()};
+}
+
 fir::AllocationPolicy fir::getAllocationPolicy(mlir::Operation *op) {
-  auto mod = mlir::dyn_cast<mlir::ModuleOp>(op);
-  if (!mod)
-    mod = op->getParentOfType<mlir::ModuleOp>();
-  if (!mod)
-    return fir::AllocationPolicy{};
-  return getAllocationPolicy(mod);
+  // The innermost policy wins, so that a function can narrow the module one
+  // (e.g. device code, where the stack is a scarce resource).
+  for (mlir::Operation *cur = op; cur; cur = cur->getParentOp())
+    if (std::optional<fir::AllocationPolicy> policy =
+            fir::getLocalAllocationPolicy(cur))
+      return *policy;
+  return fir::AllocationPolicy{};
 }

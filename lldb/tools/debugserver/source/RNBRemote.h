@@ -402,6 +402,8 @@ protected:
   JSONGenerator::ObjectSP
   GetJSONThreadsInfo(bool threads_with_valid_stop_info_only);
 
+  void RecordRecentRead(nub_addr_t addr, nub_size_t size);
+
   RNBContext m_ctx; // process context
   RNBSocket m_comm; // communication port
   std::string m_arch;
@@ -410,6 +412,7 @@ protected:
   std::mutex m_mutex;             // Mutex that protects
   DispatchQueueOffsets m_dispatch_queue_offsets;
   nub_addr_t m_dispatch_queue_offsets_addr;
+  std::deque<std::pair<nub_addr_t, nub_size_t>> m_recent_reads;
   uint32_t m_qSymbol_index;
   uint32_t m_packets_recvd;
   Packet::collection m_packets;

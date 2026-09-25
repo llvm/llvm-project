@@ -30,7 +30,7 @@ Wrapper::Wrapper() noexcept : field(make()) {}
 // AMDGCN-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
 // AMDGCN-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR_ASCAST]], align 8
 // AMDGCN-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
-// AMDGCN-NEXT:    store ptr addrspace(1) getelementptr inbounds inrange(-16, 16) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV7Wrapper, i32 0, i32 0, i32 2), ptr [[THIS1]], align 8
+// AMDGCN-NEXT:    store ptr addrspace(1) getelementptr inbounds inrange(-16, 16) (i8, ptr addrspace(1) @_ZTV7Wrapper, i64 16), ptr [[THIS1]], align 8
 // AMDGCN-NEXT:    [[FIELD:%.*]] = getelementptr inbounds nuw [[STRUCT_WRAPPER:%.*]], ptr [[THIS1]], i32 0, i32 1
 // AMDGCN-NEXT:    call void @_Z4makev(ptr dead_on_unwind writable sret([[STRUCT_NONTRIVIALPTR:%.*]]) align 8 [[FIELD]]) #[[ATTR2:[0-9]+]]
 // AMDGCN-NEXT:    ret void
@@ -54,7 +54,7 @@ Wrapper::Wrapper() noexcept : field(make()) {}
 // SPIRV-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr [[THIS_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[THIS]], ptr addrspace(4) [[THIS_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[THIS1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[THIS_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    store ptr addrspace(1) getelementptr inbounds inrange(-16, 16) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV7Wrapper, i32 0, i32 0, i32 2), ptr addrspace(4) [[THIS1]], align 8
+// SPIRV-NEXT:    store ptr addrspace(1) getelementptr inbounds inrange(-16, 16) (i8, ptr addrspace(1) @_ZTV7Wrapper, i64 16), ptr addrspace(4) [[THIS1]], align 8
 // SPIRV-NEXT:    [[FIELD:%.*]] = getelementptr inbounds nuw [[STRUCT_WRAPPER:%.*]], ptr addrspace(4) [[THIS1]], i32 0, i32 1
 // SPIRV-NEXT:    call spir_func addrspace(4) void @_Z4makev(ptr addrspace(4) dead_on_unwind writable sret([[STRUCT_NONTRIVIALPTR:%.*]]) align 8 [[FIELD]]) #[[ATTR2:[0-9]+]]
 // SPIRV-NEXT:    ret void

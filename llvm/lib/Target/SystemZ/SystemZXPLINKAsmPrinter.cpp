@@ -659,7 +659,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
            ProductPatch = getProductPatch(M);
 
   SmallString<6> VersionEBCDIC, Version;
-  Version = formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion,
+  Version = formatv("{0,0+2:d}{1,0+2:d}{2,0+2:d}", ProductVersion,
                     ProductRelease, ProductPatch);
 
   ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeEBCDIC);

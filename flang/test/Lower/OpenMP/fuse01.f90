@@ -26,15 +26,15 @@ end subroutine omp_fuse01
 ! CHECK-SAME:      %[[ARG4:.*]]: !fir.ref<i32> {fir.bindc_name = "ub2"},
 ! CHECK-SAME:      %[[ARG5:.*]]: !fir.ref<i32> {fir.bindc_name = "inc2"}) {
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_fuse01Ei"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_fuse01Ei"}>
 ! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ALLOCA_0]] {uniq_name = "_QFomp_fuse01Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[DUMMY_SCOPE_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_fuse01Einc1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[ARG5]] dummy_scope %[[DUMMY_SCOPE_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_fuse01Einc2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFomp_fuse01Ej"}
+! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFomp_fuse01Ej"}>
 ! CHECK:           %[[DECLARE_3:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFomp_fuse01Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[DECLARE_4:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_fuse01Elb1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[DECLARE_5:.*]]:2 = hlfir.declare %[[ARG3]] dummy_scope %[[DUMMY_SCOPE_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_fuse01Elb2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFomp_fuse01Eres"}
+! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_fuse01Eres"}>
 ! CHECK:           %[[DECLARE_6:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFomp_fuse01Eres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[DECLARE_7:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[DUMMY_SCOPE_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_fuse01Eub1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[DECLARE_8:.*]]:2 = hlfir.declare %[[ARG4]] dummy_scope %[[DUMMY_SCOPE_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_fuse01Eub2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)

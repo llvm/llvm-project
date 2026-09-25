@@ -8,7 +8,7 @@
 ; RUN:   -mcpu=pwr7 | FileCheck -check-prefix=CHECK-VSX %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff \
 ; RUN:   -mattr=+vsx -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -mcpu=pwr7 -vec-extabi | FileCheck -check-prefix=CHECK-VSX %s
+; RUN:   -mcpu=pwr7 -target-abi=vec-extabi | FileCheck -check-prefix=CHECK-VSX %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpcspe-linux-unknown-gnu \
 ; RUN:   | FileCheck -check-prefix=CHECK-SPE %s
 

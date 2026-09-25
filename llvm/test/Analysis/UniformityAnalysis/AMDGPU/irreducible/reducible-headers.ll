@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ;
 ;                         Entry

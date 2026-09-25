@@ -606,11 +606,6 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
 }
 
 const TargetRegisterClass *
-AArch64RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &AArch64::GPR64spRegClass;
-}
-
-const TargetRegisterClass *
 AArch64RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &AArch64::CCRRegClass)
     return &AArch64::GPR64RegClass; // Only MSR & MRS copy NZCV.

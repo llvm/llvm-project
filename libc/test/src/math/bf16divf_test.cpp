@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/bf16divf.h"
 
-LIST_DIV_TESTS(bfloat16, float, LIBC_NAMESPACE::bf16divf)
+LIST_DIV_TESTS(Bf16divf, bfloat16, float, LIBC_NAMESPACE::bf16divf)

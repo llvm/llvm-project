@@ -7,7 +7,68 @@ add_object_library(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.CPP.string_view
+    libc.src.__support.File.file_io_result
     libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  fclose
+  SRCS fclose.cpp
+  HDRS ../fclose.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  fseek
+  SRCS fseek.cpp
+  HDRS ../fseek.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  ftell
+  SRCS ftell.cpp
+  HDRS ../ftell.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fseeko
+  SRCS fseeko.cpp
+  HDRS ../fseeko.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  ftello
+  SRCS ftello.cpp
+  HDRS ../ftello.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_header_library(

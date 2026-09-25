@@ -759,6 +759,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
         "//clang:driver",

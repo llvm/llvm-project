@@ -301,9 +301,6 @@ public:
   /// Add one of the MO_FLAG* flags to the operand at \p SrcIdx.
   void addFlag(MachineInstr &MI, unsigned SrcIdx, unsigned Flag) const;
 
-  /// Determine if the specified \p Flag is set on operand at \p SrcIdx.
-  bool isFlagSet(const MachineInstr &MI, unsigned SrcIdx, unsigned Flag) const;
-
   /// \param SrcIdx The register source to set the flag on (e.g src0, src1, src2)
   /// \param Flag The flag being set.
   ///

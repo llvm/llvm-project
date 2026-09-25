@@ -76,7 +76,8 @@ Error L0ContextTy::init() {
     CleanupOnError();
     return Err;
   }
-  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions())) {
+  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions(),
+                                               zeContext)) {
     if (auto DeinitErr = EventPool.deinit())
       Err = joinErrors(std::move(Err), std::move(DeinitErr));
     CleanupOnError();

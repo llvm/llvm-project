@@ -1,30 +1,28 @@
-//===-- Implementation of the pthread_attr_init ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of pthread_attr_init.
+///
+//===----------------------------------------------------------------------===//
 
-#include "pthread_attr_init.h"
-
-#include "hdr/sched_macros.h"
+#include "src/pthread/pthread_attr_init.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/thread.h" // For thread::DEFAULT_*
-
-#include <pthread.h>
+#include "src/__support/macros/null_check.h"
+#include "src/pthread/pthread_attr.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
-  *attr = pthread_attr_t{
-      PTHREAD_CREATE_JOINABLE,   // Not detached
-      SCHED_OTHER,               // Default scheduling policy
-      nullptr,                   // Let the thread manage its stack
-      Thread::DEFAULT_STACKSIZE, // stack size.
-      Thread::DEFAULT_GUARDSIZE, // Default page size for the guard size.
-  };
+  LIBC_CRASH_ON_NULLPTR(attr);
+
+  *attr = DEFAULT_PTHREAD_ATTR;
   return 0;
 }
 

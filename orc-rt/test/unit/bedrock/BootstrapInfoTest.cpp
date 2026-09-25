@@ -19,6 +19,7 @@
 #include "CommonTestUtils.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 TEST(BootstrapInfoTest, ExplicitConstruction) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);

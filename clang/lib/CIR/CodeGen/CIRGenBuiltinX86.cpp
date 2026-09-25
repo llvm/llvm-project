@@ -1155,20 +1155,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
-  case X86::BI__builtin_ia32_lzcnt_u64: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Value isZeroPoison = builder.getFalse(loc);
-    return builder.emitIntrinsicCallOp(loc, "ctlz", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], isZeroPoison});
-  }
+  case X86::BI__builtin_ia32_lzcnt_u64:
+    return cir::BitClzOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                 /*poisonZero=*/false)
+        .getResult();
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
-  case X86::BI__builtin_ia32_tzcnt_u64: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Value isZeroPoison = builder.getFalse(loc);
-    return builder.emitIntrinsicCallOp(loc, "cttz", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], isZeroPoison});
-  }
+  case X86::BI__builtin_ia32_tzcnt_u64:
+    return cir::BitCtzOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                 /*poisonZero=*/false)
+        .getResult();
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:

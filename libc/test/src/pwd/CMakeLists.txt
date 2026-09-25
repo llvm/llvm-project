@@ -26,6 +26,7 @@ add_libc_test(
     getpwent_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.types.size_t
     libc.hdr.types.struct_passwd
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
@@ -36,6 +37,7 @@ add_libc_test(
     libc.src.pwd.setpwent
     libc.src.stdio.remove
     libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -55,10 +57,13 @@ add_libc_test(
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.errno.errno
+    libc.src.pwd.endpwent
+    libc.src.pwd.getpwent
     libc.src.pwd.getpwnam
     libc.src.pwd.pwd_utils
     libc.src.stdio.remove
     libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -81,6 +86,7 @@ add_libc_test(
     libc.src.pwd.pwd_utils
     libc.src.stdio.remove
     libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -104,6 +110,7 @@ add_libc_test(
     libc.src.pwd.pwd_utils
     libc.src.stdio.remove
     libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -126,4 +133,5 @@ add_libc_test(
     libc.src.pwd.pwd_utils
     libc.src.stdio.remove
     libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
 )

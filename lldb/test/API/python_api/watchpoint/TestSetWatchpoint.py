@@ -23,63 +23,81 @@ class SetWatchpointAPITestCase(TestBase):
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
     def test_watch_val(self):
-        """Exercise SBValue.Watch() API to set a watchpoint."""
+        """Test watchpoint on a SBValue not backed by a variable yields an expression watchpoint."""
         self._test_watch_val(variable_watchpoint=False)
-        pass
 
     @expectedFailureAll(archs=["s390x"])
     def test_watch_variable(self):
-        """
-        Exercise some watchpoint APIs when the watchpoint
-        is created as a variable watchpoint.
-        """
+        """Test watchpoint on an SBValue backed by a variable yields a variable watchpoint."""
         self._test_watch_val(variable_watchpoint=True)
 
-    def _test_watch_val(self, variable_watchpoint):
-        exe = self.getBuildArtifact("a.out")
+    @expectedFailureAll(archs=["s390x"])
+    def test_local_variable_watchpoint_scoped_to_frame(self):
+        """Test watchpoint on a frame local variable only triggers when in the frame scope."""
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// local_value_breakpoint", lldb.SBFileSpec(self.source, False)
+        )
+        frame = thread.selected_frame
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        value: lldb.SBValue = frame.FindVariable("local_value")
+        self.assertTrue(value.IsValid(), "Found stack-local 'local_value'")
 
-        # Now create a breakpoint on main.c.
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        error = lldb.SBError()
+        watchpoint = value.Watch(True, True, True, error)
+        self.assertSuccess(error)
+        self.assertTrue(watchpoint.IsValid(), "Set watchpoint on 'local_value'")
+        self.assertEqual(
+            watchpoint.GetWatchValueKind(), lldb.eWatchPointValueKindVariable
         )
 
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        # Continue to the read watchpoint.
+        error = process.Continue()
+        self.assertSuccess(error)
+        self.assertState(process.state, lldb.eStateStopped)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
+        self.assertTrue(thread, "stopped at watchpoint read")
 
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        # Verify the process does not stop again after continuing.
+        error = process.Continue()
+        self.assertTrue(error)
+        self.assertState(process.state, lldb.eStateExited)
+
+    def _test_watch_val(self, variable_watchpoint):
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line
+        )
+
         frame0 = thread.GetFrameAtIndex(0)
 
         # Watch 'global' for read and write.
         if variable_watchpoint:
-            # FIXME: There should probably be an API to create a
-            # variable watchpoint.
-            self.runCmd("watchpoint set variable -w read_write -- global")
-            watchpoint = target.GetWatchpointAtIndex(0)
-            self.assertEqual(
-                watchpoint.GetWatchValueKind(), lldb.eWatchPointValueKindVariable
-            )
-            self.assertEqual(watchpoint.GetWatchSpec(), "global")
-            # Synthesize an SBValue from the watchpoint
-            watchpoint_addr = lldb.SBAddress(watchpoint.GetWatchAddress(), target)
-            value = target.CreateValueFromAddress(
-                watchpoint.GetWatchSpec(), watchpoint_addr, watchpoint.GetType()
-            )
-        else:
+            # Variable watchpoint.
+            # FindValue returns a variable-backed SBValue,
             value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
             error = lldb.SBError()
             watchpoint = value.Watch(True, True, True, error)
-            self.assertTrue(
-                value and watchpoint,
-                "Successfully found the variable and set a watchpoint",
+            self.assertSuccess(error)
+            self.assertTrue(value, VALID_VARIABLE)
+            self.assertTrue(watchpoint, f"expected a watchpoint from {value=}")
+
+            self.DebugSBValue(value)
+            self.assertEqual(
+                watchpoint.GetWatchValueKind(), lldb.eWatchPointValueKindVariable
             )
+            self.assertEqual(watchpoint.GetWatchSpec(), value.GetName())
+        else:
+            # Expression watchpoint.
+            # Creates a new SBvalue from an existing SBValue Variable's address and type.
+            # This new value its not backed by an actual variable in process memory.
+            var_value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
+            sb_addr = lldb.SBAddress(var_value.GetLoadAddress(), target)
+            value = target.CreateValueFromAddress("global", sb_addr, var_value.type)
+            error = lldb.SBError()
+            watchpoint = value.Watch(True, True, True, error)
+            self.assertSuccess(error)
+            self.assertTrue(value, VALID_VARIABLE)
+            self.assertTrue(watchpoint, f"expected a watchpoint from {value=}")
+
             self.DebugSBValue(value)
             self.assertEqual(
                 watchpoint.GetWatchValueKind(), lldb.eWatchPointValueKindExpression

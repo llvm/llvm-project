@@ -2,7 +2,7 @@
 
 
 !HOST-LABEL:  func.func @_QPread_write_section() {
-!HOST:  %{{.*}} = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}
+!HOST:  %{{.*}} = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}>
 !HOST:  %[[READ:.*]] = fir.address_of(@_QFread_write_sectionEsp_read) : !fir.ref<!fir.array<10xi32>>
 !HOST:  %[[C10:.*]] = arith.constant 10 : index
 !HOST:  %[[READ_SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
@@ -70,7 +70,7 @@ module assumed_array_routines
 !HOST-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
 !HOST: %[[ARG0_SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 !HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[ARG0_SHAPE]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEarr_read_write"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
-!HOST: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEi"}
+!HOST: %[[ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEi"}>
 !HOST: %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0_DECL]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !HOST: %[[C4_1:.*]] = arith.subi %c4, %c1{{.*}} : index
 !HOST: %[[EXT:.*]] = arith.addi %[[C4_1]], %c1{{.*}} : index
@@ -90,7 +90,7 @@ end module assumed_array_routines
 
 !HOST-LABEL:func.func @_QPcall_assumed_shape_and_size_array() {
 !HOST: %[[C20:.*]] = arith.constant 20 : index
-!HOST: %[[READ_WRITE:.*]] = fir.alloca !fir.array<20xi32> {bindc_name = "arr_read_write", uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"}
+!HOST: %[[READ_WRITE:.*]] = fir.alloca !fir.array<20xi32> <{bindc_name = "arr_read_write", uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"}>
 !HOST: %[[SHAPE_READ_WRITE:.*]] = fir.shape %[[C20]] : (index) -> !fir.shape<1>
 !HOST: %[[READ_WRITE_DECL:.*]]:2 = hlfir.declare %[[READ_WRITE]](%[[SHAPE_READ_WRITE]]) {uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
 !HOST: %[[LB:.*]] = arith.constant 1 : index

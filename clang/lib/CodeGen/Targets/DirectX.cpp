@@ -109,7 +109,8 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       llvm::dxil::ResourceKind RK = llvm::dxil::ResourceKind::Invalid;
       switch (ResAttrs.ResourceDimension) {
       case llvm::dxil::ResourceDimension::Dim1D:
-        RK = llvm::dxil::ResourceKind::Texture1D;
+        RK = ResAttrs.IsArray ? llvm::dxil::ResourceKind::Texture1DArray
+                              : llvm::dxil::ResourceKind::Texture1D;
         break;
       case llvm::dxil::ResourceDimension::Dim2D:
         if (ResAttrs.isMultiSampled())

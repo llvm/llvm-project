@@ -6,12 +6,12 @@
 
 program OmpAtomicUpdate
     use omp_lib
-!CHECK: %[[VAL_A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFEa"}
+!CHECK: %[[VAL_A:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "a", uniq_name = "_QFEa"}>
 !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<i32>
 !CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 !CHECK: fir.store %[[EMBOX]] to %[[VAL_A]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_A_DECLARE:.*]]:2 = hlfir.declare %[[VAL_A]] {{.*}}
-!CHECK: %[[VAL_B:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "b", uniq_name = "_QFEb"}
+!CHECK: %[[VAL_B:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "b", uniq_name = "_QFEb"}>
 !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<i32>
 !CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 !CHECK: fir.store %[[EMBOX]] to %[[VAL_B]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -20,22 +20,22 @@ program OmpAtomicUpdate
 !CHECK: %[[VAL_C_DECLARE:.*]]:2 = hlfir.declare %[[VAL_C_ADDRESS]] {{.*}}
 !CHECK: %[[VAL_D_ADDRESS:.*]] = fir.address_of(@_QFEd) : !fir.ref<i32>
 !CHECK: %[[VAL_D_DECLARE:.*]]:2 = hlfir.declare %[[VAL_D_ADDRESS]] {{.}}
-!CHECK: %[[VAL_G_ADDRESS:.*]] = fir.alloca complex<f32> {bindc_name = "g", uniq_name = "_QFEg"}
+!CHECK: %[[VAL_G_ADDRESS:.*]] = fir.alloca complex<f32> <{bindc_name = "g", uniq_name = "_QFEg"}>
 !CHECK: %[[VAL_G_DECLARE:.*]]:2 = hlfir.declare %[[VAL_G_ADDRESS]] {uniq_name = "_QFEg"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-!CHECK: %[[VAL_i1_ALLOCA:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFEi1"}
+!CHECK: %[[VAL_i1_ALLOCA:.*]] = fir.alloca i8 <{bindc_name = "i1", uniq_name = "_QFEi1"}>
 !CHECK: %[[VAL_i1_DECLARE:.*]]:2 = hlfir.declare %[[VAL_i1_ALLOCA]] {{.*}}
 !CHECK: %[[VAL_c5:.*]] = arith.constant 5 : index
-!CHECK: %[[VAL_K_ALLOCA:.*]] = fir.alloca !fir.array<5xi32> {bindc_name = "k", uniq_name = "_QFEk"}
+!CHECK: %[[VAL_K_ALLOCA:.*]] = fir.alloca !fir.array<5xi32> <{bindc_name = "k", uniq_name = "_QFEk"}>
 !CHECK: %[[VAL_K_SHAPED:.*]] = fir.shape %[[VAL_c5]] : (index) -> !fir.shape<1>
 !CHECK: %[[VAL_K_DECLARE:.*]]:2 = hlfir.declare %[[VAL_K_ALLOCA]](%[[VAL_K_SHAPED]]) {{.*}}
 
-!CHECK: %[[VAL_W_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "w", uniq_name = "_QFEw"}
+!CHECK: %[[VAL_W_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "w", uniq_name = "_QFEw"}>
 !CHECK: %[[VAL_W_DECLARE:.*]]:2 = hlfir.declare %[[VAL_W_ALLOCA]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[VAL_X_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+!CHECK: %[[VAL_X_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFEx"}>
 !CHECK: %[[VAL_X_DECLARE:.*]]:2 = hlfir.declare %[[VAL_X_ALLOCA]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[VAL_Y_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+!CHECK: %[[VAL_Y_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFEy"}>
 !CHECK: %[[VAL_Y_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Y_ALLOCA]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[VAL_Z_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}
+!CHECK: %[[VAL_Z_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFEz"}>
 !CHECK: %[[VAL_Z_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Z_ALLOCA]] {uniq_name = "_QFEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     integer :: w, x, y, z
     integer, pointer :: a, b

@@ -1,5 +1,26 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
+llvm.func @gep_inrange_nonconstant_base(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // expected-error @below{{'inrange' requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @gep_base() : i8
+
+llvm.func @gep_inrange_nonconstant_index(%idx: i64) -> !llvm.ptr {
+  %addr = llvm.mlir.addressof @gep_base : !llvm.ptr
+  // expected-error @below{{'inrange' requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %addr[%idx] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
 // expected-error @below{{cannot be converted to LLVM IR}}
 func.func @foo() {
   llvm.return
@@ -428,4 +449,17 @@ llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_perso
   llvm.br ^bb2
 ^bb2:  // 2 preds: ^bb0, ^bb1
   llvm.return %0 : i32
+}
+
+// -----
+
+// An in-function constant referring to a missing resource must fail the
+// translation rather than leaving a null value behind for its users.
+
+llvm.func @constant_resource_does_not_exist(%arg0: vector<4xi32>) {
+  // expected-error @below{{resource does not exist}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.constant}}
+  %0 = llvm.mlir.constant(dense_resource<missing> : vector<4xi32>) : vector<4xi32>
+  %1 = llvm.icmp "sgt" %arg0, %0 : vector<4xi32>
+  llvm.return
 }

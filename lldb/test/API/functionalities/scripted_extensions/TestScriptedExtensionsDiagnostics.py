@@ -19,6 +19,10 @@ Entry points that already return an `llvm::Expected` / `Status` all the way
 to a user-visible surface (`ScriptedFrameProvider::CreateInstance`,
 `StopHookScripted::SetScriptCallback`) propagate the detailed error through
 their return type; tests for those are tracked as follow-up.
+
+`StopHookScripted::HandleStop` has no diagnostic channel of its own either:
+it writes to the debugger's asynchronous output stream, so those tests
+capture the debugger's output rather than listening for an event.
 """
 
 import os
@@ -225,3 +229,57 @@ class TestScriptedExtensionsDiagnostics(TestBase):
     @expectedFailureAll(bugnumber="ScriptedPlatform has no plugin implementation yet")
     def test_scripted_platform_missing_methods(self):
         self.assert_diagnostic("list_processes")
+
+    # ------------------------------------------------------------------
+    # Scripted Stop Hook - reports on the debugger's async output stream
+    # ------------------------------------------------------------------
+
+    def run_to_breakpoint_capturing_output(self, stop_hook_class):
+        """Add `stop_hook_class` as a stop hook, run to the breakpoint in
+        main.c and return everything the debugger printed.
+
+        Stop hook diagnostics are written to the debugger's asynchronous
+        output stream, which `SBCommandReturnObject` does not capture, so
+        redirect the debugger's output to a file for the duration of the run.
+        """
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, "valid target")
+
+        self.runCmd("breakpoint set -p 'break here' -f main.c")
+        self.runCmd("target stop-hook add --script-class " + stop_hook_class)
+
+        interp = self.dbg.GetCommandInterpreter()
+        output_path = self.getBuildArtifact("stop-hook-output.txt")
+        saved_output_file = self.dbg.GetOutputFile()
+        with open(output_path, "w") as output_file:
+            self.dbg.SetOutputFile(output_file)
+            try:
+                interp.HandleCommand("run", lldb.SBCommandReturnObject())
+                self.dbg.GetOutputFile().Flush()
+            finally:
+                self.dbg.SetOutputFile(saved_output_file)
+
+        with open(output_path, "r") as output_file:
+            return output_file.read()
+
+    def test_scripted_stop_hook_exception(self):
+        """An exception raised by `handle_stop` should be reported to the
+        user, with the Python backtrace, rather than silently ignored."""
+        output = self.run_to_breakpoint_capturing_output(
+            "malformed_scripted_extensions.ExceptionScriptedStopHook"
+        )
+        self.assertIn("intentional exception from handle_stop()", output)
+        self.assertIn("RuntimeError", output)
+        self.assertIn("handle_stop", output)
+
+    def test_scripted_stop_hook_returning_none(self):
+        """`handle_stop` returning None is not a failure: the hook runs, the
+        process stays stopped and nothing is reported."""
+        output = self.run_to_breakpoint_capturing_output(
+            "malformed_scripted_extensions.NoneReturningScriptedStopHook"
+        )
+        self.assertIn("NoneReturningScriptedStopHook ran", output)
+        self.assertNotIn("error:", output)
+        process = self.dbg.GetSelectedTarget().GetProcess()
+        self.assertState(process.GetState(), lldb.eStateStopped)

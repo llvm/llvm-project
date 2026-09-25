@@ -7,13 +7,13 @@
 !s32i = !cir.int<s, 32>
 
 module {
-  cir.global "private" internal @regular = #cir.int<0> : !s32i
+  cir.global "private" internal static_local_guard<"_ZGV7regular"> @regular = #cir.int<0> : !s32i
     {static_local_info = #cir.static_local_info<
        local = true, tls = none, is_inline = false, tsk = undeclared>}
   // CHECK: @regular
   // CHECK-SAME: static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>
 
-  cir.global "private" internal @tls = #cir.int<0> : !s32i
+  cir.global "private" internal static_local_guard<"_ZGV3tls"> @tls = #cir.int<0> : !s32i
     {static_local_info = #cir.static_local_info<
        local = true, tls = dynamic, is_inline = true, tsk = implicit_instantiation>}
   // CHECK: @tls

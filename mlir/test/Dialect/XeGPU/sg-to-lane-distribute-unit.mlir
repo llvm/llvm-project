@@ -274,42 +274,6 @@ gpu.func @prefetch_nd() {
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @scatter_load_chunksize
-// CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
-// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
-// CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf16> to vector<1x8xf16>
-gpu.func @scatter_load_chunksize(%src: memref<256xf16>) {
-  %offset = arith.constant dense<12> : vector<16xindex>
-  %mask = arith.constant dense<true> : vector<16xi1>
-  %0 = xegpu.load %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-    : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-  gpu.return
-}
-
-// CHECK-LABEL: gpu.func @scatter_store_chunksize
-// CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
-// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
-// CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-// CHECK: %[[C1:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf16> to vector<1x8xf16>
-// CHECK: %[[C2:.*]] = vector.shape_cast %[[C1]] : vector<1x8xf16> to vector<8xf16>
-// CHECK: xegpu.store %[[C2]], %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
-// CHECK-SAME: : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
-gpu.func @scatter_store_chunksize(%src: memref<256xf16>) {
-  %offset = arith.constant dense<12> : vector<16xindex>
-  %mask = arith.constant dense<true> : vector<16xi1>
-  %0 = xegpu.load %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-    : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-  xegpu.store %0, %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-    : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
-  gpu.return
-}
-
 // CHECK-LABEL: gpu.func @scatter_load
 // CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
 // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
@@ -601,11 +565,12 @@ gpu.func @vector_bitcast() {
 
 // CHECK-LABEL: gpu.func @create_mask_1d
 //  CHECK-SAME: (%[[M0:.*]]: index)
-//   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
-//       CHECK:   %[[CMP:.*]] = arith.cmpi slt, %{{.*}}, %[[M0]] : index
-//       CHECK:   %[[AND:.*]] = arith.andi %[[TRUE]], %[[CMP]] : i1
-//       CHECK:   %[[MASK:.*]] = vector.broadcast %[[AND]] : i1 to vector<1xi1>
+//       CHECK:   %[[LANE:.*]] = gpu.lane_id
+//       CHECK:   %[[K0:.*]] = arith.constant dense<0> : vector<1xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[M0]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<1xindex>
+//       CHECK:   %[[MASK:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<1xindex>
+//   CHECK-NOT:   vector.shape_cast
 //       CHECK:   gpu.return
 gpu.func @create_mask_1d(%m0: index) {
   %mask = vector.create_mask %m0
@@ -618,12 +583,12 @@ gpu.func @create_mask_1d(%m0: index) {
 }
 
 // CHECK-LABEL: gpu.func @constant_mask_1d
-//   CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
-//   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
-//       CHECK:   %[[CMP:.*]] = arith.cmpi slt, %{{.*}}, %[[C4]] : index
-//       CHECK:   %[[AND:.*]] = arith.andi %[[TRUE]], %[[CMP]] : i1
-//       CHECK:   %[[MASK:.*]] = vector.broadcast %[[AND]] : i1 to vector<1xi1>
+//       CHECK:   %[[C4:.*]] = arith.constant 4 : index
+//       CHECK:   %[[LANE:.*]] = gpu.lane_id
+//       CHECK:   %[[K0:.*]] = arith.constant dense<0> : vector<1xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[C4]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<1xindex>
+//       CHECK:   %[[MASK:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<1xindex>
 //       CHECK:   gpu.return
 gpu.func @constant_mask_1d() {
   %mask = vector.constant_mask [4]
@@ -635,19 +600,52 @@ gpu.func @constant_mask_1d() {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @create_mask_1d_multi_unit
+//  CHECK-SAME: (%[[M0:.*]]: index)
+//       CHECK:   %[[K0:.*]] = arith.constant dense<[0, 4, 8, 12]> : vector<4xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[M0]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<4xindex>
+//       CHECK:   %[[MASK:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<4xindex>
+//       CHECK:   gpu.return
+gpu.func @create_mask_1d_multi_unit(%m0: index) {
+  %mask = vector.create_mask %m0
+    : vector<16xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [4], lane_data = [1]>
+    }> : vector<16xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mask_1d_lane_data
+//  CHECK-SAME: (%[[M0:.*]]: index)
+//       CHECK:   %[[K0:.*]] = arith.constant dense<[0, 1, 2, 3, 8, 9, 10, 11]> : vector<8xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[M0]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<8xindex>
+//       CHECK:   %[[MASK:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<8xindex>
+//       CHECK:   gpu.return
+gpu.func @create_mask_1d_lane_data(%m0: index) {
+  %mask = vector.create_mask %m0
+    : vector<16xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [2], lane_data = [4]>
+    }> : vector<16xi1>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @create_mask_2d
 //  CHECK-SAME: (%[[M0:.*]]: index, %[[M1:.*]]: index)
-//   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
-//       CHECK:   %[[CMP_R0:.*]] = arith.cmpi slt, %{{.*}}, %[[M0]] : index
-//       CHECK:   %[[AND0:.*]] = arith.andi %[[TRUE]], %[[CMP_R0]] : i1
-//       CHECK:   %[[CMP_C0:.*]] = arith.cmpi slt, %{{.*}}, %[[M1]] : index
-//       CHECK:   %[[BIT0:.*]] = arith.andi %[[AND0]], %[[CMP_C0]] : i1
-//       CHECK:   %[[CMP_R1:.*]] = arith.cmpi slt, %{{.*}}, %[[M0]] : index
-//       CHECK:   %[[AND1:.*]] = arith.andi %[[TRUE]], %[[CMP_R1]] : i1
-//       CHECK:   %[[CMP_C1:.*]] = arith.cmpi slt, %{{.*}}, %[[M1]] : index
-//       CHECK:   %[[BIT1:.*]] = arith.andi %[[AND1]], %[[CMP_C1]] : i1
-//       CHECK:   %[[MASK:.*]] = vector.from_elements %[[BIT0]], %[[BIT1]] : vector<1x2xi1>
+//       CHECK:   %[[K0:.*]] = arith.constant dense<0> : vector<2xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[M0]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<2xindex>
+//       CHECK:   %[[P0:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<2xindex>
+//       CHECK:   %[[K1:.*]] = arith.constant dense<[0, 2]> : vector<2xindex>
+//       CHECK:   %[[LEN1:.*]] = arith.subi %[[M1]], %{{.*}} : index
+//       CHECK:   %[[EXT1:.*]] = vector.broadcast %[[LEN1]] : index to vector<2xindex>
+//       CHECK:   %[[P1:.*]] = arith.cmpi slt, %[[K1]], %[[EXT1]] : vector<2xindex>
+//       CHECK:   %[[AND:.*]] = arith.andi %[[P0]], %[[P1]] : vector<2xi1>
+//       CHECK:   %[[MASK:.*]] = vector.shape_cast %[[AND]] : vector<2xi1> to vector<1x2xi1>
 //       CHECK:   gpu.return
 gpu.func @create_mask_2d(%m0: index, %m1: index) {
   %mask = vector.create_mask %m0, %m1
@@ -660,19 +658,18 @@ gpu.func @create_mask_2d(%m0: index, %m1: index) {
 }
 
 // CHECK-LABEL: gpu.func @constant_mask_2d
-//   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
-//   CHECK-DAG:   %[[LANE:.*]] = gpu.lane_id
-//   CHECK-DAG:   %[[TRUE:.*]] = arith.constant true
-//       CHECK:   %[[CMP_R0:.*]] = arith.cmpi slt, %{{.*}}, %[[C2]] : index
-//       CHECK:   %[[AND0:.*]] = arith.andi %[[TRUE]], %[[CMP_R0]] : i1
-//       CHECK:   %[[CMP_C0:.*]] = arith.cmpi slt, %{{.*}}, %[[C3]] : index
-//       CHECK:   %[[BIT0:.*]] = arith.andi %[[AND0]], %[[CMP_C0]] : i1
-//       CHECK:   %[[CMP_R1:.*]] = arith.cmpi slt, %{{.*}}, %[[C2]] : index
-//       CHECK:   %[[AND1:.*]] = arith.andi %[[TRUE]], %[[CMP_R1]] : i1
-//       CHECK:   %[[CMP_C1:.*]] = arith.cmpi slt, %{{.*}}, %[[C3]] : index
-//       CHECK:   %[[BIT1:.*]] = arith.andi %[[AND1]], %[[CMP_C1]] : i1
-//       CHECK:   %[[MASK:.*]] = vector.from_elements %[[BIT0]], %[[BIT1]] : vector<1x2xi1>
+//       CHECK:   %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:   %[[C3:.*]] = arith.constant 3 : index
+//       CHECK:   %[[K0:.*]] = arith.constant dense<0> : vector<2xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[C2]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<2xindex>
+//       CHECK:   %[[P0:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<2xindex>
+//       CHECK:   %[[K1:.*]] = arith.constant dense<[0, 2]> : vector<2xindex>
+//       CHECK:   %[[LEN1:.*]] = arith.subi %[[C3]], %{{.*}} : index
+//       CHECK:   %[[EXT1:.*]] = vector.broadcast %[[LEN1]] : index to vector<2xindex>
+//       CHECK:   %[[P1:.*]] = arith.cmpi slt, %[[K1]], %[[EXT1]] : vector<2xindex>
+//       CHECK:   %[[AND:.*]] = arith.andi %[[P0]], %[[P1]] : vector<2xi1>
+//       CHECK:   %[[MASK:.*]] = vector.shape_cast %[[AND]] : vector<2xi1> to vector<1x2xi1>
 //       CHECK:   gpu.return
 gpu.func @constant_mask_2d() {
   %mask = vector.constant_mask [2, 3]
@@ -682,6 +679,116 @@ gpu.func @constant_mask_2d() {
           target_layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
         }> : vector<8x4xi1>
       gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mask_2d_lane_data
+//  CHECK-SAME: (%[[M0:.*]]: index, %[[M1:.*]]: index)
+//       CHECK:   %[[K0:.*]] = arith.constant dense<[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7]> : vector<16xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[M0]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<16xindex>
+//       CHECK:   %[[P0:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<16xindex>
+//       CHECK:   %[[K1:.*]] = arith.constant dense<[0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16]> : vector<16xindex>
+//       CHECK:   %[[LEN1:.*]] = arith.subi %[[M1]], %{{.*}} : index
+//       CHECK:   %[[EXT1:.*]] = vector.broadcast %[[LEN1]] : index to vector<16xindex>
+//       CHECK:   %[[P1:.*]] = arith.cmpi slt, %[[K1]], %[[EXT1]] : vector<16xindex>
+//       CHECK:   %[[AND:.*]] = arith.andi %[[P0]], %[[P1]] : vector<16xi1>
+//       CHECK:   %[[MASK:.*]] = vector.shape_cast %[[AND]] : vector<16xi1> to vector<8x2xi1>
+//       CHECK:   gpu.return
+gpu.func @create_mask_2d_lane_data(%m0: index, %m1: index) {
+  %mask = vector.create_mask %m0, %m1
+    : vector<8x32xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
+    }> : vector<8x32xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mask_3d
+//  CHECK-SAME: (%[[M0:.*]]: index, %[[M1:.*]]: index, %[[M2:.*]]: index)
+//       CHECK:   %[[K0:.*]] = arith.constant dense<[0, 0, 0, 0, 1, 1, 1, 1]> : vector<8xindex>
+//       CHECK:   %[[LEN0:.*]] = arith.subi %[[M0]], %{{.*}} : index
+//       CHECK:   %[[EXT0:.*]] = vector.broadcast %[[LEN0]] : index to vector<8xindex>
+//       CHECK:   %[[P0:.*]] = arith.cmpi slt, %[[K0]], %[[EXT0]] : vector<8xindex>
+//       CHECK:   %[[K1:.*]] = arith.constant dense<[0, 2, 4, 6, 0, 2, 4, 6]> : vector<8xindex>
+//       CHECK:   %[[LEN1:.*]] = arith.subi %[[M1]], %{{.*}} : index
+//       CHECK:   %[[EXT1:.*]] = vector.broadcast %[[LEN1]] : index to vector<8xindex>
+//       CHECK:   %[[P1:.*]] = arith.cmpi slt, %[[K1]], %[[EXT1]] : vector<8xindex>
+//       CHECK:   %[[AND0:.*]] = arith.andi %[[P0]], %[[P1]] : vector<8xi1>
+//       CHECK:   %[[K2:.*]] = arith.constant dense<0> : vector<8xindex>
+//       CHECK:   %[[LEN2:.*]] = arith.subi %[[M2]], %{{.*}} : index
+//       CHECK:   %[[EXT2:.*]] = vector.broadcast %[[LEN2]] : index to vector<8xindex>
+//       CHECK:   %[[P2:.*]] = arith.cmpi slt, %[[K2]], %[[EXT2]] : vector<8xindex>
+//       CHECK:   %[[AND1:.*]] = arith.andi %[[AND0]], %[[P2]] : vector<8xi1>
+//       CHECK:   %[[MASK:.*]] = vector.shape_cast %[[AND1]] : vector<8xi1> to vector<2x4x1xi1>
+//       CHECK:   gpu.return
+gpu.func @create_mask_3d(%m0: index, %m1: index, %m2: index) {
+  %mask = vector.create_mask %m0, %m1, %m2
+    : vector<2x8x8xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>
+    }> : vector<2x8x8xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @constant_mask_2d_saturated_dim
+//       CHECK:   %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-NOT:   arith.cmpi
+//       CHECK:   %[[K1:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7]> : vector<8xindex>
+//       CHECK:   %[[LEN1:.*]] = arith.subi %[[C3]], %{{.*}} : index
+//       CHECK:   %[[EXT1:.*]] = vector.broadcast %[[LEN1]] : index to vector<8xindex>
+//       CHECK:   %[[MASK:.*]] = arith.cmpi slt, %[[K1]], %[[EXT1]] : vector<8xindex>
+//   CHECK-NOT:   arith.andi
+//       CHECK:   vector.shape_cast %[[MASK]] : vector<8xi1> to vector<1x8xi1>
+//       CHECK:   gpu.return
+gpu.func @constant_mask_2d_saturated_dim() {
+  %mask = vector.constant_mask [16, 3]
+    : vector<16x8xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<16x8xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mask_2d_saturated_distributed_dim
+//  CHECK-SAME: (%[[M1:.*]]: index)
+//   CHECK-NOT:   arith.cmpi
+//       CHECK:   %[[K1:.*]] = arith.constant dense<[0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16]> : vector<16xindex>
+//       CHECK:   %[[LEN1:.*]] = arith.subi %[[M1]], %{{.*}} : index
+//       CHECK:   %[[EXT1:.*]] = vector.broadcast %[[LEN1]] : index to vector<16xindex>
+//       CHECK:   %[[MASK:.*]] = arith.cmpi slt, %[[K1]], %[[EXT1]] : vector<16xindex>
+//   CHECK-NOT:   arith.andi
+//       CHECK:   vector.shape_cast %[[MASK]] : vector<16xi1> to vector<8x2xi1>
+//       CHECK:   gpu.return
+gpu.func @create_mask_2d_saturated_distributed_dim(%m1: index) {
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c8, %m1
+    : vector<8x32xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
+    }> : vector<8x32xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mask_2d_all_dims_saturated
+//   CHECK-NOT:   arith.cmpi
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   %[[MASK:.*]] = arith.constant dense<true> : vector<1x8xi1>
+//   CHECK-NOT:   arith.cmpi
+//       CHECK:   gpu.return
+gpu.func @create_mask_2d_all_dims_saturated() {
+  %c16 = arith.constant 16 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c16, %c8
+    : vector<16x8xi1>
+  %mask_cl = xegpu.convert_layout %mask
+    <{
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<16x8xi1>
+  gpu.return
 }
 
 // CHECK-LABEL: gpu.func @vector_multi_reduction_3d_leading_unit_dim_lane_local
@@ -737,6 +844,28 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
     <{
       target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16, 1], lane_data = [1, 1, 1]>, dims = [1]>
     }> : vector<1x2xf32>
+  gpu.return
+}
+
+// lane_data packs all 16 reduced elements of dim1 into a single lane and
+// lane_layout is 1 everywhere, so the reduction is lane-local and must lower to
+// a plain vector.reduction.
+// CHECK-LABEL: gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local
+// CHECK:         %[[F0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x1xf32> to vector<16xf32>
+// CHECK:         %[[A0:.*]] = vector.extract %{{.*}}[0, 0] : f32 from vector<1x1xf32>
+// CHECK:         %[[R0:.*]] = vector.reduction <add>, %[[F0]], %[[A0]] : vector<16xf32> into f32
+// CHECK:         vector.insert %[[R0]], %{{.*}} [0, 0] : f32 into vector<1x1xf32>
+// CHECK-NOT:     gpu.shuffle
+// CHECK:         gpu.return
+gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local() {
+    %src = arith.constant dense<0.0>  : vector<1x16x1xf32>
+    %acc = arith.constant dense<0.0>  : vector<1x1xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      [1] : vector<1x16x1xf32> to vector<1x1xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1], lane_data = [1, 16, 1]>, dims = [1]>
+    }> : vector<1x1xf32>
   gpu.return
 }
 
@@ -949,6 +1078,22 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
     <{
       target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }> : vector<64x32xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_partial_lanes
+// CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [3, 0], strides = [1, 1] : vector<1x1xf32> into vector<16x1xf32>
+gpu.func @vector_insert_strided_slice_inner_partial_lanes() {
+  %0 = "test.some_op"()
+    : () -> vector<1x2xf32>
+  %1 = "test.some_op"()
+    : () -> vector<16x2xf32>
+  %2 = vector.insert_strided_slice %0, %1 offsets = [3, 0], strides = [1, 1]
+    : vector<1x2xf32> into vector<16x2xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 2], lane_data = [1, 1]>
+    }> : vector<16x2xf32>
   gpu.return
 }
 

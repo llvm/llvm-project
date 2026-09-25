@@ -103,3 +103,59 @@ namespace UnknownSizeArrayString {
                              // ref-note {{initializer of 'foo' is unknown}} \
                              // both-error {{static assertion failed}}
 }
+
+namespace TrivialAssignment {
+  struct array {
+    int _M_elems[4];
+  };
+
+  struct item {
+    array words;
+    unsigned priority;
+  };
+
+  constexpr void __insertion_sort(item * __first,
+                                  item *__last) {
+    *__first = *__first;
+  }
+
+  consteval unsigned sorted_first() {
+    item items[]{{{}, 1}};
+    __insertion_sort(items, items + 1);
+
+    return items[0].priority;
+  }
+  static_assert(sorted_first());
+
+  constexpr void __insertion_sort2(item * __first,
+                                   item *__last) {
+    *__first = *__last; // both-note {{read of dereferenced one-past-the-end pointer}} \
+                        // both-note {{in call to}}
+  }
+
+  consteval unsigned sorted_first2() {
+    item items[]{{{}, 1}};
+    __insertion_sort2(items, items + 1); // both-note {{in call}}
+
+    return items[0].priority;
+  }
+  static_assert(sorted_first2()); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call}}
+
+
+
+  constexpr void __insertion_sort3(item * __first,
+                                   item *__last) {
+    *__last = *__first; // both-note {{member call on dereferenced one-past-the-end pointer}}
+  }
+
+  consteval unsigned sorted_first3() {
+    item items[]{{{}, 1}};
+    __insertion_sort3(items, items + 1); // both-note {{in call to '__insertion_sort3(&items[0], &items[1])'}}
+
+    return items[0].priority;
+  }
+  static_assert(sorted_first3()); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to}}
+
+}

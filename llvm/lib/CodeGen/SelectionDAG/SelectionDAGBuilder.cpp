@@ -89,6 +89,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -3639,10 +3640,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(FuncInfo.ExceptionModel, PersonalityFn) ==
+          0 &&
+      TLI.getExceptionSelectorRegister(FuncInfo.ExceptionModel,
+                                       PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -4195,6 +4196,77 @@ void SelectionDAGBuilder::visitInsertElement(const User &I) {
   setValue(&I, DAG.getNode(ISD::INSERT_VECTOR_ELT, getCurSDLoc(),
                            TLI.getValueType(DAG.getDataLayout(), I.getType()),
                            InVec, InVal, InIdx));
+}
+
+void SelectionDAGBuilder::visitBitInsert(const User &I) {
+  SDValue Base = getValue(I.getOperand(0));
+  SDValue Val = getValue(I.getOperand(1));
+  SDValue Offset = getValue(I.getOperand(2));
+  EVT BaseVT = Base.getValueType();
+  EVT ValVT = Val.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc dl = getCurSDLoc();
+
+  assert(BaseVT.getSizeInBits() >= ValVT.getSizeInBits() &&
+         "bitinsert val wider than base should be rejected by verifier");
+
+  // If Val is a float, cast it to an integer of the same bitwidth
+  // so DAG.getZExtOrTrunc can process it safely.
+  if (!ValVT.isInteger()) {
+    ValVT = ValVT.changeTypeToInteger();
+    Val = DAG.getBitcast(ValVT, Val);
+  }
+
+  // Legalize shift amount to the target's shift amount type.
+  EVT ShiftAmtTy = TLI.getShiftAmountTy(BaseVT, DAG.getDataLayout());
+  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(Offset, dl, ShiftAmtTy);
+
+  unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
+  unsigned ValBitWidth = ValVT.getScalarSizeInBits();
+  APInt InsertMask = APInt::getLowBitsSet(BaseBitWidth, ValBitWidth);
+  SDValue ShiftedMask =
+      DAG.getNode(ISD::SHL, dl, BaseVT, DAG.getConstant(InsertMask, dl, BaseVT),
+                  LegalShiftAmount);
+  SDValue ClearMask = DAG.getNOT(dl, ShiftedMask, BaseVT);
+  SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, Base, ClearMask);
+
+  SDValue ExtVal = DAG.getZExtOrTrunc(Val, dl, BaseVT);
+  SDValue ShiftedVal =
+      DAG.getNode(ISD::SHL, dl, BaseVT, ExtVal, LegalShiftAmount);
+  SDValue Result = DAG.getNode(ISD::OR, dl, BaseVT, ClearedBase, ShiftedVal);
+  setValue(&I, Result);
+}
+
+void SelectionDAGBuilder::visitBitExtract(const User &I) {
+  SDValue Src = getValue(I.getOperand(0));
+  SDValue Offset = getValue(I.getOperand(1));
+  EVT SrcVT = Src.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  SDLoc dl = getCurSDLoc();
+
+  assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
+         "bitextract result wider than source should be rejected by verifier");
+
+  // Legalize shift amount to the target's shift amount type.
+  EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
+  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(Offset, dl, ShiftAmtTy);
+
+  // Shift right by Offset - brings target field to bit 0
+  SDValue Shifted = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalShiftAmount);
+
+  SDValue Result;
+  if (!ResultVT.isInteger()) {
+    // Drop into the integer domain to safely truncate the shifted bits
+    EVT IntResultVT = ResultVT.changeTypeToInteger();
+    Result = DAG.getNode(ISD::TRUNCATE, dl, IntResultVT, Shifted);
+    Result = DAG.getBitcast(ResultVT, Result);
+  } else {
+    // Normal integer path
+    Result = DAG.getNode(ISD::TRUNCATE, dl, ResultVT, Shifted);
+  }
+
+  setValue(&I, Result);
 }
 
 void SelectionDAGBuilder::visitExtractElement(const User &I) {
@@ -5198,6 +5270,38 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   if (AddToChain)
     PendingLoads.push_back(Load.getValue(1));
   setValue(&I, Res);
+}
+
+void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
+  SDLoc sdl = getCurSDLoc();
+  Value *PtrOperand = I.getArgOperand(0);
+  // The remaining arguments (num_accessible_bytes or oracle function + args)
+  // are IR-level semantics only; they are not needed at codegen.
+  SDValue Ptr = getValue(PtrOperand);
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  Align Alignment = I.getParamAlign(0).valueOrOne();
+  AAMDNodes AAInfo = I.getAAMetadata();
+
+  SDValue InChain = DAG.getRoot();
+
+  // Use MOLoad but NOT MODereferenceable - the memory may not be
+  // fully dereferenceable.
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  MMOFlags |= TLI.getTargetMMOFlags(I);
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    MMOFlags |= MachineMemOperand::MOInvariant;
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MMOFlags,
+      LocationSize::precise(VT.getStoreSize()), Alignment, AAInfo);
+
+  SDValue Load = DAG.getLoad(VT, sdl, InChain, Ptr, MMO);
+  PendingLoads.push_back(Load.getValue(1));
+  setValue(&I, Load);
 }
 
 void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
@@ -7008,6 +7112,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::masked_compressstore:
     visitMaskedStore(I, true /* IsCompressing */);
     return;
+  case Intrinsic::speculative_load:
+    visitSpeculativeLoad(I);
+    return;
   case Intrinsic::powi:
     setValue(&I, ExpandPowI(sdl, getValue(I.getArgOperand(0)),
                             getValue(I.getArgOperand(1)), DAG));
@@ -7532,6 +7639,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
     return;
   }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    auto Opc = Intrinsic == Intrinsic::smulh ? ISD::MULHS : ISD::MULHU;
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(Opc, sdl, X.getValueType(), X, Y));
+    return;
+  }
   case Intrinsic::sadd_sat: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
@@ -7738,7 +7853,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
     // Drop the intrinsic, but forward the value
     setValue(&I, getValue(I.getOperand(0)));
     return;
@@ -8606,6 +8720,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_deinterleave8:
     visitVectorDeinterleave(I, 8);
     return;
+  case Intrinsic::vector_repeat: {
+    SDValue Vec = getValue(I.getOperand(0));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::VECTOR_REPEAT, sdl, ResultVT, Vec));
+    return;
+  }
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -9092,6 +9212,13 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
                                           MCSymbol *&BeginLabel) {
   MachineFunction &MF = DAG.getMachineFunction();
 
+  // Skip emitting EH_LABEL on targets whose exception tables don't reference
+  // them (32-bit x86 SEH, Wasm).
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+    BeginLabel = nullptr;
+    return Chain;
+  }
+
   // Insert a label before the invoke call to mark the try range.  This can be
   // used to detect deletion of the invoke via the MachineModuleInfo.
   BeginLabel = MF.getContext().createTempSymbol();
@@ -9113,7 +9240,9 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
                                         const BasicBlock *EHPadBB,
                                         MCSymbol *BeginLabel) {
-  assert(BeginLabel && "BeginLabel should've been set");
+  // No labels were emitted.
+  if (!BeginLabel)
+    return Chain;
 
   MachineFunction &MF = DAG.getMachineFunction();
 

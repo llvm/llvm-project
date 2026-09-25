@@ -12,6 +12,7 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 #define __device__ __attribute__((device))
+#define global __attribute__((address_space(1)))
 
 //===----------------------------------------------------------------------===//
 // Test AMDGPU builtins
@@ -95,4 +96,58 @@ __device__ void test_tanh_f16(_Float16* out, _Float16 a) {
 // LLVM: call{{.*}} bfloat @llvm.amdgcn.tanh.bf16(bfloat %{{.*}})
 __device__ void test_tanh_bf16(__bf16* out, __bf16 a) {
   *out = __builtin_amdgcn_tanh_bf16(a);
+}
+
+// CIR-LABEL: @_Z15test_bitop3_b32PU3AS1jjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.bitop3" {{.*}} : (!s32i, !s32i, !s32i, !u32i) -> !s32i
+// LLVM: define{{.*}} void @_Z15test_bitop3_b32PU3AS1jjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.bitop3.i32(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, i32 1)
+__device__ void test_bitop3_b32(global unsigned int* out, unsigned int a,
+                                unsigned int b, unsigned int c) {
+  *out = __builtin_amdgcn_bitop3_b32(a, b, c, 1);
+}
+
+// CIR-LABEL: @_Z15test_bitop3_b16PU3AS1tttt
+// CIR: cir.call_llvm_intrinsic "amdgcn.bitop3" {{.*}} : (!s16i, !s16i, !s16i, !u32i) -> !s16i
+// LLVM: define{{.*}} void @_Z15test_bitop3_b16PU3AS1tttt
+// LLVM: call{{.*}} i16 @llvm.amdgcn.bitop3.i16(i16 %{{.+}}, i16 %{{.+}}, i16 %{{.+}}, i32 1)
+__device__ void test_bitop3_b16(global unsigned short* out, unsigned short a,
+                                unsigned short b, unsigned short c) {
+  *out = __builtin_amdgcn_bitop3_b16(a, b, c, 1);
+}
+
+// CIR-LABEL: @_Z19test_permlane_bcastPjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.permlane.bcast" {{.*}} : (!s32i, !s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z19test_permlane_bcastPjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.permlane.bcast.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+__device__ void test_permlane_bcast(unsigned int* out, unsigned int src0,
+                                    unsigned int src1, unsigned int src2) {
+  *out = __builtin_amdgcn_permlane_bcast(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z16test_permlane_upPjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.permlane.up" {{.*}} : (!s32i, !s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z16test_permlane_upPjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.permlane.up.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+__device__ void test_permlane_up(unsigned int* out, unsigned int src0,
+                                 unsigned int src1, unsigned int src2) {
+  *out = __builtin_amdgcn_permlane_up(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z18test_permlane_downPjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.permlane.down" {{.*}} : (!s32i, !s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z18test_permlane_downPjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.permlane.down.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+__device__ void test_permlane_down(unsigned int* out, unsigned int src0,
+                                   unsigned int src1, unsigned int src2) {
+  *out = __builtin_amdgcn_permlane_down(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z17test_permlane_xorPjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.permlane.xor" {{.*}} : (!s32i, !s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z17test_permlane_xorPjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.permlane.xor.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+__device__ void test_permlane_xor(unsigned int* out, unsigned int src0,
+                                  unsigned int src1, unsigned int src2) {
+  *out = __builtin_amdgcn_permlane_xor(src0, src1, src2);
 }

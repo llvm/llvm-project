@@ -213,8 +213,6 @@ private:
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
 
-  SmallVector<unsigned> PrefetchTargets;
-
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
 
@@ -1475,8 +1473,6 @@ public:
   }
   MachineBasicBlock::iterator end() { return E; }
   bool empty() { return begin() == end(); }
-
-  MachineBasicBlock::iterator getInitial() { return I; }
 };
 
 /// Increment \p It until it points to a non-debug instruction or to \p End

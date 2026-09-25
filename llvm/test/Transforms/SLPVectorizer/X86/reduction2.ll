@@ -94,17 +94,12 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], f0x3EB0C6F7A0B5ED8D
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
-; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], f0x3EB0C6F7A0B5ED8D
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x double> [[TMP4]], splat (double f0x3EB0C6F7A0B5ED8D)
+; CHECK-NEXT:    [[OR_COND:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[TMP5]])
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ule <2 x double> [[TMP4]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
-; CHECK-NEXT:    [[NOT_OR_COND9:%.*]] = or i1 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[NOT_OR_COND9:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP7]])
 ; CHECK-NEXT:    ret i1 [[NOT_OR_COND9]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret i1 false
@@ -143,9 +138,7 @@ define i1 @fcmp_lt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp uge <2 x double> [[TMP5]], splat (double f0x3EB0C6F7A0B5ED8D)
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP6]], i64 1
-; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = or i1 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP6]])
 ; CHECK-NEXT:    ret i1 [[NOT_OR_COND]]
 ;
   %fneg = fneg double %b

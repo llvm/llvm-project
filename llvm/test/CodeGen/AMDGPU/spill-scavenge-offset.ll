@@ -7292,7 +7292,6 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
 ; GFX10-FLATSCR-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-FLATSCR-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-FLATSCR-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v5, 13, v0
 ; GFX10-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FLATSCR-NEXT:    v_add_co_u32 v4, s4, s2, v5
@@ -10469,7 +10468,6 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 1
 ; GFX10-FLATSCR-NEXT:    s_mov_b32 s33, exec_lo
-; GFX10-FLATSCR-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v5, 8, v0
 ; GFX10-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FLATSCR-NEXT:    s_clause 0xf

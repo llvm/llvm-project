@@ -22,6 +22,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
 namespace llvm::orc::sps {
 
@@ -45,7 +46,7 @@ class ProxySpec<ProxyT, CI, RetT(ArgTs...)> {
   }
 
 public:
-  static constexpr const char *Name = CI::Name;
+  static constexpr SymbolNameSpec Name = CI::Name;
 
   static void dispatch(unique_function<void(ErrorRetT)> OnComplete,
                        ExecutionSession &ES, ExecutorAddr CalleeAddr,

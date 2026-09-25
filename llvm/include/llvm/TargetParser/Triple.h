@@ -1264,6 +1264,10 @@ public:
   /// Tests if the target's default floating-point ABI is hard float.
   bool isHardFloatABI() const { return getDefaultFloatABI() == FloatABI::Hard; }
 
+  /// Returns the default threading model for this target triple, i.e. the model
+  /// used when the "thread-model" module flag is absent.
+  LLVM_ABI ThreadModel getDefaultThreadModel() const;
+
   /// Returns the default floating-point format for the "long double" type. A
   /// particular module may override this default.
   LLVM_ABI LongDoubleFormat getDefaultLongDoubleFormat() const;

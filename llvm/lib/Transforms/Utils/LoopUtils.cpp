@@ -1970,25 +1970,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expressions which are true for all exits (so as to maximize
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
-        SCEVUse ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
-        if (isa<SCEVCouldNotCompute>(ExitValue) ||
-            !SE->isLoopInvariant(ExitValue, L) ||
-            !Rewriter.isSafeToExpand(ExitValue)) {
-          // TODO: This should probably be sunk into SCEV in some way; maybe a
-          // getSCEVForExit(SCEV*, L, ExitingBB)?  It can be generalized for
-          // most SCEV expressions and other recurrence types (e.g. shift
-          // recurrences).  Is there existing code we can reuse?
-          const SCEV *ExitCount = SE->getExitCount(L, PN->getIncomingBlock(i));
-          if (isa<SCEVCouldNotCompute>(ExitCount))
-            continue;
-          if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
-            if (AddRec->getLoop() == L)
-              ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
-          if (isa<SCEVCouldNotCompute>(ExitValue) ||
-              !SE->isLoopInvariant(ExitValue, L) ||
-              !Rewriter.isSafeToExpand(ExitValue))
-            continue;
-        }
+        SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, PN->getIncomingBlock(i));
+        if (!SE->isLoopInvariant(ExitValue, L) ||
+            !Rewriter.isSafeToExpand(ExitValue))
+          continue;
 
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized

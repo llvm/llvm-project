@@ -22,6 +22,7 @@ add_flang_library(FIRBuilder
   Runtime/Character.cpp
   Runtime/Command.cpp
   Runtime/CUDA/Descriptor.cpp
+  Runtime/CUDA/Support.cpp
   Runtime/Derived.cpp
   Runtime/EnvironmentDefaults.cpp
   Runtime/Exceptions.cpp

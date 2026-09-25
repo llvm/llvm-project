@@ -809,10 +809,14 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   // Identify loop attribute 'code_align' from Attrs.
   // For attribute code_align:
   // n - 'llvm.loop.align i32 n' metadata will be emitted.
+  // A source-level [[clang::code_align]] attribute takes precedence over the
+  // -falign-loops=N command-line default.
   if (const auto *CodeAlign = getSpecificAttr<CodeAlignAttr>(Attrs)) {
     const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
     llvm::APSInt ArgVal = CE->getResultAsAPSInt();
     setCodeAlign(ArgVal.getSExtValue());
+  } else if (CGOpts.LoopAlignment) {
+    setCodeAlign(CGOpts.LoopAlignment);
   }
 
   setMustProgress(MustProgress);

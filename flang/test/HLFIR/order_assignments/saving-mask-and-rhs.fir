@@ -41,7 +41,7 @@ func.func @saving_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
 
 // Creating RHS temporary using the mask temporary (and not the hlfir.elemental)
 
-// CHECK:  %[[VAL_25:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.where", uniq_name = ""}
+// CHECK:  %[[VAL_25:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.where", uniq_name = ""}>
 // CHECK:  %[[RHS_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 // CHECK:  %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.where"}
 // CHECK:  fir.do_loop %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
@@ -91,10 +91,10 @@ func.func @forall_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // and it can be used directly to mask the rhs (instead of loading the temp).
 
 // CHECK-LABEL:   func.func @forall_mask_and_rhs(
-// CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<?xi1>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<?xi1>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[MASK_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%[[MASK_SHAPE]]) {uniq_name = ".tmp.forall"}
-// CHECK:           %[[VAL_29:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[VAL_29:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[RHS_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_29]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.forall"}
 // CHECK:           fir.do_loop %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {

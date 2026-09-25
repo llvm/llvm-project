@@ -378,16 +378,17 @@ define amdgpu_kernel void @round_v4f32(ptr addrspace(1) %out, <4 x float> %in) #
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 0, 1.0, s6
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s6, |v6|, 0.5
 ; GFX11-NEXT:    v_bfi_b32 v8, 0x7fffffff, v3, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, 0, 1.0, s6
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s6, |v7|, 0.5
-; GFX11-NEXT:    v_dual_add_f32 v3, v0, v2 :: v_dual_add_f32 v2, v1, v8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_bfi_b32 v6, 0x7fffffff, v6, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, 0, 1.0, s6
 ; GFX11-NEXT:    s_mov_b32 s6, -1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v7, 0x7fffffff, v7, s0
+; GFX11-NEXT:    v_add_f32_e32 v3, v0, v2
+; GFX11-NEXT:    v_add_f32_e32 v2, v1, v8
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_dual_add_f32 v1, v4, v6 :: v_dual_add_f32 v0, v5, v7
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[4:7], 0
 ; GFX11-NEXT:    s_endpgm
@@ -668,16 +669,16 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ; GFX11-NEXT:    v_bfi_b32 v16, 0x7fffffff, v3, s10
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, 0, 1.0, s2
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s2, |v11|, 0.5
-; GFX11-NEXT:    v_sub_f32_e32 v13, s14, v6
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_dual_add_f32 v3, v0, v2 :: v_dual_add_f32 v2, v1, v16
+; GFX11-NEXT:    v_add_f32_e32 v3, v0, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_bfi_b32 v7, 0x7fffffff, v7, s9
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v11, 0, 1.0, s2
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s2, |v12|, 0.5
-; GFX11-NEXT:    v_add_f32_e32 v1, v4, v7
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_dual_add_f32 v2, v1, v16 :: v_dual_add_f32 v1, v4, v7
 ; GFX11-NEXT:    v_bfi_b32 v11, 0x7fffffff, v11, s8
+; GFX11-NEXT:    v_sub_f32_e32 v13, s14, v6
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v12, 0, 1.0, s2
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s2, |v13|, 0.5
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -761,6 +762,8 @@ define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #
 ; R600-NEXT:     ADD T0.X, T3.W, PV.W,
 ; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; R600-NEXT:     ADD_INT * T2.X, PS, literal.x,
+; R600-NEXT:    4(5.605194e-45), 0(0.000000e+00)
   %result = call <8 x float> @llvm.round.v8f32(<8 x float> %in) #1
   store <8 x float> %result, ptr addrspace(1) %out
   ret void

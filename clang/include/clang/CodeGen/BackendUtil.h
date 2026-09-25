@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 
 namespace llvm {
@@ -19,9 +20,6 @@ template <typename T> class Expected;
 template <typename T> class IntrusiveRefCntPtr;
 class Module;
 class MemoryBufferRef;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -40,7 +38,7 @@ enum BackendAction {
 };
 
 void emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
-                       StringRef TDesc, llvm::Module *M, BackendAction Action,
+                       llvm::Module *M, BackendAction Action,
                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                        std::unique_ptr<raw_pwrite_stream> OS,
                        BackendConsumer *BC = nullptr);

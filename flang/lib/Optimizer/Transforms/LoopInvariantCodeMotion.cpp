@@ -321,6 +321,21 @@ void LoopInvariantCodeMotion::runOnOperation() {
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
                                 bool maybeConditionallyExecuted) {
+        // Never hoist a producer of a !fir.field. Lowering a consumer of a
+        // field value inspects its defining operation: for a record whose
+        // layout is known at compile time the field becomes an LLVM GEP struct
+        // index, which must be a constant. Hoisting fir.field_index out of the
+        // arms of a construct (e.g. the CASEs of a SELECT CASE, each passing a
+        // different component of the same derived type) leaves those arms as
+        // otherwise-identical blocks differing only in this operand, which lets
+        // block merging thread it through a new block argument -- destroying
+        // the defining operation that codegen needs.
+        if (llvm::any_of(op->getResultTypes(),
+                         [](mlir::Type t) { return isa<fir::FieldType>(t); })) {
+          LDBG() << "Not hoisting producer of a field value: " << *op;
+          return false;
+        }
+
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;

@@ -689,7 +689,7 @@ struct SourceBreakpoint {
   /// capability `supportsLogPoints` is true.
   /// If either `hitCondition` or `condition` is specified, then the message
   /// should only be logged if those conditions are met.
-  std::optional<String> logMessage;
+  String logMessage;
 
   /// The mode of this breakpoint. If defined, this must be one of the
   /// `breakpointModes` the debug adapter advertised in its `Capabilities`.

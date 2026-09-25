@@ -18,6 +18,7 @@
 //   - cir.begin_catch            → call to __cxa_begin_catch
 //   - cir.end_catch              → call to __cxa_end_catch
 //   - cir.eh.terminate           → call to __clang_call_terminate + unreachable
+//   - cir.eh.unexpected          → call to __cxa_call_unexpected + unreachable
 //   - cir.resume                 → cir.resume.flat
 //   - !cir.eh_token values       → (!cir.ptr<!void>, !u32i) value pairs
 //   - cir.construct_catch_param  → __cxa_get_exception_ptr + inlined
@@ -118,6 +119,7 @@ private:
   cir::PointerType voidPtrType;
   cir::PointerType u8PtrType;
   cir::IntType u32Type;
+  cir::IntType s32Type;
 
   // Cached runtime function declarations, initialized when needed by
   // ensureRuntimeDecls().
@@ -128,6 +130,7 @@ private:
   cir::FuncOp clangCallTerminateFunc;
   cir::FuncOp cxaThrowFunc;
   cir::FuncOp cxaRethrowFunc;
+  cir::FuncOp cxaCallUnexpectedFunc;
 
   DenseMap<mlir::StringAttr, cir::FuncOp> catchCopyThunks;
 
@@ -138,6 +141,7 @@ private:
   void ensureClangCallTerminate(mlir::Location loc);
   void ensureCxaThrowDecl(mlir::Location loc);
   void ensureCxaRethrowDecl(mlir::Location loc);
+  void ensureCxaCallUnexpectedDecl(mlir::Location loc);
   mlir::Block *buildTerminateBlock(cir::FuncOp funcOp, mlir::Location loc);
   mlir::FailureOr<cir::FuncOp>
   resolveCatchCopyThunk(cir::ConstructCatchParamOp op);
@@ -163,6 +167,7 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   auto u8Type = cir::IntType::get(ctx, 8, /*isSigned=*/false);
   u8PtrType = cir::PointerType::get(u8Type);
   u32Type = cir::IntType::get(ctx, 32, /*isSigned=*/false);
+  s32Type = cir::IntType::get(ctx, 32, /*isSigned=*/true);
 
   for (cir::FuncOp funcOp : mod.getOps<cir::FuncOp>()) {
     if (mlir::failed(lowerFunc(funcOp)))
@@ -177,7 +182,6 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
   // TODO(cir): Handle other personality functions. This probably isn't needed
   // here if we fix codegen to always set the personality function.
   if (!personalityFunc) {
-    auto s32Type = cir::IntType::get(ctx, 32, /*isSigned=*/true);
     auto personalityFuncTy = cir::FuncType::get({}, s32Type, /*isVarArg=*/true);
     personalityFunc = getOrCreateRuntimeFuncDecl(mod, loc, kGxxPersonality,
                                                  personalityFuncTy);
@@ -282,6 +286,16 @@ void ItaniumEHLowering::ensureCxaRethrowDecl(mlir::Location loc) {
       getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_rethrow", rethrowFuncTy);
 }
 
+///   void __cxa_call_unexpected(void *exn);
+void ItaniumEHLowering::ensureCxaCallUnexpectedDecl(mlir::Location loc) {
+  if (cxaCallUnexpectedFunc)
+    return;
+  auto unexpectedFuncTy =
+      cir::FuncType::get({voidPtrType}, voidType, /*isVarArg=*/false);
+  cxaCallUnexpectedFunc = getOrCreateRuntimeFuncDecl(
+      mod, loc, "__cxa_call_unexpected", unexpectedFuncTy);
+}
+
 /// Create a terminate landing pad block at the end of the specified function.
 mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
                                                     mlir::Location loc) {
@@ -291,7 +305,8 @@ mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
   mlir::Block *terminateBlock = builder.createBlock(&body, body.end());
   auto inflight = cir::EhInflightOp::create(
       builder, loc, /*cleanup=*/false, /*catch_all=*/true,
-      /*catch_type_list=*/mlir::ArrayAttr{});
+      /*catch_type_list=*/mlir::ArrayAttr{},
+      /*filter_type_list=*/mlir::ArrayAttr{});
   auto terminateCall = cir::CallOp::create(
       builder, loc, mlir::FlatSymbolRefAttr::get(clangCallTerminateFunc),
       voidType, mlir::ValueRange{inflight.getExceptionPtr()});
@@ -488,20 +503,33 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
   // destructive token-graph traversal below -- keeps it correct regardless of
   // the order in which sibling/nested initiates are lowered.
   mlir::ArrayAttr catchTypeList;
+  mlir::ArrayAttr filterTypeList;
   bool catchAll = false;
   SmallVector<mlir::Attribute> typeSymbols;
   for (cir::EhDispatchOp dispatch : reachedDispatches) {
-    if (mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr())
-      for (mlir::Attribute attr : catchTypes)
+    if (mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr()) {
+      for (mlir::Attribute attr : catchTypes) {
+        if (auto filter = mlir::dyn_cast<cir::EhFilterAttr>(attr)) {
+          SmallVector<mlir::Attribute> filterSymbols;
+          // A filter terminates the landing-pad clause list the same way a
+          // catch-all does. Nothing outside the specification is reachable.
+          for (mlir::Attribute typeAttr : filter.getPermittedTypes()) {
+            auto globalView = mlir::cast<cir::GlobalViewAttr>(typeAttr);
+            filterSymbols.push_back(globalView.getSymbol());
+          }
+          filterTypeList = builder.getArrayAttr(filterSymbols);
+          continue;
+        }
         typeSymbols.push_back(
             mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
-    if (dispatch.getDefaultIsCatchAll()) {
-      catchAll = true;
-      // A catch-all handles every exception, so it stops the unwind: no
-      // enclosing dispatch is reachable past it, and the collector therefore
-      // never records one after it.  Drop the rest of the clauses here.
+      }
+    }
+    if (dispatch.getDefaultIsCatchAll() || filterTypeList) {
+      catchAll = dispatch.getDefaultIsCatchAll();
+      // A catch-all or filter handles the remaining exceptions, so it
+      // stops the unwind. No enclosing dispatch is reachable past it.
       assert(dispatch == reachedDispatches.back() &&
-             "catch-all must be the last reachable dispatch");
+             "catch-all or filter must be the last reachable dispatch");
       break;
     }
   }
@@ -510,9 +538,8 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
 
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
-      builder, initiateOp.getLoc(),
-      /*cleanup=*/initiateOp.getCleanup() || reachesCleanup,
-      /*catch_all=*/catchAll, catchTypeList);
+      builder, initiateOp.getLoc(), initiateOp.getCleanup() || reachesCleanup,
+      catchAll, catchTypeList, filterTypeList);
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
                            inflightOp.getTypeId()};
@@ -619,6 +646,18 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
                       builder.getUnitAttr());
         cir::UnreachableOp::create(builder, op.getLoc());
         op.erase();
+      } else if (auto op = mlir::dyn_cast<cir::EhUnexpectedOp>(user)) {
+        auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
+        ensureCxaCallUnexpectedDecl(op.getLoc());
+        builder.setInsertionPoint(op);
+        auto call = cir::CallOp::create(
+            builder, op.getLoc(),
+            mlir::FlatSymbolRefAttr::get(cxaCallUnexpectedFunc), voidType,
+            mlir::ValueRange{exnPtr});
+        call->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                      builder.getUnitAttr());
+        cir::UnreachableOp::create(builder, op.getLoc());
+        op.erase();
       } else if (auto op = mlir::dyn_cast<cir::ResumeOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         builder.setInsertionPoint(op);
@@ -658,28 +697,62 @@ void ItaniumEHLowering::lowerDispatch(cir::EhDispatchOp dispatch,
                                       mlir::Value exnPtr, mlir::Value typeId) {
   mlir::Location dispLoc = dispatch.getLoc();
   mlir::Block *defaultDest = dispatch.getDefaultDestination();
-  mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr();
-  mlir::SuccessorRange catchDests = dispatch.getCatchDestinations();
   mlir::Block *dispatchBlock = dispatch->getBlock();
+
+  llvm::SmallVector<mlir::Attribute> catchAttrs;
+  llvm::SmallVector<mlir::Block *> catchDests;
+  cir::EhFilterAttr filterAttr;
+  mlir::Block *filterDest = nullptr;
+  if (mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr()) {
+    for (auto [attr, dest] :
+         llvm::zip(catchTypes, dispatch.getCatchDestinations())) {
+      if (auto filter = mlir::dyn_cast<cir::EhFilterAttr>(attr)) {
+        assert(!filterAttr && "at most one filter handler");
+        filterAttr = filter;
+        filterDest = dest;
+        continue;
+      }
+      catchAttrs.push_back(attr);
+      catchDests.push_back(dest);
+    }
+  }
 
   // Build the comparison chain in new blocks inserted after the dispatch's
   // block. The dispatch itself is replaced with a branch to the first
   // comparison block and erased below.
-  if (!catchTypes || catchTypes.empty()) {
-    // No typed catches: replace dispatch with a direct branch.
-    builder.setInsertionPoint(dispatch);
-    cir::BrOp::create(builder, dispLoc, defaultDest,
-                      mlir::ValueRange{exnPtr, typeId});
-  } else {
-    unsigned numCatches = catchTypes.size();
+  mlir::Block *insertBefore = dispatchBlock->getNextNode();
+  mlir::Block *falseDest = defaultDest;
+  if (filterAttr) {
+    assert(filterDest && "filter handler requires a destination");
+    // An empty permitted-type list means that every exception violates the
+    // specification, so the filter destination is taken unconditionally.
+    if (filterAttr.getPermittedTypes().empty()) {
+      falseDest = filterDest;
+    } else {
+      // The personality reports a filter failure with a negative selector.
+      // Type ids are still !u32i on the eh_token replacement pair, so recast
+      // to !s32i for the signed comparison. TODO: produce !s32i throughout.
+      auto *cmpBlock = builder.createBlock(insertBefore, {voidPtrType, u32Type},
+                                           {dispLoc, dispLoc});
+      mlir::Value cmpExnPtr = cmpBlock->getArgument(0);
+      mlir::Value cmpTypeId = cmpBlock->getArgument(1);
+      mlir::Value signedTypeId = cir::CastOp::create(
+          builder, dispLoc, s32Type, cir::CastKind::integral, cmpTypeId);
+      mlir::Value zero = cir::ConstantOp::create(builder, dispLoc,
+                                                 cir::IntAttr::get(s32Type, 0));
+      auto cmpOp = cir::CmpOp::create(builder, dispLoc, cir::CmpOpKind::lt,
+                                      signedTypeId, zero);
+      cir::BrCondOp::create(builder, dispLoc, cmpOp, filterDest, defaultDest,
+                            mlir::ValueRange{cmpExnPtr, cmpTypeId},
+                            mlir::ValueRange{cmpExnPtr, cmpTypeId});
+      insertBefore = cmpBlock;
+      falseDest = cmpBlock;
+    }
+  }
 
-    // Create and populate comparison blocks in reverse order so that each
-    // block's false destination (the next comparison block, or defaultDest
-    // for the last one) is already available. Each createBlock inserts
-    // before the previous one, so the blocks end up in forward order.
-    mlir::Block *insertBefore = dispatchBlock->getNextNode();
-    mlir::Block *falseDest = defaultDest;
-    mlir::Block *firstCmpBlock = nullptr;
+  mlir::Block *firstCmpBlock = nullptr;
+  if (!catchAttrs.empty()) {
+    unsigned numCatches = catchAttrs.size();
     for (int i = numCatches - 1; i >= 0; --i) {
       auto *cmpBlock = builder.createBlock(insertBefore, {voidPtrType, u32Type},
                                            {dispLoc, dispLoc});
@@ -687,7 +760,7 @@ void ItaniumEHLowering::lowerDispatch(cir::EhDispatchOp dispatch,
       mlir::Value cmpExnPtr = cmpBlock->getArgument(0);
       mlir::Value cmpTypeId = cmpBlock->getArgument(1);
 
-      auto globalView = mlir::cast<cir::GlobalViewAttr>(catchTypes[i]);
+      auto globalView = mlir::cast<cir::GlobalViewAttr>(catchAttrs[i]);
       auto ehTypeIdOp =
           cir::EhTypeIdOp::create(builder, dispLoc, globalView.getSymbol());
       auto cmpOp = cir::CmpOp::create(builder, dispLoc, cir::CmpOpKind::eq,
@@ -701,12 +774,13 @@ void ItaniumEHLowering::lowerDispatch(cir::EhDispatchOp dispatch,
       falseDest = cmpBlock;
       firstCmpBlock = cmpBlock;
     }
-
-    // Replace the dispatch with a branch to the first comparison block.
-    builder.setInsertionPoint(dispatch);
-    cir::BrOp::create(builder, dispLoc, firstCmpBlock,
-                      mlir::ValueRange{exnPtr, typeId});
+  } else {
+    firstCmpBlock = falseDest;
   }
+
+  builder.setInsertionPoint(dispatch);
+  cir::BrOp::create(builder, dispLoc, firstCmpBlock,
+                    mlir::ValueRange{exnPtr, typeId});
 
   // The caller lowers each dispatch exactly once after every initiate has been
   // processed, so no sibling still needs it; erase it now.

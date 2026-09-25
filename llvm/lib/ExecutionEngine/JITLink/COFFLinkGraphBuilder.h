@@ -166,8 +166,6 @@ private:
   static uint64_t getSectionSize(const object::COFFObjectFile &Obj,
                                  const object::coff_section *Section);
   static bool isComdatSection(const object::coff_section *Section);
-  static unsigned getPointerSize(const object::COFFObjectFile &Obj);
-  static llvm::endianness getEndianness(const object::COFFObjectFile &Obj);
   static StringRef getDLLImportStubPrefix() { return "__imp_"; }
   static StringRef getDirectiveSectionName() { return ".drectve"; }
   StringRef getCOFFSectionName(COFFSectionIndex SectionIndex,
