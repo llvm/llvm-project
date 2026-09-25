@@ -673,7 +673,7 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? (X - Y) : 0
   if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
       match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CtxI, SQ.DT)) {
     Value *SMin =
         Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
     return Builder.CreateNSWSub(CmpLHS, SMin);
