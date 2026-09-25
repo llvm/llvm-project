@@ -12,8 +12,7 @@ define void @test_nonconst_start_and_step(ptr %dst, i32 %start, i32 %step, i64 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DOTCAST]], [[NEG_STEP]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[START]], [[TMP1]]
@@ -40,11 +39,11 @@ define void @test_nonconst_start_and_step(ptr %dst, i32 %start, i32 %step, i64 %
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PRIMARY_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PRIMARY_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_DOWN:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV_DOWN_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_DOWN:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_DOWN_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_DOWN_NEXT]] = sub nsw i32 [[IV_DOWN]], [[STEP]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[PRIMARY_IV]]
 ; CHECK-NEXT:    store i32 [[IV_DOWN_NEXT]], ptr [[GEP_DST]], align 2

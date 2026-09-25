@@ -115,8 +115,7 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK2:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH3:.*]]
 ; CHECK:       [[VECTOR_PH3]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[N_VEC4:%.*]] = and i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[IV_OUTER]], [[N_VEC4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY5:.*]]
 ; CHECK:       [[VECTOR_BODY5]]:
@@ -131,10 +130,10 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N9]], label %[[INNER1_PREHEADER:.*]], label %[[SCALAR_PH1]]
 ; CHECK:       [[SCALAR_PH1]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK8]] ], [ [[IV_OUTER]], %[[OUTER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK8]] ], [ [[IV_OUTER]], %[[OUTER]] ]
 ; CHECK-NEXT:    br label %[[INNER0:.*]]
 ; CHECK:       [[INNER0]]:
-; CHECK-NEXT:    [[IV0:%.*]] = phi i64 [ [[IV0_NEXT:%.*]], %[[INNER0]] ], [ [[BC_RESUME_VAL10]], %[[SCALAR_PH1]] ]
+; CHECK-NEXT:    [[IV0:%.*]] = phi i64 [ [[IV0_NEXT:%.*]], %[[INNER0]] ], [ [[BC_RESUME_VAL9]], %[[SCALAR_PH1]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, ptr [[DST]], i64 [[IV0]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[P0]], align 4
 ; CHECK-NEXT:    [[IV0_NEXT]] = add nuw nsw i64 [[IV0]], 1
@@ -146,8 +145,7 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP14]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP14]], -4
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[IV_OUTER]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

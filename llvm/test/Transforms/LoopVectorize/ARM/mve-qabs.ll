@@ -21,10 +21,9 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP11]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[BLOCKSIZE]], 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[BLOCKSIZE]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -16
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[N_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BLOCKSIZE]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP12:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -46,7 +45,7 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[PSRC]], %[[WHILE_BODY_PREHEADER]] ], [ [[PSRC]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ], [ [[PDST]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
@@ -118,11 +117,10 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP5]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[BLOCKSIZE]], 7
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[BLOCKSIZE]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[BLOCKSIZE]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[BLOCKSIZE]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -145,7 +143,7 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PSRC]], %[[WHILE_BODY_PREHEADER]] ], [ [[PSRC]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ], [ [[PDST]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
@@ -217,11 +215,10 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP5]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[BLOCKSIZE]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[BLOCKSIZE]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[BLOCKSIZE]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -244,7 +241,7 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PSRC]], %[[WHILE_BODY_PREHEADER]] ], [ [[PSRC]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], %[[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ], [ [[PDST]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:

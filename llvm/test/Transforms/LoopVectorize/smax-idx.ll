@@ -109,8 +109,7 @@ define i64 @smax_idx_max_no_exit_user(ptr nocapture readonly %a, i64 %mm, i64 %i
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
-; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
-; CHECK-VF4UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-VF4UF1-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; CHECK-VF4UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[MM]], i64 0
 ; CHECK-VF4UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -166,8 +165,7 @@ define i64 @smax_idx_max_no_exit_user(ptr nocapture readonly %a, i64 %mm, i64 %i
 ; CHECK-VF4UF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4UF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF4:       [[VECTOR_PH]]:
-; CHECK-VF4UF4-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 15
-; CHECK-VF4UF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-VF4UF4-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-VF4UF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[MM]], i64 0
 ; CHECK-VF4UF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-VF4UF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -259,8 +257,7 @@ define i64 @smax_idx_max_no_exit_user(ptr nocapture readonly %a, i64 %mm, i64 %i
 ; CHECK-VF1UF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1UF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1UF4:       [[VECTOR_PH]]:
-; CHECK-VF1UF4-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
-; CHECK-VF1UF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-VF1UF4-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; CHECK-VF1UF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1UF4:       [[VECTOR_BODY]]:
 ; CHECK-VF1UF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

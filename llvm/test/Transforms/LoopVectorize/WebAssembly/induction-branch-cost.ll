@@ -16,8 +16,7 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], -4
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START_2]], i32 [[TMP3]]

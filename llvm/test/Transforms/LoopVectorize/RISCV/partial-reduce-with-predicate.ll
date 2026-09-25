@@ -40,8 +40,7 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-FIXED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-FIXED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-FIXED:       [[VECTOR_PH]]:
-; CHECK-FIXED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-FIXED:       [[VECTOR_BODY]]:
 ; CHECK-FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -139,8 +138,7 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-FIXED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-FIXED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-FIXED:       [[VECTOR_PH]]:
-; CHECK-FIXED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-FIXED:       [[VECTOR_BODY]]:
 ; CHECK-FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -241,8 +239,7 @@ define i32 @pred_reduction_dotprod(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-FIXED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-FIXED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-FIXED:       [[VECTOR_PH]]:
-; CHECK-FIXED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-FIXED:       [[VECTOR_BODY]]:
 ; CHECK-FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -356,8 +353,7 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-FIXED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-FIXED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-FIXED:       [[VECTOR_PH]]:
-; CHECK-FIXED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-FIXED:       [[VECTOR_BODY]]:
 ; CHECK-FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -472,8 +468,7 @@ define i32 @chained_pred_reduction(ptr %src, ptr noalias %src_b, ptr %cond, i64 
 ; CHECK-FIXED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-FIXED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-FIXED:       [[VECTOR_PH]]:
-; CHECK-FIXED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-FIXED:       [[VECTOR_BODY]]:
 ; CHECK-FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -587,8 +582,7 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-FIXED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-FIXED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-FIXED:       [[VECTOR_PH]]:
-; CHECK-FIXED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-FIXED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-FIXED:       [[VECTOR_BODY]]:
 ; CHECK-FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

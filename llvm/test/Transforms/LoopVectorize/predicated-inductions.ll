@@ -21,8 +21,7 @@ define i64 @predicated_iv_with_liveout(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 65535
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX1]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -96,8 +95,7 @@ define i64 @predicated_iv_with_liveout(ptr %dst, i64 %n) {
 ; THRESHOLD1-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 65535
 ; THRESHOLD1-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD1:       [[VECTOR_PH]]:
-; THRESHOLD1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
-; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX1]], [[N_MOD_VF]]
+; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX1]], -4
 ; THRESHOLD1-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; THRESHOLD1:       [[VECTOR_BODY]]:
@@ -168,8 +166,7 @@ define void @dead_predicated_iv1(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -4
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -210,8 +207,7 @@ define void @dead_predicated_iv1(ptr %dst, i64 %n) {
 ; THRESHOLD0-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; THRESHOLD0-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD0:       [[VECTOR_PH]]:
-; THRESHOLD0-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
-; THRESHOLD0-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
+; THRESHOLD0-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -4
 ; THRESHOLD0-NEXT:    [[TMP0:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD0-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; THRESHOLD0:       [[VECTOR_BODY]]:
@@ -252,8 +248,7 @@ define void @dead_predicated_iv1(ptr %dst, i64 %n) {
 ; THRESHOLD1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; THRESHOLD1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD1:       [[VECTOR_PH]]:
-; THRESHOLD1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
-; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
+; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -4
 ; THRESHOLD1-NEXT:    [[TMP0:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; THRESHOLD1:       [[VECTOR_BODY]]:
@@ -322,8 +317,7 @@ define void @dead_predicated_iv2(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[MUL_OVERFLOW]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX1]], -4
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[DOTCAST]], 9
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -389,8 +383,7 @@ define void @dead_predicated_iv2(ptr %dst, i64 %n) {
 ; THRESHOLD1-NEXT:    [[TMP3:%.*]] = or i1 [[MUL_OVERFLOW]], [[TMP2]]
 ; THRESHOLD1-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD1:       [[VECTOR_PH]]:
-; THRESHOLD1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
-; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX1]], [[N_MOD_VF]]
+; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX1]], -4
 ; THRESHOLD1-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; THRESHOLD1-NEXT:    [[TMP4:%.*]] = mul i32 [[DOTCAST]], 9
 ; THRESHOLD1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -467,8 +460,7 @@ define i32 @predicated_iv_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %stride
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX3]], -4
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 9
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -598,8 +590,7 @@ define i32 @predicated_iv_inc_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %st
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX3]], -4
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 9
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -731,8 +722,7 @@ define void @total_complexity_exceeds_threshold(ptr %dst, ptr %src, i64 %stride,
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX3]], -4
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[DOTCAST]], 9
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -856,8 +846,7 @@ define void @combined_lai_iv_complexity(ptr %dst, ptr %src, i64 %stride, i64 %n)
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX3]], -4
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[DOTCAST]], 9
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
@@ -985,8 +974,7 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX6]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX6]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX6]], -4
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[DOTCAST]], 9
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[DOTCAST]], 5

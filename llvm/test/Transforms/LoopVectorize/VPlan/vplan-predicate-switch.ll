@@ -14,9 +14,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = and vp<[[VP4]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP4]]>, vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = ptradd ir<%start>, vp<%n.vec>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = and vp<[[VP4]]>, ir<-2>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = ptradd ir<%start>, vp<[[VP6]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
@@ -84,12 +83,12 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<2>
-; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP25]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP4]]>, vp<%n.vec>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP4]]>, vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:

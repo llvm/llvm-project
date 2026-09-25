@@ -11,8 +11,7 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SIZE]], -2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -55,8 +54,7 @@ define void @fp_math(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 4
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 3
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SIZE]], -4
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -394,8 +392,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SIZE]], -2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -436,8 +433,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SIZE]], 4
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = and i64 [[SIZE]], 3
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[TMP0]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[SIZE]], -4
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -518,8 +514,7 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP2]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -569,8 +564,7 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; INTERLEAVE-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = and i64 [[TMP2]], 3
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP5]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 3
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]

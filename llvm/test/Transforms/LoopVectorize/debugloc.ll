@@ -6,7 +6,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; CHECK-LABEL: define i32 @f(
 ; CHECK: for.body.lr.ph
-; CHECK:   min.iters.check = icmp ult i64 {{.*}}, 2, !dbg !{{[0-9]+}}
+; CHECK:   min.iters.check = icmp ult i64 [[WIDE_TC:.*]], 2, !dbg !{{[0-9]+}}
+; CHECK: vector.ph:
+; CHECK:   [[N_VEC:%.*]] = and i64 [[WIDE_TC]], -2
 ; CHECK: vector.body
 ; CHECK:   index {{.*}}, !dbg ![[LOC1:[0-9]+]]
 ; CHECK:   getelementptr inbounds i32, ptr %a, {{.*}}, !dbg ![[LOC2:[0-9]+]]
@@ -14,7 +16,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:   load <2 x i32>, ptr {{.*}}, !dbg ![[LOC1]]
 ; CHECK:   add <2 x i32> {{.*}}, !dbg ![[LOC1]]
 ; CHECK:   add nuw i64 %index, 2, !dbg ![[LOC1]]
-; CHECK:   icmp eq i64 %index.next, %n.vec, !dbg ![[BR_LOC:[0-9]+]]
+; CHECK:   icmp eq i64 %index.next, [[N_VEC]], !dbg ![[BR_LOC:[0-9]+]]
 ; CHECK: middle.block
 ; CHECK:   call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %{{.*}}), !dbg ![[BR_LOC]]
 ; CHECK: for.body
@@ -168,6 +170,8 @@ exit:
 
 define void @test_scalar_steps(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg !39 {
 ; CHECK-LABEL: define void @test_scalar_steps(
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC_STEPS:%.*]] = and i64 {{%.*}}, -2
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
@@ -181,7 +185,7 @@ define void @test_scalar_steps(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg
 ; CHECK-NEXT:    store i32 [[TMP12]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC_STEPS]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %middle.block, label %vector.body
 ;
 entry:

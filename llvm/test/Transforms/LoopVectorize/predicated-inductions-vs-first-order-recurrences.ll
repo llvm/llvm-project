@@ -10,8 +10,7 @@ define i64 @for_liveout_blocked_by_ind_predicate(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -60,8 +59,7 @@ define i64 @for_liveout_blocked_by_ind_predicate(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; THRESHOLD:       [[VECTOR_BODY]]:
@@ -131,8 +129,7 @@ define void @for_inflates_scev_threshold(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -180,8 +177,7 @@ define void @for_inflates_scev_threshold(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; THRESHOLD:       [[VECTOR_BODY]]:
@@ -250,8 +246,7 @@ define void @for_blocks_vectorization_optsize(ptr %dst, i64 %n) optsize {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[N_RND_UP]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -4
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -318,8 +313,7 @@ define void @for_blocks_vectorization_optsize(ptr %dst, i64 %n) optsize {
 ; THRESHOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
 ; THRESHOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i64 [[N_RND_UP]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -4
 ; THRESHOLD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
 ; THRESHOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; THRESHOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -412,8 +406,7 @@ define i64 @for_and_ind_liveout_gep(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], 65535
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -506,8 +499,7 @@ define void @for_and_ind_trunc_sole_canonical_iv(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 1, [[N_VEC]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -558,8 +550,7 @@ define void @for_and_ind_trunc_sole_canonical_iv(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
-; THRESHOLD-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[TMP2]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -4
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = add i64 1, [[N_VEC]]
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -632,8 +623,7 @@ define void @for_and_ind_trunc_another_canonical_iv(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -681,8 +671,7 @@ define void @for_and_ind_trunc_another_canonical_iv(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; THRESHOLD:       [[VECTOR_BODY]]:
@@ -752,8 +741,7 @@ define void @for_and_ind_trunc_predicate_not_implied(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP2]], 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -812,8 +800,7 @@ define void @for_and_ind_trunc_predicate_not_implied(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP2]], 3
 ; THRESHOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -919,8 +906,7 @@ define void @for_and_ind_indupdate_feeds_gep_index(ptr %dst, ptr %dst2, i64 %n) 
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP12]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i16 [[TMP13]], 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1035,8 +1021,7 @@ define void @for_and_ind_optsize_prev_first(ptr %dst, i32 %n) optsize {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[N_RND_UP]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1102,8 +1087,7 @@ define void @for_and_ind_optsize_prev_first(ptr %dst, i32 %n) optsize {
 ; THRESHOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
 ; THRESHOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i32 [[N_RND_UP]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; THRESHOLD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP0]], 1
 ; THRESHOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; THRESHOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1189,8 +1173,7 @@ define void @for_and_ind_optsize_prev_last(ptr %dst, i32 %n) optsize {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[N_RND_UP]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1256,8 +1239,7 @@ define void @for_and_ind_optsize_prev_last(ptr %dst, i32 %n) optsize {
 ; THRESHOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
 ; THRESHOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP0]], 3
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = and i32 [[N_RND_UP]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[TMP1]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; THRESHOLD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP0]], 1
 ; THRESHOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; THRESHOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1348,8 +1330,7 @@ define i64 @for_and_ind_widest_type_modeled_as_induction(ptr noalias %dst, ptr n
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP1]], 65535
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1449,8 +1430,7 @@ define i64 @for_and_ind_kept_must_not_be_uniform(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], 63
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1551,8 +1531,7 @@ define i64 @for_and_ind_dead_in_body_live_out(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i8 [[TMP1]], 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1604,8 +1583,7 @@ define i64 @for_and_ind_dead_in_body_live_out(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; THRESHOLD:       [[VECTOR_PH]]:
-; THRESHOLD-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
-; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; THRESHOLD-NEXT:    [[TMP1:%.*]] = trunc i64 [[N_VEC]] to i8
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = mul i8 [[TMP1]], 3
 ; THRESHOLD-NEXT:    br label %[[VECTOR_BODY:.*]]

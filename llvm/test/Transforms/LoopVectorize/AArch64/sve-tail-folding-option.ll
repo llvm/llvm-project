@@ -1067,8 +1067,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_PH]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP19:%.*]] = and i64 [[N]], 3
-; CHECK-TF-DEFAULT-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP19]]
+; CHECK-TF-DEFAULT-NEXT:    [[N_VEC5:%.*]] = and i64 [[N]], -4
 ; CHECK-TF-DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -1317,8 +1316,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF8:![0-9]+]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP19:%.*]] = and i64 [[N]], 3
-; CHECK-NEOVERSE-V1-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP19]]
+; CHECK-NEOVERSE-V1-NEXT:    [[N_VEC5:%.*]] = and i64 [[N]], -4
 ; CHECK-NEOVERSE-V1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]

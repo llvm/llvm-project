@@ -27,8 +27,7 @@ define void @wide_gep_all_lanes_live_only_scalar_users(ptr noalias %dst, ptr noa
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP12]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE11:.*]] ]
@@ -171,8 +170,7 @@ define void @int_iv_increment_only_scalar_users(ptr noalias %dst, ptr noalias %s
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 100, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -263,8 +261,7 @@ define void @fp_iv_increment_only_scalar_users(ptr noalias %dst, ptr noalias %sr
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i64 [[N_VEC]] to float
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float 1.000000e+00, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast float 1.000000e+03, [[TMP3]]
@@ -357,8 +354,7 @@ define void @increment_used_by_invariant_and_per_lane_store(ptr noalias %dst, pt
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 100, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

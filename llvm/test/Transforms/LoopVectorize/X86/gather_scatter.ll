@@ -648,8 +648,7 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK7:%.*]] = icmp ult i64 [[TMP3]], 16
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK7]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 15
-; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; AVX512-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -16
 ; AVX512-NEXT:    [[TMP23:%.*]] = shl i64 [[N_VEC]], 2
 ; AVX512-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP23]]
 ; AVX512-NEXT:    [[TMP13:%.*]] = shl i64 [[N_VEC]], 6
@@ -675,13 +674,13 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AVX512:       vec.epilog.iter.check:
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[TMP3]], [[N_VEC]]
 ; AVX512-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; AVX512-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF9:![0-9]+]]
 ; AVX512:       vec.epilog.ph:
 ; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[DEST]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX512-NEXT:    [[N_MOD_VF9:%.*]] = and i64 [[TMP3]], 7
-; AVX512-NEXT:    [[N_VEC10:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF9]]
+; AVX512-NEXT:    [[N_VEC10:%.*]] = and i64 [[TMP3]], -8
 ; AVX512-NEXT:    [[TMP24:%.*]] = shl i64 [[N_VEC10]], 2
 ; AVX512-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP24]]
 ; AVX512-NEXT:    [[TMP25:%.*]] = shl i64 [[N_VEC10]], 6
@@ -724,8 +723,7 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; FVW2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; FVW2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; FVW2:       vector.ph:
-; FVW2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
-; FVW2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; FVW2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -2
 ; FVW2-NEXT:    [[TMP13:%.*]] = shl i64 [[N_VEC]], 2
 ; FVW2-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP13]]
 ; FVW2-NEXT:    [[TMP14:%.*]] = shl i64 [[N_VEC]], 6
