@@ -419,12 +419,11 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
 ///   Exit:     br %Merge
 ///   Merge:    ...
 ///
-/// which makes getLoopGuardBranch() treat \p L as unguarded even though
-/// SimplifyCFG would fold %Skip away. This function performs that same
-/// fold: it redirects the guard branch to %Merge and deletes the empty
-/// %Skip block. Loop fusion calls this on every loop before collecting
-/// fusion candidates, so that a guarded loop left in this shape by an
-/// earlier pass is still recognized as guarded and as adjacent to its
+/// which makes getLoopGuardBranch() treat \p L as unguarded.
+/// This function folds %Skip: it redirects the guard branch to %Merge and
+/// deletes the empty %Skip block. Loop fusion calls this on every loop before
+/// collecting fusion candidates so that a guarded loop left in this shape by
+/// an earlier pass is still recognized as guarded and as adjacent to its
 /// neighbor. Returns true if the CFG was changed.
 static bool simplifyLoopGuard(Loop *L, DomTreeUpdater &DTU, LoopInfo &LI,
                               ScalarEvolution &SE) {
@@ -585,11 +584,6 @@ public:
     LLVM_DEBUG(dbgs() << "Performing Loop Fusion on function " << F.getName()
                       << "\n");
     bool Changed = false;
-
-    // Canonicalize the CFG around loop guards before looking for candidates,
-    // so that guarded loops are recognized as such and as adjacent.
-    for (Loop *L : LI.getLoopsInPreorder())
-      Changed |= simplifyLoopGuard(L, DTU, LI, SE);
 
     while (!LDT.empty()) {
       LLVM_DEBUG(dbgs() << "Got " << LDT.size() << " loop sets for depth "
@@ -1930,9 +1924,12 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   // pass. Added only for new PM since the legacy PM has already added
   // LoopSimplify pass as a dependency.
   bool Changed = false;
+  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (auto &L : LI) {
     Changed |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
+    for (Loop *L : LI.getLoopsInPreorder())
+      Changed |= simplifyLoopGuard(L, DTU, LI, SE);
   }
   if (Changed)
     PDT.recalculate(F);
