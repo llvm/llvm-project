@@ -32359,8 +32359,49 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getZExtOrTrunc(Res, DL, VT);
   }
 
-  if (VT == MVT::i8 || ExpandFunnel)
-    return SDValue();
+  // Following fold is done in DAGCombiner:
+  //
+  // (or (and X, Mask), (shl Y, MaskBitNum)) -> (fshr X, (shl Y,
+  // (MaxWideNumBits - MaskBitNum)))
+  //
+  // Reverse this fold if funnel shifts is slow and if we are not optimizing
+  // for size.
+  //
+  // (fshr X, (shl Y, (MaxWideNumBits - MaskBitNum))) -> (or (and X, (shl 1,
+  // MaskBitNum)), (shl Y, MaskBitNum))
+  if (VT == MVT::i8 || ExpandFunnel) {
+
+    auto *C = dyn_cast<ConstantSDNode>(Amt.getNode());
+    if (!C || Op1.getOpcode() != ISD::SHL)
+      return SDValue();
+
+    SDValue SHLOperandShiftAmount = Op1.getOperand(1);
+    uint64_t InvMaskWidth = C->getAPIntValue().urem(EltSizeInBits);
+
+    auto *EC = dyn_cast<ConstantSDNode>(SHLOperandShiftAmount.getNode());
+
+    // bail if EC is not a constant node
+    if (!EC)
+      return SDValue();
+
+    const APInt &ExpectedShiftAmount = EC->getAPIntValue();
+
+    // Check if the shift amounts match.
+    if (ExpectedShiftAmount != InvMaskWidth)
+      return SDValue();
+
+    uint64_t ShiftAmount = EltSizeInBits - InvMaskWidth;
+    SDValue SHLOperand = Op1.getOperand(0);
+
+    APInt Mask = APInt::getLowBitsSet(EltSizeInBits, ShiftAmount);
+
+    SDValue MaskBitNum =
+        DAG.getShiftAmountConstant(ShiftAmount, SHLOperand.getValueType(), DL);
+    SDValue MaskNode = DAG.getConstant(Mask, DL, VT);
+    SDValue AndMask = DAG.getNode(ISD::AND, DL, VT, SHLOperand, MaskNode);
+    SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, Op0, MaskBitNum);
+    return DAG.getNode(ISD::OR, DL, VT, AndMask, SHL);
+  }
 
   // i16 needs to modulo the shift amount, but i32/i64 have implicit modulo.
   if (VT == MVT::i16) {
