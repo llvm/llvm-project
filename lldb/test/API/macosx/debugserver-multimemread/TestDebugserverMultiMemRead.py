@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireDarwin
+@requireDarwin()
 class TestCase(TestBase):
     def check_invalid_packet(self, packet_str):
         reply = lldbutil.send_packet_get_reply(self, "packet_str")

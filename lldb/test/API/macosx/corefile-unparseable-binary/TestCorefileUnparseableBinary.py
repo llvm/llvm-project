@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 
 class TestCorefileUnparseableBinary(TestBase):
     @no_debug_info_test
-    @requireDarwin
+    @requireDarwin()
     @skipIfRemote
     def test(self):
         self.build()

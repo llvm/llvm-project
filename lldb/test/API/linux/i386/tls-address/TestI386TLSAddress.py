@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 
 class I386TLSAddressTestCase(TestBase):
-    @requireLinux
+    @requireLinux()
     @skipIf(archs=no_match(["x86_64", "i386", "i686"]))
     @skipUnlessCompilerSupports("-m32")
     def test(self):
