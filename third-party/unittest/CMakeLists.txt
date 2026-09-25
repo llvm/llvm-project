@@ -13,32 +13,6 @@
 
 set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
 
-if(LLVM_RUNTIMES_BUILD)
-  # This instance of GTest is use for unittests for the runtime libraries. It
-  # must not link to LLVMSupport (used for llvm::raw_ostream and llvm::cl
-  # support) of the host build: It may be a different architecture and/or
-  # using a different C++ ABI such as libcxx/libstdc++.
-  set(GTEST_LLVM_COMPONENTS "")
-
-  # We cannot use llvm_gtest for the target; it would clash with
-  # find_package(LLVM) with LLVM_EXPORT_GTEST=ON. Instead, we define an alias
-  # default_gtest that points to llvm_gtest in the LLVM build and
-  # runtimes_gtest in an runtimes build.
-  set(gtest_name "runtimes_gtest")
-
-  # Override locally; never install the runtimes-GTest.
-  set(LLVM_INSTALL_GTEST OFF)
-
-  # Build the library containing main() so unittests need less boilerplate.
-  # UnitTestMain/TestMain.cpp always needs LLVMSupport, use GTest's original
-  # main when unavailable.
-  set(gtest_main_src googletest/src/gtest_main.cc)
-else()
-  set(GTEST_LLVM_COMPONENTS "Support")
-  set(gtest_name "llvm_gtest")
-  set(gtest_main_src UnitTestMain/TestMain.cpp)
-endif()
-
 if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
 endif()
@@ -66,25 +40,83 @@ if (HAVE_LIBPTHREAD)
   list(APPEND LIBS pthread)
 endif()
 
-# Install GTest only if requested.
-set(BUILDTREE_ONLY BUILDTREE_ONLY)
-if (LLVM_INSTALL_GTEST)
-  set(BUILDTREE_ONLY "")
-endif ()
+if (LLVM_RUNTIMES_BUILD)
+  # We cannot use llvm_gtest for the target; it would clash with
+  # find_package(LLVM) with LLVM_EXPORT_GTEST=ON. Instead, we define an alias
+  # default_gtest that points to llvm_gtest in the LLVM build and
+  # runtimes_gtest in an runtimes build.
+  set(gtest_name "runtimes_gtest")
 
-add_llvm_library("${gtest_name}"
-  googletest/src/gtest-all.cc
-  googlemock/src/gmock-all.cc
+  # This instance of GTest is used for unittests for the runtime libraries. It
+  # must not link to LLVMSupport (used for llvm::raw_ostream and llvm::cl
+  # support) of the host build: It may be a different architecture and/or
+  # using a different C++ ABI such as libcxx/libstdc++.
+  add_library("${gtest_name}" STATIC
+    googletest/src/gtest-all.cc
+    googlemock/src/gmock-all.cc
+  )
+  target_compile_definitions("${gtest_name}" PUBLIC GTEST_NO_LLVM_SUPPORT=1)
+  target_link_libraries("${gtest_name}"
+    PUBLIC
+      ${LIBS}
+  )
 
-  LINK_LIBS
-  ${LIBS}
+  add_library("${gtest_name}_main" STATIC
+    googletest/src/gtest_main.cc
+  )
+  target_link_libraries("${gtest_name}_main"
+    PUBLIC
+      ${gtest_name}
+  )
+  set_target_properties("${gtest_name}" "${gtest_name}_main" PROPERTIES FOLDER "Third-Party/Google Test")
+else()
+  set(gtest_name "llvm_gtest")
 
-  LINK_COMPONENTS
-  ${GTEST_LLVM_COMPONENTS}
+  # Install GTest only if requested.
+  set(BUILDTREE_ONLY BUILDTREE_ONLY)
+  if (LLVM_INSTALL_GTEST)
+    set(BUILDTREE_ONLY "")
+  endif ()
 
-  # This is a library meant only for the build tree.
-  ${BUILDTREE_ONLY}
-)
+  add_llvm_library("${gtest_name}"
+    googletest/src/gtest-all.cc
+    googlemock/src/gmock-all.cc
+
+    LINK_LIBS
+    ${LIBS}
+
+    LINK_COMPONENTS
+    Support
+
+    # This is a library meant only for the build tree.
+    ${BUILDTREE_ONLY}
+  )
+
+  # When used from the buildtree, also force use of buildtree LLVM headers,
+  # (instead locally installed version)
+  # FIXME: Shouldn't this be done for all LLVM libraries? Currently, LLVM uses a
+  # big giant `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
+  # which CMake does not add to the import library.
+  target_include_directories("${gtest_name}" BEFORE
+    PUBLIC $<BUILD_INTERFACE:${LLVM_SOURCE_DIR}/include>
+           $<BUILD_INTERFACE:${LLVM_BINARY_DIR}/include>
+  )
+
+  add_llvm_library("${gtest_name}_main"
+    UnitTestMain/TestMain.cpp
+
+    LINK_LIBS
+    "${gtest_name}"
+
+    LINK_COMPONENTS
+    Support
+
+    ${BUILDTREE_ONLY}
+  )
+
+  install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT "${gtest_name}")
+  install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT "${gtest_name}")
+endif()
 
 # The googletest and googlemock sources don't presently use the 'override'
 # keyword, which leads to lots of warnings from -Wsuggest-override. Disable
@@ -106,38 +138,6 @@ target_include_directories("${gtest_name}"
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/>
   PRIVATE googletest googlemock
   )
-
-if(LLVM_RUNTIMES_BUILD)
-  target_compile_definitions("${gtest_name}" PUBLIC GTEST_NO_LLVM_SUPPORT=1)
-else()
-  # When used from the buildtree, also force use of buildtree LLVM headers,
-  # (instead locally installed version)
-  # FIXME: Shouldn't this be done for all LLVM libraries? Currently, LLVM uses a
-  # big giant `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
-  # which CMake does not add to the import library.
-  target_include_directories("${gtest_name}" BEFORE
-    PUBLIC $<BUILD_INTERFACE:${LLVM_SOURCE_DIR}/include>
-           $<BUILD_INTERFACE:${LLVM_BINARY_DIR}/include>
-    )
-endif()
-
-
-add_llvm_library("${gtest_name}_main"
-  ${gtest_main_src}
-
-  LINK_LIBS
-  "${gtest_name}"
-
-  LINK_COMPONENTS
-  ${GTEST_LLVM_COMPONENTS}
-
-  ${BUILDTREE_ONLY}
-)
-
-if (LLVM_INSTALL_GTEST)
-  install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT "${gtest_name}")
-  install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT "${gtest_name}")
-endif()
 
 # When LLVM_LINK_LLVM_DYLIB is enabled, libLLVM.so is added to the interface
 # link libraries for gtest and gtest_main.  This means that any target, like
