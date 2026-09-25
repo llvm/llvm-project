@@ -17,10 +17,10 @@ define i16 @f1(i16 %dummy, ptr %src, i16 %cmp, i16 %swap) {
 ; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK-MAIN-DAG: llhr %r4, %r4
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
-; CHECK-MAIN: rll %r2, [[OLD]], 16(%r3)
-; CHECK-MAIN: risbg %r5, %r2, 32, 47, 0
-; CHECK-MAIN: llhr %r2, %r2
+; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r3)
+; CHECK-MAIN: llhr %r2, [[TMP]]
 ; CHECK-MAIN: crjlh %r2, %r4, [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r5, [[TMP]], 32, 47, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r5, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
@@ -65,10 +65,10 @@ define i32 @f3(i16 %dummy, ptr %src, i16 %cmp, i16 %swap) {
 ; CHECK-MAIN-DAG: llhr %r2, %r4
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r3)
-; CHECK-MAIN: risbg %r5, [[TMP]], 32, 47, 0
-; CHECK-MAIN: llhr %r14, %r14
-; CHECK-MAIN: cr [[TMP]], %r2
+; CHECK-MAIN: llhr [[TMP2:%r[0-9]+]], [[TMP]]
+; CHECK-MAIN: cr [[TMP2]], %r2
 ; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r5, [[TMP]], 32, 47, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r5, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
@@ -101,10 +101,10 @@ declare void @g()
 ; CHECK-MAIN-DAG: llhr %r3, %r3
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r2)
-; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
-; CHECK-MAIN: llhr %r14, %r14
-; CHECK-MAIN: cr [[TMP]], %r3
+; CHECK-MAIN: llhr [[TMP2:%r[0-9]+]], [[TMP]]
+; CHECK-MAIN: cr [[TMP2]], %r3
 ; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r4, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
@@ -140,10 +140,10 @@ exit:
 ; CHECK-MAIN-DAG: llhr %r3, %r3
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r2)
-; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
-; CHECK-MAIN: llhr %r14, %r14
-; CHECK-MAIN: cr [[TMP]], %r3
+; CHECK-MAIN: llhr [[TMP2:%r[0-9]+]], [[TMP]]
+; CHECK-MAIN: cr [[TMP2]], %r3
 ; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r4, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]

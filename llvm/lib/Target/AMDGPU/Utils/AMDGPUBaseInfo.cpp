@@ -1530,6 +1530,9 @@ static bool isValidRegPrefix(char C) {
 }
 
 std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
+  if (RegName.empty())
+    return {};
+
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};
@@ -3616,8 +3619,9 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   return false;
 }
 
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
-                             const MCSubtargetInfo &ST) {
+static bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+                                    const MCInstrInfo &MII,
+                                    const MCSubtargetInfo &ST) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
     if (Idx == -1)
@@ -3656,27 +3660,10 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                  const MCSubtargetInfo &ST) {
-  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
-    return false;
-
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
-    return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
+    return true;
 
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
-}
-
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
-    return 64;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
-    return 128;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
-    return 256;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
-    return 320;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
-    return 512;
-  return 64; // In sync with getAddressableLocalMemorySize
 }
 
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {

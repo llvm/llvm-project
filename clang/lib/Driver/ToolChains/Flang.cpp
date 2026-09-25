@@ -358,6 +358,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
                   options::OPT_fno_fp_sum_reassociation);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
+                    options::OPT_fno_unique_internal_linkage_names);
+
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
@@ -377,8 +380,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
       {options::OPT_fdo_concurrent_to_openmp_EQ,
        options::OPT_fno_ppc_native_vec_elem_order,
        options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
-       options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
-       options::OPT_fno_repack_arrays,
+       options::OPT_fno_init_global_zero, options::OPT_finit_local_EQ,
+       options::OPT_frepack_arrays, options::OPT_fno_repack_arrays,
        options::OPT_frepack_arrays_contiguity_EQ,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,

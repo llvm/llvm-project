@@ -801,7 +801,7 @@ NativeProcessProtocol::ReadCStringFromMemory(lldb::addr_t addr, char *buffer,
 
   string_size = total_bytes_read - 1;
 
-  // Make sure we return a null terminated string.
+  // Make sure we return a null-terminated string.
   if (bytes_left == 0 && max_size > 0 && buffer[max_size - 1] != '\0') {
     buffer[max_size - 1] = '\0';
     total_bytes_read--;

@@ -18,6 +18,7 @@
 
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -95,6 +96,25 @@ getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
                            ArrayRef<Instruction *> ChainInsts,
                            TargetTransformInfo::TargetCostKind CostKind);
 
+/// Returns the cost of the boolean bitmask reduction of a vector of boolean
+/// leaves of type \p NarrowScalarTy, emitted as [and] + [lane permutation
+/// \p PermMask] + zero test + bitcast [+ zext] to \p WideTy. \p Root is the
+/// reduction root, used as the context of the emitted instructions.
+InstructionCost
+getBoolBitmaskCost(const TargetTransformInfo &TTI, bool NeedMask,
+                   Type *NarrowScalarTy, Type *WideTy, unsigned VF,
+                   ArrayRef<int> PermMask, const Value *Root,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the per-lane operations on the narrowed leaves
+/// \p NarrowedLeafShifts: the shl in the wide vector type if any leaf is
+/// shifted and the and in the narrow vector type if any leaf is masked.
+InstructionCost getNarrowedLeafOpsCost(
+    const TargetTransformInfo &TTI,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CtxI,
+    TargetTransformInfo::TargetCostKind CostKind);
+
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
@@ -136,7 +156,7 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                TargetTransformInfo::CastContextHint CCH,
                                TargetTransformInfo::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
-                               const Instruction *CxtI, unsigned &ShiftWidth);
+                               const Instruction *CtxI, unsigned &ShiftWidth);
 
 /// i1 reductions can be emitted as the plain target reduction or in the
 /// bitcast-based form (bitcast to a scalar integer type plus a compare for

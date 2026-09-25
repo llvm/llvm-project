@@ -10,7 +10,7 @@ func.func @associate_int() {
   return
 }
 // CHECK-LABEL:   func.func @associate_int() {
-// CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "x"}
+// CHECK:  %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "x"}>
 // CHECK:  %[[VAL_1:.*]] = arith.constant 42 : i32
 // CHECK:  fir.store %[[VAL_1]] to %[[VAL_0]] : !fir.ref<i32>
 // CHECK:  %[[VAL_2:.*]] = arith.constant false
@@ -26,7 +26,7 @@ func.func @associate_real() {
   return
 }
 // CHECK-LABEL:   func.func @associate_real() {
-// CHECK:  %[[VAL_0:.*]] = fir.alloca f32 {bindc_name = "x"}
+// CHECK:  %[[VAL_0:.*]] = fir.alloca f32 <{bindc_name = "x"}>
 // CHECK:  %[[VAL_1:.*]] = arith.constant 4.200000e-01 : f32
 // CHECK:  fir.store %[[VAL_1]] to %[[VAL_0]] : !fir.ref<f32>
 // CHECK:  %[[VAL_2:.*]] = arith.constant false
@@ -43,7 +43,7 @@ func.func @associate_logical() {
   return
 }
 // CHECK-LABEL:   func.func @associate_logical() {
-// CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.logical<4> {bindc_name = "x"}
+// CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "x"}>
 // CHECK:  %[[VAL_1:.*]] = arith.constant true
 // CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i1) -> !fir.logical<4>
 // CHECK:  fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.logical<4>>
@@ -76,7 +76,7 @@ func.func @associate_char(%arg0: !fir.boxchar<1> ) {
 // CHECK:           %[[VAL_5:.*]] = fir.undefined !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "char_literal"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           %[[VAL_7:.*]] = arith.addi %[[VAL_2]]#1, %[[VAL_1]] : index
-// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
 // CHECK:           %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_10]] : i64
@@ -217,7 +217,7 @@ func.func @test_shape_of(%arg0: !fir.ref<!fir.array<4x3xi32>>) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 4 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_1]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_4:.*]] = fir.allocmem !fir.array<3x4xi32> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_4:.*]] = fir.allocmem !fir.array<3x4xi32> <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_3]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<3x4xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x4xi32>>, !fir.heap<!fir.array<3x4xi32>>)
 // CHECK:           %[[VAL_6:.*]] = arith.constant true
 // CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
@@ -258,7 +258,7 @@ func.func @test_multiple_associations(%arg0: !hlfir.expr<1x2xi32>) {
 // CHECK:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<1x2xi32>) -> !fir.shape<2>
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<1x2xi32> {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<1x2xi32> <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_4]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<1x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<1x2xi32>>, !fir.heap<!fir.array<1x2xi32>>)
 // CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_9]]#0 temporary_lhs : !hlfir.expr<1x2xi32>, !fir.heap<!fir.array<1x2xi32>>
 // CHECK:           %[[VAL_8:.*]] = arith.constant true
@@ -271,7 +271,7 @@ func.func @test_multiple_associations(%arg0: !hlfir.expr<1x2xi32>) {
 // CHECK:           %[[VAL_15:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<1x2xi32>) -> !fir.shape<2>
 // CHECK:           %[[VAL_16:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_17:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<1x2xi32> {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<1x2xi32> <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%[[VAL_15]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<1x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<1x2xi32>>, !fir.heap<!fir.array<1x2xi32>>)
 // CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_20]]#0 temporary_lhs : !hlfir.expr<1x2xi32>, !fir.heap<!fir.array<1x2xi32>>
 // CHECK:           %[[VAL_19:.*]] = arith.constant true
@@ -301,7 +301,7 @@ func.func @test_get_length(%arg0: !fir.ref<!fir.char<1,2>>) {
 }
 // CHECK-LABEL:   func.func @test_get_length(
 // CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<!fir.char<1,2>>) {
-// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,2> {bindc_name = ".tmp"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,2> <{bindc_name = ".tmp"}>
 // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_2]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
 // CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_4]]#0 temporary_lhs : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>
@@ -349,12 +349,12 @@ func.func @_QPtest_multiple_expr_uses_inside_elemental() {
 // CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_5]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:           %[[VAL_9:.*]] = fir.undefined index
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_11:.*]] = fir.allocmem !fir.array<?x!fir.logical<4>>, %[[VAL_9]] {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_11:.*]] = fir.allocmem !fir.array<?x!fir.logical<4>>, %[[VAL_9]] <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_10]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.heap<!fir.array<?x!fir.logical<4>>>)
 // CHECK:           %[[VAL_13:.*]] = arith.constant true
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_9]] step %[[VAL_14]] unordered {
-// CHECK:             %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index) {bindc_name = ".tmp"}
+// CHECK:             %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index) <{bindc_name = ".tmp"}>
 // CHECK:             %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_4]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:             hlfir.assign %[[VAL_5]]#0 to %[[VAL_18]]#0 temporary_lhs : !fir.boxchar<1>, !fir.boxchar<1>
 // CHECK:             %[[VAL_17:.*]] = arith.constant false
@@ -394,7 +394,7 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_3:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_3:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
 // CHECK:           %[[VAL_5:.*]] = arith.constant true
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
@@ -406,7 +406,7 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           %[[VAL_10:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_5]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_4]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
-// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
 // CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_15]]#0 temporary_lhs : !fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>
 // CHECK:           %[[VAL_14:.*]] = arith.constant true
@@ -417,7 +417,7 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_15]]#0 : (!fir.heap<!fir.array<10x!fir.char<1>>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.array<10x!fir.char<1>>>) -> !fir.heap<!fir.array<10x!fir.char<1>>>
 // CHECK:           fir.freemem %[[VAL_21]] : !fir.heap<!fir.array<10x!fir.char<1>>>
-// CHECK:           %[[VAL_22:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:           %[[VAL_22:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
 // CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_24]]#0 temporary_lhs : !fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>
 // CHECK:           %[[VAL_23:.*]] = arith.constant true
