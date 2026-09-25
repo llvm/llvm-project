@@ -28,6 +28,13 @@ zx_status_t zx_channel_create(
 zx_status_t zx_handle_close(
     zx_handle_t handle ZX_HANDLE_RELEASE);
 
+zx_status_t zx_handle_close_inline(
+    zx_handle_t handle ZX_HANDLE_RELEASE)
+{
+  /* Doing smth important, like calling syscall */
+  return 0;
+}
+
 ZX_HANDLE_ACQUIRE_UNOWNED
 zx_handle_t zx_process_self();
 
@@ -174,6 +181,14 @@ void checkLeak01(int tag) {
   // expected-note@-1 {{Potential leak of handle}}
   zx_handle_close(sb);
 }
+
+void checkLeakInline(int tag) {
+  zx_handle_t sa, sb;
+  if (zx_channel_create(0, &sa, &sb))
+    return;
+  zx_handle_close_inline(sa);
+  zx_handle_close_inline(sb);
+} // No leak warnings
 
 void checkLeakFromReturn01(int tag) {
   zx_handle_t sa = return_handle(); // expected-note {{Function 'return_handle' returns an open handle}}
