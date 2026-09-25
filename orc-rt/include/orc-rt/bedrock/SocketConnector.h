@@ -19,6 +19,10 @@ namespace orc_rt {
 
 /// Registers the connector for the "socket" transport, whose only action is
 /// "adopt": a stream socket this process was handed, already connected.
+///
+/// If the descriptor named by the spec is a socket, the connector takes
+/// ownership of it whether or not the connection succeeds. Otherwise it is left
+/// untouched.
 Error registerSocketConnector(ConnectorRegistry &R) noexcept;
 
 } // namespace orc_rt

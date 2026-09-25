@@ -241,7 +241,8 @@ LogicalResult acc::emitWaitCall(Location loc, ValueRange waitOperands,
                                 Value asyncQueue, OpBuilder &builder,
                                 Region &globalSymbolRegion,
                                 SymbolTable &symbolTable,
-                                const ACCRuntimeCallConfig &config) {
+                                const ACCRuntimeCallConfig &config,
+                                Value deviceNum) {
   Type i32Ty = builder.getI32Type();
   Type i64Ty = builder.getI64Type();
   Type ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
@@ -276,7 +277,8 @@ LogicalResult acc::emitWaitCall(Location loc, ValueRange waitOperands,
   Value flags = LLVM::ConstantOp::create(builder, loc, i64Ty, 0);
   Value deviceType = LLVM::ConstantOp::create(
       builder, loc, i64Ty, config.getDeviceTypeRuntimeValue(DeviceType::None));
-  Value deviceNum = LLVM::ConstantOp::create(builder, loc, i32Ty, 0);
+  if (!deviceNum)
+    deviceNum = LLVM::ConstantOp::create(builder, loc, i32Ty, 0);
 
   return createRuntimeCall(
       loc, builder, globalSymbolRegion, symbolTable,

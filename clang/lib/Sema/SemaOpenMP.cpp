@@ -25,6 +25,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -6370,7 +6371,8 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
                                             CXXScopeSpec &MapperIdScopeSpec,
                                             const DeclarationNameInfo &MapperId,
                                             QualType Type,
-                                            Expr *UnresolvedMapper);
+                                            Expr *UnresolvedMapper,
+                                            SourceLocation ItemLoc);
 
 /// Perform DFS through the structure/class data members trying to find
 /// member(s) with user-defined 'default' mapper and generate implicit map
@@ -6442,7 +6444,7 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
           DefaultMapperId.setLoc(E->getExprLoc());
           ExprResult ER = buildUserDefinedMapperRef(
               S, Stack->getCurScope(), MapperIdScopeSpec, DefaultMapperId,
-              BaseType, /*UnresolvedMapper=*/nullptr);
+              BaseType, /*UnresolvedMapper=*/nullptr, E->getExprLoc());
           if (ER.isInvalid())
             continue;
           It = Visited.try_emplace(BaseType.getTypePtr(), ER.get()).first;
@@ -19238,8 +19240,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
   QualType Type = ME->getType();
+  // OpenMP 5.1 [2.5.4, error Directive]
+  // msg-string is a string of const char * type.
   if ((!Type->isPointerType() && !Type->isArrayType()) ||
-      !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
+      !Type->getPointeeOrArrayElementType()->isCharType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseNameForDiag(OMPC_message) << 0;
     return nullptr;
@@ -24602,12 +24606,15 @@ static bool checkMapConflicts(
 }
 
 // Look up the user-defined mapper given the mapper name and mapped type, and
-// build a reference to it.
+// build a reference to it. \a ItemLoc is the location of the mapped list item;
+// it is used as the point of instantiation since \a MapperId has no location
+// for implicit map clauses.
 static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
                                             CXXScopeSpec &MapperIdScopeSpec,
                                             const DeclarationNameInfo &MapperId,
                                             QualType Type,
-                                            Expr *UnresolvedMapper) {
+                                            Expr *UnresolvedMapper,
+                                            SourceLocation ItemLoc) {
   if (MapperIdScopeSpec.isInvalid())
     return ExprError();
   // Get the actual type for the array type.
@@ -24673,7 +24680,7 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
   }
   // Perform argument dependent lookup.
   if (SemaRef.getLangOpts().CPlusPlus && !MapperIdScopeSpec.isSet())
-    argumentDependentLookup(SemaRef, MapperId, Loc, Type, Lookups);
+    argumentDependentLookup(SemaRef, MapperId, ItemLoc, Type, Lookups);
   // Return the first user-defined mapper with the desired type.
   if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
           Lookups, [&SemaRef, Type](ValueDecl *D) -> ValueDecl * {
@@ -24686,9 +24693,9 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
   // Find the first user-defined mapper with a type derived from the desired
   // type.
   if (auto *VD = filterLookupForUDReductionAndMapper<ValueDecl *>(
-          Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
+          Lookups, [&SemaRef, Type, ItemLoc](ValueDecl *D) -> ValueDecl * {
             if (!D->isInvalidDecl() &&
-                SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
+                SemaRef.IsDerivedFrom(ItemLoc, Type, D->getType()) &&
                 !Type.isMoreQualifiedThan(D->getType(),
                                           SemaRef.getASTContext()))
               return D;
@@ -24696,11 +24703,11 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
           })) {
     CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                        /*DetectVirtual=*/false);
-    if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
+    if (SemaRef.IsDerivedFrom(ItemLoc, Type, VD->getType(), Paths)) {
       if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
               VD->getType().getUnqualifiedType()))) {
         if (SemaRef.CheckBaseClassAccess(
-                Loc, VD->getType(), Type, Paths.front(),
+                ItemLoc, VD->getType(), Type, Paths.front(),
                 /*DiagID=*/0) != Sema::AR_inaccessible) {
           return SemaRef.BuildDeclRefExpr(VD, Type, VK_LValue, Loc);
         }
@@ -25006,7 +25013,7 @@ static void checkMappableExpressionList(
       // Try to find the associated user-defined mapper.
       ExprResult ER = buildUserDefinedMapperRef(
           SemaRef, DSAS->getCurScope(), MapperIdScopeSpec, MapperId,
-          VE->getType().getCanonicalType(), UnresolvedMapper);
+          VE->getType().getCanonicalType(), UnresolvedMapper, ELoc);
       if (ER.isInvalid())
         continue;
       MVLI.UDMapperList.push_back(ER.get());
@@ -25073,7 +25080,7 @@ static void checkMappableExpressionList(
       // Try to find the associated user-defined mapper.
       ExprResult ER = buildUserDefinedMapperRef(
           SemaRef, DSAS->getCurScope(), MapperIdScopeSpec, MapperId,
-          VE->getType().getCanonicalType(), UnresolvedMapper);
+          VE->getType().getCanonicalType(), UnresolvedMapper, ELoc);
       if (ER.isInvalid())
         continue;
       MVLI.UDMapperList.push_back(ER.get());
@@ -25275,7 +25282,7 @@ static void checkMappableExpressionList(
     // Try to find the associated user-defined mapper.
     ExprResult ER = buildUserDefinedMapperRef(
         SemaRef, DSAS->getCurScope(), MapperIdScopeSpec, MapperId,
-        Type.getCanonicalType(), UnresolvedMapper);
+        Type.getCanonicalType(), UnresolvedMapper, ELoc);
     if (ER.isInvalid())
       continue;
 
@@ -25618,6 +25625,17 @@ VarDecl *SemaOpenMP::ActOnOpenMPDeclareReductionInitializerStart(Scope *S,
 void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
     Decl *D, Expr *Initializer, VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // Ensure OmpPrivParm is default-constructed before the user initializer runs
+  // (required for class types with non-trivial default constructors).
+  if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
+    QualType ReductionType = DRD->getType();
+    if (CXXRecordDecl *RD = ReductionType->getAsCXXRecordDecl()) {
+      if (!RD->hasTrivialDefaultConstructor())
+        SemaRef.ActOnUninitializedDecl(OmpPrivParm);
+    }
+  }
+
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 

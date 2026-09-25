@@ -11,7 +11,7 @@
 ; "preemptible" means that `mcause` and `mepc` should be saved and interrupts
 ; should be re-enabled by setting a bit in `mstatus`.
 
-; FIXME: A lot of the CFI information here is wrong.
+; FIXME: CFI information for the stack swap and CSRs is still missing.
 
 define void @stack_swap_empty() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV32-LABEL: stack_swap_empty:
@@ -78,35 +78,43 @@ define void @preemptible_empty() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr s0, mcause
-; RV32-NEXT:    csrr s1, mepc
+; RV32-NEXT:    sw t0, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -12
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
 ; RV32-NEXT:    csrsi mstatus, 8
+; RV32-NEXT:    sw t0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    lw t0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    csrci mstatus, 8
-; RV32-NEXT:    csrw mepc, s1
-; RV32-NEXT:    csrw mcause, s0
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore t0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: preemptible_empty:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr s0, mcause
-; RV64-NEXT:    csrr s1, mepc
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -24
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
 ; RV64-NEXT:    csrsi mstatus, 8
+; RV64-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    csrci mstatus, 8
-; RV64-NEXT:    csrw mepc, s1
-; RV64-NEXT:    csrw mcause, s0
-; RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore t0
+; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    mret
   ret void
@@ -118,16 +126,20 @@ define void @both_empty() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr s0, mcause
-; RV32-NEXT:    csrr s1, mepc
+; RV32-NEXT:    sw t0, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -12
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
 ; RV32-NEXT:    csrsi mstatus, 8
+; RV32-NEXT:    sw t0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    lw t0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    csrci mstatus, 8
-; RV32-NEXT:    csrw mepc, s1
-; RV32-NEXT:    csrw mcause, s0
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore t0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
@@ -136,19 +148,23 @@ define void @both_empty() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-LABEL: both_empty:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr s0, mcause
-; RV64-NEXT:    csrr s1, mepc
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -24
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
 ; RV64-NEXT:    csrsi mstatus, 8
+; RV64-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    csrci mstatus, 8
-; RV64-NEXT:    csrw mepc, s1
-; RV64-NEXT:    csrw mcause, s0
-; RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore t0
+; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
@@ -484,13 +500,14 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
-; RV32-NEXT:    sw s0, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr s0, mcause
-; RV32-NEXT:    csrr s1, mepc
-; RV32-NEXT:    csrsi mstatus, 8
-; RV32-NEXT:    sw ra, 68(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t0, 64(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -16
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 76(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
+; RV32-NEXT:    csrsi mstatus, 8
+; RV32-NEXT:    sw t0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 68(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t1, 60(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t2, 56(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
@@ -506,7 +523,6 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32-NEXT:    sw t5, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t6, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -12
-; RV32-NEXT:    .cfi_offset t0, -16
 ; RV32-NEXT:    .cfi_offset t1, -20
 ; RV32-NEXT:    .cfi_offset t2, -24
 ; RV32-NEXT:    .cfi_offset a0, -28
@@ -523,7 +539,6 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32-NEXT:    .cfi_offset t6, -72
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 68(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw t0, 64(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t1, 60(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t2, 56(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
@@ -538,8 +553,14 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32-NEXT:    lw t4, 16(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t5, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t6, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    lw t0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrci mstatus, 8
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 76(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 64(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore t0
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore t1
 ; RV32-NEXT:    .cfi_restore t2
 ; RV32-NEXT:    .cfi_restore a0
@@ -554,11 +575,6 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32-NEXT:    .cfi_restore t4
 ; RV32-NEXT:    .cfi_restore t5
 ; RV32-NEXT:    .cfi_restore t6
-; RV32-NEXT:    csrci mstatus, 8
-; RV32-NEXT:    csrw mepc, s1
-; RV32-NEXT:    csrw mcause, s0
-; RV32-NEXT:    lw s1, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    mret
@@ -567,13 +583,14 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -144
 ; RV64-NEXT:    .cfi_def_cfa_offset 144
-; RV64-NEXT:    sd s0, 136(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 128(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr s0, mcause
-; RV64-NEXT:    csrr s1, mepc
-; RV64-NEXT:    csrsi mstatus, 8
-; RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -32
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 136(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
+; RV64-NEXT:    csrsi mstatus, 8
+; RV64-NEXT:    sd t0, 128(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t1, 104(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t2, 96(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
@@ -589,7 +606,6 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV64-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -24
-; RV64-NEXT:    .cfi_offset t0, -32
 ; RV64-NEXT:    .cfi_offset t1, -40
 ; RV64-NEXT:    .cfi_offset t2, -48
 ; RV64-NEXT:    .cfi_offset a0, -56
@@ -606,7 +622,6 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV64-NEXT:    .cfi_offset t6, -144
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld t0, 112(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t1, 104(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t2, 96(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
@@ -621,8 +636,14 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV64-NEXT:    ld t4, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    ld t0, 128(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrci mstatus, 8
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 136(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 112(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore t0
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore t1
 ; RV64-NEXT:    .cfi_restore t2
 ; RV64-NEXT:    .cfi_restore a0
@@ -637,11 +658,6 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV64-NEXT:    .cfi_restore t4
 ; RV64-NEXT:    .cfi_restore t5
 ; RV64-NEXT:    .cfi_restore t6
-; RV64-NEXT:    csrci mstatus, 8
-; RV64-NEXT:    csrw mepc, s1
-; RV64-NEXT:    csrw mcause, s0
-; RV64-NEXT:    ld s1, 128(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    mret
@@ -655,13 +671,14 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
-; RV32-NEXT:    sw s0, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr s0, mcause
-; RV32-NEXT:    csrr s1, mepc
-; RV32-NEXT:    csrsi mstatus, 8
-; RV32-NEXT:    sw ra, 68(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t0, 64(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -16
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 76(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
+; RV32-NEXT:    csrsi mstatus, 8
+; RV32-NEXT:    sw t0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 68(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t1, 60(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t2, 56(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
@@ -677,7 +694,6 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    sw t5, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw t6, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -12
-; RV32-NEXT:    .cfi_offset t0, -16
 ; RV32-NEXT:    .cfi_offset t1, -20
 ; RV32-NEXT:    .cfi_offset t2, -24
 ; RV32-NEXT:    .cfi_offset a0, -28
@@ -694,7 +710,6 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    .cfi_offset t6, -72
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    lw ra, 68(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw t0, 64(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t1, 60(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t2, 56(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
@@ -709,8 +724,14 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    lw t4, 16(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t5, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw t6, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    lw t0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrci mstatus, 8
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 76(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 64(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore t0
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore t1
 ; RV32-NEXT:    .cfi_restore t2
 ; RV32-NEXT:    .cfi_restore a0
@@ -725,11 +746,6 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    .cfi_restore t4
 ; RV32-NEXT:    .cfi_restore t5
 ; RV32-NEXT:    .cfi_restore t6
-; RV32-NEXT:    csrci mstatus, 8
-; RV32-NEXT:    csrw mepc, s1
-; RV32-NEXT:    csrw mcause, s0
-; RV32-NEXT:    lw s1, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
@@ -740,13 +756,14 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -144
 ; RV64-NEXT:    .cfi_def_cfa_offset 144
-; RV64-NEXT:    sd s0, 136(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 128(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr s0, mcause
-; RV64-NEXT:    csrr s1, mepc
-; RV64-NEXT:    csrsi mstatus, 8
-; RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -32
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 136(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
+; RV64-NEXT:    csrsi mstatus, 8
+; RV64-NEXT:    sd t0, 128(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t1, 104(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t2, 96(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
@@ -762,7 +779,6 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -24
-; RV64-NEXT:    .cfi_offset t0, -32
 ; RV64-NEXT:    .cfi_offset t1, -40
 ; RV64-NEXT:    .cfi_offset t2, -48
 ; RV64-NEXT:    .cfi_offset a0, -56
@@ -779,7 +795,6 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    .cfi_offset t6, -144
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld t0, 112(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t1, 104(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t2, 96(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
@@ -794,8 +809,14 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    ld t4, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    ld t0, 128(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrci mstatus, 8
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 136(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 112(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore t0
+; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore t1
 ; RV64-NEXT:    .cfi_restore t2
 ; RV64-NEXT:    .cfi_restore a0
@@ -810,11 +831,6 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    .cfi_restore t4
 ; RV64-NEXT:    .cfi_restore t5
 ; RV64-NEXT:    .cfi_restore t6
-; RV64-NEXT:    csrci mstatus, 8
-; RV64-NEXT:    csrw mepc, s1
-; RV64-NEXT:    csrw mcause, s0
-; RV64-NEXT:    ld s1, 128(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
@@ -928,57 +944,65 @@ define void @stack_swap_clobber_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame
 define void @preemptible_clobber() "interrupt"="SiFive-CLIC-preemptible" {
 ; RV32-LABEL: preemptible_clobber:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr s0, mcause
-; RV32-NEXT:    csrr s1, mepc
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    sw t0, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -12
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
 ; RV32-NEXT:    csrsi mstatus, 8
-; RV32-NEXT:    sw s0, 4(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset s0, -12
-; RV32-NEXT:    .cfi_offset s1, -16
+; RV32-NEXT:    sw t0, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset s0, -16
+; RV32-NEXT:    .cfi_offset s1, -20
 ; RV32-NEXT:    #APP
 ; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t0, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrci mstatus, 8
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore t0
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
-; RV32-NEXT:    csrci mstatus, 8
-; RV32-NEXT:    csrw mepc, s1
-; RV32-NEXT:    csrw mcause, s0
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: preemptible_clobber:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    .cfi_def_cfa_offset 32
-; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr s0, mcause
-; RV64-NEXT:    csrr s1, mepc
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -24
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
 ; RV64-NEXT:    csrsi mstatus, 8
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset s0, -24
-; RV64-NEXT:    .cfi_offset s1, -32
+; RV64-NEXT:    sd t0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset s0, -32
+; RV64-NEXT:    .cfi_offset s1, -40
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    #NO_APP
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t0, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrci mstatus, 8
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore t0
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
-; RV64-NEXT:    csrci mstatus, 8
-; RV64-NEXT:    csrw mepc, s1
-; RV64-NEXT:    csrw mcause, s0
-; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    mret
   call void asm sideeffect "", "~{x8},~{x9}"() #4
@@ -989,29 +1013,33 @@ define void @both_clobber() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-LABEL: both_clobber:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr s0, mcause
-; RV32-NEXT:    csrr s1, mepc
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    sw t0, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -12
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
 ; RV32-NEXT:    csrsi mstatus, 8
-; RV32-NEXT:    sw s0, 4(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset s0, -12
-; RV32-NEXT:    .cfi_offset s1, -16
+; RV32-NEXT:    sw t0, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset s0, -16
+; RV32-NEXT:    .cfi_offset s1, -20
 ; RV32-NEXT:    #APP
 ; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t0, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrci mstatus, 8
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore t0
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
-; RV32-NEXT:    csrci mstatus, 8
-; RV32-NEXT:    csrw mepc, s1
-; RV32-NEXT:    csrw mcause, s0
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
@@ -1019,32 +1047,223 @@ define void @both_clobber() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-LABEL: both_clobber:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
-; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    .cfi_def_cfa_offset 32
-; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr s0, mcause
-; RV64-NEXT:    csrr s1, mepc
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -24
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
 ; RV64-NEXT:    csrsi mstatus, 8
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset s0, -24
-; RV64-NEXT:    .cfi_offset s1, -32
+; RV64-NEXT:    sd t0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset s0, -32
+; RV64-NEXT:    .cfi_offset s1, -40
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    #NO_APP
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t0, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrci mstatus, 8
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore t0
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
-; RV64-NEXT:    csrci mstatus, 8
-; RV64-NEXT:    csrw mepc, s1
-; RV64-NEXT:    csrw mcause, s0
-; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void asm sideeffect "", "~{x8},~{x9}"() #4
+  ret void
+}
+
+declare void @use(ptr)
+
+define void @large_frame() "interrupt"="SiFive-CLIC-preemptible" "frame-pointer"="none" {
+; RV32-LABEL: large_frame:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -2032
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
+; RV32-NEXT:    sw t0, 2016(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset t0, -16
+; RV32-NEXT:    csrr t0, mcause
+; RV32-NEXT:    sw t0, 2028(sp) # 4-byte Folded Spill
+; RV32-NEXT:    csrr t0, mepc
+; RV32-NEXT:    csrsi mstatus, 8
+; RV32-NEXT:    sw t0, 2024(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 2020(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t1, 2012(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t2, 2008(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a0, 2004(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a1, 2000(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a2, 1996(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a3, 1992(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a4, 1988(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a5, 1984(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a6, 1980(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a7, 1976(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t3, 1972(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t4, 1968(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t5, 1964(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t6, 1960(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -12
+; RV32-NEXT:    .cfi_offset t1, -20
+; RV32-NEXT:    .cfi_offset t2, -24
+; RV32-NEXT:    .cfi_offset a0, -28
+; RV32-NEXT:    .cfi_offset a1, -32
+; RV32-NEXT:    .cfi_offset a2, -36
+; RV32-NEXT:    .cfi_offset a3, -40
+; RV32-NEXT:    .cfi_offset a4, -44
+; RV32-NEXT:    .cfi_offset a5, -48
+; RV32-NEXT:    .cfi_offset a6, -52
+; RV32-NEXT:    .cfi_offset a7, -56
+; RV32-NEXT:    .cfi_offset t3, -60
+; RV32-NEXT:    .cfi_offset t4, -64
+; RV32-NEXT:    .cfi_offset t5, -68
+; RV32-NEXT:    .cfi_offset t6, -72
+; RV32-NEXT:    addi sp, sp, -2048
+; RV32-NEXT:    addi sp, sp, -112
+; RV32-NEXT:    .cfi_def_cfa_offset 4192
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    call use
+; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    addi sp, sp, 128
+; RV32-NEXT:    .cfi_def_cfa_offset 2032
+; RV32-NEXT:    lw ra, 2020(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t1, 2012(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t2, 2008(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a0, 2004(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a1, 2000(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a2, 1996(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a3, 1992(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a4, 1988(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a5, 1984(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a6, 1980(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a7, 1976(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t3, 1972(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t4, 1968(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t5, 1964(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t6, 1960(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t0, 2024(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrci mstatus, 8
+; RV32-NEXT:    csrw mepc, t0
+; RV32-NEXT:    lw t0, 2028(sp) # 4-byte Folded Reload
+; RV32-NEXT:    csrw mcause, t0
+; RV32-NEXT:    lw t0, 2016(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore t0
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore t1
+; RV32-NEXT:    .cfi_restore t2
+; RV32-NEXT:    .cfi_restore a0
+; RV32-NEXT:    .cfi_restore a1
+; RV32-NEXT:    .cfi_restore a2
+; RV32-NEXT:    .cfi_restore a3
+; RV32-NEXT:    .cfi_restore a4
+; RV32-NEXT:    .cfi_restore a5
+; RV32-NEXT:    .cfi_restore a6
+; RV32-NEXT:    .cfi_restore a7
+; RV32-NEXT:    .cfi_restore t3
+; RV32-NEXT:    .cfi_restore t4
+; RV32-NEXT:    .cfi_restore t5
+; RV32-NEXT:    .cfi_restore t6
+; RV32-NEXT:    addi sp, sp, 2032
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    mret
+;
+; RV64-LABEL: large_frame:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -2032
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    sd t0, 2000(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset t0, -32
+; RV64-NEXT:    csrr t0, mcause
+; RV64-NEXT:    sd t0, 2024(sp) # 8-byte Folded Spill
+; RV64-NEXT:    csrr t0, mepc
+; RV64-NEXT:    csrsi mstatus, 8
+; RV64-NEXT:    sd t0, 2016(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 2008(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t1, 1992(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t2, 1984(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a0, 1976(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a1, 1968(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a2, 1960(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a3, 1952(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a4, 1944(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a5, 1936(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a6, 1928(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a7, 1920(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t3, 1912(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t4, 1904(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t5, 1896(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t6, 1888(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -24
+; RV64-NEXT:    .cfi_offset t1, -40
+; RV64-NEXT:    .cfi_offset t2, -48
+; RV64-NEXT:    .cfi_offset a0, -56
+; RV64-NEXT:    .cfi_offset a1, -64
+; RV64-NEXT:    .cfi_offset a2, -72
+; RV64-NEXT:    .cfi_offset a3, -80
+; RV64-NEXT:    .cfi_offset a4, -88
+; RV64-NEXT:    .cfi_offset a5, -96
+; RV64-NEXT:    .cfi_offset a6, -104
+; RV64-NEXT:    .cfi_offset a7, -112
+; RV64-NEXT:    .cfi_offset t3, -120
+; RV64-NEXT:    .cfi_offset t4, -128
+; RV64-NEXT:    .cfi_offset t5, -136
+; RV64-NEXT:    .cfi_offset t6, -144
+; RV64-NEXT:    addi sp, sp, -2048
+; RV64-NEXT:    addi sp, sp, -176
+; RV64-NEXT:    .cfi_def_cfa_offset 4256
+; RV64-NEXT:    addi a0, sp, 16
+; RV64-NEXT:    call use
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    addi sp, sp, 192
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    ld ra, 2008(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t1, 1992(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t2, 1984(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a0, 1976(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a1, 1968(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a2, 1960(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a3, 1952(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a4, 1944(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a5, 1936(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a6, 1928(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a7, 1920(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t3, 1912(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t4, 1904(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t5, 1896(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t6, 1888(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t0, 2016(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrci mstatus, 8
+; RV64-NEXT:    csrw mepc, t0
+; RV64-NEXT:    ld t0, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    csrw mcause, t0
+; RV64-NEXT:    ld t0, 2000(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore t0
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore t1
+; RV64-NEXT:    .cfi_restore t2
+; RV64-NEXT:    .cfi_restore a0
+; RV64-NEXT:    .cfi_restore a1
+; RV64-NEXT:    .cfi_restore a2
+; RV64-NEXT:    .cfi_restore a3
+; RV64-NEXT:    .cfi_restore a4
+; RV64-NEXT:    .cfi_restore a5
+; RV64-NEXT:    .cfi_restore a6
+; RV64-NEXT:    .cfi_restore a7
+; RV64-NEXT:    .cfi_restore t3
+; RV64-NEXT:    .cfi_restore t4
+; RV64-NEXT:    .cfi_restore t5
+; RV64-NEXT:    .cfi_restore t6
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    mret
+  %object = alloca [4096 x i8], align 16
+  call void @use(ptr %object)
   ret void
 }

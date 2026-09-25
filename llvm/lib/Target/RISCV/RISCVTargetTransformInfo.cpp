@@ -1783,6 +1783,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     InstructionCost Cost = 0;
     Type *ArgTy = ICA.getArgTypes()[0];
     auto LT = getTypeLegalizationCost(ArgTy);
+    if (!LT.second.isVector())
+      break;
 
     // If the element type is not i1, do a comparison with all-zeros.
     if (LT.second.getVectorElementType() != MVT::i1)
