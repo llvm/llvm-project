@@ -29,7 +29,7 @@ constexpr __m128 a = { 1.0f, 2.0f, 3.0f, 4.0f };
 constexpr __m128d b_inexact = { 1.0000000000000002, 0.0 };
 constexpr __m128 r = _mm_mask_cvtsd_ss(src, 0x1, a, b_inexact);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@avx512fintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@avx512fintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_mask_cvtsd_ss({9.000000e+00, 5.000000e+00, 6.000000e+00, 7.000000e+00}, 1, {1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00}, {1.000000e+00, 0.000000e+00})'}}
 }
 namespace MaskOnInf {
@@ -56,7 +56,7 @@ constexpr __m128 a = { 1.0f, 2.0f, 3.0f, 4.0f };
 constexpr __m128d b_sub = { 1e-310, 0.0 };
 constexpr __m128 r = _mm_mask_cvtsd_ss(src, 0x1, a, b_sub);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@avx512fintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@avx512fintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_mask_cvtsd_ss({9.000000e+00, 5.000000e+00, 6.000000e+00, 7.000000e+00}, 1, {1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00}, {1.000000e-310, 0.000000e+00})'}}
 }
 }
@@ -104,7 +104,7 @@ namespace Inexact {
 constexpr __m512d a = { 1.0000000000000002, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 constexpr __m256 r = _mm512_cvtpd_ps(a);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@avx512fintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@avx512fintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm512_cvtpd_ps({1.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00})'}}
 }
 }
