@@ -7176,6 +7176,12 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
 }
 
 bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD) {
+  // If the function is a specialization of a member function template which has
+  // been declared a friend by another class, 'FD' might be a Decl marked as an
+  // explicit specialization, which would then be classified as "not implicitly
+  // instantiable". Walking to the most recent Decl resolves this.
+  FD = FD->getMostRecentDecl();
+
   if (FD->isDefined() || !FD->isImplicitlyInstantiable() || !FD->isConstexpr())
     return false;
 
@@ -7186,18 +7192,16 @@ bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD) {
 static void TryInstantiateFunctionBeforeCall(const FunctionDecl *FD,
                                              EvalInfo &Info,
                                              SourceLocation Loc) {
-  FD = FD->getMostRecentDecl();
-
   // [C++26] [temp.inst] p5
   // [...] the function template specialization is implicitly instantiated
   // when the specialization is referenced in a context that requires a function
   // definition to exist or if the existence of the definition affects the
   // semantics of the program.
 
-  SemaProxy *SP = Info.getSemaProxy();
-  if (SP && FunctionDefinitionCanBeLazilyInstantiated(FD) &&
+  SemaProxy *SProxy = Info.getSemaProxy();
+  if (SProxy && FunctionDefinitionCanBeLazilyInstantiated(FD) &&
       Info.InConstantContext)
-    SP->instantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(FD));
+    SProxy->instantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(FD));
 }
 
 /// Evaluate a function call.
@@ -22018,11 +22022,11 @@ bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
 
 bool Expr::EvaluateAsMandatedConstantRValue(EvalResult &Result,
                                             const ASTContext &Ctx,
-                                            SemaProxy &SP) const {
+                                            SemaProxy &SProxy) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsMandatedConstantRValue");
-  EvalInfo Info(Ctx, &SP, Result, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, &SProxy, Result, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
   return ::EvaluateAsRValue(this, Result, Ctx, Info);
 }
@@ -22114,12 +22118,12 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
   return true;
 }
 
-static bool EvaluateDestruction(const ASTContext &Ctx, SemaProxy *SP,
+static bool EvaluateDestruction(const ASTContext &Ctx, SemaProxy *SProxy,
                                 APValue::LValueBase Base,
                                 APValue DestroyedValue, QualType Type,
                                 SourceLocation Loc, Expr::EvalStatus &EStatus,
                                 bool IsConstantDestruction) {
-  EvalInfo Info(Ctx, SP, EStatus,
+  EvalInfo Info(Ctx, SProxy, EStatus,
                 IsConstantDestruction ? EvaluationMode::ConstantExpression
                                       : EvaluationMode::ConstantFold);
   Info.setEvaluatingDecl(Base, DestroyedValue,
@@ -22388,13 +22392,13 @@ bool VarDecl::evaluateDestruction(
 }
 
 bool VarDecl::evaluateConstantDestruction(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SP) const {
+    SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
   bool IsConstantDestruction = hasConstantInitialization();
 
-  EvalInfo Info(getASTContext(), &SP, EStatus,
+  EvalInfo Info(getASTContext(), &SProxy, EStatus,
                 EvaluationMode::ConstantExpression);
   return ::evaluateDestruction(EStatus, Info, this, IsConstantDestruction);
 }
@@ -23324,9 +23328,9 @@ template <typename T>
 static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *SizeExpression,
                                           const Expr *PtrExpression,
-                                          ASTContext &Ctx, SemaProxy &SP,
+                                          ASTContext &Ctx, SemaProxy &SProxy,
                                           Expr::EvalResult &Status) {
-  EvalInfo Info(Ctx, &SP, Status, EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, &SProxy, Status, EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp)
@@ -23379,17 +23383,19 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
 bool Expr::EvaluateCharRangeAsString(std::string &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
-                                     SemaProxy &SP, EvalResult &Status) const {
+                                     SemaProxy &SProxy,
+                                     EvalResult &Status) const {
   return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
-                                       PtrExpression, Ctx, SP, Status);
+                                       PtrExpression, Ctx, SProxy, Status);
 }
 
 bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
-                                     SemaProxy &SP, EvalResult &Status) const {
+                                     SemaProxy &SProxy,
+                                     EvalResult &Status) const {
   return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
-                                       PtrExpression, Ctx, SP, Status);
+                                       PtrExpression, Ctx, SProxy, Status);
 }
 
 std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {

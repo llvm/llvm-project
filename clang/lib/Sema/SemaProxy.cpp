@@ -21,6 +21,12 @@ namespace sema {
 
 void EvalProxy::instantiateFunctionDefinition(
     SourceLocation PointOfInstantiation, FunctionDecl *Function) {
+  // If the function is a specialization of a member function template which has
+  // been declared a friend by another class, 'Function' might be a Decl marked
+  // as an explicit specialization. Walking to the most recent Decl seems to
+  // find a node that is understood to be implicitly instantiable.
+  Function = Function->getMostRecentDecl();
+
   SemaRef.InstantiateFunctionDefinition(
       PointOfInstantiation, Function, /*Recursive=*/true,
       /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);

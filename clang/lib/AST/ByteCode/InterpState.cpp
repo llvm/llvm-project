@@ -50,9 +50,9 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
 InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
                          FrameAllocator &FrameAlloc, Context &Ctx,
                          SourceMapper *M)
-    : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
-      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
-      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+    : State(Ctx.getASTContext(), /*SProxy=*/nullptr, Status), M(M),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = true;
   CheckingPotentialConstantExpression = false;

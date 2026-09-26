@@ -2075,7 +2075,7 @@ bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
 
 static void compileFunction(InterpState &S, const Function *Func,
                             CodePtr OpPC) {
-  const FunctionDecl *Fn = Func->getDecl()->getMostRecentDecl();
+  const FunctionDecl *Fn = Func->getDecl();
 
   // [C++26] [temp.inst] p5
   // [...] the function template specialization is implicitly instantiated
@@ -2083,11 +2083,11 @@ static void compileFunction(InterpState &S, const Function *Func,
   // definition to exist or if the existence of the definition affects the
   // semantics of the program.
   if (FunctionDefinitionCanBeLazilyInstantiated(Fn) && S.inConstantContext()) {
-    SemaProxy *SP = S.getSemaProxy();
-    if (!SP)
+    SemaProxy *SProxy = S.getSemaProxy();
+    if (!SProxy)
       return;
-    SP->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
-                                      const_cast<FunctionDecl *>(Fn));
+    SProxy->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
+                                          const_cast<FunctionDecl *>(Fn));
   }
 
   const FunctionDecl *Definition;

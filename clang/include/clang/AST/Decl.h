@@ -1440,7 +1440,7 @@ public:
 
 private:
   const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
-                                   SemaProxy *SP,
+                                   SemaProxy *SProxy,
                                    bool IsConstantInitialization) const;
 
 public:
