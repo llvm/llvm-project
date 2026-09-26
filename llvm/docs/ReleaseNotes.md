@@ -335,6 +335,15 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
+* llvm-objcopy now supports dumping and updating the resources of PE images
+  with the `--dump-resource` and `--update-resource` options. It also no longer
+  writes PE images with a dangling attribute certificate table (Authenticode
+  signature) entry, but clears the entry instead.
+
+* llvm-mt now supports the `/inputresource`, `/outputresource` and
+  `/updateresource` options, which read and write manifests embedded in PE
+  images as resources.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm

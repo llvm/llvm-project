@@ -40,6 +40,7 @@
 #include "llvm/Support/Error.h"
 
 #include <map>
+#include <optional>
 
 namespace llvm {
 
@@ -154,6 +155,16 @@ private:
 class WindowsResourceParser {
 public:
   class TreeNode;
+
+  struct StringOrID {
+    bool IsString;
+    ArrayRef<UTF16> String;
+    uint32_t ID = ~0u;
+
+    StringOrID(uint32_t ID) : IsString(false), ID(ID) {}
+    StringOrID(ArrayRef<UTF16> String) : IsString(true), String(String) {}
+  };
+
   LLVM_ABI WindowsResourceParser(bool MinGW = false);
   LLVM_ABI Error parse(WindowsResource *WR,
                        std::vector<std::string> &Duplicates);
@@ -164,6 +175,23 @@ public:
   const TreeNode &getTree() const { return Root; }
   ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
   ArrayRef<std::vector<UTF16>> getStringTable() const { return StringTable; }
+
+  /// Returns the node of the resource with the given type and name, whose
+  /// children are the data nodes of the resource's languages, or nullptr if
+  /// there is no such resource.
+  LLVM_ABI const TreeNode *findResource(const StringOrID &Type,
+                                        const StringOrID &Name) const;
+  /// Adds a resource with the given type, name and language and the given
+  /// data, replacing an existing resource with the same type, name and
+  /// language. \p Origin describes the source of the resource for diagnostics.
+  LLVM_ABI void addResource(const StringOrID &Type, const StringOrID &Name,
+                            uint16_t Language, ArrayRef<uint8_t> ResourceData,
+                            StringRef Origin);
+  /// Removes the resources with the given type and name, either of all
+  /// languages or, if \p Language is set, only of that language. Returns
+  /// whether any resource was removed.
+  LLVM_ABI bool removeResource(const StringOrID &Type, const StringOrID &Name,
+                               std::optional<uint16_t> Language = std::nullopt);
 
   class TreeNode {
   public:
@@ -177,6 +205,8 @@ public:
     uint16_t getMajorVersion() const { return MajorVersion; }
     uint16_t getMinorVersion() const { return MinorVersion; }
     uint32_t getCharacteristics() const { return Characteristics; }
+    uint32_t getCodePage() const { return CodePage; }
+    uint32_t getReserved() const { return Reserved; }
     bool checkIsDataNode() const { return IsDataNode; }
     const Children<uint32_t> &getIDChildren() const { return IDChildren; }
     const Children<std::string> &getStringChildren() const {
@@ -190,15 +220,15 @@ public:
     static std::unique_ptr<TreeNode> createStringNode(uint32_t Index);
     static std::unique_ptr<TreeNode> createIDNode();
     // DataIndex is the Data vector index that the data node points at.
-    static std::unique_ptr<TreeNode> createDataNode(uint16_t MajorVersion,
-                                                    uint16_t MinorVersion,
-                                                    uint32_t Characteristics,
-                                                    uint32_t Origin,
-                                                    uint32_t DataIndex);
+    static std::unique_ptr<TreeNode>
+    createDataNode(uint16_t MajorVersion, uint16_t MinorVersion,
+                   uint32_t Characteristics, uint32_t CodePage,
+                   uint32_t Reserved, uint32_t Origin, uint32_t DataIndex);
 
     explicit TreeNode(uint32_t StringIndex);
     TreeNode(uint16_t MajorVersion, uint16_t MinorVersion,
-             uint32_t Characteristics, uint32_t Origin, uint32_t DataIndex);
+             uint32_t Characteristics, uint32_t CodePage, uint32_t Reserved,
+             uint32_t Origin, uint32_t DataIndex);
 
     bool addEntry(const ResourceEntryRef &Entry, uint32_t Origin,
                   std::vector<std::vector<uint8_t>> &Data,
@@ -212,12 +242,20 @@ public:
                          std::vector<std::vector<uint8_t>> &Data,
                          TreeNode *&Result);
     bool addDataChild(uint32_t ID, uint16_t MajorVersion, uint16_t MinorVersion,
-                      uint32_t Characteristics, uint32_t Origin,
-                      uint32_t DataIndex, TreeNode *&Result);
+                      uint32_t Characteristics, uint32_t CodePage,
+                      uint32_t Reserved, uint32_t Origin, uint32_t DataIndex,
+                      TreeNode *&Result);
     TreeNode &addIDChild(uint32_t ID);
     TreeNode &addNameChild(ArrayRef<UTF16> NameRef,
                            std::vector<std::vector<UTF16>> &StringTable);
+    TreeNode &addChild(const StringOrID &Key,
+                       std::vector<std::vector<UTF16>> &StringTable);
+    const TreeNode *findChild(const StringOrID &Key) const;
+    TreeNode *findChild(const StringOrID &Key) {
+      return const_cast<TreeNode *>(std::as_const(*this).findChild(Key));
+    }
     void shiftDataIndexDown(uint32_t Index);
+    void shiftStringIndexDown(uint32_t Index);
 
     bool IsDataNode = false;
     uint32_t StringIndex;
@@ -227,19 +265,12 @@ public:
     uint16_t MajorVersion = 0;
     uint16_t MinorVersion = 0;
     uint32_t Characteristics = 0;
+    uint32_t CodePage = 0;
+    uint32_t Reserved = 0;
 
     // The .res file that defined this TreeNode, for diagnostics.
     // Index into InputFilenames.
     uint32_t Origin;
-  };
-
-  struct StringOrID {
-    bool IsString;
-    ArrayRef<UTF16> String;
-    uint32_t ID = ~0u;
-
-    StringOrID(uint32_t ID) : IsString(false), ID(ID) {}
-    StringOrID(ArrayRef<UTF16> String) : IsString(true), String(String) {}
   };
 
 private:
@@ -249,6 +280,7 @@ private:
                     std::vector<std::string> &Duplicates);
   bool shouldIgnoreDuplicate(const ResourceEntryRef &Entry) const;
   bool shouldIgnoreDuplicate(const std::vector<StringOrID> &Context) const;
+  void removeChild(TreeNode &Parent, const StringOrID &Key);
 
   TreeNode Root;
   std::vector<std::vector<uint8_t>> Data;
@@ -263,6 +295,14 @@ LLVM_ABI Expected<std::unique_ptr<MemoryBuffer>>
 writeWindowsResourceCOFF(llvm::COFF::MachineTypes MachineType,
                          const WindowsResourceParser &Parser,
                          uint32_t TimeDateStamp);
+
+/// Writes the resources of \p Parser in the format of the .rsrc section of a
+/// PE image, i.e. the resource directory followed by the resource data.
+/// \p SectionRVA is the RVA at which the section will be loaded, which the
+/// resource data entries refer to the data by.
+LLVM_ABI std::vector<uint8_t>
+writeWindowsResourceSection(const WindowsResourceParser &Parser,
+                            uint32_t SectionRVA);
 
 LLVM_ABI void printResourceTypeName(uint16_t TypeID, raw_ostream &OS);
 } // namespace object

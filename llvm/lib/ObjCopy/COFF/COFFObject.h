@@ -133,6 +133,8 @@ struct Object {
   const Section *findSection(ssize_t UniqueId) const;
 
   void addSections(ArrayRef<Section> NewSections);
+  // Insert a section before the section with the given (zero-based) index.
+  void insertSection(size_t Index, Section NewSection);
   void removeSections(function_ref<bool(const Section &)> ToRemove);
   void truncateSections(function_ref<bool(const Section &)> ToTruncate);
 

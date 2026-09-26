@@ -12,10 +12,9 @@ def no_dependency : Flag<["/", "-"], "nodependency">, HelpText<"Not supported">,
 def category : Flag<["/", "-"], "category">, HelpText<"Not supported">, Group<unsupported>;
 def no_logo : Flag<["/", "-"], "nologo">, HelpText<"No effect as this tool never writes copyright data.  Included for parity">;
 def out : Joined<["/", "-"], "out:">, HelpText<"Name of the output manifest.  If this is skipped and only one manifest is being operated upon by the tool, that manifest is modified in place">, MetaVarName<"manifest">;
-def input_resource : Joined<["/", "-"], "inputresource:">, HelpText<"Not supported">, MetaVarName<"file">, Group<unsupported>;
-def output_resource : Joined<["/", "-"], "outputresource:">, HelpText<"Not supported">, MetaVarName<"file">, Group<unsupported>;
-def output_resource_flag : Flag<["/", "-"], "outputresource">, Alias<output_resource>, HelpText<"Not supported">, Group<unsupported>;
-def update_resource : Joined<["/", "-"], "updateresource:">, HelpText<"Not supported">, MetaVarName<"file">, Group<unsupported>;
+def input_resource : Joined<["/", "-"], "inputresource:">, HelpText<"Read the manifest from the RT_MANIFEST resource with the given ID (default: 1) of a PE image">, MetaVarName<"file[;[#]id]">;
+def output_resource : Joined<["/", "-"], "outputresource:">, HelpText<"Write the merged manifest to the RT_MANIFEST resource with the given ID (default: 1) of a PE image">, MetaVarName<"file[;[#]id]">;
+def update_resource : Joined<["/", "-"], "updateresource:">, HelpText<"Equivalent to specifying both /inputresource and /outputresource with the same argument">, MetaVarName<"file[;[#]id]">;
 def hash_update : Joined<["/", "-"], "hashupdate:">, HelpText<"Not supported">, MetaVarName<"file">, Group<unsupported>;
 def hash_update_flag : Flag<["/", "-"], "hashupdate">, Alias<hash_update>, HelpText<"Not supported">, Group<unsupported>;
 def validate_manifest : Flag<["/", "-"], "validate_manifest">, HelpText<"Not supported">, Group<unsupported>;

@@ -1,0 +1,525 @@
+## Test --update-resource, which adds resources to PE images or replaces them.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/noresources.yaml -o %t/noresources.exe
+# RUN: %python -c "open(r'%t/large.bin', 'wb').write(b'A' * 5000)"
+
+## Add a resource to an image without resources. The resource section is added
+## before the discardable .reloc section, which is moved along with the base
+## relocation table entry and the base relocation block that refers to it.
+# RUN: llvm-objcopy --update-resource=24/1=%t/small.txt %t/noresources.exe %t/added.exe
+# RUN: llvm-readobj --file-headers --sections --coff-basereloc --coff-resources %t/added.exe | \
+# RUN:   FileCheck %s --check-prefix=ADDED
+
+# ADDED:      SizeOfImage: 16384
+# ADDED:      ResourceTableRVA: 0x2000
+# ADDED-NEXT: ResourceTableSize: 0x5D
+# ADDED:      BaseRelocationTableRVA: 0x3000
+# ADDED-NEXT: BaseRelocationTableSize: 0x18
+# ADDED:      Name: .text
+# ADDED-NEXT: VirtualSize: 0x4
+# ADDED-NEXT: VirtualAddress: 0x1000
+# ADDED:      Name: .rsrc
+# ADDED-NEXT: VirtualSize: 0x5D
+# ADDED-NEXT: VirtualAddress: 0x2000
+# ADDED-NEXT: RawDataSize: 0x200
+# ADDED-NEXT: PointerToRawData: 0x400
+# ADDED:      Characteristics [
+# ADDED-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# ADDED-NEXT:   IMAGE_SCN_MEM_READ
+# ADDED-NEXT: ]
+# ADDED:      Name: .reloc
+# ADDED-NEXT: VirtualSize: 0x18
+# ADDED-NEXT: VirtualAddress: 0x3000
+# ADDED-NEXT: RawDataSize: 0x200
+# ADDED-NEXT: PointerToRawData: 0x600
+# ADDED:      BaseReloc [
+# ADDED-NEXT:   Entry {
+# ADDED-NEXT:     Type: DIR64
+# ADDED-NEXT:     Address: 0x1000
+# ADDED-NEXT:   }
+# ADDED-NEXT:   Entry {
+# ADDED-NEXT:     Type: ABSOLUTE
+# ADDED-NEXT:     Address: 0x1000
+# ADDED-NEXT:   }
+# ADDED-NEXT:   Entry {
+# ADDED-NEXT:     Type: DIR64
+# ADDED-NEXT:     Address: 0x3000
+# ADDED-NEXT:   }
+# ADDED-NEXT:   Entry {
+# ADDED-NEXT:     Type: ABSOLUTE
+# ADDED-NEXT:     Address: 0x3000
+# ADDED-NEXT:   }
+# ADDED-NEXT: ]
+# ADDED:      Resources [
+# ADDED-NEXT:   Total Number of Resources: 1
+# ADDED-NEXT:   Base Table Address: 0x400
+# ADDED:        Number of String Entries: 0
+# ADDED-NEXT:   Number of ID Entries: 1
+# ADDED-NEXT:   Type: MANIFEST (ID 24) [
+# ADDED-NEXT:     Table Offset: 0x18
+# ADDED-NEXT:     Number of String Entries: 0
+# ADDED-NEXT:     Number of ID Entries: 1
+# ADDED-NEXT:     Name: (ID 1) [
+# ADDED-NEXT:       Table Offset: 0x30
+# ADDED-NEXT:       Number of String Entries: 0
+# ADDED-NEXT:       Number of ID Entries: 1
+# ADDED-NEXT:       Language: (ID 0) [
+# ADDED-NEXT:         Entry Offset: 0x48
+# ADDED-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+# ADDED-NEXT:         Major Version: 0
+# ADDED-NEXT:         Minor Version: 0
+# ADDED-NEXT:         Characteristics: 0
+# ADDED-NEXT:         Data [
+# ADDED-NEXT:           DataRVA: 0x2058
+# ADDED-NEXT:           DataSize: 5
+# ADDED-NEXT:           Codepage: 0
+# ADDED-NEXT:           Reserved: 0
+# ADDED-NEXT:           Data (
+# ADDED-NEXT:             0000: 41424344 0A |ABCD.|
+# ADDED-NEXT:           )
+# ADDED-NEXT:         ]
+# ADDED-NEXT:       ]
+# ADDED-NEXT:     ]
+# ADDED-NEXT:   ]
+# ADDED-NEXT: ]
+
+## Replace the resource with a larger one that still fits into the address
+## range of the resource section, which keeps the other sections in place, and
+## add a resource of another type.
+# RUN: llvm-objcopy --update-resource=24/1=%t/medium.txt --update-resource=10/100=%t/small.txt \
+# RUN:   %t/added.exe %t/replaced.exe
+# RUN: llvm-readobj --file-headers --sections --coff-resources %t/replaced.exe | \
+# RUN:   FileCheck %s --check-prefix=REPLACED
+# RUN: llvm-objcopy --dump-resource=24/1=%t/dumped.txt --dump-resource=10/100=%t/dumped2.txt \
+# RUN:   %t/replaced.exe %t/copy.exe
+# RUN: cmp %t/dumped.txt %t/medium.txt
+# RUN: cmp %t/dumped2.txt %t/small.txt
+
+# REPLACED:      ResourceTableRVA: 0x2000
+# REPLACED-NEXT: ResourceTableSize: 0xB5
+# REPLACED:      BaseRelocationTableRVA: 0x3000
+# REPLACED:      Name: .rsrc
+# REPLACED-NEXT: VirtualSize: 0xB5
+# REPLACED-NEXT: VirtualAddress: 0x2000
+# REPLACED-NEXT: RawDataSize: 0x200
+# REPLACED:      Name: .reloc
+# REPLACED-NEXT: VirtualSize: 0x18
+# REPLACED-NEXT: VirtualAddress: 0x3000
+# REPLACED:      Resources [
+# REPLACED-NEXT:   Total Number of Resources: 2
+# REPLACED:        Type: RCDATA (ID 10) [
+# REPLACED:          Name: (ID 100) [
+# REPLACED:            Language: (ID 0) [
+# REPLACED:              DataRVA: 0x20B0
+# REPLACED-NEXT:         DataSize: 5
+# REPLACED:        Type: MANIFEST (ID 24) [
+# REPLACED:          Name: (ID 1) [
+# REPLACED:            Language: (ID 0) [
+# REPLACED:              DataRVA: 0x20A0
+# REPLACED-NEXT:         DataSize: 15
+
+## Grow the resource beyond the address range of the resource section, which
+## moves the following sections again.
+# RUN: llvm-objcopy --update-resource=24/1=%t/large.bin %t/replaced.exe %t/grown.exe
+# RUN: llvm-readobj --file-headers --sections --coff-basereloc --coff-resources %t/grown.exe | \
+# RUN:   FileCheck %s --check-prefix=GROWN
+# RUN: llvm-objcopy --dump-resource=24/1=%t/dumped.bin %t/grown.exe %t/copy.exe
+# RUN: cmp %t/dumped.bin %t/large.bin
+
+# GROWN:      SizeOfImage: 20480
+# GROWN:      ResourceTableRVA: 0x2000
+# GROWN-NEXT: ResourceTableSize: 0x1430
+# GROWN:      BaseRelocationTableRVA: 0x4000
+# GROWN-NEXT: BaseRelocationTableSize: 0x18
+# GROWN:      Name: .rsrc
+# GROWN-NEXT: VirtualSize: 0x1430
+# GROWN-NEXT: VirtualAddress: 0x2000
+# GROWN-NEXT: RawDataSize: 0x1600
+# GROWN-NEXT: PointerToRawData: 0x400
+# GROWN:      Name: .reloc
+# GROWN-NEXT: VirtualSize: 0x18
+# GROWN-NEXT: VirtualAddress: 0x4000
+# GROWN-NEXT: RawDataSize: 0x200
+# GROWN-NEXT: PointerToRawData: 0x1A00
+# GROWN:      BaseReloc [
+# GROWN-NEXT:   Entry {
+# GROWN-NEXT:     Type: DIR64
+# GROWN-NEXT:     Address: 0x1000
+# GROWN-NEXT:   }
+# GROWN-NEXT:   Entry {
+# GROWN-NEXT:     Type: ABSOLUTE
+# GROWN-NEXT:     Address: 0x1000
+# GROWN-NEXT:   }
+# GROWN-NEXT:   Entry {
+# GROWN-NEXT:     Type: DIR64
+# GROWN-NEXT:     Address: 0x4000
+# GROWN-NEXT:   }
+# GROWN-NEXT:   Entry {
+# GROWN-NEXT:     Type: ABSOLUTE
+# GROWN-NEXT:     Address: 0x4000
+# GROWN-NEXT:   }
+# GROWN-NEXT: ]
+# GROWN:      Type: MANIFEST (ID 24) [
+# GROWN:        Name: (ID 1) [
+# GROWN:          Language: (ID 0) [
+# GROWN:            DataRVA: 0x20A8
+# GROWN-NEXT:       DataSize: 5000
+
+## With a language, only the resource of that language is added or replaced.
+# RUN: llvm-objcopy --update-resource=24/1/1033=%t/small.txt --update-resource=24/1/1034=%t/medium.txt \
+# RUN:   %t/noresources.exe %t/languages.exe
+# RUN: llvm-objcopy --update-resource=24/1/1034=%t/large.bin %t/languages.exe %t/languages2.exe
+# RUN: llvm-readobj --coff-resources %t/languages.exe | FileCheck %s --check-prefix=LANGUAGES
+# RUN: llvm-readobj --coff-resources %t/languages2.exe | FileCheck %s --check-prefix=LANGUAGES2
+
+# LANGUAGES:      Language: (ID 1033) [
+# LANGUAGES:        DataSize: 5
+# LANGUAGES:      Language: (ID 1034) [
+# LANGUAGES:        DataSize: 15
+# LANGUAGES2:     Language: (ID 1033) [
+# LANGUAGES2:       DataSize: 5
+# LANGUAGES2:     Language: (ID 1034) [
+# LANGUAGES2:       DataSize: 5000
+
+## Without a language, the resources of all languages are replaced by a single
+## language-neutral one, unless there is only one, whose language is kept.
+# RUN: llvm-objcopy --update-resource=24/1=%t/large.bin %t/languages.exe %t/neutral.exe
+# RUN: llvm-readobj --coff-resources %t/neutral.exe | FileCheck %s --check-prefix=NEUTRAL
+# RUN: llvm-objcopy --update-resource=24/1/1033=%t/small.txt %t/noresources.exe %t/single.exe
+# RUN: llvm-objcopy --update-resource=24/1=%t/medium.txt %t/single.exe %t/kept.exe
+# RUN: llvm-readobj --coff-resources %t/kept.exe | FileCheck %s --check-prefix=KEPT
+
+# NEUTRAL:      Name: (ID 1) [
+# NEUTRAL:        Number of ID Entries: 1
+# NEUTRAL-NEXT:   Language: (ID 0) [
+# NEUTRAL:          DataSize: 5000
+# KEPT:         Name: (ID 1) [
+# KEPT:           Number of ID Entries: 1
+# KEPT-NEXT:      Language: (ID 1033) [
+# KEPT:             DataSize: 15
+
+## The resource section cannot grow beyond its address range if it is followed
+## by a section that is not discardable.
+# RUN: yaml2obj %t/followed.yaml -o %t/followed.exe
+# RUN: llvm-objcopy --update-resource=24/1=%t/medium.txt %t/followed.exe %t/followed2.exe
+# RUN: llvm-readobj --sections --coff-resources %t/followed2.exe | FileCheck %s --check-prefix=FOLLOWED
+# RUN: not llvm-objcopy --update-resource=24/1=%t/large.bin %t/followed.exe %t/followed3.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CANNOT-MOVE
+
+# FOLLOWED:      Name: .rsrc
+# FOLLOWED-NEXT: VirtualSize: 0x67
+# FOLLOWED-NEXT: VirtualAddress: 0x2000
+# FOLLOWED:      Name: .data
+# FOLLOWED-NEXT: VirtualSize: 0x4
+# FOLLOWED-NEXT: VirtualAddress: 0x3000
+# FOLLOWED:      Language: (ID 0) [
+# FOLLOWED:        DataRVA: 0x2058
+# FOLLOWED-NEXT:   DataSize: 15
+# CANNOT-MOVE: error: '{{.*}}followed.exe': section '.rsrc' cannot grow past section '.data', which is not discardable and thus cannot be moved
+
+## Data following the resources in their section cannot be preserved since it
+## would have to move when the resources grow, so only zero padding is allowed.
+# RUN: yaml2obj %t/padded.yaml -o %t/padded.exe
+# RUN: llvm-objcopy --update-resource=24/1=%t/medium.txt %t/padded.exe %t/padded2.exe
+# RUN: llvm-readobj --sections --coff-resources %t/padded2.exe | FileCheck %s --check-prefix=PADDED
+# RUN: yaml2obj %t/trailing.yaml -o %t/trailing.exe
+# RUN: not llvm-objcopy --update-resource=24/1=%t/medium.txt %t/trailing.exe %t/trailing2.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TRAILING
+
+# PADDED:      Name: .rsrc
+# PADDED-NEXT: VirtualSize: 0x67
+# PADDED:      Language: (ID 0) [
+# PADDED:        DataRVA: 0x2058
+# PADDED-NEXT:   DataSize: 15
+# TRAILING: error: '{{.*}}trailing.exe': section '.rsrc' contains data after its resources that cannot be preserved
+
+## The entries of the debug directory are updated if their payloads are moved.
+# RUN: yaml2obj %t/debug.yaml -o %t/debug.exe
+# RUN: llvm-objcopy --update-resource=24/1=%t/large.bin %t/debug.exe %t/debug2.exe
+# RUN: llvm-readobj --file-headers --sections --coff-debug-directory %t/debug2.exe | \
+# RUN:   FileCheck %s --check-prefix=DEBUG
+
+# DEBUG:      DebugRVA: 0x4000
+# DEBUG-NEXT: DebugSize: 0x1C
+# DEBUG:      Name: .debug
+# DEBUG-NEXT: VirtualSize: 0x20
+# DEBUG-NEXT: VirtualAddress: 0x4000
+# DEBUG-NEXT: RawDataSize: 0x200
+# DEBUG-NEXT: PointerToRawData: 0x1800
+# DEBUG:      DebugEntry {
+# DEBUG:        AddressOfRawData: 0x401C
+# DEBUG-NEXT:   PointerToRawData: 0x181C
+# DEBUG-NEXT:   RawData (
+# DEBUG-NEXT:     0000: DEADBEEF
+
+## Resources can only be updated in PE images.
+# RUN: yaml2obj %t/object.yaml -o %t/object.o
+# RUN: not llvm-objcopy --update-resource=24/1=%t/small.txt %t/object.o %t/object2.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-PE
+# RUN: yaml2obj %t/elf.yaml -o %t/elf.o
+# RUN: not llvm-objcopy --update-resource=24/1=%t/small.txt %t/elf.o %t/elf2.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ELF
+
+# NOT-PE: error: '{{.*}}object.o': resources can only be dumped from or updated in PE images
+# ELF: error: option is not supported for ELF
+
+## Invalid option values.
+# RUN: not llvm-objcopy --update-resource=24/1 %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-FILE
+# RUN: not llvm-objcopy --update-resource=24=%t/small.txt %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-FORMAT
+# RUN: not llvm-objcopy --update-resource=24/1/0/0=%t/small.txt %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-FORMAT
+# RUN: not llvm-objcopy --update-resource=x/1=%t/small.txt %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-TYPE
+# RUN: not llvm-objcopy --update-resource=24/y=%t/small.txt %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-NAME
+# RUN: not llvm-objcopy --update-resource=24/1/65536=%t/small.txt %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-LANGUAGE
+# RUN: not llvm-objcopy --update-resource=24/1=%t/missing.txt %t/noresources.exe %t/out.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING -DENOENT=%errc_ENOENT
+
+# NO-FILE: error: bad format for --update-resource: missing file name
+# BAD-FORMAT: error: bad format for --update-resource: expected <type>/<name>[/<language>]=<file>
+# BAD-TYPE: error: bad format for --update-resource: 'x' is not a valid resource type ID
+# BAD-NAME: error: bad format for --update-resource: 'y' is not a valid resource name ID
+# BAD-LANGUAGE: error: bad format for --update-resource: '65536' is not a valid resource language ID
+# MISSING: error: '{{.*}}missing.txt': [[ENOENT]]
+
+#--- small.txt
+ABCD
+#--- medium.txt
+0123456789ABCD
+#--- noresources.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  BaseRelocationTable:
+    RelativeVirtualAddress: 8192
+    Size:            24
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  ## Two base relocation blocks with one DIR64 entry each: one for the .text
+  ## section and one for the .reloc section itself.
+  - Name:            .reloc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     24
+    SectionData:     001000000C00000000A00000002000000C00000000A00000
+symbols:         []
+...
+## An image with a resource section holding a single resource of type 24,
+## name 1 and language 0 with the data "ABCD" (at RVA 0x2058), followed by a
+## section that is not discardable.
+#--- followed.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ResourceTable:
+    RelativeVirtualAddress: 8192
+    Size:            92
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     92
+    SectionData:     000000000000000000000000000001001800000018000080000000000000000000000000000001000100000030000080000000000000000000000000000001000000000048000000582000000400000000000000000000004142434400000000
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  12288
+    VirtualSize:     4
+    SectionData:     01020304
+symbols:         []
+...
+## The same image, but followed by a discardable section that holds the debug
+## directory with a single entry whose payload is in the same section.
+#--- debug.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ResourceTable:
+    RelativeVirtualAddress: 8192
+    Size:            92
+  Debug:
+    RelativeVirtualAddress: 12288
+    Size:            28
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     92
+    SectionData:     000000000000000000000000000001001800000018000080000000000000000000000000000001000100000030000080000000000000000000000000000001000000000048000000582000000400000000000000000000004142434400000000
+  - Name:            .debug
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     32
+    SectionData:     00000000000000000000000000000000040000001C30000000100000DEADBEEF
+symbols:         []
+...
+## The same resources as in followed.yaml, followed by zero padding.
+#--- padded.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ResourceTable:
+    RelativeVirtualAddress: 8192
+    Size:            92
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     100
+    SectionData:     0000000000000000000000000000010018000000180000800000000000000000000000000000010001000000300000800000000000000000000000000000010000000000480000005820000004000000000000000000000041424344000000000000000000000000
+symbols:         []
+...
+## The same resources as in followed.yaml, followed by other data.
+#--- trailing.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ResourceTable:
+    RelativeVirtualAddress: 8192
+    Size:            92
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     100
+    SectionData:     000000000000000000000000000001001800000018000080000000000000000000000000000001000100000030000080000000000000000000000000000001000000000048000000582000000400000000000000000000004142434400000000DEADBEEFDEADBEEF
+symbols:         []
+...
+#--- object.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C3C3C3C3
+symbols:         []
+...
+#--- elf.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+...
