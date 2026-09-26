@@ -1163,15 +1163,29 @@ public:
     // argument index to refer to the arguments of the called function. Unless
     // the index is out of bounds, which presumably means it's a variadic
     // function.
-    if (!DABAttr)
-      return Index;
-    unsigned DABIndices = DABAttr->argIndices_size();
-    unsigned NewIndex = Index < DABIndices
-                            ? DABAttr->argIndices_begin()[Index]
-                            : Index - DABIndices + FD->getNumParams();
+    unsigned NewIndex = Index;
+    if (DABAttr) {
+      unsigned DABIndices = DABAttr->argIndices_size();
+      NewIndex = Index < DABIndices ? DABAttr->argIndices_begin()[Index]
+                                    : Index - DABIndices + FD->getNumParams();
+    }
     if (NewIndex >= TheCall->getNumArgs())
       return std::nullopt;
     return NewIndex;
+  }
+
+  /// Evaluate the argument at Index as an integer constant while preserving
+  /// its signedness, or return std::nullopt if it cannot be evaluated.
+  std::optional<llvm::APSInt> EvaluateIntegerArgument(unsigned Index) {
+    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return std::nullopt;
+    Expr::EvalResult Result;
+    Expr *Arg = TheCall->getArg(*IndexOptional);
+    if (!Arg->EvaluateAsInt(Result, S.getASTContext()))
+      return std::nullopt;
+
+    return Result.Val.getInt();
   }
 
   std::optional<llvm::APSInt>
@@ -1204,18 +1218,30 @@ public:
     std::optional<unsigned> IndexOptional = TranslateIndex(Index);
     if (!IndexOptional)
       return std::nullopt;
-    unsigned NewIndex = *IndexOptional;
 
-    if (NewIndex >= TheCall->getNumArgs())
-      return std::nullopt;
-
-    const Expr *ObjArg = TheCall->getArg(NewIndex);
+    const Expr *ObjArg = TheCall->getArg(*IndexOptional);
     if (std::optional<uint64_t> ObjSize =
             ObjArg->tryEvaluateObjectSize(S.getASTContext(), BOSType)) {
       // Get the object size in the target's size_t width.
       return llvm::APSInt::getUnsigned(*ObjSize).extOrTrunc(SizeTypeWidth);
     }
     return std::nullopt;
+  }
+
+  std::optional<llvm::APSInt>
+  ComputeExplicitObjectSizeArgumentProduct(unsigned LIndex, unsigned RIndex) {
+    auto L = ComputeExplicitObjectSizeArgument(LIndex);
+    auto R = ComputeExplicitObjectSizeArgument(RIndex);
+    if (!L || !R)
+      return std::nullopt;
+
+    unsigned W =
+        2 * std::max({L->getBitWidth(), R->getBitWidth(), SizeTypeWidth});
+
+    llvm::APSInt LE = L->extOrTrunc(W);
+    llvm::APSInt RE = R->extOrTrunc(W);
+
+    return LE * RE;
   }
 
   std::optional<llvm::APSInt> ComputeStrLenArgument(unsigned Index) {
@@ -1313,8 +1339,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
   unsigned SizeTypeWidth = Checker.getSizeTypeWidth();
 
-  std::optional<llvm::APSInt> SourceSize;
-  std::optional<llvm::APSInt> DestinationSize;
+  std::optional<llvm::APSInt> AccessSize;
+  std::optional<llvm::APSInt> BufferSize;
   unsigned DiagID = 0;
 
   switch (BuiltinID) {
@@ -1327,8 +1353,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin_strcpy:
   case Builtin::BIstrcpy: {
     DiagID = diag::warn_fortify_strlen_overflow;
-    SourceSize = Checker.ComputeStrLenArgument(1);
-    DestinationSize = Checker.ComputeSizeArgument(0);
+    AccessSize = Checker.ComputeStrLenArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
 
@@ -1336,8 +1362,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin___stpcpy_chk:
   case Builtin::BI__builtin___strcpy_chk: {
     DiagID = diag::warn_fortify_strlen_overflow;
-    SourceSize = Checker.ComputeStrLenArgument(1);
-    DestinationSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    AccessSize = Checker.ComputeStrLenArgument(1);
+    BufferSize = Checker.ComputeExplicitObjectSizeArgument(2);
     break;
   }
 
@@ -1400,12 +1426,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         DiagID = H.isKernelCompatible()
                      ? diag::warn_format_overflow
                      : diag::warn_format_overflow_non_kprintf;
-        SourceSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
+        AccessSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                          .extOrTrunc(SizeTypeWidth);
         if (BuiltinID == Builtin::BI__builtin___sprintf_chk) {
-          DestinationSize = Checker.ComputeExplicitObjectSizeArgument(2);
+          BufferSize = Checker.ComputeExplicitObjectSizeArgument(2);
         } else {
-          DestinationSize = Checker.ComputeSizeArgument(0);
+          BufferSize = Checker.ComputeSizeArgument(0);
         }
         break;
       }
@@ -1423,9 +1449,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin___memccpy_chk:
   case Builtin::BI__builtin___mempcpy_chk: {
     DiagID = diag::warn_builtin_chk_overflow;
-    SourceSize =
+    AccessSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 2);
-    DestinationSize =
+    BufferSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
 
     if (BuiltinID == Builtin::BI__builtin___memcpy_chk ||
@@ -1439,8 +1465,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin___snprintf_chk:
   case Builtin::BI__builtin___vsnprintf_chk: {
     DiagID = diag::warn_builtin_chk_overflow;
-    SourceSize = Checker.ComputeExplicitObjectSizeArgument(1);
-    DestinationSize = Checker.ComputeExplicitObjectSizeArgument(3);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeExplicitObjectSizeArgument(3);
     break;
   }
 
@@ -1460,9 +1486,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     // size larger than the destination buffer though; this is a runtime abort
     // in _FORTIFY_SOURCE mode, and is quite suspicious otherwise.
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SourceSize =
+    AccessSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
-    DestinationSize = Checker.ComputeSizeArgument(0);
+    BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
 
@@ -1474,8 +1500,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         !TheCall->getArg(2)->getType()->isIntegerType())
       return;
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SourceSize = Checker.ComputeExplicitObjectSizeArgument(2);
-    DestinationSize = Checker.ComputeSizeArgument(1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
     break;
   }
 
@@ -1490,9 +1516,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BImempcpy:
   case Builtin::BI__builtin_mempcpy: {
     DiagID = diag::warn_fortify_source_overflow;
-    SourceSize =
+    AccessSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
-    DestinationSize = Checker.ComputeSizeArgument(0);
+    BufferSize = Checker.ComputeSizeArgument(0);
 
     // Buffer overread doesn't make sense for memset/bzero.
     if (BuiltinID != Builtin::BImemset &&
@@ -1506,13 +1532,38 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIbcopy:
   case Builtin::BI__builtin_bcopy: {
     DiagID = diag::warn_fortify_source_overflow;
-    SourceSize =
+    AccessSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
-    DestinationSize = Checker.ComputeSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(1);
     Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     break;
   }
+  case Builtin::BIfread: {
+    DiagID = diag::warn_fortify_source_overflow;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+  case Builtin::BIfwrite: {
+    DiagID = diag::warn_fortify_source_overread;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+  case Builtin::BIfgets: {
+    AccessSize = Checker.EvaluateIntegerArgument(1);
 
+    if (AccessSize && AccessSize->isNegative()) {
+      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          PDiag(diag::warn_fortify_source_negative_size)
+                              << Checker.getFunctionName());
+      return;
+    }
+
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
   // memchr(buf, val, size)
   case Builtin::BImemchr:
   case Builtin::BI__builtin_memchr: {
@@ -1535,11 +1586,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIvsnprintf:
   case Builtin::BI__builtin_vsnprintf: {
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SourceSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
     const auto *FormatExpr = TheCall->getArg(2)->IgnoreParenImpCasts();
     StringRef FormatStrRef;
     size_t StrLen;
-    if (SourceSize &&
+    if (AccessSize &&
         ProcessFormatStringLiteral(FormatExpr, FormatStrRef, StrLen, Context)) {
       EstimateSizeFormatHandler H(FormatStrRef);
       const char *FormatBytes = FormatStrRef.data();
@@ -1549,13 +1600,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         llvm::APSInt FormatSize =
             llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                 .extOrTrunc(SizeTypeWidth);
-        if (FormatSize > *SourceSize && *SourceSize != 0) {
+        if (FormatSize > *AccessSize && *AccessSize != 0) {
           unsigned TruncationDiagID =
               H.isKernelCompatible() ? diag::warn_format_truncation
                                      : diag::warn_format_truncation_non_kprintf;
           SmallString<16> SpecifiedSizeStr;
           SmallString<16> FormatSizeStr;
-          SourceSize->toString(SpecifiedSizeStr, /*Radix=*/10);
+          AccessSize->toString(SpecifiedSizeStr, /*Radix=*/10);
           FormatSize.toString(FormatSizeStr, /*Radix=*/10);
           DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
                               PDiag(TruncationDiagID)
@@ -1564,7 +1615,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         }
       }
     }
-    DestinationSize = Checker.ComputeSizeArgument(0);
+    BufferSize = Checker.ComputeSizeArgument(0);
     const Expr *LenArg = TheCall->getArg(1)->IgnoreCasts();
     const Expr *Dest = TheCall->getArg(0)->IgnoreCasts();
     IdentifierInfo *FnInfo = FD->getIdentifier();
@@ -1572,19 +1623,19 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   }
   }
 
-  if (!SourceSize || !DestinationSize ||
-      llvm::APSInt::compareValues(*SourceSize, *DestinationSize) <= 0)
+  if (!AccessSize || !BufferSize ||
+      llvm::APSInt::compareValues(*AccessSize, *BufferSize) <= 0)
     return;
 
   std::string FunctionName = Checker.getFunctionName();
 
-  SmallString<16> DestinationStr;
-  SmallString<16> SourceStr;
-  DestinationSize->toString(DestinationStr, /*Radix=*/10);
-  SourceSize->toString(SourceStr, /*Radix=*/10);
+  SmallString<16> BufferSizeStr;
+  SmallString<16> AccessSizeStr;
+  BufferSize->toString(BufferSizeStr, /*Radix=*/10);
+  AccessSize->toString(AccessSizeStr, /*Radix=*/10);
   DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
                       PDiag(DiagID)
-                          << FunctionName << DestinationStr << SourceStr);
+                          << FunctionName << BufferSizeStr << AccessSizeStr);
 }
 
 void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {

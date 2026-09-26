@@ -12,6 +12,7 @@ typedef unsigned long size_t;
 typedef long ssize_t;
 typedef unsigned int socklen_t;
 struct sockaddr;
+typedef struct _IO_FILE FILE;
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +32,9 @@ ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
 #endif
 void bcopy(const void *src, void *dst, size_t n);
 void bzero(void *dst, size_t n);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+char *fgets(char *s, int size, FILE *stream);
 
 #ifdef __cplusplus
 }
@@ -138,6 +142,21 @@ void call_bcopy_bzero(void) {
   __builtin_bcopy(src, dst, 20); // expected-warning {{'bcopy' will always overflow; destination buffer has size 10, but size argument is 20}}
   __builtin_bzero(dst, 10);
   __builtin_bzero(dst, 11); // expected-warning {{'bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
+}
+
+void call_fread_fwrite_fgets(FILE *fp) {
+  char src[4];
+  fread(src, 2, 3, fp); // expected-warning {{'fread' will always overflow; destination buffer has size 4, but size argument is 6}}
+  fread(src, 1ULL << 32, 1ULL << 32, fp); // expected-warning {{'fread' will always overflow; destination buffer has size 4, but size argument is 18446744073709551616}}
+  fwrite(src, 2, 3, fp); // expected-warning {{'fwrite' will always read past the end of the source buffer; source buffer has size 4, but the size is 6}}
+  fgets(src, 5, fp); // expected-warning {{'fgets' size argument is too large; destination buffer has size 4, but size argument is 5}}
+  fgets(src, -1, fp); // expected-warning {{'fgets' size argument is negative}}
+
+  fread(src, 2, 2, fp);
+  fread(src, 0, 10, fp);
+  fwrite(src, 2, 2, fp);
+  fgets(src, 4, fp);
+  fgets(src, 0, fp);
 }
 
 void call_snprintf(double d, int n) {
