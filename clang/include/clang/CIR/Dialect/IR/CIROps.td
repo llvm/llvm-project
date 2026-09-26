@@ -213,6 +213,7 @@ def CIR_CastKind : CIR_I32Enum<"CastKind", "cast kind", [
   I32EnumCase<"ptr_to_bool", 23>,
   // CK_ToVoid
   // CK_MatrixCast
+  // CK_CoopMatrixCast
   // CK_VectorSplat
   I32EnumCase<"integral", 27>,
   I32EnumCase<"int_to_bool", 28>,
@@ -256,6 +257,7 @@ def CIR_CastKind : CIR_I32Enum<"CastKind", "cast kind", [
   // CK_HLSLArrayRValue
   // CK_HLSLElementwiseCast
   // CK_HLSLAggregateSplatCast
+  // CK_CoopMatrixCast
 
   // Enums below are specific to CIR and don't have a correspondence to classic
   // codegen:

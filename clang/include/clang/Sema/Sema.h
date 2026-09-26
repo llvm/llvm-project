@@ -3062,6 +3062,32 @@ private:
                                        BuiltinCountedByRefKind K);
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
+  // Coop matrix handling.
+  bool CheckCoopMatrixLoadElementType(QualType MatrixType,
+                                      SourceLocation MatrixLoc, CallExpr *call);
+  bool CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
+                                           QualType BufferType,
+                                           SourceLocation MatrixLoc);
+  bool CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx);
+  bool CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr);
+  bool CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx);
+  ExprResult BuiltinCoopMatrixStore(CallExpr *TheCall, ExprResult CallResult);
+  ExprResult BuiltinCoopMatrixLoad(CallExpr *TheCall, ExprResult CallResult);
+  bool CheckCoopMatrixMatMulOutput(CallExpr *TheCall);
+  ExprResult BuiltinCoopMatrixMulAdd(CallExpr *TheCall, ExprResult CallResult);
+  ExprResult CreateCoopMatBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
+                                Expr *LHSExpr, Expr *RHSExpr);
+  bool CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
+                            SourceLocation BLoc);
+  ExprResult BuiltinCoopMatrixBinaryOp(CallExpr *TheCall,
+                                       ExprResult CallResult);
+  ExprResult CreateCoopMatScalarOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
+                                   Expr *LHSExpr, Expr *RHSExpr);
+  ExprResult BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
+                                       ExprResult CallResult);
+  ExprResult BuiltinCoopMatrixScalarUnaryOp(CallExpr *TheCall,
+                                            ExprResult CallResult);
+
   // Matrix builtin handling.
   ExprResult BuiltinMatrixTranspose(CallExpr *TheCall, ExprResult CallResult);
   ExprResult BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
@@ -7950,6 +7976,14 @@ public:
   QualType CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
                                        SourceLocation Loc, bool IsCompAssign);
 
+  /// Type checking for cooperative matrix binary operators.
+  QualType CheckCoopMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
+                                              SourceLocation Loc,
+                                              bool IsCompAssign);
+  QualType CheckCoopMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
+                                           SourceLocation Loc,
+                                           bool IsCompAssign);
+
   /// Are the two types SVE-bitcast-compatible types? I.e. is bitcasting from
   /// the first SVE type (e.g. an SVE VLAT) to the second type (e.g. an SVE
   /// VLST) allowed?
@@ -7961,6 +7995,11 @@ public:
   /// Are the two types matrix types and do they have the same dimensions i.e.
   /// do they have the same number of rows and the same number of columns?
   bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
+
+  /// Are the two types cooperative matrix types and do they have the same
+  /// dimensions i.e. do they have the same number of rows and the same number
+  /// of columns? Also do they have the same scope and use?
+  bool areCoopMatrixTypesCompatible(QualType srcTy, QualType destTy);
 
   bool areVectorTypesSameSize(QualType srcType, QualType destType);
 
@@ -8003,6 +8042,13 @@ public:
   // invalid.
   bool CheckMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
                        CastKind &Kind);
+
+  /// Check type constraints for cooperative matrix casts. We allow casting
+  /// between cooperative matrixes of the same scope, use, and same dimensions
+  /// i.e. when they have the same number of rows and columns. Returns true if
+  /// the cast is invalid.
+  bool CheckCoopMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
+                           CastKind &Kind);
 
   // CheckVectorCast - check type constraints for vectors.
   // Since vectors are an extension, there are no C standard reference for this.
@@ -15323,6 +15369,10 @@ public:
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 
+  QualType BuildCoopMatrixType(QualType T, Expr *Scope, Expr *Use,
+                               Expr *NumRows, Expr *NumColumns,
+                               SourceLocation AttrLoc);
+
   QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                   Expr *CountExpr,
                                                   bool CountInBytes,
@@ -15343,6 +15393,8 @@ public:
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
+
+  bool BuiltinReturnsCoopMatrix(Expr *RHSExpr);
 
   /// Build a function type.
   ///

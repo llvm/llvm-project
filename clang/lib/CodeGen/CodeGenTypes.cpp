@@ -90,6 +90,21 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   Ty->setName(OS.str());
 }
 
+llvm::Type *
+CodeGenTypes::ConvertTypeForCoopMat(const CooperativeMatrixType *CMT) {
+  llvm::Type *ElementTy = ConvertType(CMT->getElementType());
+  // Type arguments for TargetExtType
+  llvm::Type *Tys[] = {ElementTy};
+  // Unsigned arguments for TargetExtType
+  unsigned Ints[] = {CMT->getScope(), CMT->getNumRows(), CMT->getNumColumns(),
+                     CMT->getUse()};
+  // Create a TargetExtType to represent the coop matrix type
+  llvm::TargetExtType *RetType = llvm::TargetExtType::get(
+      getLLVMContext(), "spirv.CooperativeMatrixKHR",
+      llvm::ArrayRef<llvm::Type *>(Tys), llvm::ArrayRef<unsigned>(Ints));
+  return RetType;
+}
+
 /// ConvertTypeForMem - Convert type T into a llvm::Type.  This differs from
 /// ConvertType in that it is used to convert to the memory representation for
 /// a type.  For example, the scalar representation for _Bool is i1, but the
@@ -120,7 +135,8 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     }
     return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
-
+  if (const CooperativeMatrixType *CMT = T->getAs<CooperativeMatrixType>())
+    return ConvertTypeForCoopMat(CMT);
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.
@@ -686,6 +702,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType =
         llvm::FixedVectorType::get(ConvertType(MT->getElementType()),
                                    MT->getNumRows() * MT->getNumColumns());
+    break;
+  }
+  case Type::CooperativeMatrix: {
+    ResultType = ConvertTypeForCoopMat(T->getAs<CooperativeMatrixType>());
     break;
   }
   case Type::FunctionNoProto:
