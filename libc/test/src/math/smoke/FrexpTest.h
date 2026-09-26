@@ -19,7 +19,7 @@ public:
   typedef T (*FrexpFunc)(T, int *);
 
   void testSpecialNumbers(FrexpFunc func) {
-    int exponent;
+    int exponent = 0;
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(aNaN, &exponent));
 #ifdef LIBC_FREXP_INF_NAN_EXPONENT
     EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
@@ -43,7 +43,7 @@ public:
   }
 
   void testPowersOfTwo(FrexpFunc func) {
-    int exponent;
+    int exponent = 0;
 
     EXPECT_FP_EQ_ALL_ROUNDING(T(0.5), func(T(1.0), &exponent));
     EXPECT_EQ(exponent, 1);
@@ -77,7 +77,7 @@ public:
   }
 
   void testSomeIntegers(FrexpFunc func) {
-    int exponent;
+    int exponent = 0;
 
     EXPECT_FP_EQ_ALL_ROUNDING(T(0.75), func(T(24.0), &exponent));
     EXPECT_EQ(exponent, 5);

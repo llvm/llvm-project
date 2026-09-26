@@ -18,7 +18,7 @@ using LIBC_NAMESPACE::fputil::Float128;
 TEST(LlvmLibcSharedMathTest, AllFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
 
-  int exponent;
+  int exponent = 0;
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::acospif16(1.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::rsqrtf16(1.0f16));
@@ -167,7 +167,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
 TEST(LlvmLibcSharedMathTest, AllFloat) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
-  int exponent;
+  int exponent = 0;
 
   EXPECT_FP_EQ(0x1.921fb6p+0, LIBC_NAMESPACE::shared::acosf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::acoshf(1.0f));
@@ -631,7 +631,7 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
 
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
-  int exponent;
+  int exponent = 0;
 
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::ffmaf128(
                          float128(0.0), float128(0.0), float128(0.0)));

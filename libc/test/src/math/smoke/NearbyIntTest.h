@@ -60,20 +60,20 @@ public:
     ASSERT_FP_EQ(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalTowardZero(NearbyIntFunc func) {
+  void testSubnormalTowardZero([[maybe_unused]] NearbyIntFunc func) {
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(func(min_denormal), zero);
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalToPosInf(NearbyIntFunc func) {
+  void testSubnormalToPosInf([[maybe_unused]] NearbyIntFunc func) {
     EXPECT_FP_EQ_ROUNDING_UPWARD(func(min_denormal), FPBits::one().get_val());
     EXPECT_FP_EQ_ROUNDING_UPWARD(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalToNegInf(NearbyIntFunc func) {
-    T negative_one = FPBits::one(Sign::NEG).get_val();
+  void testSubnormalToNegInf([[maybe_unused]] NearbyIntFunc func) {
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(min_denormal), zero);
-    EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(-min_denormal), negative_one);
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(-min_denormal),
+                                   FPBits::one(Sign::NEG).get_val());
   }
 };
 

@@ -29,7 +29,7 @@ function(_create_unittest_framework_library fq_target_name)
       ${TEST_LIB_HDRS}
   )
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  if(TARGET libc.src.time.clock)
+  if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     target_compile_definitions(${fq_target_name} PRIVATE TARGET_SUPPORTS_CLOCK)
   endif()
 
@@ -124,11 +124,6 @@ add_unittest_framework_library(
     .LibcTest
 )
 
-set(libc_hermetic_test_support_srcs HermeticTestUtils.cpp)
-if(LIBC_TARGET_OS_IS_BAREMETAL AND LIBC_TARGET_ARCHITECTURE_IS_ARM)
-  list(APPEND libc_hermetic_test_support_srcs ArmBaremetalTestUtils.cpp)
-endif()
-
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
     libc.hdr.stdint_proxy
@@ -163,14 +158,31 @@ else()
   )
 endif()
 
+set(libc_hermetic_test_support_srcs HermeticTestUtils.cpp)
+set(libc_hermetic_test_support_deps 
+  libc.hdr.errno_macros
+  libc.hdr.stdint_proxy
+  libc.src.__support.libc_errno
+)
+if(LIBC_TARGET_OS_IS_BAREMETAL)
+  if(LIBC_TARGET_ARCHITECTURE_IS_ARM)
+    list(APPEND libc_hermetic_test_support_srcs ArmBaremetalTestUtils.cpp)
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_HEXAGON)
+    list(APPEND libc_hermetic_test_support_srcs HexagonBaremetalTestUtils.cpp)
+  endif()
+  list(APPEND libc_hermetic_test_support_deps
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_timespec
+  )
+endif()
+
 add_unittest_framework_library(
   HermeticTestUtils
   SRCS
     ${libc_hermetic_test_support_srcs}
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.stdint_proxy
-    libc.src.__support.libc_errno
+    ${libc_hermetic_test_support_deps}
 )
 
 add_header_library(

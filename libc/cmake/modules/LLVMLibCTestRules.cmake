@@ -513,6 +513,28 @@ if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
 endif()
 
+# Get the compiler runtime builtins library to be used in hermetic and integration tests
+# when -nodefaultlibs is in effect.
+if(NOT MSVC AND NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
+  set(target_flags "")
+  if(CMAKE_C_COMPILER_TARGET)
+    list(APPEND target_flags "--target=${CMAKE_C_COMPILER_TARGET}")
+  endif()
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} ${target_flags} ${LIBC_COMPILE_OPTIONS_DEFAULT} -print-libgcc-file-name
+    OUTPUT_VARIABLE default_builtins_file
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE default_builtins_res
+  )
+  if(default_builtins_res EQUAL 0 AND default_builtins_file AND EXISTS "${default_builtins_file}")
+    set(LIBC_TEST_BUILTINS_LIBRARY "${default_builtins_file}" CACHE FILEPATH
+        "Compiler runtime builtins library to link into libc tests" FORCE)
+  elseif(NOT LIBC_TARGET_OS_IS_BAREMETAL)
+    set(LIBC_TEST_BUILTINS_LIBRARY "-lgcc" CACHE STRING
+        "Compiler runtime builtins library to link into libc tests" FORCE)
+  endif()
+endif()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
@@ -644,8 +666,8 @@ function(add_integration_test test_name)
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
@@ -656,8 +678,8 @@ function(add_integration_test test_name)
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
@@ -670,8 +692,13 @@ function(add_integration_test test_name)
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
     ${fq_target_name}.__libc__
+    ${LIBC_TEST_BUILTINS_LIBRARY}
     ${compiler_runtime}
   )
+  if(LIBC_TEST_BUILTINS_TARGET)
+    target_link_libraries(${fq_build_target_name} $<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>)
+    add_dependencies(${fq_build_target_name} ${LIBC_TEST_BUILTINS_TARGET})
+  endif()
   add_dependencies(${fq_build_target_name}
     libc.test.IntegrationTest.test
     ${INTEGRATION_TEST_DEPENDS})
@@ -958,8 +985,8 @@ function(add_libc_hermetic test_name)
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
@@ -976,8 +1003,8 @@ function(add_libc_hermetic test_name)
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
@@ -1007,8 +1034,13 @@ function(add_libc_hermetic test_name)
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
       ${coverage_link_libs}
+      ${LIBC_TEST_BUILTINS_LIBRARY}
       ${compiler_runtime}
   )
+  if(LIBC_TEST_BUILTINS_TARGET)
+    target_link_libraries(${fq_build_target_name} PRIVATE $<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>)
+    add_dependencies(${fq_build_target_name} ${LIBC_TEST_BUILTINS_TARGET})
+  endif()
   add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)

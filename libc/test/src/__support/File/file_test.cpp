@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
@@ -18,6 +19,7 @@
 #include "test/UnitTest/Test.h"
 
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
+using LIBC_NAMESPACE::Error;
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::File;
 using LIBC_NAMESPACE::FileIOResult;
@@ -97,13 +99,21 @@ FileIOResult StringFile::str_write(LIBC_NAMESPACE::File *f, const void *data,
 ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
                                     int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
+  off_t new_pos;
   if (whence == SEEK_SET)
-    sf->pos = offset;
-  if (whence == SEEK_CUR)
-    sf->pos += offset;
-  if (whence == SEEK_END)
-    sf->pos = SIZE + offset;
-  return sf->pos;
+    new_pos = offset;
+  else if (whence == SEEK_CUR)
+    new_pos = static_cast<off_t>(sf->pos) + offset;
+  else if (whence == SEEK_END)
+    new_pos = static_cast<off_t>(SIZE) + offset;
+  else
+    return Error(EINVAL);
+
+  if (new_pos < 0 || new_pos > static_cast<off_t>(SIZE))
+    return Error(EINVAL);
+
+  sf->pos = static_cast<size_t>(new_pos);
+  return new_pos;
 }
 
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
@@ -503,7 +513,7 @@ TEST(LlvmLibcFileTest, WriteSplit) {
       new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
 
   static constexpr size_t AVAIL = 12;
-  f->seek(-AVAIL, SEEK_END);
+  f->seek(-static_cast<off_t>(AVAIL), SEEK_END);
 
   const char data[] = "hello";
   ASSERT_EQ(sizeof(data) - 1, f->write(data, sizeof(data) - 1).value);
@@ -814,13 +824,21 @@ class ShortWriteFile : public File {
   static ErrorOr<off_t> short_seek(LIBC_NAMESPACE::File *f, off_t offset,
                                    int whence) {
     ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    off_t new_pos;
     if (whence == SEEK_SET)
-      sf->pos = offset;
-    if (whence == SEEK_CUR)
-      sf->pos += offset;
-    if (whence == SEEK_END)
-      sf->pos = SIZE + offset;
-    return sf->pos;
+      new_pos = offset;
+    else if (whence == SEEK_CUR)
+      new_pos = static_cast<off_t>(sf->pos) + offset;
+    else if (whence == SEEK_END)
+      new_pos = static_cast<off_t>(SIZE) + offset;
+    else
+      return Error(EINVAL);
+
+    if (new_pos < 0 || new_pos > static_cast<off_t>(SIZE))
+      return Error(EINVAL);
+
+    sf->pos = static_cast<size_t>(new_pos);
+    return new_pos;
   }
 
   static int short_close(LIBC_NAMESPACE::File *f) {
