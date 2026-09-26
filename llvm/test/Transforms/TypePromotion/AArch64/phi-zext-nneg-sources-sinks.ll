@@ -536,22 +536,19 @@ exit:
   ret i64 %sum.next
 }
 
-; Unsigned promotion must truncate the promoted source before applying an
-; existing sext, preserving negative results.
+; An existing sext user of the source prevents unsigned promotion.
 define i64 @existing_sext_sink_unsigned(i16 %head) {
 ; CHECK-LABEL: define i64 @existing_sext_sink_unsigned(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i16
-; CHECK-NEXT:    [[SIGNED:%.*]] = sext i16 [[TMP1]] to i64
+; CHECK-NEXT:    [[SIGNED:%.*]] = sext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IDX]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i16 [ [[HEAD]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext i16 [[TMP2]] to i64
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -701,23 +698,21 @@ exit:
   ret i64 %result
 }
 
-; In unsigned mode, a sext user of the PHI needs truncation back to i16
-; before sign extension, even if another use zero extends the same PHI.
+; A sext user of the PHI prevents unsigned promotion, even if another use
+; zero extends the same PHI.
 define i64 @phi_sext_sink_unsigned(i16 %head) {
 ; CHECK-LABEL: define i64 @phi_sext_sink_unsigned(
 ; CHECK-SAME: i16 [[HEAD:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[HEAD]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[TMP0]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[HEAD]], %[[ENTRY]] ], [ 0, %[[BODY:.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX]] to i16
 ; CHECK-NEXT:    [[SIGNED:%.*]] = sext i16 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IDX]] to i16
-; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP2]], 0
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i16 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[NEGATIVE]], label %[[EXIT:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[IDX:%.*]] = zext i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[SIGNED]]
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp ne i64 [[IDX]], 0
 ; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT]]
