@@ -11,19 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcInstrInfo.h"
-#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "Sparc.h"
 #include "SparcMachineFunctionInfo.h"
-#include "SparcRegisterInfo.h"
 #include "SparcSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
