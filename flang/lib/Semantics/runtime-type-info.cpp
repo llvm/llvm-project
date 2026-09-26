@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/Twine.h"
 #include <map>
 #include <string>
 
@@ -451,7 +452,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(
   } else if (isPDTDefinitionWithKindParameters && !wantUninstantiatedPDT) {
     return nullptr;
   }
-  std::string dtDescName{(fir::kTypeDescriptorSeparator + distinctName).str()};
+  std::string dtDescName{(llvm::Twine(fir::kTypeDescriptorSeparator) + distinctName).str()};
   Scope *dtSymbolScope{const_cast<Scope *>(dtSymbol->scope())};
   Scope &scope{
       GetContainingNonDerivedScope(dtSymbolScope ? *dtSymbolScope : dtScope)};
@@ -524,11 +525,11 @@ const Symbol *RuntimeTableBuilder::DescribeType(
   }
   AddValue(dtValues, derivedTypeSchema_, "kindparameter"s,
       SaveNumericPointerTarget<Int8>(scope,
-          SaveObjectName((fir::kKindParameterSeparator + distinctName).str()),
+          SaveObjectName((llvm::Twine(fir::kKindParameterSeparator) + distinctName).str()),
           std::move(kinds)));
   AddValue(dtValues, derivedTypeSchema_, "lenparameterkind"s,
       SaveNumericPointerTarget<Int1>(scope,
-          SaveObjectName((fir::kLenKindSeparator + distinctName).str()),
+          SaveObjectName((llvm::Twine(fir::kLenKindSeparator) + distinctName).str()),
           std::move(lenKinds)));
   // Traverse the components of the derived type
   if (!isPDTDefinitionWithKindParameters) {
@@ -578,14 +579,14 @@ const Symbol *RuntimeTableBuilder::DescribeType(
     }
     AddValue(dtValues, derivedTypeSchema_, "component"s,
         SaveDerivedPointerTarget(scope,
-            SaveObjectName((fir::kComponentSeparator + distinctName).str()),
+            SaveObjectName((llvm::Twine(fir::kComponentSeparator) + distinctName).str()),
             std::move(dataComponents),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(
                     dataComponents.size())}));
     AddValue(dtValues, derivedTypeSchema_, "procptr"s,
         SaveDerivedPointerTarget(scope,
-            SaveObjectName((fir::kProcPtrSeparator + distinctName).str()),
+            SaveObjectName((llvm::Twine(fir::kProcPtrSeparator) + distinctName).str()),
             std::move(procPtrComponents),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(
@@ -599,7 +600,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(
       AddValue(dtValues, derivedTypeSchema_, bindingDescCompName,
           SaveDerivedPointerTarget(scope,
               SaveObjectName(
-                  (fir::kBindingTableSeparator + distinctName).str()),
+                  (llvm::Twine(fir::kBindingTableSeparator) + distinctName).str()),
               std::move(bindings),
               evaluate::ConstantSubscripts{
                   static_cast<evaluate::ConstantSubscript>(bindings.size())}));
@@ -639,7 +640,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(
       AddValue(dtValues, derivedTypeSchema_, "special"s,
           SaveDerivedPointerTarget(scope,
               SaveObjectName(
-                  (fir::kSpecialBindingSeparator + distinctName).str()),
+                  (llvm::Twine(fir::kSpecialBindingSeparator) + distinctName).str()),
               std::move(sortedSpecials),
               evaluate::ConstantSubscripts{
                   static_cast<evaluate::ConstantSubscript>(specials.size())}));
@@ -753,7 +754,7 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
   Symbol &symbol{
       *scope
            .try_emplace(
-               SaveObjectName((fir::kNameStringSeparator + name).str()),
+               SaveObjectName((llvm::Twine(fir::kNameStringSeparator) + name).str()),
                Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
            .first->second};
   SetReadOnlyCompilerCreatedFlags(symbol);
@@ -851,7 +852,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   if (!lenParams.empty()) {
     AddValue(values, componentSchema_, "lenvalue"s,
         SaveDerivedPointerTarget(scope,
-            SaveObjectName((fir::kLenParameterSeparator + distinctName +
+            SaveObjectName((llvm::Twine(fir::kLenParameterSeparator) + distinctName +
                 fir::kNameSeparator + symbol.name().ToString())
                                .str()),
             std::move(lenParams),
@@ -876,7 +877,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     }
     AddValue(values, componentSchema_, "bounds"s,
         SaveDerivedPointerTarget(scope,
-            SaveObjectName((fir::kBoundsSeparator + distinctName +
+            SaveObjectName((llvm::Twine(fir::kBoundsSeparator) + distinctName +
                 fir::kNameSeparator + symbol.name().ToString())
                                .str()),
             std::move(bounds), evaluate::ConstantSubscripts{2, rank}));
@@ -900,7 +901,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     if (hasDataInit) {
       AddValue(values, componentSchema_, "initialization"s,
           SaveObjectInit(scope,
-              SaveObjectName((fir::kComponentInitSeparator + distinctName +
+              SaveObjectName((llvm::Twine(fir::kComponentInitSeparator) + distinctName +
                   fir::kNameSeparator + symbol.name().ToString())
                                  .str()),
               object));
@@ -960,7 +961,7 @@ bool RuntimeTableBuilder::InitializeDataPointer(
     const ObjectEntityDetails &object, Scope &scope, Scope &dtScope,
     const std::string &distinctName) {
   if (object.init().has_value()) {
-    SourceName ptrDtName{SaveObjectName((fir::kDataPtrInitSeparator +
+    SourceName ptrDtName{SaveObjectName((llvm::Twine(fir::kDataPtrInitSeparator) +
         distinctName + fir::kNameSeparator + symbol.name().ToString())
                                             .str())};
     Symbol &ptrDtSym{
@@ -995,7 +996,7 @@ bool RuntimeTableBuilder::InitializeDataPointer(
         Structure(ptrDtDeclType, std::move(ptrInitValues))));
     AddValue(values, componentSchema_, "initialization"s,
         SaveObjectInit(scope,
-            SaveObjectName((fir::kComponentInitSeparator + distinctName +
+            SaveObjectName((llvm::Twine(fir::kComponentInitSeparator) + distinctName +
                 fir::kNameSeparator + symbol.name().ToString())
                                .str()),
             ptrInitObj));

@@ -242,7 +242,9 @@ private:
 // have rank > 0 only in an uppermost ArrayRef.
 class CoarrayRef {
 public:
-  CLASS_BOILERPLATE(CoarrayRef)
+  CoarrayRef() = delete;
+  DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(CoarrayRef)
+  ~CoarrayRef();
   CoarrayRef(DataRef &&, std::vector<Expr<SubscriptInteger>> &&);
 
   const DataRef &base() const { return base_.value(); }
@@ -286,7 +288,11 @@ private:
 // a terminal substring range or complex component designator; use
 // R901 designator for that.
 struct DataRef {
-  EVALUATE_UNION_CLASS_BOILERPLATE(DataRef)
+  DataRef() = delete;
+  DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(DataRef)
+  UNION_CONSTRUCTORS(DataRef)
+  ~DataRef();
+  bool operator==(const DataRef &) const;
   int Rank() const;
   int Corank() const;
   const Symbol &GetFirstSymbol() const;
@@ -307,16 +313,11 @@ class Substring {
 public:
   CLASS_BOILERPLATE(Substring)
   Substring(DataRef &&parent, std::optional<Expr<SubscriptInteger>> &&lower,
-      std::optional<Expr<SubscriptInteger>> &&upper)
-      : parent_{std::move(parent)} {
-    SetBounds(lower, upper);
-  }
+      std::optional<Expr<SubscriptInteger>> &&upper);
   Substring(StaticDataObject::Pointer &&parent,
       std::optional<Expr<SubscriptInteger>> &&lower,
-      std::optional<Expr<SubscriptInteger>> &&upper)
-      : parent_{std::move(parent)} {
-    SetBounds(lower, upper);
-  }
+      std::optional<Expr<SubscriptInteger>> &&upper);
+  ~Substring();
 
   Expr<SubscriptInteger> lower() const;
   const Expr<SubscriptInteger> *GetLower() const {
@@ -357,8 +358,10 @@ private:
 class ComplexPart {
 public:
   ENUM_CLASS(Part, RE, IM)
-  CLASS_BOILERPLATE(ComplexPart)
-  ComplexPart(DataRef &&z, Part p) : complex_{std::move(z)}, part_{p} {}
+  ComplexPart() = delete;
+  DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(ComplexPart)
+  ~ComplexPart();
+  ComplexPart(DataRef &&z, Part p);
   DataRef &complex() { return complex_; }
   const DataRef &complex() const { return complex_; }
   Part part() const { return part_; }

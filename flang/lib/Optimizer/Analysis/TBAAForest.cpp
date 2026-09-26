@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/TBAAForest.h"
+#include "llvm/ADT/Twine.h"
 #include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 
 mlir::LLVM::TBAATagAttr
 fir::TBAATree::SubtreeState::getTag(llvm::StringRef uniqueName) const {
-  std::string id = (parentId + '/' + uniqueName).str();
+  std::string id = (llvm::Twine(parentId) + "/" + uniqueName).str();
   mlir::LLVM::TBAATypeDescriptorAttr type =
       mlir::LLVM::TBAATypeDescriptorAttr::get(
           context, id, mlir::LLVM::TBAAMemberAttr::get(parent, 0));

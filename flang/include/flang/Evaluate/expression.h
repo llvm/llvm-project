@@ -545,8 +545,8 @@ public:
   using Base = ArrayConstructorValues<Result>;
   CLASS_BOILERPLATE(ArrayConstructor)
 
-  ArrayConstructor(const semantics::DerivedTypeSpec &spec, Base &&v)
-      : Base{std::move(v)}, result_{spec} {}
+  ArrayConstructor(const semantics::DerivedTypeSpec &spec, Base &&v);
+  ~ArrayConstructor();
   template <typename A>
   explicit ArrayConstructor(const A &prototype)
       : result_{prototype.GetType().value().GetDerivedTypeSpec()} {}
@@ -915,6 +915,11 @@ public:
 public:
   common::CombineVariants<TypelessExpression, CategoryExpression> u;
 };
+
+inline ArrayConstructor<SomeDerived>::ArrayConstructor(
+    const semantics::DerivedTypeSpec &spec, Base &&v)
+    : Base{std::move(v)}, result_{spec} {}
+inline ArrayConstructor<SomeDerived>::~ArrayConstructor() = default;
 
 // An assignment is either intrinsic, user-defined (with a ProcedureRef to
 // specify the procedure to call), or pointer assignment (with possibly empty
