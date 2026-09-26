@@ -581,37 +581,41 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   if (useInBoundsInsteadOfMasking)
     return write;
 
+  // The dest dims written to are those the permutation map selects. A null map
+  // means a minor identity: the trailing dims.
+  AffineMap map = permutationMap
+                      ? permutationMap
+                      : AffineMap::getMinorIdentityMap(destRank, vecToStoreRank,
+                                                       builder.getContext());
+
   // Check if masking is needed. If not, exit.
-  if (llvm::equal(vecToStoreShape, destShape.take_back(vecToStoreRank)))
+  if (llvm::equal(vecToStoreShape, applyPermutationMap(map, destShape)))
     return write;
 
   // Compute the mask and mask the write Op.
-  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
-                                       vecToStoreType.getScalableDims());
+  VectorType writeMaskType = inferTransferOpMaskType(vecToStoreType, map);
 
   SmallVector<OpFoldResult> destSizes =
       isa<MemRefType>(dest.getType())
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
 
-  // Compute sizes for write-mask
+  // Compute sizes for write-mask: `dim - index` for each dest dim written to,
+  // in increasing order, as the mask dims are.
+  SmallVector<int64_t> writtenDims;
+  for (AffineExpr expr : map.getResults())
+    writtenDims.push_back(cast<AffineDimExpr>(expr).getPosition());
+  llvm::sort(writtenDims);
   SmallVector<OpFoldResult> maskSizes;
-  if (useDefaultWriteIdxs) {
-    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
-                                          destSizes.end());
-  } else {
-    size_t diff = destShape.size() - vecToStoreRank;
-    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
-      auto value =
-          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
-      auto neg =
-          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
-      maskSizes.push_back(OpFoldResult(neg));
-    }
+  for (int64_t dim : writtenDims) {
+    Value size = getValueOrCreateConstantIndexOp(builder, loc, destSizes[dim]);
+    maskSizes.push_back(
+        builder.createOrFold<arith::SubIOp>(loc, size, writeIndices[dim]));
   }
 
-  if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
-                              vecToStoreShape))
+  // isMaskTriviallyFoldable does not take a permutation map.
+  if (!permutationMap && isMaskTriviallyFoldable(maskSizes, writeIndices,
+                                                 destShape, vecToStoreShape))
     return write;
 
   Value maskForWrite =
