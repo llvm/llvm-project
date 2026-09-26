@@ -74,7 +74,7 @@ target-defined scopes and constraints:
 
 - *system scope* (same as LLVM)
 - "agent" scope
-- "cluster" scope
+- "cluster" scope (see {ref}`amdgpu-clusters`)
 - "workgroup" scope
 - "wavefront" scope
 - "singlethread" scope (same as LLVM)

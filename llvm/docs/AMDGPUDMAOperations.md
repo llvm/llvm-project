@@ -99,7 +99,7 @@ void @llvm.amdgcn.{global|cluster}.load.async.to.lds.b<N>(
     ptr addrspace(3) %lds_base, ; LDS base pointer (per-lane)
     i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
     i32 immarg %cpol,           ; cache policy (immediate)
-    [i32 %m0])                  ; workgroup broadcast mask, cluster variants only (in M0)
+    [i32 %mask])                ; workgroup broadcast mask, cluster variants only (wave-uniform, in M0)
 ```
 
 The bit-size encoded in the name can be 8, 32, 64 or 128.
@@ -107,8 +107,51 @@ The bit-size encoded in the name can be 8, 32, 64 or 128.
 Loads data from global memory to LDS. The `%offset` is applied to both the
 global and LDS addresses.
 
-The `cluster` variants add a `%m0` argument for workgroup broadcast. The
-broadcast mask selects which workgroups within a cluster participate in the load.
+(amdgpu-cluster-broadcast-dma)=
+
+**Cluster Broadcast**
+
+The `cluster` variants let several workgroups in a {ref}`workgroup cluster
+<amdgpu-clusters>` share a single fetch from global memory when they are all
+loading the same data to their respective LDS. The `%mask` argument identifies
+the group of workgroups whose requests may be combined, and controls the request
+timeout. The mask is wave-uniform and passed in the `M0` register:
+
+- Bits `[15:0]` are the *workgroup broadcast mask*: bit `i` corresponds to the
+  workgroup with cluster index `i`. Each workgroup that wants to participate in
+  the combined fetch must set its own bit and all participating workgroups must
+  supply an identical mask (and the same address). If the mask is all-zero, the
+  operation behaves like an ordinary, non-cluster load: it returns only to the
+  requesting workgroup.
+- Bit `[16]` selects the timeout behavior. When clear, a target-defined timeout
+  is used: requests are combined if they arrive within that window. When set,
+  an *early timeout* is used: as soon as the L2 cache supplies the data, it is
+  returned to whichever waves have already issued their requests.
+
+Each participating workgroup issues its own request, with one wave per
+workgroup. For requests that arrive within the timeout, the L2 cache is accessed
+only once, and a copy of the loaded data is written into the LDS of each of
+those workgroups. Workgroups that issue their request later trigger a new,
+separate combined fetch. The data is written at the same LDS location
+(`%lds_base` plus `%offset`) in each participating workgroup.
+
+Because each wave's request only ever writes to its own workgroup's LDS, this is
+an ordinary `addrspace(3)` access with scope "workgroup", exactly like a
+non-cluster variant of this load. Completion is tracked independently for each
+request using the requesting wave's own
+{ref}`asyncmarks<amdgpu-async-operations>`; there is no signal that tells a wave
+when the *other* participating workgroups have completed their own requests.
+Applications that need every participating workgroup to observe the shared data
+must synchronize separately across those workgroups.
+
+The `cluster` variants are only available on targets that have the
+`mcast-load-insts` subtarget feature (e.g., GFX1250). Using them on any other
+target is not supported. Note that this feature is distinct from workgroup
+cluster support itself: a target may support clusters without providing these
+broadcast DMA instructions.
+
+On the `gfx1250-strict` subtarget, the mask is always forced to zero and no
+broadcast occurs, regardless of the value supplied.
 
 ```llvm
 void @llvm.amdgcn.global.store.async.from.lds.b<N>(
