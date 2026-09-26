@@ -1,13 +1,15 @@
 ; RUN: llc -mtriple=sparc -verify-machineinstrs < %s | FileCheck %s
 
 ;; Test reserve-* options.
-; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-g1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1
-; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-o1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-O1
-; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-l1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-L1
-; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-I1
+; RUN: llc -mtriple=sparc64-linux-gnu -disable-sparc-leaf-proc -mattr=+reserve-g1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1
+; RUN: llc -mtriple=sparc64-linux-gnu -disable-sparc-leaf-proc -mattr=+reserve-o1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-O1
+; RUN: llc -mtriple=sparc64-linux-gnu -disable-sparc-leaf-proc -mattr=+reserve-l1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-L1
+; RUN: llc -mtriple=sparc64-linux-gnu -disable-sparc-leaf-proc -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-I1
+; RUN: llc -mtriple=sparc64-linux-gnu -verify-machineinstrs -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=LEAF-RESERVED-I1
+; RUN: llc -mtriple=sparc -verify-machineinstrs -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=LEAF32-RESERVED-I1
 
 ;; Test multiple reserve-* options together.
-; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-g1 -mattr=+reserve-o1 -mattr=+reserve-l1 -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1,CHECK-RESERVED-O1,CHECK-RESERVED-L1,CHECK-RESERVED-I1
+; RUN: llc -mtriple=sparc64-linux-gnu -disable-sparc-leaf-proc -mattr=+reserve-g1 -mattr=+reserve-o1 -mattr=+reserve-l1 -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1,CHECK-RESERVED-O1,CHECK-RESERVED-L1,CHECK-RESERVED-I1
 
 @g = common global [32 x i32] zeroinitializer, align 16
 @h = common global [16 x i64] zeroinitializer, align 16
@@ -15,21 +17,25 @@
 ;; Ensures that we don't use registers which are supposed to be reserved.
 
 ; CHECK-LABEL: use_all_i32_regs:
-; CHECK: save %sp
-; CHECK: .cfi_register %o7, %i7
+; CHECK: add %sp, -{{[0-9]+}}, %sp
+; CHECK-NOT: .cfi_window_save
 ; CHECK-NOT: %g0
 ; CHECK-NOT: %g1
 ; CHECK-NOT: %g5
 ; CHECK-NOT: %g6
 ; CHECK-NOT: %g7
 ; CHECK-NOT: %o6
-; CHECK-NOT: %i6
-; CHECK-NOT: %i7
+; CHECK-NOT: %i{{[0-7]}}
+; CHECK-NOT: %l{{[0-7]}}
+; CHECK-NOT: %fp
 ; CHECK-RESERVED-G1-NOT: %g1
 ; CHECK-RESERVED-O1-NOT: %o1
 ; CHECK-RESERVED-L1-NOT: %l1
 ; CHECK-RESERVED-I1-NOT: %i1
-; CHECK: ret
+; CHECK: retl
+; LEAF-RESERVED-I1-LABEL: use_all_i32_regs:
+; LEAF-RESERVED-I1-NOT: %o1
+; LEAF-RESERVED-I1: retl
 define void @use_all_i32_regs() {
 entry:
   %0 = load volatile i32, ptr @g, align 16
@@ -101,23 +107,29 @@ entry:
 
 
 ; CHECK-LABEL: use_all_i64_regs:
-; CHECK: save %sp
-; CHECK: .cfi_register %o7, %i7
+; CHECK: add %sp, -{{[0-9]+}}, %sp
+; CHECK-NOT: .cfi_window_save
 ; CHECK-NOT: %g0
 ; CHECK-NOT: %g1
-; CHECK-NOT: %g4
 ; CHECK-NOT: %g5
+; CHECK-NOT: ldd {{.*}}, %g4
+; CHECK-NOT: std %g4
 ; CHECK-NOT: %g6
 ; CHECK-NOT: %g7
 ; CHECK-NOT: %o6
 ; CHECK-NOT: %o7
-; CHECK-NOT: %i6
-; CHECK-NOT: %i7
+; CHECK-NOT: %i{{[0-7]}}
+; CHECK-NOT: %l{{[0-7]}}
+; CHECK-NOT: %fp
 ; CHECK-RESERVED-G1-NOT: %g1
 ; CHECK-RESERVED-O1-NOT: %o1
 ; CHECK-RESERVED-L1-NOT: %l1
 ; CHECK-RESERVED-I1-NOT: %i1
-; CHECK: ret
+; CHECK: retl
+; LEAF32-RESERVED-I1-LABEL: use_all_i64_regs:
+; LEAF32-RESERVED-I1-NOT: ldd {{.*}}, %o0
+; LEAF32-RESERVED-I1-NOT: std %o0
+; LEAF32-RESERVED-I1: retl
 define void @use_all_i64_regs() {
 entry:
   %0 = load volatile i64, ptr @h, align 16

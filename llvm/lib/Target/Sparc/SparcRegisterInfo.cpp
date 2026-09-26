@@ -12,6 +12,7 @@
 
 #include "SparcRegisterInfo.h"
 #include "Sparc.h"
+#include "SparcMachineFunctionInfo.h"
 #include "SparcSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -101,6 +102,22 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
        i != SP::IntRegsRegClass.end(); ++i) {
     if (MF.getSubtarget<SparcSubtarget>().isRegisterReserved(*i))
       markSuperRegs(Reserved, *i);
+  }
+
+  if (MF.getInfo<SparcMachineFunctionInfo>()->isLeafProc()) {
+    auto ReserveAliases = [&](MCRegister Reg) {
+      for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
+        Reserved.set(*AI);
+    };
+
+    for (unsigned Reg = SP::I0; Reg <= SP::I7; ++Reg)
+      if (Reserved.test(Reg))
+        ReserveAliases(Reg - SP::I0 + SP::O0);
+
+    for (unsigned Reg = SP::I0; Reg <= SP::I7; ++Reg)
+      ReserveAliases(Reg);
+    for (unsigned Reg = SP::L0; Reg <= SP::L7; ++Reg)
+      ReserveAliases(Reg);
   }
 
   assert(checkAllSuperRegsMarked(Reserved));

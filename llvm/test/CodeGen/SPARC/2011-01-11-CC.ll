@@ -167,14 +167,14 @@ define double @test_select_dfp_icc(i32 %a, double %f1, double %f2) nounwind {
 ; V8-LABEL: test_select_dfp_icc:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    add %sp, -112, %sp
-; V8-NEXT:    mov %o4, %o5
-; V8-NEXT:    mov %o2, %g3
-; V8-NEXT:    mov %o3, %o4
-; V8-NEXT:    std %o4, [%sp+96]
+; V8-NEXT:    mov %o4, %g3
+; V8-NEXT:    mov %o2, %o5
+; V8-NEXT:    mov %o3, %g2
+; V8-NEXT:    std %g2, [%sp+96]
 ; V8-NEXT:    cmp %o0, 0
-; V8-NEXT:    mov %o1, %g2
+; V8-NEXT:    mov %o1, %o4
 ; V8-NEXT:    be .LBB3_2
-; V8-NEXT:    std %g2, [%sp+104]
+; V8-NEXT:    std %o4, [%sp+104]
 ; V8-NEXT:  ! %bb.1: ! %entry
 ; V8-NEXT:    ldd [%sp+96], %f0
 ; V8-NEXT:    retl
@@ -187,12 +187,12 @@ define double @test_select_dfp_icc(i32 %a, double %f1, double %f2) nounwind {
 ; V9-LABEL: test_select_dfp_icc:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    add %sp, -112, %sp
-; V9-NEXT:    mov %o4, %o5
-; V9-NEXT:    mov %o2, %g3
-; V9-NEXT:    mov %o3, %o4
-; V9-NEXT:    std %o4, [%sp+96]
-; V9-NEXT:    mov %o1, %g2
-; V9-NEXT:    std %g2, [%sp+104]
+; V9-NEXT:    mov %o4, %g3
+; V9-NEXT:    mov %o2, %o5
+; V9-NEXT:    mov %o3, %g2
+; V9-NEXT:    std %g2, [%sp+96]
+; V9-NEXT:    mov %o1, %o4
+; V9-NEXT:    std %o4, [%sp+104]
 ; V9-NEXT:    ldd [%sp+96], %f0
 ; V9-NEXT:    ldd [%sp+104], %f2
 ; V9-NEXT:    cmp %o0, 0

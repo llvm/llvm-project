@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=sparc -disable-sparc-leaf-proc=0 < %s | FileCheck %s
+; RUN: llc -mtriple=sparcv9 -disable-sparc-leaf-proc=0 < %s | FileCheck %s --check-prefix=V9
 
 ; CHECK-LABEL:      func_nobody:
 ; CHECK:      retl
@@ -39,6 +40,16 @@ entry:
   ret i32 %1
 }
 
+; CHECK-LABEL: leaf_proc_with_i64_arg:
+; CHECK:       addcc %o1, 1, %o1
+; CHECK:       retl
+; CHECK-NEXT:  addxcc %o0, 0, %o0
+define i64 @leaf_proc_with_i64_arg(i64 %x) {
+entry:
+  %value = add i64 %x, 1
+  ret i64 %value
+}
+
 ; CHECK-LABEL:     leaf_proc_with_args_in_stack:
 ; CHECK-DAG: ld [%sp+92], {{%[go][0-7]}}
 ; CHECK-DAG: ld [%sp+96], {{%[go][0-7]}}
@@ -58,6 +69,8 @@ entry:
 
 ; CHECK-LABEL:      leaf_proc_with_local_array:
 ; CHECK:      add %sp, -104, %sp
+; CHECK-NEXT: .cfi_def_cfa_offset 104
+; CHECK-NOT:  .cfi_window_save
 ; CHECK:      mov 1, [[R1:%[go][0-7]]]
 ; CHECK:      st [[R1]], [%sp+96]
 ; CHECK:      mov 2, [[R2:%[go][0-7]]]
@@ -67,6 +80,11 @@ entry:
 ; CHECK-NEXT: add %sp, 104, %sp
 
 define i32 @leaf_proc_with_local_array(i32 %a, i32 %b, i32 %c) {
+; V9-LABEL: leaf_proc_with_local_array:
+; V9:       add %sp, -144, %sp
+; V9-NEXT:  .cfi_def_cfa_offset 2191
+; V9-NOT:   .cfi_window_save
+; V9:       retl
 entry:
   %array = alloca [2 x i32], align 4
   %0 = sub nsw i32 %b, %c
