@@ -16,28 +16,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionEnumValueElement g_watch_type[] = {
-    {
-        OptionGroupWatchpoint::eWatchRead,
-        "read",
-        "Watch for read",
-    },
-    {
-        OptionGroupWatchpoint::eWatchWrite,
-        "write",
-        "Watch for write",
-    },
-    {
-        OptionGroupWatchpoint::eWatchModify,
-        "modify",
-        "Watch for modifications",
-    },
-    {
-        OptionGroupWatchpoint::eWatchReadWrite,
-        "read_write",
-        "Watch for read/write",
-    },
-};
+#define LLDB_ENUMS_watch_type
+#include "OptionGroupWatchpointEnums.inc"
 
 static constexpr OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "watch", 'w', OptionParser::eRequiredArgument,

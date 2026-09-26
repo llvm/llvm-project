@@ -63,31 +63,8 @@ enum KASLRScanType {
                            // range looking for a kernel
 };
 
-static constexpr OptionEnumValueElement g_kaslr_kernel_scan_enum_values[] = {
-    {
-        eKASLRScanNone,
-        "none",
-        "Do not read memory looking for a Darwin kernel when attaching.",
-    },
-    {
-        eKASLRScanLowgloAddresses,
-        "basic",
-        "Check for the Darwin kernel's load addr in the lowglo page "
-        "(boot-args=debug) only.",
-    },
-    {
-        eKASLRScanNearPC,
-        "fast-scan",
-        "Scan near the pc value on attach to find the Darwin kernel's load "
-        "address.",
-    },
-    {
-        eKASLRScanExhaustiveScan,
-        "exhaustive-scan",
-        "Scan through the entire potential address range of Darwin kernel "
-        "(only on 32-bit targets).",
-    },
-};
+#define LLDB_ENUMS_kaslr_kernel_scan_enum_values
+#include "DynamicLoaderDarwinKernelEnums.inc"
 
 #define LLDB_PROPERTIES_dynamicloaderdarwinkernel
 #include "DynamicLoaderDarwinKernelProperties.inc"

@@ -52,23 +52,8 @@ LLDB_PLUGIN_DEFINE(ObjectFilePECOFF)
 
 namespace {
 
-static constexpr OptionEnumValueElement g_abi_enums[] = {
-    {
-        llvm::Triple::UnknownEnvironment,
-        "default",
-        "Use default target (if it is Windows) or MSVC",
-    },
-    {
-        llvm::Triple::MSVC,
-        "msvc",
-        "MSVC ABI",
-    },
-    {
-        llvm::Triple::GNU,
-        "gnu",
-        "MinGW / Itanium ABI",
-    },
-};
+#define LLDB_ENUMS_abi_enums
+#include "ObjectFilePECOFFEnums.inc"
 
 #define LLDB_PROPERTIES_objectfilepecoff
 #include "ObjectFilePECOFFProperties.inc"
