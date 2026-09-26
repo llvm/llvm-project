@@ -5398,6 +5398,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
 
+  case ICK_HLSL_Packed_Type_Conversion: {
+    From = ImpCastExprToType(From, ToType, CK_IntegralCast,
+                             From->getValueKind(), nullptr, CCK)
+               .get();
+    break;
+  }
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:

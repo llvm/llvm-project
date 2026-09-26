@@ -8171,6 +8171,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case PREDEF_TYPE_##Id##_ID:                                                  \
     T = Context.SingletonId;                                                   \

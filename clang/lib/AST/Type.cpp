@@ -3791,6 +3791,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case Id:                                                                     \
+    return #Name;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case Id:                                                                     \
     return Name;
@@ -5412,6 +5416,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:

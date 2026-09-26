@@ -239,6 +239,7 @@ public:
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
+  bool CanPerformPackedTypeCast(Expr *SrcTy, QualType DestTy);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);

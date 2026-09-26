@@ -5274,6 +5274,20 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
   return true;
 }
 
+bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  QualType UIntTy = Ctx.UnsignedIntTy;
+  QualType SrcTy = Src->getType();
+
+  const bool SrcIsUint = Ctx.hasSameUnqualifiedType(SrcTy, UIntTy);
+  const bool DestIsUint = Ctx.hasSameUnqualifiedType(DestTy, UIntTy);
+
+  return (SrcTy->isHLSLBuiltinPackedType() &&
+          DestTy->isHLSLBuiltinPackedType()) ||
+         (SrcTy->isHLSLBuiltinPackedType() && DestIsUint) ||
+         (DestTy->isHLSLBuiltinPackedType() && SrcIsUint);
+}
+
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   assert(Param->hasAttr<HLSLParamModifierAttr>() &&
          "We should not get here without a parameter modifier expression");

@@ -552,6 +552,9 @@ KEYWORD(column_major                , KEYHLSL)
 // HLSL Intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// HLSL Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) KEYWORD(Name, KEYHLSL)
+#include "clang/Basic/HLSLPackedTypes.def"
 
 // Borland Extensions.
 KEYWORD(__pascal                    , KEYALL)

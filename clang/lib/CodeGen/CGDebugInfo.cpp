@@ -979,6 +979,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id:                                                        \
     return getOrCreateStructPtrType(#Name, SingletonId);
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    return DBuilder.createBasicType(#Name, 32, llvm::dwarf::DW_ATE_unsigned);
+#include "clang/Basic/HLSLPackedTypes.def"
 
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64ACLETypes.def"

@@ -590,6 +590,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
       ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
       break;
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 32);
+      break;
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "spirv.Event");
