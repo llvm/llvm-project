@@ -1981,6 +1981,12 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Create a long branch using a register proven dead at the target.
+  virtual void createLongBranch(MCInst &Inst, const MCSymbol *Target,
+                                MCPhysReg ScratchReg, MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Creates a new call instruction in Inst and sets its operand to
   /// Target.
   virtual void createCall(MCInst &Inst, const MCSymbol *Target,
