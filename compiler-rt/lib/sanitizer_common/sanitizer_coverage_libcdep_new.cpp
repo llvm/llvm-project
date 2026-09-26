@@ -256,6 +256,12 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp2, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_switch, void) {}
+// Dataflow coverage (trace-args / trace-ret). Weak no-op defaults so a program
+// built with -fsanitize-coverage=trace-args,trace-ret links without a consumer;
+// a fuzzer (libFuzzer) or the user redefines them. They must be null-safe: the
+// pass passes a null pointer for an argument/return it could not spill.
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_args, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_ret, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
