@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMABI
   IRTypeMapper.cpp
   Targets/AArch64.cpp
   Targets/BPF.cpp
+  Targets/SPIRV.cpp
   Targets/X86.cpp
 
   ADDITIONAL_HEADER_DIRS
