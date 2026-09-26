@@ -297,9 +297,6 @@ public:
   /// passed on the command line.
   std::string StackUsageFile;
 
-  /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
-  unsigned LoopAlignment = 0;
-
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
