@@ -290,6 +290,9 @@ features cannot lower the translation-unit ABI level;
 - `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
   size argument larger than the destination buffer.
 
+- `-Wfortify-source` now diagnoses when `poll`, `ppoll`, or `ppoll64` is called
+  with a descriptor count whose total size exceeds the `fds` array size.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
