@@ -303,6 +303,17 @@ int ProcedureRef::Rank() const {
   }
 }
 
+DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ProcedureRef)
+
+void ProcedureRef::set_chevrons(Chevrons &&chevrons) {
+  chevrons_ = std::move(chevrons);
+}
+
+ProcedureRef::ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a,
+    bool hasAlternateReturns)
+    : proc_{std::move(p)}, arguments_{std::move(a)},
+      hasAlternateReturns_{hasAlternateReturns} {}
+
 ProcedureRef::~ProcedureRef() {}
 
 void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }

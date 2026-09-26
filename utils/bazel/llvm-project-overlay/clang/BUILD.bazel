@@ -2307,6 +2307,7 @@ cc_library(
 
 cc_library(
     name = "serialization",
+    features = ["-layering_check"],
     srcs = [
         "include/clang/Serialization/AttrPCHRead.inc",
         "include/clang/Serialization/AttrPCHWrite.inc",

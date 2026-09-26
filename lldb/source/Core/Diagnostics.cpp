@@ -26,6 +26,7 @@
 #include "lldb/Version/Version.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -212,7 +213,7 @@ static std::string CaptureCommand(Debugger &debugger, llvm::StringRef command) {
   CommandReturnObject result(/*colors=*/false);
   debugger.GetCommandInterpreter().HandleCommand(command.str().c_str(),
                                                  eLazyBoolNo, result);
-  return (result.GetOutputString() + result.GetErrorString()).str();
+  return (llvm::Twine(result.GetOutputString()) + result.GetErrorString()).str();
 }
 
 namespace {

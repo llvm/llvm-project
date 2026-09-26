@@ -47,6 +47,7 @@
 #include "flang/Semantics/type.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -924,8 +925,8 @@ genInlinedInitWithMemcpy(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location symLoc = genLocation(converter, sym);
   std::string globalName = fir::NameUniquer::doGenerated(
-      (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
-       fir::kDerivedTypeInitSuffix)
+      (llvm::Twine(converter.mangleName(*declTy->AsDerived())) +
+       fir::kNameSeparator + fir::kDerivedTypeInitSuffix)
           .str());
   fir::LinkageAttr linkage = builder.createInternalLinkage();
   fir::GlobalOp global = builder.getNamedGlobal(globalName);

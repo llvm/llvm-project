@@ -93,11 +93,11 @@ std::string lld::toString(const InputFile *f) {
 
   if (f->archiveName.empty())
     return std::string(f->getName());
-  return (f->archiveName + "(" + path::filename(f->getName()) + ")").str();
+  return (Twine(f->archiveName) + "(" + path::filename(f->getName()) + ")").str();
 }
 
 std::string lld::toString(const Section &sec) {
-  return (toString(sec.file) + ":(" + sec.name + ")").str();
+  return (Twine(toString(sec.file)) + ":(" + sec.name + ")").str();
 }
 
 SetVector<InputFile *> macho::inputFiles;

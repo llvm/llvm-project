@@ -36,7 +36,7 @@ std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
     std::string demangled = demangle(demangleInput);
     if (demangled != demangleInput)
       return prefix + demangled;
-    return (prefix + prefixless).str();
+    return (Twine(prefix) + prefixless).str();
   }
   return std::string(symName);
 }

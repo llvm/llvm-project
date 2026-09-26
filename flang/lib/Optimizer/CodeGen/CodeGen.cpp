@@ -66,6 +66,7 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -1381,9 +1382,9 @@ static std::string getHeapAllocName(mlir::Operation *op, llvm::StringRef plain,
     return plain.str();
   switch (fir::getCudaHeapAllocMode(op)) {
   case fir::CudaHeapAllocMode::Unified:
-    return (plain + options.unifiedHeapAllocSuffix).str();
+    return (llvm::Twine(plain) + options.unifiedHeapAllocSuffix).str();
   case fir::CudaHeapAllocMode::Managed:
-    return (plain + options.managedHeapAllocSuffix).str();
+    return (llvm::Twine(plain) + options.managedHeapAllocSuffix).str();
   case fir::CudaHeapAllocMode::None:
     return plain.str();
   }

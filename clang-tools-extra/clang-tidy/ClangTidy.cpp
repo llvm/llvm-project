@@ -505,7 +505,7 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
   for (const auto &AnalyzerCheck : getAnalyzerCheckersAndPackages(
            Context, Context.canEnableAnalyzerAlphaCheckers()))
     CheckNames.emplace_back(
-        (AnalyzerCheckNamePrefix + AnalyzerCheck.first).str());
+        (Twine(AnalyzerCheckNamePrefix) + AnalyzerCheck.first).str());
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
   llvm::sort(CheckNames);

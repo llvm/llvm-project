@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "llvm/ADT/Twine.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
@@ -378,7 +379,7 @@ mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
     return "";
   std::string result;
   for (std::int64_t kind : kinds)
-    result += (fir::kNameSeparator + std::to_string(kind)).str();
+    result += (llvm::Twine(fir::kNameSeparator) + std::to_string(kind)).str();
   return result;
 }
 
@@ -423,7 +424,7 @@ fir::NameUniquer::getComponentInitName(llvm::StringRef mangledTypeName,
 
   std::string prefix =
       getDerivedTypeObjectName(mangledTypeName, fir::kComponentInitSeparator);
-  return (prefix + fir::kNameSeparator + componentName).str();
+  return (llvm::Twine(prefix) + fir::kNameSeparator + componentName).str();
 }
 
 llvm::StringRef

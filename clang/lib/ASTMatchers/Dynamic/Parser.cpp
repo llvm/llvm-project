@@ -759,7 +759,8 @@ std::vector<MatcherCompletion> Parser::getNamedValueCompletions(
     unsigned Specificity;
     if (Entry.getValue().isConvertibleTo(AcceptedTypes, &Specificity)) {
       std::string Decl =
-          (Entry.getValue().getTypeAsString() + " " + Entry.getKey()).str();
+          (Twine(Entry.getValue().getTypeAsString()) + " " + Entry.getKey())
+              .str();
       Result.emplace_back(Entry.getKey(), Decl, Specificity);
     }
   }

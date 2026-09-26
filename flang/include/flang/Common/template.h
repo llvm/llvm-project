@@ -136,11 +136,17 @@ common::IfNoLvalue<TOV, FROMV> MoveVariant(FROMV &&u) {
 // types.  E.g.,
 //   CombineTuples<std::tuple<char, int>, std::tuple<float, double>>
 // is std::tuple<char, int, float, double>.
-template <typename... TUPLES> struct CombineTuplesHelper {
-  static decltype(auto) f(TUPLES *...a) {
-    return std::tuple_cat(std::move(*a)...);
-  }
-  using type = decltype(f(static_cast<TUPLES *>(nullptr)...));
+template <typename... TUPLES> struct CombineTuplesHelper;
+template <> struct CombineTuplesHelper<> {
+  using type = std::tuple<>;
+};
+template <typename... Ts> struct CombineTuplesHelper<std::tuple<Ts...>> {
+  using type = std::tuple<Ts...>;
+};
+template <typename... T1s, typename... T2s, typename... Rest>
+struct CombineTuplesHelper<std::tuple<T1s...>, std::tuple<T2s...>, Rest...> {
+  using type =
+      typename CombineTuplesHelper<std::tuple<T1s..., T2s...>, Rest...>::type;
 };
 template <typename... TUPLES>
 using CombineTuples = typename CombineTuplesHelper<TUPLES...>::type;

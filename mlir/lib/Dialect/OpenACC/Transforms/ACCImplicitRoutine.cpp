@@ -46,6 +46,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/Twine.h"
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -98,7 +99,7 @@ private:
   acc::RoutineOp createRoutineOp(OpBuilder &builder, Location loc,
                                  FunctionOpInterface &callee) {
     std::string routineName =
-        (accRoutinePrefix + std::to_string(routineCounter++)).str();
+        (llvm::Twine(accRoutinePrefix) + std::to_string(routineCounter++)).str();
     auto routineOp = acc::RoutineOp::create(
         builder, loc,
         /* sym_name=*/builder.getStringAttr(routineName),

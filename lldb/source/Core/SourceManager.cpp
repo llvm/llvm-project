@@ -273,7 +273,7 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       auto debugger_sp = m_debugger_wp.lock();
       if (should_show_stop_line_with_ansi(debugger_sp)) {
         current_line_highlight = ansi::FormatAnsiTerminalCodes(
-            (debugger_sp->GetStopShowLineMarkerAnsiPrefix() +
+            (llvm::Twine(debugger_sp->GetStopShowLineMarkerAnsiPrefix()) +
              current_line_highlight +
              debugger_sp->GetStopShowLineMarkerAnsiSuffix())
                 .str());

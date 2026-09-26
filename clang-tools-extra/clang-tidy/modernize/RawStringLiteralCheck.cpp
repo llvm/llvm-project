@@ -157,7 +157,7 @@ static std::string createRawStringLiteral(const StringLiteral *Literal,
     return (R"(R"()" + Bytes + R"lit()")lit" + UserDefinedSuffix.value_or(""))
         .str();
 
-  return (R"(R")" + Delimiter + "(" + Bytes + ")" + Delimiter + R"(")" +
+  return (Twine(R"(R")") + Delimiter + "(" + Bytes + ")" + Delimiter + R"(")" +
           UserDefinedSuffix.value_or(""))
       .str();
 }

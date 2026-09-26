@@ -71,6 +71,15 @@ CoarrayRef::CoarrayRef(
     DataRef &&base, std::vector<Expr<SubscriptInteger>> &&css)
     : base_{std::move(base)}, cosubscript_(std::move(css)) {}
 
+DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(CoarrayRef)
+DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DataRef)
+DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ComplexPart)
+ComplexPart::ComplexPart(DataRef &&z, Part p)
+    : complex_{std::move(z)}, part_{p} {}
+ComplexPart::~ComplexPart() = default;
+CoarrayRef::~CoarrayRef() = default;
+DataRef::~DataRef() = default;
+
 std::optional<Expr<SomeInteger>> CoarrayRef::stat() const {
   if (stat_) {
     return stat_.value().value();
@@ -118,6 +127,22 @@ const Symbol &CoarrayRef::GetFirstSymbol() const {
 const Symbol &CoarrayRef::GetLastSymbol() const {
   return base().GetLastSymbol();
 }
+
+Substring::Substring(DataRef &&parent,
+    std::optional<Expr<SubscriptInteger>> &&lower,
+    std::optional<Expr<SubscriptInteger>> &&upper)
+    : parent_{std::move(parent)} {
+  SetBounds(lower, upper);
+}
+
+Substring::Substring(StaticDataObject::Pointer &&parent,
+    std::optional<Expr<SubscriptInteger>> &&lower,
+    std::optional<Expr<SubscriptInteger>> &&upper)
+    : parent_{std::move(parent)} {
+  SetBounds(lower, upper);
+}
+
+Substring::~Substring() = default;
 
 void Substring::SetBounds(std::optional<Expr<SubscriptInteger>> &lower,
     std::optional<Expr<SubscriptInteger>> &upper) {

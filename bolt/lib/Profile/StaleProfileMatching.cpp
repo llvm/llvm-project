@@ -656,7 +656,7 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
     ++BC.Stats.NumStaleBlocks;
     BC.Stats.StaleSampleCount += YamlBB.ExecCount;
 
-    assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
+    assert(YamlBB.Hash.value != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
     addMatchedBlock(Matcher.matchBlockStrict(YamlHash), YamlBF, YamlBB);
   }
@@ -671,7 +671,7 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
   }
   // Match blocks from the profile to the blocks in CFG with loose methods.
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
-    assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
+    assert(YamlBB.Hash.value != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
 
     std::string CallHashStr = hashBlockCalls(IdToYamlBF, YamlBB);
