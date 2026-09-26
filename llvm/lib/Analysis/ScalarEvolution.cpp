@@ -8655,6 +8655,11 @@ void ScalarEvolution::visitAndClearUsers(
     SmallVectorImpl<Instruction *> &Worklist,
     SmallPtrSetImpl<Instruction *> &Visited,
     SmallVectorImpl<SCEVUse> &ToForget) {
+  // Nothing can be invalidated if no value has a SCEV yet.
+  if (ValueExprMap.empty()) {
+    Worklist.clear();
+    return;
+  }
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
     if (!isSCEVable(I->getType()) && !isa<WithOverflowInst>(I))
