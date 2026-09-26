@@ -1062,8 +1062,25 @@ void CodeGenModule::checkAliases() {
 
 void CodeGenModule::clear() {
   DeferredDeclsToEmit.clear();
+  if (Context.getLangOpts().IncrementalExtensions) {
+    // The next input starts a new module. It can still emit the deferred decls
+    // of the earlier inputs, but not those of the failed unit.
+    DeferredDecls.insert_range(EmittedDeferredDecls);
+    const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
+    auto InFailedUnit = [TU](const Decl *D) {
+      return D->getTranslationUnitDecl() == TU;
+    };
+    SmallVector<StringRef, 8> Dropped;
+    for (const auto &[Name, GD] : DeferredDecls)
+      if (InFailedUnit(GD.getDecl()))
+        Dropped.push_back(Name);
+    for (StringRef Name : Dropped)
+      DeferredDecls.erase(Name);
+    llvm::erase_if(DeferredVTables, InFailedUnit);
+  }
   EmittedDeferredDecls.clear();
   DeferredAnnotations.clear();
+  GlobalTopLevelStmtBlockInFlight = {nullptr, nullptr};
   if (OpenMPRuntime)
     OpenMPRuntime->clear();
 }
