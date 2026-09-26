@@ -79,7 +79,7 @@ public:
   bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
-  bool isWeak() const { return AccessFlags & WeakFlag; }
+  bool isWeak() const;
   bool isDynamic() const { return (DynAllocId != std::nullopt); }
   bool isDead() const { return AccessFlags & DeadFlag; }
   /// Returns the size of the block, including metadata.
