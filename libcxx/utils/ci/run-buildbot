@@ -28,6 +28,14 @@ ${PROGNAME} [options] <BUILDER>
 --build-dir <DIR>   The directory to use for building the library. By default,
                     this is '<llvm-root>/build/<builder>'.
 
+--cmake <PATH>      Path to the cmake binary to use.
+
+--ninja <PATH>      Path to the ninja binary to use.
+
+--cc <PATH>         Path to the C compiler to use.
+
+--cxx <PATH>        Path to the C++ compiler to use.
+
 Environment variables
 CMAKE               The cmake binary to use. This variable is optional.
 
@@ -89,6 +97,26 @@ while [[ $# -gt 0 ]]; do
             BUILD_DIR="${2}"
             shift; shift
             ;;
+        --cmake)
+            CMAKE="${2}"
+            shift; shift
+            ;;
+        --ninja)
+            NINJA="${2}"
+            shift; shift
+            ;;
+        --cc)
+            CC="${2}"
+            shift; shift
+            ;;
+        --cxx)
+            CXX="${2}"
+            shift; shift
+            ;;
+        --hermetic)
+            HERMETIC=true
+            shift
+            ;;
         *)
             BUILDER="${1}"
             shift
@@ -111,13 +139,17 @@ else
 fi
 
 if [ -z ${CC+x} ]; then
-    error "Environment variable CC must be defined"
+    error "Environment variable CC or --cc must be defined"
     exit 1
 fi
 
 if [ -z ${CXX+x} ]; then
-    error "Environment variable CXX must be defined"
+    error "Environment variable CXX or --cxx must be defined"
     exit 1
+fi
+
+if [ -n "${HERMETIC+x}" ]; then
+    export -n CMAKE NINJA CC CXX
 fi
 
 # Print the version of a few tools to aid diagnostics in some cases
@@ -135,8 +167,10 @@ function generate-cmake-base() {
     step "Generating CMake"
 
     # FIXME: This should really be set in the Dockerfile
-    export CMAKE_PREFIX_PATH="/opt/compiler-explorer/clang-trunk/lib/cmake"
-    export PATH="$PATH:/opt/compiler-explorer/clang-trunk/bin"
+    if [ -z "${HERMETIC+x}" ]; then
+        export CMAKE_PREFIX_PATH="/opt/compiler-explorer/clang-trunk/lib/cmake"
+        export PATH="$PATH:/opt/compiler-explorer/clang-trunk/bin"
+    fi
 
     # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
     ${CMAKE} \
@@ -144,6 +178,8 @@ function generate-cmake-base() {
           -B "${BUILD_DIR}" \
           -GNinja \
           ${MAKE_PROGRAM} \
+          -DCMAKE_C_COMPILER="${CC}" \
+          -DCMAKE_CXX_COMPILER="${CXX}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLIBCXX_ENABLE_WERROR=YES \

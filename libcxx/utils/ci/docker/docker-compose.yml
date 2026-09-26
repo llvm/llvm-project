@@ -17,6 +17,16 @@ services:
         GCC_HEAD_VERSION: 17
         LLVM_HEAD_VERSION: 23
 
+  libcxx-linux-builder-hermetic:
+    image: ghcr.io/llvm/libcxx-linux-builder-hermetic:${TAG:-latest}
+    build:
+      context: ../../../.. # monorepo root
+      dockerfile: libcxx/utils/ci/docker/linux-builder-hermetic.dockerfile
+      args:
+        LLVM_HEAD_VERSION: 23
+        CMAKE_VERSION: 4.4.3
+        NINJA_VERSION: 1.13.2
+
   libcxx-android-builder:
     image: ghcr.io/llvm/libcxx-android-builder:${TAG:-latest}
     build:
