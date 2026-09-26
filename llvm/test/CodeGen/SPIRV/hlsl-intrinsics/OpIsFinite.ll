@@ -12,7 +12,10 @@ define noundef i1 @isfinite_half(half noundef %a) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#bool]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_16]]
-  ; CHECK: %[[#]] = OpIsFinite %[[#bool]] %[[#arg0]]
+  ; CHECK: %[[#isinf:]] = OpIsInf %[[#bool]] %[[#arg0]]
+  ; CHECK: %[[#isnan:]] = OpIsNan %[[#bool]] %[[#arg0]]
+  ; CHECK: %[[#or:]] = OpLogicalOr %[[#bool]] %[[#isinf]] %[[#isnan]]
+  ; CHECK: %[[#]] = OpLogicalNot %[[#bool]] %[[#or]]
   %hlsl.isfinite = call i1 @llvm.spv.isfinite.f16(half %a)
   ret i1 %hlsl.isfinite
 }
@@ -21,7 +24,10 @@ define noundef i1 @isfinite_float(float noundef %a) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#bool]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
-  ; CHECK: %[[#]] = OpIsFinite %[[#bool]] %[[#arg0]]
+  ; CHECK: %[[#isinf:]] = OpIsInf %[[#bool]] %[[#arg0]]
+  ; CHECK: %[[#isnan:]] = OpIsNan %[[#bool]] %[[#arg0]]
+  ; CHECK: %[[#or:]] = OpLogicalOr %[[#bool]] %[[#isinf]] %[[#isnan]]
+  ; CHECK: %[[#]] = OpLogicalNot %[[#bool]] %[[#or]]
   %hlsl.isfinite = call i1 @llvm.spv.isfinite.f32(float %a)
   ret i1 %hlsl.isfinite
 }
@@ -30,7 +36,10 @@ define noundef <4 x i1> @isfinite_half4(<4 x half> noundef %a) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_bool]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
-  ; CHECK: %[[#]] = OpIsFinite %[[#vec4_bool]] %[[#arg0]]
+  ; CHECK: %[[#isinf:]] = OpIsInf %[[#vec4_bool]] %[[#arg0]]
+  ; CHECK: %[[#isnan:]] = OpIsNan %[[#vec4_bool]] %[[#arg0]]
+  ; CHECK: %[[#or:]] = OpLogicalOr %[[#vec4_bool]] %[[#isinf]] %[[#isnan]]
+  ; CHECK: %[[#]] = OpLogicalNot %[[#vec4_bool]] %[[#or]]
   %hlsl.isfinite = call <4 x i1> @llvm.spv.isfinite.v4f16(<4 x half> %a)
   ret <4 x i1> %hlsl.isfinite
 }
@@ -39,7 +48,10 @@ define noundef <4 x i1> @isfinite_float4(<4 x float> noundef %a) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_bool]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
-  ; CHECK: %[[#]] = OpIsFinite %[[#vec4_bool]] %[[#arg0]]
+  ; CHECK: %[[#isinf:]] = OpIsInf %[[#vec4_bool]] %[[#arg0]]
+  ; CHECK: %[[#isnan:]] = OpIsNan %[[#vec4_bool]] %[[#arg0]]
+  ; CHECK: %[[#or:]] = OpLogicalOr %[[#vec4_bool]] %[[#isinf]] %[[#isnan]]
+  ; CHECK: %[[#]] = OpLogicalNot %[[#vec4_bool]] %[[#or]]
   %hlsl.isfinite = call <4 x i1> @llvm.spv.isfinite.v4f32(<4 x float> %a)
   ret <4 x i1> %hlsl.isfinite
 }
