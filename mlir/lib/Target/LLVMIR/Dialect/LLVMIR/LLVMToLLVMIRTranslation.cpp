@@ -267,10 +267,15 @@ static LogicalResult convertGEPOp(GEPOp op, llvm::IRBuilderBase &builder,
     constIndices.reserve(indices.size());
     for (llvm::Value *value : indices)
       constIndices.push_back(cast<llvm::Constant>(value));
+    const llvm::DataLayout &dataLayout =
+        moduleTranslation.getLLVMModule()->getDataLayout();
     res = llvm::ConstantExpr::getGetElementPtr(
-        elementType, baseConst, constIndices, nwFlags,
+        dataLayout, elementType, baseConst, constIndices, nwFlags,
         llvm::ConstantRange::getNonEmpty(inrangeAttr.getLower(),
                                          inrangeAttr.getUpper()));
+    if (!res)
+      return op.emitError(
+          "failed to lower 'inrange' GEP to a constant byte offset");
   } else {
     res = builder.CreateGEP(elementType, base, indices, "", nwFlags);
   }
