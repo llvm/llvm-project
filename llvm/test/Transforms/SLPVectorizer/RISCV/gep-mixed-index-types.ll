@@ -9,53 +9,23 @@ define i32 @copyable_gep_node_mixed_index_types(ptr %b, i32 %S) {
 ; CHECK-LABEL: define i32 @copyable_gep_node_mixed_index_types(
 ; CHECK-SAME: ptr [[B:%.*]], i32 [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B]], align 1
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[TMP0]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i32
-; CHECK-NEXT:    [[IDXPROM_1:%.*]] = zext i32 [[S]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IDXPROM_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
-; CHECK-NEXT:    [[SUB_1:%.*]] = sub i8 0, [[TMP1]]
-; CHECK-NEXT:    [[CONV_1:%.*]] = sext i8 [[SUB_1]] to i32
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[CONV]], [[CONV_1]]
 ; CHECK-NEXT:    [[MUL_2:%.*]] = shl i32 [[S]], 1
-; CHECK-NEXT:    [[IDXPROM_2:%.*]] = zext i32 [[MUL_2]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IDXPROM_2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
-; CHECK-NEXT:    [[SUB_2:%.*]] = sub i8 0, [[TMP2]]
-; CHECK-NEXT:    [[CONV_2:%.*]] = sext i8 [[SUB_2]] to i32
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[ADD_1]], [[CONV_2]]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i32 7
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
-; CHECK-NEXT:    [[SUB_3:%.*]] = sub i8 0, [[TMP3]]
-; CHECK-NEXT:    [[CONV_3:%.*]] = sext i8 [[SUB_3]] to i32
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[ADD_2]], [[CONV_3]]
 ; CHECK-NEXT:    [[MUL_4:%.*]] = shl i32 [[S]], 2
-; CHECK-NEXT:    [[IDXPROM_4:%.*]] = zext i32 [[MUL_4]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IDXPROM_4]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_4]], align 1
-; CHECK-NEXT:    [[SUB_4:%.*]] = sub i8 0, [[TMP4]]
-; CHECK-NEXT:    [[CONV_4:%.*]] = sext i8 [[SUB_4]] to i32
-; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[ADD_3]], [[CONV_4]]
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i32 5
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[ARRAYIDX_5]], align 1
-; CHECK-NEXT:    [[SUB_5:%.*]] = sub i8 0, [[TMP5]]
-; CHECK-NEXT:    [[CONV_5:%.*]] = sext i8 [[SUB_5]] to i32
-; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[ADD_4]], [[CONV_5]]
 ; CHECK-NEXT:    [[MUL_6:%.*]] = mul i32 [[S]], 6
-; CHECK-NEXT:    [[IDXPROM_6:%.*]] = zext i32 [[MUL_6]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IDXPROM_6]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX_6]], align 1
-; CHECK-NEXT:    [[SUB_6:%.*]] = sub i8 0, [[TMP6]]
-; CHECK-NEXT:    [[CONV_6:%.*]] = sext i8 [[SUB_6]] to i32
-; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[ADD_5]], [[CONV_6]]
 ; CHECK-NEXT:    [[MUL_7:%.*]] = mul i32 [[S]], 7
-; CHECK-NEXT:    [[IDXPROM_7:%.*]] = zext i32 [[MUL_7]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[IDXPROM_7]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX_7]], align 1
-; CHECK-NEXT:    [[SUB_7:%.*]] = sub i8 0, [[TMP7]]
-; CHECK-NEXT:    [[CONV_7:%.*]] = sext i8 [[SUB_7]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[ADD_6]], [[CONV_7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 poison, i32 poison, i32 7, i32 poison, i32 5, i32 poison, i32 poison>, i32 [[S]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[MUL_2]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[MUL_4]], i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[MUL_6]], i64 6
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[MUL_7]], i64 7
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[TMP4]] to <8 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x ptr> poison, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x ptr> [[TMP6]], <8 x ptr> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, <8 x ptr> [[TMP7]], <8 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP8]], <8 x i1> splat (i1 true), <8 x i8> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = sub <8 x i8> zeroinitializer, [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <8 x i8> [[TMP10]] to <8 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP11]])
 ; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
 entry:
