@@ -218,14 +218,29 @@ template <typename SubPattern_t> struct Splat_match {
       auto *Splat = C->getSplatValue();
       return Splat ? SubPattern.match(Splat) : false;
     }
-    // TODO: Extend to other cases (e.g. shufflevectors).
-    return false;
+
+    auto *Shuffle = dyn_cast<ShuffleVectorInst>(V);
+    if (!Shuffle || !Shuffle->isZeroEltSplat())
+      return false;
+
+    // Look for an insertelement.
+    auto *Insert = dyn_cast<InsertElementInst>(Shuffle->getOperand(0));
+    if (!Insert)
+      return false;
+
+    Value *SplatElt = Insert->getOperand(1);
+    ConstantInt *Idx = dyn_cast<ConstantInt>(Insert->getOperand(2));
+    if (!Idx || Idx->getZExtValue() != 0)
+      return false;
+
+    return SubPattern.match(SplatElt);
+    // TODO: Handle other splat patterns.
   }
 };
 
-/// Match a constant splat. TODO: Extend this to non-constant splats.
-template <typename T>
-inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
+/// Match a vector splat. May be a constant splat or a shufflevector of the
+/// first element.
+template <typename T> inline Splat_match<T> m_Splat(const T &SubPattern) {
   return SubPattern;
 }
 
