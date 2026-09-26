@@ -6,7 +6,7 @@
 #ifndef HEADER
 #define HEADER
 
-#include <stddef.h>
+typedef __SIZE_TYPE__ size_t;
 
 extern "C" void body(int, int);
 

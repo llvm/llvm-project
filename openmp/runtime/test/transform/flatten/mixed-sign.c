@@ -1,9 +1,10 @@
 // RUN: %libomp-compile -fopenmp-version=61 && %libomp-run \
 // RUN:   | FileCheck %s --match-full-lines
 
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+typedef __SIZE_TYPE__ size_t;
 
 int main(void) {
   int n = 2;
