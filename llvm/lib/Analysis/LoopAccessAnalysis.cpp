@@ -1153,7 +1153,12 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
     return true;
   }
 
-  return false;
+  // Without adding a new predicate, AR may still be known not to wrap if the
+  // predicates of PSE already imply it, e.g. because a wrap predicate for AR
+  // was added while analyzing the dependences of the loop.
+  ScalarEvolution &SE = *PSE.getSE();
+  return PSE.getPredicate().implies(
+      SE.getWrapPredicate(AR, SCEVWrapPredicate::IncrementNUSW), SE);
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
