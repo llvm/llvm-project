@@ -10,8 +10,8 @@
 ; multiplies keeps the loads and trades the fma of each path for a packed
 ; multiply before the branch plus an add on the path.
 
-define amdgpu_kernel void @cross_block_fmul_lhs(ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %r2, float %x, float %y, i1 %c) {
-; CHECK-LABEL: define amdgpu_kernel void @cross_block_fmul_lhs(
+define void @cross_block_fmul_lhs(ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %r2, float %x, float %y, i1 %c) {
+; CHECK-LABEL: define void @cross_block_fmul_lhs(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[Q:%.*]], ptr addrspace(1) [[R:%.*]], ptr addrspace(1) [[R2:%.*]], float [[X:%.*]], float [[Y:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -68,8 +68,8 @@ f:
 
 ; The same with the fmul in operand 1 of the fadd.
 
-define amdgpu_kernel void @cross_block_fmul_rhs(ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %r2, float %x, float %y, i1 %c) {
-; CHECK-LABEL: define amdgpu_kernel void @cross_block_fmul_rhs(
+define void @cross_block_fmul_rhs(ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %r2, float %x, float %y, i1 %c) {
+; CHECK-LABEL: define void @cross_block_fmul_rhs(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[Q:%.*]], ptr addrspace(1) [[R:%.*]], ptr addrspace(1) [[R2:%.*]], float [[X:%.*]], float [[Y:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
