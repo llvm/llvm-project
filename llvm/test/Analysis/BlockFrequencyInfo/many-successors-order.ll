@@ -6,8 +6,8 @@
 ; CHECK-LABEL: block-frequency-info: f
 ; CHECK-NEXT:  - entry: float = 1.0, int = [[ENTRY:[0-9]+]]
 ; CHECK-NEXT:  - default: float = 0.0077519, int = {{[0-9]+}}
-; CHECK-NEXT:  - b0: float = 0.49612, int = 8937376004318074
-; CHECK-NEXT:  - b1: float = 0.49612, int = 8937376004964352
+; CHECK-NEXT:  - b0: float = 0.49612, int = [[B:[0-9]+]]
+; CHECK-NEXT:  - b1: float = 0.49612, int = [[B]]
 ; CHECK-NEXT:  - exit: float = 1.0, int = [[ENTRY]]
 define void @f(i32 %x) {
 entry:
