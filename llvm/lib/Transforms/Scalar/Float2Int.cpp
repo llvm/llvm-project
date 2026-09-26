@@ -478,8 +478,14 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
 
 // Perform dead code elimination on the instructions we just modified.
 void Float2IntPass::cleanup() {
-  for (auto &I : reverse(ConvertedInsts))
+  for (auto &I : reverse(ConvertedInsts)) {
+    // The replacement for a converted instruction is not necessarily a
+    // source-level equivalent value for every debug use of an operand. Let
+    // salvageDebugInfo preserve a valid expression or make the location
+    // unavailable before deleting the original instruction.
+    salvageDebugInfo(*I.first);
     I.first->eraseFromParent();
+  }
 }
 
 bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
