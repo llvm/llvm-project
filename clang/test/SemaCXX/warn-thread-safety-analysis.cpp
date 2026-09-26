@@ -8370,4 +8370,32 @@ void testDependent(int n) {
   callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
 }
 
+// lock_returned on a function pointer or reference.
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+};
+Mutex &mu_ref_impl(Guarded &g) LOCK_RETURNED(g.mu);
+Mutex *(*mu_of)(Guarded *g) LOCK_RETURNED(&g->mu);
+Mutex &(&mu_ref_of)(Guarded &g) LOCK_RETURNED(g.mu) = mu_ref_impl;
+
+void testLockReturned(Guarded *g) {
+  mu_of(g)->Lock();
+  g->data = 1;
+  mu_ref_of(*g).Unlock(); // expected-note {{mutex released here}}
+  mu_of(g)->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+}
+
+// A dependent parameter type is classified after instantiation.
+template <typename F>
+void lockReturnedDependent(Guarded *g, F mu_of_g LOCK_RETURNED(&g->mu)) {
+  mu_of_g(g)->Lock();
+  g->data = 1;
+  g->mu.Unlock();
+}
+
+void testLockReturnedDependent(Guarded *g) {
+  lockReturnedDependent<Mutex *(*)(Guarded *)>(g, mu_of);
+}
+
 } // namespace FunctionPointers
