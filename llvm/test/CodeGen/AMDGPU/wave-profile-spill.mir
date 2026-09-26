@@ -1,0 +1,251 @@
+# REQUIRES: amdgpu-registered-target, x86-registered-target
+# RUN: split-file %s %t
+# RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -S %t/diamond.ll -o %t/gen.ll
+# RUN: %python %t/raw.py %t/gen.ll normal > %t/profile.raw
+# RUN: llvm-profdata merge %t/profile.raw -o %t/profile.data
+# RUN: opt -passes=pgo-instr-use -pgo-instrument-entry -pgo-test-profile-file=%t/profile.data -S %t/diamond.ll -o %t/use.ll
+# RUN: FileCheck %s --check-prefix=IR < %t/use.ll
+# RUN: llvm-as %t/use.ll -o %t/use.bc
+# RUN: llvm-dis %t/use.bc -o %t/roundtrip.ll
+# RUN: %python %t/mir.py %t/roundtrip.ll %t/body.mir > %t/use.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/use.mir 2>&1 | FileCheck %s --check-prefix=WAVES
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/use.mir 2>&1 | FileCheck %s --check-prefix=OFF
+# RUN: %python %t/mir.py %t/diamond.ll %t/body.mir > %t/no-profile.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/no-profile.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
+# RUN: %python %t/mir.py %t/use.ll %t/x86.mir x86 > %t/x86-input.mir
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/x86-input.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
+# RUN: %python %t/raw.py %t/gen.ll zero-entry > %t/zero.raw
+# RUN: llvm-profdata merge %t/zero.raw -o %t/zero.data
+# RUN: opt -passes=pgo-instr-use -pgo-instrument-entry -pgo-test-profile-file=%t/zero.data -S %t/diamond.ll -o %t/zero.ll
+# RUN: %python %t/mir.py %t/zero.ll %t/body.mir > %t/zero.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/zero.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
+# RUN: %python %t/mir.py %t/use.ll %t/duplicate.mir > %t/duplicate-input.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/duplicate-input.mir 2>&1 | FileCheck %s --check-prefix=DUPLICATE
+# RUN: %python %t/mir.py %t/use.ll %t/redirected.mir > %t/redirected-input.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/redirected-input.mir 2>&1 | FileCheck %s --check-prefix=REDIRECTED
+# RUN: %python %t/mir.py %t/use.ll %t/unmapped.mir > %t/unmapped-input.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/unmapped-input.mir 2>&1 | FileCheck %s --check-prefix=UNMAPPED
+# RUN: %python %t/mir.py %t/use.ll %t/choice.mir > %t/choice-input.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -o - %t/choice-input.mir | FileCheck %s --check-prefix=ALLOC-OFF
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -enable-wave-profiled-spill -o - %t/choice-input.mir | FileCheck %s --check-prefix=ALLOC-ON
+# RUN: %python %t/mir.py %t/diamond.ll %t/choice.mir > %t/choice-no-profile.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -enable-wave-profiled-spill -o - %t/choice-no-profile.mir | FileCheck %s --check-prefix=ALLOC-OFF
+
+# The measured right arm has half the lane frequency but the same wave
+# frequency as entry. Direct costs require matching machine control flow.
+# IR: define void @diamond{{.*}}!wave.profile
+# IR: !{i64 2, i64 {{-?[0-9]+}}, i64 100, i64 0, i64 100, i64 0}
+# WAVES: WAVE_PROFILED_SPILL diamond 1 2 0 1
+# OFF-NOT: WAVE_PROFILED_SPILL
+# FALLBACK: WAVE_PROFILED_SPILL diamond 0 0 0 0
+# DUPLICATE: WAVE_PROFILED_SPILL diamond 1 1 1 1
+# REDIRECTED: WAVE_PROFILED_SPILL diamond 1 1 1 0
+# A valid function profile is insufficient when no machine blocks map to it.
+# UNMAPPED: WAVE_PROFILED_SPILL diamond 1 0 2 0
+# ALLOC-OFF-LABEL: body:
+# ALLOC-OFF: bb.1.left:
+# ALLOC-OFF-NOT: lr-split COPY
+# ALLOC-OFF: bb.2.right:
+# ALLOC-OFF: = lr-split COPY
+# ALLOC-OFF: S_NOP 0, implicit-def dead $vgpr0
+# ALLOC-OFF: = lr-split COPY
+# ALLOC-ON-LABEL: body:
+# ALLOC-ON: bb.1.left:
+# ALLOC-ON: = lr-split COPY
+# ALLOC-ON: S_NOP 0, implicit-def dead $vgpr1
+# ALLOC-ON: = lr-split COPY
+# ALLOC-ON: bb.2.right:
+# ALLOC-ON-NOT: lr-split COPY
+# ALLOC-ON: bb.3.exit:
+
+#--- diamond.ll
+target triple = "amdgcn-amd-amdhsa"
+define void @diamond(i1 %condition, ptr addrspace(1) %out) {
+entry:
+  br i1 %condition, label %left, label %right
+left:
+  store volatile i32 1, ptr addrspace(1) %out
+  br label %exit
+right:
+  store volatile i32 2, ptr addrspace(1) %out
+  br label %exit
+exit:
+  ret void
+}
+
+#--- raw.py
+import hashlib
+import re
+import struct
+import sys
+from pathlib import Path
+
+ir = Path(sys.argv[1]).read_text()
+lane_counts = {"entry": 6400, "left": 3200, "right": 3200, "exit": 6400}
+block = None
+counts = {}
+for line in ir.splitlines():
+    label = re.match(r"^([\w.]+):", line)
+    if label:
+        block = label[1]
+    inc = re.search(r"@llvm.instrprof.increment\(.*i64 (-?\d+), i32 (\d+), i32 (\d+)\)", line)
+    if inc:
+        cfg_hash, num_counters, index = map(int, inc.groups())
+        cfg_hash %= 1 << 64
+        counts[index] = lane_counts[block]
+assert len(counts) == num_counters
+waves = [100] * num_counters
+if sys.argv[2] == "zero-entry":
+    waves[0] = 0
+values = [counts[i] for i in range(num_counters)] + waves
+name = b"diamond"
+name_ref = int.from_bytes(hashlib.md5(name).digest()[:8], "little")
+names = bytes([len(name), 0]) + name
+counter_delta = 80
+names_delta = counter_delta + len(values) * 8
+header = [0xff6c70726f667281, 12 | (1 << 56), 0, 1, 0, len(values),
+          0, 0, 0, 0, 0, 0, len(names), counter_delta, 0, names_delta, 0, 0, 2]
+record = struct.pack("<7QI4HII4x", name_ref, cfg_hash, counter_delta,
+                     0, 0, 0, 0, len(values), 0, 0, 0, 64, 0, len(waves))
+sys.stdout.buffer.write(struct.pack("<19Q", *header) + record +
+                        struct.pack("<" + "Q" * len(values), *values) +
+                        names + bytes((-len(names)) % 8))
+
+#--- mir.py
+import sys
+import textwrap
+from pathlib import Path
+
+print("--- |")
+ir = Path(sys.argv[1]).read_text()
+if len(sys.argv) > 3 and sys.argv[3] == "x86":
+    ir = ir.replace('target triple = "amdgcn-amd-amdhsa"',
+                    'target triple = "x86_64-unknown-linux-gnu"')
+print(textwrap.indent(ir, "  "))
+print("...")
+print(Path(sys.argv[2]).read_text())
+
+#--- body.mir
+---
+name: diamond
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1.left:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.2.right:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.3.exit:
+    S_ENDPGM 0
+...
+
+#--- x86.mir
+---
+name: diamond
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    JCC_1 %bb.1, 4, implicit $eflags
+    JMP_1 %bb.2
+  bb.1.left:
+    successors: %bb.3(0x80000000)
+    JMP_1 %bb.3
+  bb.2.right:
+    successors: %bb.3(0x80000000)
+    JMP_1 %bb.3
+  bb.3.exit:
+    RET64
+...
+
+#--- duplicate.mir
+---
+name: diamond
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1.left:
+    successors: %bb.4(0x80000000)
+    S_BRANCH %bb.4
+  bb.2.right:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.3.exit:
+    S_ENDPGM 0
+  bb.4.left:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+...
+
+#--- redirected.mir
+---
+name: diamond
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1.left:
+    successors: %bb.2(0x80000000)
+    S_BRANCH %bb.2
+  bb.2.right:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.3.exit:
+    S_ENDPGM 0
+...
+
+#--- unmapped.mir
+---
+name: diamond
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1.left:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.2:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.3.exit:
+    S_ENDPGM 0
+...
+
+#--- choice.mir
+---
+name: diamond
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr4
+    S_NOP 0, implicit-def %0:vgpr_32
+    S_CMP_EQ_U32 $sgpr4, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1.left:
+    successors: %bb.3(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr1
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.3
+  bb.2.right:
+    successors: %bb.3(0x80000000)
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit-def dead $vgpr0
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.3
+  bb.3.exit:
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
