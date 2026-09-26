@@ -44,6 +44,7 @@ namespace llvm {
 
 class StringSaver;
 class ElementCount;
+class Error;
 
 /// This namespace contains all of the command line option processing machinery.
 /// It is intentionally a short name to make qualified usage concise.
@@ -2159,6 +2160,38 @@ LLVM_ABI void ResetCommandLineParser();
 
 /// Parses `Arg` into the option handler `Handler`.
 LLVM_ABI bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
+
+/// The options of a library that declares them in TableGen rather than as
+/// cl::opt (see llvm/Option/LibraryOptions.h). ParseCommandLineOptions hands
+/// every argument naming one of them to parse(). This lets libraries move off
+/// cl::opt while tools still parse argv with cl::, and goes away once tools
+/// parse argv without cl::.
+class LLVM_ABI LibraryOptions {
+public:
+  /// Calls \p Fn with the spelling of each option without its prefix (e.g.
+  /// "x" or "x="), its metavariable, its help text, and whether only
+  /// -help-hidden lists it.
+  virtual void
+  forEachOption(function_ref<void(StringRef Spelling, StringRef MetaVar,
+                                  StringRef Help, bool Hidden)>
+                    Fn) const = 0;
+
+  /// Parses the option spelled by Args[0], which may take Args[1] as its
+  /// value, and sets \p Consumed to the number of arguments it spans. The
+  /// strings in \p Args remain valid until reset().
+  virtual Error parse(ArrayRef<const char *> Args, unsigned &Consumed) = 0;
+
+  /// Restores the default values.
+  virtual void reset() = 0;
+
+protected:
+  // Registrations are static and never destroyed through this class.
+  ~LibraryOptions() = default;
+};
+
+/// Makes ParseCommandLineOptions recognize \p L's options. A name that is also
+/// a cl::opt or belongs to another library is a fatal error.
+LLVM_ABI void addLibraryOptions(LibraryOptions &L);
 
 } // end namespace cl
 

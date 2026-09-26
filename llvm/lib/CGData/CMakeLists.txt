@@ -1,4 +1,9 @@
+set(LLVM_TARGET_DEFINITIONS CGDataOptions.td)
+tablegen(LLVM CGDataOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(CGDataOptionsTableGen)
+
 add_llvm_component_library(LLVMCGData
+  CGDataOptions.cpp
   CodeGenData.cpp
   CodeGenDataReader.cpp
   CodeGenDataWriter.cpp
@@ -11,6 +16,7 @@ add_llvm_component_library(LLVMCGData
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CGData
 
   DEPENDS
+  CGDataOptionsTableGen
   intrinsics_gen
 
   LINK_COMPONENTS
@@ -19,4 +25,5 @@ add_llvm_component_library(LLVMCGData
   Core
   Support
   Object
+  Option
   )

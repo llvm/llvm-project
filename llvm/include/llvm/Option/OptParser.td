@@ -136,6 +136,14 @@ class Option<list<string> prefixes, string name, OptionKind kind,
   code Denormalizer = "";
   list<code> NormalizedValues = ?;
   list<SubCommand> SubCommands = subcommands;
+  // For an option of an OptionsStruct: the member it sets, the member's type
+  // and default value, and the value a Flag assigns. Other kinds parse their
+  // argument. Hidden adds HelpHidden.
+  string FieldName = ?;
+  string FieldType = ?;
+  code FieldDefault = ?;
+  code FieldValue = ?;
+  bit Hidden = 1;
 }
 
 // Helpers for defining options.
@@ -270,6 +278,40 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; }
+
+// Declaring a library's options as the members of a struct. A .td with an
+// OptionsStruct def generates a struct named after the def in \p namespace,
+// with one member per BoolField or ValueField.
+// `defm : BoolField<"foo-bar", ...>` declares member foo_bar, and
+// `defm Name : ...` names it. Only -help-hidden lists the options, except those
+// declared in `let Hidden = 0 in { ... }`.
+
+class OptionsStruct<string namespace = "llvm"> { string Namespace = namespace; }
+
+class Field<string name, string type, code default> {
+  string FieldName = name;
+  string FieldType = type;
+  code FieldDefault = default;
+}
+class FieldValue<code value> { code FieldValue = value; }
+
+// A bool member set by -<name> or -<name>=<true|false|1|0>.
+multiclass BoolField<string name, code default, string help> {
+  def NAME : Flag<["-", "--"], name>, Field<NAME, "bool", default>,
+    FieldValue<"true">, HelpText<help> {
+    let Flags = !if(Hidden, [HelpHidden], []);
+  }
+  def NAME#_EQ : Joined<["-", "--"], name#"=">, Field<NAME, "bool", default>;
+}
+
+// A member of the C++ type <type> set by -<name>=<value> or -<name> <value>.
+multiclass ValueField<string name, string type, code default, string help> {
+  def NAME#_EQ : Joined<["-", "--"], name#"=">, Field<NAME, type, default>,
+    HelpText<help> {
+    let Flags = !if(Hidden, [HelpHidden], []);
+  }
+  def NAME : Separate<["-", "--"], name>, Alias<!cast<Option>(NAME#"_EQ")>;
+}
 
 // Predefined options.
 

@@ -2361,9 +2361,21 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "CGDataOptionsTableGen",
+    strip_include_prefix = "lib/CGData",
+    tbl_outs = {"lib/CGData/CGDataOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/CGData/CGDataOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "CGData",
-    srcs = glob(["lib/CGData/**/*.cpp"]),
+    srcs = glob([
+        "lib/CGData/**/*.cpp",
+        "lib/CGData/**/*.h",
+    ]),
     hdrs = glob([
         "include/llvm/CGData/**/*.h",
         "include/llvm/CGData/**/*.inc",
@@ -2372,9 +2384,11 @@ cc_library(
     deps = [
         ":BitReader",
         ":BitWriter",
+        ":CGDataOptionsTableGen",
         ":Core",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
         ":TargetParser",
     ],

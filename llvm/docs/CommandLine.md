@@ -1564,3 +1564,38 @@ TODO: complete this section
 :::{todo}
 TODO: fill in this section
 :::
+
+## Declaring a Library's Options in TableGen
+
+A library can declare its options in a `.td` file instead of as `cl::opt`
+globals. `llvm-tblgen -gen-opt-parser-defs` generates a struct with a member
+per option, the table that parses them, and the hooks through which
+`cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+
+```text
+include "llvm/Option/OptParser.td"
+
+def FooOptions : OptionsStruct;
+
+defm : BoolField<"foo-enable", "1", "Enable foo">;
+defm : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+let Hidden = 0 in
+defm : ValueField<"foo-path", "StringRef", "", "The input path">;
+```
+
+The struct is in namespace `llvm` unless the def names another, as in
+`OptionsStruct<"mlir">`. A member is named after its option, `foo_enable` for
+`-foo-enable`, unless the `defm` names it. A `BoolField` is set by `-x` or
+`-x=true|false|1|0`; a `ValueField` of an integer type, `double`, or
+`StringRef` by `-x=value` or `-x value`. Both accept `--` for `-`. Only
+`-help-hidden` lists the options, like `cl::Hidden`; those declared in
+`let Hidden = 0 in` are also listed by `-help`.
+
+The header declares the struct after including what the member defaults need,
+and one source file defines it and registers it with `cl::`.
+
+The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option`
+under `LINK_COMPONENTS`. Code reads `FooOptions::Global.foo_enable`,
+the instance the command line sets. Keep the header in `lib/`, as private as the
+`static cl::opt` it replaces; another library that needs a value calls a
+function or takes a parameter.
