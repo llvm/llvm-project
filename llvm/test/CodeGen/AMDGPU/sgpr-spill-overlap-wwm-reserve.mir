@@ -279,7 +279,7 @@ body:             |
     liveins: $vgpr0
 
     $sgpr22 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE $sgpr22, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0, addrspace 5)
+    SI_SPILL_S32_SAVE $sgpr22, %stack.0, -1, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0, addrspace 5)
     $sgpr0 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
     %0:vgpr_32 = V_SET_INACTIVE_B32 0, $vgpr0, 0, 0, $sgpr_null, implicit $exec, implicit-def $scc
     $exec_lo = EXIT_STRICT_WWM $sgpr0
