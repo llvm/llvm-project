@@ -56,8 +56,8 @@ class RISCVTargetELFStreamer : public RISCVTargetStreamer {
 private:
   StringRef CurrentVendor;
 
-  // Initial ISA string derived from the subtarget features in the constructor.
-  // Used to re-establish state on reset().
+  // Initial ISA string derived from the subtarget features in
+  // setFlagsFromFeatures(). Used to re-establish state on reset().
   std::string InitialArchString;
 
   // Current ISA string, kept in sync with each .option arch/rvc/norvc/pop
@@ -81,6 +81,7 @@ public:
   RISCVELFStreamer &getStreamer();
   RISCVTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
+  void setFlagsFromFeatures(const MCSubtargetInfo &STI) override;
   // Update ArchString and propagate the change to the streamer so the next
   // instruction-run emits an ISA-specific mapping symbol. A no-op when
   // Arch == ArchString (deduplication).

@@ -64,7 +64,7 @@ public:
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool hasTargetABI() const { return TargetABI != RISCVABI::ABI_Unknown; }
-  void setFlagsFromFeatures(const MCSubtargetInfo &STI);
+  virtual void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }
 };
