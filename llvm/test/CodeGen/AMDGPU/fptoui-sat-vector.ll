@@ -6390,52 +6390,23 @@ define <4 x i16> @test_s_unsigned_v4f32_v4i16(<4 x float> inreg %f) {
 ; GFX9-NEXT:    v_or_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-FAKE16-LABEL: test_s_unsigned_v4f32_v4i16:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_cvt_pk_u16_f32 v0, s0, s1
-; GFX11-FAKE16-NEXT:    v_cvt_pk_u16_f32 v1, s2, s3
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_s_unsigned_v4f32_v4i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_pk_u16_f32 v0, s0, s1
+; GFX11-NEXT:    v_cvt_pk_u16_f32 v1, s2, s3
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_s_unsigned_v4f32_v4i16:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_pk_u16_f32 v0, s0, s0
-; GFX11-TRUE16-NEXT:    v_cvt_pk_u16_f32 v1, s2, s2
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-FAKE16-LABEL: test_s_unsigned_v4f32_v4i16:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_cvt_pk_u16_f32 v0, s0, s1
-; GFX12-FAKE16-NEXT:    v_cvt_pk_u16_f32 v1, s2, s3
-; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-TRUE16-LABEL: test_s_unsigned_v4f32_v4i16:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_cvt_pk_u16_f32 v0, s0, s0
-; GFX12-TRUE16-NEXT:    v_cvt_pk_u16_f32 v1, s2, s2
-; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GI-LABEL: test_s_unsigned_v4f32_v4i16:
-; GFX12-GI:       ; %bb.0:
-; GFX12-GI-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GI-NEXT:    s_wait_expcnt 0x0
-; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    v_cvt_pk_u16_f32 v0, s0, s1
-; GFX12-GI-NEXT:    v_cvt_pk_u16_f32 v1, s2, s3
-; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: test_s_unsigned_v4f32_v4i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cvt_pk_u16_f32 v0, s0, s1
+; GFX12-NEXT:    v_cvt_pk_u16_f32 v1, s2, s3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
     %x = call <4 x i16> @llvm.fptoui.sat.v4f32.v4i16(<4 x float> %f)
     ret <4 x i16> %x
 }
