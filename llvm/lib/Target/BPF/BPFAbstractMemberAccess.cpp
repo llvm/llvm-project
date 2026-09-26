@@ -82,6 +82,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -296,6 +297,13 @@ static const DIType * stripQualifiers(const DIType *Ty) {
     Ty = DTy->getBaseType();
   }
   return Ty;
+}
+
+/// Return the position of Field among the BTF members of record CTy.
+static uint64_t getBTFMemberIndex(const DICompositeType *CTy,
+                                  const DINode *Field) {
+  SmallVector<const DINode *, 8> Elements = getBTFRecordElements(CTy);
+  return llvm::find(Elements, Field) - Elements.begin();
 }
 
 static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
@@ -528,7 +536,9 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
   if (PTyTag == dwarf::DW_TAG_array_type)
     Ty = PTy->getBaseType();
   else
-    Ty = dyn_cast<DIType>(PTy->getElements()[ParentAI]);
+    Ty = dyn_cast_or_null<DIType>(getDIRecordField(PTy, ParentAI));
+  if (!Ty)
+    return false;
 
   return dyn_cast<DICompositeType>(stripQualifiers(Ty)) == CTy;
 }
@@ -685,7 +695,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       PatchImm += AccessIndex * calcArraySize(CTy, 1) *
                   (EltTy->getSizeInBits() >> 3);
     } else if (Tag == dwarf::DW_TAG_structure_type) {
-      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      auto *MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
       if (!MemberTy->isBitField()) {
         PatchImm += MemberTy->getOffsetInBits() >> 3;
       } else {
@@ -703,7 +713,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       return calcArraySize(CTy, 1) * (EltTy->getSizeInBits() >> 3);
     } else {
-      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      auto *MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
       uint32_t SizeInBits = MemberTy->getSizeInBits();
       if (!MemberTy->isBitField())
         return SizeInBits >> 3;
@@ -726,7 +736,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
         report_fatal_error("Invalid array expression for llvm.bpf.preserve.field.info");
       BaseTy = stripQualifiers(CTy->getBaseType());
     } else {
-      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      auto *MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
       BaseTy = stripQualifiers(MemberTy->getBaseType());
     }
 
@@ -758,7 +768,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       SizeInBits = calcArraySize(CTy, 1) * EltTy->getSizeInBits();
     } else {
-      MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
       SizeInBits = MemberTy->getSizeInBits();
       IsBitField = MemberTy->isBitField();
     }
@@ -789,7 +799,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       SizeInBits = calcArraySize(CTy, 1) * EltTy->getSizeInBits();
     } else {
-      MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
+      MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
       SizeInBits = MemberTy->getSizeInBits();
       IsBitField = MemberTy->isBitField();
     }
@@ -965,19 +975,23 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
 
+    // For a record, use the position of the field among its BTF members, and
+    // use an array index as is.
     uint64_t BTFIndex = AccessIndex;
-    if (CTy->getTag() == dwarf::DW_TAG_structure_type) {
-      DINodeArray Elements = CTy->getElements();
-      uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
-      // Find this element's position in the stable offset order without
-      // sorting the whole record for every CO-RE access.
-      BTFIndex = 0;
-      for (unsigned I = 0; I < Elements.size(); ++I) {
-        uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
-        if (ElementOffset < Offset ||
-            (ElementOffset == Offset && I < AccessIndex))
-          ++BTFIndex;
+    if (CTy->getTag() == dwarf::DW_TAG_structure_type ||
+        CTy->getTag() == dwarf::DW_TAG_union_type) {
+      const DINode *Field = getDIRecordField(CTy, AccessIndex);
+      if (!Field) {
+        Call->getContext().diagnose(DiagnosticInfoUnsupported(
+            *Call->getFunction(),
+            "CO-RE access to a field of '" + CTy->getName() +
+                "', which the debug info does not describe; the type may only "
+                "be declared there (e.g. clang's -fstandalone-debug emits it "
+                "in full)",
+            Call->getDebugLoc()));
+        return nullptr;
       }
+      BTFIndex = getBTFMemberIndex(CTy, Field);
     }
     AccessKey += ":" + std::to_string(BTFIndex);
 
@@ -1074,8 +1088,16 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
     TypeMeta = computeAccessKey(Call, CInfo, AccessKey, IsInt32Ret);
   } else {
     Base = computeBaseAndAccessKey(Call, CInfo, AccessKey, TypeMeta);
-    if (!Base)
+    if (!Base) {
+      // For a field info call, computeBaseAndAccessKey() only gives up after
+      // reporting an error, so the value of the call does not matter.
+      if (IsInt32Ret) {
+        Call->replaceAllUsesWith(ConstantInt::get(Call->getType(), 0));
+        Call->eraseFromParent();
+        return true;
+      }
       return false;
+    }
   }
 
   BasicBlock *BB = Call->getParent();
