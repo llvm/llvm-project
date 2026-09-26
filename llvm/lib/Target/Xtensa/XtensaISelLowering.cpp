@@ -272,12 +272,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 }
 
 Register XtensaTargetLowering::getExceptionPointerRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   return Xtensa::A2;
 }
 
 Register XtensaTargetLowering::getExceptionSelectorRegister(
-    ExceptionHandling EH, const Constant *PersonalityFn) const {
+    const Constant *PersonalityFn) const {
   return Xtensa::A3;
 }
 

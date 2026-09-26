@@ -636,15 +636,10 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const MachineFunction &MF = *BB->getParent();
       const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-      // Prefer the "exception-model" module flag, else the TargetOptions
-      // default.
-      ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
-      if (EH == ExceptionHandling::Default)
-        EH = TLI.getTargetMachine().getExceptionModel();
-      if (MCRegister Reg = TLI.getExceptionPointerRegister(EH, PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
-      if (MCRegister Reg = TLI.getExceptionSelectorRegister(EH, PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
     }
