@@ -218,6 +218,11 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
       ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
       DynamicVGPRBlockSize);
 
+  // A DVGPR wave launches with a single VGPR block allocated.
+  if (DynamicVGPRBlockSize != 0 &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    MaxVGPRs = std::min(MaxVGPRs, DynamicVGPRBlockSize);
+
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
   // will be inlined.
