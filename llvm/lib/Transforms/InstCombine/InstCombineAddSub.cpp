@@ -3277,6 +3277,12 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     return replaceInstUsesWith(I, Reverse);
   }
 
+  // fneg (fabs x) --> fneg (x) if we can prove that x is nonnegative (or that x
+  // is -0.0 when nsz is set)
+  if (match(OneUse, m_FAbs(m_Value(X))) &&
+      SimplifyDemandedInstructionFPClass(I))
+    return &I;
+
   return nullptr;
 }
 
