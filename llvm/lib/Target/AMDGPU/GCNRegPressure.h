@@ -450,8 +450,11 @@ public:
   /// it is assumed that the tracker is using an externally managed iterator,
   /// and advance* calls will not update the state of the iterator. In such
   /// cases, the tracker will move to the state at the provided \p MI .
+  /// If \p RetireDeadUses is false the uses that die at the instruction are
+  /// kept live. Callers that do this must restore the tracked state afterwards.
   void advanceToNext(MachineInstr *MI = nullptr,
-                     bool UseInternalIterator = true);
+                     bool UseInternalIterator = true,
+                     bool RetireDeadUses = true);
 
   /// Move to the state at the next MI. \p returns false if reached end of
   /// block. If \p UseInternalIterator is true, then internal iterators are used

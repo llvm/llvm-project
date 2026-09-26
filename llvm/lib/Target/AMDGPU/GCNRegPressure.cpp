@@ -720,18 +720,22 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
 
   assert(SI.isValid());
 
-  // Remove dead registers or mask bits.
   SmallSet<Register, 8> SeenRegs;
-  for (auto &MO : CurrMI->operands()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      continue;
-    if (MO.isUse() && !MO.readsReg())
-      continue;
-    if (!UseInternalIterator && MO.isDef())
-      continue;
-    if (!SeenRegs.insert(MO.getReg()).second)
-      continue;
-    retireVirtReg(MO.getReg(), SI);
+  if (UseInternalIterator) {
+    // Drop dead def lanes.
+    for (const MachineOperand &MO : CurrMI->all_defs()) {
+      Register Reg = MO.getReg();
+      if (Reg.isVirtual() && SeenRegs.insert(Reg).second)
+        retireVirtReg(Reg, SI);
+    }
+  } else {
+    // Defs have not been added yet, so the only lanes that can be dropped are
+    // uses that are already dead.
+    for (const MachineOperand &MO : CurrMI->all_uses()) {
+      Register Reg = MO.getReg();
+      if (MO.readsReg() && Reg.isVirtual() && SeenRegs.insert(Reg).second)
+        retireVirtReg(Reg, SI);
+    }
   }
 
   MaxPressure = max(MaxPressure, CurPressure);
@@ -742,7 +746,8 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
 }
 
 void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
-                                         bool UseInternalIterator) {
+                                         bool UseInternalIterator,
+                                         bool RetireDeadUses) {
   if (UseInternalIterator) {
     LastTrackedMI = &*NextMI++;
     NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
@@ -751,6 +756,34 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
   }
 
   const MachineInstr *CurrMI = LastTrackedMI;
+
+  if (RetireDeadUses) {
+    // Mirror ECDefPressure handling from GCNUpwardRPTracker::recede().
+    GCNRegPressure ECDefPressure;
+    for (const MachineOperand &MO : CurrMI->all_defs()) {
+      Register Reg = MO.getReg();
+      if (Reg.isVirtual() && MO.isEarlyClobber())
+        ECDefPressure.inc(Reg, LaneBitmask::getNone(), getDefRegMask(MO, *MRI),
+                          *MRI);
+    }
+
+    MaxPressure = max(MaxPressure, CurPressure + ECDefPressure);
+
+    // Retire the uses that die here before adding the defs, mirroring
+    // RegPressureTracker::advance().
+    //
+    // A PHI is skipped since its operands do not die here.
+    if (!CurrMI->isPHI()) {
+      SlotIndex SI = LIS.getInstructionIndex(*CurrMI).getDeadSlot();
+      assert(SI.isValid());
+      SmallSet<Register, 8> SeenRegs;
+      for (const MachineOperand &MO : CurrMI->all_uses()) {
+        Register Reg = MO.getReg();
+        if (MO.readsReg() && Reg.isVirtual() && SeenRegs.insert(Reg).second)
+          retireVirtReg(Reg, SI);
+      }
+    }
+  }
 
   // Add new registers or mask bits.
   for (const auto &MO : CurrMI->all_defs()) {

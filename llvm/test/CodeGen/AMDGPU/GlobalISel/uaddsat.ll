@@ -1653,10 +1653,10 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_not_b32_e32 v31, v0
 ; GFX6-NEXT:    v_min_u32_e32 v16, v31, v16
-; GFX6-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v16
 ; GFX6-NEXT:    v_not_b32_e32 v16, v1
 ; GFX6-NEXT:    v_min_u32_e32 v16, v16, v17
+; GFX6-NEXT:    buffer_load_dword v17, off, s[0:3], s32
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, v1, v16
 ; GFX6-NEXT:    v_not_b32_e32 v16, v2
 ; GFX6-NEXT:    v_min_u32_e32 v16, v16, v18
@@ -1699,7 +1699,7 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-NEXT:    v_add_i32_e32 v14, vcc, v14, v16
 ; GFX6-NEXT:    v_not_b32_e32 v16, v15
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_min_u32_e32 v16, v16, v31
+; GFX6-NEXT:    v_min_u32_e32 v16, v16, v17
 ; GFX6-NEXT:    v_add_i32_e32 v15, vcc, v15, v16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;

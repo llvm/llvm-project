@@ -2451,11 +2451,26 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
         RPTracker.reset(MI, MBB.end());
       RPTracker.advance();
 
+      // Report distance for every register live at MI including the ones
+      // that the tracker retired. Add their live-in lanes back.
+      GCNRPTracker::LiveRegSet LiveAtMI = RPTracker.getLiveRegs();
+      if (!MI.isDebugInstr()) {
+        SlotIndex BaseIdx = LIS.getInstructionIndex(MI).getBaseIndex();
+        for (const MachineOperand &MO : MI.all_uses()) {
+          Register Reg = MO.getReg();
+          if (!Reg.isVirtual() || !MO.readsReg())
+            continue;
+          LaneBitmask Mask = getLiveLaneMask(Reg, BaseIdx, LIS, MRI);
+          if (Mask.any())
+            LiveAtMI[Reg] |= Mask;
+        }
+      }
+
       UseDistancePair Furthest;
       UseDistancePair FurthestSubreg;
       RelevantUses.clear();
-      NUA.getNextUseDistances(RPTracker.getLiveRegs(), MI, Furthest,
-                              &FurthestSubreg, &RelevantUses);
+      NUA.getNextUseDistances(LiveAtMI, MI, Furthest, &FurthestSubreg,
+                              &RelevantUses);
 
       J.objectBegin();
       printInstrMember(J, MST, MI, NUAImpl);
