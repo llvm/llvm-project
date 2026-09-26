@@ -289,6 +289,12 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     }
   }
 
+  // For LoongArch, pass --no-rosegment so that read-only code stays in the
+  // first LOAD segment (matching GNU ld's layout). This enables Linux to
+  // use file-backed PMD mappings more effectively and reduces iTLB misses.
+  if (Triple.isLoongArch())
+    ExtraOpts.push_back("--no-rosegment");
+
   if (GCCInstallation.getParentLibPath().contains("opt/rh/"))
     // With devtoolset on RHEL, we want to add a bin directory that is relative
     // to the detected gcc install, because if we are using devtoolset gcc then
