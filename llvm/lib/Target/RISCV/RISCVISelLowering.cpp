@@ -2153,6 +2153,9 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
+// Return false to lower the fold of vscale add to RISCV.
+bool RISCVTargetLowering::isDesirableToFoldVScaleAdd() const { return false; }
+
 // Return false if we can lower get_vector_length to a vsetvli intrinsic.
 bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
                                                       unsigned VF,
@@ -18613,6 +18616,33 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::MULHSU, DL, VT, X, Mulh.getOperand(1));
 }
 
+// Fold (add (add A, (vscale C1)), (vscale C2))
+//   -> (add A, (vscale (C1 + C2)))
+// Optimize only when (add A, (vscale C1)) is not reused.
+static SDValue combineVscaleAdd(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getOperand(0).getValueType();
+
+  using namespace SDPatternMatch;
+  SDValue A, InnerAdd, VScale0, VScale1;
+
+  if (!sd_match(N, m_Add(m_OneUse(m_Value(InnerAdd,
+                                          m_Add(m_Value(A), m_Value(VScale0)))),
+                         m_Value(VScale1))))
+    return SDValue();
+
+  SDLoc DL(N);
+  if (VScale0.getOpcode() != ISD::VSCALE || VScale1.getOpcode() != ISD::VSCALE)
+    return SDValue();
+
+  const APInt &VS1 = VScale0->getConstantOperandAPInt(0);
+  const APInt &VS2 = VScale1->getConstantOperandAPInt(0);
+
+  SDValue VS = DAG.getVScale(DL, VT, VS1 + VS2);
+
+  return DAG.getNode(ISD::ADD, DL, VT, A, VS);
+}
+
 // Fold an add of a multiply-parts product into the accumulating form.
 static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
@@ -18805,6 +18835,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulh(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineVscaleAdd(N, DAG, Subtarget))
     return V;
 
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
@@ -24449,6 +24481,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::ADD: {
+    LLVM_DEBUG(dbgs() << "ISD::ADD " << "\n");
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
