@@ -963,4 +963,6 @@ math_mpfr_test(name = "log10f16")
 
 math_mpfr_test(name = "log10p1f16")
 
+math_mpfr_test(name = "lgammabf16")
+
 math_mpfr_test(name = "lgammaf16")
