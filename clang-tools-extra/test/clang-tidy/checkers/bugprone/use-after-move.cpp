@@ -1,13 +1,15 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
-// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
+// RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
-// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
+// RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
@@ -1998,3 +2000,196 @@ void callPartialForwardTemplate(Derived &&d) {
   partialForwardTemplate<Derived>(std::forward<Derived>(d));
 }
 } // namespace GH63202
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests for the ReportAccessOnlyUseForTypes option
+//
+// For the types in this option, only an access counts as a use. An access is a
+// member access or a dereference of the object. A different reference to the
+// variable does not count as a use. Examples of a different reference are an
+// argument, a comparison, or a copy. This behavior applies to a pointer to a
+// listed type. It also applies to a class that is the same as or derived from
+// a listed type.
+
+namespace report_access_only {
+
+struct AccessOnly {
+  void foo() const;
+  int bar;
+};
+
+void takePointer(AccessOnly *);
+
+void pointerMethodAccessIsUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  p->foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void pointerMemberDataAccessIsUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  int i = p->bar;
+  (void)i;
+  // CHECK-NOTES: [[@LINE-2]]:11: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:3: note: move occurred here
+}
+
+void pointerDerefIsUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  *p;
+  // CHECK-NOTES: [[@LINE-1]]:4: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void pointerDerefThenMemberIsUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  (*p).foo();
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void pointerSubscriptIsUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  p[0];
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void pointerPassIsNotUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  takePointer(p);
+}
+
+void pointerCompareIsNotUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  if (p == nullptr) {
+  }
+}
+
+void pointerCopyIsNotUse() {
+  AccessOnly *p = nullptr;
+  std::move(p);
+  AccessOnly *p2 = p;
+  (void)p2;
+}
+
+struct DerivedAccess : AccessOnly {};
+
+void derivedPointerAccessIsUse() {
+  DerivedAccess *p = nullptr;
+  std::move(p);
+  p->foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void derivedPointerPassIsNotUse() {
+  DerivedAccess *p = nullptr;
+  std::move(p);
+  takePointer(p);
+}
+
+struct HandleBase {};
+struct Handle : HandleBase {
+  void foo() const;
+};
+
+void takeHandle(Handle);
+
+void handleMemberAccessIsUse() {
+  Handle h;
+  std::move(h);
+  h.foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'h' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void handlePassIsNotUse() {
+  Handle h;
+  std::move(h);
+  takeHandle(h);
+}
+
+void handleCopyIsNotUse() {
+  Handle h;
+  std::move(h);
+  Handle h2 = h;
+  (void)h2;
+}
+
+struct NotListedInConfig {
+  void foo() const;
+};
+
+void nonListedPointerCompareIsUse() {
+  NotListedInConfig *p = nullptr;
+  std::move(p);
+  if (p == nullptr) {
+  }
+  // CHECK-NOTES: [[@LINE-2]]:7: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:3: note: move occurred here
+}
+
+// A smart-pointer-like class with overloaded dereference operators. An access
+// to the pointee through an overloaded operator counts as a use. Other
+// references to the variable do not count as a use.
+struct Pointee {
+  void foo() const;
+};
+
+struct SmartHandle {
+  Pointee *operator->();
+  Pointee &operator*();
+  Pointee &operator[](int);
+};
+
+void takeSmartHandle(SmartHandle);
+bool operator==(const SmartHandle &, const SmartHandle &);
+
+void smartHandleArrowIsUse() {
+  SmartHandle s;
+  std::move(s);
+  s->foo();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 's' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void smartHandleDerefIsUse() {
+  SmartHandle s;
+  std::move(s);
+  (*s).foo();
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: 's' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void smartHandleSubscriptIsUse() {
+  SmartHandle s;
+  std::move(s);
+  s[0];
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 's' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+}
+
+void smartHandlePassIsNotUse() {
+  SmartHandle s;
+  std::move(s);
+  takeSmartHandle(s);
+}
+
+void smartHandleCompareIsNotUse() {
+  SmartHandle s1;
+  SmartHandle s2;
+  std::move(s1);
+  if (s1 == s2) {
+  }
+}
+
+} // namespace report_access_only
