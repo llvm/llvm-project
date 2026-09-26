@@ -337,6 +337,9 @@ def __builtin_amdgcn_av_store_b128
 def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts|asynccnt">;
 def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts|asynccnt">;
 
+def __builtin_amdgcn_global_load_b128 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int address_space<1> *>, char const *)", [], "gfx9-insts">;
+def __builtin_amdgcn_global_store_b128 : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int address_space<1> *>, _ExtVector<4, unsigned int>, char const *)", [], "gfx9-insts">;
+
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
 //===----------------------------------------------------------------------===//
