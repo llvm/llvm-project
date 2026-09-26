@@ -270,6 +270,21 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
 
+  // LoweringPrepare uses this attribute directly as the fatbin global's
+  // initializer, so it must be a valid #cir.const_array payload for its type.
+  if (attrName == getCUDADeviceBinaryAttrName()) {
+    auto bytes = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    auto arrayTy =
+        bytes ? mlir::dyn_cast<cir::ArrayType>(bytes.getType()) : nullptr;
+    if (!arrayTy || arrayTy.getSize() != bytes.size())
+      return op->emitOpError()
+             << "expects '" << getCUDADeviceBinaryAttrName()
+             << "' to be a string typed as an array of its length";
+    return cir::ConstArrayAttr::verify([&] { return op->emitOpError(); },
+                                       arrayTy, bytes,
+                                       /*trailingZerosNum=*/0);
+  }
+
   return success();
 }
 
