@@ -2021,6 +2021,21 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_sudot4:
   case Intrinsic::amdgcn_sudot8: {
+    Value *Src0 = II.getArgOperand(1);
+    Value *Src1 = II.getArgOperand(3);
+
+    // Canonicalize the constant multiplicand to Src1, moving its sign flag with
+    // it.
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      Value *Sign0 = II.getArgOperand(0);
+      Value *Sign1 = II.getArgOperand(2);
+      II.setArgOperand(0, Sign1);
+      II.setArgOperand(1, Src1);
+      II.setArgOperand(2, Sign0);
+      II.setArgOperand(3, Src0);
+      return &II;
+    }
+
     if (Instruction *I = foldConstantIntoDotAccumulator(II, 4, 5, IC))
       return I;
 
