@@ -20615,6 +20615,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   // FIXME: Builtin::BI__builtin_powif
   // FIXME: Builtin::BI__builtin_powil
 
+  case Builtin::BIcopysign:
+  case Builtin::BIcopysignf:
+  case Builtin::BIcopysignl:
   case Builtin::BI__builtin_copysign:
   case Builtin::BI__builtin_copysignf:
   case Builtin::BI__builtin_copysignl:
