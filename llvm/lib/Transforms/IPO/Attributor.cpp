@@ -487,13 +487,13 @@ static bool getPotentialCopiesOfMemoryValue(
     bool NullOnly = true;
     bool NullRequired = false;
     auto CheckForNullOnlyAndUndef = [&](std::optional<Value *> V,
-                                        bool IsExact) {
+                                        AAPointerInfo::AccessOverlapTy AOTy) {
       if (!V || *V == nullptr)
         NullOnly = false;
       else if (isa<UndefValue>(*V))
         /* No op */;
       else if (isa<Constant>(*V) && cast<Constant>(*V)->isNullValue())
-        NullRequired = !IsExact;
+        NullRequired = AOTy == AAPointerInfo::AccessOverlapTy::UNKNOWN;
       else
         NullOnly = false;
     };
@@ -534,14 +534,15 @@ static bool getPotentialCopiesOfMemoryValue(
       return false;
     };
 
-    auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
+    auto CheckAccess = [&](const AAPointerInfo::Access &Acc,
+                           AAPointerInfo::AccessOverlapTy AOTy) {
       if ((IsLoad && !Acc.isWriteOrAssumption()) || (!IsLoad && !Acc.isRead()))
         return true;
       if (IsLoad && Acc.isWrittenValueYetUndetermined())
         return true;
-      CheckForNullOnlyAndUndef(Acc.getContent(), IsExact);
-      if (OnlyExact && !IsExact && !NullOnly &&
-          !isa_and_nonnull<UndefValue>(Acc.getWrittenValue())) {
+      CheckForNullOnlyAndUndef(Acc.getContent(), AOTy);
+      if (OnlyExact && AOTy == AAPointerInfo::AccessOverlapTy::UNKNOWN &&
+          !NullOnly && !isa_and_nonnull<UndefValue>(Acc.getWrittenValue())) {
         LLVM_DEBUG(dbgs() << "Non exact access " << *Acc.getRemoteInst()
                           << ", abort!\n");
         return false;
@@ -618,7 +619,8 @@ static bool getPotentialCopiesOfMemoryValue(
                              "underlying object, abort!\n");
         return false;
       }
-      CheckForNullOnlyAndUndef(InitialValue, /* IsExact */ true);
+      CheckForNullOnlyAndUndef(InitialValue,
+                               AAPointerInfo::AccessOverlapTy::EXACT);
       if (NullRequired && !NullOnly) {
         LLVM_DEBUG(dbgs() << "Non exact access but initial value that is not "
                              "null or undef, abort!\n");
