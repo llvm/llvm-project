@@ -98,8 +98,15 @@ public:
                 uint64_t val) const override;
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   void applyBranchToBranchOpt() const override;
+  bool relaxOnce(int pass) const override;
 
 private:
+  struct RelaxCandidateSection {
+    InputSection *sec;
+    SmallVector<uint32_t, 2> relocs;
+  };
+  mutable SmallVector<RelaxCandidateSection, 0> relaxableSections;
+
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -109,17 +116,12 @@ private:
 
 struct AArch64Relaxer {
   Ctx &ctx;
-  SmallPtrSet<Symbol *, 32> unsafeToRelaxAdrpLdr;
 
-  AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs, uint64_t secAddr,
-                 uint8_t *buf);
+  AArch64Relaxer(Ctx &ctx) : ctx(ctx) {}
   bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
                        uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
                        uint64_t secAddr, uint8_t *buf) const;
-  bool isLegalAdrpLdrRelaxationCandidate(const Relocation &adrpRel,
-                                         const Relocation &ldrRel,
-                                         uint64_t secAddr, uint8_t *buf) const;
 };
 } // namespace
 
@@ -194,11 +196,100 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
   }
 }
 
+static bool isLegalAdrpLdrPair(Ctx &ctx, uint64_t adrpOffset,
+                               int64_t adrpAddend, Symbol *adrpSym,
+                               uint64_t ldrOffset, int64_t ldrAddend,
+                               Symbol *ldrSym, const uint8_t *buf) {
+  // Check if the relocations apply to consecutive instructions.
+  if (adrpOffset + 4 != ldrOffset)
+    return false;
+  // Check if the relocations reference the same symbol and
+  // skip undefined, preemptible, STT_GNU_IFUNC, and tagged symbols.
+  if (!adrpSym || adrpSym != ldrSym || !adrpSym->isDefined() ||
+      adrpSym->isPreemptible || adrpSym->isGnuIFunc() || adrpSym->isTagged())
+    return false;
+  // Check if the addends of the both relocations are zero.
+  if (adrpAddend != 0 || ldrAddend != 0)
+    return false;
+  uint32_t adrpInstr = read32le(buf + adrpOffset);
+  uint32_t ldrInstr = read32le(buf + ldrOffset);
+  // Check if the first instruction is ADRP and the second instruction is LDR.
+  if ((adrpInstr & 0x9f000000) != 0x90000000 ||
+      (ldrInstr & 0x3b000000) != 0x39000000)
+    return false;
+  // Check the value of the sf bit.
+  if (!(ldrInstr >> 31))
+    return false;
+  uint32_t adrpDestReg = adrpInstr & 0x1f;
+  uint32_t ldrDestReg = ldrInstr & 0x1f;
+  uint32_t ldrSrcReg = (ldrInstr >> 5) & 0x1f;
+  // Check if ADRP and LDR use the same register.
+  if (adrpDestReg != ldrDestReg || adrpDestReg != ldrSrcReg)
+    return false;
+
+  // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
+  // position-independent code because these instructions produce a relative
+  // address.
+  if (ctx.arg.isPic && !cast<Defined>(*adrpSym).section)
+    return false;
+
+  return true;
+}
+
+template <class ELFT, class RelTy>
+static bool isLegalAdrpLdrPair(Ctx &ctx, InputSectionBase &sec,
+                               const RelTy &adrpRel, const RelTy &ldrRel,
+                               RelocScan &rs, const uint8_t *buf) {
+  if (ldrRel.r_offset + 4 > sec.content().size())
+    return false;
+  Symbol *adrpSym = &sec.getFile<ELFT>()->getSymbol(adrpRel.getSymbol(false));
+  Symbol *ldrSym = &sec.getFile<ELFT>()->getSymbol(ldrRel.getSymbol(false));
+  return isLegalAdrpLdrPair(
+      ctx, adrpRel.r_offset,
+      rs.getAddend<ELFT>(adrpRel, R_AARCH64_ADR_GOT_PAGE), adrpSym,
+      ldrRel.r_offset, rs.getAddend<ELFT>(ldrRel, R_AARCH64_LD64_GOT_LO12_NC),
+      ldrSym, buf);
+}
+
+template <class ELFT, class RelTy>
+static void findUnsafeAdrpLdr(Ctx &ctx, InputSectionBase &sec,
+                              Relocs<RelTy> rels, RelocScan &rs,
+                              SmallPtrSet<Symbol *, 32> &unsafeToRelaxAdrpLdr) {
+  if (!ctx.arg.relax || !(sec.flags & SHF_EXECINSTR) ||
+      sec.content().size() < 8)
+    return;
+
+  // For a given symbol R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
+  // relaxation is all-or-nothing. We can't relax only some of them, as there
+  // may be a jump destination between the two relocations.
+  auto getSym = [&](const RelTy &rel) {
+    return &sec.getFile<ELFT>()->getSymbol(rel.getSymbol(false));
+  };
+  const uint8_t *buf = sec.content().data();
+  for (auto it = rels.begin(), end = rels.end(); it != end; ++it) {
+    if (it->getType(false) == R_AARCH64_ADR_GOT_PAGE) {
+      auto next = std::next(it);
+      if (next != end && next->getType(false) == R_AARCH64_LD64_GOT_LO12_NC &&
+          !unsafeToRelaxAdrpLdr.contains(getSym(*it)) &&
+          isLegalAdrpLdrPair<ELFT>(ctx, sec, *it, *next, rs, buf)) {
+        it = next;
+        continue;
+      }
+      unsafeToRelaxAdrpLdr.insert(getSym(*it));
+    } else if (it->getType(false) == R_AARCH64_LD64_GOT_LO12_NC) {
+      unsafeToRelaxAdrpLdr.insert(getSym(*it));
+    }
+  }
+}
+
 template <class ELFT, class RelTy>
 void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                               unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
+
+  SmallPtrSet<Symbol *, 32> unsafeToRelaxAdrpLdr;
+  findUnsafeAdrpLdr<ELFT>(ctx, sec, rels, rs, unsafeToRelaxAdrpLdr);
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
@@ -303,10 +394,21 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
     // GOT relocations:
     case R_AARCH64_ADR_GOT_PAGE:
-      expr = RE_AARCH64_GOT_PAGE_PC;
+      if (ctx.arg.relax && (sec.flags & SHF_EXECINSTR) &&
+          !unsafeToRelaxAdrpLdr.contains(&sym)) {
+        expr = RE_AARCH64_RELAX_GOT_PAGE_PC;
+        // We may end up needing this GOT later if we can't relax this.
+        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      } else {
+        expr = RE_AARCH64_GOT_PAGE_PC;
+      }
       break;
     case R_AARCH64_LD64_GOT_LO12_NC:
-      expr = R_GOT;
+      if (ctx.arg.relax && (sec.flags & SHF_EXECINSTR) &&
+          !unsafeToRelaxAdrpLdr.contains(&sym))
+        expr = RE_AARCH64_RELAX_GOT_LO12;
+      else
+        expr = R_GOT;
       break;
     case R_AARCH64_LD64_GOTPAGE_LO15:
       expr = RE_AARCH64_GOT_PAGE;
@@ -957,32 +1059,6 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs,
-                               uint64_t secAddr, uint8_t *buf)
-    : ctx(ctx) {
-  if (!ctx.arg.relax)
-    return;
-  // For a given symbol R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
-  // relaxation is all-or-nothing. We can't relax only some of them, as there
-  // may be a jump destination between the two relocations.
-  size_t i = 0;
-  const size_t size = relocs.size();
-  for (; i != size; ++i) {
-    if (relocs[i].type == R_AARCH64_ADR_GOT_PAGE) {
-      if (i + 1 < size && relocs[i + 1].type == R_AARCH64_LD64_GOT_LO12_NC &&
-          !unsafeToRelaxAdrpLdr.contains(relocs[i].sym) &&
-          isLegalAdrpLdrRelaxationCandidate(relocs[i], relocs[i + 1], secAddr,
-                                            buf)) {
-        ++i;
-        continue;
-      }
-      unsafeToRelaxAdrpLdr.insert(relocs[i].sym);
-    } else if (relocs[i].type == R_AARCH64_LD64_GOT_LO12_NC) {
-      unsafeToRelaxAdrpLdr.insert(relocs[i].sym);
-    }
-  }
-}
-
 bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
                                      const Relocation &addRel, uint64_t secAddr,
                                      uint8_t *buf) const {
@@ -1031,51 +1107,6 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   return true;
 }
 
-bool AArch64Relaxer::isLegalAdrpLdrRelaxationCandidate(
-    const Relocation &adrpRel, const Relocation &ldrRel, uint64_t secAddr,
-    uint8_t *buf) const {
-  // Check if the relocations apply to consecutive instructions.
-  if (adrpRel.offset + 4 != ldrRel.offset)
-    return false;
-  // Check if the relocations reference the same symbol and
-  // skip undefined, preemptible and STT_GNU_IFUNC symbols.
-  if (!adrpRel.sym || adrpRel.sym != ldrRel.sym || !adrpRel.sym->isDefined() ||
-      adrpRel.sym->isPreemptible || adrpRel.sym->isGnuIFunc())
-    return false;
-  // Check if the addends of the both relocations are zero.
-  if (adrpRel.addend != 0 || ldrRel.addend != 0)
-    return false;
-  uint32_t adrpInstr = read32le(buf + adrpRel.offset);
-  uint32_t ldrInstr = read32le(buf + ldrRel.offset);
-  // Check if the first instruction is ADRP and the second instruction is LDR.
-  if ((adrpInstr & 0x9f000000) != 0x90000000 ||
-      (ldrInstr & 0x3b000000) != 0x39000000)
-    return false;
-  // Check the value of the sf bit.
-  if (!(ldrInstr >> 31))
-    return false;
-  uint32_t adrpDestReg = adrpInstr & 0x1f;
-  uint32_t ldrDestReg = ldrInstr & 0x1f;
-  uint32_t ldrSrcReg = (ldrInstr >> 5) & 0x1f;
-  // Check if ADPR and LDR use the same register.
-  if (adrpDestReg != ldrDestReg || adrpDestReg != ldrSrcReg)
-    return false;
-
-  Symbol &sym = *adrpRel.sym;
-  // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
-  // position-independent code because these instructions produce a relative
-  // address.
-  if (ctx.arg.isPic && !cast<Defined>(sym).section)
-    return false;
-  // Check if the address difference is within 4GB range.
-  int64_t val =
-      getAArch64Page(sym.getVA(ctx)) - getAArch64Page(secAddr + adrpRel.offset);
-  if (val != llvm::SignExtend64(val, 33))
-    return false;
-
-  return true;
-}
-
 bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
                                      const Relocation &ldrRel, uint64_t secAddr,
                                      uint8_t *buf) const {
@@ -1087,17 +1118,10 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // ADRP xn, sym
   // ADD xn, xn, :lo_12: sym
 
-  if (!ctx.arg.relax || adrpRel.type != R_AARCH64_ADR_GOT_PAGE ||
-      ldrRel.type != R_AARCH64_LD64_GOT_LO12_NC)
+  if (adrpRel.expr != RE_AARCH64_RELAX_GOT_PAGE_PC)
     return false;
 
   Symbol *sym = adrpRel.sym;
-  if (unsafeToRelaxAdrpLdr.contains(sym))
-    return false;
-
-  assert(isLegalAdrpLdrRelaxationCandidate(adrpRel, ldrRel, secAddr, buf) &&
-         "Should have been marked as unsafe");
-
   uint32_t adrpInstr = read32le(buf + adrpRel.offset);
   uint32_t adrpDestReg = adrpInstr & 0x1f;
   Relocation adrpSymRel = {RE_AARCH64_PAGE_PC, R_AARCH64_ADR_PREL_PG_HI21,
@@ -1130,7 +1154,7 @@ static bool needsGotForMemtag(const Relocation &rel) {
 void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   const ArrayRef<Relocation> relocs = sec.relocs();
-  AArch64Relaxer relaxer(ctx, relocs, secAddr, buf);
+  AArch64Relaxer relaxer(ctx);
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     const Relocation &rel = relocs[i];
     if (rel.expr == R_NONE) // See finalizeAddressDependentContent()
@@ -1248,6 +1272,75 @@ void AArch64::applyBranchToBranchOpt() const {
   applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
                              getBranchInfoAtTarget,
                              redirectControlTransferRelocations);
+}
+
+bool AArch64::relaxOnce(int pass) const {
+  if (!ctx.arg.relax || !ctx.in.got->hasGotOffRel)
+    return false;
+
+  auto [minVA, maxVA] = getOutputSectionVaRange();
+  // In -pie/-shared, GOT references to absolute symbols cannot be relaxed, so
+  // all relaxed symbols are defined in output sections. If the address span is
+  // under 4 GiB, ADRP relocations cannot overflow.
+  if (isUInt<32>(maxVA - minVA) && ctx.arg.isPic)
+    return false;
+
+  bool changed = false;
+  auto isOutOfRange = [&](const InputSection *sec, const Relocation &rel) {
+    int64_t val = getAArch64Page(rel.sym->getVA(ctx, rel.addend)) -
+                  getAArch64Page(sec->getOutputSection()->addr +
+                                 sec->outSecOff + rel.offset);
+    return val != llvm::SignExtend64(val, 33);
+  };
+
+  if (pass == 0) {
+    // Collect the sections containing relaxable relocations. Later passes only
+    // revisit these sections, and reverted relocations are pruned below, so
+    // the work per pass shrinks monotonically.
+    relaxableSections.clear();
+    SmallVector<InputSection *, 0> storage;
+    for (OutputSection *osec : ctx.outputSections) {
+      if (!(osec->flags & SHF_EXECINSTR))
+        continue;
+      for (InputSection *sec : getInputSections(*osec, storage)) {
+        SmallVector<uint32_t, 2> relocs;
+        for (size_t i = 0, e = sec->relocs().size(); i != e; ++i)
+          if (sec->relocs()[i].expr == RE_AARCH64_RELAX_GOT_PAGE_PC)
+            relocs.push_back(i);
+        if (!relocs.empty())
+          relaxableSections.push_back({sec, std::move(relocs)});
+      }
+    }
+  }
+
+  // Relaxation is all-or-nothing per symbol within a section (see
+  // findUnsafeAdrpLdr), so if any pair is out of range, revert every pair for
+  // that symbol in the section.
+  SmallPtrSet<Symbol *, 4> outOfRange;
+  for (RelaxCandidateSection &cs : relaxableSections) {
+    MutableArrayRef<Relocation> rels = cs.sec->relocs();
+    outOfRange.clear();
+    for (uint32_t i : cs.relocs)
+      if (isOutOfRange(cs.sec, rels[i]))
+        outOfRange.insert(rels[i].sym);
+    if (outOfRange.empty())
+      continue;
+    llvm::erase_if(cs.relocs, [&](uint32_t i) {
+      Relocation &rel = rels[i];
+      if (!outOfRange.contains(rel.sym))
+        return false;
+      if (rel.sym->auxIdx == 0) {
+        rel.sym->allocateAux(ctx);
+        addGotEntry(ctx, *rel.sym);
+        changed = true;
+      }
+      rel.expr = RE_AARCH64_GOT_PAGE_PC;
+      if (i + 1 < rels.size() && rels[i + 1].expr == RE_AARCH64_RELAX_GOT_LO12)
+        rels[i + 1].expr = R_GOT;
+      return true;
+    });
+  }
+  return changed;
 }
 
 // AArch64 may use security features in variant PLT sequences. These are:
