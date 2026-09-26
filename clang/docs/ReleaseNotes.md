@@ -597,6 +597,11 @@ features cannot lower the translation-unit ABI level;
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
+- Fixed an assertion failure when the `alias` attribute was applied to an
+  `extern` variable with an initializer. Static data members declared with
+  `alias` are now correctly diagnosed as definitions when followed by an
+  out-of-line definition.
+
 #### Bug Fixes to C++ Support
 
 - Fixed lambdas with specifiers or attributes after the capture list being
