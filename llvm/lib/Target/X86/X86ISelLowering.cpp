@@ -23221,9 +23221,8 @@ static SDValue lowerFTRUNC_FROUND_SSE2(SDValue Op, SelectionDAG &DAG) {
     llvm_unreachable("Unexpected type");
 
   const fltSemantics &Sem = VT.getFltSemantics();
-  APFloat Bound = VT.getScalarType() == MVT::f32
-                      ? APFloat(Sem, "0x1.0p23")
-                      : APFloat(Sem, "0x1.0p52");
+  APFloat Bound = VT.getScalarType() == MVT::f32 ? APFloat(Sem, "0x1.0p23")
+                                                 : APFloat(Sem, "0x1.0p52");
   SDValue Threshold = DAG.getConstantFP(Bound, DL, VT);
 
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
