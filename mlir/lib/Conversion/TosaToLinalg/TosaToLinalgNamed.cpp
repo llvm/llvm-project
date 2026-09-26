@@ -1120,6 +1120,9 @@ public:
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
     const TypeConverter &converter, RewritePatternSet *patterns,
     const TosaToLinalgNamedOptions &options) {
+  MaxPool2dAdaptiveOp::getCanonicalizationPatterns(*patterns,
+                                                   patterns->getContext());
+
   if (options.preferConv2DKernelLayoutHWCF) {
     patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcHwcfOp,
                                 linalg::Conv2DNhwcHwcfQOp>>(
