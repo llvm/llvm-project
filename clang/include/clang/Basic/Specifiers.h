@@ -312,6 +312,8 @@ namespace clang {
     CC_RISCVVLSCall_16384, // __attribute__((riscv_vls_cc(16384)))
     CC_RISCVVLSCall_32768, // __attribute__((riscv_vls_cc(32768)))
     CC_RISCVVLSCall_65536, // __attribute__((riscv_vls_cc(65536)))
+    CC_SH_RENESAS,         // __attribute__((sh_renesas))
+    CC_SH_WinCE,           // __attribute__((sh_wince))
   };
 
   /// Checks whether the given calling convention supports variadic
