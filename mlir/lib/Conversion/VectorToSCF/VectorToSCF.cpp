@@ -283,11 +283,20 @@ struct BufferAllocs {
   Value maskBuffer;
 };
 
-// TODO: Parallelism and threadlocal considerations with a ParallelScope trait.
+/// Skip serial loop scopes when an enclosing allocation scope is available.
 static Operation *getAutomaticAllocationScope(Operation *op) {
   Operation *scope =
       op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
   assert(scope && "Expected op to be inside automatic allocation scope");
+  // Only serial loops are skipped; parallel and explicit scopes are preserved.
+  while (isa<scf::ForOp, affine::AffineForOp>(scope)) {
+    Operation *parent =
+        scope->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+    // Keep the existing scope if there is no enclosing allocation scope.
+    if (!parent)
+      break;
+    scope = parent;
+  }
   return scope;
 }
 
