@@ -917,19 +917,22 @@ define float @extra_args_no_fast(ptr %x, float %a, float %b) {
 ; CHECK-NEXT:    ret float [[ADD5]]
 ;
 ; THRESHOLD-LABEL: @extra_args_no_fast(
-; THRESHOLD-NEXT:    [[ADDC:%.*]] = fadd fast float [[B:%.*]], 3.000000e+00
-; THRESHOLD-NEXT:    [[ADD:%.*]] = fadd fast float [[A:%.*]], [[ADDC]]
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
-; THRESHOLD-NEXT:    [[T0:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
-; THRESHOLD-NEXT:    [[ADD1:%.*]] = fadd fast float [[T0]], [[ADD]]
-; THRESHOLD-NEXT:    [[T1:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
-; THRESHOLD-NEXT:    [[ADD4:%.*]] = fadd fast float [[T1]], [[ADD1]]
-; THRESHOLD-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <3 x i32> <i32 3, i32 2, i32 poison>
+; THRESHOLD-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 1
+; THRESHOLD-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
+; THRESHOLD-NEXT:    [[T0:%.*]] = load float, ptr [[X]], align 4
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[ARRAYIDX3]], align 4
+; THRESHOLD-NEXT:    [[T3:%.*]] = load float, ptr [[ARRAYIDX3_2]], align 4
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float 3.000000e+00, float poison, float poison, float poison>, float [[B:%.*]], i64 1
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[A1:%.*]], i64 2
+; THRESHOLD-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[T0]], i64 3
+; THRESHOLD-NEXT:    [[A:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP4]])
 ; THRESHOLD-NEXT:    [[TMP5:%.*]] = insertelement <3 x float> poison, float [[A]], i64 0
-; THRESHOLD-NEXT:    [[TMP6:%.*]] = shufflevector <3 x float> [[TMP5]], <3 x float> poison, <3 x i32> <i32 poison, i32 poison, i32 0>
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> [[TMP6]], <3 x i32> <i32 0, i32 1, i32 5>
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = insertelement <3 x float> <float -0.000000e+00, float poison, float -0.000000e+00>, float [[ADD4]], i64 1
-; THRESHOLD-NEXT:    [[TMP9:%.*]] = fadd <3 x float> [[TMP7]], [[TMP8]]
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = shufflevector <3 x float> [[TMP5]], <3 x float> [[TMP7]], <3 x i32> <i32 0, i32 3, i32 4>
+; THRESHOLD-NEXT:    [[TMP12:%.*]] = call float @llvm.vector.reduce.fadd.v3f32(float -0.000000e+00, <3 x float> [[TMP8]])
+; THRESHOLD-NEXT:    [[TMP10:%.*]] = insertelement <3 x float> poison, float [[A1]], i64 2
+; THRESHOLD-NEXT:    [[TMP11:%.*]] = insertelement <3 x float> [[TMP10]], float [[T3]], i64 0
+; THRESHOLD-NEXT:    [[TMP9:%.*]] = insertelement <3 x float> [[TMP11]], float [[TMP12]], i64 1
 ; THRESHOLD-NEXT:    [[ADD5:%.*]] = call nnan ninf nsz arcp contract afn float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP9]])
 ; THRESHOLD-NEXT:    ret float [[ADD5]]
 ;

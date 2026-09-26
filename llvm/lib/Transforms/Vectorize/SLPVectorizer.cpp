@@ -21093,6 +21093,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         GatherNodes.push_back(E);
       }
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
+               E && TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
+               !E->UserTreeIndex.UserTE->isGather()) {
+      // Regular gathers reuse only perfectly matched transformed nodes of the
+      // same user.
+      GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
       if (TEPtr == TE || TEPtr->Idx == 0 || DeletedNodes.contains(TEPtr))
@@ -32857,7 +32864,10 @@ public:
         bool IsAnyRedOpGathered =
             !IgnoreVL &&
             (RK == ReductionOrdering::Ordered || V.isAnyGathered(IgnoreList));
-        if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth) {
+        // The non-power-of-2 width is an extra attempt on top of the full
+        // register widths, its failure must not prevent them.
+        if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth &&
+            hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ReduxWidth, SLPReVec)) {
           // Check if any of the reduction ops are gathered. If so, worth
           // trying again with less number of reduction ops.
           CheckForReusedReductionOpsLocal |= IsAnyRedOpGathered;
@@ -32931,8 +32941,12 @@ public:
           V.buildTree(VL, IgnoreList);
           V.setNarrowedChainInsts(NarrowedChainInsts);
         }
+        // All the lanes of an ordered reduction are extracted for the scalar
+        // reduction chain, so vectorizing just the reduced values saves
+        // nothing.
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
-                                                ReductionOrdering::Unordered)) {
+                                                ReductionOrdering::Unordered) ||
+            (RK == ReductionOrdering::Ordered && V.getTreeSize() == 1)) {
           constexpr unsigned CandidatesLimit = 64;
           if (!AdjustReducedVals(RK == ReductionOrdering::Ordered &&
                                  Candidates.size() >= CandidatesLimit))
