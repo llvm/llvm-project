@@ -37,6 +37,7 @@
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
@@ -693,6 +694,26 @@ LIBC_INLINE float powf(float x, float y) {
       return FloatBits::quiet_nan().get_val();
     }
 
+    if (y_abs > 0x4f17'0000U && y_abs < 0x7f80'0000U && x_u != 0 &&
+        x_u < 0x7f80'0000U && x_u != 0x3f80'0000U && x_u != 0x4000'0000U &&
+        x_u != 0x4120'0000U) {
+      const bool overflow = (x_u > 0x3f80'0000U) != (y_u > 0x8000'0000U);
+      if (overflow) {
+        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+        static volatile float rounding_test = 0x1.0p-25f;
+        if (1.0f - rounding_test != 1.0f)
+          return FloatBits::max_normal().get_val();
+        fputil::set_errno_if_required(ERANGE);
+        return FloatBits::inf().get_val();
+      }
+
+      fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+      if (fputil::fenv_is_round_up())
+        return FloatBits::min_subnormal().get_val();
+      fputil::set_errno_if_required(ERANGE);
+      return 0.0f;
+    }
+
     // Exceptional exponents.
     if (y == 0.0f)
       return 1.0f;
@@ -778,6 +799,21 @@ LIBC_INLINE float powf(float x, float y) {
         // won't be overflow in double precision.
         y = cpp::bit_cast<float>((y_u & FloatBits::SIGN_MASK) + 0x4f800000U);
       }
+    }
+  }
+
+  if (LIBC_UNLIKELY(y_u >= 0x3f80'0000U && y_u < 0x7f80'0000U && x_u > 0 &&
+                    x_u < 0x3f00'0000U)) {
+    // If x is in [2^(e - 127), 2^(e - 126)), then
+    // log2(x) < -(126 - e).  Use this bound to identify results below
+    // 2^-150 without evaluating log2(x).
+    int log2_bound = 126 - static_cast<int>(x_u >> FloatBits::FRACTION_LEN);
+    if (LIBC_UNLIKELY(static_cast<double>(y) * log2_bound >= 150.0)) {
+      fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+      if (fputil::fenv_is_round_up())
+        return FloatBits::min_subnormal().get_val();
+      fputil::set_errno_if_required(ERANGE);
+      return 0.0f;
     }
   }
 
