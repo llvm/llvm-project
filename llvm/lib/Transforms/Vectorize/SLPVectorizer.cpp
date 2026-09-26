@@ -13185,7 +13185,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const BoUpSLP &R);
+                                       const BoUpSLP &R, unsigned FMulOpIdx);
 
 // A poor-throughput entry's real vector-vs-scalar savings (fdiv/frem/fsqrt)
 // are already folded into TreeCost like any other entry, including all
@@ -13284,9 +13284,10 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
           if (!I || (TE.isAltShuffle() && I->getOpcode() != Instruction::FAdd &&
                      I->getOpcode() != Instruction::FSub))
             continue;
-          if (canConvertToFMA(I, InstructionsState(I, I), *DT, *DL, *TTI, *TLI,
-                              *this)
-                  .isValid()) {
+          std::optional<unsigned> FMulOpIdx = getFMulOperandIdx(I);
+          if (FMulOpIdx && canConvertToFMA(I, InstructionsState(I, I), *DT, *DL,
+                                           *TTI, *TLI, *this, *FMulOpIdx)
+                               .isValid()) {
             assert(Count > 0 && "Underflow in scalar inst count (fma)");
             --Count;
           }
@@ -13653,7 +13654,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const BoUpSLP &R) {
+                                       const BoUpSLP &R, unsigned FMulOpIdx) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -13687,13 +13688,14 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
   SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL, R);
 
-  InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
+  assert(FMulOpIdx < Operands.size() && "Expected a binary add/sub-like op");
+  InstructionsState OpS = getSameOpcode(Operands[FMulOpIdx], TLI);
   if (!OpS.valid())
     return InstructionCost::getInvalid();
 
   if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
     return InstructionCost::getInvalid();
-  if (!CheckForContractable(Operands.front(), OpS))
+  if (!CheckForContractable(Operands[FMulOpIdx], OpS))
     return InstructionCost::getInvalid();
   // Compare the costs.
   InstructionCost FMulPlusFAddCost = 0;
@@ -13744,7 +13746,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     FMulPlusFAddCost += GetLinkCost(I, IsCopyable);
   }
   unsigned NumOps = 0;
-  for (auto [V, Op] : zip(VL, Operands.front())) {
+  for (auto [V, Op] : zip(VL, Operands[FMulOpIdx])) {
     if (S.isCopyableElement(V))
       continue;
     auto *I = dyn_cast<Instruction>(Op);
@@ -14694,17 +14696,17 @@ void BoUpSLP::transformNodes() {
                         V->hasOneUse();
                });
       };
-      if (!IsOneUseVectorFMulOperand(LHS) &&
-          (E.getOpcode() == Instruction::FSub ||
-           !IsOneUseVectorFMulOperand(RHS)))
+      const bool FMulOnLHS = IsOneUseVectorFMulOperand(LHS);
+      if (!FMulOnLHS && (E.getOpcode() == Instruction::FSub ||
+                         !IsOneUseVectorFMulOperand(RHS)))
         break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI,
-                           *this)
+                           *this, FMulOnLHS ? 0 : 1)
                .isValid())
         break;
       // This node is a fmuladd node.
       E.CombinedOp = TreeEntry::FMulAdd;
-      TreeEntry *FMulEntry = getOperandEntry(&E, 0);
+      TreeEntry *FMulEntry = getOperandEntry(&E, FMulOnLHS ? 0 : 1);
       if (FMulEntry->UserTreeIndex &&
           FMulEntry->State == TreeEntry::Vectorize) {
         // The FMul node is part of the combined fmuladd node.
@@ -16577,8 +16579,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     return IntrinsicCost;
   };
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
-                                         Instruction *VI) {
-    InstructionCost Cost = canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this);
+                                         Instruction *VI,
+                                         std::optional<unsigned> FMulOpIdx) {
+    if (!FMulOpIdx)
+      return InstructionCost::getInvalid();
+    InstructionCost Cost =
+        canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this, *FMulOpIdx);
     return Cost;
   };
   switch (ShuffleOrOp) {
@@ -17053,8 +17059,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
-      return GetFMulAddCost(E->getOperations(),
-                            cast<Instruction>(UniqueValues[Idx]));
+      auto *VI = cast<Instruction>(UniqueValues[Idx]);
+      return GetFMulAddCost(E->getOperations(), VI,
+                            E->isCopyableElement(VI) ? 0
+                                                     : getFMulOperandIdx(VI));
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
       FastMathFlags FMF;
@@ -17062,8 +17070,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       for (Value *V : E->Scalars) {
         if (auto *FPCI = dyn_cast<FPMathOperator>(V)) {
           FMF &= FPCI->getFastMathFlags();
-          if (auto *FPCIOp = dyn_cast<FPMathOperator>(FPCI->getOperand(0)))
-            FMF &= FPCIOp->getFastMathFlags();
+          if (E->isCopyableElement(V))
+            continue;
+          if (std::optional<unsigned> FMulOpIdx =
+                  getFMulOperandIdx(cast<Instruction>(V)))
+            FMF &= cast<FPMathOperator>(FPCI->getOperand(*FMulOpIdx))
+                       ->getFastMathFlags();
         }
       }
       IntrinsicCostAttributes ICA(Intrinsic::fmuladd, VecTy,
@@ -17269,9 +17281,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InstructionCost ScalarCost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, OrigScalarTy, CostKind, Op1Info, Op2Info, Operands,
           I && I->getOpcode() == ShuffleOrOp ? I : nullptr);
-      if (I && (ShuffleOrOp == Instruction::FAdd ||
-                ShuffleOrOp == Instruction::FSub)) {
-        InstructionCost IntrinsicCost = GetFMulAddCost(E->getOperations(), I);
+      if (I && !E->isCopyableElement(I) &&
+          (ShuffleOrOp == Instruction::FAdd ||
+           ShuffleOrOp == Instruction::FSub)) {
+        InstructionCost IntrinsicCost =
+            GetFMulAddCost(E->getOperations(), I, getFMulOperandIdx(I));
         if (IntrinsicCost.isValid())
           ScalarCost = IntrinsicCost;
       }
@@ -33688,8 +33702,12 @@ private:
                                                ? getSameOpcode(RdxOp, TLI)
                                                : InstructionsState::invalid();
                 if (RdxOpS && RdxOpS.isAddSubOrFNegLikeOp()) {
-                  InstructionCost FMACost =
-                      canConvertToFMA(RdxOp, RdxOpS, DT, DL, *TTI, TLI, R);
+                  unsigned OpIdx = isa<BinaryOperator>(RdxOp) &&
+                                           RdxOp->getOperand(1) == RdxVal
+                                       ? 1
+                                       : 0;
+                  InstructionCost FMACost = canConvertToFMA(
+                      RdxOp, RdxOpS, DT, DL, *TTI, TLI, R, OpIdx);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -33845,19 +33863,30 @@ private:
             SmallVector<Value *> Ops;
             FastMathFlags FMF;
             FMF.set();
-            for (Value *RdxVal : ReducedVals) {
+            unsigned FMulOpIdx = 0;
+            for (auto [Idx, RdxVal] : enumerate(ReducedVals)) {
               if (!RdxVal->hasOneUse()) {
                 Ops.clear();
                 break;
               }
+              User *U = RdxVal->user_back();
+              unsigned OpIdx =
+                  isa<BinaryOperator>(U) && U->getOperand(1) == RdxVal ? 1 : 0;
+              if (Idx != 0 && FMulOpIdx != OpIdx) {
+                Ops.clear();
+                break;
+              }
+              if (Idx == 0)
+                FMulOpIdx = OpIdx;
               if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
                 FMF &= FPCI->getFastMathFlags();
-              Ops.push_back(RdxVal->user_back());
+              Ops.push_back(U);
             }
             if (!Ops.empty()) {
               InstructionsState S = getSameOpcode(Ops, TLI);
               if (S && S.isAddSubOrFNegLikeOp())
-                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, R);
+                FMACost =
+                    canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, R, FMulOpIdx);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
@@ -34747,13 +34776,15 @@ bool SLPVectorizerPass::tryToVectorize(
     return false;
   // Skip potential FMA candidates and collect them for a retry after all other
   // instructions in the block have been processed.
-  if (!AllowFMACandidates &&
-      (I->getOpcode() == Instruction::FAdd ||
-       I->getOpcode() == Instruction::FSub) &&
-      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI, R)
-          .isValid()) {
-    FMACandidates.insert(I);
-    return false;
+  if (!AllowFMACandidates && (I->getOpcode() == Instruction::FAdd ||
+                              I->getOpcode() == Instruction::FSub)) {
+    std::optional<unsigned> FMulOpIdx = getFMulOperandIdx(I);
+    if (FMulOpIdx && canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI,
+                                     *TLI, R, *FMulOpIdx)
+                         .isValid()) {
+      FMACandidates.insert(I);
+      return false;
+    }
   }
 
   Value *P = I->getParent();
@@ -36068,7 +36099,8 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
           S && S.isAddSubLikeOp() &&
-          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R).isValid())
+          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R, *getFMulOperandIdx(U))
+              .isValid())
         continue;
     }
     // The keys are hashes, so the groups are numbered by the first seed to

@@ -387,6 +387,10 @@ bool isOnceUsedSeed(const Instruction *I);
 /// produce nan/inf.
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
 
+/// \returns the operand index of \p I that holds a one-use fmul, std::nullopt
+/// if there is none. \p I must be an fadd/fsub-like instruction.
+std::optional<unsigned> getFMulOperandIdx(const Instruction *I);
+
 /// Narrow reduction leaf: the value, the shift applied after widening and
 /// the mask applied in the narrow type before widening, clearing the bits
 /// the absorbed narrow shls shift out and applying the absorbed narrow
