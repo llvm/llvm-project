@@ -53,6 +53,7 @@ BoundsSafetyImplPlans
 ControlFlowIntegrity
 LTOVisibility
 PointerAuthentication
+ReturnAddressAuthenticationHardening
 SafeStack
 ShadowCallStack
 StructureProtection
@@ -137,4 +138,3 @@ LLVMExceptionHandlingCodeGen
 
 - {ref}`genindex`
 - {ref}`search`
-
