@@ -28,6 +28,7 @@
 #ifndef __riscv_abi_rve
 
   .globl  __riscv_restore_12
+  .hidden __riscv_restore_12
   .type   __riscv_restore_12,@function
 __riscv_restore_12:
   lw      s11, 12(sp)
@@ -35,12 +36,16 @@ __riscv_restore_12:
   // fallthrough into __riscv_restore_11/10/9/8
 
   .globl  __riscv_restore_11
+  .hidden __riscv_restore_11
   .type   __riscv_restore_11,@function
   .globl  __riscv_restore_10
+  .hidden __riscv_restore_10
   .type   __riscv_restore_10,@function
   .globl  __riscv_restore_9
+  .hidden __riscv_restore_9
   .type   __riscv_restore_9,@function
   .globl  __riscv_restore_8
+  .hidden __riscv_restore_8
   .type   __riscv_restore_8,@function
 __riscv_restore_11:
 __riscv_restore_10:
@@ -54,12 +59,16 @@ __riscv_restore_8:
   // fallthrough into __riscv_restore_7/6/5/4
 
   .globl  __riscv_restore_7
+  .hidden __riscv_restore_7
   .type   __riscv_restore_7,@function
   .globl  __riscv_restore_6
+  .hidden __riscv_restore_6
   .type   __riscv_restore_6,@function
   .globl  __riscv_restore_5
+  .hidden __riscv_restore_5
   .type   __riscv_restore_5,@function
   .globl  __riscv_restore_4
+  .hidden __riscv_restore_4
   .type   __riscv_restore_4,@function
 __riscv_restore_7:
 __riscv_restore_6:
@@ -73,12 +82,16 @@ __riscv_restore_4:
   // fallthrough into __riscv_restore_3/2/1/0
 
   .globl  __riscv_restore_3
+  .hidden __riscv_restore_3
   .type   __riscv_restore_3,@function
   .globl  __riscv_restore_2
+  .hidden __riscv_restore_2
   .type   __riscv_restore_2,@function
   .globl  __riscv_restore_1
+  .hidden __riscv_restore_1
   .type   __riscv_restore_1,@function
   .globl  __riscv_restore_0
+  .hidden __riscv_restore_0
   .type   __riscv_restore_0,@function
 __riscv_restore_3:
 __riscv_restore_2:
@@ -94,6 +107,7 @@ __riscv_restore_0:
 #else
 
   .globl  __riscv_restore_2
+  .hidden __riscv_restore_2
   .type   __riscv_restore_2,@function
 __riscv_restore_2:
   lw      s1, 0(sp)
@@ -101,6 +115,7 @@ __riscv_restore_2:
   // fallthrough into __riscv_restore_1/0
 
   .globl  __riscv_restore_1
+  .hidden __riscv_restore_1
   .type   __riscv_restore_1,@function
 __riscv_restore_1:
   lw      s0, 0(sp)
@@ -108,6 +123,7 @@ __riscv_restore_1:
   // fallthrough into __riscv_restore_0
 
   .globl  __riscv_restore_0
+  .hidden __riscv_restore_0
   .type   __riscv_restore_0,@function
 __riscv_restore_0:
   lw      ra, 0(sp)
@@ -121,6 +137,7 @@ __riscv_restore_0:
 #ifndef __riscv_abi_rve
 
   .globl  __riscv_restore_12
+  .hidden __riscv_restore_12
   .type   __riscv_restore_12,@function
 __riscv_restore_12:
   ld      s11, 8(sp)
@@ -128,8 +145,10 @@ __riscv_restore_12:
   // fallthrough into __riscv_restore_11/10
 
   .globl  __riscv_restore_11
+  .hidden __riscv_restore_11
   .type   __riscv_restore_11,@function
   .globl  __riscv_restore_10
+  .hidden __riscv_restore_10
   .type   __riscv_restore_10,@function
 __riscv_restore_11:
 __riscv_restore_10:
@@ -139,8 +158,10 @@ __riscv_restore_10:
   // fallthrough into __riscv_restore_9/8
 
   .globl  __riscv_restore_9
+  .hidden __riscv_restore_9
   .type   __riscv_restore_9,@function
   .globl  __riscv_restore_8
+  .hidden __riscv_restore_8
   .type   __riscv_restore_8,@function
 __riscv_restore_9:
 __riscv_restore_8:
@@ -150,8 +171,10 @@ __riscv_restore_8:
   // fallthrough into __riscv_restore_7/6
 
   .globl  __riscv_restore_7
+  .hidden __riscv_restore_7
   .type   __riscv_restore_7,@function
   .globl  __riscv_restore_6
+  .hidden __riscv_restore_6
   .type   __riscv_restore_6,@function
 __riscv_restore_7:
 __riscv_restore_6:
@@ -161,8 +184,10 @@ __riscv_restore_6:
   // fallthrough into __riscv_restore_5/4
 
   .globl  __riscv_restore_5
+  .hidden __riscv_restore_5
   .type   __riscv_restore_5,@function
   .globl  __riscv_restore_4
+  .hidden __riscv_restore_4
   .type   __riscv_restore_4,@function
 __riscv_restore_5:
 __riscv_restore_4:
@@ -172,8 +197,10 @@ __riscv_restore_4:
   // fallthrough into __riscv_restore_3/2
 
   .globl  __riscv_restore_3
+  .hidden __riscv_restore_3
   .type   __riscv_restore_3,@function
   .globl  __riscv_restore_2
+  .hidden __riscv_restore_2
   .type   __riscv_restore_2,@function
 __riscv_restore_3:
 __riscv_restore_2:
@@ -183,8 +210,10 @@ __riscv_restore_2:
   // fallthrough into __riscv_restore_1/0
 
   .globl  __riscv_restore_1
+  .hidden __riscv_restore_1
   .type   __riscv_restore_1,@function
   .globl  __riscv_restore_0
+  .hidden __riscv_restore_0
   .type   __riscv_restore_0,@function
 __riscv_restore_1:
 __riscv_restore_0:
@@ -196,6 +225,7 @@ __riscv_restore_0:
 #else
 
   .globl  __riscv_restore_2
+  .hidden __riscv_restore_2
   .type   __riscv_restore_2,@function
 __riscv_restore_2:
   ld      s1, 0(sp)
@@ -203,6 +233,7 @@ __riscv_restore_2:
   // fallthrough into __riscv_restore_1/0
 
   .globl  __riscv_restore_1
+  .hidden __riscv_restore_1
   .type   __riscv_restore_1,@function
 __riscv_restore_1:
   ld      s0, 0(sp)
@@ -210,6 +241,7 @@ __riscv_restore_1:
   // fallthrough into __riscv_restore_0
 
   .globl  __riscv_restore_0
+  .hidden __riscv_restore_0
   .type   __riscv_restore_0,@function
 __riscv_restore_0:
   ld      ra, 0(sp)

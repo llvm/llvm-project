@@ -21,6 +21,7 @@
 #ifndef __riscv_abi_rve
 
   .globl  __riscv_save_12
+  .hidden __riscv_save_12
   .type   __riscv_save_12,@function
 __riscv_save_12:
   addi   sp, sp, -64
@@ -29,12 +30,16 @@ __riscv_save_12:
   j      .Lriscv_save_11_8
 
   .globl  __riscv_save_11
+  .hidden __riscv_save_11
   .type   __riscv_save_11,@function
   .globl  __riscv_save_10
+  .hidden __riscv_save_10
   .type   __riscv_save_10,@function
   .globl  __riscv_save_9
+  .hidden __riscv_save_9
   .type   __riscv_save_9,@function
   .globl  __riscv_save_8
+  .hidden __riscv_save_8
   .type   __riscv_save_8,@function
 __riscv_save_11:
 __riscv_save_10:
@@ -50,12 +55,16 @@ __riscv_save_8:
   j      .Lriscv_save_7_4
 
   .globl  __riscv_save_7
+  .hidden __riscv_save_7
   .type   __riscv_save_7,@function
   .globl  __riscv_save_6
+  .hidden __riscv_save_6
   .type   __riscv_save_6,@function
   .globl  __riscv_save_5
+  .hidden __riscv_save_5
   .type   __riscv_save_5,@function
   .globl  __riscv_save_4
+  .hidden __riscv_save_4
   .type   __riscv_save_4,@function
 __riscv_save_7:
 __riscv_save_6:
@@ -76,12 +85,16 @@ __riscv_save_4:
   jr     t0
 
   .globl  __riscv_save_3
+  .hidden __riscv_save_3
   .type   __riscv_save_3,@function
   .globl  __riscv_save_2
+  .hidden __riscv_save_2
   .type   __riscv_save_2,@function
   .globl  __riscv_save_1
+  .hidden __riscv_save_1
   .type   __riscv_save_1,@function
   .globl  __riscv_save_0
+  .hidden __riscv_save_0
   .type   __riscv_save_0,@function
 __riscv_save_3:
 __riscv_save_2:
@@ -97,6 +110,7 @@ __riscv_save_0:
 #else
 
   .globl  __riscv_save_2
+  .hidden __riscv_save_2
   .type   __riscv_save_2,@function
 __riscv_save_2:
   addi    sp, sp, -12
@@ -106,6 +120,7 @@ __riscv_save_2:
   jr      t0
 
   .globl  __riscv_save_1
+  .hidden __riscv_save_1
   .type   __riscv_save_1,@function
 __riscv_save_1:
   addi    sp, sp, -8
@@ -114,6 +129,7 @@ __riscv_save_1:
   jr      t0
 
   .globl  __riscv_save_0
+  .hidden __riscv_save_0
   .type   __riscv_save_0,@function
 __riscv_save_0:
   addi    sp, sp, -4
@@ -127,6 +143,7 @@ __riscv_save_0:
 #ifndef __riscv_abi_rve
 
   .globl  __riscv_save_12
+  .hidden __riscv_save_12
   .type   __riscv_save_12,@function
 __riscv_save_12:
   addi   sp, sp, -112
@@ -135,8 +152,10 @@ __riscv_save_12:
   j      .Lriscv_save_11_10
 
   .globl  __riscv_save_11
+  .hidden __riscv_save_11
   .type   __riscv_save_11,@function
   .globl  __riscv_save_10
+  .hidden __riscv_save_10
   .type   __riscv_save_10,@function
 __riscv_save_11:
 __riscv_save_10:
@@ -148,8 +167,10 @@ __riscv_save_10:
   j      .Lriscv_save_9_8
 
   .globl  __riscv_save_9
+  .hidden __riscv_save_9
   .type   __riscv_save_9,@function
   .globl  __riscv_save_8
+  .hidden __riscv_save_8
   .type   __riscv_save_8,@function
 __riscv_save_9:
 __riscv_save_8:
@@ -161,8 +182,10 @@ __riscv_save_8:
   j      .Lriscv_save_7_6
 
   .globl  __riscv_save_7
+  .hidden __riscv_save_7
   .type   __riscv_save_7,@function
   .globl  __riscv_save_6
+  .hidden __riscv_save_6
   .type   __riscv_save_6,@function
 __riscv_save_7:
 __riscv_save_6:
@@ -174,8 +197,10 @@ __riscv_save_6:
   j      .Lriscv_save_5_4
 
   .globl  __riscv_save_5
+  .hidden __riscv_save_5
   .type   __riscv_save_5,@function
   .globl  __riscv_save_4
+  .hidden __riscv_save_4
   .type   __riscv_save_4,@function
 __riscv_save_5:
 __riscv_save_4:
@@ -187,8 +212,10 @@ __riscv_save_4:
   j      .Lriscv_save_3_2
 
   .globl  __riscv_save_3
+  .hidden __riscv_save_3
   .type   __riscv_save_3,@function
   .globl  __riscv_save_2
+  .hidden __riscv_save_2
   .type   __riscv_save_2,@function
 __riscv_save_3:
 __riscv_save_2:
@@ -203,8 +230,10 @@ __riscv_save_2:
   jr     t0
 
   .globl  __riscv_save_1
+  .hidden __riscv_save_1
   .type   __riscv_save_1,@function
   .globl  __riscv_save_0
+  .hidden __riscv_save_0
   .type   __riscv_save_0,@function
 __riscv_save_1:
 __riscv_save_0:
@@ -216,6 +245,7 @@ __riscv_save_0:
 #else
 
   .globl  __riscv_save_2
+  .hidden __riscv_save_2
   .type   __riscv_save_2,@function
 __riscv_save_2:
   addi    sp, sp, -24
@@ -225,6 +255,7 @@ __riscv_save_2:
   jr      t0
 
   .globl  __riscv_save_1
+  .hidden __riscv_save_1
   .type   __riscv_save_1,@function
 __riscv_save_1:
   addi    sp, sp, -16
@@ -233,6 +264,7 @@ __riscv_save_1:
   jr      t0
 
   .globl  __riscv_save_0
+  .hidden __riscv_save_0
   .type   __riscv_save_0,@function
 __riscv_save_0:
   addi    sp, sp, -8
