@@ -536,7 +536,7 @@ enum _reduction_method {
 
 #if KMP_FAST_REDUCTION_BARRIER
 #define PACK_REDUCTION_METHOD_AND_BARRIER(reduction_method, barrier_type)      \
-  ((reduction_method) | (barrier_type))
+  ((int)(reduction_method) | (int)(barrier_type))
 
 #define UNPACK_REDUCTION_METHOD(packed_reduction_method)                       \
   ((enum _reduction_method)((packed_reduction_method) & (0x0000FF00)))
