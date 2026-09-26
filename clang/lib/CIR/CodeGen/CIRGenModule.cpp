@@ -421,8 +421,8 @@ CIRGenModule::getAddrOfGlobal(GlobalDecl gd, ForDefinition_t isForDefinition) {
                              isForDefinition);
   }
 
-  return getAddrOfGlobalVar(cast<VarDecl>(d), /*ty=*/nullptr, isForDefinition)
-      .getDefiningOp();
+  return getOrCreateCIRGlobal(cast<VarDecl>(d), /*ty=*/nullptr,
+                              isForDefinition);
 }
 
 void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
@@ -1444,10 +1444,25 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType(), g.getAddrSpaceAttr());
-  return cir::GetGlobalOp::create(
+  mlir::Value addr = cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
       /*static_local=*/g.getStaticLocalGuard().has_value());
+  return castGlobalToDeclAddrSpace(addr, *d);
+}
+
+mlir::Value CIRGenModule::castGlobalToDeclAddrSpace(mlir::Value addr,
+                                                    const VarDecl &vd) {
+  // A global may live in a different address space than its declared type,
+  // e.g. a CUDA __shared__ variable. Like classic CodeGen, cast once where
+  // the address is formed so every user sees the declared type.
+  auto ptrTy = mlir::cast<cir::PointerType>(addr.getType());
+  mlir::ptr::MemorySpaceAttrInterface declAS =
+      getTypes().getPointerAddressSpace(vd.getType());
+  if (ptrTy.getAddrSpace() == declAS)
+    return addr;
+  return builder.createAddrSpaceCast(
+      addr, builder.getPointerTo(ptrTy.getPointee(), declAS));
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
