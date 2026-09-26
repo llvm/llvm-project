@@ -30146,8 +30146,8 @@ static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
     return SDValue();
 
   unsigned EltSize = VT.getScalarSizeInBits();
-  if (!sd_match(Cond, m_SetCC(m_Specific(Amt), m_SpecificInt(EltSize),
-                              m_SpecificCondCode(RequiredCC))))
+  if (!sd_match(Cond, m_SpecificSetCC(RequiredCC, m_Specific(Amt),
+                                      m_SpecificInt(EltSize))))
     return SDValue();
 
   SDLoc DL(N);
@@ -31725,7 +31725,7 @@ static SDValue performCTPOPCombine(SDNode *N,
 
   EVT CmpVT;
   // Use the same VT as the SETcc if -CTPOP would not overflow.
-  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value(), m_Value()))) {
+  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value()))) {
     CmpVT = CmpVT.changeVectorElementTypeToInteger();
     if (Log2_64_Ceil(MaskVT.getSizeInBits()) <= CmpVT.getScalarSizeInBits() - 1)
       ReduceInVT = CmpVT;
