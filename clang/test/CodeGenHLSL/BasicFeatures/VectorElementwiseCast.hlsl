@@ -197,7 +197,9 @@ export void call8(int3x1 M) {
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
+// CHECK-NEXT:    [[M_LOADEDV:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+// CHECK-NEXT:    [[M_EXT:%.*]] = zext <2 x i1> [[M_LOADEDV]] to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[M_EXT]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <2 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
