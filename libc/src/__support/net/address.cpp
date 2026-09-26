@@ -67,6 +67,107 @@ namespace net {
   return true;
 }
 
+namespace {
+
+LIBC_INLINE constexpr bool is_hex_char(char c) {
+  return internal::isalnum(c) && internal::b36_char_to_int(c) < 16;
+}
+
+} // anonymous namespace
+
+[[nodiscard]] bool str_to_ipv6(cpp::string_view src, struct in6_addr &dst) {
+  if (src.empty())
+    return false;
+
+  uint8_t bytes[16] = {0};
+  size_t cur_byte = 0;
+  int double_colon_byte = -1;
+
+  if (src.starts_with("::")) {
+    double_colon_byte = 0;
+    src.remove_prefix(2);
+    if (src.empty()) {
+      inline_memcpy(&dst.s6_addr, bytes, 16);
+      return true;
+    }
+  } else if (src[0] == ':') {
+    return false;
+  }
+
+  uint32_t val = 0;
+  size_t num_digits = 0;
+  size_t token_start = 0;
+
+  for (size_t i = 0; i < src.size(); ++i) {
+    char c = src[i];
+    if (is_hex_char(c)) {
+      if (++num_digits > 4)
+        return false;
+      if (num_digits == 1)
+        token_start = i;
+      val = (val << 4) | static_cast<uint32_t>(internal::b36_char_to_int(c));
+    } else if (c == ':') {
+      if (num_digits == 0) {
+        if (double_colon_byte != -1)
+          return false;
+        double_colon_byte = static_cast<int>(cur_byte);
+        continue;
+      }
+      if (i + 1 == src.size())
+        return false; // Trailing single colon
+
+      if (cur_byte + 2 > 16)
+        return false;
+
+      bytes[cur_byte++] = static_cast<uint8_t>(val >> 8);
+      bytes[cur_byte++] = static_cast<uint8_t>(val & 0xff);
+      val = 0;
+      num_digits = 0;
+    } else if (c == '.') {
+      if (num_digits == 0 || cur_byte + 4 > 16)
+        return false;
+
+      cpp::string_view ipv4_str = src.substr(token_start);
+      struct in_addr in4;
+      if (!str_to_ipv4(ipv4_str, in4))
+        return false;
+
+      inline_memcpy(&bytes[cur_byte], &in4.s_addr, 4);
+      cur_byte += 4;
+      num_digits = 0;
+      break;
+    } else {
+      return false;
+    }
+  }
+
+  if (num_digits > 0) {
+    if (cur_byte + 2 > 16)
+      return false;
+    bytes[cur_byte++] = static_cast<uint8_t>(val >> 8);
+    bytes[cur_byte++] = static_cast<uint8_t>(val & 0xff);
+  }
+
+  if (double_colon_byte != -1) {
+    if (cur_byte >= 16)
+      return false;
+
+    size_t bytes_after = cur_byte - static_cast<size_t>(double_colon_byte);
+    for (size_t k = bytes_after; k > 0; --k)
+      bytes[16 - bytes_after + (k - 1)] =
+          bytes[static_cast<size_t>(double_colon_byte) + (k - 1)];
+
+    size_t gap = 16 - cur_byte;
+    for (size_t k = 0; k < gap; ++k)
+      bytes[static_cast<size_t>(double_colon_byte) + k] = 0;
+  } else if (cur_byte != 16) {
+    return false;
+  }
+
+  inline_memcpy(&dst.s6_addr, bytes, 16);
+  return true;
+}
+
 cpp::optional<in_addr_t> inet_addr(cpp::string_view src) {
   constexpr int IPV4_MAX_DOT_NUM = 3;
   in_addr_t parts[IPV4_MAX_DOT_NUM + 1] = {0};

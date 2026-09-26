@@ -81,6 +81,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.struct_in_addr
+    libc.hdr.types.struct_in6_addr
     libc.src.arpa.inet.inet_pton
     libc.src.__support.libc_errno
     libc.hdr.sys_socket_macros
