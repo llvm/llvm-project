@@ -1211,8 +1211,9 @@ static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
 }
 
 BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
-  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
-                                            AlwaysExecutesFreq);
+  return getBranchProbabilityKeepingPartial(
+      Freq.getFrequency(),
+      BlockFrequencyInfoImplBase::BlockMass::getFull().getMass());
 }
 
 /// Returns the probability of reaching each unique successor of \p VPBB, taken
@@ -1267,7 +1268,7 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     BFI.Working.emplace_back(BFIBase::BlockNode(Idx)).Loop = &Loop;
   }
   BFI.Working.emplace_back(Outside);
-  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass(AlwaysExecutesFreq);
+  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass::getFull();
 
   // Keep track nodes reached via an edge without branch weighs or with
   // estimated ones
