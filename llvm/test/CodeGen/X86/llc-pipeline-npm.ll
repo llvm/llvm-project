@@ -131,6 +131,7 @@
 ; O2-NEXT:     stack-coloring
 ; O2-NEXT:     localstackalloc
 ; O2-NEXT:     dead-mi-elimination
+; O2-NEXT:     machine-ccmp
 ; O2-NEXT:     early-ifcvt
 ; O2-NEXT:     machine-combiner
 ; O2-NEXT:     x86-cmov-conversion
@@ -334,6 +335,7 @@
 ; O3-WINDOWS-NEXT:     stack-coloring
 ; O3-WINDOWS-NEXT:     localstackalloc
 ; O3-WINDOWS-NEXT:     dead-mi-elimination
+; O3-WINDOWS-NEXT:     machine-ccmp
 ; O3-WINDOWS-NEXT:     early-ifcvt
 ; O3-WINDOWS-NEXT:     machine-combiner
 ; O3-WINDOWS-NEXT:     x86-cmov-conversion

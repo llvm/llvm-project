@@ -104,6 +104,7 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Trace Metrics
+; CHECK-NEXT:       Machine Conditional Compares
 ; CHECK-NEXT:       Early If-Conversion
 ; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
