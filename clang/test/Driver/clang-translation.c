@@ -1,4 +1,4 @@
-// RUN: %clang -target i386-unknown-unknown -### -S -O0 -Os %s -o %t.s -fverbose-asm -fvisibility=hidden 2>&1 | FileCheck -check-prefix=I386 %s
+// RUN: %clang -fno-integrated-cc1 -target i386-unknown-unknown -### -S -O0 -Os %s -o %t.s -fverbose-asm -fvisibility=hidden 2>&1 | FileCheck -check-prefix=I386 %s
 // I386: "-triple" "i386-unknown-unknown"
 // I386: "-Os"
 // I386: "-S"
@@ -10,7 +10,7 @@
 // I386: "-o"
 // I386: clang-translation
 
-// RUN: %clang -target i386-unknown-unknown -### -S %s -o %t.s -Xclang -no-disable-free 2>&1 | FileCheck -check-prefix=FREE %s
+// RUN: %clang -fno-integrated-cc1 -target i386-unknown-unknown -### -S %s -o %t.s -Xclang -no-disable-free 2>&1 | FileCheck -check-prefix=FREE %s
 // FREE: "-disable-free"
 // FREE: "-no-disable-free"
 

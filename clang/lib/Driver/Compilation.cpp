@@ -37,9 +37,10 @@ using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
                          InputArgList *_Args, DerivedArgList *_TranslatedArgs,
-                         bool ContainsError)
+                         bool ContainsError, bool CC1MainIsReusable)
     : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
-      TranslatedArgs(_TranslatedArgs), ContainsError(ContainsError) {
+      TranslatedArgs(_TranslatedArgs), CC1MainIsReusable(CC1MainIsReusable),
+      ContainsError(ContainsError) {
   // The offloading host toolchain is the default toolchain.
   OrderedOffloadingToolchains.insert(
       std::make_pair(Action::OFK_Host, &DefaultToolChain));
