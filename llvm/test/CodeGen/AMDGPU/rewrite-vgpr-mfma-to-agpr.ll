@@ -395,11 +395,12 @@ define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[22:23], v[22:23], v[4:7]
 ; CHECK-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[22:23], v[24:25], v[0:3]
+; CHECK-NEXT:    s_nop 2
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[22:23], v[22:23], v[6:9]
-; CHECK-NEXT:    s_nop 3
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v20, v4
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[12:15], v[22:23], v[26:27], v[0:3]
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_nop 3
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 0x7fc00000
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v10, v8
