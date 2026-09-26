@@ -150,15 +150,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
     static cl::opt<std::string, /*ExternalStorage=*/true> splitInputFile{
         "split-input-file",
         llvm::cl::ValueOptional,
-        cl::callback([&](const std::string &str) {
-          // Implicit value: use default marker if flag was used without value.
-          if (str.empty())
-            splitInputFile.setValue(kDefaultSplitMarker);
-        }),
         cl::desc("Split the input file into chunks using the given or "
                  "default marker and process each chunk independently"),
         cl::location(splitInputFileFlag),
         cl::init("")};
+    splitInputFileOption = &splitInputFile;
 
     static cl::opt<std::string, /*ExternalStorage=*/true> outputSplitMarker(
         "output-split-marker",
@@ -303,6 +299,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
   /// Pointer to static dialectPlugins variable in constructor, needed by
   /// setDialectPluginsCallback(DialectRegistry&).
   cl::list<std::string> *dialectPlugins = nullptr;
+
+  /// Pointer to static splitInputFile variable in constructor, needed by
+  /// createFromCLOptions().
+  cl::opt<std::string, /*ExternalStorage=*/true> *splitInputFileOption =
+      nullptr;
 };
 
 /// A scoped diagnostic handler that suppresses certain diagnostics based on
@@ -352,6 +353,10 @@ void MlirOptMainConfig::registerCLOptions(DialectRegistry &registry) {
 
 MlirOptMainConfig MlirOptMainConfig::createFromCLOptions() {
   clOptionsConfig->setDebugConfig(tracing::DebugConfig::createFromCLOptions());
+  // Without a value, --split-input-file selects the default marker.
+  if (clOptionsConfig->splitInputFileOption->getNumOccurrences() &&
+      clOptionsConfig->inputSplitMarker().empty())
+    clOptionsConfig->splitInputFile(kDefaultSplitMarker);
   return *clOptionsConfig;
 }
 
