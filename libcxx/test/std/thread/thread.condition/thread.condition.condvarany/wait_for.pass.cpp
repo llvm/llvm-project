@@ -110,6 +110,30 @@ void test() {
 
     t1.join();
   }
+
+  // Regression test for LWG 3504: wait_for() with a floating-point
+  {
+    std::condition_variable_any cv;
+    std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex);
+
+    using float_sec = std::chrono::duration<float>;
+    const float_sec total{0.25f};
+
+    auto start            = std::chrono::steady_clock::now();
+    std::cv_status status = std::cv_status::no_timeout;
+
+    while (status == std::cv_status::no_timeout) {
+      auto left = total - std::chrono::duration_cast<float_sec>(std::chrono::steady_clock::now() - start);
+      if (left <= float_sec::zero())
+        break;
+      status = cv.wait_for(lock, left);
+    }
+
+    auto elapsed = std::chrono::steady_clock::now() - start;
+    assert(elapsed > std::chrono::milliseconds(200));
+    assert(elapsed < std::chrono::milliseconds(600));
+  }
 }
 
 int main(int, char**) {
