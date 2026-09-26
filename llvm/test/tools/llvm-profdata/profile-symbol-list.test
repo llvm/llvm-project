@@ -14,7 +14,7 @@
 ; RUN: llvm-profdata show -sample -show-sec-info-only %t.md5.1.output | FileCheck %s -check-prefix=MD5-1
 ; RUN: llvm-profdata merge -sample -extbinary -md5-prof-sym-list -prof-sym-list=%S/Inputs/profile-symbol-list-2.text %S/Inputs/sample-profile.proftext -o %t.md5.2.output
 ; RUN: llvm-profdata show -sample -show-sec-info-only %t.md5.2.output | FileCheck %s -check-prefix=MD5-2
-; RUN: llvm-profdata merge -sample -extbinary -md5-prof-sym-list %t.md5.1.output %t.md5.2.output -o %t.md5.merged.output
+; RUN: llvm-profdata merge -sample -extbinary %t.md5.1.output %t.md5.2.output -o %t.md5.merged.output
 ; RUN: llvm-profdata show -sample -show-sec-info-only %t.md5.merged.output | FileCheck %s -check-prefix=MD5-MERGED
 
 ; MD5-1: ProfileSymbolListSection - Offset: {{.*}}, Size: 40, Flags: {{{.*}}md5}
