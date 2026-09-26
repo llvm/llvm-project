@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
+#include "Rewrite.h"
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
@@ -22,6 +23,7 @@
 #include <array>
 #include <cassert>
 #include <functional>
+#include <nanobind/nanobind.h>
 #include <optional>
 #include <string>
 
@@ -2547,6 +2549,37 @@ void PyOpAdaptor::bind(nb::module_ &m) {
           "Returns the attributes of the adaptor.");
 }
 
+void PyDynamicOpDefinition::setGetCanonicalizationPatternsFn(
+    const nb::callable &fn) {
+  fn.inc_ref();
+  mlirDynamicOpDefinitionSetGetCanonicalizationPatternsFn(
+      opDef,
+      [](MlirRewritePatternSet patterns, MlirContext context,
+         void *userData) -> void {
+        nb::handle fn(static_cast<PyObject *>(userData));
+        fn(PyRewritePatternSet(patterns),
+           PyMlirContext::forContext(context).get());
+      },
+      [](void *userData) {
+        nb::handle fn(static_cast<PyObject *>(userData));
+        fn.dec_ref();
+      },
+      static_cast<void *>(fn.ptr()));
+}
+
+void PyDynamicOpDefinition::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpDefinition>(m, "DynamicOpDefinition")
+      .def(nb::init<std::string_view, DefaultingPyMlirContext>(), "op_name"_a,
+           "context"_a = nb::none(),
+           "Lookup a dynamic operation definition with the given operation "
+           "name.")
+      .def("set_get_canonicalization_patterns_fn",
+           &PyDynamicOpDefinition::setGetCanonicalizationPatternsFn,
+           "Sets the function to get canonicalization patterns for this "
+           "dynamic operation definition.",
+           "fn"_a);
+}
+
 static MlirLogicalResult verifyTraitByMethod(MlirOperation op, void *userData,
                                              const char *methodName) {
   nb::handle targetObj(static_cast<PyObject *>(userData));
@@ -2569,8 +2602,9 @@ static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
     throw nb::type_error("the root argument must be a type or a string");
   }
 
-  return mlirDynamicOpTraitAttach(
-      trait, MlirStringRef{opNameStr.data(), opNameStr.size()}, context.get());
+  MlirDynamicOpDefinition def = mlirDynamicOpDefinitionLookup(
+      MlirStringRef{opNameStr.data(), opNameStr.size()}, context.get());
+  return mlirDynamicOpDefinitionAddTrait(def, trait);
 }
 
 bool PyDynamicOpTrait::attach(const nb::object &opName,
@@ -5416,6 +5450,7 @@ void populateIRCore(nb::module_ &m) {
   PyAttrBuilderMap::bind(m);
 
   // Extensible Dialect
+  PyDynamicOpDefinition::bind(m);
   PyDynamicOpTrait::bind(m);
   PyDynamicOpTraits::IsTerminator::bind(m);
   PyDynamicOpTraits::NoTerminator::bind(m);
