@@ -520,6 +520,22 @@ if target_arch:
     if target_arch in ["x86_64", "i386"]:
         config.available_features.add("x86-target-arch")
     config.available_features.add(target_arch + "-" + config.target_os.lower())
+    # Derived from target_arch rather than the build's default triple so the
+    # feature is correct for each architecture in a multi-arch build.
+    if target_arch in [
+        "aarch64_be",
+        "mips",
+        "mips64",
+        "powerpc",
+        "powerpcspe",
+        "powerpc64",
+        "s390x",
+        "sparc",
+        "sparcv9",
+    ]:
+        config.available_features.add("target-byteorder-big-endian")
+    else:
+        config.available_features.add("target-byteorder-little-endian")
 
 compiler_rt_debug = getattr(config, "compiler_rt_debug", False)
 if not compiler_rt_debug:
