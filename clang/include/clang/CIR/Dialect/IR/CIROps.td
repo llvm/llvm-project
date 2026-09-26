@@ -6065,6 +6065,69 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
 }
 
 //===----------------------------------------------------------------------===//
+// VecReduceOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VecReduceKind : CIR_I32Enum<
+  "VecReduceKind", "vector reduction operation kind", [
+    I32EnumCase<"Add", 0, "add">,
+    I32EnumCase<"Mul", 1, "mul">,
+    I32EnumCase<"And", 2, "and">,
+    I32EnumCase<"Or", 3, "or">,
+    I32EnumCase<"Xor", 4, "xor">,
+    I32EnumCase<"SMax", 5, "smax">,
+    I32EnumCase<"SMin", 6, "smin">,
+    I32EnumCase<"UMax", 7, "umax">,
+    I32EnumCase<"UMin", 8, "umin">,
+    I32EnumCase<"FAdd", 9, "fadd">,
+    I32EnumCase<"FMul", 10, "fmul">,
+    I32EnumCase<"FMax", 11, "fmax">,
+    I32EnumCase<"FMin", 12, "fmin">
+]>;
+
+def CIR_VecReduceKindAttr
+    : CIR_EnumAttr<CIR_VecReduceKind, "vec_reduce">;
+
+def CIR_VecReduceOp : CIR_Op<"vec.reduce", [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a vector to a scalar";
+  let description = [{
+    The `cir.vec.reduce` operation combines the elements of a vector using the
+    specified reduction kind and returns a scalar of the vector element type.
+    Floating-point addition and multiplication require an accumulator value.
+
+    Examples:
+
+    ```
+    %sum = cir.vec.reduce(add, %vec) : (!cir.vector<4 x !s32i>) -> !s32i
+    %fsum = cir.vec.reduce(fadd, %fvec, %start) :
+        (!cir.vector<4 x !cir.float>, !cir.float) -> !cir.float
+        {fastmath_flags = #cir.fastmath<reassoc>}
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$input,
+    Optional<CIR_VectorElementType>:$accumulator,
+    CIR_VecReduceKindAttr:$kind,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+
+  let results = (outs CIR_VectorElementType:$result);
+
+  let assemblyFormat = [{
+    `(` enum($kind) `,` $input (`,` $accumulator^)? `)` `:`
+    functional-type(operands, results) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 

@@ -5035,6 +5035,74 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMVecReduceOpLowering::matchAndRewrite(
+    cir::VecReduceOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultTy = getTypeConverter()->convertType(op.getType());
+  mlir::LLVM::FastmathFlags fastmathFlags{};
+  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
+    fastmathFlags = convertFastMathFlags(*fastmath);
+
+  switch (op.getKind()) {
+  case cir::VecReduceKind::Add:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_add>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::Mul:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_mul>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::And:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_and>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::Or:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_or>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::Xor:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_xor>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::SMax:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_smax>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::SMin:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_smin>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::UMax:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_umax>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::UMin:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_umin>(
+        op, resultTy, adaptor.getInput());
+    break;
+  case cir::VecReduceKind::FAdd:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_fadd>(
+        op, resultTy, adaptor.getAccumulator(), adaptor.getInput(),
+        fastmathFlags);
+    break;
+  case cir::VecReduceKind::FMul:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_fmul>(
+        op, resultTy, adaptor.getAccumulator(), adaptor.getInput(),
+        fastmathFlags);
+    break;
+  case cir::VecReduceKind::FMax:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_fmax>(
+        op, resultTy, adaptor.getInput(), fastmathFlags);
+    break;
+  case cir::VecReduceKind::FMin:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::vector_reduce_fmin>(
+        op, resultTy, adaptor.getInput(), fastmathFlags);
+    break;
+  }
+
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

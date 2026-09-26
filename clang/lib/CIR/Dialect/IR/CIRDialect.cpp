@@ -3850,6 +3850,77 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// VecReduceOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecReduceOp::verify() {
+  mlir::Type elementTy = getInput().getType().getElementType();
+  const bool hasAccumulator = static_cast<bool>(getAccumulator());
+  const bool isFloatingPoint = cir::isAnyFloatingPointType(elementTy);
+  const bool isInteger = mlir::isa<cir::IntType>(elementTy);
+  const bool isIntegerOrBool = isInteger || mlir::isa<cir::BoolType>(elementTy);
+
+  if (getAccumulator() && getAccumulator().getType() != elementTy)
+    return emitOpError() << "accumulator type " << getAccumulator().getType()
+                         << " doesn't match vector element type " << elementTy;
+
+  const bool requiresAccumulator = getKind() == cir::VecReduceKind::FAdd ||
+                                   getKind() == cir::VecReduceKind::FMul;
+  if (hasAccumulator != requiresAccumulator)
+    return emitOpError() << (requiresAccumulator ? "requires"
+                                                 : "does not accept")
+                         << " an accumulator for "
+                         << stringifyVecReduceKind(getKind()) << " reduction";
+
+  if (getFastmathFlagsAttr() && !isFloatingPoint)
+    return emitOpError()
+           << "fast-math flags are only valid for floating-point reductions";
+
+  switch (getKind()) {
+  case cir::VecReduceKind::Add:
+  case cir::VecReduceKind::Mul:
+    if (!isIntegerOrBool)
+      return emitOpError() << "requires an integer or boolean vector for "
+                           << stringifyVecReduceKind(getKind()) << " reduction";
+    break;
+  case cir::VecReduceKind::And:
+  case cir::VecReduceKind::Or:
+  case cir::VecReduceKind::Xor:
+    if (!isIntegerOrBool)
+      return emitOpError() << "requires an integer or boolean vector for "
+                           << stringifyVecReduceKind(getKind()) << " reduction";
+    break;
+  case cir::VecReduceKind::SMax:
+  case cir::VecReduceKind::SMin: {
+    auto intTy = mlir::dyn_cast<cir::IntType>(elementTy);
+    if (!intTy || !intTy.isSigned())
+      return emitOpError() << "requires a signed integer vector for "
+                           << stringifyVecReduceKind(getKind()) << " reduction";
+    break;
+  }
+  case cir::VecReduceKind::UMax:
+  case cir::VecReduceKind::UMin: {
+    auto intTy = mlir::dyn_cast<cir::IntType>(elementTy);
+    if ((!intTy || !intTy.isUnsigned()) && !mlir::isa<cir::BoolType>(elementTy))
+      return emitOpError()
+             << "requires an unsigned integer or boolean vector for "
+             << stringifyVecReduceKind(getKind()) << " reduction";
+    break;
+  }
+  case cir::VecReduceKind::FAdd:
+  case cir::VecReduceKind::FMul:
+  case cir::VecReduceKind::FMax:
+  case cir::VecReduceKind::FMin:
+    if (!isFloatingPoint)
+      return emitOpError() << "requires a floating-point vector for "
+                           << stringifyVecReduceKind(getKind()) << " reduction";
+    break;
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CmpOp
 //===----------------------------------------------------------------------===//
 
