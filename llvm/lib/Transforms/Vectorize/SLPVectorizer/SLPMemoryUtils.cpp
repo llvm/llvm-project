@@ -253,6 +253,16 @@ bool isMaskedLoadCompress(
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
   LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
+  // The masked load covers the whole span between the outermost loads. When
+  // the span needs extra registers with no active lanes and is sparse, the
+  // compress becomes a multi-register gather that costs more than the scalar
+  // loads it replaces.
+  if (getNumberOfPartsOrRegs(/*QueryNumParts=*/true, TTI, LoadVecTy, ScalarTy,
+                             ReVec) >
+          2 * getNumberOfPartsOrRegs(/*QueryNumParts=*/true, TTI, VecTy,
+                                     ScalarTy, ReVec) &&
+      4 * Sz <= static_cast<size_t>(*Diff) + 1)
+    return false;
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
   SimplifyQuery SQ(

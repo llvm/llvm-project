@@ -100,8 +100,6 @@ define void @fsub_reduction_extracts_credited(ptr %vp, ptr %sp, ptr %ap, ptr %bp
 ; CHECK-NEXT:    [[B:%.*]] = load double, ptr [[BP]], align 8
 ; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[CP]], align 8
 ; CHECK-NEXT:    [[D:%.*]] = load double, ptr [[DP]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -109,13 +107,14 @@ define void @fsub_reduction_extracts_credited(ptr %vp, ptr %sp, ptr %ap, ptr %bp
 ; CHECK-NEXT:    [[V:%.*]] = load <2 x double>, ptr [[VPTR]], align 16
 ; CHECK-NEXT:    [[SPTR:%.*]] = getelementptr double, ptr [[SP]], i64 [[I]]
 ; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[SPTR]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x double> [[V]], [[TMP1]]
 ; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[S]], [[C]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[V]])
 ; CHECK-NEXT:    [[R:%.*]] = fadd fast double [[TMP3]], [[M2]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast double [[B]], [[A]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fsub fast double [[R]], [[OP_RDX1]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    [[LT:%.*]] = fcmp fast olt double [[R]], [[D]]
+; CHECK-NEXT:    [[LT:%.*]] = fcmp fast olt double [[OP_RDX2]], [[D]]
 ; CHECK-NEXT:    [[CONT:%.*]] = and i1 [[CMP]], [[LT]]
 ; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
