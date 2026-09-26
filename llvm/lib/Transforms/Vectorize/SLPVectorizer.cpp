@@ -13197,27 +13197,40 @@ bool BoUpSLP::areAllUsersVectorized(
          });
 }
 
-static InstructionCost
-canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
-                DominatorTree &DT, const DataLayout &DL,
-                TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                const BoUpSLP &R, bool FuseEitherOperand = true);
+static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
+                                       const InstructionsState &S,
+                                       DominatorTree &DT, const DataLayout &DL,
+                                       TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI,
+                                       const BoUpSLP &R);
+
+/// \returns true if \p Op is a contractable single-use fmul, which the backend
+/// fuses with its fadd/fsub user \p I: \p Op is in the block of \p I or the
+/// target sinks it there.
+static bool isFusableFMulOperand(Value *Op, Instruction *I,
+                                 const TargetTransformInfo &TTI) {
+  Instruction *FMul;
+  if (!match(Op, m_Instruction(FMul, m_OneUse(m_AllowContract(
+                                         m_FMul(m_Value(), m_Value()))))))
+    return false;
+  if (FMul->getParent() == I->getParent())
+    return true;
+  SmallVector<Use *> OpsToSink;
+  return TTI.isProfitableToSinkOperands(I, OpsToSink) &&
+         any_of(OpsToSink, [&](const Use *U) { return U->get() == FMul; });
+}
 
 /// \returns the fmul operand of the fadd/fsub \p I that the backend fuses with
-/// \p I into an fmuladd: a contractable single-use fmul from the same block,
-/// from either operand, the first one preferred, c - a*b included. \p I must
-/// allow contraction.
-static Instruction *getFusableFMulOperand(Instruction *I) {
-  if ((I->getOpcode() != Instruction::FAdd &&
-       I->getOpcode() != Instruction::FSub) ||
-      !I->hasAllowContract())
+/// \p I into an fmuladd: the first fusable one from either operand, c - a*b
+/// included. \p I must allow contraction.
+static Instruction *getFusableFMulOperand(Instruction *I,
+                                          const TargetTransformInfo &TTI) {
+  if (!match(I, m_AllowContract(m_CombineOr(m_FAdd(m_Value(), m_Value()),
+                                            m_FSub(m_Value(), m_Value())))))
     return nullptr;
-  for (Value *Op : I->operands()) {
-    auto *FMul = dyn_cast<Instruction>(Op);
-    if (FMul && FMul->getOpcode() == Instruction::FMul && FMul->hasOneUse() &&
-        FMul->hasAllowContract() && FMul->getParent() == I->getParent())
-      return FMul;
-  }
+  for (Value *Op : I->operands())
+    if (isFusableFMulOperand(Op, I, TTI))
+      return cast<Instruction>(Op);
   return nullptr;
 }
 
@@ -13228,7 +13241,7 @@ static InstructionCost getUnfusedBinOpCost(Instruction *I,
                                            TargetTransformInfo &TTI,
                                            const TargetLibraryInfo &TLI,
                                            TTI::TargetCostKind CostKind) {
-  assert(I->isBinaryOp() && "Expected a binary operator.");
+  assert(match(I, m_BinOp()) && "Expected a binary operator.");
   TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
   TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
   return TTI.getArithmeticInstrCost(
@@ -13238,14 +13251,13 @@ static InstructionCost getUnfusedBinOpCost(Instruction *I,
 
 std::pair<Instruction *, InstructionCost>
 BoUpSLP::getFMulFusingUser(Instruction *I) const {
-  assert(I->getOpcode() == Instruction::FMul && "Expected fmul.");
-  if (!I->hasOneUse())
+  if (!match(I, m_OneUse(m_FMul(m_Value(), m_Value()))))
     return {nullptr, InstructionCost::getInvalid()};
   auto *U = cast<Instruction>(I->user_back());
   // The reduction cost accounts for the fusion of the reduced values into the
   // reduction operations itself. The lanes of the combined fmuladd node are
   // fused with its own fmul operand node, not with the other operand.
-  if (getFusableFMulOperand(U) != I ||
+  if (getFusableFMulOperand(U, *TTI) != I ||
       (UserIgnoreList && UserIgnoreList->contains(U)) ||
       any_of(getTreeEntries(U), [](const TreeEntry *TE) {
         return TE->CombinedOp == TreeEntry::FMulAdd;
@@ -13270,8 +13282,8 @@ InstructionCost BoUpSLP::getUnfusedFMulsPenalty(const TreeEntry &TE) const {
     return TTI::TCC_Free;
   InstructionCost Penalty = TTI::TCC_Free;
   for (Value *V : TE.Scalars) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I || I->getOpcode() != Instruction::FMul ||
+    Instruction *I;
+    if (!match(V, m_Instruction(I, m_FMul(m_Value(), m_Value()))) ||
         (TE.hasCopyableElements() && TE.isCopyableElement(I)))
       continue;
     if (Instruction *U = getFMulFusingUser(I).first;
@@ -13377,15 +13389,15 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
           auto *I = dyn_cast<Instruction>(V);
           if (!I)
             continue;
-          if (I->getOpcode() == Instruction::FAdd ||
-              I->getOpcode() == Instruction::FSub) {
+          if (match(I, m_CombineOr(m_FAdd(m_Value(), m_Value()),
+                                   m_FSub(m_Value(), m_Value())))) {
             if (canConvertToFMA(I, InstructionsState(I, I), *DT, *DL, *TTI,
                                 *TLI, *this)
                     .isValid()) {
               assert(Count > 0 && "Underflow in scalar inst count (fma)");
               --Count;
             }
-          } else if (I->getOpcode() == Instruction::FMul) {
+          } else if (match(I, m_FMul(m_Value(), m_Value()))) {
             // The fmul, fused into a scalar user, disappears into the user's
             // fmuladd. A vectorized fadd/fsub user lane already accounts for
             // the fusion.
@@ -13750,18 +13762,15 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   }
 }
 
-/// Check if we can convert fadd/fsub sequence to FMAD. If \p FuseEitherOperand
-/// is set, the fmul of the lane is taken from either operand, as the backend
-/// does, otherwise from the first operand only. The reduction cost uses the
-/// latter: the latency of the scalar reduction chain is not modeled, and
-/// pricing all its links as fused makes the vector reductions unprofitable.
+/// Check if we can convert fadd/fsub sequence to FMAD.
 /// \returns Cost of the FMAD, if conversion is possible, invalid cost
 /// otherwise.
-static InstructionCost
-canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
-                DominatorTree &DT, const DataLayout &DL,
-                TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                const BoUpSLP &R, bool FuseEitherOperand) {
+static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
+                                       const InstructionsState &S,
+                                       DominatorTree &DT, const DataLayout &DL,
+                                       TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI,
+                                       const BoUpSLP &R) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -13797,12 +13806,12 @@ canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
   // The operands follow the majority pattern of the lanes, while the backend
   // fuses the fmul from either operand (c - a*b included); move it to the
   // first column.
-  if (FuseEitherOperand && Operands.size() == 2) {
+  if (Operands.size() == 2) {
     for (auto [Idx, V] : enumerate(VL)) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I || S.isCopyableElement(I))
         continue;
-      if (Instruction *FMul = getFusableFMulOperand(I);
+      if (Instruction *FMul = getFusableFMulOperand(I, TTI);
           FMul && Operands[1][Idx] == FMul)
         std::swap(Operands[0][Idx], Operands[1][Idx]);
     }
@@ -13856,9 +13865,8 @@ canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
     if (S.isCopyableElement(V))
       continue;
     auto *I = dyn_cast<Instruction>(Op);
-    // The backend fuses the fmul with its user in the same block only.
-    if (!I || !I->hasOneUse() || OpS.isCopyableElement(I) ||
-        I->getParent() != cast<Instruction>(V)->getParent()) {
+    if (!I || OpS.isCopyableElement(I) ||
+        !isFusableFMulOperand(I, cast<Instruction>(V), TTI)) {
       if (auto *OpI = dyn_cast<Instruction>(V))
         FMACost += GetLinkCost(OpI);
       if (I)
@@ -16695,7 +16703,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
                                          Instruction *VI) {
     InstructionCost Cost = canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this);
-    Instruction *FMul = getFusableFMulOperand(VI);
+    Instruction *FMul = getFusableFMulOperand(VI, TTI);
     if (!Cost.isValid() || !FMul || isVectorized(FMul))
       return Cost;
     InstructionCost FMulCost = getUnfusedBinOpCost(FMul, TTI, *TLI, CostKind);
@@ -17213,7 +17221,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         if (auto *FPCI = dyn_cast<FPMathOperator>(V)) {
           FMF &= FPCI->getFastMathFlags();
           // The fused fmul may sit in either operand (c - a*b included).
-          if (Instruction *FMul = getFusableFMulOperand(cast<Instruction>(V)))
+          if (Instruction *FMul =
+                  getFusableFMulOperand(cast<Instruction>(V), TTI))
             FMF &= FMul->getFastMathFlags();
         }
       }
@@ -17768,10 +17777,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       // The backend fuses fmul+fadd/fsub pairs in the scalar code.
       InstructionCost FusedCost = InstructionCost::getInvalid();
-      if (VI->getOpcode() == Instruction::FAdd ||
-          VI->getOpcode() == Instruction::FSub)
+      if (match(VI, m_CombineOr(m_FAdd(m_Value(), m_Value()),
+                                m_FSub(m_Value(), m_Value()))))
         FusedCost = GetFMulAddCost(InstructionsState(VI, VI), VI);
-      else if (VI->getOpcode() == Instruction::FMul)
+      else if (match(VI, m_FMul(m_Value(), m_Value())))
         FusedCost = GetFusedFMulCost(VI);
       if (FusedCost.isValid())
         return FusedCost;
@@ -21220,6 +21229,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         GatherNodes.push_back(E);
       }
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
+               E && TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
+               !E->UserTreeIndex.UserTE->isGather()) {
+      // Regular gathers reuse only perfectly matched transformed nodes of the
+      // same user.
+      GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
       if (TEPtr == TE || TEPtr->Idx == 0 || DeletedNodes.contains(TEPtr))
@@ -33892,10 +33908,12 @@ private:
                 InstructionsState RdxOpS = RdxKind == RecurKind::FAdd
                                                ? getSameOpcode(RdxOp, TLI)
                                                : InstructionsState::invalid();
-                if (RdxOpS && RdxOpS.isAddSubOrFNegLikeOp()) {
+                // The reduced value itself must be a fusable fmul, whose cost
+                // is excluded.
+                if (RdxOpS && RdxOpS.isAddSubOrFNegLikeOp() &&
+                    isFusableFMulOperand(RdxVal, RdxOp, *TTI)) {
                   InstructionCost FMACost =
-                      canConvertToFMA(RdxOp, RdxOpS, DT, DL, *TTI, TLI, R,
-                                      /*FuseEitherOperand=*/false);
+                      canConvertToFMA(RdxOp, RdxOpS, DT, DL, *TTI, TLI, R);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -34052,7 +34070,11 @@ private:
             FastMathFlags FMF;
             FMF.set();
             for (Value *RdxVal : ReducedVals) {
-              if (!RdxVal->hasOneUse()) {
+              // The vector fmul fuses only if all the reduced values are
+              // fusable fmuls.
+              if (!RdxVal->hasOneUse() ||
+                  !isFusableFMulOperand(
+                      RdxVal, cast<Instruction>(RdxVal->user_back()), *TTI)) {
                 Ops.clear();
                 break;
               }
@@ -34063,8 +34085,7 @@ private:
             if (!Ops.empty()) {
               InstructionsState S = getSameOpcode(Ops, TLI);
               if (S && S.isAddSubOrFNegLikeOp())
-                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, R,
-                                          /*FuseEitherOperand=*/false);
+                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, R);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,

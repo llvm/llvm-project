@@ -75,6 +75,18 @@ typedef int __attribute__((ext_vector_type(0x100000000))) e2;      // expected-e
 typedef int __attribute__((vector_size((__int128_t)1 << 100))) e3; // expected-error {{vector size too large}}
 typedef int __attribute__((ext_vector_type(0))) e4;                // expected-error {{zero vector size}}
 
+// GH165458: at most 2^23 elements and 2^28 bytes for both attributes.
+typedef _Bool bool512 __attribute__((ext_vector_type(187553262))); // expected-error {{vector size too large}}
+bool512 gh165458;
+typedef _Bool __attribute__((ext_vector_type(8388609))) e5; // expected-error {{vector size too large}}
+typedef int __attribute__((ext_vector_type(8388609))) e6;   // expected-error {{vector size too large}}
+typedef _Bool __attribute__((ext_vector_type(8388608))) e7;
+typedef int __attribute__((ext_vector_type(8388608))) e8;
+typedef _Bool __attribute__((ext_vector_type(4096))) e9;
+char __attribute__((vector_size(8388609))) v5;   // expected-error {{vector size too large}}
+char __attribute__((vector_size(8388608))) v6;
+int __attribute__((vector_size(0x10000001))) v7; // expected-error {{vector size too large}}
+
 // no support for vector enum type
 enum { e_2 } x3 __attribute__((vector_size(64))); // expected-error {{invalid vector element type}}
 

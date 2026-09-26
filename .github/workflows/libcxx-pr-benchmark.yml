@@ -71,9 +71,11 @@ jobs:
             const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
             core.setOutput('benchmarks', match ? match[1] : '');
 
-            // Benchmark on the same configurations that we track performance on.
+            // Benchmark the configurations defined in machines.json. We only consider configurations that
+            // build something, since there's nothing to do an A/B comparison with for other configurations.
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
-            core.setOutput('matrix', JSON.stringify(config.map(({coverage, ...machine}) => machine)));
+            const buildable = config.filter(cfg => cfg.build);
+            core.setOutput('matrix', JSON.stringify(buildable.map(({coverage, ...machine}) => machine)));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -115,6 +117,7 @@ jobs:
       LNT_MACHINE: ${{ matrix.lnt-machine }}
       PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
       PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
+      TEST_CONFIG: ${{ matrix.test-config }}
       TOOLING: ${{ github.workspace }}/tooling
     steps:
       - name: Checkout the PR
@@ -179,7 +182,7 @@ jobs:
           commit: ${{ steps.baseline.outputs.commit }}
           install-dir: ${{ github.workspace }}/install/baseline
           compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+          cmake-cache: ${{ matrix.build.cmake-cache }}
 
       - name: Build the candidate
         uses: ./tooling/.github/workflows/libcxx/build-at-commit
@@ -188,7 +191,7 @@ jobs:
           commit: ${{ needs.extract-info.outputs.pr_head }}
           install-dir: ${{ github.workspace }}/install/candidate
           compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+          cmake-cache: ${{ matrix.build.cmake-cache }}
 
       - name: Run baseline and candidate interleaved
         run: |
@@ -203,9 +206,9 @@ jobs:
           # Run 5 times so we can pick the median, and interleave baseline and candidate to mitigate the impact of
           # environmental noise
           for _ in $(seq 1 5); do
-            "${TOOLING}/libcxx/utils/test-at-commit" --test-config installed-libc++.cfg.in -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
+            "${TOOLING}/libcxx/utils/test-at-commit" --test-config "${TEST_CONFIG}" -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
             "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/baseline | tee -a baseline.lnt
-            "${TOOLING}/libcxx/utils/test-at-commit" --test-config installed-libc++.cfg.in -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
+            "${TOOLING}/libcxx/utils/test-at-commit" --test-config "${TEST_CONFIG}" -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
             "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/candidate | tee -a candidate.lnt
           done
 

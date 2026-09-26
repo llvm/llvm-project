@@ -1299,47 +1299,24 @@ inline AllOnes_match m_AllOnes(bool AllowUndefs = false) {
   return AllOnes_match(AllowUndefs);
 }
 
+template <bool Expected> struct Bool_match {
+  const SelectionDAG &DAG;
+
+  Bool_match(const SelectionDAG &DAG) : DAG(DAG) {}
+
+  bool match(SDValue N) {
+    auto Res = DAG.isBoolConstant(N);
+    return Res && *Res == Expected;
+  }
+};
+
 /// Match true boolean value based on the information provided by
 /// TargetLowering.
-inline auto m_True(const SelectionDAG &DAG) {
-  return TLI_pred_match{
-      [&DAG](SDValue N) {
-        APInt ConstVal;
-        if (sd_match(N, m_ConstInt(ConstVal)))
-          switch (DAG.getTargetLoweringInfo().getBooleanContents(
-              N.getValueType())) {
-          case TargetLowering::ZeroOrOneBooleanContent:
-            return ConstVal.isOne();
-          case TargetLowering::ZeroOrNegativeOneBooleanContent:
-            return ConstVal.isAllOnes();
-          case TargetLowering::UndefinedBooleanContent:
-            return (ConstVal & 0x01) == 1;
-          }
+inline auto m_True(const SelectionDAG &DAG) { return Bool_match<true>(DAG); }
 
-        return false;
-      },
-      m_Value()};
-}
 /// Match false boolean value based on the information provided by
 /// TargetLowering.
-inline auto m_False(const SelectionDAG &DAG) {
-  return TLI_pred_match{
-      [&DAG](SDValue N) {
-        APInt ConstVal;
-        if (sd_match(N, m_ConstInt(ConstVal)))
-          switch (DAG.getTargetLoweringInfo().getBooleanContents(
-              N.getValueType())) {
-          case TargetLowering::ZeroOrOneBooleanContent:
-          case TargetLowering::ZeroOrNegativeOneBooleanContent:
-            return ConstVal.isZero();
-          case TargetLowering::UndefinedBooleanContent:
-            return (ConstVal & 0x01) == 0;
-          }
-
-        return false;
-      },
-      m_Value()};
-}
+inline auto m_False(const SelectionDAG &DAG) { return Bool_match<false>(DAG); }
 
 struct CondCode_match {
   std::optional<ISD::CondCode> CCToMatch;
