@@ -52634,7 +52634,9 @@ static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
 
 /// If both input operands of a logic op are being cast from floating-point
 /// types or FP compares, try to convert this into a floating-point logic node
-/// to avoid unnecessary moves from SSE to integer registers.
+/// to avoid unnecessary moves from SSE to integer registers. For i1 logic, also
+/// look through one level of a nested logic op of the same kind to pair up two
+/// FP compares.
 static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
                                         SDValue N0, SDValue N1,
                                         SelectionDAG &DAG,
@@ -52642,6 +52644,27 @@ static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
                                         const X86Subtarget &Subtarget) {
   assert((Opc == ISD::OR || Opc == ISD::AND || Opc == ISD::XOR) &&
          "Unexpected bit opcode");
+
+  // Look through a single-use inner logic op to pair up two FP compares that
+  // it separates, e.g. by an integer compare. The recursive call only sees
+  // SETCC operands, so this is limited to one level:
+  // logic (logic (setcc X), Y), (setcc Z) -->
+  // logic (logic (setcc X), (setcc Z)), Y
+  if (VT == MVT::i1) {
+    if (N1.getOpcode() == Opc)
+      std::swap(N0, N1);
+    if (N0.getOpcode() == Opc && N0.hasOneUse() &&
+        N1.getOpcode() == ISD::SETCC) {
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Cmp = N0.getOperand(I);
+        if (Cmp.getOpcode() != ISD::SETCC)
+          continue;
+        if (SDValue FPLogic = convertIntLogicToFPLogic(Opc, DL, VT, Cmp, N1,
+                                                       DAG, DCI, Subtarget))
+          return DAG.getNode(Opc, DL, VT, FPLogic, N0.getOperand(1 - I));
+      }
+    }
+  }
 
   if (!((N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) ||
         (N0.getOpcode() == ISD::SETCC && N1.getOpcode() == ISD::SETCC)))

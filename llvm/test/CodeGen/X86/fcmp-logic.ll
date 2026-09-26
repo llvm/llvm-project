@@ -433,3 +433,239 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
   %or = or i1 %cmp0, %cmp2
   ret i1 %or
 }
+
+; Two FP compares that another compare separates in a chain of logic ops.
+
+; Int64 > Float64 comparison. The olt against 2^63 becomes SETLT because
+; neither operand can be NaN, so the generic reassociation of compares with the
+; same predicate pairs it with the integer compare instead of the oeq.
+define i1 @sitofp_i64_gt_f64(i64 %x, double %y) {
+; SSE2-LABEL: sitofp_i64_gt_f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cvtsi2sd %rdi, %xmm1
+; SSE2-NEXT:    ucomisd %xmm0, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    cvttsd2si %xmm1, %rax
+; SSE2-NEXT:    cmpq %rdi, %rax
+; SSE2-NEXT:    setl %dl
+; SSE2-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE2-NEXT:    cmpltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    andpd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    andb %dl, %al
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: sitofp_i64_gt_f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm1
+; AVX1-NEXT:    vucomisd %xmm0, %xmm1
+; AVX1-NEXT:    seta %cl
+; AVX1-NEXT:    vcvttsd2si %xmm1, %rax
+; AVX1-NEXT:    cmpq %rdi, %rax
+; AVX1-NEXT:    setl %dl
+; AVX1-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vandpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    andb %dl, %al
+; AVX1-NEXT:    orb %cl, %al
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: sitofp_i64_gt_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm1
+; AVX512-NEXT:    vucomisd %xmm0, %xmm1
+; AVX512-NEXT:    seta %cl
+; AVX512-NEXT:    vcvttsd2si %xmm1, %rax
+; AVX512-NEXT:    cmpq %rdi, %rax
+; AVX512-NEXT:    setl %dl
+; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k0
+; AVX512-NEXT:    vcmpltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
+; AVX512-NEXT:    kandw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    andb %dl, %al
+; AVX512-NEXT:    orb %cl, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
+  %d = sitofp i64 %x to double
+  %lt = fcmp olt double %y, %d
+  %eq = fcmp oeq double %y, %d
+  %inrange = fcmp olt double %d, 0x43E0000000000000
+  %and1 = and i1 %eq, %inrange
+  %t = fptosi double %d to i64
+  %cmp = icmp slt i64 %t, %x
+  %and2 = and i1 %and1, %cmp
+  %or = or i1 %lt, %and2
+  ret i1 %or
+}
+
+define i1 @olt_icmp_ole_or_f32(float %w, float %x, float %y, float %z, i32 %a, i32 %b) {
+; SSE2-LABEL: olt_icmp_ole_or_f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %cl
+; SSE2-NEXT:    cmpless %xmm3, %xmm2
+; SSE2-NEXT:    cmpltss %xmm1, %xmm0
+; SSE2-NEXT:    orps %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: olt_icmp_ole_or_f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    cmpl %esi, %edi
+; AVX1-NEXT:    setg %cl
+; AVX1-NEXT:    vcmpless %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpltss %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vorps %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    orb %cl, %al
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: olt_icmp_ole_or_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    cmpl %esi, %edi
+; AVX512-NEXT:    setg %cl
+; AVX512-NEXT:    vcmpless %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpltss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    orb %cl, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
+  %f1 = fcmp olt float %w, %x
+  %i = icmp sgt i32 %a, %b
+  %f2 = fcmp ole float %y, %z
+  %or1 = or i1 %f1, %i
+  %or2 = or i1 %or1, %f2
+  ret i1 %or2
+}
+
+define i1 @icmp_olt_ole_and_f64(double %w, double %x, double %y, double %z, i32 %a, i32 %b) {
+; SSE2-LABEL: icmp_olt_ole_and_f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %cl
+; SSE2-NEXT:    cmplesd %xmm3, %xmm2
+; SSE2-NEXT:    cmpltsd %xmm1, %xmm0
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: icmp_olt_ole_and_f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    cmpl %esi, %edi
+; AVX1-NEXT:    setg %cl
+; AVX1-NEXT:    vcmplesd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    andb %cl, %al
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: icmp_olt_ole_and_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    cmpl %esi, %edi
+; AVX512-NEXT:    setg %cl
+; AVX512-NEXT:    vcmplesd %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    kandw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    andb %cl, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
+  %i = icmp sgt i32 %a, %b
+  %f1 = fcmp olt double %w, %x
+  %f2 = fcmp ole double %y, %z
+  %and1 = and i1 %i, %f1
+  %and2 = and i1 %f2, %and1
+  ret i1 %and2
+}
+
+define i1 @olt_icmp_ole_xor_f64(double %w, double %x, double %y, double %z, i32 %a, i32 %b) {
+; SSE2-LABEL: olt_icmp_ole_xor_f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %cl
+; SSE2-NEXT:    cmplesd %xmm3, %xmm2
+; SSE2-NEXT:    cmpltsd %xmm1, %xmm0
+; SSE2-NEXT:    xorpd %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    xorb %cl, %al
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: olt_icmp_ole_xor_f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    cmpl %esi, %edi
+; AVX1-NEXT:    setg %cl
+; AVX1-NEXT:    vcmplesd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vxorpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    xorb %cl, %al
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: olt_icmp_ole_xor_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    cmpl %esi, %edi
+; AVX512-NEXT:    setg %cl
+; AVX512-NEXT:    vcmplesd %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    kxorw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    xorb %cl, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
+  %f1 = fcmp olt double %w, %x
+  %i = icmp sgt i32 %a, %b
+  %f2 = fcmp ole double %y, %z
+  %xor1 = xor i1 %f1, %i
+  %xor2 = xor i1 %xor1, %f2
+  ret i1 %xor2
+}
+
+; Negative test: the inner logic op has another use.
+define i1 @olt_icmp_ole_and_f64_use(double %w, double %x, double %y, double %z, i32 %a, i32 %b, ptr %p) {
+; SSE2-LABEL: olt_icmp_ole_and_f64_use:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    ucomisd %xmm0, %xmm1
+; SSE2-NEXT:    seta %cl
+; SSE2-NEXT:    cmpl %esi, %edi
+; SSE2-NEXT:    setg %al
+; SSE2-NEXT:    ucomisd %xmm2, %xmm3
+; SSE2-NEXT:    setae %sil
+; SSE2-NEXT:    andb %cl, %al
+; SSE2-NEXT:    movb %al, (%rdx)
+; SSE2-NEXT:    andb %sil, %al
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: olt_icmp_ole_and_f64_use:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vucomisd %xmm0, %xmm1
+; AVX-NEXT:    seta %cl
+; AVX-NEXT:    cmpl %esi, %edi
+; AVX-NEXT:    setg %al
+; AVX-NEXT:    vucomisd %xmm2, %xmm3
+; AVX-NEXT:    setae %sil
+; AVX-NEXT:    andb %cl, %al
+; AVX-NEXT:    movb %al, (%rdx)
+; AVX-NEXT:    andb %sil, %al
+; AVX-NEXT:    retq
+  %f1 = fcmp olt double %w, %x
+  %i = icmp sgt i32 %a, %b
+  %f2 = fcmp ole double %y, %z
+  %and1 = and i1 %f1, %i
+  store i1 %and1, ptr %p
+  %and2 = and i1 %and1, %f2
+  ret i1 %and2
+}
