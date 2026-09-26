@@ -615,6 +615,22 @@ bool LoopVectorizationLegality::isUniformMemOp(
   return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
 }
 
+/// Returns true if the type produced by \p I can be widened. Casts from vector
+/// types and extractelement instructions cannot be widened. Struct results are
+/// only supported if \p AllowStructCalls is set, for calls whose users are all
+/// extractvalue instructions and whose struct element types can be widened.
+static bool canWidenResultType(const Instruction &I, bool AllowStructCalls) {
+  if (isa<ExtractElementInst>(I) ||
+      (isa<CastInst>(I) &&
+       !VectorType::isValidElementType(I.getOperand(0)->getType())))
+    return false;
+  Type *Ty = I.getType();
+  if (!isa<StructType>(Ty))
+    return canVectorizeTy(Ty);
+  return AllowStructCalls && isa<CallInst>(I) && canVectorizeTy(Ty) &&
+         all_of(I.users(), IsaPred<ExtractValueInst>);
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -623,6 +639,23 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
 
   for (BasicBlock *BB : TheLoop->blocks()) {
+    // Instructions in the loop nest are widened, so the types they produce and
+    // store must be widenable. Struct-returning calls are not supported yet.
+    for (Instruction &I : *BB) {
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (canWidenResultType(I, /*AllowStructCalls=*/false) &&
+          (!SI ||
+           VectorType::isValidElementType(SI->getValueOperand()->getType())))
+        continue;
+      reportVectorizationFailure("Found unvectorizable type",
+                                 "instruction type cannot be vectorized",
+                                 "CantVectorizeInstructionType", ORE, TheLoop,
+                                 &I);
+      if (!DoExtraAnalysis)
+        return false;
+      Result = false;
+    }
+
     // Check whether the BB terminator is a branch. Any other terminator is
     // not supported yet.
     Instruction *Term = BB->getTerminator();
@@ -974,25 +1007,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (CI && !VFDatabase::getMappings(*CI).empty())
     VecCallVariantsFound = true;
 
-  auto CanWidenInstructionTy = [](Instruction const &Inst) {
-    Type *InstTy = Inst.getType();
-    if (!isa<StructType>(InstTy))
-      return canVectorizeTy(InstTy);
-
-    // For now, we only recognize struct values returned from calls where
-    // all users are extractvalue as vectorizable. All element types of the
-    // struct must be types that can be widened.
-    return isa<CallInst>(Inst) && canVectorizeTy(InstTy) &&
-           all_of(Inst.users(), IsaPred<ExtractValueInst>);
-  };
-
   // Check that the instruction return type is vectorizable.
-  // We can't vectorize casts from vector type to scalar type.
-  // Also, we can't vectorize extractelement instructions.
-  if (!CanWidenInstructionTy(I) ||
-      (isa<CastInst>(I) &&
-       !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
-      isa<ExtractElementInst>(I)) {
+  if (!canWidenResultType(I, /*AllowStructCalls=*/true)) {
     reportVectorizationFailure("Found unvectorizable type",
                                "instruction return type cannot be vectorized",
                                "CantVectorizeInstructionReturnType", ORE,
