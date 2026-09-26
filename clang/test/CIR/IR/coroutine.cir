@@ -1,6 +1,6 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
-cir.func coroutine @coro_co_return(%arg0 : !cir.bool) {
+cir.func coroutine @valid_coroutine(%arg0 : !cir.bool) {
   cir.coroutine initialSuspend : {
     cir.await(init, ready : {
       cir.condition(%arg0)
@@ -11,7 +11,7 @@ cir.func coroutine @coro_co_return(%arg0 : !cir.bool) {
     },)
     cir.yield
   }, body : {
-    cir.co_return
+    cir.yield
   }, finalSuspend : {
     cir.yield
   }, destroy : {
@@ -22,5 +22,15 @@ cir.func coroutine @coro_co_return(%arg0 : !cir.bool) {
   cir.trap
 }
 
-// CHECK: cir.func coroutine @coro_co_return
-// CHECK: cir.co_return
+// CHECK: cir.func coroutine @valid_coroutine
+// CHECK: cir.coroutine initialSuspend : {
+// CHECK: cir.await(init
+// CHECK: }, body : {
+// CHECK: cir.yield
+// CHECK: }, finalSuspend : {
+// CHECK: cir.yield
+// CHECK: }, destroy : {
+// CHECK: cir.yield
+// CHECK: }, exit : {
+// CHECK: cir.return
+// CHECK: }
