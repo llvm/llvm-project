@@ -107,7 +107,7 @@ unsigned VecUtils::getFloorPowerOf2(unsigned Num) {
 
 template <typename T>
 void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
-    ArrayRef<T *> Bndl) {
+    BndlRef<T *> Bndl) {
   for (T *V : Bndl) {
     assert(isa<Instruction>(V) && "Only works with instructions");
     DeadInstrCandidates.insert(cast<Instruction>(V));
@@ -136,10 +136,10 @@ void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
 
 template void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Value>(
-        ArrayRef<Value *>);
+        BndlRef<Value *>);
 template void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
-        ArrayRef<Instruction *>);
+        BndlRef<Instruction *>);
 
 void VecUtils::DeadInstructionMorgue::tryEraseDeadInstrs() {
   DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
