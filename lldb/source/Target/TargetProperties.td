@@ -117,6 +117,12 @@ let Definition = "target", Path = "target" in {
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
     Desc<"Consult the platform module avoid list when setting non-module specific breakpoints.">;
+  def BreakpointsConditionMode: Property<"breakpoints-condition-mode", "Enum">,
+    DefaultEnumValue<"eBreakpointConditionModeDWIM">,
+    EnumValues<"OptionEnumValues(g_breakpoint_condition_mode)">,
+    Desc<"Specifies the default mode to use when evaluating the condition expression "
+         "of breakpoints. Default value: dwim. Use `help condition-mode` to list the modes. "
+         "Can be overridden by breakpoint command option -Z (--condition-mode).">;
   def Arg0: Property<"arg0", "String">,
     DefaultStringValue<"">,
     Desc<"The first argument passed to the program in the argument array which can be different from the executable itself.">;
