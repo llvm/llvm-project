@@ -623,7 +623,7 @@ public:
     assert(index < recordTy.getMembers().size() &&
            "member index out of bounds");
     mlir::Type memberTy = recordTy.getMembers()[index];
-    mlir::Type memberPtrTy = getPointerTo(memberTy);
+    mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
     auto moduleOp =
         getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
