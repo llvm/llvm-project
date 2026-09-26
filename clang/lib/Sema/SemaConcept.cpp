@@ -2532,14 +2532,40 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
   auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
   if (CacheEntry == NormalizationCache.end()) {
-    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
-        *this, ND, AssociatedConstraints);
-    if (!Normalized) {
-      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
-      return nullptr;
+    // The normal form only depends on the constraint expressions, and the
+    // members of all specializations of a class template share the
+    // (uninstantiated) constraint expressions of the member they were
+    // instantiated from. Look the expressions up in a second cache to not
+    // normalize the same expression once per class template specialization.
+    NormalizedConstraint *Normalized = nullptr;
+    bool Failed = false;
+    for (const AssociatedConstraint &AC : AssociatedConstraints) {
+      std::pair<const Expr *, unsigned> Key(
+          AC.ConstraintExpr, AC.ArgPackSubstIndex.toInternalRepresentation());
+      NormalizedConstraint *Next;
+      if (auto It = NormalizedConstraintExprCache.find(Key);
+          It != NormalizedConstraintExprCache.end()) {
+        Next = It->second;
+      } else {
+        Next = NormalizedConstraint::fromAssociatedConstraints(*this, ND, AC);
+        // Stop substituting after the first failure, and don't cache
+        // failures, so that they behave the same for every declaration.
+        // Note that substitute() can invalidate iterators of both caches.
+        if (Next && !Failed) {
+          Failed = SubstituteParameterMappings(*this).substitute(*Next);
+          if (!Failed)
+            NormalizedConstraintExprCache.try_emplace(Key, Next);
+        }
+      }
+      if (!Next) {
+        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
+        return nullptr;
+      }
+      Normalized =
+          Normalized
+              ? CompoundConstraint::CreateConjunction(Context, Normalized, Next)
+              : Next;
     }
-    // substitute() can invalidate iterators of NormalizationCache.
-    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
             .first;
