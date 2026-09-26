@@ -48,17 +48,17 @@
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop
 ! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloopEi"}>
-! CHECK:          %[[I_VAL:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[I_VAL:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFomp_taskloopEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[ALLOCA_RES:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_taskloopEres"}>
-! CHECK:          %[[RES_VAL:.*]]:2 = hlfir.declare %[[ALLOCA_RES]] {uniq_name = "_QFomp_taskloopEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[RES_VAL:.*]]:2 = hlfir.declare %[[ALLOCA_RES]] uniq_name("_QFomp_taskloopEres") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[C1_I32:.*]] = arith.constant 1 : i32
 ! CHECK:          %[[C10_I32:.*]] = arith.constant 10 : i32
 ! CHECK:          %[[C1_I32_0:.*]] = arith.constant 1 : i32
 ! CHECK:          omp.taskloop.context private(@[[RES_FIRSTPRIVATE]] %[[RES_VAL]]#0 -> %[[PRIV_RES:.*]], @[[I_PRIVATE]] %[[I_VAL]]#0 -> %[[PRIV_I:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:            omp.taskloop.wrapper {
 ! CHECK:              omp.loop_nest (%[[ARG2:.*]]) : i32 = (%[[C1_I32]]) to (%[[C10_I32]]) inclusive step (%[[C1_I32_0]]) {
-! CHECK:                %[[RES_DECL:.*]]:2 = hlfir.declare %[[PRIV_RES]] {uniq_name = "_QFomp_taskloopEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                %[[I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFomp_taskloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                %[[RES_DECL:.*]]:2 = hlfir.declare %[[PRIV_RES]] uniq_name("_QFomp_taskloopEres") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                %[[I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] uniq_name("_QFomp_taskloopEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                hlfir.assign %[[ARG2]] to %[[I_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:                %[[LOAD_RES:.*]] = fir.load %[[RES_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                %[[C1_I32_1:.*]] = arith.constant 1 : i32
@@ -84,15 +84,15 @@ end subroutine omp_taskloop
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_private
 ! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_privateEi"}>
-! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_privateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFomp_taskloop_privateEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[ALLOCA_RES:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_taskloop_privateEres"}>
-! CHECK:           %[[DECL_RES:.*]]:2 = hlfir.declare %[[ALLOCA_RES]] {uniq_name = "_QFomp_taskloop_privateEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_RES:.*]]:2 = hlfir.declare %[[ALLOCA_RES]] uniq_name("_QFomp_taskloop_privateEres") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine omp_taskloop_private
   integer :: res, i
 ! CHECK:           omp.taskloop.context private(@[[RES_PRIVATE_TEST2]] %[[DECL_RES]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE_TEST2]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:             omp.taskloop.wrapper {
 ! CHECK:               omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
-! CHECK:                 %[[VAL1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_taskloop_privateEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL1:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_QFomp_taskloop_privateEres") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   !$omp taskloop private(res)
   do i = 1, 10
 ! CHECK:                 %[[LOAD_RES:.*]] = fir.load %[[VAL1]]#0 : !fir.ref<i32>
@@ -112,9 +112,9 @@ end subroutine omp_taskloop_private
 
 ! CHECK-LABEL:  func.func @_QPtaskloop_allocate
 ! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtaskloop_allocateEi"}>
-! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtaskloop_allocateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFtaskloop_allocateEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtaskloop_allocateEx"}>
-! CHECK:           %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFtaskloop_allocateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] uniq_name("_QFtaskloop_allocateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine taskloop_allocate()
    use omp_lib
    integer :: x
@@ -136,7 +136,7 @@ end subroutine taskloop_allocate
 
 ! CHECK-LABEL:  func.func @_QPtaskloop_final
 ! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtaskloop_finalEi"}>
-! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFtaskloop_finalEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFtaskloop_finalEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine taskloop_final()
     ! CHECK:  omp.taskloop.context final(%true) private(@[[I_PRIVATE_FINAL]] %[[DECL_I]]#0 -> %[[ARG0:.*]] : !fir.ref<i32>) {
     ! CHECK:    omp.taskloop.wrapper {
@@ -155,7 +155,7 @@ end subroutine
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_if
 ! CHECK:            %[[DECL_BAR:.*]]:2 = hlfir.declare %[[ARG0:.*]] dummy_scope %{{.*}}
 ! CHECK:           %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_ifEi"}>
-! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_ifEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFomp_taskloop_ifEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[LOAD_VAL:.*]] = fir.load %[[DECL_BAR]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_BAR:.*]] = fir.convert %[[LOAD_VAL]] : (!fir.logical<4>) -> i1
 subroutine omp_taskloop_if(bar)
@@ -235,9 +235,9 @@ end subroutine
 
 ! CHECK-LABEL:  func.func @_QPomp_taskloop_lastprivate
 ! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_taskloop_lastprivateEi"}>
-! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_lastprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] uniq_name("_QFomp_taskloop_lastprivateEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFomp_taskloop_lastprivateEx"}>
-! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFomp_taskloop_lastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] uniq_name("_QFomp_taskloop_lastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine omp_taskloop_lastprivate()
    integer x
    x = 0
@@ -245,7 +245,7 @@ subroutine omp_taskloop_lastprivate()
    ! CHECK:    omp.taskloop.wrapper {
    !$omp taskloop lastprivate(x)
    do i = 1, 100
-      ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_taskloop_lastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_QFomp_taskloop_lastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       ! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[DECL_ARG0]]#0 : !fir.ref<i32>
       ! CHECK: %[[RES_ADD:.*]] = arith.addi %[[LOAD_ARG0]], %{{.*}} : i32
       ! CHECK:  hlfir.assign %[[RES_ADD]] to %[[DECL_ARG0]]#0 : i32, !fir.ref<i32>

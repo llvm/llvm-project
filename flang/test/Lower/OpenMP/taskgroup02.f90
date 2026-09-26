@@ -5,11 +5,11 @@
 !CHECK-LABEL: func.func @_QPsub() {
 !CHECK:         omp.parallel private(@_QFsubEi_private_i32 %[[SUB_I:.*]]#0 -> %[[ARG:.*]] : !fir.ref<i32>)
 !CHECK:           %[[ALLOCA:.*]] = fir.alloca i32
-!CHECK:           %[[PAR_I:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFsubEi"}
+!CHECK:           %[[PAR_I:.*]]:2 = hlfir.declare %[[ALLOCA]] uniq_name("_QFsubEi")
 !CHECK:           omp.master {
 !CHECK:             omp.taskgroup {
 !CHECK-NEXT:          omp.task private(@_QFsubEi_firstprivate_i32 %[[PAR_I]]#0 -> %[[TASK_I:.*]] : !fir.ref<i32>) {
-!CHECK:                 %[[TASK_I_DECL:.*]]:2 = hlfir.declare %[[TASK_I]] {uniq_name = "_QFsubEi"}
+!CHECK:                 %[[TASK_I_DECL:.*]]:2 = hlfir.declare %[[TASK_I]] uniq_name("_QFsubEi")
 !CHECK:               }
 !CHECK:             }
 !CHECK:           }

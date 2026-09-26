@@ -6,11 +6,11 @@
 !HOST:  %[[READ:.*]] = fir.address_of(@_QFread_write_sectionEsp_read) : !fir.ref<!fir.array<10xi32>>
 !HOST:  %[[C10:.*]] = arith.constant 10 : index
 !HOST:  %[[READ_SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
-!HOST:  %[[READ_DECL:.*]]:2 = hlfir.declare %[[READ]](%[[READ_SHAPE]]) {uniq_name = "_QFread_write_sectionEsp_read"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+!HOST:  %[[READ_DECL:.*]]:2 = hlfir.declare %[[READ]](%[[READ_SHAPE]]) uniq_name("_QFread_write_sectionEsp_read") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !HOST:  %[[WRITE:.*]] = fir.address_of(@_QFread_write_sectionEsp_write) : !fir.ref<!fir.array<10xi32>>
 !HOST:  %[[C10_0:.*]] = arith.constant 10 : index
 !HOST:  %[[WRITE_SHAPE:.*]] = fir.shape %[[C10_0]] : (index) -> !fir.shape<1>
-!HOST:  %[[WRITE_DECL:.*]]:2 = hlfir.declare %[[WRITE]](%[[WRITE_SHAPE]]) {uniq_name = "_QFread_write_sectionEsp_write"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+!HOST:  %[[WRITE_DECL:.*]]:2 = hlfir.declare %[[WRITE]](%[[WRITE_SHAPE]]) uniq_name("_QFread_write_sectionEsp_write") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !HOST:  %[[C1:.*]] = arith.constant 1 : index
 !HOST:  %[[C2:.*]] = arith.constant 1 : index
 !HOST:  %[[C3:.*]] = arith.constant 4 : index
@@ -41,7 +41,7 @@ module assumed_array_routines
 !HOST-LABEL: func.func @_QMassumed_array_routinesPassumed_shape_array(
 !HOST-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
 !HOST: %[[INTERMEDIATE_ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
-!HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMassumed_array_routinesFassumed_shape_arrayEarr_read_write"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+!HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMassumed_array_routinesFassumed_shape_arrayEarr_read_write") fortran_attrs<intent_inout> : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 !HOST: %[[C0:.*]] = arith.constant 1 : index
 !HOST: %[[C1:.*]] = arith.constant 0 : index
 !HOST: %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0_DECL]]#0, %[[C1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -69,7 +69,7 @@ module assumed_array_routines
 !HOST-LABEL: func.func @_QMassumed_array_routinesPassumed_size_array(
 !HOST-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
 !HOST: %[[ARG0_SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-!HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[ARG0_SHAPE]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEarr_read_write"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+!HOST: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[ARG0_SHAPE]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMassumed_array_routinesFassumed_size_arrayEarr_read_write") fortran_attrs<intent_inout> : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 !HOST: %[[ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_size_arrayEi"}>
 !HOST: %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0_DECL]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !HOST: %[[C4_1:.*]] = arith.subi %c4, %c1{{.*}} : index
@@ -92,7 +92,7 @@ end module assumed_array_routines
 !HOST: %[[C20:.*]] = arith.constant 20 : index
 !HOST: %[[READ_WRITE:.*]] = fir.alloca !fir.array<20xi32> <{bindc_name = "arr_read_write", uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"}>
 !HOST: %[[SHAPE_READ_WRITE:.*]] = fir.shape %[[C20]] : (index) -> !fir.shape<1>
-!HOST: %[[READ_WRITE_DECL:.*]]:2 = hlfir.declare %[[READ_WRITE]](%[[SHAPE_READ_WRITE]]) {uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
+!HOST: %[[READ_WRITE_DECL:.*]]:2 = hlfir.declare %[[READ_WRITE]](%[[SHAPE_READ_WRITE]]) uniq_name("_QFcall_assumed_shape_and_size_arrayEarr_read_write") : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>)
 !HOST: %[[LB:.*]] = arith.constant 1 : index
 !HOST: %[[UB:.*]] = arith.constant 10 : index
 !HOST: %[[STEP:.*]] = arith.constant 1 : index

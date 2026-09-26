@@ -15,7 +15,7 @@
 func.func @test_scalar() {
   %0 = fir.alloca f32 {test.var = "scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -32,7 +32,7 @@ func.func @test_scalar() {
 func.func @test_logical() {
   %0 = fir.alloca !fir.logical<4> {test.var = "logical"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -49,7 +49,7 @@ func.func @test_logical() {
 func.func @test_complex() {
   %0 = fir.alloca complex<f32> {test.var = "complex"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -66,7 +66,7 @@ func.func @test_complex() {
 func.func @test_array_1d() {
   %0 = fir.alloca !fir.array<100xf32> {test.var = "array_1d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -83,7 +83,7 @@ func.func @test_array_1d() {
 func.func @test_array_3d() {
   %0 = fir.alloca !fir.array<5x10x15xi32> {test.var = "array_3d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -100,7 +100,7 @@ func.func @test_array_3d() {
 func.func @test_derived() {
   %0 = fir.alloca !fir.type<_QTpoint{x:f32,y:f32,z:f32}> {test.var = "derived"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -125,7 +125,7 @@ func.func @test_derived() {
 func.func @test_box_heap_scalar() {
   %0 = fir.alloca !fir.box<!fir.heap<f64>> {test.var = "box_heap_scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -157,7 +157,7 @@ func.func @test_box_heap_scalar() {
 func.func @test_box_ptr_scalar() {
   %0 = fir.alloca !fir.box<!fir.ptr<i32>> {test.var = "box_ptr_scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -179,7 +179,7 @@ func.func @test_box_ptr_scalar() {
 func.func @test_box_heap_array_1d() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {test.var = "box_heap_array_1d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -198,7 +198,7 @@ func.func @test_box_heap_array_1d() {
 func.func @test_box_heap_array_2d() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi64>>> {test.var = "box_heap_array_2d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -228,7 +228,7 @@ func.func @test_box_heap_array_2d() {
 func.func @test_box_ptr_array() {
   %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {test.var = "box_ptr_array"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -248,6 +248,6 @@ func.func @test_from_copyin() {
   %host = fir.alloca i32
   %in = acc.copyin varPtr(%host : !fir.ref<i32>) -> !fir.ref<i32> {test.var = "from_copyin"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }

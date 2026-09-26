@@ -28,7 +28,7 @@ end module mod
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a", fir.optional}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable, intent_inout, optional>, uniq_name = "_QMmodFroutine_boxEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMmodFroutine_boxEa") fortran_attrs<allocatable, intent_inout, optional> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK:           %[[VAL_8:.*]] = fir.is_present %[[VAL_2]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> i1
 ! CHECK:           %[[VAL_9:.*]]:5 = fir.if %[[VAL_8]] -> (index, index, index, index, index) {
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -58,10 +58,10 @@ end module mod
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.boxchar<1>
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMmodFroutine_boxcharEa") fortran_attrs<intent_in, optional> : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.char<1,4> <{bindc_name = "b", uniq_name = "_QMmodFroutine_boxcharEb"}>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_4]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_4]] uniq_name("_QMmodFroutine_boxcharEb") : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
 ! CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_6]]#1 : !fir.ref<!fir.char<1,4>>, !fir.char<1,4>) map_clauses(from) capture(ByRef) name("b") -> !fir.ref<!fir.char<1,4>>
 ! CHECK-FPRIV:     fir.store %[[VAL_3]]#0 to %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK-FPRIV:     %[[VAL_8:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
@@ -77,9 +77,9 @@ end module mod
 ! CHECK-FPRIV:     %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[VAL_16]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[VAL_14]]) -> !fir.ref<!fir.boxchar<1>>
 ! CHECK-FPRIV:     omp.target kernel_type(generic) map_entries(%[[VAL_7]] -> %[[VAL_21:.*]], %[[VAL_18]] -> %[[VAL_22:.*]], [[VAL_20:.*]] -> %{{.*}}, %[[VAL_17]] -> %[[VAL_23:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) private(@_QMmodFroutine_boxcharEa_firstprivate_boxchar_c8xU %[[VAL_3]]#0 -> %[[VAL_24:.*]] [map_idx=1] : !fir.boxchar<1>) {
 ! CHECK-FPRIV:         %[[VAL_25:.*]] = arith.constant 4 : index
-! CHECK-FPRIV:         %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_21]] typeparams %[[VAL_25]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK-FPRIV:         %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_21]] typeparams %[[VAL_25]] uniq_name("_QMmodFroutine_boxcharEb") : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
 ! CHECK-FPRIV:         %[[VAL_27:.*]]:2 = fir.unboxchar %[[VAL_24]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-FPRIV:         %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_27]]#0 typeparams %[[VAL_27]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-FPRIV:         %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_27]]#0 typeparams %[[VAL_27]]#1 uniq_name("_QMmodFroutine_boxcharEa") fortran_attrs<intent_in, optional> : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK-FPRIV:         hlfir.assign %[[VAL_28]]#0 to %[[VAL_26]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
 ! CHECK-FPRIV:       return
 ! CHECK-FPRIV:     }
@@ -109,8 +109,8 @@ end module mod
 ! CHECK-NO-FPRIV:    %[[VAL_31:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK-NO-FPRIV:    %[[VAL_32:.*]]:2 = fir.unboxchar %[[VAL_31]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NO-FPRIV:    %[[VAL_33:.*]] = arith.constant 4 : index
-! CHECK-NO-FPRIV:    %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_27]] typeparams %[[VAL_33]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK-NO-FPRIV:    %[[VAL_35:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_32]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NO-FPRIV:    %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_27]] typeparams %[[VAL_33]] uniq_name("_QMmodFroutine_boxcharEb") : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK-NO-FPRIV:    %[[VAL_35:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_32]]#1 uniq_name("_QMmodFroutine_boxcharEa") fortran_attrs<intent_in, optional> : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK-NO-FPRIV:    hlfir.assign %[[VAL_35]]#0 to %[[VAL_34]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
 ! CHECK-NO-FPRIV:    omp.terminator
 ! CHECK-NO-FPRIV:  }

@@ -5,8 +5,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     %c4 = arith.constant 4 : index
     %c3 = arith.constant 3 : index
     %0 = fir.undefined !fir.dscope
-    %1 = fircg.ext_declare %arg0 dummy_scope %0 {uniq_name = "_QFffEarr"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>> loc(#loc1)
-    %2 = fircg.ext_declare %arg1 origin %c3, %c4 dummy_scope %0 {uniq_name = "_QFffEarr1"} : (!fir.box<!fir.array<?x?xi32>>, index, index, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 uniq_name("_QFffEarr") : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>> loc(#loc1)
+    %2 = fircg.ext_declare %arg1 origin %c3, %c4 dummy_scope %0 uniq_name("_QFffEarr1") : (!fir.box<!fir.array<?x?xi32>>, index, index, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>> loc(#loc3)
     return
   } loc(#loc2)
 }

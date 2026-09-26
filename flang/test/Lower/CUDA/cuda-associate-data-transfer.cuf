@@ -16,6 +16,6 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPfoo()
 ! CHECK: %[[D:.*]] = fir.address_of(@_QMmEd) : !fir.ref<!fir.array<10x10x10xf64>>
-! CHECK: %[[D_DECL:.*]]:2 = hlfir.declare %[[D]](%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QMmEd"} : (!fir.ref<!fir.array<10x10x10xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x10xf64>>, !fir.ref<!fir.array<10x10x10xf64>>)
-! CHECK: %[[D1_DECL:.*]]:2 = hlfir.declare %[[D_DECL]]#0(%4) {uniq_name = "_QFfooEd1"} : (!fir.ref<!fir.array<10x10x10xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x10xf64>>, !fir.ref<!fir.array<10x10x10xf64>>)
-! CHECK: cuf.data_transfer %{{.*}} to %[[D1_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : f64, !fir.ref<!fir.array<10x10x10xf64>>
+! CHECK: %[[D_DECL:.*]]:2 = hlfir.declare %[[D]](%{{.*}}) uniq_name("_QMmEd") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10x10x10xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x10xf64>>, !fir.ref<!fir.array<10x10x10xf64>>)
+! CHECK: %[[D1_DECL:.*]]:2 = hlfir.declare %[[D_DECL]]#0(%4) uniq_name("_QFfooEd1") : (!fir.ref<!fir.array<10x10x10xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x10xf64>>, !fir.ref<!fir.array<10x10x10xf64>>)
+! CHECK: cuf.data_transfer %{{.*}} to %[[D1_DECL]]#0 transfer_kind(host_device) : f64, !fir.ref<!fir.array<10x10x10xf64>>

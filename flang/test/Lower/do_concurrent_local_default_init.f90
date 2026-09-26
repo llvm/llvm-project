@@ -51,7 +51,7 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_7:.*]] = fir.box_elesize %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> index
 ! CHECK:           fir.do_concurrent.loop {{.*}} local(@[[PTR_LOCALIZER]] %{{.*}}#0 -> %[[LOCAL_ARG:.*]] : {{.*}})
-! CHECK:             %[[VAL_21:.*]]:2 = hlfir.declare %[[LOCAL_ARG]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_ptrEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>)
+! CHECK:             %[[VAL_21:.*]]:2 = hlfir.declare %[[LOCAL_ARG]] uniq_name("_QFtest_ptrEp") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>)
 ! CHECK:             fir.call @_QPtakes_ptr(%[[VAL_21]]#0) proc_attrs<pure> fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
 ! CHECK:           }
 ! CHECK:           return
@@ -59,5 +59,5 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPtest_default_init(
 ! CHECK:           fir.do_concurrent.loop {{.*}} local(@[[DEFAULT_INIT_LOCALIZER]] %{{.*}}#0 -> %[[LOCAL_ARG:.*]] : {{.*}})
-! CHECK:             %[[VAL_33:.*]]:2 = hlfir.declare %[[LOCAL_ARG]] {uniq_name = "_QFtest_default_initEa"} : (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>) -> (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>, !fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>)
+! CHECK:             %[[VAL_33:.*]]:2 = hlfir.declare %[[LOCAL_ARG]] uniq_name("_QFtest_default_initEa") : (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>) -> (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>, !fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>)
 ! CHECK:           }

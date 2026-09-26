@@ -3,8 +3,8 @@
 
 // 1d boxed vector shift by scalar
 func.func @eoshift1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "sh"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "sh"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("sh") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = hlfir.eoshift %0#0 %1#0 : (!fir.box<!fir.array<?xi32>>, !fir.ref<i32>) -> !hlfir.expr<?xi32>
   hlfir.assign %2 to %0#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
   return
@@ -15,8 +15,8 @@ func.func @eoshift1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %
 // CHECK:           %[[VAL_2:.*]] = arith.constant true
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "sh"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("a") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("sh") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_8:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_10:.*]] = fir.embox %[[VAL_8]](%[[VAL_9]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -30,7 +30,7 @@ func.func @eoshift1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %
 
 // 2d boxed array shift by scalar
 func.func @eoshift2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: i32 {fir.bindc_name = "sh"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
   %2 = hlfir.eoshift %0#0 %arg1 : (!fir.box<!fir.array<?x?xi32>>, i32) -> !hlfir.expr<?x?xi32>
   hlfir.assign %2 to %0#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
   return
@@ -43,7 +43,7 @@ func.func @eoshift2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"},
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
 // CHECK:           %[[VAL_7:.*]] = fir.alloca i32
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("a") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
 // CHECK:           fir.store %[[VAL_1]] to %[[VAL_7]] : !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_5]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
@@ -59,8 +59,8 @@ func.func @eoshift2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"},
 
 // 2d boxed array shift by boxed array
 func.func @eoshift3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "sh"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "sh"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("sh") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %2 = hlfir.eoshift %0#0 %1#0 : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?xi32>>) -> !hlfir.expr<?x?xi32>
   hlfir.assign %2 to %0#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
   return
@@ -72,8 +72,8 @@ func.func @eoshift3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"},
 // CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "sh"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("a") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("sh") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK:           %[[VAL_9:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_5]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]](%[[VAL_10]]) : (!fir.heap<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
@@ -87,7 +87,7 @@ func.func @eoshift3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"},
 
 // 2d boxed array shift by array expr
 func.func @eoshift4(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: !hlfir.expr<?xi32> {fir.bindc_name = "sh"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("a") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
   %2 = hlfir.eoshift %0#0 %arg1 : (!fir.box<!fir.array<?x?xi32>>, !hlfir.expr<?xi32>) -> !hlfir.expr<?x?xi32>
   hlfir.assign %2 to %0#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
   return
@@ -99,10 +99,10 @@ func.func @eoshift4(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"},
 // CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("a") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
 // CHECK:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?xi32>) -> !fir.shape<1>
 // CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %[[VAL_1]](%[[VAL_8]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
-// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_11:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_5]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_11]](%[[VAL_12]]) : (!fir.heap<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
@@ -131,13 +131,13 @@ func.func @eoshift5(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
 // CHECK:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
 // CHECK:           %[[VAL_8:.*]]:3 = hlfir.associate %[[VAL_0]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?x?xi32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.ref<!fir.array<?x?xi32>>, i1)
-// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_7]] dim(0) : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_9]], %[[VAL_10]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_8]]#1(%[[VAL_14]]) : (!fir.ref<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_11:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?xi32>) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]]:3 = hlfir.associate %[[VAL_1]](%[[VAL_11]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
-// CHECK:           %[[VAL_13:.*]] = hlfir.get_extent %[[VAL_11]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_13:.*]] = hlfir.get_extent %[[VAL_11]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_5]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_16]](%[[VAL_17]]) : (!fir.heap<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
@@ -167,13 +167,13 @@ func.func @eoshift6(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !
 // CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
 // CHECK:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
 // CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %[[VAL_0]](%[[VAL_8]]) {adapt.valuebyref} : (!hlfir.expr<?x?xi32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.ref<!fir.array<?x?xi32>>, i1)
-// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] dim(0) : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_16:.*]] = fir.shape %[[VAL_10]], %[[VAL_11]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_17:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_16]]) : (!fir.ref<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_12:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?xi32>) -> !fir.shape<1>
 // CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_1]](%[[VAL_12]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
-// CHECK:           %[[VAL_14:.*]] = hlfir.get_extent %[[VAL_12]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_14:.*]] = hlfir.get_extent %[[VAL_12]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_2]] : (i16) -> i32
 // CHECK:           %[[VAL_18:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
 // CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_6]], %[[VAL_6]] : (index, index) -> !fir.shape<2>
@@ -190,8 +190,8 @@ func.func @eoshift6(%arg0: !hlfir.expr<?x?xi32> {fir.bindc_name = "a"}, %arg1: !
 // shift of polymorphic array
 func.func @eoshift7(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, %arg1: !fir.ref<f32>) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "a"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "sh"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("a") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("sh") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %c2_i32 = arith.constant 2 : i32
   %3 = fir.load %1#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
   %4 = hlfir.eoshift %3 %c2_i32 : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i32) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
@@ -208,8 +208,8 @@ func.func @eoshift7(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>
 // CHECK:           %[[VAL_7:.*]] = fir.alloca i32
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_8]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "a"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>)
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_8]] {uniq_name = "sh"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_8]] uniq_name("a") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_8]] uniq_name("sh") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           fir.store %[[VAL_5]] to %[[VAL_7]] : !fir.ref<i32>
 // CHECK:           %[[VAL_12:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>
@@ -228,7 +228,7 @@ func.func @_QPeoshift8(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "a
   %cst = arith.constant 3.000000e+00 : f32
   %c2_i32 = arith.constant 2 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift8Earray"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift8Earray") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   %2 = hlfir.eoshift %1#0 %c2_i32 boundary %cst dim %c2_i32 : (!fir.box<!fir.array<?x?xf32>>, i32, f32, i32) -> !hlfir.expr<?x?xf32>
   hlfir.assign %2 to %1#0 : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
   hlfir.destroy %2 : !hlfir.expr<?x?xf32>
@@ -243,7 +243,7 @@ func.func @_QPeoshift8(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "a
 // CHECK:           %[[VAL_7:.*]] = fir.alloca f32
 // CHECK:           %[[VAL_8:.*]] = fir.alloca i32
 // CHECK:           %[[VAL_9:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_9]] {uniq_name = "_QFeoshift8Earray"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_9]] uniq_name("_QFeoshift8Earray") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_8]] : !fir.ref<i32>
 // CHECK:           fir.store %[[VAL_5]] to %[[VAL_7]] : !fir.ref<f32>
 // CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_7]] : (!fir.ref<f32>) -> !fir.box<f32>
@@ -262,8 +262,8 @@ func.func @_QPeoshift8(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "a
 func.func @_QPeoshift9(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "array"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "boundary"}) {
   %c2_i32 = arith.constant 2 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift9Earray"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFeoshift9Eboundary"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift9Earray") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFeoshift9Eboundary") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %3 = hlfir.eoshift %1#0 %c2_i32 boundary %2#0 : (!fir.box<!fir.array<?x?xf32>>, i32, !fir.box<!fir.array<?xf32>>) -> !hlfir.expr<?x?xf32>
   hlfir.assign %3 to %1#0 : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
   hlfir.destroy %3 : !hlfir.expr<?x?xf32>
@@ -278,8 +278,8 @@ func.func @_QPeoshift9(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "a
 // CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>>
 // CHECK:           %[[VAL_6:.*]] = fir.alloca i32
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift9Earray"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift9Eboundary"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift9Earray") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift9Eboundary") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_6]] : !fir.ref<i32>
 // CHECK:           %[[VAL_10:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_3]], %[[VAL_3]] : (index, index) -> !fir.shape<2>

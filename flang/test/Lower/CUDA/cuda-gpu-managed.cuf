@@ -14,12 +14,12 @@ subroutine test_implicit_managed()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_implicit_managed()
-! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_implicit_managedEa"}
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_implicit_managedEa"}
-! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>}
-! CHECK: cuf.deallocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>}
-! CHECK: cuf.free %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>}
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFtest_implicit_managedEa") {{.*}}bindc_name("a") data_attr(managed)
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] uniq_name("_QFtest_implicit_managedEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<managed>)
+! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} data_attr(managed)
+! CHECK: cuf.deallocate %[[BOX_DECL]]#0 : {{.*}} data_attr(managed)
+! CHECK: cuf.free %[[BOX_DECL]]#0 : {{.*}} data_attr(managed)
 
 ! -----------------------------------------------------------------------------
 ! Test 2: Explicit device attribute is preserved (not overridden to managed)
@@ -31,10 +31,10 @@ subroutine test_explicit_device()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_explicit_device()
-! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_explicit_deviceEd"}
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_explicit_deviceEd"}
-! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<device>}
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFtest_explicit_deviceEd") {{.*}}bindc_name("d") data_attr(device)
+! CHECK: fir.embox {{.*}} allocator_idx(2)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] uniq_name("_QFtest_explicit_deviceEd") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>)
+! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} data_attr(device)
 
 ! -----------------------------------------------------------------------------
 ! Test 3: Explicit pinned attribute is preserved
@@ -46,9 +46,9 @@ subroutine test_explicit_pinned()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_explicit_pinned()
-! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "p", data_attr = #cuf.cuda<pinned>, uniq_name = "_QFtest_explicit_pinnedEp"}
-! CHECK: fir.embox {{.*}} {allocator_idx = 1 : i32}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_explicit_pinnedEp"}
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFtest_explicit_pinnedEp") {{.*}}bindc_name("p") data_attr(pinned)
+! CHECK: fir.embox {{.*}} allocator_idx(1)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] uniq_name("_QFtest_explicit_pinnedEp") fortran_attrs<allocatable> data_attr(#cuf.cuda<pinned>)
 
 ! -----------------------------------------------------------------------------
 ! Test 4: Explicit managed attribute is preserved (redundant but valid)
@@ -60,9 +60,9 @@ subroutine test_explicit_managed()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_explicit_managed()
-! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "m", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_explicit_managedEm"}
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_explicit_managedEm"}
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFtest_explicit_managedEm") {{.*}}bindc_name("m") data_attr(managed)
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] uniq_name("_QFtest_explicit_managedEm") fortran_attrs<allocatable> data_attr(#cuf.cuda<managed>)
 
 ! -----------------------------------------------------------------------------
 ! Test 5: Pointer variables are also implicitly managed with -gpu=managed
@@ -75,9 +75,9 @@ subroutine test_pointer_managed()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_pointer_managed()
-! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "ptr", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_pointer_managedEptr"}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_pointer_managedEptr"}
-! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> uniq_name("_QFtest_pointer_managedEptr") {{.*}}bindc_name("ptr") data_attr(managed)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] uniq_name("_QFtest_pointer_managedEptr") fortran_attrs<pointer> data_attr(#cuf.cuda<managed>)
+! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} data_attr(managed) pointer
 
 ! -----------------------------------------------------------------------------
 ! Test 5b: Scalar pointers are also implicitly managed (same as arrays)
@@ -95,10 +95,10 @@ subroutine test_scalar_pointer_managed()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_scalar_pointer_managed()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "node", data_attr = #cuf.cuda<managed>
-! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "p", data_attr = #cuf.cuda<managed>
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
+! CHECK: cuf.alloc {{.*}} {{.*}}bindc_name("node") data_attr(managed)
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {{.*}}bindc_name("p") data_attr(managed)
+! CHECK: cuf.allocate {{.*}} data_attr(managed) pointer
+! CHECK: cuf.allocate {{.*}} data_attr(managed) pointer
 
 ! -----------------------------------------------------------------------------
 ! Test 5c: Explicit CUDA attributes on scalars that convert to ObjectEntity
@@ -114,14 +114,14 @@ subroutine test_scalar_explicit_attrs()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_scalar_explicit_attrs()
-! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "p", data_attr = #cuf.cuda<device>
-! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "q", data_attr = #cuf.cuda<device>
-! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {bindc_name = "x", data_attr = #cuf.cuda<device>
-! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {bindc_name = "y", data_attr = #cuf.cuda<pinned>
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<pinned>}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, pointer}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, pointer}
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {{.*}}bindc_name("p") data_attr(device)
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {{.*}}bindc_name("q") data_attr(device)
+! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}bindc_name("x") data_attr(device)
+! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}bindc_name("y") data_attr(pinned)
+! CHECK: cuf.allocate {{.*}} data_attr(device)
+! CHECK: cuf.allocate {{.*}} data_attr(pinned)
+! CHECK: cuf.allocate {{.*}} data_attr(device) pointer
+! CHECK: cuf.allocate {{.*}} data_attr(device) pointer
 
 ! -----------------------------------------------------------------------------
 ! Test 6: Multiple allocatables - mix of implicit and explicit
@@ -137,10 +137,10 @@ subroutine test_mixed_allocatables()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_mixed_allocatables()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_mixed_allocatablesEa"}
-! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_mixed_allocatablesEd"}
-! CHECK: cuf.alloc {{.*}} {bindc_name = "m", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_mixed_allocatablesEm"}
-! CHECK: cuf.alloc {{.*}} {bindc_name = "p", data_attr = #cuf.cuda<pinned>, uniq_name = "_QFtest_mixed_allocatablesEp"}
+! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEa") {{.*}}bindc_name("a") data_attr(managed)
+! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEd") {{.*}}bindc_name("d") data_attr(device)
+! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEm") {{.*}}bindc_name("m") data_attr(managed)
+! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEp") {{.*}}bindc_name("p") data_attr(pinned)
 
 ! -----------------------------------------------------------------------------
 ! Test 7: Multi-dimensional allocatable array
@@ -153,8 +153,8 @@ subroutine test_multidim()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_multidim()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "arr", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_multidimEarr"}
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_multidimEarr") {{.*}}bindc_name("arr") data_attr(managed)
+! CHECK: fir.embox {{.*}} allocator_idx(3)
 
 ! -----------------------------------------------------------------------------
 ! Test 8: Explicit unified attribute is preserved (not overridden to managed)
@@ -166,8 +166,8 @@ subroutine test_explicit_unified()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_explicit_unified()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "u", data_attr = #cuf.cuda<unified>, uniq_name = "_QFtest_explicit_unifiedEu"}
-! CHECK: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>
+! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_explicit_unifiedEu") {{.*}}bindc_name("u") data_attr(unified)
+! CHECK: hlfir.declare {{.*}} {{.*}}fortran_attrs<allocatable> data_attr(#cuf.cuda<unified>)
 
 ! -----------------------------------------------------------------------------
 ! Test 9: Dummy arguments - allocatable dummy without explicit attribute
@@ -180,7 +180,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_dummy_allocatable(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuf.data_attr = #cuf.cuda<managed>, fir.bindc_name = "arr"})
-! CHECK: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable, intent_inout>
+! CHECK: hlfir.declare {{.*}} {{.*}}fortran_attrs<allocatable, intent_inout> data_attr(#cuf.cuda<managed>)
 
 ! -----------------------------------------------------------------------------
 ! Test 10: Module variables - allocatable module variable becomes managed
@@ -199,12 +199,12 @@ subroutine test_module_var()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_module_var()
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, hasDoubleDescriptor}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, hasDoubleDescriptor}
+! CHECK: cuf.allocate {{.*}} data_attr(managed) hasDoubleDescriptor
+! CHECK: cuf.allocate {{.*}} data_attr(device) hasDoubleDescriptor
 
 ! CHECK: fir.global @_QMmod_globalsEglobal_arr <{data_attr = #cuf.cuda<managed>}> : !fir.box<!fir.heap<!fir.array<?xf32>>>
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: fir.embox {{.*}} allocator_idx(3)
 
 ! CHECK: fir.global @_QMmod_globalsEglobal_device <{data_attr = #cuf.cuda<device>}> : !fir.box<!fir.heap<!fir.array<?xf32>>>
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: fir.embox {{.*}} allocator_idx(2)
 

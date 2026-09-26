@@ -22,7 +22,7 @@ end subroutine
 ! CHECK-SAME: map_entries({{[^[:space:]]*}} -> {{[^[:space:]]*}},
 ! CHECK-SAME:   {{[^[:space:]]*}} -> {{[^[:space:]]*}}, {{[^[:space:]]*}} -> {{[^[:space:]]*}},
 ! CHECK-SAME:   {{[^[:space:]]*}} -> {{[^[:space:]]*}}, {{[^[:space:]]*}} -> %[[N_MAP_ARG:[^[:space:]]*]], {{.*}}) {
-! CHECK:   %[[N_MAPPED:.*]]:2 = hlfir.declare %[[N_MAP_ARG]] {uniq_name = "_QFfooEn"}
+! CHECK:   %[[N_MAPPED:.*]]:2 = hlfir.declare %[[N_MAP_ARG]] uniq_name("_QFfooEn")
 ! CHECK:   omp.teams {
 ! CHECK:     omp.parallel {
 ! CHECK:       omp.distribute {

@@ -213,7 +213,7 @@ acc.reduction.recipe @red_ref_box_no_destroy : !fir.box<i32> reduction_operator 
 acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
 ^bb0(%arg0: !fir.ref<i32>):
   %0 = fir.alloca i32
-  %1 = fir.declare %0 {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("acc.private.init") : (!fir.ref<i32>) -> !fir.ref<i32>
   acc.yield %1 : !fir.ref<i32>
 }
 acc.private.recipe @privatization_box_Uxf32 : !fir.box<!fir.array<?xf32>> init {
@@ -222,7 +222,7 @@ acc.private.recipe @privatization_box_Uxf32 : !fir.box<!fir.array<?xf32>> init {
   %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   %1 = fir.shape %0#1 : (index) -> !fir.shape<1>
   %2 = fir.allocmem !fir.array<?xf32>, %0#1 {bindc_name = ".tmp", uniq_name = ""}
-  %3 = fir.declare %2(%1) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
+  %3 = fir.declare %2(%1) uniq_name(".tmp") : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
   %4 = fir.embox %3(%1) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   acc.yield %4 : !fir.box<!fir.array<?xf32>>
 } destroy {
@@ -237,15 +237,15 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFfooEi"}
-  %2 = fir.declare %1 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %2 = fir.declare %1 uniq_name("_QFfooEi") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFfooEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   acc.parallel combined(loop) {
     %4 = acc.private var(%3 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) name("x") -> !fir.box<!fir.array<?xf32>>
     %5 = acc.private varPtr(%2 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
     acc.loop combined(parallel) private(%4, %5 : !fir.box<!fir.array<?xf32>>, !fir.ref<i32>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c200_i32 : i32)  step (%c1_i32 : i32) {
       %6 = fir.dummy_scope : !fir.dscope
-      %7 = fir.declare %4 dummy_scope %6 {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
-      %8 = fir.declare %5 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      %7 = fir.declare %4 dummy_scope %6 uniq_name("_QFfooEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+      %8 = fir.declare %5 uniq_name("_QFfooEi") : (!fir.ref<i32>) -> !fir.ref<i32>
       %9 = fir.convert %arg1 : (i32) -> f32
       %10 = fir.convert %arg1 : (i32) -> i64
       %11 = fir.array_coor %7 %10 : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
@@ -260,7 +260,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK-LABEL:   acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
 // CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
 // CHECK:           %[[VAL_1:.*]] = fir.alloca i32
-// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] uniq_name("acc.private.init") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           acc.yield %[[VAL_2]] : !fir.ref<i32>
 // CHECK:         }
 
@@ -271,7 +271,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK:           %[[VAL_3:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_5:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_3]]#1 <{bindc_name = ".tmp", uniq_name = ""}>
-// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]](%[[VAL_4]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]](%[[VAL_4]]) uniq_name(".tmp") : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
 // CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]](%[[VAL_4]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 // CHECK:           fir.store %[[VAL_7]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
@@ -292,8 +292,8 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFfooEi"}>
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_2]] {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] uniq_name("_QFfooEi") : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_2]] uniq_name("_QFfooEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 // CHECK:           fir.store %[[VAL_5]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 // CHECK:           acc.parallel combined(loop) {
@@ -302,8 +302,8 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK:             acc.loop combined(parallel) private(%[[VAL_7]], %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<i32>) control(%[[VAL_9:.*]] : i32) = (%[[VAL_1]] : i32) to (%[[VAL_0]] : i32)  step (%[[VAL_1]] : i32) {
 // CHECK:               %[[VAL_10:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_7]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
-// CHECK:               %[[VAL_12:.*]] = fir.declare %[[VAL_11]] dummy_scope %[[VAL_10]] {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
-// CHECK:               %[[VAL_13:.*]] = fir.declare %[[VAL_8]] {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:               %[[VAL_12:.*]] = fir.declare %[[VAL_11]] dummy_scope %[[VAL_10]] uniq_name("_QFfooEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK:               %[[VAL_13:.*]] = fir.declare %[[VAL_8]] uniq_name("_QFfooEi") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:               %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (i32) -> f32
 // CHECK:               %[[VAL_15:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
 // CHECK:               %[[VAL_16:.*]] = fir.array_coor %[[VAL_12]] %[[VAL_15]] : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
@@ -331,7 +331,7 @@ acc.reduction.recipe @red_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_oper
 func.func @_QPloop_reduction(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFloop_reductionEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFloop_reductionEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xi32>>) {
     %2 = acc.reduction var(%1 : !fir.box<!fir.array<?xi32>>) recipe(@red_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
@@ -347,7 +347,7 @@ func.func @_QPloop_reduction(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name 
 // CHECK-SAME:                                 %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
 // CHECK:           %[[LB:.*]] = arith.constant 1 : i32
 // CHECK:           %[[UB:.*]] = arith.constant 32 : i32
-// CHECK:           %[[DECL:.*]] = fir.declare %[[ARG0]] {uniq_name = "_QFloop_reductionEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DECL:.*]] = fir.declare %[[ARG0]] uniq_name("_QFloop_reductionEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[MAPPED:.*]] = acc.copyin var(%[[DECL]] : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
 // CHECK:           acc.parallel dataOperands(%[[MAPPED]] : !fir.box<!fir.array<?xi32>>) {
 // CHECK-NEXT:        %[[SLOT:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
@@ -376,7 +376,7 @@ acc.reduction.recipe @red_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_oper
 func.func @_QPnested_loop_reduction(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFnested_loop_reductionEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFnested_loop_reductionEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xi32>>) {
     acc.loop gang control(%arg1 : i32) = (%c1_i32 : i32) to (%c32_i32 : i32)  step (%c1_i32 : i32) {
@@ -416,7 +416,7 @@ acc.reduction.recipe @red_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_oper
   acc.yield %lhs : !fir.box<!fir.array<?xi32>>
 }
 func.func @_QPconstruct_reduction(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
-  %0 = fir.declare %arg0 {uniq_name = "_QFconstruct_reductionEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFconstruct_reductionEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
   %2 = acc.reduction var(%1 : !fir.box<!fir.array<?xi32>>) recipe(@red_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xi32>>) reduction(%2 : !fir.box<!fir.array<?xi32>>) {
@@ -445,7 +445,7 @@ acc.private.recipe @priv_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
 func.func @_QPunmapped_private(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFunmapped_privateEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFunmapped_privateEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   acc.parallel {
     %1 = acc.private var(%0 : !fir.box<!fir.array<?xi32>>) recipe(@priv_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
     acc.loop gang private(%1 : !fir.box<!fir.array<?xi32>>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c32_i32 : i32)  step (%c1_i32 : i32) {
@@ -457,7 +457,7 @@ func.func @_QPunmapped_private(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_nam
 }
 
 // CHECK-LABEL:   func.func @_QPunmapped_private(
-// CHECK:           %[[DECL:.*]] = fir.declare %{{.*}} {uniq_name = "_QFunmapped_privateEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DECL:.*]] = fir.declare %{{.*}} uniq_name("_QFunmapped_privateEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[SLOT:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 // CHECK:           fir.store %[[DECL]] to %[[SLOT]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 // CHECK:           acc.parallel {
@@ -477,7 +477,7 @@ acc.private.recipe @priv_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
 func.func @_QPmapped_private(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFmapped_privateEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFmapped_privateEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xi32>>) {
     %2 = acc.private var(%1 : !fir.box<!fir.array<?xi32>>) recipe(@priv_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
@@ -511,7 +511,7 @@ acc.firstprivate.recipe @fp_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
 func.func @_QPmapped_firstprivate(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFmapped_firstprivateEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFmapped_firstprivateEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xi32>>) {
     %2 = acc.firstprivate var(%1 : !fir.box<!fir.array<?xi32>>) recipe(@fp_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
@@ -545,10 +545,10 @@ acc.private.recipe @priv_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
 func.func @_QPmapped_private_via_declare(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFmapped_private_via_declareEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFmapped_private_via_declareEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xi32>>) {
-    %2 = fir.declare %1 {uniq_name = "_QFmapped_private_via_declareEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %2 = fir.declare %1 uniq_name("_QFmapped_private_via_declareEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %3 = acc.private var(%2 : !fir.box<!fir.array<?xi32>>) recipe(@priv_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
     acc.loop gang private(%3 : !fir.box<!fir.array<?xi32>>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c32_i32 : i32)  step (%c1_i32 : i32) {
       acc.yield
@@ -582,7 +582,7 @@ acc.reduction.recipe @red_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_oper
 func.func @_QPin_region_data_entry(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFin_region_data_entryEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFin_region_data_entryEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   acc.parallel {
     %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xi32>>) dataClause(acc_copy) implicit(true) name("r") -> !fir.box<!fir.array<?xi32>>
     %2 = acc.reduction var(%1 : !fir.box<!fir.array<?xi32>>) recipe(@red_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
@@ -623,7 +623,7 @@ acc.reduction.recipe @red_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_oper
 func.func @_QPunmapped_reduction(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "r"}) {
   %c1_i32 = arith.constant 1 : i32
   %c32_i32 = arith.constant 32 : i32
-  %0 = fir.declare %arg0 {uniq_name = "_QFunmapped_reductionEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.declare %arg0 uniq_name("_QFunmapped_reductionEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
   acc.parallel {
     %1 = acc.reduction var(%0 : !fir.box<!fir.array<?xi32>>) recipe(@red_box_Uxi32) name("r") -> !fir.box<!fir.array<?xi32>>
     acc.loop gang reduction(%1 : !fir.box<!fir.array<?xi32>>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c32_i32 : i32)  step (%c1_i32 : i32) {
@@ -635,7 +635,7 @@ func.func @_QPunmapped_reduction(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_n
 }
 
 // CHECK-LABEL:   func.func @_QPunmapped_reduction(
-// CHECK:           %[[DECL:.*]] = fir.declare %{{.*}} {uniq_name = "_QFunmapped_reductionEr"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DECL:.*]] = fir.declare %{{.*}} uniq_name("_QFunmapped_reductionEr") : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[SLOT:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 // CHECK:           fir.store %[[DECL]] to %[[SLOT]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 // CHECK:           acc.parallel {

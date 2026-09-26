@@ -37,7 +37,7 @@ end subroutine compute
 
 ! The actual definition lowers the present declare on its dummy argument.
 ! CHECK-LABEL: func.func @_QPcompute(
-! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %{{.*}} {acc.declare = #acc.declare<dataClause = acc_present>, uniq_name = "_QFcomputeEa"}
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFcomputeEa") {acc.declare = #acc.declare<dataClause = acc_present>}
 ! CHECK:         %[[PRES:.*]] = acc.present var(%[[DECL]]#0
 ! CHECK:         acc.declare_enter dataOperands(%[[PRES]]
 ! CHECK:         acc.declare_exit

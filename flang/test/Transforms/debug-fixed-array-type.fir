@@ -11,13 +11,13 @@ module {
     %c-2 = arith.constant -2 : index loc(#loc3)
     %c4 = arith.constant 4 : index loc(#loc3)
     %0 = fir.alloca !fir.array<3xi32> {bindc_name = "d1", uniq_name = "_QFEd1"}
-    %1 = fircg.ext_declare %0(%c3) {uniq_name = "_QFEd1"} : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<!fir.array<3xi32>> loc(#loc1)
+    %1 = fircg.ext_declare %0(%c3) uniq_name("_QFEd1") : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<!fir.array<3xi32>> loc(#loc1)
     %2 = fir.address_of(@_QFEd2) : !fir.ref<!fir.array<2x5xi32>>
-    %3 = fircg.ext_declare %2(%c2, %c5) {uniq_name = "_QFEd2"} : (!fir.ref<!fir.array<2x5xi32>>, index, index) -> !fir.ref<!fir.array<2x5xi32>> loc(#loc2)
+    %3 = fircg.ext_declare %2(%c2, %c5) uniq_name("_QFEd2") : (!fir.ref<!fir.array<2x5xi32>>, index, index) -> !fir.ref<!fir.array<2x5xi32>> loc(#loc2)
     %4 = fir.address_of(@_QFEd3) : !fir.ref<!fir.array<6x8x7xf32>>
-    %5 = fircg.ext_declare %4(%c6, %c8, %c7) {uniq_name = "_QFEd3"} : (!fir.ref<!fir.array<6x8x7xf32>>, index, index, index) -> !fir.ref<!fir.array<6x8x7xf32>> loc(#loc3)
+    %5 = fircg.ext_declare %4(%c6, %c8, %c7) uniq_name("_QFEd3") : (!fir.ref<!fir.array<6x8x7xf32>>, index, index, index) -> !fir.ref<!fir.array<6x8x7xf32>> loc(#loc3)
     %6 = fir.address_of(@_QFEd4) : !fir.ref<!fir.array<6x7xi32>>
-    %7 = fircg.ext_declare %6(%c6, %c7) origin %c-2, %c4 {uniq_name = "_QFEd4"} : (!fir.ref<!fir.array<6x7xi32>>, index, index, index, index) -> !fir.ref<!fir.array<6x7xi32>> loc(#loc5)
+    %7 = fircg.ext_declare %6(%c6, %c7) origin %c-2, %c4 uniq_name("_QFEd4") : (!fir.ref<!fir.array<6x7xi32>>, index, index, index, index) -> !fir.ref<!fir.array<6x7xi32>> loc(#loc5)
     return
   } loc(#loc4)
 }

@@ -19,13 +19,13 @@ end program test
 ! CHECK: ^bb0(%[[INIT_ARG0:.*]]: !fir.ref<[[TY]]>, %[[INIT_ARG1:.*]]: !fir.ref<[[TY]]>):
 ! CHECK:   %{{.*}} = fir.embox %[[INIT_ARG1]]
 ! CHECK:   %{{.*}} = fir.embox %[[INIT_ARG0]]
-! CHECK:   %{{.*}}:2 = hlfir.declare %[[INIT_ARG0]] {uniq_name = "omp_orig"}
-! CHECK:   %{{.*}}:2 = hlfir.declare %[[INIT_ARG1]] {uniq_name = "omp_priv"}
+! CHECK:   %{{.*}}:2 = hlfir.declare %[[INIT_ARG0]] uniq_name("omp_orig")
+! CHECK:   %{{.*}}:2 = hlfir.declare %[[INIT_ARG1]] uniq_name("omp_priv")
 ! CHECK:   omp.yield(%[[INIT_ARG1]] : !fir.ref<[[TY]]>)
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<[[TY]]>, %[[ARG1:.*]]: !fir.ref<[[TY]]>):
-! CHECK:   %[[OMP_IN:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "omp_in"}
-! CHECK:   %[[OMP_OUT:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "omp_out"}
+! CHECK:   %[[OMP_IN:.*]]:2 = hlfir.declare %[[ARG1]] uniq_name("omp_in")
+! CHECK:   %[[OMP_OUT:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("omp_out")
 ! CHECK:   %[[OUT_X:.*]] = hlfir.designate %[[OMP_OUT]]#0{"x"} : (!fir.ref<[[TY]]>) -> !fir.ref<i32>
 ! CHECK:   %[[OUT_X_VAL:.*]] = fir.load %[[OUT_X]] : !fir.ref<i32>
 ! CHECK:   %[[IN_X:.*]] = hlfir.designate %[[OMP_IN]]#0{"x"} : (!fir.ref<[[TY]]>) -> !fir.ref<i32>

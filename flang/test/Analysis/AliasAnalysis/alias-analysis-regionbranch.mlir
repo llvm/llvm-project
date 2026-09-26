@@ -10,14 +10,14 @@
 func.func @test_rb_both_alloc_distinct() {
   %cond = arith.constant true
   %a_out = fir.alloca f32 {uniq_name = "_QFEa_out"}
-  %d_out = fir.declare %a_out {uniq_name = "_QFEa_out", test.ptr = "outside_alloc"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_out = fir.declare %a_out uniq_name("_QFEa_out") {test.ptr = "outside_alloc"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     %a1 = fir.alloca f32 {uniq_name = "_QFEa1"}
-    %d1 = fir.declare %a1 {uniq_name = "_QFEa1"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %d1 = fir.declare %a1 uniq_name("_QFEa1") : (!fir.ref<f32>) -> !fir.ref<f32>
     fir.result %d1 : !fir.ref<f32>
   } else {
     %a2 = fir.alloca f32 {uniq_name = "_QFEa2"}
-    %d2 = fir.declare %a2 {uniq_name = "_QFEa2"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %d2 = fir.declare %a2 uniq_name("_QFEa2") : (!fir.ref<f32>) -> !fir.ref<f32>
     fir.result %d2 : !fir.ref<f32>
   }
   %join = fir.convert %jf {test.ptr = "join_alloc"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -37,10 +37,10 @@ func.func @test_rb_both_alloc_distinct_outer_scope() {
   %cond = arith.constant true
   %a1 = fir.alloca f32 {uniq_name = "_QFEa1o"}
   %a2 = fir.alloca f32 {uniq_name = "_QFEa2o"}
-  %d1 = fir.declare %a1 {uniq_name = "_QFEa1o", test.ptr = "d1"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %d2 = fir.declare %a2 {uniq_name = "_QFEa2o", test.ptr = "d2"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d1 = fir.declare %a1 uniq_name("_QFEa1o") {test.ptr = "d1"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d2 = fir.declare %a2 uniq_name("_QFEa2o") {test.ptr = "d2"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %a_ext = fir.alloca f32 {uniq_name = "_QFEa_ext_o"}
-  %d_ext = fir.declare %a_ext {uniq_name = "_QFEa_ext_o", test.ptr = "outside_outer"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_ext = fir.declare %a_ext uniq_name("_QFEa_ext_o") {test.ptr = "outside_outer"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     fir.result %d1 : !fir.ref<f32>
   } else {
@@ -59,7 +59,7 @@ func.func @test_rb_both_alloc_distinct_outer_scope() {
 func.func @test_rb_both_alloc_same_decl() {
   %cond = arith.constant true
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa", test.ptr = "shared_decl"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") {test.ptr = "shared_decl"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     fir.result %da : !fir.ref<f32>
   } else {
@@ -81,14 +81,14 @@ func.func @test_rb_both_alloc_same_decl() {
 func.func @test_rb_alloc_outer_vs_inner() {
   %cond = arith.constant true
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %a_neither = fir.alloca f32 {uniq_name = "_QFEa_neither"}
-  %d_neither = fir.declare %a_neither {uniq_name = "_QFEa_neither", test.ptr = "outside_neither"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_neither = fir.declare %a_neither uniq_name("_QFEa_neither") {test.ptr = "outside_neither"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     fir.result %da : !fir.ref<f32>
   } else {
     %a_else = fir.alloca f32 {uniq_name = "_QFEa_else"}
-    %d_else = fir.declare %a_else {uniq_name = "_QFEa_else"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %d_else = fir.declare %a_else uniq_name("_QFEa_else") : (!fir.ref<f32>) -> !fir.ref<f32>
     fir.result %d_else : !fir.ref<f32>
   }
   %join = fir.convert %jf {test.ptr = "join_oi"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -109,7 +109,7 @@ fir.global @rb_merge_g : f32 {
 func.func @test_rb_both_same_global() {
   %cond = arith.constant true
   %addr = fir.address_of(@rb_merge_g) : !fir.ref<f32>
-  %dg = fir.declare %addr {uniq_name = "_QErb_merge_g", test.ptr = "global_decl"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %dg = fir.declare %addr uniq_name("_QErb_merge_g") {test.ptr = "global_decl"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     fir.result %dg : !fir.ref<f32>
   } else {
@@ -128,7 +128,7 @@ func.func @test_rb_both_same_global() {
 func.func @test_rb_both_same_argument(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) {
   %cond = arith.constant true
   %ds = fir.dummy_scope : !fir.dscope
-  %dx = fir.declare %arg0 dummy_scope %ds arg 1 {uniq_name = "_QFEex", test.ptr = "decl_arg"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dx = fir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFEex") {test.ptr = "decl_arg"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     fir.result %dx : !fir.ref<f32>
   } else {
@@ -153,11 +153,11 @@ fir.global @rb_side_g : f32 {
 func.func @test_rb_merged_unknown_global_vs_alloc() {
   %cond = arith.constant true
   %addr = fir.address_of(@rb_side_g) : !fir.ref<f32>
-  %dg = fir.declare %addr {uniq_name = "_QErb_side_g"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %dg = fir.declare %addr uniq_name("_QErb_side_g") : (!fir.ref<f32>) -> !fir.ref<f32>
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %a_by = fir.alloca f32 {uniq_name = "_QFEa_by"}
-  %d_by = fir.declare %a_by {uniq_name = "_QFEa_by", test.ptr = "outside_mixed"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_by = fir.declare %a_by uniq_name("_QFEa_by") {test.ptr = "outside_mixed"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     fir.result %dg : !fir.ref<f32>
   } else {
@@ -179,14 +179,14 @@ func.func @test_rb_merged_unknown_global_vs_alloc() {
 func.func @test_rb_merged_unknown_attr_mismatch() {
   %cond = arith.constant true
   %a_ext = fir.alloca f32 {uniq_name = "_QFEa_attr_ext"}
-  %d_ext = fir.declare %a_ext {uniq_name = "_QFEa_attr_ext", test.ptr = "outside_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_ext = fir.declare %a_ext uniq_name("_QFEa_attr_ext") {test.ptr = "outside_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     %a1 = fir.alloca f32 {uniq_name = "_QFEa1"}
-    %dt = fir.declare %a1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEa1"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %dt = fir.declare %a1 uniq_name("_QFEa1") fortran_attrs<target> : (!fir.ref<f32>) -> !fir.ref<f32>
     fir.result %dt : !fir.ref<f32>
   } else {
     %a2 = fir.alloca f32 {uniq_name = "_QFEa2"}
-    %dp = fir.declare %a2 {uniq_name = "_QFEa2"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %dp = fir.declare %a2 uniq_name("_QFEa2") : (!fir.ref<f32>) -> !fir.ref<f32>
     fir.result %dp : !fir.ref<f32>
   }
   %join = fir.convert %jf {test.ptr = "join_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -225,10 +225,10 @@ func.func @test_rb_merge_one_branch_pack_array(
 func.func @test_rb_optional_ref_present_absent(%arg0: !fir.ref<i32> {fir.bindc_name = "x", fir.optional}) {
   %present = fir.is_present %arg0 : (!fir.ref<i32>) -> i1
   %a_ext = fir.alloca i32 {uniq_name = "_QFEopt_ext"}
-  %d_ext = fir.declare %a_ext {uniq_name = "_QFEopt_ext", test.ptr = "outside_opt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d_ext = fir.declare %a_ext uniq_name("_QFEopt_ext") {test.ptr = "outside_opt"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %slot = fir.if %present -> !fir.ref<i32> {
     %a = fir.alloca i32 {uniq_name = "_QFEopt"}
-    %d = fir.declare %a {uniq_name = "_QFEopt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %d = fir.declare %a uniq_name("_QFEopt") : (!fir.ref<i32>) -> !fir.ref<i32>
     fir.result %d : !fir.ref<i32>
   } else {
     %abs = fir.absent !fir.ref<i32>
@@ -248,10 +248,10 @@ func.func @test_rb_optional_ref_present_absent(%arg0: !fir.ref<i32> {fir.bindc_n
 func.func @test_rb_optional_ref_outside_target(%arg0: !fir.ref<i32> {fir.bindc_name = "x", fir.optional}) {
   %present = fir.is_present %arg0 : (!fir.ref<i32>) -> i1
   %a_ext = fir.alloca i32 {uniq_name = "_QFEopt_ext_t"}
-  %d_ext = fir.declare %a_ext {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEopt_ext_t", test.ptr = "outside_opt_tgt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d_ext = fir.declare %a_ext uniq_name("_QFEopt_ext_t") fortran_attrs<target> {test.ptr = "outside_opt_tgt"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %slot = fir.if %present -> !fir.ref<i32> {
     %a = fir.alloca i32 {uniq_name = "_QFEopt_t"}
-    %d = fir.declare %a {uniq_name = "_QFEopt_t"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %d = fir.declare %a uniq_name("_QFEopt_t") : (!fir.ref<i32>) -> !fir.ref<i32>
     fir.result %d : !fir.ref<i32>
   } else {
     %abs = fir.absent !fir.ref<i32>
@@ -275,9 +275,9 @@ func.func @test_rb_do_loop_iter_carry_ref() {
   %ub = arith.constant 2 : index
   %st = arith.constant 1 : index
   %a_carry = fir.alloca f32 {uniq_name = "_QFEcarry"}
-  %d_carry = fir.declare %a_carry {uniq_name = "_QFEcarry", test.ptr = "carry_init"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_carry = fir.declare %a_carry uniq_name("_QFEcarry") {test.ptr = "carry_init"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %a_out = fir.alloca f32 {uniq_name = "_QFEoutside"}
-  %d_out = fir.declare %a_out {uniq_name = "_QFEoutside", test.ptr = "outside_loop"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_out = fir.declare %a_out uniq_name("_QFEoutside") {test.ptr = "outside_loop"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %loop_res = fir.do_loop %iv = %lb to %ub step %st iter_args(%carry = %d_carry) -> (!fir.ref<f32>) {
     fir.result %carry : !fir.ref<f32>
   }
@@ -298,8 +298,8 @@ func.func @test_rb_do_loop_no_iter_args() {
   %st = arith.constant 1 : index
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa", test.ptr = "no_iter_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb", test.ptr = "no_iter_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") {test.ptr = "no_iter_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") {test.ptr = "no_iter_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.do_loop %iv = %lb to %ub step %st {
     %fval = fir.convert %iv : (index) -> f32
     fir.store %fval to %da : !fir.ref<f32>
@@ -322,8 +322,8 @@ func.func @test_rb_do_loop_final_value_only() {
   %st = arith.constant 1 : index
   %a = fir.alloca f32 {uniq_name = "_QFEfv_a"}
   %b = fir.alloca f32 {uniq_name = "_QFEfv_b"}
-  %da = fir.declare %a {uniq_name = "_QFEfv_a", test.ptr = "fv_only_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEfv_b", test.ptr = "fv_only_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEfv_a") {test.ptr = "fv_only_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEfv_b") {test.ptr = "fv_only_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %iv_final:1 = fir.do_loop %iv = %lb to %ub step %st -> index {
     fir.result %iv : index
   }
@@ -345,9 +345,9 @@ func.func @test_rb_do_loop_final_value_and_iter_carry_ref() {
   %ub = arith.constant 2 : index
   %st = arith.constant 1 : index
   %a_carry = fir.alloca f32 {uniq_name = "_QFEfv_carry"}
-  %d_carry = fir.declare %a_carry {uniq_name = "_QFEfv_carry", test.ptr = "fv_carry_init"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_carry = fir.declare %a_carry uniq_name("_QFEfv_carry") {test.ptr = "fv_carry_init"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %a_out = fir.alloca f32 {uniq_name = "_QFEfv_outside"}
-  %d_out = fir.declare %a_out {uniq_name = "_QFEfv_outside", test.ptr = "fv_outside_loop"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_out = fir.declare %a_out uniq_name("_QFEfv_outside") {test.ptr = "fv_outside_loop"} : (!fir.ref<f32>) -> !fir.ref<f32>
   // -> (index, !fir.ref<f32>): result#0 = IV final value, result#1 = iter result
   %loop_res:2 = fir.do_loop %iv = %lb to %ub step %st
                   iter_args(%carry = %d_carry) -> (index, !fir.ref<f32>) {

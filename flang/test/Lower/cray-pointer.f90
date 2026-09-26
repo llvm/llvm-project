@@ -20,8 +20,8 @@ subroutine cray_scalar()
 ! CHECK: %[[j_addr:.*]] = fir.address_of(@_QFcray_scalarEj) {{.*}}
 ! CHECK: %[[j:.*]]:2 = hlfir.declare %[[j_addr]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_scalarEptr"}
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_scalarEpte"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_scalarEptr") fortran_attrs<cray_pointer>
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_scalarEpte") fortran_attrs<pointer, cray_pointee>
 ! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK: %[[zerobox:.*]] = fir.embox %[[zero]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK: fir.store %[[zerobox]] to %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -75,10 +75,10 @@ subroutine cray_derivedType()
 ! CHECK: %[[k_alloc:.*]] = fir.alloca i32 {{.*}}
 ! CHECK: %[[k:.*]]:2 = hlfir.declare %[[k_alloc]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_derivedtypeEptr"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_derivedtypeEptr") fortran_attrs<cray_pointer>
 ! CHECK: %[[xdt_alloc:.*]] = fir.alloca !fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}> {{.*}}
 ! CHECK: %[[xdt:.*]]:2 = hlfir.declare %[[xdt_alloc]]
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_derivedtypeEpte"}
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_derivedtypeEpte") fortran_attrs<pointer, cray_pointee>
 ! CHECK: %[[xdtbox:.*]] = fir.embox %[[xdt]]#0 : (!fir.ref<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>) -> !fir.box<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>
 ! CHECK: %[[xdtaddr:.*]] = fir.box_addr %[[xdtbox]] : (!fir.box<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>) -> !fir.ref<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>
 ! CHECK: %[[xdtaddrval:.*]] = fir.convert %[[xdtaddr]] : (!fir.ref<!fir.type<_QFcray_derivedtypeTdt{i:i32,j:i32}>>) -> i64
@@ -132,10 +132,10 @@ subroutine cray_ptrArth()
 ! CHECK: %[[i_alloc:.*]] = fir.alloca i32 {{.*}}
 ! CHECK: %[[i:.*]]:2 = hlfir.declare %[[i_alloc]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_ptrarthEptr"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_ptrarthEptr") fortran_attrs<cray_pointer>
 ! CHECK: %[[xdt_alloc:.*]] = fir.alloca !fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}> {{.*}}
 ! CHECK: %[[xdt:.*]]:2 = hlfir.declare %[[xdt_alloc]]
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_ptrarthEpte"}
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_ptrarthEpte") fortran_attrs<pointer, cray_pointee>
 ! CHECK: %[[xdtbox:.*]] = fir.embox %[[xdt]]#0 : (!fir.ref<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>) -> !fir.box<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>
 ! CHECK: %[[xdtaddr:.*]] = fir.box_addr %[[xdtbox]] : (!fir.box<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>
 ! CHECK: %[[xdtaddrval:.*]] = fir.convert %[[xdtaddr]] : (!fir.ref<!fir.type<_QFcray_ptrarthTdt{x:i32,y:i32,z:i32}>>) -> i64
@@ -194,8 +194,8 @@ subroutine cray_arrayElement()
 ! CHECK: %[[k_alloc:.*]] = fir.alloca i32 {{.*}}
 ! CHECK: %[[k:.*]]:2 = hlfir.declare %[[k_alloc]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_arrayelementEptr"}
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_arrayelementEpte"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_arrayelementEptr") fortran_attrs<cray_pointer>
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_arrayelementEpte") fortran_attrs<pointer, cray_pointee>
 ! CHECK: %[[c2:.*]] = arith.constant 2 : index
 ! CHECK: %[[elem:.*]] = hlfir.designate %[[data]]#0 (%[[c2]])  : (!fir.ref<!fir.array<5xi32>>, index) -> !fir.ref<i32>
 ! CHECK: %[[box:.*]] = fir.embox %[[elem]] : (!fir.ref<i32>) -> !fir.box<i32>
@@ -248,8 +248,8 @@ subroutine cray_2darrayElement()
 ! CHECK: %[[k_alloc:.*]] = fir.alloca i32 {{.*}}
 ! CHECK: %[[k:.*]]:2 = hlfir.declare %[[k_alloc]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_2darrayelementEptr"}
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_2darrayelementEpte"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_2darrayelementEptr") fortran_attrs<cray_pointer>
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_2darrayelementEpte") fortran_attrs<pointer, cray_pointee>
 ! CHECK: %[[elem:.*]] = hlfir.designate %[[data]]#0 (%{{.*}}, %{{.*}})  : (!fir.ref<!fir.array<2x4xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK: %[[box:.*]] = fir.embox %[[elem]] : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<i32>) -> !fir.ref<i32>
@@ -303,8 +303,8 @@ subroutine cray_array()
 ! CHECK: %[[k_alloc:.*]] = fir.alloca !fir.array<3xi32> {{.*}}
 ! CHECK: %[[k:.*]]:2 = hlfir.declare %[[k_alloc]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_arrayEptr"}
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_arrayEpte"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_arrayEptr") fortran_attrs<cray_pointer>
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_arrayEpte") fortran_attrs<pointer, cray_pointee>
 
   k = pte
   print *, k
@@ -345,8 +345,8 @@ subroutine cray_arraySection()
 ! CHECK: %[[k_alloc:.*]] = fir.alloca !fir.array<2xi32> {{.*}}
 ! CHECK: %[[k:.*]]:2 = hlfir.declare %[[k_alloc]]
 ! CHECK: %[[ptr_alloc:.*]] = fir.alloca i64 {{.*}}
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFcray_arraysectionEptr"}
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFcray_arraysectionEpte"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_alloc]] uniq_name("_QFcray_arraysectionEptr") fortran_attrs<cray_pointer>
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %[[pte_alloc]] uniq_name("_QFcray_arraysectionEpte") fortran_attrs<pointer, cray_pointee>
 
   k = pte(2:3)
   print *, k
@@ -387,9 +387,9 @@ subroutine test_ptr()
   integer :: x
   ptr = loc(x)
 ! CHECK: %[[ptr_addr:.*]] = fir.address_of(@_QMmod_cray_ptrEptr) : !fir.ref<i64>
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_addr]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QMmod_cray_ptrEptr"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_addr]] uniq_name("_QMmod_cray_ptrEptr") fortran_attrs<cray_pointer>
 ! CHECK: %[[x_alloc:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_ptrEx"}> {fir.target}
-! CHECK: %[[x:.*]]:2 = hlfir.declare %[[x_alloc]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_ptrEx"}
+! CHECK: %[[x:.*]]:2 = hlfir.declare %[[x_alloc]] uniq_name("_QFtest_ptrEx") fortran_attrs<target>
 ! CHECK: %[[xbox:.*]] = fir.embox %[[x]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK: %[[xboxAddr:.*]] = fir.box_addr %[[xbox]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK: %[[addr_x:.*]] = fir.convert %[[xboxAddr]] : (!fir.ref<i32>) -> i64
@@ -403,10 +403,10 @@ subroutine test_pte()
   pte = x
 ! CHECK-LABEL: func.func @_QPtest_pte()
 ! CHECK: %[[ptr_addr:.*]] = fir.address_of(@_QMmod_cray_ptrEptr) : !fir.ref<i64>
-! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_addr]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QMmod_cray_ptrEptr"}
+! CHECK: %[[ptr:.*]]:2 = hlfir.declare %[[ptr_addr]] uniq_name("_QMmod_cray_ptrEptr") fortran_attrs<cray_pointer>
 ! CHECK: %[[x_alloc:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_pteEx"}>
 ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[x_alloc]]
-! CHECK: %[[pte:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QMmod_cray_ptrEpte"}
+! CHECK: %[[pte:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMmod_cray_ptrEpte") fortran_attrs<pointer, cray_pointee>
 ! CHECK: %[[xval:.*]] = fir.load %[[x]]#0 : !fir.ref<i32>
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>

@@ -7,13 +7,13 @@ func.func @_QPsum_in_device(%arg0: !fir.ref<!fir.array<?xi32>> {cuf.data_attr = 
   %c-1 = arith.constant -1 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c-1 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFsum_in_deviceEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFsum_in_deviceEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
   %3 = fir.embox %2(%1) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
   %4 = fir.alloca i32
   fir.store %arg1 to %4 : !fir.ref<i32>
-  %5 = fir.declare %4 dummy_scope %0 {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFsum_in_deviceEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %5 = fir.declare %4 dummy_scope %0 uniq_name("_QFsum_in_deviceEn") fortran_attrs<value> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %12 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsum_in_deviceEi"}
-  %13 = fir.declare %12 {uniq_name = "_QFsum_in_deviceEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %13 = fir.declare %12 uniq_name("_QFsum_in_deviceEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   %14 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
   %18 = fir.load %5 : !fir.ref<i32>
   %19 = fir.convert %18 : (i32) -> index
@@ -21,7 +21,7 @@ func.func @_QPsum_in_device(%arg0: !fir.ref<!fir.array<?xi32>> {cuf.data_attr = 
   %21 = arith.select %20, %19, %c0 : index
   %22 = fir.alloca !fir.array<?xi32>, %21 {bindc_name = "auto", uniq_name = "_QFsum_in_deviceEauto"}
   %23 = fir.shape %21 : (index) -> !fir.shape<1>
-  %24 = fir.declare %22(%23) {uniq_name = "_QFsum_in_deviceEauto"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
+  %24 = fir.declare %22(%23) uniq_name("_QFsum_in_deviceEauto") : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
   %25 = fir.embox %24(%23) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
   %26 = fir.undefined index
   %27 = fir.slice %c1, %19, %c1 : (index, index, index) -> !fir.slice<1>

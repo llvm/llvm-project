@@ -4,16 +4,16 @@
 ! CHECK-LABEL: func @_QQmain
 use ieee_arithmetic
 ! CHECK-DAG: %[[V_X:[0-9]+]] = fir.alloca f128 <{bindc_name = "x", uniq_name = "_QFEx"}>
-! CHECK-DAG: %[[X_DECL:[0-9]+]]:2 = hlfir.declare %[[V_X]] {uniq_name = "_QFEx"}
+! CHECK-DAG: %[[X_DECL:[0-9]+]]:2 = hlfir.declare %[[V_X]] uniq_name("_QFEx")
 ! CHECK-DAG: %[[V_Y:[0-9]+]] = fir.alloca f128 <{bindc_name = "y", uniq_name = "_QFEy"}>
-! CHECK-DAG: %[[Y_DECL:[0-9]+]]:2 = hlfir.declare %[[V_Y]] {uniq_name = "_QFEy"}
+! CHECK-DAG: %[[Y_DECL:[0-9]+]]:2 = hlfir.declare %[[V_Y]] uniq_name("_QFEy")
 ! CHECK-DAG: %[[V_Z:[0-9]+]] = fir.alloca f128 <{bindc_name = "z", uniq_name = "_QFEz"}>
-! CHECK-DAG: %[[Z_DECL:[0-9]+]]:2 = hlfir.declare %[[V_Z]] {uniq_name = "_QFEz"}
+! CHECK-DAG: %[[Z_DECL:[0-9]+]]:2 = hlfir.declare %[[V_Z]] uniq_name("_QFEz")
 real(16) :: x, y, z
 
 x = -17.0
 
-! CHECK:     %[[V_NEG_INF:[0-9]+]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QQro._QMieee_arithmeticTieee_class_type.{{[0-9]+}}"}
+! CHECK:     %[[V_NEG_INF:[0-9]+]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name("_QQro._QMieee_arithmeticTieee_class_type.{{[0-9]+}}")}
 ! CHECK:     %[[V_11:[0-9]+]] = fir.coordinate_of %[[V_NEG_INF]]#0, _QMieee_arithmeticTieee_class_type.which : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>) -> !fir.ref<i8>
 ! CHECK:     %[[V_12:[0-9]+]] = fir.load %[[V_11]] : !fir.ref<i8>
 ! CHECK:     %[[V_13:[0-9]+]] = fir.address_of(@_FortranAIeeeValueTable_16) : !fir.ref<!fir.array<12xi64>>
@@ -25,7 +25,7 @@ x = -17.0
 ! CHECK:     hlfir.assign %[[V_18]] to %[[Y_DECL]]#0 : f128, !fir.ref<f128>
 y = ieee_value(y, ieee_negative_inf)
 
-! CHECK:     %[[V_QNAN:[0-9]+]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QQro._QMieee_arithmeticTieee_class_type.{{[0-9]+}}"}
+! CHECK:     %[[V_QNAN:[0-9]+]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name("_QQro._QMieee_arithmeticTieee_class_type.{{[0-9]+}}")}
 ! CHECK:     %[[V_27:[0-9]+]] = fir.coordinate_of %[[V_QNAN]]#0, _QMieee_arithmeticTieee_class_type.which : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>) -> !fir.ref<i8>
 ! CHECK:     %[[V_28:[0-9]+]] = fir.load %[[V_27]] : !fir.ref<i8>
 ! CHECK:     %[[V_29:[0-9]+]] = fir.address_of(@_FortranAIeeeValueTable_16) : !fir.ref<!fir.array<12xi64>>
