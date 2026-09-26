@@ -6628,12 +6628,23 @@ def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
 
 class CIR_ComplexBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
   let results = (outs CIR_ComplexType:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($result)) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
 }
 
 def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
@@ -6648,6 +6659,8 @@ def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
     %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
     ```
   }];
+
+  let hasVerifier = 1;
 }
 
 def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
@@ -6662,6 +6675,8 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
     %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
     ```
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

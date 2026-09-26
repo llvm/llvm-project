@@ -577,6 +577,25 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
   return mlir::success();
 }
 
+static mlir::Value createConstrainedFPIntrinsicCall(
+    mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+    mlir::ValueRange operands, mlir::Type llvmResTy, cir::FenvAttr fenv,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
+    mlir::LLVM::FastmathFlags fastmathFlags = {}) {
+  llvm::SmallVector<mlir::Value> callOperands(operands.begin(), operands.end());
+  if (hasRoundingMode)
+    callOperands.push_back(createFenvMetadataValue(
+        rewriter, loc, getConstrainedRoundingMetadata(fenv)));
+
+  callOperands.push_back(createFenvMetadataValue(
+      rewriter, loc, getConstrainedExceptMetadata(fenv)));
+
+  mlir::LLVM::CallIntrinsicOp intrinsic = createCallLLVMIntrinsicOp(
+      rewriter, loc, "llvm.experimental.constrained." + constrainedMnemonic,
+      llvmResTy, callOperands, fastmathFlags);
+  return intrinsic->getResult(0);
+}
+
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
@@ -5247,11 +5266,22 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
                                         rhsImag);
   } else {
     assert(!cir::MissingFeatures::fastMathFlags());
-    assert(!cir::MissingFeatures::fpConstraints());
-    newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsReal,
-                                         rhsReal);
-    newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsImag,
-                                         rhsImag);
+    if (cir::FenvAttr fenv = op.getFenvAttr()) {
+      newReal = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fadd",
+          /*hasRoundingMode=*/true);
+
+      newImag = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fadd",
+          /*hasRoundingMode=*/true);
+    } else {
+      newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
+                                           lhsReal, rhsReal);
+      newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
+                                           lhsImag, rhsImag);
+    }
   }
 
   mlir::Type complexLLVMTy =
@@ -5330,11 +5360,22 @@ mlir::LogicalResult CIRToLLVMComplexSubOpLowering::matchAndRewrite(
                                         rhsImag);
   } else {
     assert(!cir::MissingFeatures::fastMathFlags());
-    assert(!cir::MissingFeatures::fpConstraints());
-    newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsReal,
-                                         rhsReal);
-    newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsImag,
-                                         rhsImag);
+    if (cir::FenvAttr fenv = op.getFenvAttr()) {
+      newReal = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fsub",
+          /*hasRoundingMode=*/true);
+
+      newImag = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fsub",
+          /*hasRoundingMode=*/true);
+    } else {
+      newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
+                                           lhsReal, rhsReal);
+      newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
+                                           lhsImag, rhsImag);
+    }
   }
 
   mlir::Type complexLLVMTy =
