@@ -184,7 +184,7 @@ def FormatLiteralOp : TEST_Op<"format_literal_op"> {
   }];
 }
 
-// Test that we elide attributes that are within the syntax.
+// Test that inherent and discardable attributes use separate dictionaries.
 def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let arguments = (ins I64Attr:$attr);
   let assemblyFormat = "$attr attr-dict";
@@ -221,7 +221,7 @@ def FormatOptSymbolRefAttrOp : TEST_Op<"format_opt_symbol_ref_attr_op"> {
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "attr-dict-with-keyword";
+  let assemblyFormat = "prop-dict attr-dict-with-keyword";
 }
 
 // Test that we don't need to provide types in the format if they are buildable.
@@ -637,7 +637,7 @@ def FormatCustomDirectiveAttrDict
     : TEST_Op<"format_custom_directive_attrdict"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
   let assemblyFormat = [{
-    custom<CustomDirectiveAttrDict>( attr-dict )
+    prop-dict custom<CustomDirectiveAttrDict>( attr-dict )
   }];
 }
 
