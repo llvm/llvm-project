@@ -125,3 +125,52 @@ exit:
   %result.lcssa = phi i40 [ %1, %for.body ]
   ret i40 %result.lcssa
 }
+
+; Without +dotprod there is no udot to build an i8 -> i64 partial reduction
+; from, so the extended add stays a regular reduction.
+define i64 @not_dotp_zext_add_i8_to_i64(ptr %a) {
+; CHECK-LABEL: define i64 @not_dotp_zext_add_i8_to_i64(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i64>
+; CHECK-NEXT:    [[TMP4]] = add <16 x i64> [[VEC_PHI]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5]] = add <16 x i64> [[VEC_PHI1]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <16 x i64> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[BIN_RDX]])
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret i64 [[TMP7]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi i64 [ 0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %ext.a = zext i8 %load.a to i64
+  %add = add i64 %accum, %ext.a
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret i64 %add
+}

@@ -6918,11 +6918,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i8)
-      // FIXME: This cost should probably be a little higher, e.g. Cost + 2
-      // because it requires two extra extends on the inputs. But if we'd change
-      // that now, a regular reduction would be cheaper because the costs of
-      // the extends in the IR are still counted. This can be fixed
-      // after https://github.com/llvm/llvm-project/pull/147302 has landed.
+      // FIXME: Also account for folding the i32 dot product results into the
+      // i64 accumulator, as the NEON case below does.
       return Cost + INegCost;
     // i8 -> i16 is natively supported with SVE2p3 udot/sdot
     // For sub-reductions, we prefer using the *mlslb/t instructions.
@@ -6931,6 +6928,18 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
         (ST->hasSVE2p3() || ST->hasSME2p3()) && !IsSub)
       return Cost;
   }
+
+  // With +dotprod, NEON lowers an extended i8 -> i64 sum to a udot/sdot into
+  // a zeroed i32 vector followed by an [SU]ADALP into the i64 accumulator
+  // (SVE is handled above). Charge one basic cost for each of the two steps
+  // per legal input vector.
+  // TODO: Handle multiply and sub-reductions too. In loops, CodeGenPrepare
+  // currently turns zero extends that do not directly feed the partial
+  // reduction into TBLs, which hides the udot from instruction selection.
+  if (!BinOp && !IsSub && AccumLT.second.getScalarType() == MVT::i64 &&
+      InputLT.second.getScalarType() == MVT::i8 &&
+      IsSupported(/*SVEPred=*/false, ST->hasDotProd()))
+    return Cost * 2;
 
   // f16 -> f32 is natively supported for fdot using either
   // SVE or NEON instruction.
