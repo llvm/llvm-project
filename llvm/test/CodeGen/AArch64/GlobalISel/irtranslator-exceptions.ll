@@ -19,7 +19,7 @@ define { ptr, i32 } @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
-  ; CHECK-NEXT:   BL @foo, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
+  ; CHECK-NEXT:   BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
@@ -65,7 +65,7 @@ define void @test_invoke_indirect(ptr %callee) personality ptr @__gxx_personalit
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BLR [[COPY]](p0), csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BLR [[COPY]](p0), csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.3
@@ -113,7 +113,7 @@ define void @test_invoke_varargs() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](i64)
   ; CHECK-NEXT:   G_STORE [[C2]](f32), [[PTR_ADD1]](p0) :: (store (f32) into stack + 8, align 1)
   ; CHECK-NEXT:   $x0 = COPY [[C]](p0)
-  ; CHECK-NEXT:   BL @printf, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @printf, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.3
@@ -157,7 +157,7 @@ define i32 @test_lpad_phi() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.3
