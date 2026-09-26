@@ -18,6 +18,7 @@
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleLinker.h"
+#include "clang/CodeGenUtils/BackendDiagnosticHandler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -90,6 +91,11 @@ class CIRGenConsumer : public clang::ASTConsumer {
 
   std::optional<CIRDiagnosticHandler> MLIRDiagHandler;
 
+  // Translates LLVM backend diagnostics (raised while lowering CIR to LLVM
+  // IR and while running emitBackendOutput) into clang diagnostics; shared
+  // with classic CodeGen's BackendConsumer.
+  BackendDiagnosticConsumer DiagConsumer;
+
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
                  CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS,
@@ -100,11 +106,13 @@ public:
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
         FEOptions(CI.getFrontendOpts()), CGO(CGO), LLVMCtx(LLVMCtx),
-        LinkModules(LinkModules) {}
+        LinkModules(LinkModules),
+        DiagConsumer(CI.getDiagnostics(), CI.getCodeGenOpts()) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
     Context = &Ctx;
+    DiagConsumer.setSourceManager(&Ctx.getSourceManager());
     Gen->Initialize(Ctx);
     // Install the MLIR diagnostic handler now that CIRGenerator owns its
     // MLIRContext. Lifetime is tied to this consumer, which spans CIRGen,
@@ -202,6 +210,16 @@ public:
       if (CI.getDiagnostics().hasErrorOccurred())
         return;
 
+      // Route LLVM backend diagnostics (optimization remarks, unsupported
+      // features, inline-asm errors, etc.) through clang diagnostics for
+      // the remainder of the LLVM-emitting pipeline.
+      std::unique_ptr<llvm::DiagnosticHandler> OldDiagnosticHandler =
+          LLVMCtx.getDiagnosticHandler();
+      llvm::scope_exit RestoreDiagnosticHandler([&]() {
+        LLVMCtx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
+      });
+      LLVMCtx.setDiagnosticHandler(DiagConsumer.createDiagnosticHandler());
+
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());
@@ -223,8 +241,8 @@ public:
     }
   }
 
-  // TODO: share with BackendConsumer::LinkInModules once OG's CurLinkModule
-  // diagnostic-handler indirection is abstracted behind a callback for CIR.
+  // TODO: share with BackendConsumer::LinkInModules once the rest of the
+  // linking logic (not just diagnostics) is unified.
   bool linkInModules(llvm::Module &M) {
     for (auto &LM : LinkModules) {
       assert(LM.Module && "LinkModule does not actually have a module");
@@ -237,6 +255,7 @@ public:
               F, CGO, CI.getLangOpts(), CI.getTargetOpts(), LM.Internalize);
         }
 
+      DiagConsumer.setCurLinkModule(LM.Module.get());
       bool Err;
       if (LM.Internalize) {
         Err = llvm::Linker::linkModules(
