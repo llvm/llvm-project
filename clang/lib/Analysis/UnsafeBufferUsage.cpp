@@ -1894,7 +1894,7 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (ignoreUnsafeBufferInContainer(*S, Handler))
+    if (!isa<CXXConstructExpr>(S) || ignoreUnsafeBufferInContainer(*S, Handler))
       return false;
     return matches(S, Ctx, Result);
   }
@@ -1957,7 +1957,7 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (ignoreUnsafeBufferInContainer(*S, Handler))
+    if (!isa<CXXConstructExpr>(S) || ignoreUnsafeBufferInContainer(*S, Handler))
       return false;
     return matches(S, Ctx, Result);
   }
@@ -2370,13 +2370,13 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
-      return false;
     const auto *CE = dyn_cast<CallExpr>(S);
     if (!CE)
       return false;
     const auto *FD = CE->getDirectCallee();
     if (!FD)
+      return false;
+    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
       return false;
 
     const bool IsGlobalAndNotInAnyNamespace =
@@ -2461,13 +2461,13 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
-      return false;
     auto *CE = dyn_cast<CallExpr>(S);
     if (!CE || !CE->getDirectCallee())
       return false;
     const FunctionDecl *FD = CE->getDirectCallee();
     if (!FD)
+      return false;
+    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
       return false;
 
     const FormatAttr *Attr = nullptr;
