@@ -1091,47 +1091,25 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
-  /// following IEEE-754 definitions except for signed zero behavior.
-  ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
-  /// from 2019).
-  ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
-  /// so arithmetic feeding into a minnum/maxnum can produce inconsistent
-  /// results. FMAXIMUN/FMINIMUM or FMAXIMUMNUM/FMINIMUMNUM may be better choice
-  /// for non-distinction of sNaN/qNaN handling.
+  /// FMINNUM/FMAXNUM - Same semantics as the llvm.minnum/maxnum intrinsics.
   FMINNUM,
   FMAXNUM,
 
-  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
-  /// maximumNumber on two values, following IEEE-754 definitions. This differs
-  /// from FMINNUM/FMAXNUM in the handling of signaling NaNs, and signed zero.
+  /// FMINNUM_IEEE/FMAXNUM_IEEE - Same as FMINNUM/FMAXNUM, except that a
+  /// signaling NaN operand deterministically returns a quiet NaN, like IEEE-754
+  /// 2008's minNum/maxNum. -0 is ordered less than +0, relaxed by the nsz flag.
   ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which differs
-  /// from 2019).
-  ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
-  /// semantics now.
+  /// Deprecated, and will be removed soon: this is a legal implementation of
+  /// FMINNUM/FMAXNUM, so targets should select those instead.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
-  /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
-  /// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
+  /// FMINIMUM/FMAXIMUM - Same semantics as the llvm.minimum/maximum intrinsics.
   FMINIMUM,
   FMAXIMUM,
 
-  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
-  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  /// FMINIMUMNUM/FMAXIMUMNUM - Same semantics as the llvm.minimumnum/maximumnum
+  /// intrinsics.
   FMINIMUMNUM,
   FMAXIMUMNUM,
 
