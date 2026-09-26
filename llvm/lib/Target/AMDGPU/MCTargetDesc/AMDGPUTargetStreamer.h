@@ -209,6 +209,18 @@ class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   unsigned getEFlagsV4();
   unsigned getEFlagsV6();
 
+  // Override of AMDGPUTargetStreamer::getTargetID that tolerates
+  // initializeTargetID not having been called by initializing it here from our
+  // MCSubtargetInfo. This allows the use of AMDGPUTargetELFStreamer in an
+  // out-of-tree compiler component that directly uses the MC layer to generate
+  // a data-only AMDGPU ELF. Such an out-of-tree compiler component has no way
+  // to call initializeTargetID().
+  std::optional<AMDGPU::TargetID> &getTargetID() {
+    if (!TargetID)
+      initializeTargetID(STI);
+    return TargetID;
+  }
+
 public:
   AMDGPUTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
