@@ -90,6 +90,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -769,6 +772,78 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     return false;
   }
   return true;
+}
+
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that covers
+  // those bits, we can remove it. Return false if nothing was combined so
+  // other patterns (e.g. zext/sext GPR32 → SUBREG_TO_REG) can match.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Remove AND if the mask covers the low log2(ShiftWidth) bits.
+    if ((Mask & (ShiftWidth - 1)) == (ShiftWidth - 1)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+  // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
+  // to avoid the ADD/SUB. Only do this if the ADD/SUB has a single use, so
+  // we don't leave the ADD/SUB behind for other users.
+  if ((N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) &&
+      N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(1).getNode(), Imm) &&
+        (Imm % ShiftWidth == 0)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+
+  // If shifting by N-X where N == 0 mod ShiftWidth, then just shift by -X
+  // to generate a NEG instead of a SUB from a constant.
+  if (N.getOpcode() == ISD::SUB && N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(0).getNode(), Imm) && Imm != 0 &&
+        (Imm % ShiftWidth == 0)) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      unsigned NegOpc = (ShiftWidth == 32) ? AArch64::SUBWrr : AArch64::SUBXrr;
+      unsigned ZeroReg = (ShiftWidth == 32) ? AArch64::WZR : AArch64::XZR;
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, VT);
+      MachineSDNode *Neg =
+          CurDAG->getMachineNode(NegOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Neg, 0);
+      return true;
+    }
+  }
+
+  // If shifting by N-X where N == -1 mod ShiftWidth, then just shift by ~X
+  // to generate a NOT (MVN) instead of a SUB from a constant.
+  if (N.getOpcode() == ISD::SUB && N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(0).getNode(), Imm) &&
+        (Imm % ShiftWidth == ShiftWidth - 1)) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      unsigned NotOpc = (ShiftWidth == 32) ? AArch64::ORNWrr : AArch64::ORNXrr;
+      unsigned ZeroReg = (ShiftWidth == 32) ? AArch64::WZR : AArch64::XZR;
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, VT);
+      MachineSDNode *Not =
+          CurDAG->getMachineNode(NotOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Not, 0);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as
