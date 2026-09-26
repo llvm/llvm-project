@@ -113,6 +113,7 @@ class IRPromoter {
   SmallPtrSet<Value *, 8> NewInsts;
   DenseMap<Value *, SmallVector<Type *, 4>> TruncTysMap;
   SmallPtrSet<Value *, 8> Promoted;
+  bool UseSExt;
 
   void ReplaceAllUsersOfWith(Value *From, Value *To);
   void ExtendSources();
@@ -121,13 +122,17 @@ class IRPromoter {
   void TruncateSinks();
   void Cleanup();
 
+  bool CheckSignedMatch(const Value *V) const;
+
 public:
   IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
              SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
              SmallPtrSetImpl<Instruction *> &wrap,
-             SmallPtrSetImpl<Instruction *> &instsToRemove)
+             SmallPtrSetImpl<Instruction *> &instsToRemove,
+             bool useSExt = false)
       : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
-        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove) {
+        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove),
+        UseSExt(useSExt) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -143,6 +148,7 @@ class TypePromotionImpl {
   SmallPtrSet<Instruction *, 8> SafeToPromote;
   SmallPtrSet<Instruction *, 4> SafeWrap;
   SmallPtrSet<Instruction *, 4> InstsToRemove;
+  bool UseSExt;
 
   // Does V have the same size result type as TypeSize.
   bool EqualTypeSize(Value *V);
@@ -243,7 +249,8 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return Call->hasRetAttr(Attribute::AttrKind::ZExt);
+    return (Call->hasRetAttr(UseSExt ? Attribute::AttrKind::SExt
+                                     : Attribute::AttrKind::ZExt));
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
@@ -269,6 +276,8 @@ bool TypePromotionImpl::isSink(Value *V) {
     return LessOrEqualTypeSize(Return->getReturnValue());
   if (auto *ZExt = dyn_cast<ZExtInst>(V))
     return GreaterThanTypeSize(ZExt);
+  if (auto *SExt = dyn_cast<SExtInst>(V))
+    return UseSExt && GreaterThanTypeSize(SExt);
   if (auto *Switch = dyn_cast<SwitchInst>(V))
     return LessThanTypeSize(Switch->getCondition());
   if (auto *ICmp = dyn_cast<ICmpInst>(V))
@@ -408,14 +417,24 @@ bool TypePromotionImpl::shouldPromote(Value *V) {
 
 /// Return whether we can safely mutate V's type to ExtTy without having to be
 /// concerned with zero extending or truncation.
-static bool isPromotedResultSafe(Instruction *I) {
+static bool isPromotedResultSafe(Instruction *I, bool UseSExt) {
   if (GenerateSignBits(I))
     return false;
+
+  if (UseSExt && (I->getOpcode() == Instruction::LShr ||
+                  I->getOpcode() == Instruction::UDiv ||
+                  I->getOpcode() == Instruction::URem))
+    return false;
+
+  if (UseSExt)
+    if (auto *ZExt = dyn_cast<ZExtInst>(I))
+      if (!ZExt->hasNonNeg())
+        return false;
 
   if (!isa<OverflowingBinaryOperator>(I))
     return true;
 
-  return I->hasNoUnsignedWrap();
+  return UseSExt ? I->hasNoSignedWrap() : I->hasNoUnsignedWrap();
 }
 
 void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
@@ -453,8 +472,9 @@ void IRPromoter::ExtendSources() {
     if (auto *I = dyn_cast<Instruction>(V))
       Builder.SetCurrentDebugLocation(I->getDebugLoc());
 
-    Value *ZExt = Builder.CreateZExt(V, ExtTy);
-    if (auto *I = dyn_cast<Instruction>(ZExt)) {
+    Value *Ext =
+        UseSExt ? Builder.CreateSExt(V, ExtTy) : Builder.CreateZExt(V, ExtTy);
+    if (auto *I = dyn_cast<Instruction>(Ext)) {
       if (isa<Argument>(V))
         I->moveBefore(InsertPt);
       else
@@ -462,7 +482,7 @@ void IRPromoter::ExtendSources() {
       NewInsts.insert(I);
     }
 
-    ReplaceAllUsersOfWith(V, ZExt);
+    ReplaceAllUsersOfWith(V, Ext);
   };
 
   // Now, insert extending instructions between the sources and their users.
@@ -519,7 +539,8 @@ void IRPromoter::PromoteTree() {
           else
             NewConst = Const->getValue().zext(PromotedWidth);
         } else
-          NewConst = Const->getValue().zext(PromotedWidth);
+          NewConst = UseSExt ? Const->getValue().sext(PromotedWidth)
+                             : Const->getValue().zext(PromotedWidth);
 
         I->setOperand(i, ConstantInt::get(Const->getContext(), NewConst));
       } else if (isa<UndefValue>(Op))
@@ -529,7 +550,9 @@ void IRPromoter::PromoteTree() {
     // For switch, also mutate case values, which are not operands.
     if (auto *SI = dyn_cast<SwitchInst>(I)) {
       for (auto Case : SI->cases()) {
-        APInt NewConst = Case.getCaseValue()->getValue().zext(PromotedWidth);
+        APInt NewConst =
+            UseSExt ? Case.getCaseValue()->getValue().sext(PromotedWidth)
+                    : Case.getCaseValue()->getValue().zext(PromotedWidth);
         Case.setValue(ConstantInt::get(SI->getContext(), NewConst));
       }
     }
@@ -601,15 +624,15 @@ void IRPromoter::TruncateSinks() {
       continue;
     }
 
-    // Don't insert a trunc for a zext which can still legally promote.
+    // Don't insert a trunc for a (z/s)ext which can still legally promote.
     // Nor insert a trunc when the input value to that trunc has the same width
     // as the zext we are inserting it for.  When this happens the input operand
-    // for the zext will be promoted to the same width as the zext's return type
-    // rendering that zext unnecessary.  This zext gets removed before the end
+    // for the zext will be promoted to the same width as the ext's return type
+    // rendering that ext unnecessary.  This zext gets removed before the end
     // of the pass.
-    if (auto ZExt = dyn_cast<ZExtInst>(I))
-      if (ZExt->getType()->getScalarSizeInBits() >= PromotedWidth)
-        continue;
+    if (CheckSignedMatch(I) &&
+        (I->getType()->getScalarSizeInBits() >= PromotedWidth))
+      continue;
 
     // Now handle the others.
     for (unsigned i = 0; i < I->getNumOperands(); ++i) {
@@ -624,31 +647,34 @@ void IRPromoter::TruncateSinks() {
 
 void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
-  // Some zexts will now have become redundant, along with their trunc
+  // Some (z/s)exts will now have become redundant, along with their trunc
   // operands, so remove them.
   for (auto *V : Visited) {
-    if (!isa<ZExtInst>(V))
+    if (!isa<ZExtInst>(V) && !isa<SExtInst>(V))
       continue;
 
-    auto ZExt = cast<ZExtInst>(V);
-    if (ZExt->getDestTy() != ExtTy)
+    if (!CheckSignedMatch(V))
       continue;
 
-    Value *Src = ZExt->getOperand(0);
-    if (ZExt->getSrcTy() == ZExt->getDestTy()) {
-      LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *ZExt
+    auto XExt = cast<CastInst>(V);
+    if (XExt->getDestTy() != ExtTy)
+      continue;
+
+    Value *Src = XExt->getOperand(0);
+    if (XExt->getSrcTy() == XExt->getDestTy()) {
+      LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *XExt
                         << "\n");
-      ReplaceAllUsersOfWith(ZExt, Src);
+      ReplaceAllUsersOfWith(XExt, Src);
       continue;
     }
 
-    // We've inserted a trunc for a zext sink, but we already know that the
+    // We've inserted a trunc for a (z/s)ext sink, but we already know that the
     // input is in range, negating the need for the trunc.
     if (NewInsts.count(Src) && isa<TruncInst>(Src)) {
       auto *Trunc = cast<TruncInst>(Src);
       assert(Trunc->getOperand(0)->getType() == ExtTy &&
              "expected inserted trunc to be operating on i32");
-      ReplaceAllUsersOfWith(ZExt, Trunc->getOperand(0));
+      ReplaceAllUsersOfWith(XExt, Trunc->getOperand(0));
     }
   }
 
@@ -672,16 +698,22 @@ void IRPromoter::ConvertTruncs() {
     IntegerType *DestTy = cast<IntegerType>(TruncTysMap[Trunc][0]);
 
     unsigned NumBits = DestTy->getScalarSizeInBits();
-    ConstantInt *Mask =
-        ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
-    Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
-    if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
-      Masked = Builder.CreateTrunc(Masked, ExtTy);
-
-    if (auto *I = dyn_cast<Instruction>(Masked))
+    // Signed promotion path truncates then sign extends
+    Value *Final;
+    if (UseSExt) {
+      Value *Narrow = Builder.CreateTrunc(Trunc->getOperand(0), DestTy);
+      Final = Builder.CreateSExt(Narrow, ExtTy);
+    } else {
+      ConstantInt *Mask =
+          ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
+      Final = Builder.CreateAnd(Trunc->getOperand(0), Mask);
+      if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
+        Final = Builder.CreateTrunc(Final, ExtTy);
+    }
+    if (auto *I = dyn_cast<Instruction>(Final))
       NewInsts.insert(I);
 
-    ReplaceAllUsersOfWith(Trunc, Masked);
+    ReplaceAllUsersOfWith(Trunc, Final);
   }
 }
 
@@ -727,6 +759,17 @@ void IRPromoter::Mutate() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Mutation complete\n");
 }
 
+bool IRPromoter::CheckSignedMatch(const Value *V) const {
+  bool SignedMatch = false;
+
+  if (isa<SExtInst>(V))
+    SignedMatch = UseSExt;
+  if (auto *ZExt = dyn_cast<ZExtInst>(V))
+    SignedMatch = !UseSExt || ZExt->hasNonNeg();
+
+  return SignedMatch;
+}
+
 /// We disallow booleans to make life easier when dealing with icmps but allow
 /// any other integer that fits in a scalar register. Void types are accepted
 /// so we can handle switches.
@@ -745,9 +788,8 @@ bool TypePromotionImpl::isSupportedType(Value *V) {
 }
 
 /// We accept most instructions, as well as Arguments and ConstantInsts. We
-/// Disallow casts other than zext and truncs and only allow calls if their
-/// return value is zeroext. We don't allow opcodes that can introduce sign
-/// bits.
+/// Disallow casts other than zext/sext and truncs and only allow calls if their
+/// return value is zext/sext.
 bool TypePromotionImpl::isSupportedValue(Value *V) {
   if (auto *I = dyn_cast<Instruction>(V)) {
     switch (I->getOpcode()) {
@@ -769,6 +811,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
     case Instruction::BitCast:
       return I->getOperand(0)->getType() == I->getType();
     case Instruction::ZExt:
+    case Instruction::SExt:
       return isSupportedType(I->getOperand(0));
     case Instruction::ICmp:
       // Now that we allow small types than TypeSize, only allow icmp of
@@ -784,7 +827,8 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
       // can still be sinks.
       auto *Call = cast<CallInst>(I);
       return isSupportedType(Call) &&
-             Call->hasRetAttr(Attribute::AttrKind::ZExt);
+             (UseSExt ? Call->hasRetAttr(Attribute::AttrKind::SExt)
+                      : Call->hasRetAttr(Attribute::AttrKind::ZExt));
     }
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {
@@ -806,7 +850,7 @@ bool TypePromotionImpl::isLegalToPromote(Value *V) {
   if (SafeToPromote.count(I))
     return true;
 
-  if (isPromotedResultSafe(I) || isSafeWrap(I)) {
+  if (isPromotedResultSafe(I, UseSExt) || (!UseSExt && isSafeWrap(I))) {
     SafeToPromote.insert(I);
     return true;
   }
@@ -814,7 +858,7 @@ bool TypePromotionImpl::isLegalToPromote(Value *V) {
 }
 
 bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
-                                 const LoopInfo &LI) {
+                                     const LoopInfo &LI) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();
@@ -942,7 +986,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     return false;
 
   IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
-                      SafeWrap, InstsToRemove);
+                      SafeWrap, InstsToRemove, UseSExt);
   Promoter.Mutate();
   return true;
 }
@@ -1001,6 +1045,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      UseSExt = false;
       if (AllVisited.count(&I))
         continue;
 
@@ -1008,6 +1053,8 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
           isa<IntegerType>(I.getType()) && BBIsInLoop(&BB)) {
         LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: "
                           << *I.getOperand(0) << "\n");
+        auto *ZExt = cast<ZExtInst>(&I);
+        UseSExt = ZExt->hasNonNeg();
         EVT ZExtVT = TLI->getValueType(DL, I.getType());
         Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
         auto PromoteWidth = ZExtVT.getFixedSizeInBits();
