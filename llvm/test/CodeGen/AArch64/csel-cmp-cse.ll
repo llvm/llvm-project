@@ -998,9 +998,9 @@ define i32 @test_uge_unsigned_overflow(i32 %x0, i32 %x1) {
 define i32 @test_slt_signed_overflow(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_slt_signed_overflow:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483647 // =0x80000001
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
 ; CHECK-NEXT:    add w9, w0, w1
-; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    sub w0, w9, w8
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i32 %x1, 2147483648
   %add = add i32 %x0, %x1

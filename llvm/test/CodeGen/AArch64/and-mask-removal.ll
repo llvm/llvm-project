@@ -401,9 +401,9 @@ ret_true:
 define zeroext i1 @test16_6(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_6:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #-32194 ; =0xffff823e
+; CHECK-SD-NEXT:    mov w8, #32194 ; =0x7dc2
 ; CHECK-SD-NEXT:    mov w9, #24320 ; =0x5f00
-; CHECK-SD-NEXT:    add w8, w0, w8
+; CHECK-SD-NEXT:    sub w8, w0, w8
 ; CHECK-SD-NEXT:    cmp w8, w9
 ; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret

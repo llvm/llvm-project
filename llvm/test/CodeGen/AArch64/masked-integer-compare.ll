@@ -149,9 +149,9 @@ define { i1, i1 } @dont_combine_multi_use_cmp(i32 %x) {
 define { i32, i1 } @dont_combine_multi_use_sub(i32 %x) {
 ; CHECK-LABEL: dont_combine_multi_use_sub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2139095040 // =0x80800000
+; CHECK-NEXT:    mov w8, #2139095040 // =0x7f800000
 ; CHECK-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NEXT:    adds w0, w9, w8
+; CHECK-NEXT:    subs w0, w9, w8
 ; CHECK-NEXT:    cset w1, eq
 ; CHECK-NEXT:    ret
   %and = and i32 %x, u0x7fffffff
