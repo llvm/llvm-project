@@ -476,6 +476,58 @@ define void @load_of_select_with_noundef_nonnull(ptr %buffer, i1 %b) {
   ret void
 }
 
+define i32 @test_load_addrspacecast_select() {
+; CHECK-LABEL: @test_load_addrspacecast_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_3]], align 4
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V0:%.*]] = load i32, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V1:%.*]] = load i32, ptr [[A_SROA_3]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 [[A_SROA_0_0_A_SROA_0_0_V0]], [[A_SROA_3_0_A_SROA_3_4_V1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ptr [[A_SROA_3]], ptr [[A_SROA_0]]
+; CHECK-NEXT:    [[SELECT_ASC:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(1)
+; CHECK-NEXT:    [[RESULT:%.*]] = load i32, ptr addrspace(1) [[SELECT_ASC]], align 4
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %a = alloca [2 x i32]
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
+  %v0 = load i32, ptr %a
+  %v1 = load i32, ptr %a1
+  %cond = icmp sle i32 %v0, %v1
+  %select = select i1 %cond, ptr %a1, ptr %a
+  %select.asc = addrspacecast ptr %select to ptr addrspace(1)
+  %result = load i32, ptr addrspace(1) %select.asc
+  ret i32 %result
+}
+
+; Verify that a select of pointers in a non-default address space can be
+; speculated after SROA rewrites one arm to the default address space.
+define i32 @select_speculate_addrspace(i1 %cond) {
+; CHECK-LABEL: define i32 @select_speculate_addrspace(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ALLOCA]] to ptr addrspace(5)
+; CHECK-NEXT:    store volatile i32 1, ptr addrspace(5) [[CAST]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[LOAD]], i32 2
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  %cast0 = addrspacecast ptr %alloc0 to ptr addrspace(5)
+  %cast1 = addrspacecast ptr %alloc1 to ptr addrspace(5)
+  store volatile i32 1, ptr addrspace(5) %cast0
+  store i32 2, ptr addrspace(5) %cast1
+  %sel = select i1 %cond, ptr addrspace(5) %cast0, ptr addrspace(5) %cast1
+  %val = load i32, ptr addrspace(5) %sel
+  ret i32 %val
+}
+
 !0  = !{!"branch_weights", i32 1,  i32 99}
 !1 = !{}
 
