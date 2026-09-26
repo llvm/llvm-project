@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
-#include <cctype>
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
@@ -21,6 +20,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cctype>
 
 #define DEBUG_TYPE "perf-reader"
 
