@@ -411,6 +411,13 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
   return Size;
 }
 
+bool llvm::hasComputableAllocSize(const CallBase *CB,
+                                  const TargetLibraryInfo *TLI) {
+  // Keep in sync with ObjectSizeOffsetEvaluator::visitCallBase.
+  std::optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
+  return FnData && FnData->AllocTy != StrDupLike;
+}
+
 Constant *llvm::getInitialValueOfAllocation(const Value *V,
                                             const TargetLibraryInfo *TLI,
                                             Type *Ty) {
