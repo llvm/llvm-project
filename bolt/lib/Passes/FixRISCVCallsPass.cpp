@@ -51,6 +51,8 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 
+        const SMLoc AUIPCLoc = II->getLoc();
+        const std::optional<uint32_t> AUIPCOffset = MIB->getOffset(*II);
         MCInst OldCall = *NextII;
         auto L = BC.scopeLock();
 
@@ -66,6 +68,13 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         // Discard annotations added by the builder before moving the originals.
         MIB->stripAnnotations(*NextII);
         MIB->moveAnnotations(std::move(OldCall), *NextII);
+        if (!NextII->getLoc().isValid() && AUIPCLoc.isValid())
+          NextII->setLoc(AUIPCLoc);
+        // The AUIPC's input offset may mark a DWARF scope boundary. Keep it on
+        // the surviving call alongside the JALR's offset so both input
+        // addresses map to the call even after the replacement NOP is removed.
+        if (AUIPCOffset)
+          MIB->addAnnotation(*NextII, "InputOffsetAlias", *AUIPCOffset);
 
         II = std::next(NextII);
         continue;
