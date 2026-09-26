@@ -1526,6 +1526,42 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       continue;
     }
 
+    // Removing dependence classes above also separates different pointers that
+    // access the same address in each iteration, like stores to A[i] in both
+    // branches of an if, and a runtime check between them would always fail.
+    // Put such accesses back into a common class if all loads and stores
+    // through them have the same type and the stride is one element: they then
+    // access the same bytes in each iteration, and bytes no other iteration
+    // accesses, so they only depend on each other within an iteration, which
+    // vectorization preserves. Being consecutive, they cannot be part of an
+    // interleave group, which could reorder them.
+    SmallDenseMap<std::pair<const SCEV *, Type *>, MemAccessInfo, 4>
+        SameAddressAccesses;
+    for (MemAccessInfo Access : AccessInfos) {
+      if (DepCands.contains(Access))
+        continue;
+      Value *Ptr = Access.getPointer();
+      SmallSetVector<Type *, 1> AccessTys;
+      for (bool IsWrite : {false, true})
+        if (auto It = Accesses.find(MemAccessInfo(Ptr, IsWrite));
+            It != Accesses.end())
+          AccessTys.insert_range(It->second);
+      if (AccessTys.size() != 1)
+        continue;
+      Type *AccessTy = AccessTys.front();
+      const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
+      if (!AR)
+        continue;
+      std::optional<int64_t> Stride =
+          getStrideFromAddRec(AR, TheLoop, AccessTy, Ptr, PSE);
+      if (Stride != 1 && Stride != -1)
+        continue;
+      auto [It, Inserted] =
+          SameAddressAccesses.try_emplace({AR, AccessTy}, Access);
+      if (!Inserted)
+        DepCands.unionSets(It->second, Access);
+    }
+
     for (auto &Access : AccessInfos) {
       for (const auto &AccessTy : Accesses[Access]) {
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
