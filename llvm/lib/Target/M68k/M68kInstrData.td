@@ -630,7 +630,7 @@ foreach EXT = ["S", "Z"] in {
 
     def MOV#EXT#Xd16d8  : MxPseudoMove_RR<MxType16d,  MxType8d>;
     def MOV#EXT#Xd32d8  : MxPseudoMove_RR<MxType32d,  MxType8d>;
-    def MOV#EXT#Xd32d16 : MxPseudoMove_RR<MxType32r, MxType16r>;
+    def MOV#EXT#Xd32d16 : MxPseudoMove_RR<MxType32d, MxType16d>;
 
     let mayLoad = 1 in {
 
