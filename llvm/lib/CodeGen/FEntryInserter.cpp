@@ -51,10 +51,14 @@ PreservedAnalyses FEntryInserterPass::run(MachineFunction &MF,
 }
 
 bool FEntryInserter::run(MachineFunction &MF) {
-  const std::string FEntryName = std::string(
-      MF.getFunction().getFnAttribute("fentry-call").getValueAsString());
-  if (FEntryName != "true")
+  const Function &F = MF.getFunction();
+  if (F.getFnAttribute("fentry-call").getValueAsString() != "true") {
+    if (F.hasFnAttribute("mnop-mcount"))
+      report_fatal_error("mnop-mcount only supported with fentry-call");
+    if (F.hasFnAttribute("mrecord-mcount"))
+      report_fatal_error("mrecord-mcount only supported with fentry-call");
     return false;
+  }
 
   auto &FirstMBB = *MF.begin();
   auto *TII = MF.getSubtarget().getInstrInfo();
