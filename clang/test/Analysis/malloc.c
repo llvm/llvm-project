@@ -1771,7 +1771,20 @@ void testMallocIntoMalloc(void) {
   StructWithPtr *s = malloc(sizeof(StructWithPtr));
   s->memP = malloc(sizeof(int));
   free(s);
-} // FIXME: should warn here
+} // expected-warning {{Potential leak of memory pointed to by field 'memP'}}
+
+void testMallocIntoMallocThenFreeMember(void) {
+  StructWithPtr *s = malloc(sizeof(StructWithPtr));
+  s->memP = malloc(sizeof(int));
+  free(s->memP);
+  free(s);
+} // no-warning
+
+void testMallocIntoEscapedParent(StructWithPtr **out) {
+  StructWithPtr *s = malloc(sizeof(StructWithPtr));
+  *out = s;
+  s->memP = malloc(sizeof(int));
+} // no-warning
 
 int conjure(void);
 void testExtent(void) {
