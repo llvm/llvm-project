@@ -113,7 +113,7 @@ void dumpFunction(const BinaryFunction &BF) {
   std::string Filename =
       opts::AsmDump.empty()
           ? (PrintName + ".s")
-          : (opts::AsmDump + sys::path::get_separator() + PrintName + ".s")
+          : (Twine(opts::AsmDump) + sys::path::get_separator() + PrintName + ".s")
                 .str();
   BC.outs() << "BOLT-INFO: Dumping function assembly to " << Filename << "\n";
 
