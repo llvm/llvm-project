@@ -404,8 +404,7 @@ template <bool ExcludeChain> struct EffectiveOperands {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N)
-      : Size(N->getNumOperands()) {
+  explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {
     if (ExcludeChain) {
       // Glue if present, is the last operand.
       if (Size != 0 && N->getOperand(Size - 1).getValueType() == MVT::Glue)
