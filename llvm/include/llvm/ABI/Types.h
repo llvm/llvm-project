@@ -17,8 +17,10 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
@@ -302,9 +304,38 @@ public:
   bool isScalable() const { return NumElements.isScalable(); }
   bool isFixedLength() const { return !NumElements.isScalable(); }
 
+  /// Returns the size of this vector as Clang's ASTContext reports it: zero
+  /// for a scalable vector, and otherwise at least one byte and rounded up to
+  /// a power of two. For example, a 3 x float vector has 96 bits of payload
+  /// but an ABI size of 128 bits. getSizeInBits() returns the payload width,
+  /// so classification rules that compare against a Clang type size must use
+  /// this instead.
+  uint64_t getABISizeInBits() const {
+    if (isScalable())
+      return 0;
+
+    // A _BitInt occupies a whole number of bytes, so a sub-byte element is
+    // padded out to 8 bits. Clang only permits power-of-2 _BitInt vector
+    // elements, and a wider one always fills its storage exactly, so this is
+    // the only padding that can occur. A one-bit element is a bool rather
+    // than a _BitInt, and those really are packed one to a bit.
+    uint64_t EltWidth = ElementType->getSizeInBits().getFixedValue();
+    if (const auto *IT = dyn_cast<IntegerType>(ElementType))
+      if (IT->isBitInt() && EltWidth < 8)
+        EltWidth = 8;
+
+    uint64_t Width = EltWidth * NumElements.getKnownMinValue();
+    return bit_ceil(Width < 8 ? uint64_t(8) : Width);
+  }
+
   bool isSVEData() const { return VecKind == VectorKind::SVEData; }
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
   bool isSVECount() const { return VecKind == VectorKind::SVECount; }
+
+  bool isFixedLengthSVEData() const { return isFixedLength() && isSVEData(); }
+  bool isFixedLengthSVEPredicate() const {
+    return isFixedLength() && isSVEPredicate();
+  }
 
   /// Returns true for any of the AArch64 SVE flavors.
   bool isSVEType() const { return VecKind != VectorKind::Generic; }
@@ -493,6 +524,14 @@ public:
     assert(NumVectors >= 2 && NumVectors <= 4 &&
            "tuple types hold 2, 3, or 4 vectors");
     return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
+  }
+
+  /// Creates the sizeless AArch64 SVE predicate type svbool_t.
+  const VectorType *getScalablePredicateVectorType() {
+    const Type *PredicateBit =
+        getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
+    return getVectorType(PredicateBit, ElementCount::getScalable(16), Align(2),
+                         VectorKind::SVEPredicate);
   }
 
   /// Creates the AArch64 __SVCount_t type. The type is opaque, so it is
