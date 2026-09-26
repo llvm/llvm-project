@@ -16,6 +16,7 @@
 #include "M68kMCAsmInfo.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -62,7 +63,7 @@ static MCSubtargetInfo *createM68kMCSubtargetInfo(const Triple &TT,
   std::string ArchFS = ParseM68kTriple(TT, CPU);
   if (!FS.empty()) {
     if (!ArchFS.empty()) {
-      ArchFS = (ArchFS + "," + FS).str();
+      ArchFS = (Twine(ArchFS) + "," + FS).str();
     } else {
       ArchFS = FS.str();
     }

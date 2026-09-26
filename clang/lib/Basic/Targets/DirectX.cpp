@@ -18,7 +18,7 @@ using namespace clang;
 using namespace clang::targets;
 
 static constexpr int NumBuiltins =
-    clang::DirectX::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(clang::DirectX::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 
 #define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsDirectX.inc"

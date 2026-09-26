@@ -393,7 +393,7 @@ public:
       unsigned End = Offset + Length;
       StringRef RText = R.getReplacementText();
       StringRef Tail = RText.substr(End - R.getOffset());
-      Text = (Text + Tail).str();
+      Text += Tail;
       if (R.getOffset() + RText.size() > End) {
         Length = R.getOffset() + R.getLength() - Offset;
         MergeSecond = true;

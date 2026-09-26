@@ -21,7 +21,7 @@ using namespace clang;
 using namespace clang::targets;
 
 static constexpr int NumBuiltins =
-    clang::WebAssembly::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(clang::WebAssembly::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 
 static constexpr llvm::StringTable BuiltinStrings =
     CLANG_BUILTIN_STR_TABLE_START
