@@ -370,6 +370,15 @@ def cxa_guard_acquire : TargetLibCall<"__cxa_guard_acquire", Int, [Ptr]>;
 /// void __cxa_guard_release(guard_t *guard);
 def cxa_guard_release : TargetLibCall<"__cxa_guard_release", Void, [Ptr]>;
 
+/// void *_Unwind_Resume(_Unwind_Exception *);
+def unwind_resume : TargetLibCall<"_Unwind_Resume", Void, [Ptr]>;
+
+/// void *__cxa_allocate_exception(size_t thrown_size);
+def cxa_allocate_exception : TargetLibCall<"__cxa_allocate_exception", Ptr, [SizeT]>;
+
+/// void *__cxa_begin_catch(void *exception);
+def cxa_begin_catch : TargetLibCall<"__cxa_begin_catch", Ptr, [Ptr]>;
+
 /// double __exp10_finite(double x);
 def exp10_finite : TargetLibCall<"__exp10_finite", Dbl, [Dbl]>;
 
