@@ -5453,8 +5453,13 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
-  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects);
+  {
+    // SIMD clauses see DISTRIBUTE, but loop bounds are evaluated before it.
+    mlir::SaveStateStack<OpenMPContextFrame> distributeContext{
+        converter.getStateStack(), eval, llvm::omp::Directive::OMPD_distribute};
+    genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
+                   simdReductionObjects);
+  }
 
   DataSharingProcessor distributeItemDSP(
       converter, semaCtx, distributeItem->clauses, eval,
