@@ -12281,6 +12281,13 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
          "Converting bits to bytes lost precision");
   assert(SubVecVT.getVectorElementType() == EltVT &&
          "Sub-vector must be a vector with matching element type");
+
+  // An out-of-range index only makes the vector operation return poison, but
+  // a load/store through the pointer computed below would be immediate UB, so
+  // freeze the index before clamping it into range.
+  if (!DAG.isGuaranteedNotToBePoison(Index))
+    Index = DAG.getFreeze(Index);
+
   Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
                                   SubVecVT.getVectorElementCount());
 
