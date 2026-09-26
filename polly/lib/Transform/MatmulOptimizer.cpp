@@ -810,6 +810,10 @@ static isl::schedule_node optimizePackedB(isl::schedule_node Node,
   ScopArrayInfo *PackedB =
       S->createScopArrayInfo(MMI.B->getElementType(), "Packed_B",
                              {FirstDimSize, SecondDimSize, ThirdDimSize});
+  // The packed arrays are sized by the cache parameters rather than by the
+  // operands and take megabytes. On the stack, a few of them in one function
+  // would overflow it.
+  PackedB->setIsOnHeap(true);
 
   // Compute the access relation for copying from B to PackedB.
   isl::map AccRelB = MMI.B->getLatestAccessRelation();
@@ -849,6 +853,7 @@ static isl::schedule_node optimizePackedA(isl::schedule_node Node, ScopStmt *,
   ScopArrayInfo *PackedA = Stmt->getParent()->createScopArrayInfo(
       MMI.A->getElementType(), "Packed_A",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
+  PackedA->setIsOnHeap(true);
 
   // Compute the access relation for copying from A to PackedA.
   isl::map AccRelA = MMI.A->getLatestAccessRelation();
