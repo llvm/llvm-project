@@ -160,6 +160,8 @@ math_mpfr_test(name = "erff")
 
 math_mpfr_test(name = "erff16")
 
+math_mpfr_test(name = "erfcf")
+
 math_mpfr_test(name = "erfcf16")
 
 math_mpfr_test(name = "exp")
