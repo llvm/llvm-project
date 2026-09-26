@@ -862,6 +862,28 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
               X, ConstantInt::get(X->getType(), Factor->lshr(ShiftAmt)));
           return InsertNewInstWith(Mul, I->getIterator());
         }
+
+        // (BinOp (shl InnerX, InnerShAmt), BOC) >> ShiftAmt -->
+        //   BinOp (shl InnerX, InnerShAmt - ShiftAmt), (BOC >> ShiftAmt)
+        BinaryOperator *BO;
+        Value *InnerX;
+        const APInt *InnerShAmt, *BOC;
+        if (match(I->getOperand(0), m_OneUse(m_BinOp(BO))) &&
+            match(BO->getOperand(0),
+                  m_Shl(m_Value(InnerX), m_APInt(InnerShAmt))) &&
+            match(BO->getOperand(1), m_APInt(BOC)) &&
+            InnerShAmt->uge(ShiftAmt) &&
+            (BO->isBitwiseLogicOp() || (BO->getOpcode() == Instruction::Add &&
+                                        BOC->countr_zero() >= ShiftAmt))) {
+          Value *NewShl = InsertNewInstWith(
+              BinaryOperator::CreateShl(
+                  InnerX, ConstantInt::get(VTy, *InnerShAmt - ShiftAmt)),
+              I->getIterator());
+          Constant *NewBOC = ConstantInt::get(VTy, BOC->lshr(ShiftAmt));
+          Instruction *NewBO =
+              BinaryOperator::Create(BO->getOpcode(), NewShl, NewBOC);
+          return InsertNewInstWith(NewBO, I->getIterator());
+        }
       }
 
       // Unsigned shift right.
