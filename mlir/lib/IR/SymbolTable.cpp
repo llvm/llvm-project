@@ -1056,6 +1056,11 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
     for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
       auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
       if (!symbolUses) {
+        // `getSymbolUses` returns std::nullopt for ops, from
+        // dialects because the symbol references of those ops cannot be
+        // checked. Be careful: getSymbolUses treats this op as an user of every
+        // symbol that is defined in this region so we never mistakenly think a
+        // symbol is dead simply because we cannot see how it is referenced.
         for (Operation &maybeSymbol : symbolTableOp->getRegion(0).getOps())
           if (getNameIfSymbol(&maybeSymbol))
             symbolToUsers[&maybeSymbol].insert(&nestedOp);
