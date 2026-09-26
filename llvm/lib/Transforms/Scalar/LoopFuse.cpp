@@ -1908,6 +1908,14 @@ private:
     return finalizeFusedLoop(FC0, FC1);
   }
 };
+
+bool hasSiblingLoops(const LoopInfo &LI) {
+  ArrayRef<Loop *> Loops = LI.getTopLevelLoops();
+  while (Loops.size() == 1)
+    Loops = Loops.front()->getSubLoops();
+  return Loops.size() > 1;
+}
+
 } // namespace
 
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -1919,6 +1927,9 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+
+  if (!hasSiblingLoops(LI))
+    return PreservedAnalyses::all();
 
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added
