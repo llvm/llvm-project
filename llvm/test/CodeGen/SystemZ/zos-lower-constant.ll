@@ -5,9 +5,12 @@
 ; CHECK: func_s CSECT
 ; CHECK: DC AD(AD({{.*}}#S)+XL8'0')
 ; CHECK: func_e CSECT
-; CHECK: DC VD(bar)
+; CHECK: DC AD(AD({{.*}}#S)+XL8'16')
 ; CHECK: DC RD(foo)
 ; CHECK-NEXT: DC VD(foo)
+; CHECK-NEXT: * Offset 16 function descriptor of bar
+; CHECK-NEXT: DC RD(bar)
+; CHECK-NEXT: DC VD(bar)
 @x = hidden global i32 4077, align 4
 @y = hidden global ptr @x, align 8
 @func_s = hidden global ptr @foo, align 8

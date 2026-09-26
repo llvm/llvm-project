@@ -775,11 +775,9 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
 
   if (IsFunc) {
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    if (FV->hasExternalLinkage())
-      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
-                                     SystemZ::S_VCon, OutContext);
-    // Trigger creation of function descriptor in ADA for internal
-    // functions.
+    // A function pointer must point to a function descriptor. Trigger
+    // creation of a function descriptor in the ADA, for internal and external
+    // functions alike (a V-con would yield the entry point instead).
     unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
     return MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(
