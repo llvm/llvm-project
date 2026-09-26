@@ -64,3 +64,12 @@ functions:
     return_type: struct dirent *
     arguments:
       - type: DIR *
+  - name: scandir
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: struct dirent ***
+      - type: __scandir_filter_t
+      - type: __scandir_compare_t

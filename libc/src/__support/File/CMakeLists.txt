@@ -41,6 +41,19 @@ add_object_library(
     libc.hdr.errno_macros
 )
 
+add_header_library(
+  scan_impl
+  HDRS
+    scan_impl.h
+  DEPENDS
+    libc.src.__support.error_or
+    libc.src.__support.CPP.limits
+    libc.src.stdlib.qsort_util
+    libc.src.string.memory_utils.inline_memcpy
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_dirent
+)
+
 add_object_library(
   dir
   SRCS
@@ -48,6 +61,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
+    .scan_impl
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
