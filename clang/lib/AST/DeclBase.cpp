@@ -548,7 +548,15 @@ TranslationUnitDecl *Decl::getTranslationUnitDecl() {
 }
 
 ASTContext &Decl::getASTContext() const {
-  return getTranslationUnitDecl()->getASTContext();
+  if (const auto *TUD = dyn_cast<TranslationUnitDecl>(this))
+    return TUD->getASTContext();
+
+  // This is called a lot, e.g. for every attribute lookup. Only walk up to the
+  // TranslationUnitDecl once per DeclContext.
+  const DeclContext *DC = getDeclContext();
+  if (!DC->CachedASTContext)
+    DC->CachedASTContext = &getTranslationUnitDecl()->getASTContext();
+  return *DC->CachedASTContext;
 }
 
 /// Helper to get the language options from the ASTContext.
