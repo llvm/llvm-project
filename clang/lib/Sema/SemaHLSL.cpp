@@ -6699,7 +6699,7 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   ASTContext &Context = SemaRef.getASTContext();
 
   APValue InitValue;
-  if (!Init->isCXX11ConstantExpr(Context, &InitValue)) {
+  if (!Init->isCXX11ConstantExpr(Context, InitValue)) {
     Diag(VDecl->getLocation(), diag::err_specialization_const);
     VDecl->setInvalidDecl();
     return false;
