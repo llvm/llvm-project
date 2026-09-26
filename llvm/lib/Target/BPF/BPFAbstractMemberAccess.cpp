@@ -533,13 +533,11 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
   assert(PTy && CTy && "ParentType or ChildType is null or not composite");
 
   uint32_t PTyTag = PTy->getTag();
-  assert(PTyTag == dwarf::DW_TAG_array_type ||
-         PTyTag == dwarf::DW_TAG_structure_type ||
+  assert(PTyTag == dwarf::DW_TAG_array_type || isStructTag(PTyTag) ||
          PTyTag == dwarf::DW_TAG_union_type);
 
   uint32_t CTyTag = CTy->getTag();
-  assert(CTyTag == dwarf::DW_TAG_array_type ||
-         CTyTag == dwarf::DW_TAG_structure_type ||
+  assert(CTyTag == dwarf::DW_TAG_array_type || isStructTag(CTyTag) ||
          CTyTag == dwarf::DW_TAG_union_type);
 
   // Multi dimensional arrays, base element should be the same
@@ -708,7 +706,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       PatchImm += AccessIndex * calcArraySize(CTy, 1) *
                   (EltTy->getSizeInBits() >> 3);
-    } else if (Tag == dwarf::DW_TAG_structure_type) {
+    } else if (isStructTag(Tag)) {
       auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       if (!MemberTy->isBitField()) {
         PatchImm += MemberTy->getOffsetInBits() >> 3;
@@ -943,7 +941,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
       }
 
       unsigned CTag = CTy->getTag();
-      if (CTag == dwarf::DW_TAG_structure_type || CTag == dwarf::DW_TAG_union_type) {
+      if (isStructTag(CTag) || CTag == dwarf::DW_TAG_union_type) {
         TypeName = std::string(CTy->getName());
       } else {
         if (HasPreserveFieldInfoCall(CallStack))
@@ -992,7 +990,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     // For a record, use the position of the field among its BTF members, and
     // use an array index as is.
     uint64_t BTFIndex = AccessIndex;
-    if (CTy->getTag() == dwarf::DW_TAG_structure_type ||
+    if (isStructTag(CTy->getTag()) ||
         CTy->getTag() == dwarf::DW_TAG_union_type) {
       const DINode *Field = getDIRecordField(CTy, AccessIndex);
       if (!Field) {

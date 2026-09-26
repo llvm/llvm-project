@@ -39,6 +39,12 @@ inline bool isBTFRecordElement(const DINode *Element) {
   }
 }
 
+/// Whether a debug info tag describes a record that BTF represents as a
+/// struct. A C++ record declared with the class keyword is one as well.
+inline bool isStructTag(unsigned Tag) {
+  return Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_class_type;
+}
+
 /// Return the bit offset used to order an element of a BTF structure record.
 inline uint64_t getBTFRecordElementOffset(const DINode *Element) {
   switch (Element->getTag()) {
@@ -60,7 +66,7 @@ getBTFRecordElements(const DICompositeType *CTy) {
   for (const DINode *Element : CTy->getElements())
     if (isBTFRecordElement(Element))
       Elements.push_back(Element);
-  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
+  if (isStructTag(CTy->getTag()))
     llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
       return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
     });
