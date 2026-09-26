@@ -4624,7 +4624,7 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
   int MemoryHint = -1;
   const MDNode *MemCacheHint = MMO->getMemCacheHint();
   if (!MemCacheHint)
-    return AArch64MemoryHint::HINT_NONE;
+    return AArch64MemoryHint::NONE;
 
   for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
     if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
@@ -4639,12 +4639,12 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
   return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::HINT_STSHH_KEEP;
+         AArch64MemoryHint::STSHH_KEEP;
 }
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
   return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::HINT_STSHH_STRM;
+         AArch64MemoryHint::STSHH_STRM;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,

@@ -136,7 +136,7 @@ Expected<int> runOgre(const Options &Opts) noexcept {
   ThreadPoolRunner Run(4);
   Session S(
       std::move(*EPI), [&Run](Session::Task T) { Run(std::move(T)); },
-      reportError);
+      [](Session &, Error Err) noexcept { reportError(std::move(Err)); });
 
   std::promise<void> StopP;
   auto StopF = StopP.get_future();
