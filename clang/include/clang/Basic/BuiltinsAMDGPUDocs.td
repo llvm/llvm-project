@@ -877,6 +877,114 @@ integers.
 }];
 }
 
+def DocCvtScalePk32BF16BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit brain-float values in ``src`` to brain-float16, then
+multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32BF16FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit float values in ``src`` to brain-float16, then
+multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F16BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit brain-float values in ``src`` to half-precision
+float16, then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F16FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit float values in ``src`` to half-precision float16,
+then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F32BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit brain-float values in ``src`` to single-precision
+float32, then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F32FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit float values in ``src`` to single-precision float32,
+then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // Prefetch Builtins
 //===----------------------------------------------------------------------===//
