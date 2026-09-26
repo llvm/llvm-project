@@ -100,3 +100,28 @@ define amdgpu_ps <2 x bfloat> @fabs_v2bf16_ss(<2 x bfloat> inreg %a) {
   %result = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %a)
   ret <2 x bfloat> %result
 }
+define amdgpu_ps <3 x bfloat> @fabs_v3bf16_vv(<3 x bfloat> %a) {
+; GFX9-LABEL: fabs_v3bf16_vv:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fabs_v3bf16_vv:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; GFX12-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: fabs_v3bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
+; GFX1250-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
+; GFX1250-NEXT:    ; return to shader part epilog
+  %result = call <3 x bfloat> @llvm.fabs.v3bf16(<3 x bfloat> %a)
+  ret <3 x bfloat> %result
+}
