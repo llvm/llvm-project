@@ -622,3 +622,415 @@ define <16 x float> @mul_addsub_ps512_partial_avx(<16 x float> %C, <16 x float> 
   %vecinsert162 = shufflevector <16 x float> %vecinsert141, <16 x float> %i15, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
   ret <16 x float> %vecinsert162
 }
+
+; A chain of two multiply-add/subs, as in consecutive complex multiply-adds.
+; Simplifying the demanded lanes of the outer FSUB/FADD splits the inner
+; add/sub shuffle into its FSUB and FADD.
+define <2 x double> @mul_addsub_chain_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) {
+; NOFMA-LABEL: mul_addsub_chain_pd128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_pd128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm4
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_pd128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm4
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
+; FMA4-NEXT:    retq
+  %AB = fmul contract <2 x double> %A, %B
+  %Sub0 = fsub contract <2 x double> %AB, %E
+  %Add0 = fadd contract <2 x double> %AB, %E
+  %Inner = shufflevector <2 x double> %Sub0, <2 x double> %Add0, <2 x i32> <i32 0, i32 3>
+  %CD = fmul contract <2 x double> %C, %D
+  %Sub1 = fsub contract <2 x double> %CD, %Inner
+  %Add1 = fadd contract <2 x double> %CD, %Inner
+  %Outer = shufflevector <2 x double> %Sub1, <2 x double> %Add1, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %Outer
+}
+
+; Same with commuted FADD operands and the FADD as the first shuffle operand.
+define <8 x float> @mul_addsub_chain_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C, <8 x float> %D, <8 x float> %E) {
+; NOFMA-LABEL: mul_addsub_chain_ps256:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; NOFMA-NEXT:    vmulps %ymm3, %ymm2, %ymm1
+; NOFMA-NEXT:    vaddsubps %ymm4, %ymm0, %ymm0
+; NOFMA-NEXT:    vaddsubps %ymm0, %ymm1, %ymm0
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_ps256:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- ymm4
+; FMA3-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm3 * ymm2) +/- ymm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_ps256:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm0 = (ymm0 * ymm1) +/- ymm4
+; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm0 = (ymm2 * ymm3) +/- ymm0
+; FMA4-NEXT:    retq
+  %AB = fmul contract <8 x float> %A, %B
+  %Sub0 = fsub contract <8 x float> %AB, %E
+  %Add0 = fadd contract <8 x float> %E, %AB
+  %Inner = shufflevector <8 x float> %Add0, <8 x float> %Sub0, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  %CD = fmul contract <8 x float> %C, %D
+  %Sub1 = fsub contract <8 x float> %CD, %Inner
+  %Add1 = fadd contract <8 x float> %Inner, %CD
+  %Outer = shufflevector <8 x float> %Add1, <8 x float> %Sub1, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  ret <8 x float> %Outer
+}
+
+define <8 x double> @mul_addsub_chain_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C, <8 x double> %D, <8 x double> %E) {
+; NOFMA-LABEL: mul_addsub_chain_pd512:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    pushq %rbp
+; NOFMA-NEXT:    .cfi_def_cfa_offset 16
+; NOFMA-NEXT:    .cfi_offset %rbp, -16
+; NOFMA-NEXT:    movq %rsp, %rbp
+; NOFMA-NEXT:    .cfi_def_cfa_register %rbp
+; NOFMA-NEXT:    andq $-32, %rsp
+; NOFMA-NEXT:    subq $32, %rsp
+; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vmulpd %ymm7, %ymm5, %ymm2
+; NOFMA-NEXT:    vmulpd %ymm6, %ymm4, %ymm3
+; NOFMA-NEXT:    vaddsubpd 16(%rbp), %ymm0, %ymm0
+; NOFMA-NEXT:    vaddsubpd %ymm0, %ymm3, %ymm0
+; NOFMA-NEXT:    vaddsubpd 48(%rbp), %ymm1, %ymm1
+; NOFMA-NEXT:    vaddsubpd %ymm1, %ymm2, %ymm1
+; NOFMA-NEXT:    movq %rbp, %rsp
+; NOFMA-NEXT:    popq %rbp
+; NOFMA-NEXT:    .cfi_def_cfa %rsp, 8
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: mul_addsub_chain_pd512:
+; FMA3_256:       # %bb.0:
+; FMA3_256-NEXT:    pushq %rbp
+; FMA3_256-NEXT:    .cfi_def_cfa_offset 16
+; FMA3_256-NEXT:    .cfi_offset %rbp, -16
+; FMA3_256-NEXT:    movq %rsp, %rbp
+; FMA3_256-NEXT:    .cfi_def_cfa_register %rbp
+; FMA3_256-NEXT:    andq $-32, %rsp
+; FMA3_256-NEXT:    subq $32, %rsp
+; FMA3_256-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm2 * ymm0) +/- mem
+; FMA3_256-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm6 * ymm4) +/- ymm0
+; FMA3_256-NEXT:    vfmaddsub213pd {{.*#+}} ymm1 = (ymm3 * ymm1) +/- mem
+; FMA3_256-NEXT:    vfmaddsub231pd {{.*#+}} ymm1 = (ymm7 * ymm5) +/- ymm1
+; FMA3_256-NEXT:    movq %rbp, %rsp
+; FMA3_256-NEXT:    popq %rbp
+; FMA3_256-NEXT:    .cfi_def_cfa %rsp, 8
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: mul_addsub_chain_pd512:
+; FMA3_512:       # %bb.0:
+; FMA3_512-NEXT:    vfmaddsub213pd {{.*#+}} zmm0 = (zmm1 * zmm0) +/- zmm4
+; FMA3_512-NEXT:    vfmaddsub231pd {{.*#+}} zmm0 = (zmm3 * zmm2) +/- zmm0
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_pd512:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    pushq %rbp
+; FMA4-NEXT:    .cfi_def_cfa_offset 16
+; FMA4-NEXT:    .cfi_offset %rbp, -16
+; FMA4-NEXT:    movq %rsp, %rbp
+; FMA4-NEXT:    .cfi_def_cfa_register %rbp
+; FMA4-NEXT:    andq $-32, %rsp
+; FMA4-NEXT:    subq $32, %rsp
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) +/- mem
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm0 = (ymm4 * ymm6) +/- ymm0
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) +/- mem
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm1 = (ymm5 * ymm7) +/- ymm1
+; FMA4-NEXT:    movq %rbp, %rsp
+; FMA4-NEXT:    popq %rbp
+; FMA4-NEXT:    .cfi_def_cfa %rsp, 8
+; FMA4-NEXT:    retq
+  %AB = fmul contract <8 x double> %A, %B
+  %Sub0 = fsub contract <8 x double> %AB, %E
+  %Add0 = fadd contract <8 x double> %AB, %E
+  %Inner = shufflevector <8 x double> %Sub0, <8 x double> %Add0, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  %CD = fmul contract <8 x double> %C, %D
+  %Sub1 = fsub contract <8 x double> %CD, %Inner
+  %Add1 = fadd contract <8 x double> %CD, %Inner
+  %Outer = shufflevector <8 x double> %Sub1, <8 x double> %Add1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x double> %Outer
+}
+
+; Without contract flags the chain can only become two ADDSUBs.
+define <2 x double> @mul_addsub_chain_nocontract_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) {
+; NOFMA-LABEL: mul_addsub_chain_nocontract_pd128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_nocontract_pd128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; FMA3-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA3-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_nocontract_pd128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; FMA4-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA4-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; FMA4-NEXT:    retq
+  %AB = fmul <2 x double> %A, %B
+  %Sub0 = fsub <2 x double> %AB, %E
+  %Add0 = fadd <2 x double> %AB, %E
+  %Inner = shufflevector <2 x double> %Sub0, <2 x double> %Add0, <2 x i32> <i32 0, i32 3>
+  %CD = fmul <2 x double> %C, %D
+  %Sub1 = fsub <2 x double> %CD, %Inner
+  %Add1 = fadd <2 x double> %CD, %Inner
+  %Outer = shufflevector <2 x double> %Sub1, <2 x double> %Add1, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %Outer
+}
+
+; A chain of three multiply-add/subs.
+define <2 x double> @mul_addsub_chain3_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, <2 x double> %F, <2 x double> %G) {
+; NOFMA-LABEL: mul_addsub_chain3_pd128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vmulpd %xmm5, %xmm4, %xmm2
+; NOFMA-NEXT:    vaddsubpd %xmm6, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm2, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain3_pd128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vfmaddsub213pd {{.*#+}} xmm0 = (xmm1 * xmm0) +/- xmm6
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm5 * xmm4) +/- xmm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain3_pd128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm6
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm4 * xmm5) +/- xmm0
+; FMA4-NEXT:    retq
+  %AB = fmul contract <2 x double> %A, %B
+  %Sub0 = fsub contract <2 x double> %AB, %G
+  %Add0 = fadd contract <2 x double> %AB, %G
+  %Inner0 = shufflevector <2 x double> %Sub0, <2 x double> %Add0, <2 x i32> <i32 0, i32 3>
+  %CD = fmul contract <2 x double> %C, %D
+  %Sub1 = fsub contract <2 x double> %CD, %Inner0
+  %Add1 = fadd contract <2 x double> %CD, %Inner0
+  %Inner1 = shufflevector <2 x double> %Sub1, <2 x double> %Add1, <2 x i32> <i32 0, i32 3>
+  %EF = fmul contract <2 x double> %E, %F
+  %Sub2 = fsub contract <2 x double> %EF, %Inner1
+  %Add2 = fadd contract <2 x double> %EF, %Inner1
+  %Outer = shufflevector <2 x double> %Sub2, <2 x double> %Add2, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %Outer
+}
+
+; Inner SUBADD feeding an outer ADDSUB.
+define <4 x float> @mul_addsub_chain_subadd_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) {
+; NOFMA-LABEL: mul_addsub_chain_subadd_ps128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vsubps %xmm4, %xmm0, %xmm1
+; NOFMA-NEXT:    vaddps %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; NOFMA-NEXT:    vmulps %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubps %xmm0, %xmm1, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_subadd_ps128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vfmsubadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) -/+ xmm4
+; FMA3-NEXT:    vfmaddsub231ps {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_subadd_ps128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vfmsubaddps {{.*#+}} xmm0 = (xmm0 * xmm1) -/+ xmm4
+; FMA4-NEXT:    vfmaddsubps {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
+; FMA4-NEXT:    retq
+  %AB = fmul contract <4 x float> %A, %B
+  %Sub0 = fsub contract <4 x float> %AB, %E
+  %Add0 = fadd contract <4 x float> %AB, %E
+  %Inner = shufflevector <4 x float> %Add0, <4 x float> %Sub0, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %CD = fmul contract <4 x float> %C, %D
+  %Sub1 = fsub contract <4 x float> %CD, %Inner
+  %Add1 = fadd contract <4 x float> %CD, %Inner
+  %Outer = shufflevector <4 x float> %Sub1, <4 x float> %Add1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x float> %Outer
+}
+
+; Only the outer operations are contractable.
+define <2 x double> @mul_addsub_chain_inner_nocontract_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) {
+; NOFMA-LABEL: mul_addsub_chain_inner_nocontract_pd128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vaddsubpd %xmm0, %xmm1, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_inner_nocontract_pd128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA3-NEXT:    vfmaddsub231pd {{.*#+}} xmm0 = (xmm3 * xmm2) +/- xmm0
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_inner_nocontract_pd128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vaddsubpd %xmm4, %xmm0, %xmm0
+; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm2 * xmm3) +/- xmm0
+; FMA4-NEXT:    retq
+  %AB = fmul <2 x double> %A, %B
+  %Sub0 = fsub <2 x double> %AB, %E
+  %Add0 = fadd <2 x double> %AB, %E
+  %Inner = shufflevector <2 x double> %Sub0, <2 x double> %Add0, <2 x i32> <i32 0, i32 3>
+  %CD = fmul contract <2 x double> %C, %D
+  %Sub1 = fsub contract <2 x double> %CD, %Inner
+  %Add1 = fadd contract <2 x double> %CD, %Inner
+  %Outer = shufflevector <2 x double> %Sub1, <2 x double> %Add1, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %Outer
+}
+
+; Negative test: the second operands are unrelated. Blending them would keep
+; them from contracting into FMAs of their own.
+define <4 x float> @mul_addsub_different_rhs_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) {
+; NOFMA-LABEL: mul_addsub_different_rhs_ps128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; NOFMA-NEXT:    vmulps %xmm4, %xmm3, %xmm2
+; NOFMA-NEXT:    vsubps %xmm1, %xmm0, %xmm1
+; NOFMA-NEXT:    vaddps %xmm2, %xmm0, %xmm0
+; NOFMA-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_different_rhs_ps128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vfnmadd213ps {{.*#+}} xmm1 = -(xmm2 * xmm1) + xmm0
+; FMA3-NEXT:    vfmadd213ps {{.*#+}} xmm3 = (xmm4 * xmm3) + xmm0
+; FMA3-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm3[1],xmm1[2],xmm3[3]
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_different_rhs_ps128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vfnmaddps {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm0
+; FMA4-NEXT:    vfmaddps {{.*#+}} xmm0 = (xmm3 * xmm4) + xmm0
+; FMA4-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
+; FMA4-NEXT:    retq
+  %X = fmul contract <4 x float> %B, %C
+  %Y = fmul contract <4 x float> %D, %E
+  %Sub = fsub contract <4 x float> %A, %X
+  %Add = fadd contract <4 x float> %A, %Y
+  %Addsub = shufflevector <4 x float> %Sub, <4 x float> %Add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x float> %Addsub
+}
+
+; Negative test: the inner FSUB has another use.
+define <2 x double> @mul_addsub_chain_multiuse_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, ptr %p) {
+; NOFMA-LABEL: mul_addsub_chain_multiuse_pd128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
+; NOFMA-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vmovapd %xmm1, (%rdi)
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
+; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_multiuse_pd128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
+; FMA3-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
+; FMA3-NEXT:    vmovapd %xmm1, (%rdi)
+; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
+; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
+; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; FMA3-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_multiuse_pd128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
+; FMA4-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
+; FMA4-NEXT:    vmovapd %xmm1, (%rdi)
+; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
+; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
+; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA4-NEXT:    retq
+  %AB = fmul contract <2 x double> %A, %B
+  %Sub0 = fsub contract <2 x double> %AB, %E
+  %Add0 = fadd contract <2 x double> %AB, %E
+  store <2 x double> %Sub0, ptr %p
+  %Inner = shufflevector <2 x double> %Sub0, <2 x double> %Add0, <2 x i32> <i32 0, i32 3>
+  %CD = fmul contract <2 x double> %C, %D
+  %Sub1 = fsub contract <2 x double> %CD, %Inner
+  %Add1 = fadd contract <2 x double> %CD, %Inner
+  %Outer = shufflevector <2 x double> %Sub1, <2 x double> %Add1, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %Outer
+}
+
+; Negative test: the inner FSUB and FADD have different operands.
+define <2 x double> @mul_addsub_chain_different_inner_ops_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, <2 x double> %F) {
+; NOFMA-LABEL: mul_addsub_chain_different_inner_ops_pd128:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; NOFMA-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
+; NOFMA-NEXT:    vaddpd %xmm5, %xmm0, %xmm0
+; NOFMA-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
+; NOFMA-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
+; NOFMA-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; NOFMA-NEXT:    retq
+;
+; FMA3-LABEL: mul_addsub_chain_different_inner_ops_pd128:
+; FMA3:       # %bb.0:
+; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
+; FMA3-NEXT:    vaddpd %xmm5, %xmm0, %xmm0
+; FMA3-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
+; FMA3-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
+; FMA3-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; FMA3-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA3-NEXT:    retq
+;
+; FMA4-LABEL: mul_addsub_chain_different_inner_ops_pd128:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vsubpd %xmm4, %xmm0, %xmm1
+; FMA4-NEXT:    vaddpd %xmm5, %xmm0, %xmm0
+; FMA4-NEXT:    vmulpd %xmm3, %xmm2, %xmm2
+; FMA4-NEXT:    vsubpd %xmm1, %xmm2, %xmm1
+; FMA4-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; FMA4-NEXT:    retq
+  %AB = fmul contract <2 x double> %A, %B
+  %Sub0 = fsub contract <2 x double> %AB, %E
+  %Add0 = fadd contract <2 x double> %AB, %F
+  %Inner = shufflevector <2 x double> %Sub0, <2 x double> %Add0, <2 x i32> <i32 0, i32 3>
+  %CD = fmul contract <2 x double> %C, %D
+  %Sub1 = fsub contract <2 x double> %CD, %Inner
+  %Add1 = fadd contract <2 x double> %CD, %Inner
+  %Outer = shufflevector <2 x double> %Sub1, <2 x double> %Add1, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %Outer
+}
