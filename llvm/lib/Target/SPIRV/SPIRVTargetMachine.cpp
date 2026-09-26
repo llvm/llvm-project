@@ -65,6 +65,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVLegalizeResourceBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
+  initializeSPIRVRemoveUnusedResourcesLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -174,6 +175,7 @@ void SPIRVPassConfig::addIRPasses() {
   if (TM.getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None)
       addPass(createSPIRVFinalizeShaderLinkagePass(TM));
+    addPass(createSPIRVRemoveUnusedResourcesLegacyPass());
   } else {
     // Variadic function calls aren't supported in shader code.
     // This needs to come before SPIRVPrepareFunctions because this
