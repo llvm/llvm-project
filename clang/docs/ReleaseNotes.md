@@ -537,6 +537,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
+- Fixed an assertion failure when a fixed point type was used in arithmetic with a `_BitInt` or overflow behavior type; the combination is now diagnosed as invalid operands. (#GH191701)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 - Fixed an assertion caused by Microsoft integer literals exceeding the maximum value. (#GH212504)
