@@ -14,7 +14,7 @@ define i64 @findlast_load_expr(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -22,7 +22,7 @@ define i64 @findlast_load_expr(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i64> [[WIDE_LOAD1]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -84,7 +84,7 @@ define i64 @findlast_load_expr_with_store(ptr noalias %a, ptr %b, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -92,7 +92,7 @@ define i64 @findlast_load_expr_with_store(ptr noalias %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i64> [[WIDE_LOAD1]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -157,13 +157,13 @@ define i64 @findlast_load_expr_same_array(ptr %a, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
-; CHECK-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP3]], <4 x i1> [[TMP9]]
 ; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP4]], <4 x i64> [[WIDE_LOAD]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -221,7 +221,7 @@ define i64 @findlast_multiple_loads(ptr noalias %a, ptr noalias %b, ptr noalias 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -232,7 +232,7 @@ define i64 @findlast_multiple_loads(ptr noalias %a, ptr noalias %b, ptr noalias 
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[WIDE_LOAD1]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP6]], <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP7]], <4 x i64> [[TMP5]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -301,7 +301,7 @@ define i64 @findlast_load_scaled_iv(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -324,7 +324,7 @@ define i64 @findlast_load_scaled_iv(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP20]])
-; CHECK-NEXT:    [[TMP22]] = select i1 [[TMP21]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP22]] = select i1 [[TMP21]], <4 x i1> [[TMP20]], <4 x i1> [[TMP26]]
 ; CHECK-NEXT:    [[TMP23]] = select i1 [[TMP21]], <4 x i64> [[TMP19]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -389,7 +389,7 @@ define i64 @findlast_load_offset_iv(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -398,7 +398,7 @@ define i64 @findlast_load_offset_iv(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP5]], <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP6]], <4 x i64> [[WIDE_LOAD1]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -465,13 +465,13 @@ define i64 @findlast_load_constant_idx(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -531,7 +531,7 @@ define i64 @findlast_load_data_dependent_idx(ptr noalias %a, ptr noalias %b, ptr
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -555,7 +555,7 @@ define i64 @findlast_load_data_dependent_idx(ptr noalias %a, ptr noalias %b, ptr
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP20]])
-; CHECK-NEXT:    [[TMP22]] = select i1 [[TMP21]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP22]] = select i1 [[TMP21]], <4 x i1> [[TMP20]], <4 x i1> [[TMP26]]
 ; CHECK-NEXT:    [[TMP23]] = select i1 [[TMP21]], <4 x i64> [[TMP19]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -621,7 +621,7 @@ define i64 @findlast_load_cond_store_other_block(ptr noalias %a, ptr %b, i64 %n)
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[PRED_STORE_CONTINUE7]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[PRED_STORE_CONTINUE7]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[PRED_STORE_CONTINUE7]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 42)
@@ -629,7 +629,7 @@ define i64 @findlast_load_cond_store_other_block(ptr noalias %a, ptr %b, i64 %n)
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i64> [[WIDE_LOAD1]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD]], splat (i64 100)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0

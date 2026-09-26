@@ -27,7 +27,7 @@ define ptr @find_last_ptr_induction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP5]], <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP6]], <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP7]], <4 x ptr> [[VECTOR_GEP]], <4 x ptr> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16
@@ -103,7 +103,7 @@ define ptr @find_last_ptr_induction_separate_array(ptr %a, ptr %b, ptr %init, i6
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP5]], <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP6]], <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP7]], <4 x ptr> [[VECTOR_GEP]], <4 x ptr> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 96
@@ -176,7 +176,7 @@ define ptr @find_last_ptr_load(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x ptr> [[WIDE_LOAD]], <4 x ptr> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -294,7 +294,7 @@ define ptr addrspace(1) @find_last_ptr_induction_narrow_step(ptr addrspace(1) %a
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP6]], <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP7]], <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <4 x ptr addrspace(1)> [[VECTOR_GEP]], <4 x ptr addrspace(1)> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr addrspace(1) [[POINTER_PHI]], i32 16

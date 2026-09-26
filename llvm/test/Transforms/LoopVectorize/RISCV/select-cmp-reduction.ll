@@ -250,7 +250,7 @@ define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ splat (float 3.000000e+00), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP0]]
@@ -259,7 +259,7 @@ define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x float> splat (float 7.000000e+00), <vscale x 4 x float> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP11]], [[TMP0]]
