@@ -281,10 +281,23 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BinOp(SDNode *N) {
-  SDValue LHS = GetScalarizedVector(N->getOperand(0));
-  SDValue RHS = GetScalarizedVector(N->getOperand(1));
-  return DAG.getNode(N->getOpcode(), SDLoc(N),
-                     LHS.getValueType(), LHS, RHS, N->getFlags());
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  // The result needs scalarizing, but it is not a given that both operands
+  // do. For instance, AVX-512 has a legal <1 x i1> exponent for FLDEXP.
+  if (getTypeAction(LHS.getValueType()) == TargetLowering::TypeScalarizeVector)
+    LHS = GetScalarizedVector(LHS);
+  else
+    LHS = DAG.getExtractVectorElt(DL, LHS.getValueType().getVectorElementType(),
+                                  LHS, 0);
+  if (getTypeAction(RHS.getValueType()) == TargetLowering::TypeScalarizeVector)
+    RHS = GetScalarizedVector(RHS);
+  else
+    RHS = DAG.getExtractVectorElt(DL, RHS.getValueType().getVectorElementType(),
+                                  RHS, 0);
+  return DAG.getNode(N->getOpcode(), DL, LHS.getValueType(), LHS, RHS,
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_MaskedBinOp(SDNode *N) {
