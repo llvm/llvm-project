@@ -750,7 +750,54 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
 
   // If uConflictingWrite is an InsertSliceOp...
   if (auto subsetOp =
-          dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp))
+          dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp)) {
+    if (uConflictingWrite == &subsetOp.getDestinationOperand()) {
+      auto writtenSubset = cast<SubsetOpInterface>(conflictingWritingOp);
+      auto isDisjointSubset = [&](SubsetOpInterface readSubset) {
+        return readSubset.operatesOnDisjointSubset(
+            writtenSubset, [&](Value v1, Value v2) {
+              return state.areEquivalentBufferizedValues(v1, v2);
+            });
+      };
+      auto isDisjointExtraction = [&](Value value) {
+        auto extraction = value.getDefiningOp<SubsetExtractionOpInterface>();
+        return extraction && isDisjointSubset(cast<SubsetOpInterface>(
+                                 extraction.getOperation()));
+      };
+
+      // Example:
+      //
+      // %0 = tensor.insert_slice %s into %t[0][4][1]
+      // %1 = vector.transfer_read %t[%c4], %cst
+      //
+      // A read from a subset does not conflict with a write to a disjoint
+      // subset of an equivalent tensor. Check the operand roles explicitly
+      // because not every subset extraction bufferizes to a memory read.
+      if (auto extraction = dyn_cast<SubsetExtractionOpInterface>(readingOp)) {
+        if (uRead == &extraction.getSourceOperand() &&
+            isDisjointSubset(cast<SubsetOpInterface>(readingOp)))
+          return true;
+      }
+
+      // Example:
+      //
+      // %0 = tensor.insert_slice %s into %t[0][4][1]
+      // %1 = tensor.extract_slice %t[4][4][1]
+      // return %0, %1
+      //
+      // The actual read may be further down the aliasing use-def chain. E.g.,
+      // tensor.extract_slice is an alias-only op and the read is attributed to
+      // a return or another consumer of its result. Trace such reads back to
+      // their subset extractions. Every origin must be a disjoint subset; a
+      // non-subset leaf or an extraction that may overlap keeps the analysis
+      // conservative.
+      SetVector<Value> readOrigins =
+          state.findValueInReverseUseDefChain(uRead, isDisjointExtraction);
+      if (!readOrigins.empty() &&
+          llvm::all_of(readOrigins, isDisjointExtraction))
+        return true;
+    }
+
     // As an example, consider the following IR.
     //
     // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
@@ -772,6 +819,7 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
             uRead->get(), subsetOp.getSourceOperand().get()) &&
         matchesInsertDestination(state, &subsetOp.getSourceOperand(), subsetOp))
       return true;
+  }
 
   return false;
 }

@@ -17,6 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
+  let useStrictPropertiesInAssemblyFormat = 0;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "
@@ -93,7 +94,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
-    static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
+    // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
+    // can build the runtime-registration globals without doing file I/O.
+    static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }

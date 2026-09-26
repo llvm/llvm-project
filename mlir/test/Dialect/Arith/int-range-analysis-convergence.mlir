@@ -70,7 +70,7 @@ func.func @grouped_gemm_while_hang(%n: i32, %flag: i1) -> i32 {
       // The yielded `arith.remui` result stays at [0, 126]: the widening
       // budget only fires on virtual `Lattice::join` at framework merge
       // sites, not on transfer-function joins for inferrable ops.
-      // CHECK: test.reflect_bounds {smax = 126 : si32, smin = 0 : si32, umax = 126 : ui32, umin = 0 : ui32}
+      // CHECK: test.reflect_bounds <umin = 0 : ui32, umax = 126 : ui32, smin = 0 : si32, smax = 126 : si32>
       %r_l1 = test.reflect_bounds %L1 : i32
       scf.yield %L1, %nic : i32, i1
     }
@@ -83,7 +83,7 @@ func.func @grouped_gemm_while_hang(%n: i32, %flag: i1) -> i32 {
   // presence of these bounds here is the convergence assertion: without
   // the patch the analysis would not terminate to print this attribute.
   // CHECK: %[[BOUNDED:.*]] = test.reflect_bounds
-  // CHECK-SAME: {smax = 2147483647 : si32, smin = -2147483648 : si32, umax = 4294967295 : ui32, umin = 0 : ui32}
+  // CHECK-SAME: <umin = 0 : ui32, umax = 4294967295 : ui32, smin = -2147483648 : si32, smax = 2147483647 : si32>
   // CHECK-SAME: %[[OUTER]]#0 : i32
   %r = test.reflect_bounds %res#0 : i32
   // CHECK: return %[[BOUNDED]] : i32
