@@ -715,9 +715,11 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // The UtilityFunction is held in the Process.  Platforms don't track the
   // lifespan of the Targets that use them, we can't put this in the Platform.
   dlopen_utility_func = process->GetLoadImageUtilityFunction(
-      this, [&]() -> std::unique_ptr<UtilityFunction> {
+      this,
+      [&]() -> std::unique_ptr<UtilityFunction> {
         return MakeLoadImageUtilityFunction(exe_ctx, error);
-      });
+      },
+      error);
   // If we couldn't make it, the error will be in error, so we can exit here.
   if (!dlopen_utility_func)
     return LLDB_INVALID_IMAGE_TOKEN;

@@ -6712,11 +6712,15 @@ Status Process::UpdateAutomaticSignalFiltering() {
 
 UtilityFunction *Process::GetLoadImageUtilityFunction(
     Platform *platform,
-    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory) {
+    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory,
+    Status &error) {
   if (platform != GetTarget().GetPlatform().get())
     return nullptr;
-  llvm::call_once(m_dlopen_utility_func_flag_once,
-                  [&] { m_dlopen_utility_func_up = factory(); });
+  llvm::call_once(m_dlopen_utility_func_flag_once, [&] {
+    m_dlopen_utility_func_up = factory();
+    m_dlopen_utility_func_error = error.Clone();
+  });
+  error = m_dlopen_utility_func_error.Clone();
   return m_dlopen_utility_func_up.get();
 }
 

@@ -229,10 +229,12 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   thread->CalculateExecutionContext(context);
 
   Status status;
-  UtilityFunction *loader =
-      process->GetLoadImageUtilityFunction(this, [&]() -> std::unique_ptr<UtilityFunction> {
-        return MakeLoadImageUtilityFunction(context, status);
-      });
+  UtilityFunction *loader = process->GetLoadImageUtilityFunction(
+      this,
+      [&]() -> std::unique_ptr<UtilityFunction> {
+        return MakeLoadImageUtilityFunction(context, error);
+      },
+      error);
   if (loader == nullptr)
     return LLDB_INVALID_IMAGE_TOKEN;
 
