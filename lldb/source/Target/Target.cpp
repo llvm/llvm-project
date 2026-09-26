@@ -2447,6 +2447,31 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
   return false;
 }
 
+/// Find a module in \a images that is the same file as \a module reached by a
+/// different spelling of its path -- a symlink and its target, or a Windows
+/// subst/mapped drive and the path it maps to. The UUID establishes that the
+/// two describe the same bytes; the file name then tells a re-spelling of one
+/// path, which always keeps the name, apart from the multi-call binary idiom,
+/// where several differently named symlinks point at one file on purpose and
+/// each has to stay its own module so that argv[0] survives.
+static ModuleSP FindEquivalentModule(const ModuleList &images, Module &module) {
+  ModuleSpec uuid_spec;
+  uuid_spec.GetUUID() = module.GetUUID();
+  ModuleList matches;
+  images.FindModules(uuid_spec, matches);
+
+  llvm::StringRef filename = module.GetFileSpec().GetFilename();
+  ModuleSP equivalent_sp;
+  matches.ForEach([&](const ModuleSP &match_sp) {
+    if (match_sp.get() == &module ||
+        match_sp->GetFileSpec().GetFilename() != filename)
+      return IterationAction::Continue;
+    equivalent_sp = match_sp;
+    return IterationAction::Stop;
+  });
+  return equivalent_sp;
+}
+
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
                                    bool notify, Status *error_ptr) {
   ModuleSP module_sp;
@@ -2607,6 +2632,26 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
             old_modules.push_back(found_module);
             return IterationAction::Continue;
           });
+        }
+
+        // The converse case: a spec with no UUID, which is what a dynamic
+        // loader hands us. The lookup at the top of this function was skipped
+        // for it, and a path comparison cannot recognise a module the target
+        // already has under a different spelling of the same file. The module
+        // is built by now, so match on its identity instead, and keep the one
+        // the target already has: that preserves the path the user spelled,
+        // which argv[0] is derived from.
+        if (!module_spec.GetUUID().IsValid() &&
+            module_sp->GetUUID().IsValid()) {
+          if (ModuleSP existing_sp =
+                  FindEquivalentModule(m_images, *module_sp)) {
+            ModuleWP discarded_wp = module_sp->weak_from_this();
+            module_sp = existing_sp;
+            objfile = module_sp->GetObjectFile();
+            // Nothing to replace it with; it is the module being kept.
+            llvm::erase(old_modules, module_sp);
+            ModuleList::RemoveSharedModuleIfOrphaned(discarded_wp);
+          }
         }
 
         // If the locate module callback had found a symbol file, set it to the
