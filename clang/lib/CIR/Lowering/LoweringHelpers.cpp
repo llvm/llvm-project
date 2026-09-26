@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/LoweringHelpers.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -61,10 +62,17 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
   // If we have to do split storage, we are an array of bytes.  Split this up
   // into the array that matches convertTypeForMemory.
   unsigned numBytes = storageBits / 8;
+  bool isBigEndian = false;
+  if (auto endianness = mlir::dyn_cast_if_present<mlir::StringAttr>(
+          dataLayout.getEndianness()))
+    isBigEndian =
+        endianness.getValue() == mlir::DLTIDialect::kDataLayoutEndiannessBig;
   llvm::SmallVector<mlir::APInt> bytes;
   bytes.reserve(numBytes);
-  for (unsigned i = 0; i != numBytes; ++i)
-    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, i * 8));
+  for (unsigned i = 0; i != numBytes; ++i) {
+    unsigned valueByte = isBigEndian ? numBytes - i - 1 : i;
+    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, valueByte * 8));
+  }
 
   auto i8Ty = mlir::IntegerType::get(intTy.getContext(), 8);
   return mlir::DenseElementsAttr::get(

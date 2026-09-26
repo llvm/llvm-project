@@ -225,10 +225,10 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
 
     Two driver modes select how each function's classification is computed:
 
-    - `target=<name>` selects an ABI target.  Currently only `"test"` (the
-      MLIR test target in `mlir/lib/ABI/Targets/Test/`) is supported.  Real
-      targets (x86_64, AArch64, ...) will be added once the LLVM ABI library
-      ships them.
+    - `target=<name>` selects an ABI target.  The MLIR test target and x86_64
+      System V have full classifiers.  AArch64 uses the LLVM ABI classifier
+      for the scalar types it supports; i386 and PowerPC64 provide their
+      integer rules while their full classifiers are developed.
     - `classification-attr=<name>` reads a `DictionaryAttr` named `<name>`
       from each `cir.func` and parses it via the test-target injection
       helper.  Used by tests to inject arbitrary classifications without
@@ -246,7 +246,13 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
              clEnumValN(cir::CallConvTarget::Test, "test",
                         "MLIR test ABI target"),
              clEnumValN(cir::CallConvTarget::X86_64, "x86_64",
-                        "x86_64 System V")
+                        "x86_64 System V"),
+             clEnumValN(cir::CallConvTarget::X86_32, "x86_32",
+                        "32-bit x86"),
+             clEnumValN(cir::CallConvTarget::AArch64, "aarch64",
+                        "AArch64"),
+             clEnumValN(cir::CallConvTarget::PPC64, "ppc64",
+                        "64-bit PowerPC ELF")
            )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",
