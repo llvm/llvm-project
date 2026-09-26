@@ -88,8 +88,6 @@ TEST_F(LlvmLibcStrfromfTest, InsufficientBufferSize) {
   ASSERT_STREQ(buff, "1.05"); // Make sure that buff has not changed
 }
 
-// TODO: fix https://github.com/llvm/llvm-project/issues/217708.
-#if 0
 TEST_F(LlvmLibcStrfromfTest, InfNanValues) {
   char buff[15];
   int result;
@@ -109,7 +107,6 @@ TEST_F(LlvmLibcStrfromfTest, InfNanValues) {
   result = LIBC_NAMESPACE::strfromf(buff, 10, "%A", -nan);
   EXPECT_STREQ_LEN(result, buff, "-NAN");
 }
-#endif
 
 // https://github.com/llvm/llvm-project/issues/166795
 TEST_F(LlvmLibcStrfromfTest, ResultOverflow) {
