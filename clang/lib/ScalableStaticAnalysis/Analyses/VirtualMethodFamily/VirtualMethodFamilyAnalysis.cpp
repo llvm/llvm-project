@@ -28,9 +28,6 @@ struct MethodFamilyUnionFind {
   EntityId find(EntityId E);
   void unionSets(EntityId A, EntityId B);
 
-  void seed(EntityId E, EntityId Owner) { Roots.try_emplace(E, E); }
-  void seed(EntityId Owner, const VirtualMethodSummary &S);
-
   auto keys() const { return llvm::make_first_range(Roots); }
 
 private:
@@ -100,14 +97,6 @@ void MethodFamilyUnionFind::unionSets(EntityId A, EntityId B) {
     std::swap(RootA, RootB);
 
   Roots.insert_or_assign(RootB, RootA);
-}
-
-void MethodFamilyUnionFind::seed(EntityId Owner,
-                                 const VirtualMethodSummary &S) {
-  for (EntityId P : S.ParamEntities)
-    seed(P, Owner);
-  if (S.ReturnEntity.has_value())
-    seed(S.ReturnEntity.value(), Owner);
 }
 
 void Owners::recordOwner(EntityId Owner, const VirtualMethodSummary &S) {

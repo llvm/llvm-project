@@ -66,6 +66,7 @@ struct VirtualMethodFamilyAnalysisResult final : AnalysisResult {
     /// Basically, for "param" in "fun(param)" it will be "fun".
     EntityId OwnerMethodId;
   };
+
   llvm::DenseMap<EntityId, Data> RetAndParamData;
 
   friend bool operator==(const Data &L, const Data &R) {
