@@ -1247,7 +1247,14 @@ uptr GetMaxVirtualAddress() {
   // Similarly, aarch64 has multiple address space layouts: 39, 42 and 47-bit.
   // loongarch64 also has multiple address space layouts: default is 47-bit.
   // RISC-V 64 also has multiple address space layouts: 39, 48 and 57-bit.
-  return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
+  //
+  // We've seen qemu-user emulation put code above the frame addres, so the
+  // heuristic is extended with a code address.
+  return (1ULL << (MostSignificantSetBitIndex(
+                       GET_CURRENT_FRAME() |
+                       reinterpret_cast<uptr>(&GetMaxVirtualAddress)) +
+                   1)) -
+         1;
 #    elif SANITIZER_ALPHA
   // Linux/Alpha uses a 42-bit user VAS (TASK_SIZE = 0x40000000000).  With
   // fixed shadow offset 0x10000000000 (1 TiB) the layout is:
