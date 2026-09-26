@@ -66,6 +66,7 @@ add_tablegen(llvm-tblgen LLVM
   SDNodeInfoEmitter.cpp
   SearchableTableEmitter.cpp
   SubtargetEmitter.cpp
+  SystemZInsnDirectiveEmitter.cpp
   WebAssemblyDisassemblerEmitter.cpp
   X86InstrMappingEmitter.cpp
   X86DisassemblerTables.cpp
