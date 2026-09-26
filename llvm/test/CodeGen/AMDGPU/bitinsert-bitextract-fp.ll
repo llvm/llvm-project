@@ -256,11 +256,11 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 3, v8
 ; GFX9-NEXT:    v_and_b32_e32 v0, 24, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e64 v1, 6, s32
-; GFX9-NEXT:    v_add_u32_e32 v4, v0, v1
-; GFX9-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_load_dword v2, v4, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v3, v4, s[0:3], 0 offen offset:12
-; GFX9-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
+; GFX9-NEXT:    v_add_u32_e32 v5, v0, v1
+; GFX9-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
+; GFX9-NEXT:    buffer_load_dword v2, v5, s[0:3], 0 offen offset:8
+; GFX9-NEXT:    buffer_load_dword v3, v5, s[0:3], 0 offen offset:12
+; GFX9-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
 ; GFX9-NEXT:    v_and_b32_e32 v4, 63, v8
 ; GFX9-NEXT:    v_xor_b32_e32 v4, 63, v4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
@@ -297,11 +297,11 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:48
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:40
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:32
-; GFX12-NEXT:    v_and_b32_e32 v9, 24, v11
+; GFX12-NEXT:    v_and_b32_e32 v10, 24, v11
 ; GFX12-NEXT:    v_xor_b32_e32 v4, 63, v4
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b64 v[0:1], v9, s32 offset:8
-; GFX12-NEXT:    scratch_load_b64 v[2:3], v9, s32
+; GFX12-NEXT:    scratch_load_b64 v[0:1], v10, s32 offset:8
+; GFX12-NEXT:    scratch_load_b64 v[2:3], v10, s32
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -704,17 +704,17 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 3, v10
 ; GFX9-NEXT:    s_add_i32 s4, s5, 32
 ; GFX9-NEXT:    v_and_b32_e32 v16, 24, v8
-; GFX9-NEXT:    v_sub_u32_e32 v20, s4, v16
-; GFX9-NEXT:    buffer_load_dword v12, v20, s[0:3], 0 offen offset:28
-; GFX9-NEXT:    buffer_load_dword v9, v20, s[0:3], 0 offen offset:20
-; GFX9-NEXT:    buffer_load_dword v8, v20, s[0:3], 0 offen offset:16
-; GFX9-NEXT:    buffer_load_dword v11, v20, s[0:3], 0 offen offset:24
+; GFX9-NEXT:    v_sub_u32_e32 v22, s4, v16
+; GFX9-NEXT:    buffer_load_dword v12, v22, s[0:3], 0 offen offset:28
+; GFX9-NEXT:    buffer_load_dword v9, v22, s[0:3], 0 offen offset:20
+; GFX9-NEXT:    buffer_load_dword v8, v22, s[0:3], 0 offen offset:16
+; GFX9-NEXT:    buffer_load_dword v11, v22, s[0:3], 0 offen offset:24
 ; GFX9-NEXT:    v_and_b32_e32 v13, 63, v10
 ; GFX9-NEXT:    s_lshr_b32 s5, s32, 6
 ; GFX9-NEXT:    v_xor_b32_e32 v24, 63, v13
 ; GFX9-NEXT:    s_add_i32 s4, s5, 0x60
-; GFX9-NEXT:    v_sub_u32_e32 v25, s4, v16
-; GFX9-NEXT:    buffer_load_dword v13, v20, s[0:3], 0 offen offset:12
+; GFX9-NEXT:    v_sub_u32_e32 v26, s4, v16
+; GFX9-NEXT:    buffer_load_dword v13, v22, s[0:3], 0 offen offset:12
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_lshrrev_b64 v[14:15], 1, v[8:9]
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
@@ -723,11 +723,11 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX9-NEXT:    v_lshlrev_b64 v[8:9], v10, v[8:9]
 ; GFX9-NEXT:    v_or_b32_e32 v16, v12, v15
 ; GFX9-NEXT:    v_or_b32_e32 v18, v11, v14
-; GFX9-NEXT:    buffer_load_dword v12, v25, s[0:3], 0 offen offset:28
-; GFX9-NEXT:    buffer_load_dword v15, v25, s[0:3], 0 offen offset:20
-; GFX9-NEXT:    buffer_load_dword v14, v25, s[0:3], 0 offen offset:16
-; GFX9-NEXT:    buffer_load_dword v11, v25, s[0:3], 0 offen offset:24
-; GFX9-NEXT:    buffer_load_dword v17, v25, s[0:3], 0 offen offset:12
+; GFX9-NEXT:    buffer_load_dword v12, v26, s[0:3], 0 offen offset:28
+; GFX9-NEXT:    buffer_load_dword v15, v26, s[0:3], 0 offen offset:20
+; GFX9-NEXT:    buffer_load_dword v14, v26, s[0:3], 0 offen offset:16
+; GFX9-NEXT:    buffer_load_dword v11, v26, s[0:3], 0 offen offset:24
+; GFX9-NEXT:    buffer_load_dword v17, v26, s[0:3], 0 offen offset:12
 ; GFX9-NEXT:    v_xor_b32_e32 v16, 0x7f, v16
 ; GFX9-NEXT:    v_not_b32_e32 v18, v18
 ; GFX9-NEXT:    v_and_b32_e32 v16, v7, v16
@@ -739,9 +739,9 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX9-NEXT:    v_lshrrev_b64 v[6:7], v24, v[6:7]
 ; GFX9-NEXT:    v_or3_b32 v7, v12, v7, v16
 ; GFX9-NEXT:    v_or3_b32 v6, v11, v6, v18
-; GFX9-NEXT:    buffer_load_dword v19, v20, s[0:3], 0 offen offset:4
-; GFX9-NEXT:    buffer_load_dword v12, v20, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v18, v20, s[0:3], 0 offen
+; GFX9-NEXT:    buffer_load_dword v19, v22, s[0:3], 0 offen offset:4
+; GFX9-NEXT:    buffer_load_dword v12, v22, s[0:3], 0 offen offset:8
+; GFX9-NEXT:    buffer_load_dword v18, v22, s[0:3], 0 offen
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_lshlrev_b64 v[22:23], v10, v[12:13]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -749,9 +749,9 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX9-NEXT:    v_lshrrev_b64 v[20:21], v24, v[20:21]
 ; GFX9-NEXT:    v_or_b32_e32 v11, v23, v21
 ; GFX9-NEXT:    v_or_b32_e32 v22, v22, v20
-; GFX9-NEXT:    buffer_load_dword v16, v25, s[0:3], 0 offen offset:8
-; GFX9-NEXT:    buffer_load_dword v21, v25, s[0:3], 0 offen offset:4
-; GFX9-NEXT:    buffer_load_dword v20, v25, s[0:3], 0 offen
+; GFX9-NEXT:    buffer_load_dword v16, v26, s[0:3], 0 offen offset:8
+; GFX9-NEXT:    buffer_load_dword v21, v26, s[0:3], 0 offen offset:4
+; GFX9-NEXT:    buffer_load_dword v20, v26, s[0:3], 0 offen
 ; GFX9-NEXT:    v_bfi_b32 v11, v11, 0, v3
 ; GFX9-NEXT:    v_bfi_b32 v25, v22, 0, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
@@ -788,7 +788,6 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
-; GFX12-NEXT:    v_and_b32_e32 v25, 63, v10
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -817,24 +816,26 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:80
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:72
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:64
-; GFX12-NEXT:    v_xor_b32_e32 v37, 63, v25
 ; GFX12-NEXT:    v_and_b32_e32 v11, 24, v11
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_nc_u32_e32 v19, s0, v11
-; GFX12-NEXT:    v_sub_nc_u32_e32 v23, s1, v11
+; GFX12-NEXT:    v_sub_nc_u32_e32 v25, s0, v11
+; GFX12-NEXT:    v_sub_nc_u32_e32 v26, s1, v11
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b64 v[8:9], v19, off offset:24
-; GFX12-NEXT:    scratch_load_b64 v[11:12], v19, off offset:16
+; GFX12-NEXT:    scratch_load_b64 v[8:9], v25, off offset:24
+; GFX12-NEXT:    scratch_load_b64 v[11:12], v25, off offset:16
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b64 v[13:14], v23, off offset:24
-; GFX12-NEXT:    scratch_load_b64 v[15:16], v23, off offset:16
+; GFX12-NEXT:    scratch_load_b64 v[13:14], v26, off offset:24
+; GFX12-NEXT:    scratch_load_b64 v[15:16], v26, off offset:16
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b64 v[17:18], v19, off offset:8
-; GFX12-NEXT:    scratch_load_b64 v[19:20], v19, off
+; GFX12-NEXT:    scratch_load_b64 v[17:18], v25, off offset:8
+; GFX12-NEXT:    scratch_load_b64 v[19:20], v25, off
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b64 v[21:22], v23, off offset:8
-; GFX12-NEXT:    scratch_load_b64 v[23:24], v23, off
+; GFX12-NEXT:    scratch_load_b64 v[21:22], v26, off offset:8
+; GFX12-NEXT:    scratch_load_b64 v[23:24], v26, off
+; GFX12-NEXT:    v_and_b32_e32 v25, 63, v10
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_xor_b32_e32 v37, 63, v25
 ; GFX12-NEXT:    s_wait_loadcnt 0x7
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], v10, v[8:9]
 ; GFX12-NEXT:    s_wait_loadcnt 0x6

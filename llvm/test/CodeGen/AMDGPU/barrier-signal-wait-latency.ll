@@ -136,14 +136,14 @@ define amdgpu_kernel void @test_barrier_multiple(ptr addrspace(1) %out, i32 %siz
 ; OPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; OPT-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; OPT-NEXT:    s_wait_alu depctr_va_vcc(0)
-; OPT-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
+; OPT-NEXT:    v_add_co_ci_u32_e64 v7, null, s1, v1, vcc_lo
 ; OPT-NEXT:    s_wait_loadcnt 0x0
 ; OPT-NEXT:    global_store_b32 v3, v4, s[0:1]
 ; OPT-NEXT:    s_barrier_signal -1
 ; OPT-NEXT:    s_barrier_wait -1
-; OPT-NEXT:    global_load_b32 v0, v[0:1], off
+; OPT-NEXT:    global_load_b32 v6, v[6:7], off
 ; OPT-NEXT:    s_wait_loadcnt 0x0
-; OPT-NEXT:    global_store_b32 v3, v0, s[0:1]
+; OPT-NEXT:    global_store_b32 v3, v6, s[0:1]
 ; OPT-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: test_barrier_multiple:
@@ -172,14 +172,14 @@ define amdgpu_kernel void @test_barrier_multiple(ptr addrspace(1) %out, i32 %siz
 ; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; NOOPT-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; NOOPT-NEXT:    s_wait_alu depctr_va_vcc(0)
-; NOOPT-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
+; NOOPT-NEXT:    v_add_co_ci_u32_e64 v7, null, s1, v1, vcc_lo
 ; NOOPT-NEXT:    s_wait_loadcnt 0x0
 ; NOOPT-NEXT:    global_store_b32 v4, v2, s[0:1]
 ; NOOPT-NEXT:    s_barrier_signal -1
 ; NOOPT-NEXT:    s_barrier_wait -1
-; NOOPT-NEXT:    global_load_b32 v0, v[0:1], off
+; NOOPT-NEXT:    global_load_b32 v6, v[6:7], off
 ; NOOPT-NEXT:    s_wait_loadcnt 0x0
-; NOOPT-NEXT:    global_store_b32 v4, v0, s[0:1]
+; NOOPT-NEXT:    global_store_b32 v4, v6, s[0:1]
 ; NOOPT-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

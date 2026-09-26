@@ -8,15 +8,15 @@ define amdgpu_kernel void @copy(ptr addrspace(1) noalias nocapture readonly %src
 ; DEFAULT-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; DEFAULT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; DEFAULT-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DEFAULT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; DEFAULT-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; DEFAULT-NEXT:    s_waitcnt lgkmcnt(0)
 ; DEFAULT-NEXT:    s_clause 0x1
-; DEFAULT-NEXT:    global_load_b32 v1, v0, s[0:1]
-; DEFAULT-NEXT:    global_load_b32 v2, v0, s[2:3]
+; DEFAULT-NEXT:    global_load_b32 v1, v3, s[0:1]
+; DEFAULT-NEXT:    global_load_b32 v2, v3, s[2:3]
 ; DEFAULT-NEXT:    s_waitcnt vmcnt(1)
-; DEFAULT-NEXT:    global_store_b32 v0, v1, s[4:5]
+; DEFAULT-NEXT:    global_store_b32 v3, v1, s[4:5]
 ; DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; DEFAULT-NEXT:    global_store_b32 v0, v2, s[6:7]
+; DEFAULT-NEXT:    global_store_b32 v3, v2, s[6:7]
 ; DEFAULT-NEXT:    s_endpgm
 ;
 ; LDZERO-LABEL: copy:
@@ -24,15 +24,15 @@ define amdgpu_kernel void @copy(ptr addrspace(1) noalias nocapture readonly %src
 ; LDZERO-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; LDZERO-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; LDZERO-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; LDZERO-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; LDZERO-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; LDZERO-NEXT:    s_waitcnt lgkmcnt(0)
 ; LDZERO-NEXT:    s_clause 0x1
-; LDZERO-NEXT:    global_load_b32 v1, v0, s[0:1]
-; LDZERO-NEXT:    global_load_b32 v2, v0, s[2:3]
+; LDZERO-NEXT:    global_load_b32 v1, v3, s[0:1]
+; LDZERO-NEXT:    global_load_b32 v2, v3, s[2:3]
 ; LDZERO-NEXT:    s_waitcnt vmcnt(0)
 ; LDZERO-NEXT:    s_clause 0x1
-; LDZERO-NEXT:    global_store_b32 v0, v1, s[4:5]
-; LDZERO-NEXT:    global_store_b32 v0, v2, s[6:7]
+; LDZERO-NEXT:    global_store_b32 v3, v1, s[4:5]
+; LDZERO-NEXT:    global_store_b32 v3, v2, s[6:7]
 ; LDZERO-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %idx = zext i32 %id to i64

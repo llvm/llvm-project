@@ -453,17 +453,17 @@ define amdgpu_kernel void @clobber_by_atomic_load(ptr addrspace(1) %arg) {
 ; GCN-LABEL: clobber_by_atomic_load:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:8 glc
+; GCN-NEXT:    global_load_dword v1, v2, s[0:1] offset:8 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
-; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:12
+; GCN-NEXT:    global_load_dword v1, v2, s[0:1] offset:12
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_u32_e32 v1, s2, v1
-; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:16
+; GCN-NEXT:    global_store_dword v2, v1, s[0:1] offset:16
 ; GCN-NEXT:    s_endpgm
 bb:
   %i = load i32, ptr addrspace(1) %arg, align 4

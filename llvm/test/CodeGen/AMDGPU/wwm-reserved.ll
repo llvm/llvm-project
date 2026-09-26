@@ -820,9 +820,9 @@ define amdgpu_cs void @_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i32 %index)
 ;
 ; GFX9-O3-LABEL: _amdgpu_cs_main:
 ; GFX9-O3:       ; %bb.0:
-; GFX9-O3-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
-; GFX9-O3-NEXT:    buffer_load_dwordx4 v[8:11], v0, s[0:3], 0 offen
-; GFX9-O3-NEXT:    buffer_load_dwordx2 v[12:13], v0, s[0:3], 0 offen offset:16
+; GFX9-O3-NEXT:    v_lshlrev_b32_e32 v14, 5, v0
+; GFX9-O3-NEXT:    buffer_load_dwordx4 v[8:11], v14, s[0:3], 0 offen
+; GFX9-O3-NEXT:    buffer_load_dwordx2 v[12:13], v14, s[0:3], 0 offen offset:16
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-O3-NEXT:    v_bfrev_b32_e32 v1, -2
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(1)
@@ -840,8 +840,8 @@ define amdgpu_cs void @_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i32 %index)
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v12, v6
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v13, v7
-; GFX9-O3-NEXT:    buffer_store_dwordx4 v[8:11], v0, s[0:3], 0 offen
-; GFX9-O3-NEXT:    buffer_store_dwordx2 v[12:13], v0, s[0:3], 0 offen offset:16
+; GFX9-O3-NEXT:    buffer_store_dwordx4 v[8:11], v14, s[0:3], 0 offen
+; GFX9-O3-NEXT:    buffer_store_dwordx2 v[12:13], v14, s[0:3], 0 offen offset:16
 ; GFX9-O3-NEXT:    s_endpgm
   %tmp17 = shl i32 %index, 5
   %tmp18 = tail call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %desc, i32 %tmp17, i32 0), !invariant.load !{}
@@ -1683,9 +1683,9 @@ define amdgpu_cs void @strict_wwm_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i
 ;
 ; GFX9-O3-LABEL: strict_wwm_amdgpu_cs_main:
 ; GFX9-O3:       ; %bb.0:
-; GFX9-O3-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
-; GFX9-O3-NEXT:    buffer_load_dwordx4 v[8:11], v0, s[0:3], 0 offen
-; GFX9-O3-NEXT:    buffer_load_dwordx2 v[12:13], v0, s[0:3], 0 offen offset:16
+; GFX9-O3-NEXT:    v_lshlrev_b32_e32 v14, 5, v0
+; GFX9-O3-NEXT:    buffer_load_dwordx4 v[8:11], v14, s[0:3], 0 offen
+; GFX9-O3-NEXT:    buffer_load_dwordx2 v[12:13], v14, s[0:3], 0 offen offset:16
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-O3-NEXT:    v_bfrev_b32_e32 v1, -2
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(1)
@@ -1703,8 +1703,8 @@ define amdgpu_cs void @strict_wwm_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v12, v6
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v13, v7
-; GFX9-O3-NEXT:    buffer_store_dwordx4 v[8:11], v0, s[0:3], 0 offen
-; GFX9-O3-NEXT:    buffer_store_dwordx2 v[12:13], v0, s[0:3], 0 offen offset:16
+; GFX9-O3-NEXT:    buffer_store_dwordx4 v[8:11], v14, s[0:3], 0 offen
+; GFX9-O3-NEXT:    buffer_store_dwordx2 v[12:13], v14, s[0:3], 0 offen offset:16
 ; GFX9-O3-NEXT:    s_endpgm
   %tmp17 = shl i32 %index, 5
   %tmp18 = tail call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %desc, i32 %tmp17, i32 0), !invariant.load !{}

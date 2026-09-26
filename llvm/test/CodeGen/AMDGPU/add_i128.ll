@@ -9,13 +9,13 @@ define amdgpu_kernel void @test_i128_vreg(ptr addrspace(1) noalias %out, ptr add
 ; GCN-NEXT:    s_mov_b32 s11, 0xf000
 ; GCN-NEXT:    s_mov_b32 s14, 0
 ; GCN-NEXT:    s_mov_b32 s15, s11
-; GCN-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; GCN-NEXT:    v_mov_b32_e32 v5, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v8, 4, v0
+; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[14:15]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[12:13], s[2:3]
-; GCN-NEXT:    buffer_load_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64
-; GCN-NEXT:    buffer_load_dwordx4 v[4:7], v[4:5], s[12:15], 0 addr64
+; GCN-NEXT:    buffer_load_dwordx4 v[0:3], v[8:9], s[4:7], 0 addr64
+; GCN-NEXT:    buffer_load_dwordx4 v[4:7], v[8:9], s[12:15], 0 addr64
 ; GCN-NEXT:    s_mov_b32 s10, -1
 ; GCN-NEXT:    s_mov_b32 s8, s0
 ; GCN-NEXT:    s_mov_b32 s9, s1

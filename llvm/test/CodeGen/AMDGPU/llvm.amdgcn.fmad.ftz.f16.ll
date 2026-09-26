@@ -22,13 +22,13 @@ define amdgpu_kernel void @mad_f16(
 ;
 ; GFX9-SDAG-LABEL: mad_f16:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v4, 0
 ; GFX9-SDAG:    v_mac_f16_e32 v3, v1, v2
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s0, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s1, v2
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v3
@@ -63,13 +63,13 @@ define amdgpu_kernel void @mad_f16_imm_a(
 ;
 ; GFX9-SDAG-LABEL: mad_f16_imm_a:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v3, 0
 ; GFX9-SDAG:    v_madmk_f16 v1, v1, 0x4800, v2
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16_imm_a:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v3, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s3, v2
 ; GFX9-GISEL:    v_mov_b32_e32 v1, 0x4800
@@ -100,13 +100,13 @@ define amdgpu_kernel void @mad_f16_imm_b(
 ;
 ; GFX9-SDAG-LABEL: mad_f16_imm_b:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v3, 0
 ; GFX9-SDAG:    v_madmk_f16 v1, v1, 0x4800, v2
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16_imm_b:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v3, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s3, v2
 ; GFX9-GISEL:    v_mov_b32_e32 v1, 0x4800
@@ -137,13 +137,13 @@ define amdgpu_kernel void @mad_f16_imm_c(
 ;
 ; GFX9-SDAG-LABEL: mad_f16_imm_c:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v3, 0
 ; GFX9-SDAG:    v_madak_f16 v1, v1, v2, 0x4800
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16_imm_c:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v3, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s3, v2
 ; GFX9-GISEL:    v_mov_b32_e32 v1, s3
@@ -176,13 +176,13 @@ define amdgpu_kernel void @mad_f16_neg_b(
 ;
 ; GFX9-SDAG-LABEL: mad_f16_neg_b:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v4, 0
 ; GFX9-SDAG:    v_mad_legacy_f16 v1, v1, -v2, v3
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16_neg_b:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s0, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s1, v2
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v3
@@ -219,13 +219,13 @@ define amdgpu_kernel void @mad_f16_abs_b(
 ;
 ; GFX9-SDAG-LABEL: mad_f16_abs_b:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v4, 0
 ; GFX9-SDAG:    v_mad_legacy_f16 v1, v1, |v2|, v3
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16_abs_b:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s0, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s1, v2
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v3
@@ -262,13 +262,13 @@ define amdgpu_kernel void @mad_f16_neg_abs_b(
 ;
 ; GFX9-SDAG-LABEL: mad_f16_neg_abs_b:
 ; GFX9-SDAG:  ; %bb.0:
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v4, 0
 ; GFX9-SDAG:    v_mad_legacy_f16 v1, v1, -|v2|, v3
 ; GFX9-SDAG:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: mad_f16_neg_abs_b:
 ; GFX9-GISEL:  ; %bb.0:
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL:    v_readfirstlane_b32 s0, v1
 ; GFX9-GISEL:    v_readfirstlane_b32 s1, v2
 ; GFX9-GISEL:    v_readfirstlane_b32 s2, v3

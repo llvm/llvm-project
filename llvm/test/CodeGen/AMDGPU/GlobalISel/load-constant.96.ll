@@ -985,19 +985,19 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg 
 ;
 ; GFX9-NOUNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX9-NOUNALIGNED:       ; %bb.0:
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v1, v0, s[0:1]
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:1
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v3, v0, s[0:1] offset:2
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v4, v0, s[0:1] offset:3
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v5, v0, s[0:1] offset:4
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v6, v0, s[0:1] offset:5
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v7, v0, s[0:1] offset:6
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v8, v0, s[0:1] offset:7
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v9, v0, s[0:1] offset:8
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v10, v0, s[0:1] offset:9
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v11, v0, s[0:1] offset:10
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v12, v0, s[0:1] offset:11
+; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v13, 0
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v1, v13, s[0:1]
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v2, v13, s[0:1] offset:1
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v3, v13, s[0:1] offset:2
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v4, v13, s[0:1] offset:3
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v5, v13, s[0:1] offset:4
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v6, v13, s[0:1] offset:5
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v7, v13, s[0:1] offset:6
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v8, v13, s[0:1] offset:7
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v9, v13, s[0:1] offset:8
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v10, v13, s[0:1] offset:9
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v11, v13, s[0:1] offset:10
+; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v12, v13, s[0:1] offset:11
 ; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(11)
 ; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(10)
@@ -1253,13 +1253,13 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg 
 ;
 ; GFX9-NOUNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX9-NOUNALIGNED:       ; %bb.0:
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v1, v0, s[0:1]
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v2, v0, s[0:1] offset:2
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v3, v0, s[0:1] offset:4
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v4, v0, s[0:1] offset:6
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v5, v0, s[0:1] offset:8
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v6, v0, s[0:1] offset:10
+; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v7, 0
+; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v1, v7, s[0:1]
+; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v2, v7, s[0:1] offset:2
+; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v3, v7, s[0:1] offset:4
+; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v4, v7, s[0:1] offset:6
+; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v5, v7, s[0:1] offset:8
+; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v6, v7, s[0:1] offset:10
 ; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(5)
 ; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(4)

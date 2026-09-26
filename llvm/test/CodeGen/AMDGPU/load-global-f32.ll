@@ -341,13 +341,13 @@ define amdgpu_kernel void @global_load_v9f32(ptr addrspace(1) %out, ptr addrspac
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-HSA-NEXT:    s_add_u32 s2, s2, 32
 ; GCN-HSA-NEXT:    s_addc_u32 s3, s3, 0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s4
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v7, s3
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v6, s2
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s4
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GCN-HSA-NEXT:    flat_load_dword v14, v[6:7]
-; GCN-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GCN-HSA-NEXT:    flat_load_dwordx4 v[16:19], v[4:5]
 ; GCN-HSA-NEXT:    s_add_u32 s2, s0, 32
 ; GCN-HSA-NEXT:    s_addc_u32 s3, s1, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s1
@@ -363,7 +363,7 @@ define amdgpu_kernel void @global_load_v9f32(ptr addrspace(1) %out, ptr addrspac
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
 ; GCN-HSA-NEXT:    flat_store_dword v[10:11], v14
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    flat_store_dwordx4 v[12:13], v[4:7]
+; GCN-HSA-NEXT:    flat_store_dwordx4 v[12:13], v[16:19]
 ; GCN-HSA-NEXT:    s_endpgm
 ;
 ; GCNX3-NOHSA-LABEL: global_load_v9f32:
@@ -496,7 +496,7 @@ define amdgpu_kernel void @global_load_v11f32(ptr addrspace(1) %out, ptr addrspa
 ; SI-NOHSA-NEXT:    s_mov_b32 s8, s2
 ; SI-NOHSA-NEXT:    s_mov_b32 s9, s3
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 offset:32
-; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[3:6], off, s[8:11], 0
+; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[11:14], off, s[8:11], 0
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[7:10], off, s[8:11], 0 offset:16
 ; SI-NOHSA-NEXT:    s_mov_b32 s4, s0
 ; SI-NOHSA-NEXT:    s_mov_b32 s5, s1
@@ -504,7 +504,7 @@ define amdgpu_kernel void @global_load_v11f32(ptr addrspace(1) %out, ptr addrspa
 ; SI-NOHSA-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:40
 ; SI-NOHSA-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0 offset:32
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(3)
-; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[3:6], off, s[4:7], 0
+; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[11:14], off, s[4:7], 0
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NOHSA-NEXT:    buffer_store_dwordx4 v[7:10], off, s[4:7], 0 offset:16
 ; SI-NOHSA-NEXT:    s_endpgm

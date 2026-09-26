@@ -71,11 +71,11 @@ define amdgpu_ps <8 x float> @load_constant32bit_vgpr_v8f32(ptr addrspace(6) %ar
 ; GFX8-LABEL: load_constant32bit_vgpr_v8f32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v0
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 16, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0
+; GFX8-NEXT:    v_addc_u32_e64 v9, s[0:1], 0, 0, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 16, v4
-; GFX8-NEXT:    v_addc_u32_e64 v5, s[0:1], 0, 0, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;

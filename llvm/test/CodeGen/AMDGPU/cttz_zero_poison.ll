@@ -725,10 +725,10 @@ define amdgpu_kernel void @v_cttz_zero_poison_i16_with_select(ptr addrspace(1) n
 ; GFX9-GISEL-LABEL: v_cttz_zero_poison_i16_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v3, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v3, s[2:3] offset:1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -739,7 +739,7 @@ define amdgpu_kernel void @v_cttz_zero_poison_i16_with_select(ptr addrspace(1) n
 ; GFX9-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s3, 32
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_short v3, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %arrayidx, align 1
   %cttz = tail call i16 @llvm.cttz.i16(i16 %val, i1 true) nounwind readnone
@@ -844,12 +844,12 @@ define amdgpu_kernel void @v_cttz_zero_poison_i32_with_select(ptr addrspace(1) n
 ; GFX9-GISEL-LABEL: v_cttz_zero_poison_i32_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v5, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v5, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v5, s[2:3] offset:2
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v5, s[2:3] offset:3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
@@ -867,7 +867,7 @@ define amdgpu_kernel void @v_cttz_zero_poison_i32_with_select(ptr addrspace(1) n
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s2, s2
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s2, 32
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_dword v5, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %arrayidx, align 1
   %cttz = tail call i32 @llvm.cttz.i32(i32 %val, i1 true) nounwind readnone
@@ -1033,16 +1033,16 @@ define amdgpu_kernel void @v_cttz_zero_poison_i64_with_select(ptr addrspace(1) n
 ; GFX9-GISEL-LABEL: v_cttz_zero_poison_i64_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v0, v2, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v2, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v2, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v2, s[2:3] offset:3
-; GFX9-GISEL-NEXT:    global_load_ubyte v5, v2, s[2:3] offset:4
-; GFX9-GISEL-NEXT:    global_load_ubyte v6, v2, s[2:3] offset:5
-; GFX9-GISEL-NEXT:    global_load_ubyte v7, v2, s[2:3] offset:6
-; GFX9-GISEL-NEXT:    global_load_ubyte v8, v2, s[2:3] offset:7
+; GFX9-GISEL-NEXT:    global_load_ubyte v0, v9, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v9, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v9, s[2:3] offset:2
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v9, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v5, v9, s[2:3] offset:4
+; GFX9-GISEL-NEXT:    global_load_ubyte v6, v9, s[2:3] offset:5
+; GFX9-GISEL-NEXT:    global_load_ubyte v7, v9, s[2:3] offset:6
+; GFX9-GISEL-NEXT:    global_load_ubyte v8, v9, s[2:3] offset:7
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
@@ -1077,7 +1077,7 @@ define amdgpu_kernel void @v_cttz_zero_poison_i64_with_select(ptr addrspace(1) n
 ; GFX9-GISEL-NEXT:    s_cselect_b64 s[2:3], s[2:3], 64
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX9-GISEL-NEXT:    global_store_dwordx2 v9, v[0:1], s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i64, ptr addrspace(1) %arrayidx, align 1
   %cttz = tail call i64 @llvm.cttz.i64(i64 %val, i1 true) nounwind readnone
@@ -1182,12 +1182,12 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(ptr addrspace(1) noalias %out,
 ; GFX9-GISEL-LABEL: v_cttz_i32_sel_eq_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v5, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v5, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v5, s[2:3] offset:2
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v5, s[2:3] offset:3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
@@ -1207,7 +1207,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(ptr addrspace(1) noalias %out,
 ; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, -1, s3
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_dword v5, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %arrayidx, align 1
   %ctlz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
@@ -1312,12 +1312,12 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(ptr addrspace(1) noalias %out,
 ; GFX9-GISEL-LABEL: v_cttz_i32_sel_ne_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v5, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v5, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v5, s[2:3] offset:2
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v5, s[2:3] offset:3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
@@ -1337,7 +1337,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(ptr addrspace(1) noalias %out,
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s3, -1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_dword v5, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %arrayidx, align 1
   %ctlz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
@@ -1450,12 +1450,12 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-LABEL: v_cttz_i32_sel_ne_bitwidth:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v5, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v5, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v5, s[2:3] offset:2
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v5, s[2:3] offset:3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
@@ -1475,7 +1475,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s2, 32
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s2, -1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_dword v5, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %arrayidx, align 1
   %ctlz = call i32 @llvm.cttz.i32(i32 %val, i1 false) nounwind readnone
@@ -1643,10 +1643,10 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-LABEL: v_cttz_i16_sel_eq_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v1, v3, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v3, s[2:3] offset:1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1659,7 +1659,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, 0xffff, s3
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_short v3, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %arrayidx, align 1
   %ctlz = call i16 @llvm.cttz.i16(i16 %val, i1 false) nounwind readnone

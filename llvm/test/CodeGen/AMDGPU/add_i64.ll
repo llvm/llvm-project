@@ -9,13 +9,13 @@ define amdgpu_kernel void @test_i64_vreg(ptr addrspace(1) noalias %out, ptr addr
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s14, 0
 ; SI-NEXT:    s_mov_b32 s15, s11
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; SI-NEXT:    v_mov_b32_e32 v5, 0
 ; SI-NEXT:    s_mov_b64 s[6:7], s[14:15]
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[12:13], s[2:3]
-; SI-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[12:15], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], v[4:5], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[4:5], s[12:15], 0 addr64
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s8, s0
 ; SI-NEXT:    s_mov_b32 s9, s1
@@ -112,13 +112,13 @@ define amdgpu_kernel void @test_v2i64_vreg(ptr addrspace(1) noalias %out, ptr ad
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s14, 0
 ; SI-NEXT:    s_mov_b32 s15, s11
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; SI-NEXT:    v_mov_b32_e32 v5, 0
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 4, v0
+; SI-NEXT:    v_mov_b32_e32 v9, 0
 ; SI-NEXT:    s_mov_b64 s[6:7], s[14:15]
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[12:13], s[2:3]
-; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64
-; SI-NEXT:    buffer_load_dwordx4 v[4:7], v[4:5], s[12:15], 0 addr64
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[8:9], s[4:7], 0 addr64
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], v[8:9], s[12:15], 0 addr64
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s8, s0
 ; SI-NEXT:    s_mov_b32 s9, s1

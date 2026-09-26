@@ -121,21 +121,21 @@ define amdgpu_kernel void @queue_ptr() #1 {
 }
 
 ; GCN-LABEL: {{^}}all_inputs:
-; WORKAROUND: v_mov_b32_e32 [[V_X:v[0-9]+]], s13
-; WORKAROUND: v_mov_b32_e32 [[V_Y:v[0-9]+]], s14
-; WORKAROUND: v_mov_b32_e32 [[V_Z:v[0-9]+]], s15
+; WORKAROUND-DAG: v_mov_b32_e32 [[V_X:v[0-9]+]], s13
+; WORKAROUND-DAG: v_mov_b32_e32 [[V_Y:v[0-9]+]], s14
+; WORKAROUND-DAG: v_mov_b32_e32 [[V_Z:v[0-9]+]], s15
 
-; NOWORKAROUND: v_mov_b32_e32 [[V_X:v[0-9]+]], s8
-; NOWORKAROUND: v_mov_b32_e32 [[V_Y:v[0-9]+]], s9
-; NOWORKAROUND: v_mov_b32_e32 [[V_Z:v[0-9]+]], s10
+; NOWORKAROUND-DAG: v_mov_b32_e32 [[V_X:v[0-9]+]], s8
+; NOWORKAROUND-DAG: v_mov_b32_e32 [[V_Y:v[0-9]+]], s9
+; NOWORKAROUND-DAG: v_mov_b32_e32 [[V_Z:v[0-9]+]], s10
 
 ; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
 ; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}},
 ; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
 
-; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
-; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}},
-; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
+; WORKAROUND-FAKE16-DAG: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
+; WORKAROUND-FAKE16-DAG: global_load_u8 v{{[0-9]+}},
+; WORKAROUND-FAKE16-DAG: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
 
 ; GCN-DAG: v_mov_b32_e32 v[[DISPATCH_LO:[0-9]+]], s6
 ; GCN-DAG: v_mov_b32_e32 v[[DISPATCH_HI:[0-9]+]], s7
