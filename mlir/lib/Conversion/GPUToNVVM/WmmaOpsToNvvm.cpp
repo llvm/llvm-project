@@ -345,25 +345,56 @@ static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
   return LLVM::SelectOp::create(builder, loc, isNan, nan, sel);
 }
 
+/// Returns true if `op` can be applied register by register to a WMMA
+/// fragment. The PTX ISA leaves the result of converting between f16 and f32
+/// accumulator fragments undefined, so there is nothing to lower EXTF and
+/// TRUNCF to.
+static bool isSupportedElementwiseOp(gpu::MMAElementwiseOp op) {
+  return op != gpu::MMAElementwiseOp::EXTF &&
+         op != gpu::MMAElementwiseOp::TRUNCF;
+}
+
 static Value createScalarOp(OpBuilder &builder, Location loc,
                             gpu::MMAElementwiseOp op,
                             ArrayRef<Value> operands) {
+  Type type = operands[0].getType();
   switch (op) {
   case gpu::MMAElementwiseOp::ADDF:
-    return LLVM::FAddOp::create(builder, loc, operands[0].getType(), operands);
+    return LLVM::FAddOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::SUBF:
+    return LLVM::FSubOp::create(builder, loc, type, operands);
   case gpu::MMAElementwiseOp::MULF:
-    return LLVM::FMulOp::create(builder, loc, operands[0].getType(), operands);
+    return LLVM::FMulOp::create(builder, loc, type, operands);
   case gpu::MMAElementwiseOp::DIVF:
-    return LLVM::FDivOp::create(builder, loc, operands[0].getType(), operands);
+    return LLVM::FDivOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::NEGATEF:
+    return LLVM::FNegOp::create(builder, loc, type, operands);
   case gpu::MMAElementwiseOp::MAXF:
     return createMinMaxF(builder, loc, operands[0], operands[1],
                          /*isMin=*/false);
   case gpu::MMAElementwiseOp::MINF:
     return createMinMaxF(builder, loc, operands[0], operands[1],
                          /*isMin=*/true);
-  default:
-    llvm_unreachable("unknown op");
+  case gpu::MMAElementwiseOp::ADDI:
+    return LLVM::AddOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::SUBI:
+    return LLVM::SubOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::MULI:
+    return LLVM::MulOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::DIVS:
+    return LLVM::SDivOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::DIVU:
+    return LLVM::UDivOp::create(builder, loc, type, operands);
+  case gpu::MMAElementwiseOp::NEGATES: {
+    Value zero =
+        LLVM::ConstantOp::create(builder, loc, type, builder.getZeroAttr(type));
+    return LLVM::SubOp::create(builder, loc, zero, operands[0]);
   }
+  case gpu::MMAElementwiseOp::EXTF:
+  case gpu::MMAElementwiseOp::TRUNCF:
+    break;
+  }
+  llvm_unreachable("rejected by isSupportedElementwiseOp");
 }
 
 /// Convert GPU MMA elementwise ops to extract + op + insert.
@@ -381,19 +412,32 @@ struct WmmaElementwiseOpToNVVMLowering
       return failure();
     Location loc = subgroupMmaElementwiseOp.getLoc();
     size_t numOperands = adaptor.getOperands().size();
-    Type destType = convertMMAToLLVMType(
-        cast<gpu::MMAMatrixType>(subgroupMmaElementwiseOp.getType()));
+    gpu::MMAElementwiseOp opType = subgroupMmaElementwiseOp.getOpType();
+    if (!isSupportedElementwiseOp(opType))
+      return rewriter.notifyMatchFailure(
+          subgroupMmaElementwiseOp,
+          "no NVVM lowering for this elementwise op on WMMA fragments");
+    gpu::MMAMatrixType matrixType = subgroupMmaElementwiseOp.getType();
+    Type destType = convertMMAToLLVMType(matrixType);
 
     // If the element is not a struct, it means it's a scalar f64.
     LLVM::LLVMStructType structDestTy =
         dyn_cast<LLVM::LLVMStructType>(destType);
+
+    // The op is applied to each fragment register, which only computes the
+    // right thing when a register holds elements of the matrix element type.
+    // s8, u8 and tf32 fragments pack their elements into i32 registers.
+    Type registerType = structDestTy ? structDestTy.getBody()[0] : destType;
+    if (getElementTypeOrSelf(registerType) != matrixType.getElementType())
+      return rewriter.notifyMatchFailure(
+          subgroupMmaElementwiseOp,
+          "fragment registers do not hold the matrix element type");
     if (!structDestTy) {
       SmallVector<Value> operands;
       for (auto operand : adaptor.getOperands()) {
         operands.push_back(operand);
       }
-      Value element = createScalarOp(
-          rewriter, loc, subgroupMmaElementwiseOp.getOpType(), operands);
+      Value element = createScalarOp(rewriter, loc, opType, operands);
       rewriter.replaceOp(subgroupMmaElementwiseOp, element);
       return success();
     }
@@ -404,9 +448,7 @@ struct WmmaElementwiseOpToNVVMLowering
         extractedOperands.push_back(LLVM::ExtractValueOp::create(
             rewriter, loc, adaptor.getOperands()[opIdx], i));
       }
-      Value element =
-          createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.getOpType(),
-                         extractedOperands);
+      Value element = createScalarOp(rewriter, loc, opType, extractedOperands);
       matrixStruct =
           LLVM::InsertValueOp::create(rewriter, loc, matrixStruct, element, i);
     }
