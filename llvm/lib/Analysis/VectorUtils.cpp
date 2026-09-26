@@ -1328,7 +1328,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
 
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
                                               getLoadStoreAlignment(&I));
     }
