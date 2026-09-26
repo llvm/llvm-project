@@ -151,5 +151,6 @@ template <typename A> A Clone(const A &x) { return x; }
 template <typename A, typename... B>
 using IfNoLvalue = std::enable_if_t<(... && !std::is_lvalue_reference_v<B>), A>;
 template <typename... RVREF> using NoLvalue = IfNoLvalue<void, RVREF...>;
+
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_IDIOMS_H_
