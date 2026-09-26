@@ -219,6 +219,11 @@ StringRef getZAStateString(ZAState State) {
 #undef MAKE_CASE
 }
 
+/// Returns true if \p State could requires ZA to be on.
+static bool isRequiresZAOn(ZAState State) {
+  return State == ZAState::ACTIVE || State == ZAState::ACTIVE_ZT0_SAVED;
+}
+
 static bool isZAorZTRegOp(const TargetRegisterInfo &TRI,
                           const MachineOperand &MO) {
   if (!MO.isReg() || !MO.getReg().isPhysical())
@@ -297,6 +302,9 @@ struct MachineSMEABI : public MachineFunctionPass {
   /// Collects the needed ZA state (and live registers) before each instruction
   /// within the machine function.
   FunctionInfo collectNeededZAStates(SMEAttrs SMEFnAttrs);
+
+  /// Simple peephole optimizations to remove redundant saves and restores.
+  void peepholeOptimizeStateChanges(FunctionInfo &FnInfo);
 
   /// Assigns each edge bundle a ZA state based on the desired states of
   /// incoming and outgoing blocks in the bundle.
@@ -516,6 +524,43 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 
   return FunctionInfo{std::move(Blocks), AfterSMEProloguePt,
                       PhysLiveRegsAfterSMEPrologue};
+}
+
+void MachineSMEABI::peepholeOptimizeStateChanges(FunctionInfo &FnInfo) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return;
+
+  for (BlockInfo &Block : FnInfo.Blocks) {
+    if (Block.Insts.size() <= 1 ||
+        Block.Insts.back().NeededState != ZAState::OFF)
+      continue;
+
+    unsigned DeadTransitions = 0;
+    for (unsigned I = Block.Insts.size() - 1; I >= 1; --I) {
+      assert(Block.Insts[I].NeededState == ZAState::OFF);
+      InstInfo &PreviousInst = Block.Insts[I - 1];
+
+      if (!isRequiresZAOn(PreviousInst.NeededState)) {
+        // If the previous state requires a save and the current state is OFF,
+        // set the previous state to OFF to avoid a redundant save.
+        PreviousInst.NeededState = ZAState::OFF;
+        ++DeadTransitions;
+      } else if (PreviousInst.NeededState == ZAState::ACTIVE_ZT0_SAVED &&
+                 ((I >= 2 &&
+                   Block.Insts[I - 2].NeededState == ZAState::ACTIVE) ||
+                  (I == 1 && Block.FixedEntryState == ZAState::ENTRY))) {
+        // If the previous state is ZT0 saved, the current state is OFF, and the
+        // state before that is ACTIVE. Then set the previous state to ACTIVE to
+        // avoid a redundant ZT0 save.
+        PreviousInst.NeededState = ZAState::ACTIVE;
+      }
+
+      if (PreviousInst.NeededState != ZAState::OFF)
+        break; // No more folds possible.
+    }
+    Block.DesiredIncomingState = Block.Insts.front().NeededState;
+    Block.Insts.pop_back_n(DeadTransitions);
+  }
 }
 
 /// Assigns each edge bundle a ZA state based on the desired states of incoming
@@ -1174,8 +1219,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
 static bool canElidePrivateZASetup(const FunctionInfo &FnInfo) {
   for (const BlockInfo &BlockInfo : FnInfo.Blocks) {
     for (const InstInfo &InstInfo : BlockInfo.Insts) {
-      if (InstInfo.NeededState == ZAState::ACTIVE ||
-          InstInfo.NeededState == ZAState::ACTIVE_ZT0_SAVED)
+      if (isRequiresZAOn(InstInfo.NeededState))
         return false;
     }
   }
@@ -1213,8 +1257,13 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
 
-  if (SMEFnAttrs.hasPrivateZAInterface() && canElidePrivateZASetup(FnInfo))
-    return false;
+  if (SMEFnAttrs.hasPrivateZAInterface()) {
+    if (canElidePrivateZASetup(FnInfo))
+      return false;
+
+    // If we couldn't elide ZA setup, try to push ZAState::OFF earlier.
+    peepholeOptimizeStateChanges(FnInfo);
+  }
 
   SmallVector<ZAState> BundleStates = assignBundleZAStates(Bundles, FnInfo);
 
