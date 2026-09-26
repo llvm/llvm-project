@@ -19,6 +19,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
@@ -2889,9 +2890,19 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    // TODO: Mark intrinsic functions that are SIMPLE per F2023
-    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */) {
       attrs.set(characteristics::Procedure::Attr::Pure);
+      // F2023 16.1: standard intrinsic functions are SIMPLE. Extensions that
+      // are not SIMPLE: they have side effects, or their result varies with
+      // external state. See docs/Extensions.md.
+      static const llvm::StringSet<> notSimpleExtensionFunctions{"chdir",
+          "dsecnds", "etime", "fseek", "ftell", "getcwd", "getgid", "getpid",
+          "getuid", "hostnm", "irand", "malloc", "putenv", "rand", "rename",
+          "rtc", "secnds", "second", "system", "time", "timef", "unlink"};
+      if (!notSimpleExtensionFunctions.contains(name)) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+      }
+    }
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{
@@ -3202,6 +3213,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);
   attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Simple);
   arguments.clear();
   return SpecificCall{
       SpecificIntrinsic{"null"s,
@@ -4411,7 +4423,9 @@ IntrinsicProcTable::Implementation::IsSpecificIntrinsicFunction(
           std::string{specific.dummy[j].keyword}, std::move(dummy));
     }
     characteristics::Procedure::Attrs attrs;
-    attrs.set(characteristics::Procedure::Attr::Pure)
+    // F2023 16.1: specific intrinsic functions are SIMPLE
+    attrs.set(characteristics::Procedure::Attr::Simple)
+        .set(characteristics::Procedure::Attr::Pure)
         .set(characteristics::Procedure::Attr::Elemental);
     characteristics::Procedure chars{
         std::move(fResult), std::move(args), attrs};
