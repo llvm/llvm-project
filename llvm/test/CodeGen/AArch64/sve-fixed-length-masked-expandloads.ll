@@ -2387,7 +2387,6 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ubfiz w16, w4, #13, #1
 ; VBITS_GE_256-NEXT:    orr w13, w15, w13
 ; VBITS_GE_256-NEXT:    umov w9, v0.b[6]
-; VBITS_GE_256-NEXT:    mov z19.b, z0.b[17]
 ; VBITS_GE_256-NEXT:    mov z23.b, z0.b[21]
 ; VBITS_GE_256-NEXT:    ubfiz w12, w5, #14, #1
 ; VBITS_GE_256-NEXT:    bfi w8, w11, #4, #1
@@ -2396,52 +2395,53 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    orr w13, w13, w1
 ; VBITS_GE_256-NEXT:    mov z3.b, z0.b[22]
 ; VBITS_GE_256-NEXT:    ubfiz w17, w6, #15, #1
-; VBITS_GE_256-NEXT:    ubfiz w18, w22, #20, #1
+; VBITS_GE_256-NEXT:    ubfiz w1, w22, #20, #1
 ; VBITS_GE_256-NEXT:    orr w13, w13, w16
+; VBITS_GE_256-NEXT:    mov z19.b, z0.b[17]
 ; VBITS_GE_256-NEXT:    mov z4.b, z0.b[23]
-; VBITS_GE_256-NEXT:    ubfiz w3, w7, #16, #1
+; VBITS_GE_256-NEXT:    ubfiz w18, w7, #16, #1
 ; VBITS_GE_256-NEXT:    bfi w8, w10, #5, #1
 ; VBITS_GE_256-NEXT:    orr w11, w11, w15
 ; VBITS_GE_256-NEXT:    orr w12, w13, w12
 ; VBITS_GE_256-NEXT:    mov z5.b, z0.b[24]
-; VBITS_GE_256-NEXT:    fmov w19, s19
 ; VBITS_GE_256-NEXT:    fmov w14, s23
-; VBITS_GE_256-NEXT:    orr w18, w11, w18
+; VBITS_GE_256-NEXT:    orr w4, w11, w1
 ; VBITS_GE_256-NEXT:    orr w11, w12, w17
 ; VBITS_GE_256-NEXT:    bfi w8, w9, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w11, w3
+; VBITS_GE_256-NEXT:    orr w9, w11, w18
 ; VBITS_GE_256-NEXT:    fmov w11, s3
+; VBITS_GE_256-NEXT:    fmov w19, s19
 ; VBITS_GE_256-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_256-NEXT:    fmov w24, s4
-; VBITS_GE_256-NEXT:    ubfiz w10, w19, #17, #1
+; VBITS_GE_256-NEXT:    fmov w26, s4
 ; VBITS_GE_256-NEXT:    ubfiz w6, w14, #21, #1
-; VBITS_GE_256-NEXT:    fmov w19, s5
+; VBITS_GE_256-NEXT:    fmov w22, s5
 ; VBITS_GE_256-NEXT:    mov z6.b, z0.b[25]
-; VBITS_GE_256-NEXT:    ubfiz w7, w11, #22, #1
 ; VBITS_GE_256-NEXT:    mov z7.b, z0.b[26]
-; VBITS_GE_256-NEXT:    mov z16.b, z0.b[27]
-; VBITS_GE_256-NEXT:    umov w20, v1.b[1]
+; VBITS_GE_256-NEXT:    ubfiz w7, w11, #22, #1
+; VBITS_GE_256-NEXT:    ubfiz w10, w19, #17, #1
+; VBITS_GE_256-NEXT:    orr w4, w4, w6
+; VBITS_GE_256-NEXT:    umov w19, v1.b[1]
 ; VBITS_GE_256-NEXT:    fmov w30, s1
-; VBITS_GE_256-NEXT:    orr w18, w18, w6
-; VBITS_GE_256-NEXT:    ubfiz w24, w24, #23, #1
-; VBITS_GE_256-NEXT:    orr w18, w18, w7
-; VBITS_GE_256-NEXT:    ubfiz w19, w19, #24, #1
-; VBITS_GE_256-NEXT:    umov w21, v1.b[2]
+; VBITS_GE_256-NEXT:    ubfiz w26, w26, #23, #1
+; VBITS_GE_256-NEXT:    orr w4, w4, w7
+; VBITS_GE_256-NEXT:    ubfiz w22, w22, #24, #1
+; VBITS_GE_256-NEXT:    umov w20, v1.b[2]
+; VBITS_GE_256-NEXT:    orr w4, w4, w26
+; VBITS_GE_256-NEXT:    mov z16.b, z0.b[27]
 ; VBITS_GE_256-NEXT:    mov z17.b, z0.b[28]
+; VBITS_GE_256-NEXT:    orr w22, w4, w22
+; VBITS_GE_256-NEXT:    and w4, w30, #0x1
 ; VBITS_GE_256-NEXT:    fmov w5, s6
-; VBITS_GE_256-NEXT:    orr w18, w18, w24
-; VBITS_GE_256-NEXT:    umov w1, v1.b[3]
+; VBITS_GE_256-NEXT:    umov w18, v1.b[3]
+; VBITS_GE_256-NEXT:    bfi w4, w19, #1, #1
 ; VBITS_GE_256-NEXT:    mov z24.b, z0.b[29]
-; VBITS_GE_256-NEXT:    orr w19, w18, w19
-; VBITS_GE_256-NEXT:    and w18, w30, #0x1
 ; VBITS_GE_256-NEXT:    fmov w16, s7
-; VBITS_GE_256-NEXT:    bfi w18, w20, #1, #1
 ; VBITS_GE_256-NEXT:    fmov w15, s16
 ; VBITS_GE_256-NEXT:    umov w17, v1.b[4]
-; VBITS_GE_256-NEXT:    umov w25, v1.b[7]
+; VBITS_GE_256-NEXT:    umov w24, v1.b[7]
 ; VBITS_GE_256-NEXT:    umov w27, v1.b[8]
+; VBITS_GE_256-NEXT:    bfi w4, w20, #2, #1
 ; VBITS_GE_256-NEXT:    fmov w14, s17
-; VBITS_GE_256-NEXT:    bfi w18, w21, #2, #1
 ; VBITS_GE_256-NEXT:    umov w28, v1.b[9]
 ; VBITS_GE_256-NEXT:    ubfiz w5, w5, #25, #1
 ; VBITS_GE_256-NEXT:    fmov w12, s24
@@ -2449,80 +2449,80 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z7.b, z1.b[18]
 ; VBITS_GE_256-NEXT:    mov z16.b, z1.b[19]
 ; VBITS_GE_256-NEXT:    ubfiz w16, w16, #26, #1
-; VBITS_GE_256-NEXT:    bfi w18, w1, #3, #1
+; VBITS_GE_256-NEXT:    bfi w4, w18, #3, #1
 ; VBITS_GE_256-NEXT:    umov w13, v1.b[5]
-; VBITS_GE_256-NEXT:    umov w22, v1.b[11]
+; VBITS_GE_256-NEXT:    umov w21, v1.b[11]
 ; VBITS_GE_256-NEXT:    mov z17.b, z1.b[20]
-; VBITS_GE_256-NEXT:    orr w5, w19, w5
+; VBITS_GE_256-NEXT:    orr w5, w22, w5
 ; VBITS_GE_256-NEXT:    ubfiz w15, w15, #27, #1
-; VBITS_GE_256-NEXT:    umov w26, v1.b[12]
+; VBITS_GE_256-NEXT:    umov w25, v1.b[12]
 ; VBITS_GE_256-NEXT:    mov z18.b, z1.b[21]
 ; VBITS_GE_256-NEXT:    orr w16, w5, w16
 ; VBITS_GE_256-NEXT:    ubfiz w14, w14, #28, #1
-; VBITS_GE_256-NEXT:    bfi w18, w17, #4, #1
-; VBITS_GE_256-NEXT:    ubfiz w17, w25, #7, #1
-; VBITS_GE_256-NEXT:    ubfiz w25, w27, #8, #1
+; VBITS_GE_256-NEXT:    bfi w4, w17, #4, #1
+; VBITS_GE_256-NEXT:    ubfiz w17, w24, #7, #1
+; VBITS_GE_256-NEXT:    ubfiz w24, w27, #8, #1
 ; VBITS_GE_256-NEXT:    umov w23, v1.b[13]
 ; VBITS_GE_256-NEXT:    mov z19.b, z1.b[22]
-; VBITS_GE_256-NEXT:    fmov w24, s7
+; VBITS_GE_256-NEXT:    fmov w26, s7
 ; VBITS_GE_256-NEXT:    fmov w30, s16
 ; VBITS_GE_256-NEXT:    orr w15, w16, w15
 ; VBITS_GE_256-NEXT:    ubfiz w12, w12, #29, #1
 ; VBITS_GE_256-NEXT:    ubfiz w28, w28, #9, #1
 ; VBITS_GE_256-NEXT:    orr w10, w9, w10
 ; VBITS_GE_256-NEXT:    mov z20.b, z1.b[23]
-; VBITS_GE_256-NEXT:    fmov w20, s17
+; VBITS_GE_256-NEXT:    fmov w19, s17
 ; VBITS_GE_256-NEXT:    orr w14, w15, w14
-; VBITS_GE_256-NEXT:    orr w17, w17, w25
+; VBITS_GE_256-NEXT:    orr w17, w17, w24
 ; VBITS_GE_256-NEXT:    ubfiz w29, w29, #10, #1
 ; VBITS_GE_256-NEXT:    mov z21.b, z1.b[24]
-; VBITS_GE_256-NEXT:    fmov w19, s18
+; VBITS_GE_256-NEXT:    fmov w22, s18
 ; VBITS_GE_256-NEXT:    orr w8, w8, w10
 ; VBITS_GE_256-NEXT:    orr w10, w14, w12
 ; VBITS_GE_256-NEXT:    orr w12, w17, w28
-; VBITS_GE_256-NEXT:    bfi w18, w13, #5, #1
-; VBITS_GE_256-NEXT:    ubfiz w13, w22, #11, #1
-; VBITS_GE_256-NEXT:    umov w3, v1.b[14]
+; VBITS_GE_256-NEXT:    bfi w4, w13, #5, #1
+; VBITS_GE_256-NEXT:    ubfiz w13, w21, #11, #1
+; VBITS_GE_256-NEXT:    umov w1, v1.b[14]
 ; VBITS_GE_256-NEXT:    mov z22.b, z1.b[25]
-; VBITS_GE_256-NEXT:    fmov w21, s19
+; VBITS_GE_256-NEXT:    fmov w20, s19
 ; VBITS_GE_256-NEXT:    orr w12, w12, w29
-; VBITS_GE_256-NEXT:    ubfiz w14, w26, #12, #1
-; VBITS_GE_256-NEXT:    ubfiz w17, w24, #18, #1
-; VBITS_GE_256-NEXT:    ubfiz w22, w30, #19, #1
-; VBITS_GE_256-NEXT:    umov w4, v1.b[15]
+; VBITS_GE_256-NEXT:    ubfiz w14, w25, #12, #1
+; VBITS_GE_256-NEXT:    ubfiz w17, w26, #18, #1
+; VBITS_GE_256-NEXT:    ubfiz w21, w30, #19, #1
+; VBITS_GE_256-NEXT:    umov w3, v1.b[15]
 ; VBITS_GE_256-NEXT:    fmov w5, s20
 ; VBITS_GE_256-NEXT:    orr w12, w12, w13
 ; VBITS_GE_256-NEXT:    ubfiz w13, w23, #13, #1
-; VBITS_GE_256-NEXT:    ubfiz w20, w20, #20, #1
+; VBITS_GE_256-NEXT:    ubfiz w19, w19, #20, #1
 ; VBITS_GE_256-NEXT:    mov z23.b, z1.b[26]
 ; VBITS_GE_256-NEXT:    fmov w16, s21
 ; VBITS_GE_256-NEXT:    orr w12, w12, w14
-; VBITS_GE_256-NEXT:    orr w14, w17, w22
-; VBITS_GE_256-NEXT:    ubfiz w17, w19, #21, #1
+; VBITS_GE_256-NEXT:    orr w14, w17, w21
+; VBITS_GE_256-NEXT:    ubfiz w17, w22, #21, #1
 ; VBITS_GE_256-NEXT:    mov z25.b, z0.b[30]
 ; VBITS_GE_256-NEXT:    umov w11, v1.b[6]
 ; VBITS_GE_256-NEXT:    mov z24.b, z1.b[27]
-; VBITS_GE_256-NEXT:    fmov w1, s22
+; VBITS_GE_256-NEXT:    fmov w18, s22
 ; VBITS_GE_256-NEXT:    orr w12, w12, w13
-; VBITS_GE_256-NEXT:    orr w13, w14, w20
-; VBITS_GE_256-NEXT:    ubfiz w14, w21, #22, #1
+; VBITS_GE_256-NEXT:    orr w13, w14, w19
+; VBITS_GE_256-NEXT:    ubfiz w14, w20, #22, #1
 ; VBITS_GE_256-NEXT:    mov z3.b, z1.b[29]
 ; VBITS_GE_256-NEXT:    orr w13, w13, w17
-; VBITS_GE_256-NEXT:    ubfiz w17, w3, #14, #1
-; VBITS_GE_256-NEXT:    ubfiz w3, w5, #23, #1
+; VBITS_GE_256-NEXT:    ubfiz w17, w1, #14, #1
+; VBITS_GE_256-NEXT:    ubfiz w1, w5, #23, #1
 ; VBITS_GE_256-NEXT:    fmov w15, s23
 ; VBITS_GE_256-NEXT:    orr w13, w13, w14
-; VBITS_GE_256-NEXT:    ubfiz w14, w4, #15, #1
+; VBITS_GE_256-NEXT:    ubfiz w14, w3, #15, #1
 ; VBITS_GE_256-NEXT:    ubfiz w16, w16, #24, #1
 ; VBITS_GE_256-NEXT:    fmov w9, s25
 ; VBITS_GE_256-NEXT:    mov z5.b, z1.b[16]
 ; VBITS_GE_256-NEXT:    mov z25.b, z1.b[28]
 ; VBITS_GE_256-NEXT:    fmov w27, s24
 ; VBITS_GE_256-NEXT:    orr w12, w12, w17
-; VBITS_GE_256-NEXT:    orr w13, w13, w3
-; VBITS_GE_256-NEXT:    ubfiz w17, w1, #25, #1
+; VBITS_GE_256-NEXT:    orr w13, w13, w1
+; VBITS_GE_256-NEXT:    ubfiz w17, w18, #25, #1
 ; VBITS_GE_256-NEXT:    mov z6.b, z1.b[17]
-; VBITS_GE_256-NEXT:    bfi w18, w11, #6, #1
+; VBITS_GE_256-NEXT:    bfi w4, w11, #6, #1
 ; VBITS_GE_256-NEXT:    orr w11, w12, w14
 ; VBITS_GE_256-NEXT:    orr w12, w13, w16
 ; VBITS_GE_256-NEXT:    mov z4.b, z1.b[30]
@@ -2530,7 +2530,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ubfiz w13, w15, #26, #1
 ; VBITS_GE_256-NEXT:    fmov w17, s3
 ; VBITS_GE_256-NEXT:    fmov w6, s5
-; VBITS_GE_256-NEXT:    fmov w25, s25
+; VBITS_GE_256-NEXT:    fmov w24, s25
 ; VBITS_GE_256-NEXT:    ubfiz w16, w27, #27, #1
 ; VBITS_GE_256-NEXT:    fmov w7, s6
 ; VBITS_GE_256-NEXT:    orr w12, w12, w13
@@ -2541,7 +2541,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ubfiz w16, w17, #29, #1
 ; VBITS_GE_256-NEXT:    fmov w17, s4
 ; VBITS_GE_256-NEXT:    ubfiz w14, w6, #16, #1
-; VBITS_GE_256-NEXT:    ubfiz w13, w25, #28, #1
+; VBITS_GE_256-NEXT:    ubfiz w13, w24, #28, #1
 ; VBITS_GE_256-NEXT:    ubfiz w15, w7, #17, #1
 ; VBITS_GE_256-NEXT:    orr w9, w10, w9
 ; VBITS_GE_256-NEXT:    ptrue p1.b
@@ -2551,7 +2551,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    orr w10, w11, w15
 ; VBITS_GE_256-NEXT:    orr w11, w12, w16
 ; VBITS_GE_256-NEXT:    orr w8, w8, w9
-; VBITS_GE_256-NEXT:    orr w9, w18, w10
+; VBITS_GE_256-NEXT:    orr w9, w4, w10
 ; VBITS_GE_256-NEXT:    orr w10, w11, w13
 ; VBITS_GE_256-NEXT:    fmov w11, s0
 ; VBITS_GE_256-NEXT:    orr w9, w9, w10

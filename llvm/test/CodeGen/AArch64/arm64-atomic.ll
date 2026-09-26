@@ -23,18 +23,17 @@ define i32 @val_compare_and_swap(ptr %p, i32 %cmp, i32 %new) #0 {
 define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) #0 {
 ; OUTLINE-ATOMICS: bl __aarch64_cas4_acq
 ; CHECK-LABEL: val_compare_and_swap_from_load:
+; CHECK-NEXT: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK-NEXT: ldr    [[NEW:w[0-9]+]], [x2]
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
-; CHECK-NEXT: ldaxr  w[[RESULT:[0-9]+]], [x0]
+; CHECK-NEXT: ldaxr  w[[RESULT:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NEXT: cmp    w[[RESULT]], w1
 ; CHECK-NEXT: b.ne   [[FAILBB:.?LBB[0-9_]+]]
-; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], [[NEW]], [x0]
+; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], [[NEW]], [x[[ADDR]]]
 ; CHECK-NEXT: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-; CHECK-NEXT: mov    x0, x[[RESULT]]
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: [[FAILBB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: mov    x0, x[[RESULT]]
 ; CHECK-NEXT: ret
   %new = load i32, ptr %pnew
   %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acquire acquire

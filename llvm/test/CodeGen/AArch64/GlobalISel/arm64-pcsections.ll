@@ -8,32 +8,34 @@ define i32 @val_compare_and_swap(ptr %p, i32 %cmp, i32 %new) {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x8 = ORRXrs $xzr, $x0, 0
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cmpxchg.start:
   ; CHECK-NEXT:   successors: %bb.2(0x7ffff800), %bb.3(0x00000800)
-  ; CHECK-NEXT:   liveins: $w1, $w2, $x0
+  ; CHECK-NEXT:   liveins: $w1, $w2, $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $w8 = LDAXRW renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i32) from %ir.p)
-  ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w1, 0, implicit-def $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w0 = LDAXRW renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (i32) from %ir.p)
+  ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w0, renamable $w1, 0, implicit-def $nzcv, pcsections !0
   ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0, $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber renamable $w9 = STXRW renamable $w2, renamable $x0, pcsections !0 :: (volatile store (i32) into %ir.p)
+  ; CHECK-NEXT:   early-clobber renamable $w9 = STXRW renamable $w2, renamable $x8, pcsections !0 :: (volatile store (i32) into %ir.p)
   ; CHECK-NEXT:   CBNZW killed renamable $w9, %bb.1
   ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.cmpxchg.nostore:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CLREX 15, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.cmpxchg.end:
-  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $w0 = ORRWrs $wzr, $w8, 0, implicit killed $x8
+  ; CHECK-NEXT:   $w0 = KILL renamable $w0, implicit killed $x0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acquire acquire, !pcsections !0
   %val = extractvalue { i32, i1 } %pair, 0
@@ -87,32 +89,34 @@ define i32 @val_compare_and_swap_rel(ptr %p, i32 %cmp, i32 %new) {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x8 = ORRXrs $xzr, $x0, 0
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cmpxchg.start:
   ; CHECK-NEXT:   successors: %bb.2(0x7ffff800), %bb.3(0x00000800)
-  ; CHECK-NEXT:   liveins: $w1, $w2, $x0
+  ; CHECK-NEXT:   liveins: $w1, $w2, $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $w8 = LDAXRW renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i32) from %ir.p)
-  ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w1, 0, implicit-def $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w0 = LDAXRW renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (i32) from %ir.p)
+  ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w0, renamable $w1, 0, implicit-def $nzcv, pcsections !0
   ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0, $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber renamable $w9 = STLXRW renamable $w2, renamable $x0, pcsections !0 :: (volatile store (i32) into %ir.p)
+  ; CHECK-NEXT:   early-clobber renamable $w9 = STLXRW renamable $w2, renamable $x8, pcsections !0 :: (volatile store (i32) into %ir.p)
   ; CHECK-NEXT:   CBNZW killed renamable $w9, %bb.1
   ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.cmpxchg.nostore:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CLREX 15, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.cmpxchg.end:
-  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $w0 = ORRWrs $wzr, $w8, 0, implicit killed $x8
+  ; CHECK-NEXT:   $w0 = KILL renamable $w0, implicit killed $x0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acq_rel monotonic, !pcsections !0
   %val = extractvalue { i32, i1 } %pair, 0
@@ -239,20 +243,22 @@ define i32 @fetch_and_nand(ptr %p) {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x8 = ORRXrs $xzr, $x0, 0
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.atomicrmw.start:
   ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT:   liveins: $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $w8 = LDXRW renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i32) from %ir.p)
-  ; CHECK-NEXT:   renamable $w9 = ANDWri renamable $w8, 2, pcsections !0
+  ; CHECK-NEXT:   renamable $w0 = LDXRW renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (i32) from %ir.p)
+  ; CHECK-NEXT:   renamable $w9 = ANDWri renamable $w0, 2, pcsections !0
   ; CHECK-NEXT:   $w9 = ORNWrs $wzr, killed renamable $w9, 0, pcsections !0
-  ; CHECK-NEXT:   early-clobber renamable $w10 = STLXRW killed renamable $w9, renamable $x0, pcsections !0 :: (volatile store (i32) into %ir.p)
+  ; CHECK-NEXT:   early-clobber renamable $w10 = STLXRW killed renamable $w9, renamable $x8, pcsections !0 :: (volatile store (i32) into %ir.p)
   ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.end:
-  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $w0 = ORRWrs $wzr, $w8, 0, implicit killed $x8
+  ; CHECK-NEXT:   $w0 = KILL renamable $w0, implicit killed $x0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0
   %val = atomicrmw nand ptr %p, i32 7 release, !pcsections !0
   ret i32 %val

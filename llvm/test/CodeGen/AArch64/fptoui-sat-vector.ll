@@ -3969,69 +3969,69 @@ define <16 x i16> @test_unsigned_v16f64_v16i16(<16 x double> %f) {
 ; CHECK-SD-NEXT:    mov d1, v3.d[1]
 ; CHECK-SD-NEXT:    fcvtzu w13, d2
 ; CHECK-SD-NEXT:    mov d2, v4.d[1]
+; CHECK-SD-NEXT:    fcvtzu w15, d3
 ; CHECK-SD-NEXT:    fcvtzu w18, d4
+; CHECK-SD-NEXT:    fcvtzu w0, d5
 ; CHECK-SD-NEXT:    fcvtzu w9, d16
 ; CHECK-SD-NEXT:    fcvtzu w12, d17
+; CHECK-SD-NEXT:    fcvtzu w14, d0
 ; CHECK-SD-NEXT:    fcvtzu w16, d1
 ; CHECK-SD-NEXT:    fcvtzu w17, d2
 ; CHECK-SD-NEXT:    mov d2, v5.d[1]
 ; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    csel w14, w9, w8, lo
+; CHECK-SD-NEXT:    csel w9, w9, w8, lo
 ; CHECK-SD-NEXT:    cmp w10, w8
-; CHECK-SD-NEXT:    fcvtzu w9, d0
-; CHECK-SD-NEXT:    csel w15, w10, w8, lo
+; CHECK-SD-NEXT:    csel w10, w10, w8, lo
 ; CHECK-SD-NEXT:    cmp w11, w8
-; CHECK-SD-NEXT:    fcvtzu w10, d3
 ; CHECK-SD-NEXT:    csel w11, w11, w8, lo
 ; CHECK-SD-NEXT:    cmp w12, w8
-; CHECK-SD-NEXT:    fmov s0, w15
+; CHECK-SD-NEXT:    fmov s0, w10
 ; CHECK-SD-NEXT:    csel w12, w12, w8, lo
 ; CHECK-SD-NEXT:    cmp w13, w8
 ; CHECK-SD-NEXT:    csel w13, w13, w8, lo
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    csel w0, w9, w8, lo
-; CHECK-SD-NEXT:    cmp w10, w8
-; CHECK-SD-NEXT:    mov v0.h[1], w14
-; CHECK-SD-NEXT:    csel w10, w10, w8, lo
+; CHECK-SD-NEXT:    cmp w14, w8
+; CHECK-SD-NEXT:    csel w14, w14, w8, lo
+; CHECK-SD-NEXT:    cmp w15, w8
+; CHECK-SD-NEXT:    mov v0.h[1], w9
+; CHECK-SD-NEXT:    csel w15, w15, w8, lo
 ; CHECK-SD-NEXT:    cmp w16, w8
-; CHECK-SD-NEXT:    fcvtzu w14, d2
-; CHECK-SD-NEXT:    csel w9, w16, w8, lo
+; CHECK-SD-NEXT:    fcvtzu w9, d2
+; CHECK-SD-NEXT:    csel w16, w16, w8, lo
 ; CHECK-SD-NEXT:    cmp w17, w8
 ; CHECK-SD-NEXT:    mov d2, v6.d[1]
-; CHECK-SD-NEXT:    csel w16, w17, w8, lo
+; CHECK-SD-NEXT:    csel w17, w17, w8, lo
 ; CHECK-SD-NEXT:    cmp w18, w8
-; CHECK-SD-NEXT:    csel w17, w18, w8, lo
-; CHECK-SD-NEXT:    fcvtzu w18, d5
+; CHECK-SD-NEXT:    csel w18, w18, w8, lo
+; CHECK-SD-NEXT:    cmp w0, w8
 ; CHECK-SD-NEXT:    mov v0.h[2], w11
-; CHECK-SD-NEXT:    fmov s1, w17
-; CHECK-SD-NEXT:    fcvtzu w11, d6
-; CHECK-SD-NEXT:    mov v1.h[1], w16
-; CHECK-SD-NEXT:    cmp w18, w8
+; CHECK-SD-NEXT:    fmov s1, w18
+; CHECK-SD-NEXT:    csel w10, w0, w8, lo
+; CHECK-SD-NEXT:    cmp w9, w8
+; CHECK-SD-NEXT:    csel w9, w9, w8, lo
+; CHECK-SD-NEXT:    mov v1.h[1], w17
 ; CHECK-SD-NEXT:    mov v0.h[3], w12
-; CHECK-SD-NEXT:    csel w15, w18, w8, lo
-; CHECK-SD-NEXT:    cmp w14, w8
-; CHECK-SD-NEXT:    fcvtzu w12, d2
-; CHECK-SD-NEXT:    csel w14, w14, w8, lo
-; CHECK-SD-NEXT:    cmp w11, w8
-; CHECK-SD-NEXT:    mov d2, v7.d[1]
-; CHECK-SD-NEXT:    csel w11, w11, w8, lo
-; CHECK-SD-NEXT:    mov v1.h[2], w15
+; CHECK-SD-NEXT:    mov v1.h[2], w10
+; CHECK-SD-NEXT:    fcvtzu w10, d6
 ; CHECK-SD-NEXT:    mov v0.h[4], w13
-; CHECK-SD-NEXT:    cmp w12, w8
-; CHECK-SD-NEXT:    csel w12, w12, w8, lo
-; CHECK-SD-NEXT:    mov v1.h[3], w14
-; CHECK-SD-NEXT:    mov v0.h[5], w0
-; CHECK-SD-NEXT:    mov v1.h[4], w11
-; CHECK-SD-NEXT:    fcvtzu w11, d7
-; CHECK-SD-NEXT:    mov v0.h[6], w10
-; CHECK-SD-NEXT:    mov v1.h[5], w12
-; CHECK-SD-NEXT:    cmp w11, w8
-; CHECK-SD-NEXT:    fcvtzu w12, d2
-; CHECK-SD-NEXT:    csel w11, w11, w8, lo
-; CHECK-SD-NEXT:    mov v0.h[7], w9
-; CHECK-SD-NEXT:    mov v1.h[6], w11
-; CHECK-SD-NEXT:    cmp w12, w8
-; CHECK-SD-NEXT:    csel w8, w12, w8, lo
+; CHECK-SD-NEXT:    mov v1.h[3], w9
+; CHECK-SD-NEXT:    cmp w10, w8
+; CHECK-SD-NEXT:    fcvtzu w9, d2
+; CHECK-SD-NEXT:    csel w10, w10, w8, lo
+; CHECK-SD-NEXT:    mov d2, v7.d[1]
+; CHECK-SD-NEXT:    mov v0.h[5], w14
+; CHECK-SD-NEXT:    mov v1.h[4], w10
+; CHECK-SD-NEXT:    cmp w9, w8
+; CHECK-SD-NEXT:    fcvtzu w10, d7
+; CHECK-SD-NEXT:    csel w9, w9, w8, lo
+; CHECK-SD-NEXT:    mov v0.h[6], w15
+; CHECK-SD-NEXT:    mov v1.h[5], w9
+; CHECK-SD-NEXT:    cmp w10, w8
+; CHECK-SD-NEXT:    fcvtzu w9, d2
+; CHECK-SD-NEXT:    csel w10, w10, w8, lo
+; CHECK-SD-NEXT:    mov v0.h[7], w16
+; CHECK-SD-NEXT:    mov v1.h[6], w10
+; CHECK-SD-NEXT:    cmp w9, w8
+; CHECK-SD-NEXT:    csel w8, w9, w8, lo
 ; CHECK-SD-NEXT:    mov v1.h[7], w8
 ; CHECK-SD-NEXT:    ret
 ;

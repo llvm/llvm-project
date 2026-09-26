@@ -4,16 +4,17 @@
 define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-LABEL: atomicrmw_usub_cond_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB0_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxrb w8, [x0]
-; CHECK-NEXT:    sub w9, w8, w1
-; CHECK-NEXT:    cmp w8, w1, uxtb
-; CHECK-NEXT:    csel w9, w9, w8, hs
-; CHECK-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NEXT:    ldaxrb w0, [x8]
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    cmp w0, w1, uxtb
+; CHECK-NEXT:    csel w9, w9, w0, hs
+; CHECK-NEXT:    stlxrb w10, w9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %result = atomicrmw usub_cond ptr %ptr, i8 %val seq_cst
   ret i8 %result
@@ -22,16 +23,17 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-LABEL: atomicrmw_usub_cond_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB1_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxrh w8, [x0]
-; CHECK-NEXT:    sub w9, w8, w1
-; CHECK-NEXT:    cmp w8, w1, uxth
-; CHECK-NEXT:    csel w9, w9, w8, hs
-; CHECK-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NEXT:    ldaxrh w0, [x8]
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    cmp w0, w1, uxth
+; CHECK-NEXT:    csel w9, w9, w0, hs
+; CHECK-NEXT:    stlxrh w10, w9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %result = atomicrmw usub_cond ptr %ptr, i16 %val seq_cst
   ret i16 %result
@@ -40,15 +42,16 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_usub_cond_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB2_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr w8, [x0]
-; CHECK-NEXT:    subs w9, w8, w1
-; CHECK-NEXT:    csel w9, w9, w8, hs
-; CHECK-NEXT:    stlxr w10, w9, [x0]
+; CHECK-NEXT:    ldaxr w0, [x8]
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    csel w9, w9, w0, hs
+; CHECK-NEXT:    stlxr w10, w9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %result = atomicrmw usub_cond ptr %ptr, i32 %val seq_cst
   ret i32 %result

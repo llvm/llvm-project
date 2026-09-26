@@ -20,7 +20,7 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    and x9, x9, #0x1
 ; CHECK-NEXT:    add x9, x12, x9
 ; CHECK-NEXT:    st1.s { v0 }[1], [x8]
-; CHECK-NEXT:    sub w10, w9, w10
+; CHECK-NEXT:    subs w10, w9, w10
 ; CHECK-NEXT:    orr x9, x11, x9, lsl #2
 ; CHECK-NEXT:    bfi x11, x10, #2, #2
 ; CHECK-NEXT:    st1.s { v0 }[2], [x9]
@@ -428,7 +428,7 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
 ; CHECK-NEXT:    and x8, x8, #0x1
 ; CHECK-NEXT:    add x8, x12, x8
 ; CHECK-NEXT:    st1.s { v0 }[1], [x11]
-; CHECK-NEXT:    sub w9, w8, w9
+; CHECK-NEXT:    subs w9, w8, w9
 ; CHECK-NEXT:    orr x8, x10, x8, lsl #2
 ; CHECK-NEXT:    bfi x10, x9, #2, #2
 ; CHECK-NEXT:    st1.s { v0 }[2], [x8]

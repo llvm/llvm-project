@@ -288,7 +288,7 @@ define i32 @pow2_vscale_with_negative_multiplier() vscale_range(1,16) {
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    orr w9, w9, #0xfffffff0
-; CHECK-NEXT:    sub w0, w9, w8
+; CHECK-NEXT:    subs w0, w9, w8
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %mul = mul i32 %vscale, -2

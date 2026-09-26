@@ -587,9 +587,9 @@ define dso_local i8 @atomicrmw_add_i8_aligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_aligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -603,9 +603,9 @@ define dso_local i8 @atomicrmw_add_i8_aligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_aligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -619,9 +619,9 @@ define dso_local i8 @atomicrmw_add_i8_aligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_aligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -635,9 +635,9 @@ define dso_local i8 @atomicrmw_add_i8_aligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_aligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -651,9 +651,9 @@ define dso_local i8 @atomicrmw_add_i8_aligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_aligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -667,9 +667,9 @@ define dso_local i16 @atomicrmw_add_i16_aligned_monotonic(ptr %ptr, i16 %value) 
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_add_i16_aligned_monotonic:
-; -O1:    ldxrh w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i16 %value monotonic, align 2
     ret i16 %r
 }
@@ -683,9 +683,9 @@ define dso_local i16 @atomicrmw_add_i16_aligned_acquire(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_add_i16_aligned_acquire:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i16 %value acquire, align 2
     ret i16 %r
 }
@@ -699,9 +699,9 @@ define dso_local i16 @atomicrmw_add_i16_aligned_release(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_add_i16_aligned_release:
-; -O1:    ldxrh w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i16 %value release, align 2
     ret i16 %r
 }
@@ -715,9 +715,9 @@ define dso_local i16 @atomicrmw_add_i16_aligned_acq_rel(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_add_i16_aligned_acq_rel:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i16 %value acq_rel, align 2
     ret i16 %r
 }
@@ -731,9 +731,9 @@ define dso_local i16 @atomicrmw_add_i16_aligned_seq_cst(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_add_i16_aligned_seq_cst:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i16 %value seq_cst, align 2
     ret i16 %r
 }
@@ -747,9 +747,9 @@ define dso_local i32 @atomicrmw_add_i32_aligned_monotonic(ptr %ptr, i32 %value) 
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_add_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -763,9 +763,9 @@ define dso_local i32 @atomicrmw_add_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_add_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -779,9 +779,9 @@ define dso_local i32 @atomicrmw_add_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_add_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -795,9 +795,9 @@ define dso_local i32 @atomicrmw_add_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_add_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -811,9 +811,9 @@ define dso_local i32 @atomicrmw_add_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_add_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -1002,9 +1002,9 @@ define dso_local i8 @atomicrmw_add_i8_unaligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_unaligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -1018,9 +1018,9 @@ define dso_local i8 @atomicrmw_add_i8_unaligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_unaligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -1034,9 +1034,9 @@ define dso_local i8 @atomicrmw_add_i8_unaligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_unaligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -1050,9 +1050,9 @@ define dso_local i8 @atomicrmw_add_i8_unaligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_unaligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -1066,9 +1066,9 @@ define dso_local i8 @atomicrmw_add_i8_unaligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_add_i8_unaligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    add w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    add w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw add ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -1327,9 +1327,9 @@ define dso_local i8 @atomicrmw_sub_i8_aligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_aligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -1343,9 +1343,9 @@ define dso_local i8 @atomicrmw_sub_i8_aligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_aligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -1359,9 +1359,9 @@ define dso_local i8 @atomicrmw_sub_i8_aligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_aligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -1375,9 +1375,9 @@ define dso_local i8 @atomicrmw_sub_i8_aligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_aligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -1391,9 +1391,9 @@ define dso_local i8 @atomicrmw_sub_i8_aligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_aligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -1407,9 +1407,9 @@ define dso_local i16 @atomicrmw_sub_i16_aligned_monotonic(ptr %ptr, i16 %value) 
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_sub_i16_aligned_monotonic:
-; -O1:    ldxrh w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i16 %value monotonic, align 2
     ret i16 %r
 }
@@ -1423,9 +1423,9 @@ define dso_local i16 @atomicrmw_sub_i16_aligned_acquire(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_sub_i16_aligned_acquire:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i16 %value acquire, align 2
     ret i16 %r
 }
@@ -1439,9 +1439,9 @@ define dso_local i16 @atomicrmw_sub_i16_aligned_release(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_sub_i16_aligned_release:
-; -O1:    ldxrh w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i16 %value release, align 2
     ret i16 %r
 }
@@ -1455,9 +1455,9 @@ define dso_local i16 @atomicrmw_sub_i16_aligned_acq_rel(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_sub_i16_aligned_acq_rel:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i16 %value acq_rel, align 2
     ret i16 %r
 }
@@ -1471,9 +1471,9 @@ define dso_local i16 @atomicrmw_sub_i16_aligned_seq_cst(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_sub_i16_aligned_seq_cst:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i16 %value seq_cst, align 2
     ret i16 %r
 }
@@ -1487,9 +1487,9 @@ define dso_local i32 @atomicrmw_sub_i32_aligned_monotonic(ptr %ptr, i32 %value) 
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_sub_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -1503,9 +1503,9 @@ define dso_local i32 @atomicrmw_sub_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_sub_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -1519,9 +1519,9 @@ define dso_local i32 @atomicrmw_sub_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_sub_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -1535,9 +1535,9 @@ define dso_local i32 @atomicrmw_sub_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_sub_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -1551,9 +1551,9 @@ define dso_local i32 @atomicrmw_sub_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_sub_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -1742,9 +1742,9 @@ define dso_local i8 @atomicrmw_sub_i8_unaligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_unaligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -1758,9 +1758,9 @@ define dso_local i8 @atomicrmw_sub_i8_unaligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_unaligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -1774,9 +1774,9 @@ define dso_local i8 @atomicrmw_sub_i8_unaligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_unaligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -1790,9 +1790,9 @@ define dso_local i8 @atomicrmw_sub_i8_unaligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_unaligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -1806,9 +1806,9 @@ define dso_local i8 @atomicrmw_sub_i8_unaligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_sub_i8_unaligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    sub w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    subs w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw sub ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -2067,9 +2067,9 @@ define dso_local i8 @atomicrmw_and_i8_aligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_aligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -2083,9 +2083,9 @@ define dso_local i8 @atomicrmw_and_i8_aligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_aligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -2099,9 +2099,9 @@ define dso_local i8 @atomicrmw_and_i8_aligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_aligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -2115,9 +2115,9 @@ define dso_local i8 @atomicrmw_and_i8_aligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_aligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -2131,9 +2131,9 @@ define dso_local i8 @atomicrmw_and_i8_aligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_aligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -2147,9 +2147,9 @@ define dso_local i16 @atomicrmw_and_i16_aligned_monotonic(ptr %ptr, i16 %value) 
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_and_i16_aligned_monotonic:
-; -O1:    ldxrh w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i16 %value monotonic, align 2
     ret i16 %r
 }
@@ -2163,9 +2163,9 @@ define dso_local i16 @atomicrmw_and_i16_aligned_acquire(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_and_i16_aligned_acquire:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i16 %value acquire, align 2
     ret i16 %r
 }
@@ -2179,9 +2179,9 @@ define dso_local i16 @atomicrmw_and_i16_aligned_release(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_and_i16_aligned_release:
-; -O1:    ldxrh w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i16 %value release, align 2
     ret i16 %r
 }
@@ -2195,9 +2195,9 @@ define dso_local i16 @atomicrmw_and_i16_aligned_acq_rel(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_and_i16_aligned_acq_rel:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i16 %value acq_rel, align 2
     ret i16 %r
 }
@@ -2211,9 +2211,9 @@ define dso_local i16 @atomicrmw_and_i16_aligned_seq_cst(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_and_i16_aligned_seq_cst:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i16 %value seq_cst, align 2
     ret i16 %r
 }
@@ -2227,9 +2227,9 @@ define dso_local i32 @atomicrmw_and_i32_aligned_monotonic(ptr %ptr, i32 %value) 
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_and_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -2243,9 +2243,9 @@ define dso_local i32 @atomicrmw_and_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_and_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -2259,9 +2259,9 @@ define dso_local i32 @atomicrmw_and_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_and_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -2275,9 +2275,9 @@ define dso_local i32 @atomicrmw_and_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_and_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -2291,9 +2291,9 @@ define dso_local i32 @atomicrmw_and_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_and_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -2492,9 +2492,9 @@ define dso_local i8 @atomicrmw_and_i8_unaligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_unaligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -2508,9 +2508,9 @@ define dso_local i8 @atomicrmw_and_i8_unaligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_unaligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -2524,9 +2524,9 @@ define dso_local i8 @atomicrmw_and_i8_unaligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_unaligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -2540,9 +2540,9 @@ define dso_local i8 @atomicrmw_and_i8_unaligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_unaligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -2556,9 +2556,9 @@ define dso_local i8 @atomicrmw_and_i8_unaligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_and_i8_unaligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw and ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -2828,10 +2828,10 @@ define dso_local i8 @atomicrmw_nand_i8_aligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_aligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -2846,10 +2846,10 @@ define dso_local i8 @atomicrmw_nand_i8_aligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_aligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -2864,10 +2864,10 @@ define dso_local i8 @atomicrmw_nand_i8_aligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_aligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -2882,10 +2882,10 @@ define dso_local i8 @atomicrmw_nand_i8_aligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_aligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -2900,10 +2900,10 @@ define dso_local i8 @atomicrmw_nand_i8_aligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_aligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -2918,10 +2918,10 @@ define dso_local i16 @atomicrmw_nand_i16_aligned_monotonic(ptr %ptr, i16 %value)
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_nand_i16_aligned_monotonic:
-; -O1:    ldxrh w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxrh w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i16 %value monotonic, align 2
     ret i16 %r
 }
@@ -2936,10 +2936,10 @@ define dso_local i16 @atomicrmw_nand_i16_aligned_acquire(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_nand_i16_aligned_acquire:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrh w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i16 %value acquire, align 2
     ret i16 %r
 }
@@ -2954,10 +2954,10 @@ define dso_local i16 @atomicrmw_nand_i16_aligned_release(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_nand_i16_aligned_release:
-; -O1:    ldxrh w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxrh w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i16 %value release, align 2
     ret i16 %r
 }
@@ -2972,10 +2972,10 @@ define dso_local i16 @atomicrmw_nand_i16_aligned_acq_rel(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_nand_i16_aligned_acq_rel:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrh w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i16 %value acq_rel, align 2
     ret i16 %r
 }
@@ -2990,10 +2990,10 @@ define dso_local i16 @atomicrmw_nand_i16_aligned_seq_cst(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_nand_i16_aligned_seq_cst:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrh w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i16 %value seq_cst, align 2
     ret i16 %r
 }
@@ -3008,10 +3008,10 @@ define dso_local i32 @atomicrmw_nand_i32_aligned_monotonic(ptr %ptr, i32 %value)
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_nand_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxr w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxr w10, w9, [x0]
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -3026,10 +3026,10 @@ define dso_local i32 @atomicrmw_nand_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_nand_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxr w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxr w10, w9, [x0]
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -3044,10 +3044,10 @@ define dso_local i32 @atomicrmw_nand_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_nand_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxr w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -3062,10 +3062,10 @@ define dso_local i32 @atomicrmw_nand_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_nand_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxr w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -3080,10 +3080,10 @@ define dso_local i32 @atomicrmw_nand_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_nand_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxr w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -3313,10 +3313,10 @@ define dso_local i8 @atomicrmw_nand_i8_unaligned_monotonic(ptr %ptr, i8 %value) 
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_unaligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -3331,10 +3331,10 @@ define dso_local i8 @atomicrmw_nand_i8_unaligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_unaligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -3349,10 +3349,10 @@ define dso_local i8 @atomicrmw_nand_i8_unaligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_unaligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -3367,10 +3367,10 @@ define dso_local i8 @atomicrmw_nand_i8_unaligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_unaligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -3385,10 +3385,10 @@ define dso_local i8 @atomicrmw_nand_i8_unaligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_nand_i8_unaligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    and w9, w8, w1
+; -O1:    ldaxrb w0, [x8]
+; -O1:    and w9, w0, w1
 ; -O1:    mvn w9, w9
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw nand ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -3707,9 +3707,9 @@ define dso_local i8 @atomicrmw_or_i8_aligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_aligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -3723,9 +3723,9 @@ define dso_local i8 @atomicrmw_or_i8_aligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_aligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -3739,9 +3739,9 @@ define dso_local i8 @atomicrmw_or_i8_aligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_aligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -3755,9 +3755,9 @@ define dso_local i8 @atomicrmw_or_i8_aligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_aligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -3771,9 +3771,9 @@ define dso_local i8 @atomicrmw_or_i8_aligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_aligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -3787,9 +3787,9 @@ define dso_local i16 @atomicrmw_or_i16_aligned_monotonic(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_or_i16_aligned_monotonic:
-; -O1:    ldxrh w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i16 %value monotonic, align 2
     ret i16 %r
 }
@@ -3803,9 +3803,9 @@ define dso_local i16 @atomicrmw_or_i16_aligned_acquire(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_or_i16_aligned_acquire:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i16 %value acquire, align 2
     ret i16 %r
 }
@@ -3819,9 +3819,9 @@ define dso_local i16 @atomicrmw_or_i16_aligned_release(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_or_i16_aligned_release:
-; -O1:    ldxrh w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i16 %value release, align 2
     ret i16 %r
 }
@@ -3835,9 +3835,9 @@ define dso_local i16 @atomicrmw_or_i16_aligned_acq_rel(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_or_i16_aligned_acq_rel:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i16 %value acq_rel, align 2
     ret i16 %r
 }
@@ -3851,9 +3851,9 @@ define dso_local i16 @atomicrmw_or_i16_aligned_seq_cst(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_or_i16_aligned_seq_cst:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i16 %value seq_cst, align 2
     ret i16 %r
 }
@@ -3867,9 +3867,9 @@ define dso_local i32 @atomicrmw_or_i32_aligned_monotonic(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_or_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -3883,9 +3883,9 @@ define dso_local i32 @atomicrmw_or_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_or_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -3899,9 +3899,9 @@ define dso_local i32 @atomicrmw_or_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_or_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -3915,9 +3915,9 @@ define dso_local i32 @atomicrmw_or_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_or_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -3931,9 +3931,9 @@ define dso_local i32 @atomicrmw_or_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_or_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -4132,9 +4132,9 @@ define dso_local i8 @atomicrmw_or_i8_unaligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_unaligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -4148,9 +4148,9 @@ define dso_local i8 @atomicrmw_or_i8_unaligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_unaligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -4164,9 +4164,9 @@ define dso_local i8 @atomicrmw_or_i8_unaligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_unaligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -4180,9 +4180,9 @@ define dso_local i8 @atomicrmw_or_i8_unaligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_unaligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -4196,9 +4196,9 @@ define dso_local i8 @atomicrmw_or_i8_unaligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_or_i8_unaligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    orr w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    orr w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw or ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -4467,9 +4467,9 @@ define dso_local i8 @atomicrmw_xor_i8_aligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_aligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -4483,9 +4483,9 @@ define dso_local i8 @atomicrmw_xor_i8_aligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_aligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -4499,9 +4499,9 @@ define dso_local i8 @atomicrmw_xor_i8_aligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_aligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -4515,9 +4515,9 @@ define dso_local i8 @atomicrmw_xor_i8_aligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_aligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -4531,9 +4531,9 @@ define dso_local i8 @atomicrmw_xor_i8_aligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_aligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -4547,9 +4547,9 @@ define dso_local i16 @atomicrmw_xor_i16_aligned_monotonic(ptr %ptr, i16 %value) 
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_xor_i16_aligned_monotonic:
-; -O1:    ldxrh w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i16 %value monotonic, align 2
     ret i16 %r
 }
@@ -4563,9 +4563,9 @@ define dso_local i16 @atomicrmw_xor_i16_aligned_acquire(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_xor_i16_aligned_acquire:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxrh w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i16 %value acquire, align 2
     ret i16 %r
 }
@@ -4579,9 +4579,9 @@ define dso_local i16 @atomicrmw_xor_i16_aligned_release(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_xor_i16_aligned_release:
-; -O1:    ldxrh w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldxrh w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i16 %value release, align 2
     ret i16 %r
 }
@@ -4595,9 +4595,9 @@ define dso_local i16 @atomicrmw_xor_i16_aligned_acq_rel(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_xor_i16_aligned_acq_rel:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i16 %value acq_rel, align 2
     ret i16 %r
 }
@@ -4611,9 +4611,9 @@ define dso_local i16 @atomicrmw_xor_i16_aligned_seq_cst(ptr %ptr, i16 %value) {
 ; -O0:    subs w9, w8, w9, uxth
 ;
 ; -O1-LABEL: atomicrmw_xor_i16_aligned_seq_cst:
-; -O1:    ldaxrh w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrh w10, w9, [x0]
+; -O1:    ldaxrh w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrh w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i16 %value seq_cst, align 2
     ret i16 %r
 }
@@ -4627,9 +4627,9 @@ define dso_local i32 @atomicrmw_xor_i32_aligned_monotonic(ptr %ptr, i32 %value) 
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_xor_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -4643,9 +4643,9 @@ define dso_local i32 @atomicrmw_xor_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_xor_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -4659,9 +4659,9 @@ define dso_local i32 @atomicrmw_xor_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_xor_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -4675,9 +4675,9 @@ define dso_local i32 @atomicrmw_xor_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_xor_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -4691,9 +4691,9 @@ define dso_local i32 @atomicrmw_xor_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_xor_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -4892,9 +4892,9 @@ define dso_local i8 @atomicrmw_xor_i8_unaligned_monotonic(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_unaligned_monotonic:
-; -O1:    ldxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value monotonic, align 1
     ret i8 %r
 }
@@ -4908,9 +4908,9 @@ define dso_local i8 @atomicrmw_xor_i8_unaligned_acquire(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_unaligned_acquire:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value acquire, align 1
     ret i8 %r
 }
@@ -4924,9 +4924,9 @@ define dso_local i8 @atomicrmw_xor_i8_unaligned_release(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_unaligned_release:
-; -O1:    ldxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value release, align 1
     ret i8 %r
 }
@@ -4940,9 +4940,9 @@ define dso_local i8 @atomicrmw_xor_i8_unaligned_acq_rel(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_unaligned_acq_rel:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value acq_rel, align 1
     ret i8 %r
 }
@@ -4956,9 +4956,9 @@ define dso_local i8 @atomicrmw_xor_i8_unaligned_seq_cst(ptr %ptr, i8 %value) {
 ; -O0:    subs w9, w8, w9, uxtb
 ;
 ; -O1-LABEL: atomicrmw_xor_i8_unaligned_seq_cst:
-; -O1:    ldaxrb w8, [x0]
-; -O1:    eor w9, w8, w1
-; -O1:    stlxrb w10, w9, [x0]
+; -O1:    ldaxrb w0, [x8]
+; -O1:    eor w9, w0, w1
+; -O1:    stlxrb w10, w9, [x8]
     %r = atomicrmw xor ptr %ptr, i8 %value seq_cst, align 1
     ret i8 %r
 }
@@ -5428,10 +5428,10 @@ define dso_local i32 @atomicrmw_max_i32_aligned_monotonic(ptr %ptr, i32 %value) 
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_max_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, gt
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, gt
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw max ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -5446,10 +5446,10 @@ define dso_local i32 @atomicrmw_max_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_max_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, gt
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, gt
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw max ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -5464,10 +5464,10 @@ define dso_local i32 @atomicrmw_max_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_max_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, gt
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, gt
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw max ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -5482,10 +5482,10 @@ define dso_local i32 @atomicrmw_max_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_max_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, gt
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, gt
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw max ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -5500,10 +5500,10 @@ define dso_local i32 @atomicrmw_max_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_max_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, gt
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, gt
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw max ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -6328,10 +6328,10 @@ define dso_local i32 @atomicrmw_min_i32_aligned_monotonic(ptr %ptr, i32 %value) 
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_min_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, le
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, le
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw min ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -6346,10 +6346,10 @@ define dso_local i32 @atomicrmw_min_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_min_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, le
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, le
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw min ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -6364,10 +6364,10 @@ define dso_local i32 @atomicrmw_min_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_min_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, le
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, le
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw min ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -6382,10 +6382,10 @@ define dso_local i32 @atomicrmw_min_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_min_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, le
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, le
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw min ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -6400,10 +6400,10 @@ define dso_local i32 @atomicrmw_min_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_min_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, le
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, le
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw min ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -7228,10 +7228,10 @@ define dso_local i32 @atomicrmw_umax_i32_aligned_monotonic(ptr %ptr, i32 %value)
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umax_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, hi
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, hi
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw umax ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -7246,10 +7246,10 @@ define dso_local i32 @atomicrmw_umax_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umax_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, hi
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, hi
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw umax ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -7264,10 +7264,10 @@ define dso_local i32 @atomicrmw_umax_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umax_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, hi
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, hi
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw umax ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -7282,10 +7282,10 @@ define dso_local i32 @atomicrmw_umax_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umax_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, hi
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, hi
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw umax ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -7300,10 +7300,10 @@ define dso_local i32 @atomicrmw_umax_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umax_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, hi
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, hi
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw umax ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }
@@ -8128,10 +8128,10 @@ define dso_local i32 @atomicrmw_umin_i32_aligned_monotonic(ptr %ptr, i32 %value)
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umin_i32_aligned_monotonic:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, ls
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, ls
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw umin ptr %ptr, i32 %value monotonic, align 4
     ret i32 %r
 }
@@ -8146,10 +8146,10 @@ define dso_local i32 @atomicrmw_umin_i32_aligned_acquire(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umin_i32_aligned_acquire:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, ls
-; -O1:    stxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, ls
+; -O1:    stxr w10, w9, [x8]
     %r = atomicrmw umin ptr %ptr, i32 %value acquire, align 4
     ret i32 %r
 }
@@ -8164,10 +8164,10 @@ define dso_local i32 @atomicrmw_umin_i32_aligned_release(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umin_i32_aligned_release:
-; -O1:    ldxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, ls
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, ls
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw umin ptr %ptr, i32 %value release, align 4
     ret i32 %r
 }
@@ -8182,10 +8182,10 @@ define dso_local i32 @atomicrmw_umin_i32_aligned_acq_rel(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umin_i32_aligned_acq_rel:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, ls
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, ls
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw umin ptr %ptr, i32 %value acq_rel, align 4
     ret i32 %r
 }
@@ -8200,10 +8200,10 @@ define dso_local i32 @atomicrmw_umin_i32_aligned_seq_cst(ptr %ptr, i32 %value) {
 ; -O0:    subs w9, w8, w9
 ;
 ; -O1-LABEL: atomicrmw_umin_i32_aligned_seq_cst:
-; -O1:    ldaxr w8, [x0]
-; -O1:    cmp w8, w1
-; -O1:    csel w9, w8, w1, ls
-; -O1:    stlxr w10, w9, [x0]
+; -O1:    ldaxr w0, [x8]
+; -O1:    cmp w0, w1
+; -O1:    csel w9, w0, w1, ls
+; -O1:    stlxr w10, w9, [x8]
     %r = atomicrmw umin ptr %ptr, i32 %value seq_cst, align 4
     ret i32 %r
 }

@@ -16,7 +16,7 @@ define i8 @rotl_i8(i8 %a, i8 %c) {
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    neg w9, w1
 ; CHECK-GI-NEXT:    and w10, w0, #0xff
-; CHECK-GI-NEXT:    sub x8, x8, w9, uxtb
+; CHECK-GI-NEXT:    subs x8, x8, w9, uxtb
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
 ; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    and x8, x8, #0x7
@@ -46,7 +46,7 @@ define i8 @rotr_i8(i8 %a, i8 %c) {
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0x7
 ; CHECK-GI-NEXT:    and w10, w0, #0xff
-; CHECK-GI-NEXT:    sub x8, x8, w1, uxtb
+; CHECK-GI-NEXT:    subs x8, x8, w1, uxtb
 ; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    and x8, x8, #0x7
 ; CHECK-GI-NEXT:    lsl w8, w0, w8
@@ -71,7 +71,7 @@ define i16 @rotl_i16(i16 %a, i16 %c) {
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    neg w9, w1
 ; CHECK-GI-NEXT:    and w10, w0, #0xffff
-; CHECK-GI-NEXT:    sub x8, x8, w9, uxth
+; CHECK-GI-NEXT:    subs x8, x8, w9, uxth
 ; CHECK-GI-NEXT:    and x9, x9, #0xf
 ; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    and x8, x8, #0xf
@@ -101,7 +101,7 @@ define i16 @rotr_i16(i16 %a, i16 %c) {
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    and x9, x1, #0xf
 ; CHECK-GI-NEXT:    and w10, w0, #0xffff
-; CHECK-GI-NEXT:    sub x8, x8, w1, uxth
+; CHECK-GI-NEXT:    subs x8, x8, w1, uxth
 ; CHECK-GI-NEXT:    lsr w9, w10, w9
 ; CHECK-GI-NEXT:    and x8, x8, #0xf
 ; CHECK-GI-NEXT:    lsl w8, w0, w8
@@ -136,7 +136,7 @@ entry:
 define i64 @rotl_i64(i64 %a, i64 %c) {
 ; CHECK-SD-LABEL: rotl_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    neg w8, w1
+; CHECK-SD-NEXT:    negs w8, w1
 ; CHECK-SD-NEXT:    ror x0, x0, x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -388,6 +388,7 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: fshl_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    lsr w8, w1, #1
+; CHECK-SD-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-SD-NEXT:    mvn w9, w2
 ; CHECK-SD-NEXT:    lsl w10, w0, w2
 ; CHECK-SD-NEXT:    lsr w8, w8, w9
@@ -413,6 +414,7 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: fshr_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    lsl w8, w0, #1
+; CHECK-SD-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-SD-NEXT:    mvn w9, w2
 ; CHECK-SD-NEXT:    lsr w10, w1, w2
 ; CHECK-SD-NEXT:    lsl w8, w8, w9

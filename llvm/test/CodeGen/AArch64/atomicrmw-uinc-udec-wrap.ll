@@ -72,17 +72,18 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxrb w8, [x0]
-; CHECK-NEXT:    cmp w8, w1, uxtb
-; CHECK-NEXT:    sub w9, w8, #1
-; CHECK-NEXT:    ccmp w8, #0, #4, ls
+; CHECK-NEXT:    ldaxrb w0, [x8]
+; CHECK-NEXT:    subs w9, w0, #1
+; CHECK-NEXT:    cmp w0, w1, uxtb
+; CHECK-NEXT:    ccmp w0, #0, #4, ls
 ; CHECK-NEXT:    csel w9, w1, w9, eq
-; CHECK-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NEXT:    stlxrb w10, w9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %result = atomicrmw udec_wrap ptr %ptr, i8 %val seq_cst
   ret i8 %result
@@ -91,17 +92,18 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB5_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxrh w8, [x0]
-; CHECK-NEXT:    cmp w8, w1, uxth
-; CHECK-NEXT:    sub w9, w8, #1
-; CHECK-NEXT:    ccmp w8, #0, #4, ls
+; CHECK-NEXT:    ldaxrh w0, [x8]
+; CHECK-NEXT:    subs w9, w0, #1
+; CHECK-NEXT:    cmp w0, w1, uxth
+; CHECK-NEXT:    ccmp w0, #0, #4, ls
 ; CHECK-NEXT:    csel w9, w1, w9, eq
-; CHECK-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NEXT:    stlxrh w10, w9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %result = atomicrmw udec_wrap ptr %ptr, i16 %val seq_cst
   ret i16 %result
@@ -110,17 +112,18 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB6_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr w8, [x0]
-; CHECK-NEXT:    cmp w8, w1
-; CHECK-NEXT:    sub w9, w8, #1
-; CHECK-NEXT:    ccmp w8, #0, #4, ls
+; CHECK-NEXT:    ldaxr w0, [x8]
+; CHECK-NEXT:    subs w9, w0, #1
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    ccmp w0, #0, #4, ls
 ; CHECK-NEXT:    csel w9, w1, w9, eq
-; CHECK-NEXT:    stlxr w10, w9, [x0]
+; CHECK-NEXT:    stlxr w10, w9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %result = atomicrmw udec_wrap ptr %ptr, i32 %val seq_cst
   ret i32 %result

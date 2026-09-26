@@ -17,6 +17,7 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i8_signbit_eq:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    tst w8, #0x80
 ; CHECK-SD-NEXT:    cset w0, eq
@@ -41,6 +42,7 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i8_lowestbit_eq:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    tst w8, #0x1
 ; CHECK-SD-NEXT:    cset w0, eq
@@ -65,6 +67,7 @@ define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i8_bitsinmiddle_eq:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    tst w8, #0x18
 ; CHECK-SD-NEXT:    cset w0, eq
@@ -91,6 +94,7 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i16_signbit_eq:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xffff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    tst w8, #0x8000
 ; CHECK-SD-NEXT:    cset w0, eq
@@ -115,6 +119,7 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i16_lowestbit_eq:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xffff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    tst w8, #0x1
 ; CHECK-SD-NEXT:    cset w0, eq
@@ -139,6 +144,7 @@ define i1 @scalar_i16_bitsinmiddle_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i16_bitsinmiddle_eq:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xffff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    tst w8, #0xff0
 ; CHECK-SD-NEXT:    cset w0, eq
@@ -423,6 +429,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i8_signbit_ne:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w8, w8, w1
 ; CHECK-SD-NEXT:    lsr w0, w8, #7
 ; CHECK-SD-NEXT:    ret
@@ -480,6 +487,7 @@ define i1 @scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i8_bitsinmiddle_slt:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #24 // =0x18
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w8, w8, w1
 ; CHECK-SD-NEXT:    and w8, w8, w0
 ; CHECK-SD-NEXT:    ubfx w0, w8, #7, #1
@@ -505,6 +513,7 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: scalar_i8_signbit_eq_with_nonzero:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #-128 // =0xffffff80
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w8, w8, w1
 ; CHECK-SD-NEXT:    and w8, w8, w0
 ; CHECK-SD-NEXT:    and w8, w8, #0x80

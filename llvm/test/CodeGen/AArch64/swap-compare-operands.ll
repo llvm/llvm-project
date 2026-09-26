@@ -161,6 +161,7 @@ entry:
 define i1 @testSwapCmpWithShiftedZeroExtend16_64(i16 %a, i64 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend16_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp x1, w0, uxth #2
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -174,6 +175,7 @@ entry:
 define i1 @testSwapCmpWithShiftedZeroExtend8_64(i8 %a, i64 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend8_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp x1, w0, uxtb #4
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -252,6 +254,7 @@ entry:
 define i1 @testSwapCmpWithShiftedSignExtend16_64(i16 %a, i64 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedSignExtend16_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp x1, w0, sxth #2
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -265,6 +268,7 @@ entry:
 define i1 @testSwapCmpWithShiftedSignExtend8_64(i8 %a, i64 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedSignExtend8_64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp x1, w0, sxtb #4
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -595,6 +599,8 @@ define i64 @testSwapCmpToCmnWithZeroExtend(i32 %a32, i16 %a16, i8 %a8, i64 %b64,
 ; CHECK-LABEL: testSwapCmpToCmnWithZeroExtend:
 ; CHECK:       // %bb.0: // %t0
 ; CHECK-NEXT:    cmn x3, w0, uxtw #1
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    b.eq .LBB44_8
 ; CHECK-NEXT:  // %bb.1: // %t1
 ; CHECK-NEXT:    cmn x3, w1, uxth #4
@@ -679,6 +685,8 @@ define i64 @testSwapCmpToCmnWithSignExtend(i32 %a32, i16 %a16, i8 %a8, i64 %b64,
 ; CHECK-LABEL: testSwapCmpToCmnWithSignExtend:
 ; CHECK:       // %bb.0: // %t0
 ; CHECK-NEXT:    cmn x3, w0, sxtw #1
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    b.eq .LBB45_8
 ; CHECK-NEXT:  // %bb.1: // %t1
 ; CHECK-NEXT:    cmn x3, w1, sxth #4
