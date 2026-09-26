@@ -44,7 +44,7 @@ class CompilerInstance;
 class CXXRecordDecl;
 class Decl;
 class IncrementalParser;
-class IncrementalDeviceParser;
+class IncrementalCUDADeviceParser;
 
 enum class OffloadType { CUDA, HIP };
 
@@ -131,7 +131,7 @@ class Interpreter {
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
 
   // An optional action for CUDA offloading
   std::unique_ptr<IncrementalAction> DeviceAct;

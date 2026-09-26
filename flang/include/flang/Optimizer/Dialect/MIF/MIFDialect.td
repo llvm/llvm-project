@@ -20,6 +20,7 @@ include "mlir/IR/OpBase.td"
 
 def MIFDialect : Dialect {
   let name = "mif";
+  let useStrictPropertiesInAssemblyFormat = 0;
 
   let summary = "Multi-Image Fortran dialect";
 
