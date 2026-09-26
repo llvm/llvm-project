@@ -2164,12 +2164,23 @@ public:
     }
 
     CurrentFrame->ResolvedCallee = Callee;
+    // Intrinsics and library calls have no Frame, but their parameter
+    // guarantees (including call-site-only attributes) cover their effects.
+    uint64_t NoAliasActivation = 0;
+    if (Callee->isDeclaration()) {
+      NoAliasActivation = retagNoAliasArguments(Ctx, *Callee, &CB, CalleeArgs);
+      flushNoAliasEvents();
+    }
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
+      Ctx.endNoAliasActivation(NoAliasActivation);
+      flushNoAliasEvents();
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
       CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee, CalleeArgs);
+      Ctx.endNoAliasActivation(NoAliasActivation);
+      flushNoAliasEvents();
       returnFromCallee();
       return;
     } else {

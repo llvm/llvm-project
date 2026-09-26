@@ -42,7 +42,6 @@ define void @main() {
 ; CHECK-NEXT: NoAlias: write through node #2 on 'a' bytes [0, 4) checked 2 active noalias activations
 ; CHECK-NEXT:   store i32 1, ptr %x, align 4
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: erased inactive protector node #2
 ; CHECK-NEXT: NoAlias: ended activation #2
 ; CHECK-NEXT: Exiting function: write_inner
 ; CHECK-NEXT:   call void @write_inner(ptr %x)
@@ -50,7 +49,6 @@ define void @main() {
 ; CHECK-NEXT: NoAlias: read through node #1 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   %v = load i32, ptr %x, align 4 => i32 1
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: erased inactive protector node #1
 ; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: outer_ok
 ; CHECK-NEXT:   call void @outer_ok(ptr %a)

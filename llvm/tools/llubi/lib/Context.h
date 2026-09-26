@@ -102,7 +102,7 @@ struct ProgramExitInfo {
   }
 };
 
-enum class NoAliasAccessKind { Read, Write };
+enum class NoAliasAccessKind { Read, Write, Deallocate };
 
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
@@ -323,6 +323,8 @@ class Context {
   /// they are used only to classify accesses in active function activations.
   struct NoAliasNode {
     uint64_t Parent = 0;
+    // Null for wildcard provenance: this node may access any allocation its
+    // provenance permits, including one reached by pointer arithmetic.
     MemoryObject *Object = nullptr;
     bool Active = false;
   };
@@ -338,6 +340,7 @@ class Context {
   DenseMap<uint64_t, NoAliasNode> NoAliasNodes;
   DenseMap<uint64_t, NoAliasActivation> NoAliasActivations;
   DenseMap<MemoryObject *, SmallVector<uint64_t, 2>> NoAliasActivationsByObject;
+  SmallVector<uint64_t, 2> WildcardNoAliasActivations;
 
   // noalias-related diagnostics
   std::string LastNoAliasError;
@@ -359,9 +362,6 @@ class Context {
   /// Return whether \p Ancestor is on \p Descendant's noalias parent chain.
   /// This relation defines whether an access is local to a protected node.
   bool isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const;
-  bool hasActiveNoAliasDescendant(uint64_t NodeID) const;
-  /// Try to erase the node if it is inactive and has no active descendant.
-  void tryEraseInactiveNoAliasNode(uint64_t NodeID);
   static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
   static std::string getNoAliasNodeName(uint64_t NodeID);
   static std::string getNoAliasActivationName(uint64_t ActivationID);
@@ -517,7 +517,8 @@ public:
   /// Apply an access to every active activation protecting \p MO.
   bool accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
                      uint64_t AccessNode, NoAliasAccessKind Kind);
-  /// End an activation and discard its access summaries.
+  /// End an activation and discard its access summaries, preserving ancestry
+  /// for escaped pointers while any other activation remains active.
   void endNoAliasActivation(uint64_t ActivationID);
   StringRef getLastNoAliasError() const { return LastNoAliasError; }
   SmallVector<std::string, 4> takeNoAliasEvents();

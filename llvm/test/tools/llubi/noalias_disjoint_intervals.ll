@@ -31,8 +31,6 @@ define void @main() {
 ; CHECK-NEXT: NoAlias: write through node #2 on 'a' bytes [4, 8) checked 1 active noalias activation
 ; CHECK-NEXT:   store i32 2, ptr %y, align 4
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: erased inactive protector node #1
-; CHECK-NEXT: NoAlias: erased inactive protector node #2
 ; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: write_disjoint
 ; CHECK-NEXT:   call void @write_disjoint(ptr %x, ptr %y)

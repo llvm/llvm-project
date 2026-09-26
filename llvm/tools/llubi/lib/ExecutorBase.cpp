@@ -13,30 +13,38 @@
 #include "ExecutorBase.h"
 
 namespace llvm::ubi {
+
+uint64_t retagNoAliasArguments(Context &Ctx, Function &F, CallBase *CallSite,
+                               MutableArrayRef<AnyValue> Args) {
+  if (!Ctx.isExperimentalNoAliasEnabled())
+    return 0;
+  uint64_t Activation = 0;
+  for (auto [I, ArgValue] : enumerate(Args)) {
+    bool NoAlias = F.getAttributes().hasParamAttr(I, Attribute::NoAlias) ||
+                   (CallSite && CallSite->getAttributes().hasParamAttr(
+                                    I, Attribute::NoAlias));
+    if (!NoAlias || !ArgValue.isPointer())
+      continue;
+    if (!Activation)
+      Activation = Ctx.beginNoAliasActivation();
+    ArgValue = Ctx.createNoAliasPointer(ArgValue.asPointer(), Activation);
+  }
+  return Activation;
+}
+
 Frame::Frame(Context &Ctx, Function &F, CallBase *CallSite, Frame *LastFrame,
              ArrayRef<AnyValue> Args, AnyValue &RetVal)
-    : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-      RetVal(RetVal), TLI(Ctx.getTLIImpl(), &F) {
+    : Func(F), LastFrame(LastFrame), CallSite(CallSite),
+      Args(Args.begin(), Args.end()), RetVal(RetVal),
+      TLI(Ctx.getTLIImpl(), &F) {
   assert((Args.size() == F.arg_size() ||
           (F.isVarArg() && Args.size() >= F.arg_size())) &&
          "Expected enough arguments to call the function.");
   BB = &Func.getEntryBlock();
   PC = BB->begin();
-  for (Argument &Arg : F.args()) {
-    AnyValue ArgValue = Args[Arg.getArgNo()];
-    // Retag only callee-visible noalias pointer parameters. This creates the
-    // protected node for the dynamic call frame without changing the normal
-    // provenance carried by the pointer.
-    if (Ctx.isExperimentalNoAliasEnabled() && Arg.hasNoAliasAttr() &&
-        Arg.getType()->isPointerTy() && !ArgValue.isPoison() &&
-        ArgValue.asPointer().getMemoryObject()) {
-      if (!NoAliasActivation)
-        NoAliasActivation = Ctx.beginNoAliasActivation();
-      ArgValue =
-          Ctx.createNoAliasPointer(ArgValue.asPointer(), NoAliasActivation);
-    }
-    ValueMap[&Arg] = std::move(ArgValue);
-  }
+  NoAliasActivation = retagNoAliasArguments(Ctx, F, CallSite, this->Args);
+  for (Argument &Arg : F.args())
+    ValueMap[&Arg] = this->Args[Arg.getArgNo()];
 }
 
 DiagnosticReporter ExecutorBase::reportImmediateUB() {
@@ -129,7 +137,22 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
     return {};
   }
 
+  if (!verifyNoAliasAccess(*MO, Offset.getZExtValue(), AccessSize, Ptr,
+                           IsStore ? NoAliasAccessKind::Write
+                                   : NoAliasAccessKind::Read))
+    return {};
   return {MO, Offset.getZExtValue()};
+}
+
+bool ExecutorBase::verifyNoAliasAccess(MemoryObject &MO, uint64_t Offset,
+                                       uint64_t Size, const Pointer &Ptr,
+                                       NoAliasAccessKind Kind) {
+  bool Valid =
+      Ctx.accessNoAlias(MO, Offset, Size, Ptr.getNoAliasNodeID(), Kind);
+  flushNoAliasEvents();
+  if (!Valid)
+    reportImmediateUB() << Ctx.getLastNoAliasError();
+  return Valid;
 }
 
 AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
@@ -149,17 +172,6 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
     if (NoUndef && ContainsUndefinedBits)
       reportImmediateUB() << "The value loaded contains undefined bits.";
 
-    // Run noalias after ordinary memory validity checks so diagnostics report
-    // aliasing only for otherwise valid concrete accesses.
-    if (const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ValTy);
-        !Ctx.accessNoAlias(*MO, Offset, AccessSize, PtrVal.getNoAliasNodeID(),
-                           NoAliasAccessKind::Read)) {
-      flushNoAliasEvents();
-      reportImmediateUB() << Ctx.getLastNoAliasError();
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-    }
-    flushNoAliasEvents();
-
     return Res;
   }
   return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -176,14 +188,6 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/true);
       MO) {
-    if (const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ValTy);
-        !Ctx.accessNoAlias(*MO, Offset, AccessSize, PtrVal.getNoAliasNodeID(),
-                           NoAliasAccessKind::Write)) {
-      flushNoAliasEvents();
-      reportImmediateUB() << Ctx.getLastNoAliasError();
-      return;
-    }
-    flushNoAliasEvents();
     Ctx.store(*MO, Offset, Val, ValTy);
   }
 }

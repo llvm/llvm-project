@@ -29,8 +29,6 @@ define void @main() {
 ; CHECK-NEXT: NoAlias: read through node #2 on 'a' bytes [0, 4) checked 1 active noalias activation
 ; CHECK-NEXT:   %vy = load i32, ptr %y, align 4 => i32 42
 ; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: erased inactive protector node #1
-; CHECK-NEXT: NoAlias: erased inactive protector node #2
 ; CHECK-NEXT: NoAlias: ended activation #1
 ; CHECK-NEXT: Exiting function: read_both
 ; CHECK-NEXT:   call void @read_both(ptr %a, ptr %a)

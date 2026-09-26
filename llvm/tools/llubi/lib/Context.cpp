@@ -1379,9 +1379,8 @@ bool MemoryObject::isHeapAllocated() const {
 bool Context::isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const {
   if (!Ancestor || !Descendant)
     return false;
-  // Parent links are stable while a descendant is active. If a stale node id
-  // was pruned, reaching a missing node means the relationship no longer
-  // exists.
+  // Inactive nodes retain parent links: returned and escaped pointers can
+  // still be based on an active ancestor.
   for (uint64_t NodeID = Descendant; NodeID;) {
     if (NodeID == Ancestor)
       return true;
@@ -1393,39 +1392,14 @@ bool Context::isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const {
   return false;
 }
 
-bool Context::hasActiveNoAliasDescendant(uint64_t NodeID) const {
-  for (const auto &[CandidateID, Candidate] : NoAliasNodes) {
-    if (!Candidate.Active || CandidateID == NodeID)
-      continue;
-    if (isNoAliasAncestor(NodeID, CandidateID))
-      return true;
-  }
-  return false;
-}
-
-void Context::tryEraseInactiveNoAliasNode(uint64_t NodeID) {
-  const auto It = NoAliasNodes.find(NodeID);
-  if (It == NoAliasNodes.end() || It->second.Active)
-    return;
-  if (hasActiveNoAliasDescendant(NodeID))
-    return;
-
-  // An inactive node can still be relevant as the parent of a live child. Once
-  // that is no longer true, stale pointers carrying this ID should behave like
-  // raw/root pointers during future retagging.
-  const uint64_t Parent = It->second.Parent;
-  appendNoAliasEvent("erased inactive protector " + getNoAliasNodeName(NodeID));
-  NoAliasNodes.erase(It);
-  if (Parent)
-    tryEraseInactiveNoAliasNode(Parent);
-}
-
 StringRef Context::getNoAliasAccessKindName(NoAliasAccessKind Kind) {
   switch (Kind) {
   case NoAliasAccessKind::Read:
     return "read";
   case NoAliasAccessKind::Write:
     return "write";
+  case NoAliasAccessKind::Deallocate:
+    return "deallocation";
   }
   llvm_unreachable("Unknown NoAliasAccessKind");
 }
@@ -1467,7 +1441,7 @@ uint64_t Context::classifyNoAliasAccess(const NoAliasActivation &Activation,
   for (uint64_t NodeID : Activation.Nodes) {
     const auto It = NoAliasNodes.find(NodeID);
     if (It == NoAliasNodes.end() || !It->second.Active ||
-        It->second.Object != &MO)
+        (It->second.Object && It->second.Object != &MO))
       continue;
     if (isNoAliasAncestor(NodeID, AccessNode))
       return NodeID;
@@ -1510,7 +1484,7 @@ bool Context::updateNoAliasAccesses(NoAliasActivation &Activation,
     if (RunBegin == RunEnd)
       return true;
 
-    const bool IsWrite = Kind == NoAliasAccessKind::Write;
+    const bool IsWrite = Kind != NoAliasAccessKind::Read;
     NoAliasAccessSummary New{AccessClass, false, IsWrite};
     if (Old) {
       New = *Old;
@@ -1615,9 +1589,13 @@ Pointer Context::createNoAliasPointer(const Pointer &Ptr,
   if (!ExperimentalNoAlias || !ActivationID)
     return Ptr;
 
-  MemoryObject *MO = Ptr.getMemoryObject();
-  if (!MO)
+  if (!Ptr.getMemoryObject() && !Ptr.provenance().isWildcard())
     return Ptr;
+  // An unresolved wildcard can reach an allocation via arithmetic before its
+  // first access. Track foreign accesses from entry, without resolving or
+  // dereferencing the parameter.
+  MemoryObject *MO =
+      Ptr.provenance().isWildcard() ? nullptr : Ptr.getMemoryObject();
 
   auto ActivationIt = NoAliasActivations.find(ActivationID);
   assert(ActivationIt != NoAliasActivations.end() &&
@@ -1636,7 +1614,8 @@ Pointer Context::createNoAliasPointer(const Pointer &Ptr,
   NoAliasNodes.try_emplace(NodeID, std::move(Node));
   ActivationIt->second.Nodes.push_back(NodeID);
 
-  auto &Activations = NoAliasActivationsByObject[MO];
+  auto &Activations =
+      MO ? NoAliasActivationsByObject[MO] : WildcardNoAliasActivations;
   if (std::find(Activations.begin(), Activations.end(), ActivationID) ==
       Activations.end())
     Activations.push_back(ActivationID);
@@ -1644,7 +1623,7 @@ Pointer Context::createNoAliasPointer(const Pointer &Ptr,
   std::string S;
   raw_string_ostream OS(S);
   OS << "created protector " << getNoAliasNodeName(NodeID) << " for "
-     << getNoAliasObjectName(*MO) << " in "
+     << (MO ? getNoAliasObjectName(*MO) : "wildcard provenance") << " in "
      << getNoAliasActivationName(ActivationID) << " based on "
      << getNoAliasNodeName(Parent);
   appendNoAliasEvent(std::move(S));
@@ -1657,12 +1636,20 @@ bool Context::accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
     return true;
 
   auto It = NoAliasActivationsByObject.find(&MO);
-  if (It == NoAliasActivationsByObject.end())
+  if (It == NoAliasActivationsByObject.end() &&
+      WildcardNoAliasActivations.empty())
     return true;
+
+  SmallVector<uint64_t, 4> Activations(WildcardNoAliasActivations.begin(),
+                                       WildcardNoAliasActivations.end());
+  if (It != NoAliasActivationsByObject.end())
+    for (uint64_t ID : It->second)
+      if (!is_contained(Activations, ID))
+        Activations.push_back(ID);
 
   const uint64_t End = Offset + Size;
   uint32_t CheckedActivations = 0;
-  for (uint64_t ActivationID : It->second) {
+  for (uint64_t ActivationID : Activations) {
     auto ActivationIt = NoAliasActivations.find(ActivationID);
     if (ActivationIt == NoAliasActivations.end())
       continue;
@@ -1703,7 +1690,6 @@ void Context::endNoAliasActivation(uint64_t ActivationID) {
       continue;
     MemoryObject *MO = NodeIt->second.Object;
     NodeIt->second.Active = false;
-    tryEraseInactiveNoAliasNode(NodeID);
     auto ObjectIt = NoAliasActivationsByObject.find(MO);
     if (ObjectIt == NoAliasActivationsByObject.end())
       continue;
@@ -1712,8 +1698,14 @@ void Context::endNoAliasActivation(uint64_t ActivationID) {
     if (IDs.empty())
       NoAliasActivationsByObject.erase(ObjectIt);
   }
+  llvm::erase(WildcardNoAliasActivations, ActivationID);
   appendNoAliasEvent("ended " + getNoAliasActivationName(ActivationID));
   NoAliasActivations.erase(ActivationIt);
+  // A node ID may survive in SSA values or memory after its call returns.
+  // Reclaim the ancestry only when no active protector can distinguish it
+  // from the root. IDs are never reused, so later retags can safely use root.
+  if (NoAliasActivations.empty())
+    NoAliasNodes.clear();
 }
 
 SmallVector<std::string, 4> Context::takeNoAliasEvents() {
@@ -1726,23 +1718,13 @@ void Context::clearNoAliasState(const MemoryObject &MO) {
   if (!ExperimentalNoAlias)
     return;
 
-  const auto It = NoAliasActivationsByObject.find(&MO);
-  if (It == NoAliasActivationsByObject.end())
-    return;
-  SmallVector<uint64_t, 4> ActivationIDs(It->second.begin(), It->second.end());
-  for (uint64_t ActivationID : ActivationIDs) {
-    auto ActivationIt = NoAliasActivations.find(ActivationID);
-    if (ActivationIt == NoAliasActivations.end())
-      continue;
-    for (uint64_t NodeID : ActivationIt->second.Nodes) {
-      auto NodeIt = NoAliasNodes.find(NodeID);
-      if (NodeIt != NoAliasNodes.end() && NodeIt->second.Object == &MO)
-        NodeIt->second.Active = false;
-      tryEraseInactiveNoAliasNode(NodeID);
-    }
-    ActivationIt->second.Accesses.erase(const_cast<MemoryObject *>(&MO));
-  }
-  NoAliasActivationsByObject.erase(It);
+  for (auto &[ID, Activation] : NoAliasActivations)
+    Activation.Accesses.erase(const_cast<MemoryObject *>(&MO));
+  // No valid access can use a concrete pointer to this allocation again.
+  // Also remove inactive nodes before their raw Object pointer can dangle.
+  NoAliasNodes.remove_if(
+      [&](const auto &Entry) { return Entry.second.Object == &MO; });
+  NoAliasActivationsByObject.erase(const_cast<MemoryObject *>(&MO));
 }
 
 } // namespace llvm::ubi
