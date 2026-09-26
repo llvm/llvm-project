@@ -1,0 +1,82 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=greedy,virtregrewriter -verify-machineinstrs -o - %s | FileCheck %s
+
+# The destination of an MFMA that may overlap its accumulator is placed into
+# the accumulator register even when a lower register has just become free,
+# and an accumulator follows an already allocated destination the same way.
+
+# CHECK-LABEL: name: dst_follows_src2
+# CHECK: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3
+# CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, killed $agpr4_agpr5_agpr6_agpr7,
+
+# CHECK-LABEL: name: src2_follows_dst
+# CHECK: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3
+# CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, killed $agpr4_agpr5_agpr6_agpr7,
+# CHECK-NEXT: S_ENDPGM 0, implicit $agpr4_agpr5_agpr6_agpr7
+
+# CHECK-LABEL: name: subreg_dst_follows_subreg_src2
+# CHECK: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: renamable $agpr8_agpr9_agpr10_agpr11 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: renamable $agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0,
+# CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+# CHECK-NEXT: renamable $agpr8_agpr9_agpr10_agpr11 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, $agpr8_agpr9_agpr10_agpr11,
+# CHECK-NEXT: renamable $agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, killed $agpr12_agpr13_agpr14_agpr15,
+
+--- |
+  define amdgpu_kernel void @dst_follows_src2() { ret void }
+  define amdgpu_kernel void @src2_follows_dst() { ret void }
+  define amdgpu_kernel void @subreg_dst_follows_subreg_src2() { ret void }
+...
+
+---
+name: dst_follows_src2
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    %p:areg_128_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %acc:areg_128_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %p
+    %t:areg_128_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, %acc, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %t
+...
+
+---
+name: src2_follows_dst
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    %p:areg_128_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %p
+    %acc:areg_128_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %t:areg_128_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, %acc, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_agpr5_agpr6_agpr7 = COPY %t
+    S_ENDPGM 0, implicit $agpr4_agpr5_agpr6_agpr7
+...
+
+---
+name: subreg_dst_follows_subreg_src2
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    undef %p.sub0_sub1_sub2_sub3:areg_256_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %p.sub4_sub5_sub6_sub7:areg_256_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    undef %acc.sub0_sub1_sub2_sub3:areg_256_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %acc.sub4_sub5_sub6_sub7:areg_256_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 0, implicit %p
+    undef %big.sub0_sub1_sub2_sub3:areg_256_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, %acc.sub0_sub1_sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
+    %big.sub4_sub5_sub6_sub7:areg_256_align2 = V_MFMA_F32_16X16X4F32_e64 $vgpr0, $vgpr1, %acc.sub4_sub5_sub6_sub7, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %big
+...

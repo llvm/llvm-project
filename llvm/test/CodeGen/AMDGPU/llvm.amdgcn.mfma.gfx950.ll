@@ -148,10 +148,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd(ptr addrsp
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_f32_16x16x32_f16 v[8:11], v[0:3], v[4:7], v[8:11]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 6
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
 ; GISEL-NEXT:    s_endpgm
 ;
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd:
@@ -267,10 +267,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags(ptr
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_f32_16x16x32_f16 v[8:11], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 6
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
 ; GISEL-NEXT:    s_endpgm
 ;
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags:
@@ -2590,10 +2590,10 @@ define amdgpu_kernel void @test_mfma_i32_16x16x64_i8_no_agpr__vgprcd(ptr addrspa
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_i32_16x16x64_i8 v[0:3], v[0:3], v[4:7], v[8:11]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_i32_16x16x64_i8 v[8:11], v[0:3], v[4:7], v[8:11]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 6
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
 ; GISEL-NEXT:    s_endpgm
 ;
 ; HEURRC-LABEL: test_mfma_i32_16x16x64_i8_no_agpr__vgprcd:
@@ -2737,10 +2737,10 @@ define amdgpu_kernel void @test_mfma_i32_16x16x64_i8_no_agpr__vgprcd__flags(ptr 
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_i32_16x16x64_i8 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_i32_16x16x64_i8 v[8:11], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 6
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
 ; GISEL-NEXT:    s_endpgm
 ;
 ; HEURRC-LABEL: test_mfma_i32_16x16x64_i8_no_agpr__vgprcd__flags:
@@ -5256,10 +5256,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd(ptr addrs
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_f32_16x16x32_bf16 v[8:11], v[0:3], v[4:7], v[8:11]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 6
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
 ; GISEL-NEXT:    s_endpgm
 ;
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd:
@@ -5375,10 +5375,10 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags(pt
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_f32_16x16x32_bf16 v[8:11], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 6
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[8:11], s[6:7]
 ; GISEL-NEXT:    s_endpgm
 ;
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags:

@@ -35,19 +35,19 @@ define amdgpu_kernel void @mfma_16x16_interleave(
 ; CHECK-NEXT:    s_add_i32 s1, s10, s11
 ; CHECK-NEXT:    v_add_u32_e32 v24, v16, v17
 ; CHECK-NEXT:    v_add_u32_e32 v25, v17, v30
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[2:5], v[2:5], v[6:9], v[10:13]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[10:13], v[2:5], v[6:9], v[10:13]
 ; CHECK-NEXT:    s_add_i32 s2, s12, s13
-; CHECK-NEXT:    v_add_u32_e32 v6, v30, v31
-; CHECK-NEXT:    v_add_u32_e32 v7, v31, v14
+; CHECK-NEXT:    v_add_u32_e32 v2, v30, v31
+; CHECK-NEXT:    v_add_u32_e32 v3, v31, v14
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    v_mov_b32_e32 v8, s0
-; CHECK-NEXT:    v_mov_b32_e32 v9, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s0
+; CHECK-NEXT:    v_mov_b32_e32 v5, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    global_store_dwordx4 v1, v[18:21], s[14:15]
 ; CHECK-NEXT:    global_store_dwordx4 v1, v[26:29], s[14:15] offset:16
-; CHECK-NEXT:    global_store_dwordx4 v1, v[2:5], s[14:15] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v1, v[10:13], s[14:15] offset:32
 ; CHECK-NEXT:    global_store_dwordx4 v1, v[22:25], s[14:15] offset:48
-; CHECK-NEXT:    global_store_dwordx4 v1, v[6:9], s[14:15] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v1, v[2:5], s[14:15] offset:64
 ; CHECK-NEXT:    global_store_dword v1, v0, s[14:15] offset:80
 ; CHECK-NEXT:    s_endpgm
     ptr addrspace(1) %ptr,

@@ -1225,10 +1225,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_f64_4x4x4f64 v[4:5], v[0:1], v[2:3], 0
 ; GFX90A-GISEL-NEXT:    s_nop 3
-; GFX90A-GISEL-NEXT:    v_mfma_f64_4x4x4f64 v[0:1], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 blgp:3
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-GISEL-NEXT:    v_mfma_f64_4x4x4f64 v[4:5], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 blgp:3
+; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-GISEL-NEXT:    s_nop 7
-; GFX90A-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX90A-GISEL-NEXT:    global_store_dwordx2 v0, v[4:5], s[0:1]
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: test_mfma_f64_4x4x4f64:
@@ -1257,10 +1257,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[4:5], v[0:1], v[2:3], 0
 ; GFX942-GISEL-NEXT:    s_nop 3
-; GFX942-GISEL-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 neg:[1,1,0]
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-GISEL-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[4:5], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 neg:[1,1,0]
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-GISEL-NEXT:    s_nop 7
-; GFX942-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-GISEL-NEXT:    global_store_dwordx2 v0, v[4:5], s[0:1]
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-LABEL: test_mfma_f64_4x4x4f64:
@@ -1289,10 +1289,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_4x4x4f64 v[4:5], v[0:1], v[2:3], 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 3
-; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_4x4x4f64 v[0:1], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 blgp:3
-; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-VGPR-GISEL-NEXT:    v_mfma_f64_4x4x4f64 v[4:5], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 blgp:3
+; GFX90A-VGPR-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-VGPR-GISEL-NEXT:    s_nop 7
-; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX90A-VGPR-GISEL-NEXT:    global_store_dwordx2 v0, v[4:5], s[0:1]
 ; GFX90A-VGPR-GISEL-NEXT:    s_endpgm
 ;
 ; GFX942-VGPR-LABEL: test_mfma_f64_4x4x4f64:
@@ -1321,10 +1321,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 1
 ; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[4:5], v[0:1], v[2:3], 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 3
-; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 neg:[1,1,0]
-; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-VGPR-GISEL-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[4:5], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 neg:[1,1,0]
+; GFX942-VGPR-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-VGPR-GISEL-NEXT:    s_nop 7
-; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-VGPR-GISEL-NEXT:    global_store_dwordx2 v0, v[4:5], s[0:1]
 ; GFX942-VGPR-GISEL-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %a, double %b, double 0.0, i32 0, i32 0, i32 0)

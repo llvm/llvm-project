@@ -17,10 +17,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: KILL $agpr0_agpr1_agpr2_agpr3
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, killed $agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_NOP 6
-    ; CHECK-NEXT: renamable $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr8, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3, implicit killed renamable $agpr4
+    ; CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, killed $agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr8, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $agpr4_agpr5_agpr6_agpr7, implicit killed renamable $agpr0
     %acc:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
     KILL killed $agpr0_agpr1_agpr2_agpr3
     %t:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, %acc, 0, 0, 0, implicit $mode, implicit $exec
@@ -40,10 +39,9 @@ body: |
     ; CHECK: liveins: $vgpr8, $agpr0_agpr1_agpr2_agpr3, $agpr4_agpr5_agpr6_agpr7, $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: KILL $agpr0_agpr1_agpr2_agpr3
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, killed $agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_NOP 2
-    ; CHECK-NEXT: renamable $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr8, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3, implicit killed renamable $agpr4
+    ; CHECK-NEXT: renamable $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, killed $agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr8, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $agpr4_agpr5_agpr6_agpr7, implicit killed renamable $agpr0
     %acc:areg_128_align2 = COPY $agpr4_agpr5_agpr6_agpr7
     KILL killed $agpr0_agpr1_agpr2_agpr3
     %t:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, %acc, 0, 0, 0, implicit $mode, implicit $exec
