@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -397,6 +398,75 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (BytesAdded)
     *BytesAdded = 16;
   return 2;
+}
+
+void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                          MachineBasicBlock &NewDestBB,
+                                          MachineBasicBlock &RestoreBB,
+                                          const DebugLoc &DL, int64_t BrOffset,
+                                          RegScavenger *RS) const {
+  assert(RS && "RegScavenger required for long branching");
+  assert(MBB.empty() &&
+         "new block should be inserted for expanding unconditional branch");
+  assert(MBB.pred_size() == 1);
+  assert(RestoreBB.empty() &&
+         "restore block should be inserted for restoring clobbered registers");
+
+  MachineFunction *MF = MBB.getParent();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+
+  if (!isInt<32>(BrOffset))
+    report_fatal_error(
+        "Branch offsets outside of the signed 32-bit range not supported");
+  RS->enterBasicBlockEnd(MBB);
+
+  // A SPARC CALL instruction already has signed 32-bit range, so we'll use it
+  // instead of actually emitting an indirect branch.
+  //
+  // Note that using CALLs to do unconditional long-range branch in this manner
+  // should only be done if the target is out of range of a regular BA
+  // instruction, given that CALLS will always clobber %o7 and interfere with
+  // the processor's predictor machinery.
+  bool IsO7Used = RS->isRegUsed(SP::O7);
+  Register ScratchReg = RS->FindUnusedReg(&SP::IntRegsRegClass);
+  int FI = 0;
+  if (IsO7Used) {
+    if (ScratchReg.isValid()) {
+      BuildMI(&MBB, DL, get(SP::ORrr), ScratchReg)
+          .addReg(SP::G0)
+          .addReg(SP::O7, RegState::Kill);
+      RS->setRegUsed(ScratchReg);
+    } else {
+      // In case we run out of usable registers we'll spill it into the stack.
+      const MCRegisterClass &RC =
+          Subtarget.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
+      unsigned SpillSize = TRI.getSpillSize(RC);
+      Align SpillAlign = TRI.getSpillAlign(RC);
+
+      FI = MFI.CreateStackObject(SpillSize, SpillAlign, true);
+
+      MachineBasicBlock::iterator I = MBB.end();
+      storeRegToStackSlot(MBB, I, SP::O7, true, FI, &RC, Register());
+      TRI.eliminateFrameIndex(std::prev(I), 0, 0, RS);
+    }
+  }
+
+  BuildMI(&MBB, DL, get(SP::CALL)).addMBB(IsO7Used ? &RestoreBB : &NewDestBB);
+
+  if (IsO7Used) {
+    if (ScratchReg.isValid()) {
+      BuildMI(&RestoreBB, DL, get(SP::ORrr), SP::O7)
+          .addReg(SP::G0)
+          .addReg(ScratchReg, RegState::Kill);
+    } else {
+      const MCRegisterClass &RC =
+          Subtarget.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
+
+      MachineBasicBlock::iterator I = RestoreBB.begin();
+      loadRegFromStackSlot(RestoreBB, I, SP::O7, FI, &RC, Register());
+      TRI.eliminateFrameIndex(std::prev(I), 0, 1, RS);
+    }
+  }
 }
 
 unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
