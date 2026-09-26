@@ -986,6 +986,69 @@ namespace CompoundLiterals {
                                 both-note {{in call to 'f3(nullptr, nullptr)'}}
 }
 
+namespace GH167840 {
+  /// In C++ the compound literals are temporaries, so these globals dangle.
+  extern void abort(void);
+
+  struct s {
+    int a;
+    int b;
+  };
+
+  struct s *s0 = &(struct s){1, 2}; // both-error {{taking the address of a temporary object of type 'struct s'}}
+  struct s *s1 = &(struct s){1, 2}; // both-error {{taking the address of a temporary object of type 'struct s'}}
+  const struct s *s2 = &(const struct s){1, 2}; // both-error {{taking the address of a temporary object of type 'const struct s'}} \
+                                                // both-note {{declared here}}
+
+  void foo(void) {
+    if (s0->a != 1 || s0->b != 2 || s1->a != 1 || s1->b != 2 || s2->a != 1 ||
+        s2->b != 2)
+      abort();
+  }
+
+  static_assert(s2->a == 1, ""); // both-error {{not an integral constant expression}} \
+                                 // ref-note {{read of non-constexpr variable 's2' is not allowed in a constant expression}} \
+                                 // expected-note {{initializer of 's2' is not a constant expression}}
+
+  struct P {
+    const s *p;
+  };
+  const P sub = { &(const s){5} }; // both-error {{taking the address of a temporary object of type 'const s'}} \
+                                   // both-note {{declared here}}
+  void bar(void) {
+    if (sub.p->a != 5)
+      abort();
+  }
+  static_assert(sub.p->a == 5, ""); // both-error {{not an integral constant expression}} \
+                                    // both-note {{initializer of 'sub' is not a constant expression}}
+
+  /// Reads through the lifetime-extended temporary are rejected by CheckTemporary.
+  const P &ref = P{ &(const s){5, 6} }; // both-error {{taking the address of a temporary object of type 'const s'}} \
+                                        // ref-note {{declared here}} \
+                                        // expected-note {{temporary created here}}
+  void qux(void) {
+    if (ref.p->a != 5)
+      abort();
+  }
+  static_assert(ref.p->a == 5, ""); // both-error {{not an integral constant expression}} \
+                                    // ref-note {{initializer of 'ref' is not a constant expression}} \
+                                    // expected-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+
+#if __cplusplus >= 202002L
+  /// Same with a pointer to a heap allocation.
+  struct H {
+    s *p;
+  };
+  const H heap = { new s{1, 2} }; // both-note {{declared here}}
+  void baz(void) {
+    if (heap.p->a != 1)
+      abort();
+  }
+  static_assert(heap.p->a == 1, ""); // both-error {{not an integral constant expression}} \
+                                     // both-note {{initializer of 'heap' is not a constant expression}}
+#endif
+}
+
 namespace TypeTraits {
   static_assert(__is_trivial(int), "");
   static_assert(__is_trivial(float), "");

@@ -73,6 +73,10 @@ public:
     return getPtrGlobal(Index).isInitialized();
   }
 
+  /// Marks the global as uninitialized after its initializer failed, destroying
+  /// everything that has been stored in it so far.
+  void markGlobalUninitialized(unsigned Index);
+
   /// Finds a global's index.
   UnsignedOrNone getGlobal(const ValueDecl *VD);
   UnsignedOrNone getGlobal(const Expr *E);
