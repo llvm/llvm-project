@@ -169,10 +169,22 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return false;
   };
 
+  // reject calls with more args than the builtin's declared prototype
+  auto CheckArgCount = [&]() -> bool {
+    ASTContext::GetBuiltinTypeError Error;
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(
+            Context.GetBuiltinType(BuiltinID, Error).getTypePtr()))
+      if (!FPT->isVariadic())
+        return SemaRef.checkArgCount(TheCall, FPT->getNumParams());
+    return false;
+  };
+
   switch (BuiltinID) {
   default:
     return false;
   case PPC::BI__builtin_ppc_bcdsetsign: {
+    if (CheckArgCount())
+      return true;
     // Arg0 must be vector unsigned char
     if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
       return false;
@@ -182,11 +194,18 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   }
   case PPC::BI__builtin_ppc_national2packed:
   case PPC::BI__builtin_ppc_packed2zoned:
-  case PPC::BI__builtin_ppc_zoned2packed:
+  case PPC::BI__builtin_ppc_zoned2packed: {
+    if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
+      return false;
+    if (CheckArgCount())
+      return true;
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  }
   case PPC::BI__builtin_ppc_bcdshift:
   case PPC::BI__builtin_ppc_bcdshiftround:
   case PPC::BI__builtin_ppc_bcdtruncate: {
+    if (CheckArgCount())
+      return true;
 
     // Arg0 must be vector unsigned char
     if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
