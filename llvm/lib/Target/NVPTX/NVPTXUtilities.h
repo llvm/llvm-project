@@ -69,8 +69,10 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 }
 
 inline bool shouldPassAsArray(Type *Ty) {
+  // Scalar types wider than 64 bits have no PTX fundamental type, so they are
+  // passed as byte arrays, same as aggregates and vectors.
   return Ty->isAggregateType() || Ty->isVectorTy() ||
-         Ty->getScalarSizeInBits() >= 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+         Ty->getScalarSizeInBits() > 64 || Ty->isHalfTy() || Ty->isBFloatTy();
 }
 
 namespace NVPTX {
