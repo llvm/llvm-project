@@ -57,7 +57,7 @@ body: |
     S_BRANCH %bb.4
 
   bb.3:
-    SI_END_CF %8:sreg_64_xexec, implicit-def $exec, implicit-def $scc, implicit $exec
+    bb-prolog SI_END_CF %8:sreg_64_xexec, implicit-def $exec, implicit-def $scc, implicit $exec
     %13:sreg_32 = S_MOV_B32 1
     %15:vgpr_32 = COPY %13:sreg_32
     %10:vgpr_32, dead %20:sreg_64_xexec = V_ADD_CO_U32_e64 %6:vgpr_32, %15:vgpr_32, 0, implicit $exec

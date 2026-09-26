@@ -6,6 +6,9 @@
   define amdgpu_ps void @test_strict_wwm_scc() {
     ret void
   }
+  define amdgpu_ps void @test_strict_wwm_pseudo_probe() {
+    ret void
+  }
   define amdgpu_ps void @test_strict_wwm_scc2() {
     ret void
   }
@@ -83,7 +86,7 @@ body:             |
     ; CHECK-LABEL: name: test_strict_wwm_scc
     ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = bb-prolog ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -109,6 +112,68 @@ body:             |
 ...
 
 ---
+# A pseudo probe at the block entry does not separate the exec mode switch from
+# the block start: it is still a block prolog instruction.
+name:            test_strict_wwm_pseudo_probe
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '' }
+  - { id: 1, class: sgpr_32, preferred-register: '' }
+  - { id: 2, class: sgpr_32, preferred-register: '' }
+  - { id: 3, class: vgpr_32, preferred-register: '' }
+  - { id: 4, class: vgpr_32, preferred-register: '' }
+  - { id: 5, class: sgpr_32, preferred-register: '' }
+  - { id: 6, class: vgpr_32, preferred-register: '' }
+  - { id: 7, class: vgpr_32, preferred-register: '' }
+  - { id: 8, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 9, class: sreg_32, preferred-register: '' }
+  - { id: 10, class: sreg_32, preferred-register: '' }
+  - { id: 11, class: vgpr_32, preferred-register: '' }
+  - { id: 12, class: vgpr_32, preferred-register: '' }
+liveins:
+  - { reg: '$sgpr0', virtual-reg: '%0' }
+  - { reg: '$sgpr1', virtual-reg: '%1' }
+  - { reg: '$sgpr2', virtual-reg: '%2' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
+
+    ; CHECK-LABEL: name: test_strict_wwm_pseudo_probe
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: PSEUDO_PROBE 1, 1, 0, 0
+    ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = bb-prolog ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; CHECK-NEXT: S_CMP_LT_I32 0, [[COPY3]], implicit-def $scc
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], [[COPY]], implicit-def $vcc, implicit $exec
+    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sgpr_32 = S_CSELECT_B32 [[COPY1]], [[COPY2]], implicit $scc
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_CSELECT_B32_]], [[V_ADD_CO_U32_e32_]], implicit-def $vcc, implicit $exec
+    ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
+    ; CHECK-NEXT: early-clobber $vgpr0 = V_MOV_B32_e32 [[V_ADD_CO_U32_e32_1]], implicit $exec
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0
+    PSEUDO_PROBE 1, 1, 0, 0
+    %3 = COPY $vgpr0
+    %2 = COPY $sgpr2
+    %1 = COPY $sgpr1
+    %0 = COPY $sgpr0
+    S_CMP_LT_I32 0, %0, implicit-def $scc
+    %12 = V_ADD_CO_U32_e32 %3, %3, implicit-def $vcc, implicit $exec
+    %5 = S_CSELECT_B32 %2, %1, implicit $scc
+    %11 = V_ADD_CO_U32_e32 %5, %12, implicit-def $vcc, implicit $exec
+    $vgpr0 = STRICT_WWM %11, implicit $exec
+    SI_RETURN_TO_EPILOG $vgpr0
+
+...
+---
 # Second test for awareness that s_or_saveexec_b64 clobbers SCC
 # Because entry block is treated differently.
 name:            test_strict_wwm_scc2
@@ -119,7 +184,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = bb-prolog ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
@@ -301,7 +366,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr1, $sgpr2, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = bb-prolog COPY $exec
   ; CHECK-NEXT:   $m0 = COPY $sgpr1
   ; CHECK-NEXT:   $exec = S_WQM_B64 $exec, implicit-def $scc
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
@@ -420,8 +485,8 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec
-  ; CHECK-NEXT:   $exec = S_WQM_B64 $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = bb-prolog COPY $exec
+  ; CHECK-NEXT:   $exec = bb-prolog S_WQM_B64 $exec, implicit-def $scc
   ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 -10, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[S_GETPC_B64_:%[0-9]+]]:sreg_64 = S_GETPC_B64
@@ -447,7 +512,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   $exec = S_AND_B64 $exec, [[COPY]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_AND_B64 $exec, [[COPY]], implicit-def $scc
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[IMAGE_SAMPLE_V4_V2_:%[0-9]+]]:vreg_128 = IMAGE_SAMPLE_V4_V2 [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX8_IMM]], [[DEF]], 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V4_V2_]].sub0
@@ -629,7 +694,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vcc
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = bb-prolog COPY $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY $vcc
   ; CHECK-NEXT:   V_CMP_NGT_F32_e32 0, [[COPY1]], implicit-def $vcc, implicit $mode, implicit $exec

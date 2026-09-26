@@ -108,7 +108,7 @@ body: |
     S_BRANCH %bb.4
 
   bb.3:
-    SI_END_CF %12, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %12, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
   bb.4:
@@ -128,7 +128,7 @@ body: |
     %10:sreg_32 = PHI %45, %bb.2, %46, %bb.4
     %8:sreg_32 = PHI %39, %bb.2, %40, %bb.4
     %9:vgpr_32 = PHI %36, %bb.2, %6, %bb.4
-    SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %11:sreg_32 = SI_IF_BREAK %10, %2, implicit-def dead $scc
     %12:sreg_32 = SI_IF_BREAK %8, %0, implicit-def dead $scc
     SI_LOOP %11, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -138,7 +138,7 @@ body: |
     successors: %bb.3(0x04000000), %bb.1(0x7c000000)
 
     %13:vgpr_32 = PHI %9, %bb.5
-    SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     SI_LOOP %12, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 ...

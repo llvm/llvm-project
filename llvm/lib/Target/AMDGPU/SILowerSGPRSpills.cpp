@@ -132,6 +132,7 @@ static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
   bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI);
   assert(Success && "spillCalleeSavedRegisters should always succeed");
   (void)Success;
+  SaveBlock.inheritBBProlog(MIS.begin(), I);
 
   // TFI doesn't update Indexes and LIS, so we have to do it separately.
   if (Indexes)
@@ -581,6 +582,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       MachineBasicBlock &Block = *IP.MBB;
       DebugLoc DL = Block.findDebugLoc(IP.It);
       auto MIB = BuildMI(Block, IP.It, DL, TII->get(AMDGPU::IMPLICIT_DEF), Reg);
+      Block.inheritBBProlog(MIB->getIterator(), IP.It);
 
       // Add WWM flag to the virtual register.
       FuncInfo->setFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
