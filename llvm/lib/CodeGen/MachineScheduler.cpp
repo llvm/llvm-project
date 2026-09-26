@@ -249,8 +249,15 @@ static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
 static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
   cl::desc("Limit ready list to N instructions"), cl::init(256));
 
-static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
-  cl::desc("Enable register pressure scheduling."), cl::init(true));
+static cl::opt<bool> EnableRegPressure(
+    "misched-regpressure", cl::Hidden,
+    cl::desc("Override register pressure tracking during scheduling."),
+    cl::init(true));
+
+static cl::opt<bool> EnableLaneMasks(
+    "misched-track-lane-masks", cl::Hidden,
+    cl::desc(
+        "Override lane mask tracking during register pressure scheduling."));
 
 static cl::opt<bool> EnableCyclicPath("misched-cyclicpath", cl::Hidden,
   cl::desc("Enable cyclic critical path analysis."), cl::init(true));
@@ -3715,10 +3722,14 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   MF.getSubtarget().overrideSchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
-  if (!EnableRegPressure) {
-    RegionPolicy.ShouldTrackPressure = false;
+  if (EnableRegPressure.getNumOccurrences())
+    RegionPolicy.ShouldTrackPressure = EnableRegPressure;
+  if (EnableLaneMasks.getNumOccurrences())
+    RegionPolicy.ShouldTrackLaneMasks = EnableLaneMasks;
+
+  // Lane masks are only tracked when register pressure is tracked.
+  if (!RegionPolicy.ShouldTrackPressure)
     RegionPolicy.ShouldTrackLaneMasks = false;
-  }
 
   if (PreRADirection == MISched::TopDown) {
     RegionPolicy.OnlyTopDown = true;
