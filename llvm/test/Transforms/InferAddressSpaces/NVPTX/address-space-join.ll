@@ -206,13 +206,12 @@ define ptr @mixed_null(ptr addrspace(3) %local, ptr addrspace(7) %cluster, i1 %c
   ret ptr %p
 }
 
-; Only generic expressions are analyzed; existing AS7 expressions retain AS7.
+; Existing AS7 expressions can also be refined when they have an AS3 origin.
 define i32 @cluster_expression(ptr addrspace(3) %local) {
 ; CHECK-LABEL: define i32 @cluster_expression(
 ; CHECK-SAME: ptr addrspace(3) [[LOCAL:%.*]]) {
-; CHECK-NEXT:    [[CLUSTER:%.*]] = addrspacecast ptr addrspace(3) [[LOCAL]] to ptr addrspace(7)
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr addrspace(7) [[CLUSTER]], i64 1
-; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr addrspace(7) [[P]], align 4
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[LOCAL]], i64 1
+; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr addrspace(3) [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[VALUE]]
 ;
   %cluster = addrspacecast ptr addrspace(3) %local to ptr addrspace(7)
