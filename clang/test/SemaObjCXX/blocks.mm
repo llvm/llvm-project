@@ -33,7 +33,7 @@ void foo5(id (^x)(int)) {
 @end
 
 namespace N {
-  class X { };      
+  class X { };
   void foo(X);
 }
 
@@ -45,7 +45,7 @@ namespace N {
 @end
 
 typedef signed char BOOL;
-void foo6(void *block) {  
+void foo6(void *block) {
 	void (^vb)(id obj, int idx, BOOL *stop) = (void (^)(id, int, BOOL *))block;
     BOOL (^bb)(id obj, int idx, BOOL *stop) = (BOOL (^)(id, int, BOOL *))block;
 }
@@ -145,6 +145,41 @@ namespace DependentReturn {
   bool operator!=(X, X);
 
   template void f<X>(X);
+}
+
+namespace DependentTypenameReturnType {
+  // Success case
+  template <class T> struct S { typedef int type; };
+  template <class T> void f() {
+    auto b = ^ typename S<T>::type () { return 0; };
+    (void)b;
+  }
+  template void f<int>();
+
+  // Same as 'f' but with no parameter list. The written block signature is
+  // then stored as just the return-type loc (there is no FunctionProtoTypeLoc
+  // to look through).
+  template <class T> void g() {
+    auto b = ^ typename S<T>::type { return 0; };
+    (void)b;
+  }
+  template void g<int>();
+
+  // A block with no explicit return type has no return-type source location, so
+  // it takes the deduced-return fallback in TransformBlockExpr.
+  template <class T> T h() {
+    auto b = ^ { T x{}; return x; };
+    return b();
+  }
+  template int h<int>();
+
+  // Failure case
+  template <class T> struct NoType {};
+  template <class T> void i() {
+    auto b = ^ typename NoType<T>::type () { return 0; }; // expected-error{{no type named 'type' in 'DependentTypenameReturnType::NoType<int>'}}
+    (void)b;
+  }
+  template void i<int>(); // expected-note{{in instantiation of function template specialization 'DependentTypenameReturnType::i<int>' requested here}}
 }
 
 namespace GenericLambdaCapture {
