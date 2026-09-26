@@ -151,17 +151,25 @@ struct EliminateVectorMasksPass
     : public impl::EliminateVectorMasksBase<EliminateVectorMasksPass> {
   using Base::Base;
 
+  // Checked here rather than in runOnOperation so that a bad range is reported
+  // once, not once per function.
+  LogicalResult initialize(MLIRContext *context) override {
+    bool unset = !vscaleMin && !vscaleMax;
+    bool valid = vscaleMin && vscaleMax && vscaleMin <= vscaleMax;
+    if (unset || valid)
+      return success();
+    return emitError(UnknownLoc::get(context))
+           << "invalid vscale range 'vscale-min="
+           << static_cast<unsigned>(vscaleMin)
+           << " vscale-max=" << static_cast<unsigned>(vscaleMax)
+           << "': expected both to be 0 (unknown), or both non-zero with "
+              "'vscale-min' <= 'vscale-max'";
+  }
+
   void runOnOperation() override {
     std::optional<VscaleRange> vscaleRange;
-    if (vscaleMin || vscaleMax) {
-      if (!vscaleMin || !vscaleMax || vscaleMin > vscaleMax) {
-        getOperation()->emitError()
-            << "expected 'vscale-min' and 'vscale-max' to both be set, with "
-               "'vscale-min' <= 'vscale-max'";
-        return signalPassFailure();
-      }
+    if (vscaleMin && vscaleMax)
       vscaleRange = VscaleRange{vscaleMin, vscaleMax};
-    }
 
     IRRewriter rewriter(&getContext());
     eliminateVectorMasks(rewriter, getOperation(), vscaleRange);
