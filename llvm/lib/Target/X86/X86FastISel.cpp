@@ -4065,22 +4065,12 @@ Register X86FastISel::fastEmitInst_rrrr(unsigned MachineInstOpcode,
   Op2 = constrainOperandRegClass(II, Op2, II.getNumDefs() + 2);
   Op3 = constrainOperandRegClass(II, Op3, II.getNumDefs() + 3);
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0)
-        .addReg(Op1)
-        .addReg(Op2)
-        .addReg(Op3);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0)
-        .addReg(Op1)
-        .addReg(Op2)
-        .addReg(Op3);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      .addReg(Op1)
+      .addReg(Op2)
+      .addReg(Op3);
   return ResultReg;
 }
 
