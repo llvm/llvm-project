@@ -744,6 +744,11 @@ public:
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
                                                    const APInt &C);
+  /// Match comparisons of binops with a removable common operand. Pred is
+  /// updated when removing the common operand reverses the comparison order.
+  bool matchCommonBinOpOperands(Value *Op0, Value *Op1,
+                                CmpInst::Predicate &Pred, Value *&LHS,
+                                Value *&RHS, const SimplifyQuery &Q);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);
