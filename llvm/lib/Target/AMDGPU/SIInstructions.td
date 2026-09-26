@@ -1178,14 +1178,20 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
+    // $lanemask: per-dword bitmask of which dwords of the spilled super-register
+    // are defined. Undef dwords must not be written into the (possibly shared)
+    // stack slot. -1 (all dwords defined) is the ordinary full-width spill; a
+    // partial mask is set by the spiller for partially-defined values. i32imm's
+    // 32 bits cover the widest SGPR tuple SReg_1024 (32 dwords).
     def _SAVE : PseudoInstSI <
       (outs),
-      (ins sgpr_class:$data, i32imm:$addr)> {
+      (ins sgpr_class:$data, i32imm:$addr, i32imm:$lanemask)> {
       let mayStore = 1;
       let mayLoad = 0;
     }
 
-    def _CFI_SAVE : PseudoInstSI<(outs), (ins sgpr_class:$data, i32imm:$addr)> {
+    def _CFI_SAVE : PseudoInstSI<(outs),
+      (ins sgpr_class:$data, i32imm:$addr, i32imm:$lanemask)> {
       let mayStore = 1;
       let mayLoad = 0;
     }

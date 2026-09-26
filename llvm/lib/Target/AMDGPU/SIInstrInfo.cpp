@@ -1800,10 +1800,11 @@ void SIInstrInfo::storeRegToStackSlotImpl(
     }
 
     BuildMI(MBB, MI, DL, OpDesc)
-      .addReg(SrcReg, getKillRegState(isKill)) // data
-      .addFrameIndex(FrameIndex)               // addr
-      .addMemOperand(MMO)
-      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+        .addReg(SrcReg, getKillRegState(isKill)) // data
+        .addFrameIndex(FrameIndex)               // addr
+        .addImm(-1) // lanemask (all lanes; refined by spiller)
+        .addMemOperand(MMO)
+        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
@@ -1835,6 +1836,34 @@ void SIInstrInfo::storeRegToStackSlotCFI(MachineBasicBlock &MBB,
                                          const TargetRegisterClass *RC) const {
   storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, Register(),
                           MachineInstr::NoFlags, true);
+}
+
+void SIInstrInfo::setSpillDefinedLaneMask(MachineInstr &SpillMI,
+                                          LaneBitmask DefinedLanes) const {
+  // Only SGPR spill saves carry a $lanemask operand (see SI_SPILL_SGPR).
+  int Idx =
+      AMDGPU::getNamedOperandIdx(SpillMI.getOpcode(), AMDGPU::OpName::lanemask);
+  if (Idx == -1)
+    return;
+
+  // Build the per-dword mask consumed by spillSGPR: bit i is set when dword i
+  // of the spilled super-register intersects a defined lane. spillSGPR lowers
+  // the spill dword by dword and consults this mask to skip the undef ones.
+  const MachineRegisterInfo &MRI = SpillMI.getMF()->getRegInfo();
+  Register Data = SpillMI.getOperand(0).getReg();
+  const TargetRegisterClass *RC = MRI.getRegClass(Data);
+  unsigned NumDwords = RI.getRegSizeInBits(*RC) / 32;
+  // DwordMask is a u32; the widest SGPR tuple (SReg_1024) has 32 dwords, so
+  // this holds and keeps the 1u << i shift below well-defined.
+  assert(NumDwords <= 32 && "SGPR spill wider than DwordMask can represent");
+  unsigned DwordMask = 0;
+  for (unsigned i = 0; i != NumDwords; ++i) {
+    LaneBitmask DwordLanes =
+        RI.getSubRegIndexLaneMask(RI.getSubRegFromChannel(i));
+    if ((DefinedLanes & DwordLanes).any())
+      DwordMask |= 1u << i;
+  }
+  SpillMI.getOperand(Idx).setImm(DwordMask);
 }
 
 static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {

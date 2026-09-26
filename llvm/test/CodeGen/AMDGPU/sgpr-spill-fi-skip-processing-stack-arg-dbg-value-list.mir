@@ -48,7 +48,7 @@ body:             |
 
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
     DBG_VALUE_LIST !1, !8, %stack.0, 0, debug-location !9
 
   bb.1:

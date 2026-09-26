@@ -1226,6 +1226,12 @@ public:
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
 
+  /// Tell the target which lanes of spill \p SpillMI hold a real value
+  /// (\p DefinedLanes); it can skip the undef ones when lowering, so a shared
+  /// slot's neighbor isn't stomped. Default: no-op.
+  virtual void setSpillDefinedLaneMask(MachineInstr &SpillMI,
+                                       LaneBitmask DefinedLanes) const {}
+
   /// Load the specified register of the given register class from the specified
   /// stack frame index. The load instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If \p

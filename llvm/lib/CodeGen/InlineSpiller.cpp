@@ -454,6 +454,17 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  // Every sub-range of the hoisted value must be live at the hoist point. The
+  // store below is full-width, so a dead sub-range would write a stale sibling
+  // value into the shared spill slot and clobber it. This mirrors the sub-range
+  // liveness guard on the cross-BB path in isSpillCandBB (#177703), which the
+  // in-BB path here was missing.
+  if (SrcLI.hasSubRanges() &&
+      !all_of(SrcLI.subranges(), [&](const LiveInterval::SubRange &SR) {
+        return SR.getVNInfoAt(Idx) != nullptr;
+      }))
+    return false;
+
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
   if (SrcVNI->isPHIDef())
@@ -1285,10 +1296,29 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
   MachineBasicBlock::iterator SpillBefore = std::next(MI);
   bool IsRealSpill = isRealSpill(*MI);
 
-  if (IsRealSpill)
+  if (IsRealSpill) {
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
                             MRI.getRegClass(NewVReg), Register());
-  else
+
+    MachineInstr &SpillMI = *std::next(MI);
+
+    // Compute the lanes of NewVReg defined by MI. For a partial def (undef
+    // lanes remain in the full-width store above), pass the defined-lane mask
+    // so the target skips them and avoids clobbering a sibling in the shared
+    // stack slot. A fully-undef def never reaches here (filtered by
+    // isRealSpill).
+    LaneBitmask FullMask = MRI.getMaxLaneMaskForVReg(NewVReg);
+    LaneBitmask DefinedLanes;
+    for (const MachineOperand &MO : MI->all_defs()) {
+      if (MO.getReg() != NewVReg)
+        continue;
+      DefinedLanes |= MO.getSubReg()
+                          ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
+                          : FullMask;
+    }
+    if (DefinedLanes != FullMask)
+      TII.setSpillDefinedLaneMask(SpillMI, DefinedLanes);
+  } else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
     // uninitialized is a viable option and it saves code size and
