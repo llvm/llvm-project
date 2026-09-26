@@ -70,6 +70,19 @@ define amdgpu_ps <2 x bfloat> @fsub_v2bf16_vl(<2 x bfloat> %a) {
 }
 
 
+define amdgpu_ps <3 x bfloat> @fsub_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) {
+; GFX1250-LABEL: fsub_v3bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    v_pk_add_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    ; return to shader part epilog
+  %result = fsub <3 x bfloat> %a, %b
+  ret <3 x bfloat> %result
+}
 define amdgpu_ps <4 x bfloat> @fsub_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1250-LABEL: fsub_v4bf16_vv:
 ; GFX1250:       ; %bb.0:
@@ -82,4 +95,19 @@ define amdgpu_ps <4 x bfloat> @fsub_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) 
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fsub <4 x bfloat> %a, %b
   ret <4 x bfloat> %result
+}
+
+define amdgpu_ps <5 x bfloat> @fsub_v5bf16_vv(<5 x bfloat> %a, <5 x bfloat> %b) {
+; GFX1250-LABEL: fsub_v5bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v3 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    v_pk_add_bf16 v1, v1, v4 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    v_pk_add_bf16 v2, v2, v5 neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    ; return to shader part epilog
+  %result = fsub <5 x bfloat> %a, %b
+  ret <5 x bfloat> %result
 }
