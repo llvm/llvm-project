@@ -11,13 +11,26 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
 
 extern LLVM_ABI cl::opt<std::string> BBSectionsColdTextPrefix;
 
+/// Legacy option which enables late function splitting for every function with
+/// profile data. Superseded by \p FunctionSplittingMode, which it feeds into
+/// via resolveFunctionSplittingMode().
+extern LLVM_ABI cl::opt<bool> EnableMachineFunctionSplitter;
+
 class MachineFunction;
 class MachineBasicBlock;
+class TargetMachine;
+
+/// Returns the effective late function splitting mode, resolving the explicit
+/// options against the basic block sections mode. Never returns
+/// FunctionSplittingMode::Default.
+LLVM_ABI FunctionSplittingMode
+resolveFunctionSplittingMode(const TargetMachine &TM);
 
 using MachineBasicBlockComparator =
     function_ref<bool(const MachineBasicBlock &, const MachineBasicBlock &)>;
