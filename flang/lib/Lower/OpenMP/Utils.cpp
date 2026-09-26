@@ -1471,27 +1471,59 @@ semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
 }
 
 void collectEnclosingConstructTraits(
-    mlir::Operation *op,
+    AbstractConverter &converter, const pft::Evaluation *evaluation,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  // Collect enclosing OpenMP operations so variants chosen by an outer
-  // metadirective are part of this metadirective's context. For example, an
-  // inner metadirective inside `target` and an outer-selected `parallel` must
-  // be able to match construct={target, parallel}. The final reverse yields
-  // outermost-to-innermost order as required by OMPContext.
-  for (; op; op = op->getParentOp()) {
-    if (mlir::isa<mlir::omp::WsloopOp>(op))
-      constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-    if (mlir::isa<mlir::omp::ParallelOp>(op))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_parallel_parallel);
-    if (mlir::isa<mlir::omp::TeamsOp>(op))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_teams_teams);
-    if (mlir::isa<mlir::omp::TargetOp>(op))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_target_target);
+  llvm::SmallVector<const OpenMPContextFrame *, 4> frames;
+  converter.getStateStack().stackWalk<OpenMPContextFrame>(
+      [&](OpenMPContextFrame &frame) {
+        frames.push_back(&frame);
+        return mlir::WalkResult::advance();
+      });
+  std::reverse(frames.begin(), frames.end());
+  llvm::SmallVector<bool, 4> usedFrames(frames.size(), false);
+
+  llvm::SmallVector<const pft::Evaluation *, 8> ancestors;
+  for (const pft::Evaluation *parent = evaluation ? evaluation->parentConstruct
+                                                  : nullptr;
+       parent; parent = parent->parentConstruct) {
+    ancestors.push_back(parent);
   }
-  std::reverse(constructTraits.begin(), constructTraits.end());
+  std::reverse(ancestors.begin(), ancestors.end());
+
+  auto append = [&](llvm::omp::Directive directive) {
+    semantics::omp::AppendDirectiveContextTraits(directive, constructTraits);
+  };
+  for (const pft::Evaluation *ancestor : ancestors) {
+    const auto *omp = ancestor->getIf<parser::OpenMPConstruct>();
+    if (!omp)
+      continue;
+    llvm::omp::Directive directive{parser::omp::GetOmpDirectiveName(*omp).v};
+    // An ancestor supplies the full source context, including constituents
+    // whose bodies also have active frames. Count each construct only once.
+    for (auto [index, frame] : llvm::enumerate(frames))
+      if (&frame->evaluation == ancestor)
+        usedFrames[index] = true;
+    if (directive != llvm::omp::Directive::OMPD_metadirective) {
+      append(directive);
+      continue;
+    }
+    for (const OpenMPContextFrame *frame : frames) {
+      if (&frame->evaluation == ancestor && frame->isReplacement) {
+        append(frame->directive);
+        break;
+      }
+    }
+  }
+
+  // Include entered constituents while their own evaluation is current, e.g.
+  // PARALLEL when lowering the bounds of PARALLEL DO. A selected directive
+  // contributes here only through its entered constituents, so its own clause
+  // expressions have the same context as a directly written directive's.
+  for (auto [index, frame] : llvm::enumerate(frames)) {
+    if (usedFrames[index] || frame->isReplacement)
+      continue;
+    append(frame->directive);
+  }
 }
 
 const semantics::Symbol *
@@ -1535,9 +1567,8 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   }
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(
-      converter.getFirOpBuilder().getInsertionBlock()->getParentOp(),
-      constructTraits);
+  collectEnclosingConstructTraits(converter, converter.getCurrentEvaluation(),
+                                  constructTraits);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(converter.getModuleOp(), constructTraits);
 

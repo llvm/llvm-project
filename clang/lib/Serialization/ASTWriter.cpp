@@ -8982,9 +8982,14 @@ void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
       writeBool(Selector.ScoreOrCondition);
       if (Selector.ScoreOrCondition)
         writeExprRef(Selector.ScoreOrCondition);
+      writeBool(Selector.OriginalCondition);
+      if (Selector.OriginalCondition)
+        writeExprRef(Selector.OriginalCondition);
       writeUInt32(Selector.Properties.size());
-      for (const auto &Property : Selector.Properties)
+      for (const auto &Property : Selector.Properties) {
         writeEnum(Property.Kind);
+        writeString(Property.RawString);
+      }
     }
   }
 }
