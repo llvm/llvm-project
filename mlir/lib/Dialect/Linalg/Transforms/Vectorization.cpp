@@ -3067,7 +3067,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
-  // For a rank-reducing slice the vector does not cover the trailing result
+  // For a rank-reducing slice the vector need not cover the trailing result
   // dims, so state which result dim each vector dim writes to.
   AffineMap writeMap;
   if (sourceType.getRank() != resultType.getRank()) {

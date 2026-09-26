@@ -378,3 +378,100 @@ func.func private @insert_slice_1d_source_into_column(
     transform.yield
   }
  }
+
+// -----
+
+/// Rank-reducing with user-provided vector sizes, the dropped dim not being the
+/// trailing one. The vector is written to result dims 0 and 2, so each mask
+/// size is one of those dims minus its offset.
+
+func.func private @insert_slice_masked_non_trailing_unit_dim_dropped(
+    %source: tensor<?x4xi32>, %size: index, %offset: index) -> tensor<8x1x4xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<8x1x4xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<8x1x4xi32>) -> tensor<8x1x4xi32>
+  %res = tensor.insert_slice %source into %init[%offset, 0, 0] [%size, 1, 4] [1, 1, 1] : tensor<?x4xi32> into tensor<8x1x4xi32>
+  return %res : tensor<8x1x4xi32>
+}
+
+// CHECK-DAG: #[[$MAP_D0_D2:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+
+// CHECK-LABEL:   func.func private @insert_slice_masked_non_trailing_unit_dim_dropped(
+// CHECK-SAME:      %[[SRC:[a-zA-Z0-9_]+]]: tensor<?x4xi32>,
+// CHECK-SAME:      %[[OFFSET:[a-zA-Z0-9_]+]]: index) -> tensor<8x1x4xi32> {
+// CHECK:           %[[INIT:.*]] = linalg.fill
+// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read %[[SRC]]
+// CHECK:           %[[C_8:.*]] = arith.constant 8 : index
+// CHECK:           %[[SIZE_0:.*]] = arith.subi %[[C_8]], %[[OFFSET]] : index
+// CHECK:           %[[C_4:.*]] = arith.constant 4 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[SIZE_0]], %[[C_4]] : vector<4x4xi1>
+// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[INIT]][%[[OFFSET]], %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_D0_D2]]{{.*}} : vector<4x4xi32>, tensor<8x1x4xi32> }
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 4] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+/// As above, but the vector shape (1x4) equals the trailing result dims (1x4),
+/// which are not the ones it is written to. Result dim 0 is dynamic, so the
+/// write still needs a mask.
+
+func.func private @insert_slice_masked_vector_matches_trailing_dims_only(
+    %source: tensor<?x4xi32>, %dest_size: index, %size: index, %offset: index) -> tensor<?x1x4xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty(%dest_size) : tensor<?x1x4xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<?x1x4xi32>) -> tensor<?x1x4xi32>
+  %res = tensor.insert_slice %source into %init[%offset, 0, 0] [%size, 1, 4] [1, 1, 1] : tensor<?x4xi32> into tensor<?x1x4xi32>
+  return %res : tensor<?x1x4xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_masked_vector_matches_trailing_dims_only(
+// CHECK-SAME:      %[[OFFSET:[a-zA-Z0-9_]+]]: index) -> tensor<?x1x4xi32> {
+// CHECK:           %[[INIT:.*]] = linalg.fill
+// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read
+// CHECK:           %[[DIM_0:.*]] = tensor.dim %[[INIT]], %{{.*}} : tensor<?x1x4xi32>
+// CHECK:           %[[SIZE_0:.*]] = arith.subi %[[DIM_0]], %[[OFFSET]] : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[SIZE_0]], %{{.*}} : vector<1x4xi1>
+// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[INIT]]
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [1, 4] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+/// Rank-reducing with user-provided vector sizes, leading dim dropped. The mask
+/// size for result dim 1 is that dim minus its own offset (8 - 6).
+
+func.func private @insert_slice_masked_leading_unit_dim_dropped_non_zero_offset(
+    %source: tensor<?x?xi32>, %size_0: index, %size_1: index) -> tensor<1x8x8xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<1x8x8xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<1x8x8xi32>) -> tensor<1x8x8xi32>
+  %res = tensor.insert_slice %source into %init[0, 6, 0] [1, %size_0, %size_1] [1, 1, 1] : tensor<?x?xi32> into tensor<1x8x8xi32>
+  return %res : tensor<1x8x8xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_masked_leading_unit_dim_dropped_non_zero_offset(
+// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[C_8:.*]] = arith.constant 8 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_2]], %[[C_8]] : vector<4x2xi1>
+// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]]
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 2] : !transform.any_op
+    transform.yield
+  }
+ }
