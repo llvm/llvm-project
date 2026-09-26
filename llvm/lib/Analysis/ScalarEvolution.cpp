@@ -3605,10 +3605,6 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
   for (const SCEV *Op : Operands)
     assert(isAvailableAtLoopEntry(Op, L) &&
            "SCEVAddRecExpr operand is not available at loop entry!");
-
-  // Keep track of the original operands, for verification when adding
-  // use-specific flags.
-  const SmallVector<SCEVUse, 4> OrigOperands(Operands.begin(), Operands.end());
 #endif
 
   if (Operands.back()->isZero()) {
@@ -3624,53 +3620,6 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
 
   ExprFlags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, ExprFlags);
 
-  // Canonicalize nested AddRecs in by nesting them in order of loop depth.
-  if (const SCEVAddRecExpr *NestedAR = dyn_cast<SCEVAddRecExpr>(Operands[0])) {
-    const Loop *NestedLoop = NestedAR->getLoop();
-    if (L->contains(NestedLoop)
-            ? (L->getLoopDepth() < NestedLoop->getLoopDepth())
-            : (!NestedLoop->contains(L) &&
-               DT.dominates(L->getHeader(), NestedLoop->getHeader()))) {
-      SmallVector<SCEVUse, 4> NestedOperands(NestedAR->operands());
-      Operands[0] = NestedAR->getStart();
-      // AddRecs require their operands be loop-invariant with respect to their
-      // loops. Don't perform this transformation if it would break this
-      // requirement.
-      bool AllInvariant = all_of(
-          Operands, [&](const SCEV *Op) { return isLoopInvariant(Op, L); });
-
-      if (AllInvariant) {
-        // Create a recurrence for the outer loop with the same step size.
-        //
-        // The outer recurrence keeps its NW flag but only keeps NUW/NSW if the
-        // inner recurrence has the same property.
-        SCEVFlags OuterFlags =
-            maskFlags(ExprFlags, SCEV::FlagNW | NestedAR->getNoWrapFlags());
-
-        NestedOperands[0] = getAddRecExpr(Operands, L, OuterFlags);
-        AllInvariant = all_of(NestedOperands, [&](const SCEV *Op) {
-          return isLoopInvariant(Op, NestedLoop);
-        });
-
-        if (AllInvariant) {
-          // Ok, both add recurrences are valid after the transformation.
-          //
-          // The inner recurrence keeps its NW flag but only keeps NUW/NSW if
-          // the outer recurrence has the same property.
-          SCEVFlags InnerFlags =
-              maskFlags(NestedAR->getNoWrapFlags(), SCEV::FlagNW | ExprFlags);
-          return getAddRecExpr(NestedOperands, NestedLoop, InnerFlags);
-        }
-      }
-      // Reset Operands to its original state.
-      Operands[0] = NestedAR;
-    }
-  }
-
-  // Okay, it looks like we really DO need an addrec expr.  Check to see if we
-  // already have one, otherwise create a new one.
-  assert((UseFlags == SCEV::FlagNone || equal(OrigOperands, Operands)) &&
-         "Tried to add SCEVUse flags after operands changed");
   return {getOrCreateAddRecExpr(Operands, L, ExprFlags), UseFlags};
 }
 
