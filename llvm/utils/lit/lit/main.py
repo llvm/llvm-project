@@ -114,6 +114,9 @@ def main(builtin_params={}):
     mark_xfail(discovered_tests, opts)
     mark_unsupported(discovered_tests, opts)
 
+    for test in selected_tests:
+        test.filter_requires = opts.filter_requires
+
     mark_excluded(discovered_tests, selected_tests)
 
     start = time.time()

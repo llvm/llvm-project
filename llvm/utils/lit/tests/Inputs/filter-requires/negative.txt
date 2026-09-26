@@ -1,0 +1,2 @@
+# REQUIRES: Half && !Double
+# RUN: echo negative
