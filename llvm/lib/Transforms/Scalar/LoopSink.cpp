@@ -341,6 +341,11 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     // No need to check for instruction's operands are loop invariant.
     assert(L.hasLoopInvariantOperands(&I) &&
            "Insts in a loop's preheader should have loop invariant operands!");
+    // Sinking into a loop may change how many times an instruction executes.
+    // Do not move instructions with observable side effects from the
+    // preheader, where they execute exactly once, into the loop.
+    if (I.mayHaveSideEffects())
+      continue;
     if (!canSinkOrHoistInst(I, &AA, &DT, &L, MSSAU, false, LICMFlags))
       continue;
     if (sinkInstruction(L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
