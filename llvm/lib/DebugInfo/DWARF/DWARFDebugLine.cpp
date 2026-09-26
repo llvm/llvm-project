@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1423,20 +1424,26 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
       return false;
   }
 
-  // If the start sequence doesn't contain the address, nothing to do
-  if (!SeqPos->containsPC(Address))
-    return false;
-
-  SequenceIter StartPos = SeqPos;
+  // Keep track of range sequences to ensure that we don't process the same
+  // sequence multiple times. If there is no StmtSequenceOffset we might have
+  // multiple sequences map to the same address range (merged functions), so we
+  // need to pick one of the ranges and not return a series of duplicated
+  // sequences.
+  AddressRanges RowRanges;
 
   // Process sequences that overlap with the desired range
   while (SeqPos != LastSeq && SeqPos->LowPC < EndAddr) {
+    // As soon as an address isn't contained in a sequence, we can stop
+    // searching.
+    if (!SeqPos->containsPC(Address))
+      break;
+
     const DWARFDebugLine::Sequence &CurSeq = *SeqPos;
-    // For the first sequence, we need to find which row in the sequence is the
-    // first in our range.
-    uint32_t FirstRowIndex = CurSeq.FirstRowIndex;
-    if (SeqPos == StartPos)
-      FirstRowIndex = findRowInSeq(CurSeq, Address);
+    // Always find the first row in the sequence that matches the address. We
+    // have seen merged functions create multiple sequences that contain the
+    // same address range, but also have ranges that contain these same
+    // addresses in the middle.
+    uint32_t FirstRowIndex = findRowInSeq(CurSeq, Address);
 
     // Figure out the last row in the range.
     uint32_t LastRowIndex =
@@ -1446,6 +1453,25 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
 
     assert(FirstRowIndex != UnknownRowIndex);
     assert(LastRowIndex != UnknownRowIndex);
+    // The matching row range should end at the next row's address, unless the
+    // last row is the last row in the sequence. If we don't do this and we have
+    // outlined functions, we can end up with a range that is empty.
+    uint64_t MatchingRangeHighPC = Rows[LastRowIndex].EndSequence ?
+      Rows[LastRowIndex].Address.Address :
+      Rows[LastRowIndex + 1].Address.Address;
+    AddressRange MatchingRowRange(Rows[FirstRowIndex].Address.Address,
+                                  MatchingRangeHighPC);
+    if (RowRanges.contains(MatchingRowRange)) {
+      // We've already processed this range, so skip it. This can happen when
+      // merged functions have multiple sequences that represent the same
+      // address range. We don't want to append any rows that we've already
+      // added to the result as it will return an rows that are not
+      // monotonically increasing.
+      ++SeqPos;
+      continue;
+    } else {
+      RowRanges.insert(MatchingRowRange);
+    }
 
     for (uint32_t I = FirstRowIndex; I <= LastRowIndex; ++I) {
       Result.push_back(I);
@@ -1454,7 +1480,7 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
     ++SeqPos;
   }
 
-  return true;
+  return !Result.empty();
 }
 
 std::optional<StringRef>
