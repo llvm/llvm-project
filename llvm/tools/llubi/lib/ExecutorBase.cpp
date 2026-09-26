@@ -13,18 +13,38 @@
 #include "ExecutorBase.h"
 
 namespace llvm::ubi {
-Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
-             ArrayRef<AnyValue> Args, AnyValue &RetVal,
-             const TargetLibraryInfoImpl &TLIImpl)
-    : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-      RetVal(RetVal), TLI(TLIImpl, &F) {
+
+uint64_t retagNoAliasArguments(Context &Ctx, Function &F, CallBase *CallSite,
+                               MutableArrayRef<AnyValue> Args) {
+  if (!Ctx.isExperimentalNoAliasEnabled())
+    return 0;
+  uint64_t Activation = 0;
+  for (auto [I, ArgValue] : enumerate(Args)) {
+    bool NoAlias = F.getAttributes().hasParamAttr(I, Attribute::NoAlias) ||
+                   (CallSite && CallSite->getAttributes().hasParamAttr(
+                                    I, Attribute::NoAlias));
+    if (!NoAlias || !ArgValue.isPointer())
+      continue;
+    if (!Activation)
+      Activation = Ctx.beginNoAliasActivation();
+    ArgValue = Ctx.createNoAliasPointer(ArgValue.asPointer(), Activation);
+  }
+  return Activation;
+}
+
+Frame::Frame(Context &Ctx, Function &F, CallBase *CallSite, Frame *LastFrame,
+             ArrayRef<AnyValue> Args, AnyValue &RetVal)
+    : Func(F), LastFrame(LastFrame), CallSite(CallSite),
+      Args(Args.begin(), Args.end()), RetVal(RetVal),
+      TLI(Ctx.getTLIImpl(), &F) {
   assert((Args.size() == F.arg_size() ||
           (F.isVarArg() && Args.size() >= F.arg_size())) &&
          "Expected enough arguments to call the function.");
   BB = &Func.getEntryBlock();
   PC = BB->begin();
+  NoAliasActivation = retagNoAliasArguments(Ctx, F, CallSite, this->Args);
   for (Argument &Arg : F.args())
-    ValueMap[&Arg] = Args[Arg.getArgNo()];
+    ValueMap[&Arg] = this->Args[Arg.getArgNo()];
 }
 
 DiagnosticReporter ExecutorBase::reportImmediateUB() {
@@ -33,6 +53,11 @@ DiagnosticReporter ExecutorBase::reportImmediateUB() {
 
 DiagnosticReporter ExecutorBase::reportError() {
   return DiagnosticReporter(*this, DiagnosticKind::Error);
+}
+
+void ExecutorBase::flushNoAliasEvents() {
+  for (const std::string &Msg : Ctx.takeNoAliasEvents())
+    Handler.onNoAliasEvent(Msg);
 }
 
 void ExecutorBase::reportImmediateUBString(StringRef Msg) {
@@ -112,7 +137,22 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
     return {};
   }
 
+  if (!verifyNoAliasAccess(*MO, Offset.getZExtValue(), AccessSize, Ptr,
+                           IsStore ? NoAliasAccessKind::Write
+                                   : NoAliasAccessKind::Read))
+    return {};
   return {MO, Offset.getZExtValue()};
+}
+
+bool ExecutorBase::verifyNoAliasAccess(MemoryObject &MO, uint64_t Offset,
+                                       uint64_t Size, const Pointer &Ptr,
+                                       NoAliasAccessKind Kind) {
+  bool Valid =
+      Ctx.accessNoAlias(MO, Offset, Size, Ptr.getNoAliasNodeID(), Kind);
+  flushNoAliasEvents();
+  if (!Valid)
+    reportImmediateUB() << Ctx.getLastNoAliasError();
+  return Valid;
 }
 
 AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
@@ -131,6 +171,7 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
                             NoUndef ? &ContainsUndefinedBits : nullptr);
     if (NoUndef && ContainsUndefinedBits)
       reportImmediateUB() << "The value loaded contains undefined bits.";
+
     return Res;
   }
   return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -146,8 +187,9 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/true);
-      MO)
+      MO) {
     Ctx.store(*MO, Offset, Val, ValTy);
+  }
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,

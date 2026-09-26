@@ -22,6 +22,11 @@
 
 namespace llvm::ubi {
 
+/// Apply the parameter guarantees of this invocation to its callee-visible
+/// arguments, creating at most one dynamic noalias activation.
+uint64_t retagNoAliasArguments(Context &Ctx, Function &F, CallBase *CallSite,
+                               MutableArrayRef<AnyValue> Args);
+
 enum class FrameState {
   // It is about to enter the function.
   // Valid transition:
@@ -48,7 +53,7 @@ struct Frame {
   Function &Func;
   Frame *LastFrame;
   CallBase *CallSite;
-  ArrayRef<AnyValue> Args;
+  SmallVector<AnyValue, 4> Args;
   AnyValue &RetVal;
 
   TargetLibraryInfo TLI;
@@ -58,6 +63,8 @@ struct Frame {
   // Stack objects allocated in this frame. They will be automatically freed
   // when the function returns.
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
+  // Dynamic noalias activation shared by this frame's noalias parameters.
+  uint64_t NoAliasActivation = 0;
   // Values of arguments and executed instructions in this function.
   DenseMap<Value *, AnyValue> ValueMap;
 
@@ -69,9 +76,8 @@ struct Frame {
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
-  Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
-        ArrayRef<AnyValue> Args, AnyValue &RetVal,
-        const TargetLibraryInfoImpl &TLIImpl);
+  Frame(Context &Ctx, Function &F, CallBase *CallSite, Frame *LastFrame,
+        ArrayRef<AnyValue> Args, AnyValue &RetVal);
 };
 
 enum class DiagnosticKind {
@@ -102,12 +108,19 @@ public:
   DiagnosticReporter reportImmediateUB();
   DiagnosticReporter reportError();
 
-  /// Check if the upcoming memory access is valid. Returns the resolved memory
-  /// object and offset if it is valid.
+  void flushNoAliasEvents();
+
+  /// Validate a memory access and record its noalias effect. Returns the
+  /// resolved memory object and offset if it is valid. Call this only for
+  /// actual accesses, not speculative bounds or provenance queries.
   std::pair<MemoryObject *, uint64_t> verifyMemAccess(const Pointer &Ptr,
                                                       uint64_t AccessSize,
                                                       Align Alignment,
                                                       bool IsStore);
+
+  /// Record an otherwise valid access, including a deallocation.
+  bool verifyNoAliasAccess(MemoryObject &MO, uint64_t Offset, uint64_t Size,
+                           const Pointer &Ptr, NoAliasAccessKind Kind);
 
   AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
                 bool NoUndef);

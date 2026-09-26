@@ -924,8 +924,8 @@ public:
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
       : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
         Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
-    CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
-                           RetVal, Ctx.getTLIImpl());
+    CallStack.emplace_back(Ctx, F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr,
+                           Args, RetVal);
   }
 
   void visitReturnInst(ReturnInst &RI) {
@@ -2164,12 +2164,23 @@ public:
     }
 
     CurrentFrame->ResolvedCallee = Callee;
+    // Intrinsics and library calls have no Frame, but their parameter
+    // guarantees (including call-site-only attributes) cover their effects.
+    uint64_t NoAliasActivation = 0;
+    if (Callee->isDeclaration()) {
+      NoAliasActivation = retagNoAliasArguments(Ctx, *Callee, &CB, CalleeArgs);
+      flushNoAliasEvents();
+    }
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
+      Ctx.endNoAliasActivation(NoAliasActivation);
+      flushNoAliasEvents();
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
       CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee, CalleeArgs);
+      Ctx.endNoAliasActivation(NoAliasActivation);
+      flushNoAliasEvents();
       returnFromCallee();
       return;
     } else {
@@ -2183,8 +2194,7 @@ public:
       ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
-      CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
-                             Ctx.getTLIImpl());
+      CallStack.emplace_back(Ctx, *Callee, &CB, CurrentFrame, Args, RetVal);
     }
   }
 
@@ -2832,6 +2842,7 @@ public:
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
         Handler.onFunctionEntry(Top.Func, Top.Args, Top.CallSite);
+        flushNoAliasEvents();
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to return from a callee.");
@@ -2872,6 +2883,8 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
+        Ctx.endNoAliasActivation(Top.NoAliasActivation);
+        flushNoAliasEvents();
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)

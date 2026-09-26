@@ -158,6 +158,10 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   // allocation family (malloc, calloc, etc.) is freed with a different free
   // function comes from a different family (C++ delete, etc.)
 
+  if (!Executor.verifyNoAliasAccess(*Obj, 0, Obj->getSize(), Ptr,
+                                    NoAliasAccessKind::Deallocate))
+    return AnyValue();
+
   if (!Ctx.free(*Obj)) {
     Executor.reportImmediateUB()
         << "freeing an invalid pointer at 0x"
