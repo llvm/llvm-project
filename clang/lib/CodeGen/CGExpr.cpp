@@ -442,9 +442,16 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
       if (!ReferenceTemporaryDtor)
         return;
 
+      // Like in `EmitDeclDestroy`, destructors that return `this` need a helper
+      // if the target does not tolerate the mismatch (e.g. WebAssembly).
+      bool CanRegisterDestructor =
+          !CGF.CGM.getCXXABI().HasThisReturn(
+              GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete)) ||
+          CGF.CGM.getCXXABI().canCallMismatchedFunctionType();
+
       llvm::FunctionCallee CleanupFn;
       llvm::Constant *CleanupArg;
-      if (E->getType()->isArrayType()) {
+      if (E->getType()->isArrayType() || !CanRegisterDestructor) {
         CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
             ReferenceTemporary, E->getType(), CodeGenFunction::destroyCXXObject,
             CGF.getLangOpts().Exceptions,
