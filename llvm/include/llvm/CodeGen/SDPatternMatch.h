@@ -455,17 +455,88 @@ struct TernaryOpc_match {
   }
 };
 
-template <typename T0_P, typename T1_P, typename T2_P>
-inline TernaryOpc_match<T0_P, T1_P, T2_P>
-m_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::SETCC, LHS, RHS, CC);
+struct CondCode_match {
+  std::optional<ISD::CondCode> CCToMatch;
+  ISD::CondCode *BindCC = nullptr;
+
+  explicit CondCode_match(ISD::CondCode CC) : CCToMatch(CC) {}
+
+  explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
+
+  bool match(SDValue N) {
+    if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
+      if (CCToMatch && *CCToMatch != CC->get())
+        return false;
+
+      if (BindCC)
+        *BindCC = CC->get();
+      return true;
+    }
+
+    return false;
+  }
+};
+
+/// Match any conditional code SDNode.
+inline CondCode_match m_CondCode() { return CondCode_match(nullptr); }
+/// Match any conditional code SDNode and return its ISD::CondCode value.
+inline CondCode_match m_CondCode(ISD::CondCode &CC) {
+  return CondCode_match(&CC);
+}
+/// Match a conditional code SDNode with a specific ISD::CondCode.
+inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
+  return CondCode_match(CC);
 }
 
-template <typename T0_P, typename T1_P, typename T2_P>
-inline TernaryOpc_match<T0_P, T1_P, T2_P, true, false>
-m_c_SetCC(const T0_P &LHS, const T1_P &RHS, const T2_P &CC) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P, true, false>(ISD::SETCC, LHS, RHS,
-                                                         CC);
+/// Match a SETCC with any condition code.
+template <typename T0_P, typename T1_P>
+inline TernaryOpc_match<T0_P, T1_P, CondCode_match> m_SetCC(const T0_P &LHS,
+                                                            const T1_P &RHS) {
+  return TernaryOpc_match<T0_P, T1_P, CondCode_match>(ISD::SETCC, LHS, RHS,
+                                                      m_CondCode());
+}
+
+/// Match a SETCC with any condition code and bind the condition code to CC.
+template <typename T0_P, typename T1_P>
+inline TernaryOpc_match<T0_P, T1_P, CondCode_match>
+m_SetCC(ISD::CondCode &CC, const T0_P &LHS, const T1_P &RHS) {
+  return TernaryOpc_match<T0_P, T1_P, CondCode_match>(ISD::SETCC, LHS, RHS,
+                                                      m_CondCode(CC));
+}
+
+/// Match a SETCC with a specific condition code.
+template <typename T0_P, typename T1_P>
+inline TernaryOpc_match<T0_P, T1_P, CondCode_match>
+m_SpecificSetCC(ISD::CondCode CC, const T0_P &LHS, const T1_P &RHS) {
+  return TernaryOpc_match<T0_P, T1_P, CondCode_match>(ISD::SETCC, LHS, RHS,
+                                                      m_SpecificCondCode(CC));
+}
+
+/// Match a SETCC with any condition code, allowing the operands to be
+/// commuted.
+template <typename T0_P, typename T1_P>
+inline TernaryOpc_match<T0_P, T1_P, CondCode_match, true, false>
+m_c_SetCC(const T0_P &LHS, const T1_P &RHS) {
+  return TernaryOpc_match<T0_P, T1_P, CondCode_match, true, false>(
+      ISD::SETCC, LHS, RHS, m_CondCode());
+}
+
+/// Match a SETCC with any condition code, allowing the operands to be
+/// commuted, and bind the condition code to CC.
+template <typename T0_P, typename T1_P>
+inline TernaryOpc_match<T0_P, T1_P, CondCode_match, true, false>
+m_c_SetCC(ISD::CondCode &CC, const T0_P &LHS, const T1_P &RHS) {
+  return TernaryOpc_match<T0_P, T1_P, CondCode_match, true, false>(
+      ISD::SETCC, LHS, RHS, m_CondCode(CC));
+}
+
+/// Match a SETCC with a specific condition code, allowing the operands to be
+/// commuted.
+template <typename T0_P, typename T1_P>
+inline TernaryOpc_match<T0_P, T1_P, CondCode_match, true, false>
+m_c_SpecificSetCC(ISD::CondCode CC, const T0_P &LHS, const T1_P &RHS) {
+  return TernaryOpc_match<T0_P, T1_P, CondCode_match, true, false>(
+      ISD::SETCC, LHS, RHS, m_SpecificCondCode(CC));
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
@@ -524,16 +595,48 @@ m_c_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
   return TernaryOpc_match<T0_P, T1_P, T2_P, true>(Opc, Op0, Op1, Op2);
 }
 
-template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
-inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F,
-                       const CCTy &CC) {
-  return m_Node(ISD::SELECT_CC, L, R, T, F, CC);
+/// Match a SELECT_CC with any condition code.
+template <typename LTy, typename RTy, typename TTy, typename FTy>
+inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F) {
+  return m_Node(ISD::SELECT_CC, L, R, T, F, m_CondCode());
 }
 
-template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+/// Match a SELECT_CC with any condition code and bind the condition code to
+/// CC.
+template <typename LTy, typename RTy, typename TTy, typename FTy>
+inline auto m_SelectCC(ISD::CondCode &CC, const LTy &L, const RTy &R,
+                       const TTy &T, const FTy &F) {
+  return m_Node(ISD::SELECT_CC, L, R, T, F, m_CondCode(CC));
+}
+
+/// Match a SELECT_CC with a specific condition code.
+template <typename LTy, typename RTy, typename TTy, typename FTy>
+inline auto m_SpecificSelectCC(ISD::CondCode CC, const LTy &L, const RTy &R,
+                               const TTy &T, const FTy &F) {
+  return m_Node(ISD::SELECT_CC, L, R, T, F, m_SpecificCondCode(CC));
+}
+
+/// Match a SELECT of a SETCC or a SELECT_CC with any condition code.
+template <typename LTy, typename RTy, typename TTy, typename FTy>
 inline auto m_SelectCCLike(const LTy &L, const RTy &R, const TTy &T,
-                           const FTy &F, const CCTy &CC) {
-  return m_AnyOf(m_Select(m_SetCC(L, R, CC), T, F), m_SelectCC(L, R, T, F, CC));
+                           const FTy &F) {
+  return m_AnyOf(m_Select(m_SetCC(L, R), T, F), m_SelectCC(L, R, T, F));
+}
+
+/// Match a SELECT of a SETCC or a SELECT_CC with any condition code and bind
+/// the condition code to CC.
+template <typename LTy, typename RTy, typename TTy, typename FTy>
+inline auto m_SelectCCLike(ISD::CondCode &CC, const LTy &L, const RTy &R,
+                           const TTy &T, const FTy &F) {
+  return m_AnyOf(m_Select(m_SetCC(CC, L, R), T, F), m_SelectCC(CC, L, R, T, F));
+}
+
+/// Match a SELECT of a SETCC or a SELECT_CC with a specific condition code.
+template <typename LTy, typename RTy, typename TTy, typename FTy>
+inline auto m_SpecificSelectCCLike(ISD::CondCode CC, const LTy &L, const RTy &R,
+                                   const TTy &T, const FTy &F) {
+  return m_AnyOf(m_Select(m_SpecificSetCC(CC, L, R), T, F),
+                 m_SpecificSelectCC(CC, L, R, T, F));
 }
 
 // === Binary operations ===
@@ -1317,39 +1420,6 @@ inline auto m_True(const SelectionDAG &DAG) { return Bool_match<true>(DAG); }
 /// Match false boolean value based on the information provided by
 /// TargetLowering.
 inline auto m_False(const SelectionDAG &DAG) { return Bool_match<false>(DAG); }
-
-struct CondCode_match {
-  std::optional<ISD::CondCode> CCToMatch;
-  ISD::CondCode *BindCC = nullptr;
-
-  explicit CondCode_match(ISD::CondCode CC) : CCToMatch(CC) {}
-
-  explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
-
-  bool match(SDValue N) {
-    if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
-      if (CCToMatch && *CCToMatch != CC->get())
-        return false;
-
-      if (BindCC)
-        *BindCC = CC->get();
-      return true;
-    }
-
-    return false;
-  }
-};
-
-/// Match any conditional code SDNode.
-inline CondCode_match m_CondCode() { return CondCode_match(nullptr); }
-/// Match any conditional code SDNode and return its ISD::CondCode value.
-inline CondCode_match m_CondCode(ISD::CondCode &CC) {
-  return CondCode_match(&CC);
-}
-/// Match a conditional code SDNode with a specific ISD::CondCode.
-inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
-  return CondCode_match(CC);
-}
 
 /// Match a negate as a sub(0, v)
 template <typename ValTy>
