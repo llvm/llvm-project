@@ -610,8 +610,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     for (; FileNameIt != FileNames.end() && FileNameIt->second <= MSD.Order;
          ++FileNameIt) {
       Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                         ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                         ELF::SHN_ABS, true);
+                         llvm::to_underlying(ELF::STT_FILE) | llvm::to_underlying(ELF::STB_LOCAL), 0, 0,
+                         ELF::STV_DEFAULT, ELF::SHN_ABS, true);
       ++Index;
     }
 
@@ -623,8 +623,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   }
   for (; FileNameIt != FileNames.end(); ++FileNameIt) {
     Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                       ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                       ELF::SHN_ABS, true);
+                       llvm::to_underlying(ELF::STT_FILE) | llvm::to_underlying(ELF::STB_LOCAL), 0, 0,
+                       ELF::STV_DEFAULT, ELF::SHN_ABS, true);
     ++Index;
   }
 

@@ -1180,6 +1180,10 @@ void OpenMPIRBuilder::applyDeclareTargetGlobalReplacements() {
   DeclareTargetGlobalReplacements.clear();
 }
 
+OpenMPIRBuilder::OpenMPIRBuilder(Module &M)
+    : M(M), Builder(M.getContext()), OffloadInfoManager(this),
+      T(M.getTargetTriple()), IsFinalized(false) {}
+
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
@@ -4655,7 +4659,7 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
 std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
   std::string Suffix =
       createPlatformSpecificName({"omp", "reduction", "reduction_func"});
-  return (Name + Suffix).str();
+  return (Twine(Name) + Suffix).str();
 }
 
 Expected<Function *> OpenMPIRBuilder::createReductionFunction(

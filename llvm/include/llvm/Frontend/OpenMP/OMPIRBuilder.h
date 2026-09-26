@@ -512,9 +512,7 @@ class OpenMPIRBuilder {
 public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
-  OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()), IsFinalized(false) {}
+  LLVM_ABI OpenMPIRBuilder(Module &M);
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
