@@ -393,8 +393,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   bool NeedsDtor =
       D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
-  GV->setConstant(
-      D.getType().isConstantStorage(getContext(), true, !NeedsDtor));
+  bool IsConstant =
+      D.getType().isConstantStorage(getContext(), true, !NeedsDtor);
+  if (IsConstant && GV->isWeakForLinker() && !D.hasConstantInitialization())
+    IsConstant = false;
+
+  GV->setConstant(IsConstant);
   GV->replaceInitializer(Init);
 
   emitter.finalize(GV);

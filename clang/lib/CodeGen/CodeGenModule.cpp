@@ -6774,9 +6774,14 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     emitter->finalize(GV);
 
   // If it is safe to mark the global 'constant', do so now.
+  bool IsConstant = !NeedsGlobalCtor && !NeedsGlobalDtor &&
+                    D->getType().isConstantStorage(getContext(), true, true);
+  if (IsConstant && GV->isWeakForLinker() && !D->hasConstantInitialization() &&
+      !D->hasAttr<CUDAConstantAttr>())
+    IsConstant = false;
+
   GV->setConstant((D->hasAttr<CUDAConstantAttr>() && LangOpts.CUDAIsDevice) ||
-                  (!NeedsGlobalCtor && !NeedsGlobalDtor &&
-                   D->getType().isConstantStorage(getContext(), true, true)));
+                  IsConstant);
 
   // If it is in a read-only section, mark it 'constant'.
   if (const SectionAttr *SA = D->getAttr<SectionAttr>()) {
