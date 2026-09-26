@@ -203,6 +203,11 @@ struct LateParsedAttribute : public LateParsedDeclaration {
   SourceLocation AttrNameLoc;
   SmallVector<Decl *, 2> Decls;
 
+  /// Parameters of the prototype the attribute was written on, kept because
+  /// late parsing runs after their scope is popped and the arguments may name
+  /// one: 'void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)'.
+  SmallVector<ParmVarDecl *, 4> ProtoParams;
+
 private:
   Kind K;
 
@@ -1528,6 +1533,12 @@ private:
   /// attributes. Shared implementation used by both ParseLexedAttribute and
   /// ParseLexedTypeAttribute.
   ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
+  /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
+  /// return true if it must be dropped.
+  bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
+                                   const Decl *D,
+                                   ArrayRef<const DeclRefExpr *> ParamRefs,
+                                   bool ReenteredProtoParams);
 
   /// Helper function to move LateParsedTypeAttribute pointers from one list
   /// to another. Filters type attributes from \p From and appends them to \p
