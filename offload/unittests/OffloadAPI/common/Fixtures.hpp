@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <OffloadAPI.h>
-#include <OffloadPrint.hpp>
+#include <OffloadPrintRaw.hpp>
 #include <gtest/gtest.h>
 #include <optional>
 #include <string>
