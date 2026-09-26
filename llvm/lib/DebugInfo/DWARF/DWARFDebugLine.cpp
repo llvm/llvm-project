@@ -1456,9 +1456,9 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
     // The matching row range should end at the next row's address, unless the
     // last row is the last row in the sequence. If we don't do this and we have
     // outlined functions, we can end up with a range that is empty.
-    uint64_t MatchingRangeHighPC = Rows[LastRowIndex].EndSequence ?
-      Rows[LastRowIndex].Address.Address :
-      Rows[LastRowIndex + 1].Address.Address;
+    uint64_t MatchingRangeHighPC = Rows[LastRowIndex].EndSequence
+                                       ? Rows[LastRowIndex].Address.Address
+                                       : Rows[LastRowIndex + 1].Address.Address;
     AddressRange MatchingRowRange(Rows[FirstRowIndex].Address.Address,
                                   MatchingRangeHighPC);
     if (RowRanges.contains(MatchingRowRange)) {
