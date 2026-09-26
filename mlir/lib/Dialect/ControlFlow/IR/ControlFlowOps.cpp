@@ -647,10 +647,17 @@ static ParseResult parseSwitchOpCases(
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
   while (succeeded(parser.parseOptionalComma())) {
-    int64_t value = 0;
+    SMLoc valueLoc = parser.getCurrentLocation();
+    APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+    // Signless integers accept negative values in the signed range and
+    // non-negative values in the unsigned range.
+    if ((value.isNegative() && !value.isSignedIntN(bitWidth)) ||
+        (!value.isNegative() && !value.isIntN(bitWidth)))
+      return parser.emitError(valueLoc)
+             << "case value does not fit in flag type " << flagType;
+    values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -693,7 +700,7 @@ static void printSwitchOpCases(
     p << ',';
     p.printNewline();
     p << "  ";
-    p << it.value().getLimitedValue();
+    it.value().print(p.getStream(), /*isSigned=*/true);
     p << ": ";
     p.printSuccessorAndUseList(caseDestinations[it.index()],
                                caseOperands[it.index()]);
