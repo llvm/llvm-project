@@ -4301,11 +4301,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       }
       RetValExp = Res.getAs<Expr>();
 
-      // A returned HLSL matrix may need its layout reconciled with the
-      // function's row_major/column_major return type.
-      if (getLangOpts().HLSL && RetValExp && RetType->isMatrixType())
-        HLSL().propagateContextualMatrixLayout(RetValExp, RetType);
-
       // If we have a related result type, we need to implicitly
       // convert back to the formal result type.  We can't pretend to
       // initialize the result again --- we might end double-retaining

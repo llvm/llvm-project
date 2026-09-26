@@ -722,6 +722,10 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (T.hasQualifiers())
     T = T.getUnqualifiedType();
 
+  if (getLangOpts().HLSL)
+    if (const auto *MT = T->getAs<ConstantMatrixType>(); MT && MT->getLayout())
+      T = Context.getCanonicalType(T);
+
   // Under the MS ABI, lock down the inheritance model now.
   if (T->isMemberPointerType() &&
       Context.getTargetInfo().getCXXABI().isMicrosoft())
