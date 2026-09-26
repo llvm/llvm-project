@@ -72,6 +72,7 @@ class TargetLibraryInfo;
 class Type;
 class VPIntrinsic;
 struct KnownBits;
+struct VFInfo;
 
 /// Information about a load/store intrinsic defined by the target.
 struct MemIntrinsicInfo {
@@ -1045,6 +1046,14 @@ public:
 
   /// Return true if this type is legal.
   LLVM_ABI bool isTypeLegal(Type *Ty) const;
+
+  /// Whether a vector function can be called directly from this function.
+  /// Unlike an intrinsic, an external vector call cannot be legalized by
+  /// splitting its operands without changing the callee's ABI. Targets may
+  /// also impose ISA requirements from the VFABI mapping or symbol name.
+  /// Targets may conservatively reject calls wider than their preferred width.
+  LLVM_ABI bool isLegalToCallVectorFunction(FunctionType *FTy,
+                                            const VFInfo &Info) const;
 
   /// Returns the estimated number of registers required to represent \p Ty.
   LLVM_ABI unsigned getRegUsageForType(Type *Ty) const;
