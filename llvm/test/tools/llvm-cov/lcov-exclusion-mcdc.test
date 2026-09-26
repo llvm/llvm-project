@@ -1,0 +1,66 @@
+# The source below matches Inputs/mcdc-general.cpp except for the marker on
+# line 12. Keep its decision lines aligned with mcdc-general.o.
+# RUN: split-file %s %t.sources
+# RUN: llvm-profdata merge %S/Inputs/mcdc-general.proftext -o %t.profdata
+# RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=.,%t.sources --show-mcdc-summary \
+# RUN:   %t.sources/mcdc-general.cpp | FileCheck %s --check-prefix=BASE
+# RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=.,%t.sources --show-mcdc-summary \
+# RUN:   --respect-lcov-exclusion-markers %t.sources/mcdc-general.cpp \
+# RUN:   | FileCheck %s --check-prefix=FILTERED
+# RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=.,%t.sources --show-mcdc \
+# RUN:   --respect-lcov-exclusion-markers %t.sources/mcdc-general.cpp \
+# RUN:   | FileCheck %s --check-prefix=SHOW
+# RUN: llvm-cov export --format=text %S/Inputs/mcdc-general.o \
+# RUN:   -instr-profile=%t.profdata -path-equivalence=.,%t.sources \
+# RUN:   --respect-lcov-exclusion-markers %t.sources/mcdc-general.cpp \
+# RUN:   | FileCheck %s --check-prefix=JSON
+
+# BASE: TOTAL{{.*}}24{{ +}}2{{ +}}91.67%{{ +}}12{{ +}}2{{ +}}83.33%
+# FILTERED: TOTAL{{.*}}16{{ +}}2{{ +}}87.50%{{ +}}8{{ +}}2{{ +}}75.00%
+# SHOW: 12|       |  if ((a && b) || (c && d)) // LCOV_EXCL_LINE
+# SHOW-NOT: MC/DC Decision Region (12:
+# SHOW: MC/DC Decision Region (15:7)
+# SHOW: MC/DC Decision Region (18:7)
+# JSON: "mcdc_records":{{\[\[}}15,7
+# JSON: "mcdc":{"count":8,"covered":6,"notcovered":2
+
+#--- mcdc-general.cpp
+#include <stdio.h>
+
+
+
+
+
+
+
+
+void test(bool a, bool b, bool c, bool d) {
+
+  if ((a && b) || (c && d)) // LCOV_EXCL_LINE
+    printf("test1 decision true\n");
+
+  if (b && c) if (a && d)
+    printf("test2 decision true\n");
+
+  if ((c && d) &&
+      (a && b))
+    printf("test3 decision true\n");
+}
+
+int main()
+{
+    test(false,false,false,false);
+    test(true,false,true,false);
+    test(true,false,true,true);
+    test(true,true,false,false);
+
+    test(true,false,false,false);
+    test(true,true,true,true);
+    test(false,true,true,false);
+
+    (void)0;
+    return 0;
+}

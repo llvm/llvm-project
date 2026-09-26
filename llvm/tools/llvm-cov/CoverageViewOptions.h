@@ -15,6 +15,8 @@
 
 namespace llvm {
 
+class CoverageExclusions;
+
 /// The options for displaying the code coverage information.
 struct CoverageViewOptions {
   enum class OutputFormat {
@@ -49,6 +51,7 @@ struct CoverageViewOptions {
   bool SkipFunctions;
   bool SkipBranches;
   bool BinaryCounters;
+  bool RespectLcovExclusionMarkers = false;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;
@@ -60,6 +63,7 @@ struct CoverageViewOptions {
   std::string CompilationDirectory;
   float HighCovWatermark;
   float LowCovWatermark;
+  const CoverageExclusions *SourceExclusions = nullptr;
 
   /// Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,
