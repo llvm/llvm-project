@@ -1367,6 +1367,21 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  exp_static_rounding_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp_static_rounding_test.cpp
+  DEPENDS
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.exp
+    libc.src.__support.math.exp_integer_eval
+)
 
 add_fp_unittest(
   expf16_test
