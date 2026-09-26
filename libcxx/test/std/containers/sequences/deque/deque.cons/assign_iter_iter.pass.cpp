@@ -9,22 +9,26 @@
 // <deque>
 
 // template <class InputIterator>
-//   void assign(InputIterator f, InputIterator l);
+//   void assign(InputIterator f, InputIterator l); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
-#include "test_macros.h"
-#include "test_iterators.h"
+#include "asan_testing.h"
 #include "min_allocator.h"
+#include "test_iterators.h"
+#include "test_macros.h"
+
 #if TEST_STD_VER >= 11
 #  include "emplace_constructible.h"
 #endif
 
+// TODO: Investigate how to run heavy basic_test() during constant evaluation.
+
 template <class C>
-C make(int size, int start = 0) {
+/*TEST_CONSTEXPR_CXX26*/ C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -43,7 +47,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(C& c1, const C& c2) {
+/*TEST_CONSTEXPR_CXX26*/ void test(C& c1, const C& c2) {
   c1.assign(c2.begin(), c2.end());
   assert(static_cast<std::size_t>(std::distance(c1.begin(), c1.end())) == c1.size());
   assert(c1 == c2);
@@ -52,14 +56,14 @@ void test(C& c1, const C& c2) {
 }
 
 template <class C>
-void testN(int start, int N, int M) {
+/*TEST_CONSTEXPR_CXX26*/ void testN(int start, int N, int M) {
   C c1 = make<C>(N, start);
   C c2 = make<C>(M);
   test(c1, c2);
 }
 
 template <class C>
-void testI(C& c1, const C& c2) {
+/*TEST_CONSTEXPR_CXX26*/ void testI(C& c1, const C& c2) {
   typedef typename C::const_iterator CI;
   typedef cpp17_input_iterator<CI> ICI;
   c1.assign(ICI(c2.begin()), ICI(c2.end()));
@@ -70,13 +74,13 @@ void testI(C& c1, const C& c2) {
 }
 
 template <class C>
-void testNI(int start, int N, int M) {
+/*TEST_CONSTEXPR_CXX26*/ void testNI(int start, int N, int M) {
   C c1 = make<C>(N, start);
   C c2 = make<C>(M);
   testI(c1, c2);
 }
 
-void basic_test() {
+/*TEST_CONSTEXPR_CXX26*/ void basic_test() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -109,7 +113,7 @@ void basic_test() {
 }
 
 template <class It>
-void test_emplacable_concept() {
+TEST_CONSTEXPR_CXX26 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -131,7 +135,7 @@ void test_emplacable_concept() {
 #endif
 }
 
-void test_iterators() {
+TEST_CONSTEXPR_CXX26 void test_iterators() {
   test_emplacable_concept<cpp17_input_iterator<int*> >();
   test_emplacable_concept<forward_iterator<int*> >();
   test_emplacable_concept<bidirectional_iterator<int*> >();
@@ -142,8 +146,24 @@ void test_iterators() {
   test_emplacable_concept<int*>();
 }
 
-int main(int, char**) {
-  basic_test();
+TEST_CONSTEXPR_CXX26 bool test() {
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    basic_test();
+  test_iterators();
+  {
+    int input[] = {1, 2, 3};
+    std::deque<int> d;
+    d.assign(input, input + 3);
+    assert(d.size() == 3);
+    assert(std::equal(d.begin(), d.end(), std::begin(input)));
+  }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

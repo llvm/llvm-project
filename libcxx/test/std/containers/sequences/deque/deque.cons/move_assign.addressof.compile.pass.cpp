@@ -8,7 +8,7 @@
 
 // <deque>
 
-// deque& operator=(deque&& c);
+// deque& operator=(deque&& c); // constexpr since C++26
 
 // Validate whether the container can be copy-assigned with an ADL-hijacking operator&
 

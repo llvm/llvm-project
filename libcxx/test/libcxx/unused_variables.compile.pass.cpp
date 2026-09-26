@@ -41,8 +41,8 @@ void containers() {
 }
 
 void container_iterators() {
-  std::deque<int>::iterator a;
 #if TEST_STD_VER <= 23
+  std::deque<int>::iterator a;
   std::forward_list<int>::iterator b;
   std::list<int>::iterator c;
   std::map<int, int>::iterator d;
@@ -64,8 +64,8 @@ void container_iterators() {
 }
 
 void container_const_iterators() {
-  std::deque<int>::const_iterator a;
 #if TEST_STD_VER <= 23
+  std::deque<int>::const_iterator a;
   std::forward_list<int>::const_iterator b;
   std::list<int>::const_iterator c;
   std::map<int, int>::const_iterator d;
