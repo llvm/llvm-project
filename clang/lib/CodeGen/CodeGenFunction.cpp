@@ -40,6 +40,7 @@
 #include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -1050,6 +1051,33 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
             CurCodeDecl && CurCodeDecl->getAttr<ReturnsNonNullAttr>()))
         RetValNullabilityPrecondition =
             llvm::ConstantInt::getTrue(getLLVMContext());
+    }
+  }
+
+  // Annotate C++ special member functions so that CopyProfPass can instrument
+  // them, provided the object is at least as large as the size threshold.
+  if (CGM.getCodeGenOpts().CopyProf) {
+    if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D)) {
+      StringRef Attr;
+      if (const auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+        if (!CD->isMoveConstructor())
+          Attr =
+              CD->isCopyConstructor() ? "copyprof-copy-ctor" : "copyprof-ctor";
+      } else if (isa<CXXDestructorDecl>(MD)) {
+        Attr = "copyprof-dtor";
+      } else if (MD->isCopyAssignmentOperator()) {
+        Attr = "copyprof-copy-assign-op";
+      }
+      if (!Attr.empty()) {
+        // Finally, add the object size in bytes to the annotation.
+        // A special member function always has an implicit object parameter, so
+        // its type is guaranteed to be complete here.
+        CharUnits ObjSize = getContext().getTypeSizeInChars(
+            MD->getFunctionObjectParameterType());
+        if (ObjSize.getQuantity() >=
+            CGM.getCodeGenOpts().CopyProfStaticSizeThreshold)
+          Fn->addFnAttr(Attr, llvm::utostr(ObjSize.getQuantity()));
+      }
     }
   }
 
