@@ -1417,8 +1417,8 @@ static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
 LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
                               Action::OffloadKind Kind) const {
   bool IsOffload = Kind != Action::OFK_None;
-  auto OptEq = IsOffload ? options::OPT_foffload_lto_EQ : options::OPT_flto_EQ;
-  auto OptNeg = IsOffload ? options::OPT_fno_offload_lto : options::OPT_fno_lto;
+  auto OptEq = options::OPT_flto_EQ;
+  auto OptNeg = options::OPT_fno_lto;
 
   // -fopenmp-target-jit implies -foffload-lto=full for device compilations,
   // overriding any explicit -fno-offload-lto.
@@ -1427,7 +1427,8 @@ LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
     if (Arg *A = Args.getLastArg(OptEq, OptNeg))
       if (parseLTOMode(Args, OptEq, OptNeg) != LTOK_Full)
         getDriver().Diag(diag::err_drv_incompatible_options)
-            << A->getSpelling() << "-fopenmp-target-jit";
+            << (A->getAlias() ? A->getAlias()->getSpelling() : A->getSpelling())
+            << "-fopenmp-target-jit";
     return LTOK_Full;
   }
 
@@ -1438,8 +1439,9 @@ LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
 
   if (Mode == LTOK_Unknown) {
     const Arg *A = Args.getLastArg(OptEq);
+    const Arg *SpellingArg = A->getAlias() ? A->getAlias() : A;
     getDriver().Diag(diag::err_drv_unsupported_option_argument)
-        << A->getSpelling() << A->getValue();
+        << SpellingArg->getSpelling() << A->getValue();
     return LTOK_None;
   }
   return Mode;
@@ -2179,6 +2181,27 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
 
   bool IsDevice = OFK != Action::OFK_None && OFK != Action::OFK_Host;
   for (Arg *A : Args) {
+    // Handle the legacy '-foffload-lto' option as a device-only LTO.
+    if (const Arg *Alias = A->getAlias();
+        Alias && (Alias->getOption().getID() == options::OPT_foffload_lto ||
+                  Alias->getOption().getID() == options::OPT_foffload_lto_EQ ||
+                  Alias->getOption().getID() == options::OPT_fno_offload_lto)) {
+      Modified = true;
+      if (IsDevice)
+        DAL->append(A);
+      continue;
+    }
+
+    // Handle the legacy '-flto' option as host-only LTO.
+    if (IsDevice &&
+        (A->getOption().matches(options::OPT_flto_EQ) ||
+         A->getOption().matches(options::OPT_fno_lto)) &&
+        (A->getBaseArg().getOption().matches(options::OPT_flto_EQ) ||
+         A->getBaseArg().getOption().matches(options::OPT_fno_lto))) {
+      Modified = true;
+      continue;
+    }
+
     bool NeedTrans = false;
     bool Skip = false;
     if (A->getOption().matches(options::OPT_Xarch_device)) {
