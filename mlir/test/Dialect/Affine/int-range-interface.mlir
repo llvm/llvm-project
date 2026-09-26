@@ -171,3 +171,26 @@ func.func @affine_apply_mod_negative_dividend() -> index {
   %1 = test.reflect_bounds %0 : index
   func.return %1 : index
 }
+
+// A literal zero divisor is degenerate (affine floordiv/ceildiv require a
+// strictly positive divisor). Range inference must not divide by zero; it
+// returns the full range instead of crashing.
+// CHECK-LABEL: func @affine_apply_floordiv_zero
+// CHECK: test.reflect_bounds {smax = 9223372036854775807 : index, smin = -9223372036854775808 : index, umax = -1 : index, umin = 0 : index}
+func.func @affine_apply_floordiv_zero() -> index {
+  %d0 = test.with_bounds { umin = 5 : index, umax = 10 : index,
+                           smin = 5 : index, smax = 10 : index } : index
+  %0 = affine.apply affine_map<(d0) -> (d0 floordiv 0)>(%d0)
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
+
+// CHECK-LABEL: func @affine_apply_ceildiv_zero
+// CHECK: test.reflect_bounds {smax = 9223372036854775807 : index, smin = -9223372036854775808 : index, umax = -1 : index, umin = 0 : index}
+func.func @affine_apply_ceildiv_zero() -> index {
+  %d0 = test.with_bounds { umin = 5 : index, umax = 10 : index,
+                           smin = 5 : index, smax = 10 : index } : index
+  %0 = affine.apply affine_map<(d0) -> (d0 ceildiv 0)>(%d0)
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
