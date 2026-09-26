@@ -5947,6 +5947,18 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
+bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
+                                            unsigned AddressSpace) const {
+  // Matches AArch64TargetLowering::emitCanLoadSpeculatively: only address
+  // space 0 and power-of-2 sizes up to the 16-byte MTE tag granule.
+  // TODO: Support scalable vectors.
+  if (AddressSpace != 0)
+    return false;
+  TypeSize Size = DL.getTypeStoreSize(DataType);
+  return !Size.isScalable() && isPowerOf2_64(Size.getFixedValue()) &&
+         Size.getFixedValue() <= 16;
+}
+
 unsigned
 AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
                                        bool HasUnorderedReductions) const {
