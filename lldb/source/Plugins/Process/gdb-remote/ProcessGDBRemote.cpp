@@ -1147,13 +1147,17 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
 
   // Ask any accelerator plugins installed in lldb-server for their initial
   // actions (e.g. breakpoints to set in the native process).
-  llvm::Expected<std::vector<AcceleratorActions>> init_actions =
-      m_gdb_comm.GetAcceleratorInitializeActions();
-  if (!init_actions) {
-    LLDB_LOG_ERROR(log, init_actions.takeError(),
-                   "failed to get accelerator initialize actions: {0}");
+  m_accelerator_dynamic_loader_plugin_name.clear();
+  llvm::Expected<AcceleratorInitializeResponse> init_response =
+      m_gdb_comm.GetAcceleratorInitializeResponse();
+  if (!init_response) {
+    LLDB_LOG_ERROR(log, init_response.takeError(),
+                   "failed to get accelerator initialize response: {0}");
   } else {
-    for (const AcceleratorActions &actions : *init_actions) {
+    if (init_response->dyld_plugin_name)
+      m_accelerator_dynamic_loader_plugin_name =
+          *init_response->dyld_plugin_name;
+    for (const AcceleratorActions &actions : init_response->actions) {
       if (llvm::Error error = HandleAcceleratorActions(actions))
         LLDB_LOG_ERROR(log, std::move(error),
                        "failed to handle accelerator actions: {0}");
@@ -4607,7 +4611,8 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+    m_dyld_up.reset(DynamicLoader::FindPlugin(
+        this, m_accelerator_dynamic_loader_plugin_name));
   return m_dyld_up.get();
 }
 
