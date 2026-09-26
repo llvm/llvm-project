@@ -53,7 +53,7 @@ createTextResult(std::string output, bool is_error = false) {
 }
 
 std::string to_uri(DebuggerSP debugger) {
-  return (kSchemeAndHost + std::to_string(debugger->GetID())).str();
+  return (llvm::Twine(kSchemeAndHost) + std::to_string(debugger->GetID())).str();
 }
 
 } // namespace

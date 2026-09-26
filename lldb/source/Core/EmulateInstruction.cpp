@@ -614,6 +614,13 @@ bool EmulateInstruction::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   return false;
 }
 
+SingleStepBreakpointLocationsPredictor::SingleStepBreakpointLocationsPredictor(
+    std::unique_ptr<EmulateInstruction> emulator_up)
+    : m_emulator_up{std::move(emulator_up)} {}
+
+SingleStepBreakpointLocationsPredictor::
+    ~SingleStepBreakpointLocationsPredictor() = default;
+
 llvm::Expected<BreakpointLocations>
 SingleStepBreakpointLocationsPredictor::GetBreakpointLocations() {
   if (!m_emulator_up->ReadInstruction()) {

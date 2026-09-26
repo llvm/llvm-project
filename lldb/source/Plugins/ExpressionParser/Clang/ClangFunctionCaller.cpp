@@ -62,6 +62,13 @@ ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
 // Destructor
 ClangFunctionCaller::~ClangFunctionCaller() = default;
 
+ClangFunctionCaller::ClangFunctionCallerHelper::ClangFunctionCallerHelper(
+    ClangFunctionCaller &owner)
+    : m_owner(owner) {}
+
+ClangFunctionCaller::ClangFunctionCallerHelper::~ClangFunctionCallerHelper() =
+    default;
+
 unsigned
 
 ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,

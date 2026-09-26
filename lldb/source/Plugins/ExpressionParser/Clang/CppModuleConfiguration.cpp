@@ -9,6 +9,7 @@
 #include "CppModuleConfiguration.h"
 
 #include "ClangHost.h"
+#include "llvm/ADT/Twine.h"
 #include "lldb/Host/FileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -81,7 +82,7 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f,
     posix_dir.consume_back("c++/v1");
     // Check if this is a target-specific libc++ include directory.
     return m_std_target_inc.TrySet(
-        (posix_dir + triple.str() + "/c++/v1").str());
+        (llvm::Twine(posix_dir) + triple.str() + "/c++/v1").str());
   }
 
   std::optional<llvm::StringRef> inc_path;
