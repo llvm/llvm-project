@@ -811,6 +811,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type llvmTy = converter->convertType(attr.getType());
   mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
   llvmTy = adjustGlobalTypeForInit(llvmTy, attr, *converter, dataLayout);
+  if (!llvmTy)
+    return {};
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
@@ -860,6 +862,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   llvm::SmallVector<unsigned> paddingAddedIndexes;
   llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout,
                                    paddingAddedIndexes);
+  if (!llvmTy)
+    return {};
   const mlir::Location loc = parentOp->getLoc();
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
@@ -3023,7 +3027,8 @@ convertTlsModelAttrToLLVM(TLSModelAttr attr) {
 
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
-void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
+mlir::LogicalResult
+CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
     cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getSymType());
@@ -3033,6 +3038,8 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   if (std::optional<mlir::Attribute> init = op.getInitialValue())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
                                        dataLayout);
+  if (!llvmType)
+    return mlir::failure();
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -3060,6 +3067,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
           isDsoLocal, threadLocalMode, comdatAttr, attributes);
   newGlobalOp.getRegion().emplaceBlock();
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
+  return mlir::success();
 }
 
 mlir::LogicalResult
@@ -3077,7 +3085,8 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // should be updated. For now, we use a custom op to initialize globals
   // to the appropriate value.
   const mlir::Location loc = op.getLoc();
-  setupRegionInitializedLLVMGlobalOp(op, rewriter);
+  if (failed(setupRegionInitializedLLVMGlobalOp(op, rewriter)))
+    return mlir::failure();
 
   // Pass blockInfoAddr so that block address initializers (either as the whole
   // initializer or nested inside an aggregate) can be resolved by the
@@ -3122,6 +3131,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   if (init.has_value())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
                                        dataLayout);
+  if (!llvmType)
+    return mlir::failure();
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
