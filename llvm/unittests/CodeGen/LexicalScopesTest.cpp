@@ -460,7 +460,7 @@ TEST_F(LexicalScopesTest, TestMetaInst) {
   EXPECT_TRUE(LS.dominates(InBlockLoc.get(), MBB4));
 }
 
-// Test function map creation.
+// Test inlined functions detection.
 TEST_F(LexicalScopesTest, TestFunctionScan) {
   auto MF2 = createMachineFunction(Ctx, Mod, "Test2");
   DIBuilder DIB(Mod, false, OurCU);
@@ -471,13 +471,20 @@ TEST_F(LexicalScopesTest, TestFunctionScan) {
       DIB.createFunction(OurCU, "UnattachedFunc", "", OurFile, 1, OurSubT, 1,
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
   MF2->getFunction().setSubprogram(Func2);
+
+  llvm::Function &F = const_cast<llvm::Function &>(MF->getFunction());
+  auto *BB1 = BasicBlock::Create(Ctx, "a", &F);
+  IRBuilder<> IRB1(BB1);
+  IRB1.CreateRetVoid()->setDebugLoc(
+      DILocation::get(Ctx, 1, 1, Func2, DILocation::get(Ctx, 2, 2, OurFunc)));
+
   DIB.finalize();
 
   LexicalScopes LS;
   LS.initialize(Mod);
-  ASSERT_EQ(LS.getFunction(OurFunc), &MF->getFunction());
-  ASSERT_EQ(LS.getFunction(Func2), &MF2->getFunction());
-  ASSERT_EQ(LS.getFunction(UnattachedFunc), nullptr);
+  ASSERT_FALSE(LS.isInlined(OurFunc));
+  ASSERT_TRUE(LS.isInlined(Func2));
+  ASSERT_TRUE(LS.isInlined(UnattachedFunc));
 }
 
 } // anonymous namespace
