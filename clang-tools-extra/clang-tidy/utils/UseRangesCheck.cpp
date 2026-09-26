@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseRangesCheck.h"
+#include "FixItHintUtils.h"
 #include "Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -268,13 +269,19 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     for (const auto &[First, Second, Replace] : Sig) {
       auto ArgNode = ArgName + std::to_string(First);
       if (const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode)) {
-        Diag << FixItHint::CreateReplacement(
-            Call->getArg(Replace == Indexes::Second ? Second : First)
-                ->getSourceRange(),
+        const Expr *RangeArg =
+            Call->getArg(Replace == Indexes::Second ? Second : First);
+        std::string ReplaceText =
             Lexer::getSourceText(
                 CharSourceRange::getTokenRange(ArgExpr->getSourceRange()),
                 Result.Context->getSourceManager(),
-                Result.Context->getLangOpts()));
+                Result.Context->getLangOpts())
+                .str();
+        if (ArgExpr->getType()->isPointerType() &&
+            isa<CXXMemberCallExpr>(RangeArg->IgnoreParenImpCasts()))
+          ReplaceText = fixit::formatDereference(*ArgExpr, *Result.Context);
+        Diag << FixItHint::CreateReplacement(RangeArg->getSourceRange(),
+                                             ReplaceText);
       } else {
         assert(ReverseDescriptor && "Couldn't find forward argument");
         ArgNode.push_back('R');
