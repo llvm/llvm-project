@@ -230,6 +230,25 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
   return makeNonLoc(LHS, op, *ConvertedRHS, resultTy);
 }
 
+// Returns whether X op RHS is equivalent to X.
+static bool isIdentityOperation(BinaryOperator::Opcode op,
+                                const llvm::APSInt &RHS) {
+  switch (op) {
+  case BO_Add:
+  case BO_Sub:
+  case BO_Or:
+  case BO_Xor:
+  case BO_Shl:
+  case BO_Shr:
+    return RHS == 0;
+  case BO_Mul:
+  case BO_Div:
+    return RHS == 1;
+  default:
+    return false;
+  }
+}
+
 // See if Sym is known to be a relation Rel with Bound.
 static bool isInRelation(BinaryOperator::Opcode Rel, SymbolRef Sym,
                          llvm::APSInt Bound, ProgramStateRef State) {
@@ -491,6 +510,11 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
                            rhs.castAs<nonloc::LocAsInteger>().getLoc(),
                            resultTy);
       case nonloc::ConcreteIntKind: {
+        // Preserve the location for identity operations.
+        if (isIdentityOperation(op,
+                                rhs.castAs<nonloc::ConcreteInt>().getValue()))
+          return evalCast(lhs, resultTy, QualType{});
+
         // FIXME: at the moment the implementation
         // of modeling "pointers as integers" is not complete.
         if (!BinaryOperator::isComparisonOp(op))
