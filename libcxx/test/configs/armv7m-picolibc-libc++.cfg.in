@@ -11,7 +11,9 @@ config.substitutions.append(('%{compile_flags}',
     ' -Wno-atomic-alignment'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-fuse-ld=lld -nostdlib -nostdlib++ -L %{lib-dir} -lc++ -lc++abi'
+    # -lunwind provides _Unwind_Backtrace/_Unwind_GetIPInfo, which std::stacktrace's
+    # default implementation calls directly regardless of libc++abi's own unwinder choice.
+    '-fuse-ld=lld -nostdlib -nostdlib++ -L %{lib-dir} -lc++ -lc++abi -lunwind'
     ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost' +
     ' -T {}'.format(libc_linker_script) +
     ' -Wl,--defsym=__flash=0x0'

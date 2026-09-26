@@ -55,6 +55,8 @@ Implemented Papers
 - P3450R1: Extend ``std::is_within_lifetime`` (`Github <https://llvm.org/PR189610>`__)
 - P3793R2: Better shifting (`Github <https://llvm.org/PR219389>`__) (no ``std::simd`` overloads)
 - P0040R3: Extending memory management tools (`Github <https://github.com/llvm/llvm-project/issues/103640>`__)
+- P0881R7: A Proposal to add stacktrace library (`Github <https://llvm.org/PR105131>`__)
+- P2301R1: Add a `pmr` alias for `std::stacktrace` (`Github <https://llvm.org/PR105167>`__)
 
 Improvements and New Features
 -----------------------------
