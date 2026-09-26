@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG2F_H
 
 #include "common_constants.h" // Lookup table for (1/f)
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -91,7 +92,13 @@ LIBC_INLINE float log2f(float x) {
       return x;
     }
     // Normalize denormal inputs.
-    xbits = FPBits(xbits.get_val() * 0x1.0p23f);
+    int biased_exponent = 32 - cpp::countl_zero(x_u);
+    uint32_t mantissa = (x_u << (FPBits::FRACTION_LEN + 1 - biased_exponent)) &
+                        FPBits::FRACTION_MASK;
+    uint32_t normalized_x_u =
+        (static_cast<uint32_t>(biased_exponent) << FPBits::FRACTION_LEN) |
+        mantissa;
+    xbits = FPBits(normalized_x_u);
     m -= 23;
   }
 
