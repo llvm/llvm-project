@@ -1690,9 +1690,16 @@ let Predicates = [HasUINTR, In64BitMode], SchedRW = [WriteSystem] in {
 // prefetch ADDR, RW, Locality, Data
 let Predicates = [HasPREFETCHI, In64BitMode], SchedRW = [WriteLoad] in {
   def PREFETCHIT0 : I<0x18, MRM7m, (outs), (ins i8mem:$src),
-    "prefetchit0\t$src", [(prefetch addr:$src, (i32 0), (i32 3), (i32 0))]>, TB;
+    "prefetchit0\t$src", [(prefetch addr:$src, timm, (i32 3), (i32 0))]>, TB;
   def PREFETCHIT1 : I<0x18, MRM6m, (outs), (ins i8mem:$src),
-    "prefetchit1\t$src", [(prefetch addr:$src, (i32 0), (i32 2), (i32 0))]>, TB;
+    "prefetchit1\t$src", [(prefetch addr:$src, timm, (i32 2), (i32 0))]>, TB;
+}
+
+let Predicates = [HasPREFETCHI, In64BitMode] in {
+  def : Pat<(prefetch addr:$src, timm, (i32 1), (i32 0)),
+            (PREFETCHIT1 addr:$src)>;
+  def : Pat<(prefetch addr:$src, timm, (i32 0), (i32 0)),
+            (PREFETCHIT1 addr:$src)>;
 }
 
 //===----------------------------------------------------------------------===//
