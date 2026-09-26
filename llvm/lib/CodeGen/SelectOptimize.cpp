@@ -884,6 +884,11 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
         auto *Op = I->getOperand(Idx);
         auto It = SelectInfo.find(Op);
         if (It != SelectInfo.end() && It->second.IsAuxiliary) {
+          // getTrueOrFalseValue only supports ZExt, SExt, and Shift auxiliaries for BinOps.
+          auto *OpI = dyn_cast<Instruction>(Op);
+          if (!OpI || (!isa<ZExtInst>(OpI) && !isa<SExtInst>(OpI) &&
+                       !isa<LShrOperator>(OpI) && !isa<AShrOperator>(OpI)))
+            continue;
           Cond = It->second.Cond;
           bool Inverted = It->second.IsInverted;
           return SelectInfo.insert({I, {Cond, false, Inverted, Idx}}).first;
