@@ -33,6 +33,12 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
                              llvm::LLVMContext &llvmCtx, bool enableOpenMP,
                              llvm::StringRef mlirSaveTempsOutFile = {},
                              llvm::vfs::FileSystem *fs = nullptr);
+
+// Expand calls to the internal __cir_amdgpu_printf marker CIRGen emits for a
+// device-side printf into the real AMDGPU sequence. Must run after the
+// module has been translated to LLVM IR and before device-library bitcode
+// linking.
+void expandAMDGPUDevicePrintf(llvm::Module &module);
 } // namespace direct
 } // namespace cir
 

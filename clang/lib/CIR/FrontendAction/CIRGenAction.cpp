@@ -65,8 +65,12 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
                      bool EnableOpenMP,
                      llvm::StringRef mlirSaveTempsOutFile = {},
                      llvm::vfs::FileSystem *fs = nullptr) {
-  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
-                                              mlirSaveTempsOutFile, fs);
+  std::unique_ptr<llvm::Module> LLVMModule =
+      direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
+                                           mlirSaveTempsOutFile, fs);
+  if (LLVMModule)
+    direct::expandAMDGPUDevicePrintf(*LLVMModule);
+  return LLVMModule;
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
