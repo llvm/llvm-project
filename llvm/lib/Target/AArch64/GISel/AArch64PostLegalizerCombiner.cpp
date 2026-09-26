@@ -257,54 +257,6 @@ void applyAArch64MulConstCombine(
   MI.eraseFromParent();
 }
 
-/// Try to fold a G_MERGE_VALUES of 2 s32 sources, where the second source
-/// is a zero, into a G_ZEXT of the first.
-bool matchFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  auto &Merge = cast<GMerge>(MI);
-  LLT SrcTy = MRI.getType(Merge.getSourceReg(0));
-  if (SrcTy != LLT::scalar(32) || Merge.getNumSources() != 2)
-    return false;
-  return mi_match(Merge.getSourceReg(1), MRI, m_SpecificICst(0));
-}
-
-void applyFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, GISelChangeObserver &Observer) {
-  // Mutate %d(s64) = G_MERGE_VALUES %a(s32), 0(s32)
-  //  ->
-  // %d(s64) = G_ZEXT %a(s32)
-  Observer.changingInstr(MI);
-  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
-  MI.removeOperand(2);
-  Observer.changedInstr(MI);
-}
-
-/// \returns True if a G_ANYEXT instruction \p MI should be mutated to a G_ZEXT
-/// instruction.
-bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  // If this is coming from a scalar compare then we can use a G_ZEXT instead of
-  // a G_ANYEXT:
-  //
-  // %cmp:_(s32) = G_[I|F]CMP ... <-- produces 0/1.
-  // %ext:_(s64) = G_ANYEXT %cmp(s32)
-  //
-  // By doing this, we can leverage more KnownBits combines.
-  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  return MRI.getType(Dst).isScalar() &&
-         mi_match(Src, MRI,
-                  m_any_of(m_GICmp(m_Pred(), m_Reg(), m_Reg()),
-                           m_GFCmp(m_Pred(), m_Reg(), m_Reg())));
-}
-
-void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &B,
-                             GISelChangeObserver &Observer) {
-  Observer.changingInstr(MI);
-  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
-  Observer.changedInstr(MI);
-}
-
 /// Match a 128b store of zero and split it into two 64 bit stores, for
 /// size/performance reasons.
 bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
@@ -606,21 +558,6 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
       M2->getOpcode() != AArch64::G_UMULL)
     return false;
   return true;
-}
-
-static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
-                                  MachineRegisterInfo &MRI, MachineIRBuilder &B,
-                                  GISelChangeObserver &Observer) {
-  Register Src = MI.getOperand(1).getReg();
-  Register Tmp = MI.getOperand(2).getReg();
-  Register Mul1 = Sub.getOperand(1).getReg();
-  Register Mul2 = Sub.getOperand(2).getReg();
-  Observer.changingInstr(MI);
-  B.buildInstr(AArch64::G_SUB, {Tmp}, {Src, Mul1});
-  MI.getOperand(1).setReg(Tmp);
-  MI.getOperand(2).setReg(Mul2);
-  Sub.eraseFromParent();
-  Observer.changedInstr(MI);
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
