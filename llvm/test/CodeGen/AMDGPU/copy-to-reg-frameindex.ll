@@ -43,10 +43,11 @@ define void @phi_with_alloca_and_divergent_copy_to_reg(ptr addrspace(5) %diverge
 ; CHECK-LABEL: phi_with_alloca_and_divergent_copy_to_reg:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_lshr_b32 s6, s32, 6
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v1
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
+; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2

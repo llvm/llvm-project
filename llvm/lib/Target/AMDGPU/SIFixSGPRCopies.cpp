@@ -862,8 +862,17 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     }
   }
 
-  if (TRI->hasVectorRegisters(MRI->getRegClass(PHIRes)) ||
-      RC0 == &AMDGPU::VReg_1RegClass) {
+  // Only legalize PHIs that need it: i1 PHIs, PHIs just moved to AGPRs, and
+  // vector PHIs with SGPR or subregister inputs, which are left behind by
+  // SGPR-to-VGPR lowering (e.g. for temporal divergence).
+  const TargetRegisterClass *RC = MRI->getRegClass(PHIRes);
+  bool HasSALUInput =
+      any_of(drop_begin(MI.operands()), [&](const MachineOperand &MO) {
+        return MO.isReg() &&
+               (MO.getSubReg() || TRI->isSGPRReg(*MRI, MO.getReg()));
+      });
+  if (RC0 == &AMDGPU::VReg_1RegClass ||
+      (TRI->hasVectorRegisters(RC) && (RC != RC0 || HasSALUInput))) {
     LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
     TII->legalizeOperands(MI, MDT);
   }
