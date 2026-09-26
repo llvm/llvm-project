@@ -40,6 +40,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cinttypes>
+#include <cstddef>
 #include <cstdlib>
 
 using namespace llvm;
@@ -394,8 +395,9 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   if (!hdr || !hdr->getParent())
     return;
 
-  // Write the .eh_frame_hdr section using cached FDE data from updateAllocSize.
-  bool large = hdr->large;
+  // Write the .eh_frame_hdr section using cached FDE data computed by
+  // computeFdeTable().
+  bool large = hdr->cache.large;
   int64_t ehFramePtr = getParent()->addr - hdr->getVA() - 4;
   auto writeField = [&](uint8_t *buf, uint64_t val) {
     large ? write64(ctx, buf, val) : write32(ctx, buf, val);
@@ -413,9 +415,9 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   hdrBuf += 4;
   writeField(hdrBuf, ehFramePtr);
   hdrBuf += large ? 8 : 4;
-  write32(ctx, hdrBuf, hdr->fdes.size());
+  write32(ctx, hdrBuf, hdr->cache.fdes.size());
   hdrBuf += 4;
-  for (const FdeData &fde : hdr->fdes) {
+  for (const FdeData &fde : hdr->cache.fdes) {
     writeField(hdrBuf, fde.pcRel);
     writeField(hdrBuf + (large ? 8 : 4), fde.fdeVARel);
     hdrBuf += large ? 16 : 8;
@@ -433,27 +435,26 @@ bool EhFrameHeader::isNeeded() const {
   return isLive() && ctx.in.ehFrame->isNeeded();
 }
 
-void EhFrameHeader::finalizeContents() {
-  // Compute size: 4-byte header + eh_frame_ptr + fde_count + FDE table.
-  // Initially `large` is false; updateAllocSize may set it to true if addresses
-  // exceed the 32-bit range, then call finalizeContents again.
-  auto numFdes = ctx.in.ehFrame->numFdes;
-  size = 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
+static size_t ehFrameHdrSize(bool large, size_t numFdes) {
+  return 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
 }
 
-bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
-  // This is called after `finalizeSynthetic`, so in the typical case without
-  // .relr.dyn, this function will not change the size and assignAddresses
-  // will not need another iteration.
+void EhFrameHeader::finalizeContents() {
+  // Compute size: 4-byte header + eh_frame_ptr + fde_count + FDE table.
+  size = ehFrameHdrSize(cache.large, ctx.in.ehFrame->numFdes);
+}
+
+// Shared FDE-table computation for updateAllocSize() and refreshCache().
+EhFrameHeader::CachedFdeTable EhFrameHeader::computeFdeTable(Ctx &ctx) {
+  CachedFdeTable c;
   EhFrameSection *ehFrame = ctx.in.ehFrame.get();
   uint64_t hdrVA = getVA();
   int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
   // Determine if 64-bit encodings are needed.
-  bool newLarge = !isInt<32>(ehFramePtr);
+  c.large = !isInt<32>(ehFramePtr);
 
   // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
   // .eh_frame_hdr's VA.
-  fdes.clear();
   for (CieRecord *rec : ehFrame->getCieRecords()) {
     uint8_t enc = getFdeEncoding(rec->cie);
     if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
@@ -468,36 +469,55 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
       assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
       int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
       int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
-      fdes.push_back({pcRel, fdeVARel});
-      newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
+      c.fdes.push_back({pcRel, fdeVARel});
+      c.large |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
     }
   }
 
   // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
   // at an address, but there can be more than one FDEs pointing to the address.
-  llvm::stable_sort(
-      fdes, [](const EhFrameSection::FdeData &a,
-               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
-  fdes.erase(llvm::unique(fdes,
-                          [](const EhFrameSection::FdeData &a,
-                             const EhFrameSection::FdeData &b) {
-                            return a.pcRel == b.pcRel;
-                          }),
-             fdes.end());
-  ehFrame->numFdes = fdes.size();
+  llvm::stable_sort(c.fdes, [](const EhFrameSection::FdeData &a,
+                               const EhFrameSection::FdeData &b) {
+    return a.pcRel < b.pcRel;
+  });
+  c.fdes.erase(llvm::unique(c.fdes,
+                            [](const EhFrameSection::FdeData &a,
+                               const EhFrameSection::FdeData &b) {
+                              return a.pcRel == b.pcRel;
+                            }),
+               c.fdes.end());
+  c.requiredSize = ehFrameHdrSize(c.large, c.fdes.size());
+  return c;
+}
 
-  large = newLarge;
-
-  // Compute size.
+bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
+  // This is called after `finalizeSynthetic`, so in the typical case without
+  // .relr.dyn, this function will not change the size and assignAddresses
+  // will not need another iteration.
   size_t oldSize = size;
-  finalizeContents();
+  EhFrameSection *ehFrame = ctx.in.ehFrame.get();
+  cache = computeFdeTable(ctx);
 
+  ehFrame->numFdes = cache.fdes.size();
   // Don't allow the section to shrink; otherwise the size of the section can
   // oscillate infinitely.
-  if (size < oldSize)
-    size = oldSize;
+  size = std::max(cache.requiredSize, oldSize);
 
   return size != oldSize;
+}
+
+void EhFrameHeader::refreshCache(Ctx &ctx) {
+  // Layout is frozen here, so the allocation cannot grow. A narrower table
+  // is fine. A table that does not fit is rejected.
+  CachedFdeTable c = computeFdeTable(ctx);
+  if (c.requiredSize > size) {
+    Err(ctx) << ".eh_frame_hdr needs " << c.requiredSize << " bytes but "
+             << size
+             << " were allocated; layout moved FDEs after the header was sized";
+    return;
+  }
+  ctx.in.ehFrame->numFdes = c.fdes.size();
+  cache = std::move(c);
 }
 
 GotSection::GotSection(Ctx &ctx)
