@@ -1253,18 +1253,25 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   // trunc (select(icmp_ult(A, DestTy_umax+1), A, sext(icmp_sgt(A, 0)))) -->
   // trunc (smin(smax(0, A), DestTy_umax))
-  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcTy->getPrimitiveSizeInBits()) &&
-      isPowerOf2_64(DestTy->getPrimitiveSizeInBits()) &&
-      match(Src, m_OneUse(m_Select(
-                     m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(A),
-                                             m_Constant(C))),
-                     m_Deferred(A),
-                     m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
-                         ICmpInst::ICMP_SGT, m_Deferred(A), m_Zero())))))))) {
-    APInt UpperBound = C->getUniqueInteger();
-    APInt TruncatedMax = APInt::getAllOnes(DestTy->getIntegerBitWidth());
-    TruncatedMax = TruncatedMax.zext(UpperBound.getBitWidth());
-    if (!UpperBound.isZero() && UpperBound - 1 == TruncatedMax) {
+  // Also handle the inverted form:
+  // trunc (select(icmp_ugt(A, DestTy_umax), sext(icmp_sgt(A, 0)), A))
+  CmpPredicate Pred;
+  const APInt *CmpC;
+  Value *TVal, *FVal;
+  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcWidth) &&
+      isPowerOf2_64(DestWidth) &&
+      match(Src,
+            m_OneUse(m_Select(m_OneUse(m_ICmp(Pred, m_Value(A), m_APInt(CmpC))),
+                              m_Value(TVal), m_Value(FVal))))) {
+    APInt TruncatedMax = APInt::getLowBitsSet(SrcWidth, DestWidth);
+    Value *SExtVal = nullptr;
+    if (Pred == ICmpInst::ICMP_ULT && *CmpC == TruncatedMax + 1 && TVal == A)
+      SExtVal = FVal;
+    else if (Pred == ICmpInst::ICMP_UGT && *CmpC == TruncatedMax && FVal == A)
+      SExtVal = TVal;
+    if (SExtVal &&
+        match(SExtVal, m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
+                           ICmpInst::ICMP_SGT, m_Specific(A), m_Zero())))))) {
       Value *SMax = Builder.CreateIntrinsic(Intrinsic::smax, {SrcTy},
                                             {ConstantInt::get(SrcTy, 0), A});
       Value *SMin = Builder.CreateIntrinsic(

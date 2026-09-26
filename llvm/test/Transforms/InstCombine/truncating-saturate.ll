@@ -785,11 +785,9 @@ entry:
 define i8 @clamp_i32_to_i8_swapped(i32 %x) {
 ; CHECK-LABEL: @clamp_i32_to_i8_swapped(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 255
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SHR]], i32 [[X]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 255)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
 entry:
@@ -804,11 +802,9 @@ entry:
 define i16 @clamp_i64_to_i16_swapped(i64 %x) {
 ; CHECK-LABEL: @clamp_i64_to_i16_swapped(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 65535
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[X]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i64
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 [[SHR]], i64 [[X]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 65535)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i64 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[TRUNC]]
 ;
 entry:
