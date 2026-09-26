@@ -162,3 +162,42 @@ false:
   call void asm sideeffect "nop\0A\09nop\0A\09nop\0A\09nop\0A\09nop\0A\09nop\0A\09nop\0A\09nop", ""()
   ret float 0.0
 }
+
+define i32 @branch_relax_large(i32 %in) {
+; SPARC64-LABEL: branch_relax_large:
+; SPARC64:         .cfi_startproc
+; SPARC64-NEXT:  ! %bb.0:
+; SPARC64-NEXT:    save %sp, -128, %sp
+; SPARC64-NEXT:    .cfi_def_cfa_register %fp
+; SPARC64-NEXT:    .cfi_window_save
+; SPARC64-NEXT:    .cfi_register %o7, %i7
+; SPARC64-NEXT:    cmp %i0, 0
+; SPARC64-NEXT:    bne %icc, .LBB3_1
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:  ! %bb.3:
+; SPARC64-NEXT:    call .LBB3_2
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:  .LBB3_1: ! %false
+; SPARC64-NEXT:    !APP
+; SPARC64-NEXT:    .skip 268435456
+; SPARC64-NEXT:    !NO_APP
+; SPARC64-NEXT:    ret
+; SPARC64-NEXT:    restore %g0, %g0, %o0
+; SPARC64-NEXT:  .LBB3_2: ! %true
+; SPARC64-NEXT:    mov 4, %i0
+; SPARC64-NEXT:    !APP
+; SPARC64-NEXT:    .skip 268435456
+; SPARC64-NEXT:    !NO_APP
+; SPARC64-NEXT:    ret
+; SPARC64-NEXT:    restore
+  %tst = icmp eq i32 %in, 0
+  br i1 %tst, label %true, label %false
+
+true:
+  call void asm sideeffect ".space 268435456", ""()
+  ret i32 4
+
+false:
+  call void asm sideeffect ".space 268435456", ""()
+  ret i32 0
+}
