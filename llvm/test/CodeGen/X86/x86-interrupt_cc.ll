@@ -514,9 +514,9 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-KNL-NEXT:    pushl %edx ## encoding: [0x52]
 ; CHECK32-KNL-NEXT:    pushl %ecx ## encoding: [0x51]
 ; CHECK32-KNL-NEXT:    pushl %eax ## encoding: [0x50]
-; CHECK32-KNL-NEXT:    andl $-16, %esp ## encoding: [0x83,0xe4,0xf0]
-; CHECK32-KNL-NEXT:    subl $560, %esp ## encoding: [0x81,0xec,0x30,0x02,0x00,0x00]
-; CHECK32-KNL-NEXT:    ## imm = 0x230
+; CHECK32-KNL-NEXT:    andl $-64, %esp ## encoding: [0x83,0xe4,0xc0]
+; CHECK32-KNL-NEXT:    subl $576, %esp ## encoding: [0x81,0xec,0x40,0x02,0x00,0x00]
+; CHECK32-KNL-NEXT:    ## imm = 0x240
 ; CHECK32-KNL-NEXT:    kmovw %k7, {{[-0-9]+}}(%e{{[sb]}}p) ## 2-byte Spill
 ; CHECK32-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x7d,0xf2]
 ; CHECK32-KNL-NEXT:    kmovw %k6, {{[-0-9]+}}(%e{{[sb]}}p) ## 2-byte Spill
@@ -620,9 +620,9 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-SKX-NEXT:    pushl %edx ## encoding: [0x52]
 ; CHECK32-SKX-NEXT:    pushl %ecx ## encoding: [0x51]
 ; CHECK32-SKX-NEXT:    pushl %eax ## encoding: [0x50]
-; CHECK32-SKX-NEXT:    andl $-16, %esp ## encoding: [0x83,0xe4,0xf0]
-; CHECK32-SKX-NEXT:    subl $624, %esp ## encoding: [0x81,0xec,0x70,0x02,0x00,0x00]
-; CHECK32-SKX-NEXT:    ## imm = 0x270
+; CHECK32-SKX-NEXT:    andl $-64, %esp ## encoding: [0x83,0xe4,0xc0]
+; CHECK32-SKX-NEXT:    subl $640, %esp ## encoding: [0x81,0xec,0x80,0x02,0x00,0x00]
+; CHECK32-SKX-NEXT:    ## imm = 0x280
 ; CHECK32-SKX-NEXT:    kmovq %k7, {{[-0-9]+}}(%e{{[sb]}}p) ## 8-byte Spill
 ; CHECK32-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x7d,0xe8]
 ; CHECK32-SKX-NEXT:    kmovq %k6, {{[-0-9]+}}(%e{{[sb]}}p) ## 8-byte Spill
