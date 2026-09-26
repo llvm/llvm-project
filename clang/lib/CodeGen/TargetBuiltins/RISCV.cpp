@@ -1239,6 +1239,22 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pasa_x_i16x2:
   case RISCV::BI__builtin_riscv_pasa_x_i16x4:
   case RISCV::BI__builtin_riscv_pasa_x_i32x2:
+  // Packed Shift
+  case RISCV::BI__builtin_riscv_psll_s_u8x4:
+  case RISCV::BI__builtin_riscv_psll_s_u16x2:
+  case RISCV::BI__builtin_riscv_psll_s_u8x8:
+  case RISCV::BI__builtin_riscv_psll_s_u16x4:
+  case RISCV::BI__builtin_riscv_psll_s_u32x2:
+  case RISCV::BI__builtin_riscv_psrl_s_u8x4:
+  case RISCV::BI__builtin_riscv_psrl_s_u16x2:
+  case RISCV::BI__builtin_riscv_psrl_s_u8x8:
+  case RISCV::BI__builtin_riscv_psrl_s_u16x4:
+  case RISCV::BI__builtin_riscv_psrl_s_u32x2:
+  case RISCV::BI__builtin_riscv_psra_s_i8x4:
+  case RISCV::BI__builtin_riscv_psra_s_i16x2:
+  case RISCV::BI__builtin_riscv_psra_s_i8x8:
+  case RISCV::BI__builtin_riscv_psra_s_i16x4:
+  case RISCV::BI__builtin_riscv_psra_s_i32x2:
   // Packed Absolute Value and Absolute Difference
   case RISCV::BI__builtin_riscv_pabd_i8x4:
   case RISCV::BI__builtin_riscv_pabd_i16x2:
@@ -1391,6 +1407,27 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pasa_x_i16x4:
     case RISCV::BI__builtin_riscv_pasa_x_i32x2:
       ID = Intrinsic::riscv_pasa;
+      break;
+    case RISCV::BI__builtin_riscv_psll_s_u8x4:
+    case RISCV::BI__builtin_riscv_psll_s_u16x2:
+    case RISCV::BI__builtin_riscv_psll_s_u8x8:
+    case RISCV::BI__builtin_riscv_psll_s_u16x4:
+    case RISCV::BI__builtin_riscv_psll_s_u32x2:
+      ID = Intrinsic::riscv_psll;
+      break;
+    case RISCV::BI__builtin_riscv_psrl_s_u8x4:
+    case RISCV::BI__builtin_riscv_psrl_s_u16x2:
+    case RISCV::BI__builtin_riscv_psrl_s_u8x8:
+    case RISCV::BI__builtin_riscv_psrl_s_u16x4:
+    case RISCV::BI__builtin_riscv_psrl_s_u32x2:
+      ID = Intrinsic::riscv_psrl;
+      break;
+    case RISCV::BI__builtin_riscv_psra_s_i8x4:
+    case RISCV::BI__builtin_riscv_psra_s_i16x2:
+    case RISCV::BI__builtin_riscv_psra_s_i8x8:
+    case RISCV::BI__builtin_riscv_psra_s_i16x4:
+    case RISCV::BI__builtin_riscv_psra_s_i32x2:
+      ID = Intrinsic::riscv_psra;
       break;
     case RISCV::BI__builtin_riscv_pabd_i8x4:
     case RISCV::BI__builtin_riscv_pabd_i16x2:

@@ -25,6 +25,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -5968,6 +5969,16 @@ public:
 };
 } // namespace
 
+/// Like ASTContext::getIntTypeForBitwidth, but falls back to a _BitInt type
+/// when no standard integer type has the requested width.
+static QualType getIntTypeForBitwidthOrBitInt(ASTContext &C, unsigned Bits,
+                                              bool Signed) {
+  QualType Ty = C.getIntTypeForBitwidth(Bits, Signed);
+  if (Ty.isNull())
+    Ty = C.getBitIntType(/*IsUnsigned=*/!Signed, Bits);
+  return Ty;
+}
+
 static VarDecl *precomputeExpr(Sema &Actions,
                                SmallVectorImpl<Stmt *> &BodyStmts, Expr *E,
                                StringRef Name) {
@@ -6288,7 +6299,7 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
   QualType LogicalTy = Ctx.getUnsignedPointerDiffType();
   if (CounterTy->isIntegerType()) {
     unsigned BitWidth = Ctx.getIntWidth(CounterTy);
-    LogicalTy = Ctx.getIntTypeForBitwidth(BitWidth, false);
+    LogicalTy = getIntTypeForBitwidthOrBitInt(Ctx, BitWidth, /*Signed=*/false);
   }
 
   // Analyze the loop increment.
@@ -9347,8 +9358,9 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
     uint64_t UpperSize = SemaRef.Context.getTypeSize(UpperTy);
     if ((LowerSize <= UpperSize && UpperTy->hasSignedIntegerRepresentation()) ||
         (LowerSize > UpperSize && LowerTy->hasSignedIntegerRepresentation())) {
-      QualType CastType = SemaRef.Context.getIntTypeForBitwidth(
-          LowerSize > UpperSize ? LowerSize : UpperSize, /*Signed=*/0);
+      QualType CastType = getIntTypeForBitwidthOrBitInt(
+          SemaRef.Context, LowerSize > UpperSize ? LowerSize : UpperSize,
+          /*Signed=*/false);
       Upper =
           SemaRef
               .PerformImplicitConversion(
@@ -9655,7 +9667,7 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
         UseVarType ? C.getTypeSize(VarType) : C.getTypeSize(Type);
     bool IsSigned = UseVarType ? VarType->hasSignedIntegerRepresentation()
                                : Type->hasSignedIntegerRepresentation();
-    Type = C.getIntTypeForBitwidth(NewSize, IsSigned);
+    Type = getIntTypeForBitwidthOrBitInt(C, NewSize, IsSigned);
     if (!SemaRef.Context.hasSameType(Diff.get()->getType(), Type)) {
       Diff = SemaRef.PerformImplicitConversion(Diff.get(), Type,
                                                AssignmentAction::Converting,
@@ -10719,29 +10731,10 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   // Precondition tests if there is at least one iteration (all conditions are
   // true).
   auto PreCond = ExprResult(IterSpaces[0].PreCond);
-  Expr *N0 = IterSpaces[0].NumIterations;
-  ExprResult LastIteration32 = widenIterationCount(
-      /*Bits=*/32,
-      SemaRef
-          .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
-                                     AssignmentAction::Converting,
-                                     /*AllowExplicit=*/true)
-          .get(),
-      SemaRef);
-  ExprResult LastIteration64 = widenIterationCount(
-      /*Bits=*/64,
-      SemaRef
-          .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
-                                     AssignmentAction::Converting,
-                                     /*AllowExplicit=*/true)
-          .get(),
-      SemaRef);
-
-  if (!LastIteration32.isUsable() || !LastIteration64.isUsable())
-    return NestedLoopCount;
-
   ASTContext &C = SemaRef.Context;
-  bool AllCountsNeedLessThan32Bits = C.getTypeSize(N0->getType()) < 32;
+  unsigned FirstCountBits =
+      C.getTypeSize(IterSpaces[0].NumIterations->getType());
+  bool AllCountsNeedLessThan32Bits = FirstCountBits < 32;
 
   Scope *CurScope = DSA.getCurScope();
   for (unsigned Cnt = 1; Cnt < NestedLoopCount; ++Cnt) {
@@ -10751,37 +10744,63 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                              PreCond.get(), IterSpaces[Cnt].PreCond);
     }
     Expr *N = IterSpaces[Cnt].NumIterations;
-    SourceLocation Loc = N->getExprLoc();
     AllCountsNeedLessThan32Bits &= C.getTypeSize(N->getType()) < 32;
-    if (LastIteration32.isUsable())
-      LastIteration32 = SemaRef.BuildBinOp(
-          CurScope, Loc, BO_Mul, LastIteration32.get(),
-          SemaRef
-              .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         AssignmentAction::Converting,
-                                         /*AllowExplicit=*/true)
-              .get());
-    if (LastIteration64.isUsable())
-      LastIteration64 = SemaRef.BuildBinOp(
-          CurScope, Loc, BO_Mul, LastIteration64.get(),
-          SemaRef
-              .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         AssignmentAction::Converting,
-                                         /*AllowExplicit=*/true)
-              .get());
   }
 
-  // Choose either the 32-bit or 64-bit version.
-  ExprResult LastIteration = LastIteration64;
+  auto BuildLastIteration = [&](unsigned Bits) -> ExprResult {
+    ExprResult Result;
+    for (unsigned Cnt : llvm::seq<unsigned>(NestedLoopCount)) {
+      Expr *N = IterSpaces[Cnt].NumIterations;
+      ExprResult Count = widenIterationCount(
+          Bits,
+          SemaRef
+              .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
+                                         AssignmentAction::Converting,
+                                         /*AllowExplicit=*/true)
+              .get(),
+          SemaRef);
+      if (!Count.isUsable())
+        return ExprError();
+      if (Cnt == 0)
+        Result = Count;
+      else
+        Result = SemaRef.BuildBinOp(CurScope, N->getExprLoc(), BO_Mul,
+                                    Result.get(), Count.get());
+      if (!Result.isUsable())
+        return ExprError();
+    }
+    return Result;
+  };
+
+  // Build the 32-bit tree immediately only when it is always selected.
+  // Otherwise, build the 64-bit tree first and build the 32-bit tree only when
+  // the constant product may fit.
+  ExprResult LastIteration;
   if (SemaRef.getLangOpts().OpenMPOptimisticCollapse ||
-      (LastIteration32.isUsable() &&
-       C.getTypeSize(LastIteration32.get()->getType()) == 32 &&
-       (AllCountsNeedLessThan32Bits || NestedLoopCount == 1 ||
-        fitsInto(
-            /*Bits=*/32,
-            LastIteration32.get()->getType()->hasSignedIntegerRepresentation(),
-            LastIteration64.get(), SemaRef))))
-    LastIteration = LastIteration32;
+      AllCountsNeedLessThan32Bits ||
+      (NestedLoopCount == 1 && FirstCountBits == 32)) {
+    LastIteration = BuildLastIteration(/*Bits=*/32);
+  } else {
+    ExprResult LastIteration64 = BuildLastIteration(/*Bits=*/64);
+    if (!LastIteration64.isUsable())
+      return NestedLoopCount;
+    LastIteration = LastIteration64;
+    if (LastIteration64.get()->isIntegerConstantExpr(C)) {
+      ExprResult LastIteration32 = BuildLastIteration(/*Bits=*/32);
+      if (LastIteration32.isUsable() &&
+          C.getTypeSize(LastIteration32.get()->getType()) == 32 &&
+          fitsInto(
+              /*Bits=*/32,
+              LastIteration32.get()
+                  ->getType()
+                  ->hasSignedIntegerRepresentation(),
+              LastIteration64.get(), SemaRef))
+        LastIteration = LastIteration32;
+    }
+  }
+  if (!LastIteration.isUsable())
+    return NestedLoopCount;
+
   QualType VType = LastIteration.get()->getType();
   QualType RealVType = VType;
   QualType StrideVType = VType;
@@ -10791,9 +10810,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     StrideVType =
         SemaRef.Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
   }
-
-  if (!LastIteration.isUsable())
-    return 0;
 
   // Save the number of iterations.
   ExprResult NumIterations = LastIteration;
@@ -25622,6 +25638,17 @@ VarDecl *SemaOpenMP::ActOnOpenMPDeclareReductionInitializerStart(Scope *S,
 void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
     Decl *D, Expr *Initializer, VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // Ensure OmpPrivParm is default-constructed before the user initializer runs
+  // (required for class types with non-trivial default constructors).
+  if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
+    QualType ReductionType = DRD->getType();
+    if (CXXRecordDecl *RD = ReductionType->getAsCXXRecordDecl()) {
+      if (!RD->hasTrivialDefaultConstructor())
+        SemaRef.ActOnUninitializedDecl(OmpPrivParm);
+    }
+  }
+
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 

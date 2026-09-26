@@ -18,6 +18,8 @@
 
 using namespace orc_rt;
 
+#if ORC_RT_ENABLE_EXCEPTIONS
+
 namespace {
 
 class CustomError : public ErrorExtends<CustomError, ErrorInfoBase> {
@@ -29,7 +31,6 @@ public:
 
 } // namespace
 
-#if ORC_RT_ENABLE_EXCEPTIONS
 #define EXCEPTION_TEST(X)                                                      \
   do {                                                                         \
     X;                                                                         \

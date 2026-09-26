@@ -436,11 +436,8 @@ TEST_P(RISCVXQCIInstrInfoTest, XQCIEInstSize) {
     return BuildMI(MBB, DebugLoc(), TII->get(Opcode)).addImm(4096).getInstr();
   };
 
-  // FIXME: The instructions being checked in this test all compress to 4 byte
-  // instructions but getInstSizeInBytes() currently returns 2 for all
-  // instructions that are compressible.
   auto CheckSize = [&](MachineInstr *MI) {
-    EXPECT_EQ(2u, TII->getInstSizeInBytes(*MI));
+    EXPECT_EQ(4u, TII->getInstSizeInBytes(*MI));
   };
 
   CheckSize(MakeLoad(RISCV::QC_E_LW));
