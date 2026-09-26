@@ -199,11 +199,19 @@ static mlir::Value remapActualToDummyDescriptor(
   llvm::SmallVector<mlir::Value> lengths;
   mlir::Type dummyBoxType = caller.getDummyArgumentType(arg);
   mlir::Type dummyBaseType = fir::unwrapPassByRefType(dummyBoxType);
-  if (mlir::isa<fir::SequenceType>(dummyBaseType))
-    caller.walkDummyArgumentExtents(
-        arg, [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
-          extents.emplace_back(lowerSpecExpr(e, isAssumedSizeExtent));
-        });
+  if (mlir::isa<fir::SequenceType>(dummyBaseType)) {
+    // Rank-1 bound elements share one base; evaluate it once for all
+    // dimensions instead of re-evaluating a call-valued base per extent.
+    if (const Fortran::semantics::Symbol *dummySym = caller.getDummySymbol(arg))
+      extents = Fortran::lower::lowerExplicitMappedExtents(
+          converter, loc, *dummySym, symMap, localStmtCtx);
+    if (extents.empty())
+      caller.walkDummyArgumentExtents(
+          arg,
+          [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+            extents.emplace_back(lowerSpecExpr(e, isAssumedSizeExtent));
+          });
+  }
   mlir::Value shape;
   if (!extents.empty()) {
     if (isBindcCall) {
@@ -426,12 +434,20 @@ Fortran::lower::genCallOpAndResult(
     if (!caller.callerAllocateResult())
       return {};
     mlir::Type type = caller.getResultStorageType();
-    if (mlir::isa<fir::SequenceType>(type))
-      caller.walkResultExtents(
-          [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
-            assert(!isAssumedSizeExtent && "result cannot be assumed-size");
-            extents.emplace_back(lowerSpecExpr(e));
-          });
+    if (mlir::isa<fir::SequenceType>(type)) {
+      // Rank-1 bound elements share one base; evaluate it once for all
+      // dimensions instead of re-evaluating a call-valued base per extent.
+      if (const Fortran::semantics::SubprogramDetails *ifaceDetails =
+              caller.getInterfaceDetails())
+        extents = Fortran::lower::lowerExplicitMappedExtents(
+            converter, loc, ifaceDetails->result(), symMap, stmtCtx);
+      if (extents.empty())
+        caller.walkResultExtents(
+            [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+              assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+              extents.emplace_back(lowerSpecExpr(e));
+            });
+    }
     if (resultLengths.empty()) {
       caller.walkResultLengths(
           [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
