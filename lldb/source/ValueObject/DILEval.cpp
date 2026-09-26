@@ -23,6 +23,7 @@
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private::dil {
 
@@ -57,16 +58,48 @@ GetSourceLanguageFromCU(StackFrame &ctx) {
   return symbol_context.comp_unit->GetLanguage();
 }
 
-static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemForFrame(StackFrame &ctx) {
   SymbolContext symbol_context =
       ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
-  if (!symbol_context.comp_unit)
-    return llvm::createStringErrorV("no compile unit for frame: {}",
-                                    ctx.GetFunctionName());
+  lldb::LanguageType language = lldb::eLanguageTypeUnknown;
+  if (symbol_context.comp_unit) {
+    language = symbol_context.comp_unit->GetLanguage();
+    symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
+    if (symbol_context.module_sp)
+      return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+  }
 
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-  symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+  lldb::TargetSP target_sp = ctx.CalculateTarget();
+  if (!target_sp)
+    return llvm::createStringError("no target for frame");
+  if (language == lldb::eLanguageTypeUnknown)
+    language = target_sp->GetLanguage().AsLanguageType();
+  return target_sp->GetScratchTypeSystemForLanguage(language);
+}
+
+// DIL normally treats '.' as member access, but register names may contain
+// periods. Reconstruct the candidate so an exact register name takes
+// precedence.
+static std::optional<std::string> GetRegisterPathName(const ASTNode &node) {
+  if (node.GetKind() == NodeKind::eIdentifierNode) {
+    std::string name_storage =
+        static_cast<const IdentifierNode &>(node).GetName();
+    llvm::StringRef name = name_storage;
+    if (name.consume_front("$"))
+      return name.str();
+    return std::nullopt;
+  }
+
+  if (node.GetKind() != NodeKind::eMemberOfNode)
+    return std::nullopt;
+  const auto &member = static_cast<const MemberOfNode &>(node);
+  if (member.GetIsArrow())
+    return std::nullopt;
+  std::optional<std::string> base_name = GetRegisterPathName(member.GetBase());
+  if (!base_name)
+    return std::nullopt;
+  return *base_name + "." + member.GetFieldName().str();
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -75,7 +108,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 location);
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
 
@@ -214,7 +247,7 @@ Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
 
     if (*rhs_size == *lhs_size) {
       llvm::Expected<lldb::TypeSystemSP> type_system =
-          GetTypeSystemFromCU(m_stack_frame);
+          GetTypeSystemForFrame(m_stack_frame);
       if (!type_system)
         return type_system.takeError();
       CompilerType r_type_unsigned = GetBasicType(
@@ -529,7 +562,7 @@ Interpreter::Visit(const IdentifierNode &node) {
     // If we got a "nullptr" identifier, and there is no defined variable with
     // this name, resolve it as a null pointer.
     llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_stack_frame);
+        GetTypeSystemForFrame(m_stack_frame);
     if (!type_system)
       return type_system.takeError();
     type_system.get()->GetPointerByteSize();
@@ -689,7 +722,7 @@ Interpreter::Visit(const UnaryOpNode &node) {
                                                   node.GetLocation());
     }
     llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_stack_frame);
+        GetTypeSystemForFrame(m_stack_frame);
     if (!type_system)
       return type_system.takeError();
     auto value_or_err = operand->GetValueAsBool();
@@ -897,7 +930,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     diff /= item_size;
 
     llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_stack_frame);
+        GetTypeSystemForFrame(m_stack_frame);
     if (!type_system)
       return type_system.takeError();
     CompilerType ptrdiff_type = type_system.get()->GetPointerDiffType(true);
@@ -1219,7 +1252,7 @@ Interpreter::EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return error;
 
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
   CompilerType boolean_type = GetBasicType(*type_system, lldb::eBasicTypeBool);
@@ -1308,7 +1341,7 @@ Interpreter::EvaluateLogical(const BinaryOpNode &node) {
                                                 node.GetLocation());
   }
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
 
@@ -1476,6 +1509,16 @@ Interpreter::Visit(const BinaryOpNode &node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MemberOfNode &node) {
+  if (std::optional<std::string> register_name = GetRegisterPathName(node)) {
+    lldb::RegisterContextSP reg_ctx_sp = m_stack_frame.GetRegisterContextSP();
+    if (reg_ctx_sp) {
+      if (const RegisterInfo *reg_info =
+              reg_ctx_sp->GetRegisterInfoByName(*register_name))
+        return ValueObjectRegister::Create(&m_stack_frame, reg_ctx_sp,
+                                           reg_info);
+    }
+  }
+
   auto base_or_err = Evaluate(node.GetBase());
   if (!base_or_err)
     return base_or_err;
@@ -1593,6 +1636,17 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
 
   CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
   base->GetExpressionPath(var_expr_path_strm);
+  if (base->GetValueType() == lldb::eValueTypeRegister &&
+      !base_type.IsPointerType() &&
+      child_idx > std::numeric_limits<uint32_t>::max()) {
+    std::string err_msg = llvm::formatv(
+        "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+        base->GetTypeName().AsCString("<invalid type>"),
+        var_expr_path_strm.GetData());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                node.GetLocation());
+  }
+
   bool is_incomplete_array = false;
   if (base_type.IsPointerType()) {
     bool is_objc_pointer = true;
@@ -1657,7 +1711,8 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node.GetLocation());
     }
-  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array)) {
+  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array) ||
+             base_type.IsVectorType()) {
     child_valobj_sp = base->GetChildAtIndex(child_idx);
     if (!child_valobj_sp && (is_incomplete_array || m_use_synthetic))
       child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
@@ -1852,7 +1907,7 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IntegerLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
 
@@ -1879,7 +1934,7 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FloatLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
 
@@ -1902,7 +1957,7 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BooleanLiteralNode &node) {
   bool value = node.GetValue();
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
   return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
@@ -2159,7 +2214,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
   }
 
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+      GetTypeSystemForFrame(m_stack_frame);
   if (!type_system)
     return type_system.takeError();
   CompilerType size_type = type_system.get()->GetSizeType();
