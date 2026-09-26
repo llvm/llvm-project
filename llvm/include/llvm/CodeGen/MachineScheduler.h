@@ -1327,6 +1327,10 @@ protected:
                      const RegPressureTracker &RPTracker,
                      RegPressureTracker &TempTracker);
 
+  /// Check if the region's max pressure for a given PSet is already
+  /// significantly over the target limit (above a configurable threshold).
+  bool isRegionPressureCriticallyHigh(unsigned PSetID) const;
+
   virtual bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                             SchedBoundary *Zone) const;
 
