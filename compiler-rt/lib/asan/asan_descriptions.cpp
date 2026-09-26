@@ -15,6 +15,7 @@
 #include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "sanitizer_common/sanitizer_report_receiver.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
@@ -90,10 +91,10 @@ static bool GetShadowKind(uptr addr, ShadowKind *shadow_kind) {
   return true;
 }
 
-bool DescribeAddressIfShadow(uptr addr) {
+bool DescribeAddressIfShadow(ScopedSanitizerReport *srep, uptr addr) {
   ShadowAddressDescription descr;
   if (!GetShadowAddressInformation(addr, &descr)) return false;
-  descr.Print();
+  descr.Print(srep);
   return true;
 }
 
@@ -167,6 +168,7 @@ bool GetHeapAddressInformation(uptr addr, uptr access_size,
     return false;
   }
   descr->addr = addr;
+  descr->access_size = access_size;
   GetAccessToHeapChunkInformation(&descr->chunk_access, chunk, addr,
                                   access_size);
   CHECK_NE(chunk.AllocTid(), kInvalidTid);
@@ -185,7 +187,8 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
-bool DescribeAddressIfHeap(uptr addr, uptr access_size) {
+bool DescribeAddressIfHeap(ScopedSanitizerReport *srep, uptr addr,
+                           uptr access_size) {
   HeapAddressDescription descr;
   if (!GetHeapAddressInformation(addr, access_size, &descr)) {
     Printf(
@@ -193,7 +196,7 @@ bool DescribeAddressIfHeap(uptr addr, uptr access_size) {
         "(wild memory access suspected).\n");
     return false;
   }
-  descr.Print();
+  descr.Print(srep);
   return true;
 }
 
@@ -273,10 +276,11 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
   Printf("%s", str.data());
 }
 
-bool DescribeAddressIfStack(uptr addr, uptr access_size) {
+bool DescribeAddressIfStack(ScopedSanitizerReport *srep, uptr addr,
+                            uptr access_size) {
   StackAddressDescription descr;
   if (!GetStackAddressInformation(addr, access_size, &descr)) return false;
-  descr.Print();
+  descr.Print(srep);
   return true;
 }
 
@@ -316,21 +320,25 @@ bool GetGlobalAddressInformation(uptr addr, uptr access_size,
   return globals_num != 0;
 }
 
-bool DescribeAddressIfGlobal(uptr addr, uptr access_size,
-                             const char *bug_type) {
+bool DescribeAddressIfGlobal(ScopedSanitizerReport *srep, uptr addr,
+                             uptr access_size, const char *bug_type) {
   GlobalAddressDescription descr;
   if (!GetGlobalAddressInformation(addr, access_size, &descr)) return false;
 
-  descr.Print(bug_type);
+  descr.Print(srep, bug_type);
   return true;
 }
 
-void ShadowAddressDescription::Print() const {
+void ShadowAddressDescription::Print(ScopedSanitizerReport *srep) const {
+  // Shadow addresses have no meaningful access size.
+  if (srep) srep->AddAddress(addr, 0, kReportAddressFault, "fault", 5);
   Printf("Address %p is located in the %s area.\n", (void *)addr,
          ShadowNames[kind]);
 }
 
-void GlobalAddressDescription::Print(const char *bug_type) const {
+void GlobalAddressDescription::Print(ScopedSanitizerReport *srep,
+                                     const char *bug_type) const {
+  if (srep) srep->AddAddress(addr, access_size, kReportAddressFault, "fault", 5);
   for (int i = 0; i < size; i++) {
     DescribeAddressRelativeToGlobal(addr, access_size, globals[i]);
     if (bug_type &&
@@ -362,7 +370,8 @@ bool GlobalAddressDescription::PointsInsideTheSameVariable(
   return false;
 }
 
-void StackAddressDescription::Print() const {
+void StackAddressDescription::Print(ScopedSanitizerReport *srep) const {
+  if (srep) srep->AddAddress(addr, access_size, kReportAddressFault, "fault", 5);
   Decorator d;
   Printf("%s", d.Location());
   Printf("Address %p is located in stack of thread %s", (void *)addr,
@@ -417,12 +426,16 @@ void StackAddressDescription::Print() const {
   DescribeThread(GetThreadContextByTidLocked(tid));
 }
 
-void HeapAddressDescription::Print() const {
+void HeapAddressDescription::Print(ScopedSanitizerReport *srep) const {
+  if (srep) srep->AddAddress(addr, access_size, kReportAddressFault, "fault", 5);
   PrintHeapChunkAccess(addr, chunk_access);
 
   asanThreadRegistry().CheckLocked();
   AsanThreadContext *alloc_thread = GetThreadContextByTidLocked(alloc_tid);
   StackTrace alloc_stack = GetStackTraceFromId(alloc_stack_id);
+
+  if (srep) srep->AddAddress(chunk_access.chunk_begin, chunk_access.chunk_size,
+                kReportAddressAllocation, "allocation", 10);
 
   Decorator d;
   AsanThreadContext *free_thread = nullptr;
@@ -432,6 +445,7 @@ void HeapAddressDescription::Print() const {
            AsanThreadIdAndName(free_thread).c_str(), d.Default());
     StackTrace free_stack = GetStackTraceFromId(free_stack_id);
     free_stack.Print();
+    if (srep) srep->AddStack(free_stack.trace, free_stack.size, kReportStackDeallocation, "Freed", 5);
     Printf("%spreviously allocated by thread %s here:%s\n", d.Allocation(),
            AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   } else {
@@ -439,6 +453,7 @@ void HeapAddressDescription::Print() const {
            AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   }
   alloc_stack.Print();
+  if (srep) srep->AddStack(alloc_stack.trace, alloc_stack.size, kReportStackAllocation, "Allocated", 9);
   DescribeThread(GetCurrentThread());
   if (free_thread) DescribeThread(free_thread);
   DescribeThread(alloc_thread);
@@ -492,34 +507,36 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
   data.wild.access_size = access_size;
 }
 
-void WildAddressDescription::Print() const {
+void WildAddressDescription::Print(ScopedSanitizerReport *srep) const {
+  if (srep) srep->AddAddress(addr, access_size, kReportAddressFault, "fault", 5);
   Printf("Address %p is a wild pointer inside of access range of size %p.\n",
          (void *)addr, (void *)access_size);
 }
 
-void PrintAddressDescription(uptr addr, uptr access_size,
+void PrintAddressDescription(ScopedSanitizerReport *srep, uptr addr,
+                             uptr access_size,
                              const char *bug_type) {
   ShadowAddressDescription shadow_descr;
   if (GetShadowAddressInformation(addr, &shadow_descr)) {
-    shadow_descr.Print();
+    shadow_descr.Print(srep);
     return;
   }
 
   GlobalAddressDescription global_descr;
   if (GetGlobalAddressInformation(addr, access_size, &global_descr)) {
-    global_descr.Print(bug_type);
+    global_descr.Print(srep, bug_type);
     return;
   }
 
   StackAddressDescription stack_descr;
   if (GetStackAddressInformation(addr, access_size, &stack_descr)) {
-    stack_descr.Print();
+    stack_descr.Print(srep);
     return;
   }
 
   HeapAddressDescription heap_descr;
   if (GetHeapAddressInformation(addr, access_size, &heap_descr)) {
-    heap_descr.Print();
+    heap_descr.Print(srep);
     return;
   }
 
