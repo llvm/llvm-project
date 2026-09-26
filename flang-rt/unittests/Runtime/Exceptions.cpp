@@ -13,8 +13,8 @@
 /// calls: under clang's default `-ffp-exception-behavior=ignore`, the
 /// compiler is free to drop calls to fenv functions, which would silently
 /// break ieee_arithmetic flag handling.  exceptions.cpp uses
-/// `FLANG_FP_TRAP_ON` to disable that optimization; if it were ever removed
-/// or weakened, the round-trip assertions below would fail.
+/// `FLANG_FENV_ACCESS_ON` to disable that optimization; if it were ever
+/// removed or weakened, the round-trip assertions below would fail.
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,11 +35,11 @@ namespace {
 class FenvScope {
 public:
   FenvScope() {
-    FLANG_FP_TRAP_ON
+    FLANG_FENV_ACCESS_ON
     fegetenv(&saved_);
   }
   ~FenvScope() {
-    FLANG_FP_TRAP_ON
+    FLANG_FENV_ACCESS_ON
     fesetenv(&saved_);
   }
 

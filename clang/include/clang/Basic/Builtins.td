@@ -4715,6 +4715,72 @@ def BlockObjectDispose : LibBuiltin<"blocks.h"> {
 }
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
 
+def FeClearExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feclearexcept"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = "int(int)";
+}
+
+def FeGetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetexceptflag"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = ""; // int(fexcept_t*, int); fexcept_t is not recognized as a built-in type
+}
+
+def FeRaiseExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feraiseexcept"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = "int(int)";
+}
+
+def FeSetExceptFlag : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetexceptflag"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = ""; // int(fexcept_t const*, int); fexcept_t is not recognized as a built-in type
+}
+
+def FeTestExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fetestexcept"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = "int(int)";
+}
+
+def FeGetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetround"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = "int()";
+}
+
+def FeSetRound : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetround"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = "int(int)";
+}
+
+def FeGetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fegetenv"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = ""; // int(fenv_t*); fenv_t is not recognized as a built-in type
+}
+
+def FeHoldExcept : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feholdexcept"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = ""; // int(fenv_t*); fenv_t is not recognized as a built-in type
+}
+
+def FeSetEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["fesetenv"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = ""; // int(fenv_t const*); fenv_t is not recognized as a built-in type
+}
+
+def FeUpdateEnv : LibBuiltin<"fenv.h"> {
+  let Spellings = ["feupdateenv"];
+  let Attributes = [IgnoreSignature, RequireDeclaration];
+  let Prototype = ""; // int(fenv_t const*); fenv_t is not recognized as a built-in type
+}
+
 def __Addressof : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__addressof"];
   let Attributes = [FunctionWithoutBuiltinPrefix, NoThrow, Const,

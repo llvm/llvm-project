@@ -11,8 +11,33 @@
 #===------------------------------------------------------------------------===#
 
 include(CheckCSourceCompiles)
+include(CheckCXXSourceCompiles)
 include(CheckIncludeFile)
 include(CMakePushCheckState)
+
+# Check whether the compiler honors '#pragma STDC FENV_ACCESS ON'
+set(FLANG_SAVED_TRY_COMPILE_TARGET_TYPE "${CMAKE_TRY_COMPILE_TARGET_TYPE}")
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+cmake_push_check_state()
+if(MSVC)
+  string(APPEND CMAKE_REQUIRED_FLAGS " /WX")
+else()
+  string(APPEND CMAKE_REQUIRED_FLAGS " -Wall -Werror")
+endif()
+check_cxx_source_compiles(
+  "int probe() {
+   #pragma STDC FENV_ACCESS ON
+     return 0;
+   }
+  "
+  COMPILER_SUPPORTS_STDC_FENV_ACCESS_PRAGMA)
+cmake_pop_check_state()
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "${FLANG_SAVED_TRY_COMPILE_TARGET_TYPE}")
+unset(FLANG_SAVED_TRY_COMPILE_TARGET_TYPE)
+
+if(COMPILER_SUPPORTS_STDC_FENV_ACCESS_PRAGMA)
+  add_compile_definitions(HAVE_STDC_FENV_ACCESS)
+endif()
 
 # The out of tree builds of the compiler and the Fortran runtime
 # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
