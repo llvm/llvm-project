@@ -7090,6 +7090,40 @@ TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
   return CompilerType();
 }
 
+llvm::StringRef TypeSystemClang::GetPropertyBackingStorageName(
+    lldb::opaque_compiler_type_t type, llvm::StringRef property_name) {
+  if (!type || property_name.empty())
+    return llvm::StringRef();
+
+  CompilerType compiler_type(weak_from_this(), type);
+
+  CompilerType class_type;
+  if (IsObjCObjectPointerType(compiler_type, &class_type))
+    compiler_type = class_type;
+
+  if (!GetCompleteType(compiler_type.GetOpaqueQualType()))
+    return llvm::StringRef();
+
+  clang::ObjCInterfaceDecl *class_interface_decl =
+      GetAsObjCInterfaceDecl(compiler_type);
+  if (!class_interface_decl)
+    return llvm::StringRef();
+
+  clang::IdentifierInfo &property_ident =
+      getASTContext().Idents.get(property_name);
+  clang::ObjCPropertyDecl *property_decl =
+      class_interface_decl->FindPropertyDeclaration(
+          &property_ident,
+          clang::ObjCPropertyQueryKind::OBJC_PR_query_instance);
+  if (!property_decl)
+    return llvm::StringRef();
+
+  if (clang::ObjCIvarDecl *ivar_decl = property_decl->getPropertyIvarDecl())
+    return ivar_decl->getName();
+
+  return llvm::StringRef();
+}
+
 bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
@@ -7931,29 +7965,24 @@ bool TypeSystemClang::AddObjCClassProperty(
 
   CompilerType property_clang_type_to_access;
 
-  if (property_clang_type.IsValid())
-    property_clang_type_to_access = property_clang_type;
-  else if (ivar_decl)
+  if (ivar_decl)
     property_clang_type_to_access = ast->GetType(ivar_decl->getType());
+  else if (property_clang_type.IsValid())
+    property_clang_type_to_access = property_clang_type;
 
   if (!class_interface_decl || !property_clang_type_to_access.IsValid())
     return false;
 
-  clang::TypeSourceInfo *prop_type_source;
-  if (ivar_decl)
-    prop_type_source = clang_ast.getTrivialTypeSourceInfo(ivar_decl->getType());
-  else
-    prop_type_source = clang_ast.getTrivialTypeSourceInfo(
-        ClangUtil::GetQualType(property_clang_type));
+  clang::QualType property_qual_type =
+      ClangUtil::GetQualType(property_clang_type_to_access);
+  clang::TypeSourceInfo *prop_type_source =
+      clang_ast.getTrivialTypeSourceInfo(property_qual_type);
 
   clang::ObjCPropertyDecl *property_decl =
       clang::ObjCPropertyDecl::CreateDeserialized(clang_ast, GlobalDeclID());
   property_decl->setDeclContext(class_interface_decl);
   property_decl->setDeclName(&clang_ast.Idents.get(property_name));
-  property_decl->setType(ivar_decl
-                             ? ivar_decl->getType()
-                             : ClangUtil::GetQualType(property_clang_type),
-                         prop_type_source);
+  property_decl->setType(property_qual_type, prop_type_source);
   SetMemberOwningModule(property_decl, class_interface_decl);
 
   if (!property_decl)

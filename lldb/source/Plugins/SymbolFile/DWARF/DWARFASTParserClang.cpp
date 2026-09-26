@@ -48,6 +48,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Demangle/Demangle.h"
@@ -1983,21 +1984,41 @@ public:
                                                 // required if you don't have an
                                                 // ivar decl
       const char *property_setter_name, const char *property_getter_name,
-      uint32_t property_attributes, ClangASTMetadata metadata)
+      uint32_t property_attributes, ClangASTMetadata metadata,
+      llvm::StringRef property_ivar_name)
       : m_class_opaque_type(class_opaque_type), m_property_name(property_name),
         m_property_opaque_type(property_opaque_type),
         m_property_setter_name(property_setter_name),
         m_property_getter_name(property_getter_name),
-        m_property_attributes(property_attributes), m_metadata(metadata) {}
+        m_property_attributes(property_attributes), m_metadata(metadata),
+        m_property_ivar_name(property_ivar_name) {}
 
   bool Finalize() {
     return TypeSystemClang::AddObjCClassProperty(
         m_class_opaque_type, m_property_name, m_property_opaque_type,
-        /*ivar_decl=*/nullptr, m_property_setter_name, m_property_getter_name,
+        FindIvarDecl(), m_property_setter_name, m_property_getter_name,
         m_property_attributes, m_metadata);
   }
 
 private:
+  clang::ObjCIvarDecl *FindIvarDecl() {
+    if (m_property_ivar_name.empty())
+      return nullptr;
+
+    clang::ObjCInterfaceDecl *class_interface_decl =
+        TypeSystemClang::GetAsObjCInterfaceDecl(m_class_opaque_type);
+    if (!class_interface_decl)
+      return nullptr;
+
+    auto ast = m_class_opaque_type.GetTypeSystem<TypeSystemClang>();
+    if (!ast)
+      return nullptr;
+
+    clang::IdentifierInfo &ivar_ident =
+        ast->getASTContext().Idents.get(m_property_ivar_name);
+    return class_interface_decl->lookupInstanceVariable(&ivar_ident);
+  }
+
   CompilerType m_class_opaque_type;
   const char *m_property_name;
   CompilerType m_property_opaque_type;
@@ -2005,6 +2026,7 @@ private:
   const char *m_property_getter_name;
   uint32_t m_property_attributes;
   ClangASTMetadata m_metadata;
+  llvm::StringRef m_property_ivar_name;
 };
 
 static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
@@ -2831,9 +2853,39 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   }
 }
 
+DWARFASTParserClang::PropertyBackingStorageNames
+DWARFASTParserClang::ParsePropertyBackingStorageNames(
+    const DWARFDIE &parent_die) {
+  PropertyBackingStorageNames property_backing_names;
+
+  for (DWARFDIE die : parent_die.children()) {
+    if (die.Tag() != DW_TAG_property)
+      continue;
+
+    const char *prop_name = die.GetName();
+    if (!prop_name)
+      continue;
+
+    for (DWARFDIE child_die : die.children()) {
+      if (child_die.Tag() != DW_TAG_property_getter)
+        continue;
+
+      if (DWARFDIE backing_die = child_die.GetAttributeValueAsReferenceDIE(
+              DW_AT_property_forward)) {
+        if (const char *backing_name = backing_die.GetName())
+          property_backing_names[prop_name] = backing_name;
+      }
+      break;
+    }
+  }
+
+  return property_backing_names;
+}
+
 void DWARFASTParserClang::ParseObjCProperty(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
+    const PropertyBackingStorageNames &property_backing_names,
     DelayedPropertyList &delayed_properties) {
   // This function can only parse DW_TAG_APPLE_property.
   assert(die.Tag() == DW_TAG_APPLE_property);
@@ -2859,12 +2911,18 @@ void DWARFASTParserClang::ParseObjCProperty(
     return;
   }
 
+  llvm::StringRef property_ivar_name;
+  auto backing_name_it = property_backing_names.find(propAttrs.prop_name);
+  if (backing_name_it != property_backing_names.end())
+    property_ivar_name = backing_name_it->second;
+
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
   delayed_properties.emplace_back(
       class_clang_type, propAttrs.prop_name,
       member_type->GetLayoutCompilerType(), propAttrs.prop_setter_name,
-      propAttrs.prop_getter_name, propAttrs.prop_attributes, metadata);
+      propAttrs.prop_getter_name, propAttrs.prop_attributes, metadata,
+      property_ivar_name);
 }
 
 llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
@@ -3140,12 +3198,16 @@ bool DWARFASTParserClang::ParseChildMembers(
   if (ast == nullptr)
     return false;
 
+  const PropertyBackingStorageNames property_backing_names =
+      ParsePropertyBackingStorageNames(parent_die);
+
   for (DWARFDIE die : parent_die.children()) {
     dw_tag_t tag = die.Tag();
 
     switch (tag) {
     case DW_TAG_APPLE_property:
-      ParseObjCProperty(die, parent_die, class_clang_type, delayed_properties);
+      ParseObjCProperty(die, parent_die, class_clang_type,
+                        property_backing_names, delayed_properties);
       break;
 
     case DW_TAG_variant_part:

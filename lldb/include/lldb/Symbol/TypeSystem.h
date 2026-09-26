@@ -403,6 +403,12 @@ public:
     return CompilerType();
   }
 
+  virtual llvm::StringRef
+  GetPropertyBackingStorageName(lldb::opaque_compiler_type_t type,
+                                llvm::StringRef property_name) {
+    return llvm::StringRef();
+  }
+
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 
   virtual size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
