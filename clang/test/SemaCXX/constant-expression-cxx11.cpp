@@ -2747,3 +2747,11 @@ namespace GH154567 {
   constexpr S s{};
   static_assert(s.val.i == 0, "");
 }
+
+namespace GH111378 {
+  void f() {
+    int &b = 0;
+    // expected-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+    auto &&L = [&]() { return b; };
+  }
+}
