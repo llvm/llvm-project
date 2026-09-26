@@ -17,3 +17,16 @@ define i1 @test1(ptr %in) {
   %bool = icmp slt i32 %sum, 0
   ret i1 %bool
 }
+
+; A legal v2i32 is used internally to represent 64-bit integer register pairs.
+; Make sure a dynamic extract produced while legalizing a smaller vector does
+; not reach instruction selection, which only handles constant indices.
+define i8 @extract_v2i8(<2 x i8> %v, i32 %idx) {
+; CHECK-LABEL: extract_v2i8:
+; CHECK:       cmp %o2, 0
+; CHECK:       be
+; CHECK:       mov %o1, %o0
+; CHECK:       retl
+  %elt = extractelement <2 x i8> %v, i32 %idx
+  ret i8 %elt
+}
