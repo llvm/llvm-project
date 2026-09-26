@@ -5321,6 +5321,20 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
 }
 
+def HLSLInterpolationModifiersArgument : UnsignedArgument<"Modifiers"> {
+  let Fake = 1;
+}
+
+def HLSLInterpolationModifier : InheritableAttr {
+  let Spellings = [CustomKeyword<"nointerpolation">, CustomKeyword<"linear">,
+                   CustomKeyword<"centroid">, CustomKeyword<"noperspective">,
+                   CustomKeyword<"sample">, CustomKeyword<"center">];
+  let Args = [HLSLInterpolationModifiersArgument];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLInterpolationModifierDocs];
+}
+
 def HLSLParamModifier : ParameterABIAttr {
   let Spellings = [CustomKeyword<"in">, CustomKeyword<"inout">, CustomKeyword<"out">];
   let Accessors = [Accessor<"isIn", [CustomKeyword<"in">]>,

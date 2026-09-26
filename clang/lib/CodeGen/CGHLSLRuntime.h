@@ -259,28 +259,34 @@ protected:
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-                     SemanticSignatures &Signature);
+                     SemanticSignatures &Signature,
+                     llvm::hlsl::InterpolationModifier Modifiers =
+                         llvm::hlsl::InterpolationModifier::None);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr>
   handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                       llvm::Value *Source, const clang::DeclaratorDecl *Decl,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-                      SemanticSignatures &Signature);
+                      SemanticSignatures &Signature,
+                      llvm::hlsl::InterpolationModifier Modifiers =
+                          llvm::hlsl::InterpolationModifier::None);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
