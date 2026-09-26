@@ -2118,25 +2118,31 @@ static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
 /// to determine the value of a PredefinedExpr. This can be either a
 /// block, lambda, captured statement, function, otherwise a nullptr.
 static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
-  auto LSI = S.FunctionScopes.rbegin();
 
-  auto tryAdjustLambdaContext = [&S, &LSI](DeclContext *&DC) {
+  for (; DC; DC = DC->getParent()) {
+    // Skip this DC if we are in a lambda declaration context but not yet in
+    // the compound statement.
     if (isLambdaCallOperator(DC)) {
-      auto E = S.FunctionScopes.rend();
-      while (LSI != E && !isa<LambdaScopeInfo>(*LSI))
-        ++LSI;
-      assert(LSI != E && "Should be in a lambda scope info");
-      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
-        DC = DC->getParent();
-      ++LSI;
-    }
-  };
 
-  tryAdjustLambdaContext(DC);
-  while (DC &&
-         !isa<BlockDecl, CapturedDecl, FunctionDecl, ObjCMethodDecl>(DC)) {
-    DC = DC->getParent();
-    tryAdjustLambdaContext(DC);
+      LambdaScopeInfo *MatchingLSI = nullptr;
+      for (auto Scope = S.FunctionScopes.rbegin();
+           Scope != S.FunctionScopes.rend(); Scope++) {
+        if (auto *LSI = dyn_cast<LambdaScopeInfo>(*Scope)) {
+          assert(LSI->CallOperator && "LSI missing an associated CallOperator");
+
+          if (cast<DeclContext>(LSI->CallOperator) == DC) {
+            MatchingLSI = LSI;
+            break;
+          }
+        }
+      }
+
+      if (MatchingLSI && MatchingLSI->BeforeCompoundStatement)
+        continue;
+    }
+
+    if (isa<BlockDecl, CapturedDecl, FunctionDecl, ObjCMethodDecl>(DC))
+      break;
   }
 
   return cast_or_null<Decl>(DC);
