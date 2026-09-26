@@ -130,6 +130,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
@@ -1083,6 +1084,68 @@ static void mergeValueProfileOnInstructions(Instruction *DstI,
                     VDs.size());
 }
 
+// Loop IDs are usually distinct nodes, so corresponding loops of the two
+// functions have different IDs even if they have the same properties. Compare
+// the property operands in order instead, ignoring the debug locations.
+static bool haveSameLoopProperties(const MDNode *A, const MDNode *B) {
+  // Loop::getLoopID() ignores a node whose first operand is not the node
+  // itself, so such a node gives the loop no properties.
+  auto IsLoopID = [](const MDNode *N) {
+    return N && N->getNumOperands() != 0 && N->getOperand(0) == N;
+  };
+  if (!IsLoopID(A) || !IsLoopID(B))
+    return A == B;
+  auto IsProperty = [](const MDOperand &Op) {
+    return !isa_and_present<DILocation>(Op.get());
+  };
+  return equal(make_filter_range(drop_begin(A->operands()), IsProperty),
+               make_filter_range(drop_begin(B->operands()), IsProperty));
+}
+
+// Combine the metadata of SrcI into DstI, so that it holds for the callers of
+// both functions. Metadata of the kinds in KeepIfSame is kept if it is the
+// same on both instructions.
+static void mergeMetadataOnInstructions(Instruction *DstI,
+                                        const Instruction *SrcI,
+                                        ArrayRef<unsigned> KeepIfSame) {
+  if (!DstI->hasMetadataOtherThanDebugLoc() &&
+      !SrcI->hasMetadataOtherThanDebugLoc())
+    return;
+
+  // Parallel loop accesses refer to loop IDs, and the same loop ID can belong
+  // to different loops in the two functions. Drop them, as loop IDs are not
+  // mapped between the functions.
+  DstI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, nullptr);
+
+  // Keep the metadata of DstI that must not be combined: profile metadata is
+  // merged separately, assignment IDs and memprof call stacks refer to the
+  // function that contains them, and dropping !coro.outside.frame could move
+  // the alloca into the coroutine frame.
+  SmallVector<std::pair<unsigned, MDNode *>, 16> Kept;
+  for (unsigned Kind : {LLVMContext::MD_prof, LLVMContext::MD_DIAssignID,
+                        LLVMContext::MD_memprof, LLVMContext::MD_callsite,
+                        LLVMContext::MD_coro_outside_frame})
+    Kept.emplace_back(Kind, DstI->getMetadata(Kind));
+  for (unsigned Kind : KeepIfSame) {
+    MDNode *MD = DstI->getMetadata(Kind);
+    if (MD && MD == SrcI->getMetadata(Kind))
+      Kept.emplace_back(Kind, MD);
+  }
+  MDNode *DstLoop = DstI->getMetadata(LLVMContext::MD_loop);
+  if (haveSameLoopProperties(DstLoop, SrcI->getMetadata(LLVMContext::MD_loop)))
+    Kept.emplace_back(LLVMContext::MD_loop, DstLoop);
+
+  for (unsigned Kind : make_first_range(Kept))
+    DstI->setMetadata(Kind, nullptr);
+  // DstI also executes in place of SrcI, as if it had been moved there.
+  // TODO: Map the alias scopes and access groups of SrcI to those of DstI. They
+  // are usually different nodes, so they are dropped even if they correspond
+  // one to one.
+  combineMetadataForCSE(DstI, SrcI, /*DoesKMove=*/true);
+  for (auto [Kind, MD] : Kept)
+    DstI->setMetadata(Kind, MD);
+}
+
 void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
   const BlockFrequencyInfo &DstBFI =
       FAM.getResult<BlockFrequencyAnalysis>(*Dst);
@@ -1094,10 +1157,40 @@ void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
   // equivalent functions need not store their basic blocks in the same order.
   ReversePostOrderTraversal<Function *> DstRPOT(Dst);
   ReversePostOrderTraversal<Function *> SrcRPOT(Src);
+
+  // A noalias scope declaration sets how long its scope lasts, for example one
+  // loop iteration, and FunctionComparator does not compare the declared
+  // scopes. If they differ, the same !alias.scope or !noalias can mean
+  // different things in the two functions, so drop them.
+  bool SameScopeDecls = true;
+  for (auto [DstBB, SrcBB] : llvm::zip_equal(DstRPOT, SrcRPOT))
+    for (auto [DstI, SrcI] : llvm::zip_equal(*DstBB, *SrcBB))
+      if (auto *DstDecl = dyn_cast<NoAliasScopeDeclInst>(&DstI))
+        if (DstDecl->getScopeList() !=
+            cast<NoAliasScopeDeclInst>(SrcI).getScopeList())
+          SameScopeDecls = false;
+
+  // combineMetadataForCSE() drops these kinds, even if they are the same on
+  // both instructions. Losing them would make the merged function worse than
+  // both originals: memcpy would lose its TBAA, atomics would be expanded to
+  // compare-and-swap loops, and inline assembly diagnostics would lose their
+  // source location.
+  LLVMContext &Ctx = Dst->getContext();
+  const unsigned KeepIfSame[] = {
+      LLVMContext::MD_tbaa_struct, LLVMContext::MD_atomic_ignore_denormal_mode,
+      Ctx.getMDKindID("amdgpu.no.fine.grained.memory"),
+      Ctx.getMDKindID("amdgpu.no.remote.memory"), Ctx.getMDKindID("srcloc")};
+
   for (auto [DstBB, SrcBB] : llvm::zip_equal(DstRPOT, SrcRPOT)) {
     for (auto [DstI, SrcI] : llvm::zip_equal(*DstBB, *SrcBB)) {
       // Merge poison-generating flags.
       DstI.andIRFlags(&SrcI);
+
+      if (!SameScopeDecls) {
+        DstI.setMetadata(LLVMContext::MD_alias_scope, nullptr);
+        DstI.setMetadata(LLVMContext::MD_noalias, nullptr);
+      }
+      mergeMetadataOnInstructions(&DstI, &SrcI, KeepIfSame);
 
       MDNode *DstProf = DstI.getMetadata(LLVMContext::MD_prof);
       MDNode *SrcProf = SrcI.getMetadata(LLVMContext::MD_prof);
