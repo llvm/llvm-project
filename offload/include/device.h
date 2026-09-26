@@ -139,12 +139,11 @@ struct DeviceTy {
 
   /// Event related interfaces.
   /// {
-  /// Create an event.
-  int32_t createEvent(void **Event);
-
   /// Record the event based on status in AsyncInfo->Queue at the moment the
-  /// function is called.
-  int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
+  /// function is called. If \p Event already holds an event, it is replaced
+  /// with a new one representing the current queue state and the old event
+  /// is destroyed.
+  int32_t recordEvent(void **Event, AsyncInfoTy &AsyncInfo);
 
   /// Wait for an event. This function can be blocking or non-blocking,
   /// depending on the implementation. It is expected to set a dependence on the
