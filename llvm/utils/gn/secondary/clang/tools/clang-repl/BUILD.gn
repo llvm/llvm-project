@@ -16,4 +16,5 @@ executable("clang-repl") {
   if (current_os == "linux") {
     ldflags = [ "-Wl,--export-dynamic" ]
   }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
 }
