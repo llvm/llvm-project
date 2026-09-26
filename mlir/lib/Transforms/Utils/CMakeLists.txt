@@ -24,6 +24,7 @@ add_mlir_library(MLIRTransformUtils
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
+  MLIRLoopInvariantConditionInterface
   MLIRSideEffectInterfaces
   MLIRSubsetOpInterface
   MLIRRewrite
