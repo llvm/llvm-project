@@ -1984,10 +1984,10 @@ void compare_two_complex_bin_ops() {
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[COMPLEX_AB:.*]] = cir.complex.add %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>
+// CIR: %[[COMPLEX_AB:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[COMPLEX_BA:.*]] = cir.complex.add %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.double>
+// CIR: %[[COMPLEX_BA:.*]] = cir.complex.fadd %[[TMP_B]], %[[TMP_A]] : !cir.complex<!cir.double>
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_AB]], %[[COMPLEX_BA]] : !cir.complex<!cir.double>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 

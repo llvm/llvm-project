@@ -328,6 +328,40 @@ public:
     return cir::ComplexImagOp::create(*this, loc, resultType, operand);
   }
 
+  mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs);
+    return cir::ComplexAddOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs);
+    return cir::ComplexSubOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexMul(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               cir::ComplexRangeKind rangeKind) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFMulOp::create(*this, loc, lhs, rhs, rangeKind);
+    return cir::ComplexMulOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexDiv(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               cir::ComplexRangeKind rangeKind) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFDivOp::create(*this, loc, lhs, rhs, rangeKind);
+    return cir::ComplexDivOp::create(*this, loc, lhs, rhs);
+  }
+
   mlir::Value createComplexConj(mlir::Location loc, mlir::Value operand) {
     return cir::ComplexConjOp::create(*this, loc, operand.getType(), operand);
   }
