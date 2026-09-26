@@ -7,11 +7,8 @@
 
 ; NM: T func
 
-;; TODO: LTO::addRegularLTO prepends ".lto_discard" without preserving the
-;; existing module inline asm's TargetCPU and TargetFeatures.
-; IR:      module asm
+; IR:      module asm(target_features: "+d")
 ; IR-NEXT:     ".lto_discard"
-; IR-NEXT: module asm(target_features: "+d")
 ; IR-NEXT:     ".globl func"
 ; IR-NEXT:     "func:"
 ; IR-NEXT:     "fld f0, 0(sp)"
