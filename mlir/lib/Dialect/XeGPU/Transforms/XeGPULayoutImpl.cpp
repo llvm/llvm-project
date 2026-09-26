@@ -835,6 +835,37 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return resLayout;
 }
 
+/// Folds a group of adjacent result dims (listed outer to inner) into the one
+/// source dim they came from in a row-major vector.shape_cast. Returns the
+/// source {sg_layout, sg_data}, or std::nullopt when a subgroup's elements in
+/// the flattened space can't be described by a single round-robin pair.
+static std::optional<std::pair<int64_t, int64_t>>
+foldSplitGroup(ArrayRef<int64_t> layout, ArrayRef<int64_t> data,
+               ArrayRef<int64_t> shape,
+               function_ref<bool(size_t)> innerIsFaster) {
+  int64_t L = layout.back(), D = data.back(), S = shape.back();
+  for (int64_t i = static_cast<int64_t>(layout.size()) - 2; i >= 0; --i) {
+    int64_t Lo = layout[i], Do = data[i], So = shape[i];
+    if (L == 1) {
+      // (a) One subgroup owns every inner offset, so each owned outer index is
+      // a contiguous run of S elements.
+      L = Lo;
+      D = Do * S;
+    } else if (Lo == 1) {
+      // (b) Outer dim not distributed, every row repeats the inner pattern.
+      if (S % (L * D) != 0)
+        return std::nullopt;
+    } else if (Do == 1 && L * D == S && innerIsFaster(i)) {
+      // (c) One outer index per pass, inner tiled exactly once.
+      L = Lo * L;
+    } else {
+      return std::nullopt;
+    }
+    S *= So;
+  }
+  return std::make_pair(L, D);
+}
+
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
 xegpu::DistributeLayoutAttr
@@ -865,13 +896,57 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     return srcLayout;
   }
 
-  // Use case 2: Dim split from source to result, for multi-stage reduction
+  // Use case 2: Dim split from source to result, for multi-stage reduction.
   SmallVector<SmallVector<int64_t>> splitDimGroups;
   if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
+    SmallVector<int64_t> sgLayout = resLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> srcSgData;
+
+    if (!sgLayout.empty()) {
+      SmallVector<int64_t> order = resLayout.getEffectiveOrderAsInt();
+      SmallVector<int64_t> speed(order.size());
+      for (auto [pos, dim] : llvm::enumerate(order))
+        speed[dim] = pos;
+
+      for (const auto &dimGroup : splitDimGroups) {
+        SmallVector<int64_t> l, d, s;
+        for (int64_t dim : dimGroup) {
+          l.push_back(sgLayout[dim]);
+          d.push_back(sgData[dim]);
+          s.push_back(resShape[dim]);
+        }
+        auto innerIsFaster = [&](size_t i) {
+          for (size_t j = i + 1; j < dimGroup.size(); ++j)
+            if (speed[dimGroup[j]] > speed[dimGroup[i]])
+              return false;
+          return true;
+        };
+        auto folded = foldSplitGroup(l, d, s, innerIsFaster);
+        if (!folded)
+          return nullptr; // not expressible; caller emits a warning
+        srcSgData.push_back(folded->second);
+      }
+    }
+
+    // Collapse later groups first so earlier groups' dim indices stay valid.
     auto srcLayout = resLayout;
-    for (const auto &dimGroup : splitDimGroups)
+    for (const auto &dimGroup : llvm::reverse(splitDimGroups))
       srcLayout = srcLayout.collapseDims(dimGroup);
 
+    // collapseDims multiplies sg_data; overwrite it with the folded values.
+    if (!srcSgData.empty() &&
+        srcSgData != srcLayout.getEffectiveSgDataAsInt()) {
+      auto plain = dyn_cast<xegpu::LayoutAttr>(srcLayout);
+      if (!plain)
+        return nullptr;
+      MLIRContext *ctx = resLayout.getContext();
+      SmallVector<int32_t> sgData32(srcSgData.begin(), srcSgData.end());
+      srcLayout = xegpu::LayoutAttr::get(
+          ctx, plain.getSgLayout(), DenseI32ArrayAttr::get(ctx, sgData32),
+          plain.getInstData(), plain.getLaneLayout(), plain.getLaneData(),
+          plain.getOrder());
+    }
     return srcLayout;
   }
 
