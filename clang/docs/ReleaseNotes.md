@@ -524,6 +524,9 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
 
+- `-Wflag-enum` now warns if any of the bitwise operators for scoped enumeration types with
+  the `[[clang::flag_enum]]` attribute are not available, ambiguous or deleted.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
