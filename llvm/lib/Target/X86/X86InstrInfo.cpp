@@ -4204,8 +4204,8 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
 bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    ArrayRef<MachineOperand> Cond,
                                    Register DstReg, Register TrueReg,
-                                   Register FalseReg, int &CondCycles,
-                                   int &TrueCycles, int &FalseCycles) const {
+                                   Register FalseReg,
+                                   SelectExpansion &Exp) const {
   // Not all subtargets have cmov instructions.
   if (!Subtarget.canUseCMOV())
     return false;
@@ -4228,9 +4228,9 @@ bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
       X86::GR64RegClass.hasSubClassEq(RC)) {
     // This latency applies to Pentium M, Merom, Wolfdale, Nehalem, and Sandy
     // Bridge. Probably Ivy Bridge as well.
-    CondCycles = 2;
-    TrueCycles = 2;
-    FalseCycles = 2;
+    Exp.CondCycles = 2;
+    Exp.TrueCycles = 2;
+    Exp.FalseCycles = 2;
     return true;
   }
 

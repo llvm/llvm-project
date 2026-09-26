@@ -1022,29 +1022,38 @@ public:
     return false;
   }
 
+  /// Describes how the select will be materialized:
+  ///   CondCycles        - number of cycles for compare and branch
+  ///   TrueCycles        - number of cycles to the True register
+  ///   FalseCycles       - same for False
+  ///   NumInsts          - number of instructions required for the select, 0 if
+  ///                       this field is not supported by a given backend
+  ///   ClobberedPhysRegs - physical registers which will be defined by the
+  ///                       newly inserted select. Useful for finding a legal
+  ///                       insertion point
+  struct SelectExpansion {
+    int CondCycles = 1;
+    int TrueCycles = 1;
+    int FalseCycles = 1;
+    unsigned NumInsts = 0;
+    SmallVector<MCRegister, 2> ClobberedPhysRegs;
+  };
+
   /// Return true if it is possible to insert a select
   /// instruction that chooses between TrueReg and FalseReg based on the
-  /// condition code in Cond.
+  /// condition code in Cond. Exp provides information on how the select
+  /// will be materialized.
   ///
-  /// When successful, also return the latency in cycles from TrueReg,
-  /// FalseReg, and Cond to the destination register. In most cases, a select
-  /// instruction will be 1 cycle, so CondCycles = TrueCycles = FalseCycles = 1
-  ///
-  /// Some x86 implementations have 2-cycle cmov instructions.
-  ///
-  /// @param MBB         Block where select instruction would be inserted.
-  /// @param Cond        Condition returned by analyzeBranch.
-  /// @param DstReg      Virtual dest register that the result should write to.
-  /// @param TrueReg     Virtual register to select when Cond is true.
-  /// @param FalseReg    Virtual register to select when Cond is false.
-  /// @param CondCycles  Latency from Cond+Branch to select output.
-  /// @param TrueCycles  Latency from TrueReg to select output.
-  /// @param FalseCycles Latency from FalseReg to select output.
+  /// @param MBB      Block where select instruction would be inserted.
+  /// @param Cond     Condition returned by analyzeBranch.
+  /// @param DstReg   Virtual dest register that the result should write to.
+  /// @param TrueReg  Virtual register to select when Cond is true.
+  /// @param FalseReg Virtual register to select when Cond is false.
+  /// @param Exp      Latency and number of instructions added by the select.
   virtual bool canInsertSelect(const MachineBasicBlock &MBB,
                                ArrayRef<MachineOperand> Cond, Register DstReg,
                                Register TrueReg, Register FalseReg,
-                               int &CondCycles, int &TrueCycles,
-                               int &FalseCycles) const {
+                               SelectExpansion &Exp) const {
     return false;
   }
 
