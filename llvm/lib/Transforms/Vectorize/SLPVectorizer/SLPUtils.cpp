@@ -119,9 +119,9 @@ bool allSameBlock(ArrayRef<Value *> VL) {
     return true;
 
   BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V : make_filter_range(iterator_range(It, VL.end()), [](Value *V) {
+         return !isa<PoisonValue>(V);
+       })) {
     auto *II = dyn_cast<Instruction>(V);
     if (!II)
       return false;
@@ -140,9 +140,8 @@ bool allConstant(ArrayRef<Value *> VL) {
 
 bool isSplat(ArrayRef<Value *> VL) {
   Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<UndefValue>(V); })) {
     if (!FirstNonUndef) {
       FirstNonUndef = V;
       continue;
@@ -458,12 +457,10 @@ bool areAllOperandsNonInsts(Value *V) {
   if (!I)
     return true;
   return !mayHaveNonDefUseDependency(*I) &&
-         all_of(I->operands(), [I](Value *V) {
-           auto *IO = dyn_cast<Instruction>(V);
-           if (!IO)
-             return true;
-           return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-         });
+         all_of(make_isa_range<Instruction>(I->operands()),
+                [I](Instruction *IO) {
+                  return isa<PHINode>(IO) || IO->getParent() != I->getParent();
+                });
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -601,15 +598,13 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
-    auto *EE = dyn_cast<ExtractElementInst>(V);
-    if (!EE)
-      return false;
-    Value *Vec = EE->getVectorOperand();
-    if (isa<UndefValue>(Vec))
-      return false;
-    return isGuaranteedNotToBePoison(Vec, AC);
-  });
+  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                               [&](ExtractElementInst *EE) {
+                                 Value *Vec = EE->getVectorOperand();
+                                 if (isa<UndefValue>(Vec))
+                                   return false;
+                                 return isGuaranteedNotToBePoison(Vec, AC);
+                               });
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -1237,9 +1232,9 @@ matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL) {
   Value *Src = nullptr;
   unsigned FieldWidth = 0;
   SmallVector<int> Mask(VL.size(), PoisonMaskElem);
-  for (auto [Idx, V] : enumerate(VL)) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (auto [Idx, V] : make_filter_range(enumerate(VL), [](const auto &P) {
+         return !isa<UndefValue>(P.value());
+       })) {
     if (V->getType() != VL.front()->getType())
       return std::nullopt;
     std::optional<std::tuple<Value *, unsigned, unsigned>> Field =

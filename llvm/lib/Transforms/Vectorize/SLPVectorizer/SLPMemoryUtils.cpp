@@ -222,9 +222,9 @@ bool isMaskedLoadCompress(
   if (!Order.empty())
     inversePermutation(Order, Mask);
   // Check external uses.
-  for (const auto [I, V] : enumerate(VL)) {
-    if (AreAllUsersVectorized(V))
-      continue;
+  for (const auto [I, V] : make_filter_range(enumerate(VL), [&](const auto &P) {
+         return !AreAllUsersVectorized(P.value());
+       })) {
     InstructionCost ExtractCost =
         TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
                                Mask.empty() ? I : Mask[I]);
