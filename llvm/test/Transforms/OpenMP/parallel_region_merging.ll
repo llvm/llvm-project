@@ -5252,12 +5252,12 @@ entry:
 ; CHECK2:       omp.par.pre_finalize:
 ; CHECK2-NEXT:    br label [[DOTFINI:%.*]]
 ; CHECK2:       .fini:
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull captures(none) [[B]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_EXIT_EXITSTUB:%.*]]
 ; CHECK2:       omp_region.body:
 ; CHECK2-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK2:       seq.par.merged:
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 dereferenceable(4) [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 captures(none) dereferenceable(4) [[B]])
 ; CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 ; CHECK2-NEXT:    store i32 [[ADD]], ptr [[B]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
@@ -5352,7 +5352,7 @@ entry:
 ; CHECK2-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK2:       if.then:
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META7:![0-9]+]]
-; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1)
+; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1) #[[ATTR0]]
 ; CHECK2-NEXT:    ret void
 ; CHECK2:       if.end:
 ; CHECK2-NEXT:    ret void
@@ -5366,7 +5366,7 @@ entry:
 ; CHECK2-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK2:       if.then:
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META7]]
-; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1)
+; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1) #[[ATTR0]]
 ; CHECK2-NEXT:    ret void
 ; CHECK2:       if.end:
 ; CHECK2-NEXT:    ret void
@@ -5464,7 +5464,7 @@ entry:
 ; CHECK2-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK2:       if.then:
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META7]]
-; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1)
+; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1) #[[ATTR0]]
 ; CHECK2-NEXT:    ret void
 ; CHECK2:       if.end:
 ; CHECK2-NEXT:    ret void
@@ -5478,7 +5478,7 @@ entry:
 ; CHECK2-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK2:       if.then:
 ; CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META7]]
-; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1)
+; CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_cancel(ptr noundef nonnull @[[GLOB1]], i32 [[TMP1]], i32 noundef 1) #[[ATTR0]]
 ; CHECK2-NEXT:    ret void
 ; CHECK2:       if.end:
 ; CHECK2-NEXT:    ret void
