@@ -1918,11 +1918,8 @@ bool hasSiblingLoops(const LoopInfo &LI) {
 
 } // namespace
 
-
-
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &DI = AM.getResult<DependenceAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
