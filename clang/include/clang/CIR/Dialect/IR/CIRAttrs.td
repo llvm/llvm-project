@@ -2354,8 +2354,8 @@ def CIR_StaticLocalInfoAttr
     Example:
     ```
     cir.global ... @x = ...
-      {static_local_info = #cir.static_local_info<
-         local = true, tls = none, is_inline = false, tsk = undeclared>}
+      static_local_info(local = true, tls = none, is_inline = false,
+                        tsk = undeclared)
     ```
 
     Because it stores plain data rather than a `clang::VarDecl` pointer, it

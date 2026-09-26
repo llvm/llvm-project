@@ -316,9 +316,7 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     ...
     %x = cir.cast array_to_ptrdecay %0 
        : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
-    %y = cir.cast floating %f : !cir.double -> !cir.float {
-      fenv = #cir.fenv<>
-    }
+    %y = cir.cast floating %f : !cir.double -> !cir.float fenv()
     ```
   }];
 
@@ -327,7 +325,8 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    enum($kind) $src `:` type($src) `->` type($result) attr-dict
+    enum($kind) $src `:` type($src) `->` type($result)
+    (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
   }];
 
   let builders = [
@@ -2618,7 +2617,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
     ```
     %0 = cir.cmp gt %1, %2 : !s32i
     %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
-    %2 = cir.cmp lt %x, %y : !cir.float {fenv = #cir.fenv<>}
+    %2 = cir.cmp lt %x, %y : !cir.float fenv()
     ```
   }];
 
@@ -2632,7 +2631,8 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    enum($kind) $lhs `,` $rhs `:` type($lhs) attr-dict
+    enum($kind) $lhs `,` $rhs `:` type($lhs)
+    (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
   }];
 
   let builders = [
@@ -2947,6 +2947,9 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
   let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` type($lhs) (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
+  }];
 
   let constrainedLLVMIntrinsic = mnemonic;
 
@@ -3475,6 +3478,12 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
     ($annotations^)?
+    (`align` `(` $alignment^ `)`)?
+    (`ast` `(` $ast^ `)`)?
+    (`static_local_info` `` custom<StaticLocalInfoFields>($static_local_info)^)?
+    (`section` `(` $section^ `)`)?
+    (`strictfp` $strictfp^)?
+    (`init_priority` `(` $init_priority^ `)`)?
     attr-dict
   }];
 
@@ -3871,8 +3880,9 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
-    `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
-    $src`:`type($src) `)`  attr-dict `->` type($result) }];
+    ` ` `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
+    $src`:`type($src) `)`
+    (`{` `is_volatile` $is_volatile^ `}`)? attr-dict `->` type($result) }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$type,
@@ -3959,7 +3969,8 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
-    `(`$bitfield_info `,` $addr attr-dict `:`
+    ` ` `(`$bitfield_info `,` $addr
+    (` ` `{` `is_volatile` $is_volatile^ `}`)? attr-dict `:`
     qualified(type($addr)) `)` `->` type($result) }];
 
   let builders = [
@@ -4016,7 +4027,7 @@ def CIR_GetMemberOp : CIR_Op<"get_member", [Pure]> {
   let results = (outs Res<CIR_PointerType, "">:$result);
 
   let assemblyFormat = [{
-    $addr `[` $index_attr `]` attr-dict
+    $addr `[` $index_attr `]` `{` `name` `=` $name `}` attr-dict
     `:` qualified(type($addr)) `->` qualified(type($result))
   }];
 
@@ -4527,7 +4538,8 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
   let skipDefaultBuilders = 1;
 
   let assemblyFormat = [{
-    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
+    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result)
+    (`fastmath` `` $fastmath_flags^)? attr-dict
   }];
 
   let builders = [
@@ -4555,8 +4567,8 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     will be translated to `cir.delete_array %ptr`.
 
     The `delete_fn` attribute specifies the operator delete function to call.
-    The `delete_params` attribute describes the parameters needed by the
-    operator delete call.
+    The optional `delete_params` attribute describes the parameters needed by
+    the operator delete call. When absent, all parameters have default values.
 
     The `element_dtor` attribute, when present, specifies the destructor to call
     on each array element before deallocation.
@@ -4572,7 +4584,7 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
   let arguments = (ins
     CIR_PointerType:$address,
     FlatSymbolRefAttr:$delete_fn,
-    CIR_UsualDeleteParamsAttr:$delete_params,
+    OptionalAttr<CIR_UsualDeleteParamsAttr>:$delete_params,
     OptionalAttr<FlatSymbolRefAttr>:$element_dtor,
     UnitProp:$dtor_may_throw,
     I64Attr:$element_align
@@ -4591,7 +4603,12 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
   ];
 
   let assemblyFormat = [{
-    $address `:` qualified(type($address)) (`dtor_may_throw` $dtor_may_throw^)?
+    $address `:` qualified(type($address))
+    `delete_fn` `(` $delete_fn `)`
+    (`delete_params` `` $delete_params^)?
+    (`element_dtor` `(` $element_dtor^ `)`)?
+    (`dtor_may_throw` $dtor_may_throw^)?
+    `element_align` `(` $element_align `)`
     attr-dict
   }];
 
@@ -6084,9 +6101,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
-    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
-      fenv = #cir.fenv<>
-    }
+    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv()
     ```
   }];
 
@@ -6101,7 +6116,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
 
   let assemblyFormat = [{
     `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    qualified(type($result)) attr-dict
+    qualified(type($result)) (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
   }];
 
   let builders = [
@@ -7451,7 +7466,7 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
-  let assemblyFormat = "$src `:` type($src) attr-dict";
+  let assemblyFormat = "$src `:` type($src) (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict";
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$src), [{
@@ -7779,7 +7794,8 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let assemblyFormat = [{
-    $src `:` type($src) `->` type($result) attr-dict
+    $src `:` type($src) `->` type($result)
+    (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
   }];
 
   let builders = [
@@ -7845,7 +7861,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
+    $lhs `,` $rhs `:` qualified(type($lhs))
+    (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
   }];
 
   let builders = [
@@ -7996,7 +8013,9 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
-  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `:` type($a) (`fenv` `` custom<FenvFields>($fenv)^)? attr-dict
+  }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
@@ -9422,6 +9441,7 @@ def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
 
   let assemblyFormat = [{
     enum($mem_order) $ptr
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
   }];
@@ -9451,6 +9471,7 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
 
   let assemblyFormat = [{
     enum($mem_order) $ptr
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
   }];

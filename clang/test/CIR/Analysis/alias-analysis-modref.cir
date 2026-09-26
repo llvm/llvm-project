@@ -51,6 +51,6 @@ cir.func @modref_load() {
 !s32i = !cir.int<s, 32>
 cir.func @modref_fenv(%a: !cir.float, %b: !cir.float) {
   %x = cir.alloca "x" align(4) : !cir.ptr<!s32i> {test.ptr = "x"}
-  %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<>, test.ptr = "fadd_op"}
+  %0 = cir.fadd %a, %b : !cir.float fenv() {test.ptr = "fadd_op"}
   cir.return
 }

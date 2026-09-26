@@ -17,7 +17,7 @@ void vec_logical_not() {
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[CONST_ZERO:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
-// CIR: %[[RESULT:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: %[[RESULT:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv(dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true)
 // CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // SHARED: %[[A_ADDR:.*]] = alloca <4 x float>, align 16
@@ -39,8 +39,8 @@ void vec_logical_or() {
 // CIR: %[[CONST_ZERO:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[A_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
-// CIR: %[[B_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: %[[A_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv(dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true)
+// CIR: %[[B_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv(dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true)
 // CIR: %[[RESULT:.*]] = cir.or %[[A_NE_ZERO]], %[[B_NE_ZERO]] : !cir.vector<4 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[R_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
@@ -79,8 +79,8 @@ void vec_logical_and() {
 // CIR: %[[CONST_ZERO:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[A_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
-// CIR: %[[B_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: %[[A_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv(dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true)
+// CIR: %[[B_NE_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[CONST_ZERO]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv(dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true)
 // CIR: %[[RESULT:.*]] = cir.and %[[A_NE_ZERO]], %[[B_NE_ZERO]] : !cir.vector<4 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[R_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 

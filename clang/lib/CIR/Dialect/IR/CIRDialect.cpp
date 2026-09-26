@@ -425,6 +425,145 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
+static ParseResult parseFenvFields(OpAsmParser &parser, cir::FenvAttr &attr) {
+  if (parser.parseLParen())
+    return failure();
+
+  std::optional<cir::FPDynamicRoundingMode> rounding;
+  std::optional<cir::FPExceptionMode> except;
+  mlir::BoolAttr strict;
+  llvm::StringRef key;
+  if (succeeded(parser.parseOptionalKeyword(&key))) {
+    do {
+      if (parser.parseEqual())
+        return failure();
+      if (key == "dynamic_rounding_mode" && !rounding) {
+        auto value =
+            mlir::FieldParser<std::optional<cir::FPDynamicRoundingMode>>::parse(
+                parser);
+        if (failed(value))
+          return failure();
+        rounding = *value;
+      } else if (key == "except_mode" && !except) {
+        auto value =
+            mlir::FieldParser<std::optional<cir::FPExceptionMode>>::parse(
+                parser);
+        if (failed(value))
+          return failure();
+        except = *value;
+      } else if (key == "strict_except" && !strict) {
+        auto value = mlir::FieldParser<mlir::BoolAttr>::parse(parser);
+        if (failed(value))
+          return failure();
+        strict = *value;
+      } else {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate or unknown fenv parameter");
+      }
+      if (failed(parser.parseOptionalComma()))
+        break;
+      if (parser.parseKeyword(&key))
+        return failure();
+    } while (true);
+  }
+  if (parser.parseRParen())
+    return failure();
+  attr = cir::FenvAttr::get(parser.getContext(), rounding, except, strict);
+  return success();
+}
+
+template <typename OpT>
+static void printFenvFields(OpAsmPrinter &printer, OpT, cir::FenvAttr attr) {
+  if (!attr)
+    return;
+  printer << "(";
+  bool first = true;
+  auto separator = [&] {
+    if (!first)
+      printer << ", ";
+    first = false;
+  };
+  if (auto value = attr.getDynamicRoundingMode()) {
+    separator();
+    printer << "dynamic_rounding_mode = " << cir::stringifyEnum(*value);
+  }
+  if (auto value = attr.getExceptMode()) {
+    separator();
+    printer << "except_mode = " << cir::stringifyEnum(*value);
+  }
+  if (auto value = attr.getStrictExcept()) {
+    separator();
+    printer << "strict_except = " << (value.getValue() ? "true" : "false");
+  }
+  printer << ")";
+}
+
+static ParseResult parseStaticLocalInfoFields(OpAsmParser &parser,
+                                              cir::StaticLocalInfoAttr &attr) {
+  if (parser.parseLParen())
+    return failure();
+
+  std::optional<bool> local;
+  std::optional<cir::TLSKind> tls;
+  std::optional<bool> isInline;
+  std::optional<cir::TemplateSpecializationKind> tsk;
+  llvm::StringRef key;
+  if (succeeded(parser.parseOptionalKeyword(&key))) {
+    do {
+      if (parser.parseEqual())
+        return failure();
+      if (key == "local" && !local) {
+        auto value = mlir::FieldParser<bool>::parse(parser);
+        if (failed(value))
+          return failure();
+        local = *value;
+      } else if (key == "tls" && !tls) {
+        auto value = mlir::FieldParser<cir::TLSKind>::parse(parser);
+        if (failed(value))
+          return failure();
+        tls = *value;
+      } else if (key == "is_inline" && !isInline) {
+        auto value = mlir::FieldParser<bool>::parse(parser);
+        if (failed(value))
+          return failure();
+        isInline = *value;
+      } else if (key == "tsk" && !tsk) {
+        auto value =
+            mlir::FieldParser<cir::TemplateSpecializationKind>::parse(parser);
+        if (failed(value))
+          return failure();
+        tsk = *value;
+      } else {
+        return parser.emitError(
+            parser.getCurrentLocation(),
+            "duplicate or unknown static_local_info parameter");
+      }
+      if (failed(parser.parseOptionalComma()))
+        break;
+      if (parser.parseKeyword(&key))
+        return failure();
+    } while (true);
+  }
+  if (parser.parseRParen())
+    return failure();
+  if (!local || !tls || !isInline || !tsk)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "static_local_info requires all four parameters");
+  attr = cir::StaticLocalInfoAttr::get(parser.getContext(), *local, *tls,
+                                       *isInline, *tsk);
+  return success();
+}
+
+static void printStaticLocalInfoFields(OpAsmPrinter &printer, cir::GlobalOp,
+                                       cir::StaticLocalInfoAttr attr) {
+  if (!attr)
+    return;
+  printer << "(local = " << (attr.getLocal() ? "true" : "false")
+          << ", tls = " << cir::stringifyEnum(attr.getTls())
+          << ", is_inline = " << (attr.getIsInline() ? "true" : "false")
+          << ", tsk = " << cir::stringifyEnum(attr.getTsk()) << ")";
+}
+
 static mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
                                                       mlir::Region &region) {
   auto regionLoc = parser.getCurrentLocation();

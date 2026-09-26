@@ -9,20 +9,20 @@ module {
 // be paired, matching what CIRGen emits, so each guarded global also carries
 // the info attribute here.
 cir.global "private" internal static_local_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
-  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
+  static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
 // CHECK: cir.global "private" internal static_local_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
 
 cir.global "private" internal static_local_guard<"_HasInitGuard"> @_HasInit : !s32i
-  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
+  static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
 // CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard"> @_HasInit : !s32i
 cir.global "private" internal static_local_guard<"_HasInitGuard2"> @_HasInit2 : !s32i
-  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
+  static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
 // CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard2"> @_HasInit2 : !s32i
 cir.global "private" internal static_local_guard<"_HasInitGuard3"> @_HasInit3 : !s32i
-  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
+  static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
 // CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard3"> @_HasInit3 : !s32i
 cir.global "private" internal static_local_guard<"_HasInitGuard4"> @_HasInit4 : !s32i
-  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
+  static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
 // CHECK: cir.global "private" internal static_local_guard<"_HasInitGuard4"> @_HasInit4 : !s32i
 
 cir.func @test_static_local() {

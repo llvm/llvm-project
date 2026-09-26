@@ -20,5 +20,5 @@ module {
 module {
   // expected-error@+1 {{'static_local_guard' and 'static_local_info' must be present together}}
   cir.global "private" internal @_ZZ1fvE1x : !s32i
-    {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
+    static_local_info(local = true, tls = none, is_inline = false, tsk = undeclared)
 }

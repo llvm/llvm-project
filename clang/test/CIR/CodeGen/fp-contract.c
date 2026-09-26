@@ -101,7 +101,7 @@ float fmuladd_strict(float a, float b, float c) {
   return a * b + c;
 }
 // CIR-STRICT-LABEL: cir.func {{.*}}@fmuladd_strict
-// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv({{.*}}strict_except = true)
 // LLVM-STRICT-LABEL: @fmuladd_strict
 // LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
 
@@ -112,7 +112,7 @@ float fmuladd_sub_strict(float a, float b, float c) {
 }
 // CIR-STRICT-LABEL: cir.func {{.*}}@fmuladd_sub_strict
 // CIR-STRICT: cir.fneg %{{.*}} : !cir.float
-// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv({{.*}}strict_except = true)
 // LLVM-STRICT-LABEL: @fmuladd_sub_strict
 // LLVM-STRICT: fneg float
 // LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32

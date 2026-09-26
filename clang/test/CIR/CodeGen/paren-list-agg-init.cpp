@@ -128,33 +128,33 @@ namespace gh61567 {
 }
 
 // LLVM-DAG: [[A1:@.*a1.*]] = internal constant [[STRUCT_A]] { i8 3, double 2.000000e+00 }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2a1 = #cir.const_record<{#cir.int<3> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]] {alignment = 8 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2a1 = #cir.const_record<{#cir.int<3> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]] align(8)
 constexpr A a1(3.1, 2.0);
 // LLVM-DAG: [[A2:@.*a2.*]] = internal constant [[STRUCT_A]] { i8 99, double 0.000000e+00 }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2a2 = #cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]] {alignment = 8 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2a2 = #cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]] align(8)
 constexpr auto a2 = static_cast<A>('c');
 // LLVM-DAG: [[B1:@.*b1.*]] = internal constant [[STRUCT_B]] { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0 }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2b1 = #cir.const_record<{#cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i}> : ![[STRUCT_B]] {alignment = 8 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2b1 = #cir.const_record<{#cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i}> : ![[STRUCT_B]] align(8)
 constexpr B b1(A('c'));
 // LLVMCIR-DAG: [[C1:@.*c1.*]] = internal constant [[STRUCT_C]] <{ [[STRUCT_B]] { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0 }, [[STRUCT_A]] { i8 3, double 2.000000e+00 }, i32 0, [4 x i8] zeroinitializer }>, align 8
 // OGCG-DAG:    [[C1:@.*c1.*]] = internal constant { [[STRUCT_A]], i32, [4 x i8], i8, double, i32 } { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0, [4 x i8] {{.*}}, i8 3, double 2.000000e+00, i32 0 }, align
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL2c1 = #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i}> : !rec_B, #cir.const_record<{#cir.int<3> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i, #cir.zero : !cir.array<!u8i x 4>}> : !rec_C
 constexpr C c1(b1, a1);
 // LLVM-DAG: [[U1:@.*]] = internal constant {{.*}} { [[STRUCT_A]] { i8 1, double 1.000000e+00 } }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2u1 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s8i, #cir.fp<1.000000e+00> : !cir.double}> : ![[STRUCT_A]]}> : !{{.*}}{alignment = 8 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2u1 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s8i, #cir.fp<1.000000e+00> : !cir.double}> : ![[STRUCT_A]]}> : !{{.*}}align(8)
 constexpr U u1(A(1, 1));
 // LLVMCIR-DAG: [[D1:@.*d1.*]] = internal constant [[STRUCT_D]] { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, i8 0, [[STRUCT_A]] zeroinitializer }, align 8
 // OGCG-DAG:    [[D1:@.*d1.*]] = internal constant { [[STRUCT_A]], [[STRUCT_A]], [8 x i8], [[STRUCT_A]] } { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [8 x i8] {{.*}}, [[STRUCT_A]] zeroinitializer }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : ![[STRUCT_A]]}> : !rec_D {alignment = 8 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : ![[STRUCT_A]]}> : !rec_D align(8)
 constexpr D d1(A(2, 2));
 // LLVM-DAG: [[ARR1:@.*arr1.*]] = internal constant [3 x i32] [i32 1, i32 2, i32 0], align 4
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr1 = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 3> {alignment = 4 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr1 = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 3> align(4)
 constexpr int arr1[3](1, 2);
 // LLVM-DAG: [[ARR4:@.*arr4.*]] = internal constant [1 x i32] [i32 1], align 4
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr4 = #cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1> {alignment = 4 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr4 = #cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1> align(4)
 constexpr int arr4[](1);
 // LLVM-DAG: [[ARR5:@.*arr5.*]] = internal constant [2 x i32] [i32 2, i32 0], align 4
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr5 = #cir.const_array<[#cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 2> {alignment = 4 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr5 = #cir.const_array<[#cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 2> align(4)
 constexpr int arr5[2](2);
 
 // CIR reads the coerced return out of a fresh slot it copies the record into,

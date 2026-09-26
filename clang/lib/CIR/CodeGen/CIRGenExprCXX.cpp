@@ -1532,9 +1532,12 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
           ptr.getAlignment().alignmentOfArrayElement(elementSize).getQuantity();
     }
 
-    auto deleteParams = cir::UsualDeleteParamsAttr::get(
-        builder.getContext(), udp.Size, align,
-        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+    cir::UsualDeleteParamsAttr deleteParams;
+    if (udp.Size || align || isTypeAwareAllocation(udp.TypeAwareDelete) ||
+        udp.DestroyingDelete)
+      deleteParams = cir::UsualDeleteParamsAttr::get(
+          builder.getContext(), udp.Size, align,
+          isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
 
     // Alignment of the element, used for the 'cookie' later.
     uint64_t elementAlign = cgm.getASTContext()
