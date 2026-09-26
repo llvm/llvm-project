@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -403,7 +404,8 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 /// Construct ModuleShaderFlags for module Module M
 void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                                    const DXILResourceMap &DRM,
-                                   const ModuleMetadataInfo &MMDI) {
+                                   const ModuleMetadataInfo &MMDI,
+                                   const ModuleSignatureInfo &Signatures) {
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
   // The command line option -res-may-alias will set the dx.resmayalias module
@@ -443,6 +445,24 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       for (const auto &BB : *F)
         for (const auto &I : BB)
           updateFunctionFlags(CSF, I, DRTM, MMDI);
+      // An unused signature element still contributes to the shader's type
+      // requirements even when no instruction uses that component type.
+      if (const EntrySignature *Sig = Signatures.get(F)) {
+        auto HasLowPrecision = [](const auto &Elements) {
+          return llvm::any_of(Elements, [](const auto &E) {
+            return E.CompType == ElementType::F16 ||
+                   E.CompType == ElementType::I16 ||
+                   E.CompType == ElementType::U16;
+          });
+        };
+        if (HasLowPrecision(Sig->Inputs) || HasLowPrecision(Sig->Outputs)) {
+          CSF.LowPrecisionPresent = true;
+          if (Sig->UseNative16Bit)
+            CSF.NativeLowPrecision = true;
+          else
+            CSF.MinimumPrecision = true;
+        }
+      }
       // Update combined shader flags mask for all functions in this SCC
       SCCSF.merge(CSF);
 
@@ -502,7 +522,7 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
   const ModuleMetadataInfo MMDI = AM.getResult<DXILMetadataAnalysis>(M);
 
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M, DRTM, DRM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI, AM.getResult<SignatureAnalysis>(M));
 
   return MSFI;
 }
@@ -537,7 +557,8 @@ bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  MSFI.initialize(M, DRTM, DRM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI,
+                  getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo());
   return false;
 }
 
@@ -546,6 +567,7 @@ void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
   AU.addRequiredTransitive<DXILResourceWrapperPass>();
   AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+  AU.addRequired<SignatureAnalysisWrapper>();
 }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;
@@ -554,5 +576,6 @@ INITIALIZE_PASS_BEGIN(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                       "DXIL Shader Flag Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SignatureAnalysisWrapper)
 INITIALIZE_PASS_END(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                     "DXIL Shader Flag Analysis", true, true)
