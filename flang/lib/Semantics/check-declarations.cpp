@@ -22,7 +22,6 @@
 #include "flang/Semantics/type.h"
 #include <algorithm>
 #include <map>
-#include <ostream>
 #include <string>
 
 namespace Fortran::semantics {
