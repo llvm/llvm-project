@@ -4,8 +4,8 @@
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE42
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512
-; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512,AVX512DQ
 ;
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mcpu=slm | FileCheck %s --check-prefixes=SLM
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mcpu=goldmont | FileCheck %s --check-prefixes=GLM
@@ -1327,16 +1327,27 @@ define i32 @llrint(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:1 SizeLat:1 for: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
-; AVX512-LABEL: 'llrint'
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:1 Lat:1 SizeLat:1 for: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:61 CodeSize:1 Lat:1 SizeLat:1 for: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:1 Lat:1 SizeLat:1 for: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; AVX512F-LABEL: 'llrint'
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:1 Lat:1 SizeLat:1 for: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:61 CodeSize:1 Lat:1 SizeLat:1 for: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:1 Lat:1 SizeLat:1 for: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+; AVX512DQ-LABEL: 'llrint'
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SLM-LABEL: 'llrint'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
