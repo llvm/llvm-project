@@ -48,7 +48,7 @@ static SuperH::ISAKind consumeISAKind(StringRef &ArchName) {
     
     // Enforce eb suffix for sh2e and sh3e.
     if (KV.Name.ends_with("e")) {
-      if (!ArchName.ends_with("eb") && !ArchName.ends_with("el"))
+      if (!ArchName.ends_with("eeb") && !ArchName.ends_with("eel"))
         continue;
     }
 

@@ -82,11 +82,6 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, VT, Custom);
   }
 
-  // Constants have special lowering rules depending on their length.
-  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
-    setOperationAction(ISD::Constant, VT, Custom);
-  }
-
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
@@ -158,11 +153,25 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
   default:
     break;
   case ISD::SETEQ: {
+    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+      if (C->getSExtValue() == 0) {
+        SHcc = SHCC::COND_Z;
+        SHocc = SHCC::COND_T;
+        break;
+      }
+    }
     SHcc = SHCC::COND_EQ;
     SHocc = SHCC::COND_T;
     break;
   }
   case ISD::SETNE: {
+    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+      if (C->getSExtValue() == 0) {
+        SHcc = SHCC::COND_Z;
+        SHocc = SHCC::COND_F;
+        break;
+      }
+    }
     SHcc = SHCC::COND_EQ;
     SHocc = SHCC::COND_F;
     break;
@@ -171,14 +180,14 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
     // Swap operands and reverse the branching condition.
     std::swap(LHS, RHS);
     SHcc = SHCC::COND_GE;
-    SHocc = SHCC::COND_T;
+    SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETLE: {
     // Swap operands and reverse the branching condition.
     std::swap(LHS, RHS);
     SHcc = SHCC::COND_GT;
-    SHocc = SHCC::COND_T;
+    SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETGT: {
@@ -219,17 +228,21 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
     // Swap operands and reverse the branching condition.
     std::swap(LHS, RHS);
     SHcc = SHCC::COND_HS;
-    SHocc = SHCC::COND_T;
+    SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETULE: {
     // Swap operands and reverse the branching condition.
     std::swap(LHS, RHS);
     SHcc = SHCC::COND_HI;
-    SHocc = SHCC::COND_T;
+    SHocc = SHCC::COND_F;
     break;
   }
   }
+
+  LLVM_DEBUG(dbgs() << "Lowered CC " << CC << " to " 
+                    << getCondName(SHcc) << ":"
+                    << getCondName(SHocc) << " ...\n");
 
   InCC = DAG.getTargetConstant(SHcc, DL, MVT::i8);
   OutCC = DAG.getTargetConstant(SHocc, DL, MVT::i8);
@@ -325,12 +338,11 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
 
     // Constant would fit in immediate
     if (isInt<8>(C->getSExtValue())) {
-      return Op;
+      return DAG.getTargetConstant(*C->getConstantIntValue(), DL, C->getValueType(0));
     }
 
     // Constant would NOT fit in immediate, lower to constpool.
-    SDValue Const =
-        DAG.getSignedTargetConstant(C->getSExtValue(), DL, C->getValueType(0));
+    SDValue Const = DAG.getTargetConstant(*C->getConstantIntValue(), DL, C->getValueType(0));
     return DAG.getNode(SHISD::WRAPPER, DL, C->getValueType(0), Const);
   }
   return SDValue();
@@ -515,7 +527,7 @@ SuperHTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                   bool IsVarArg,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
                                   const SmallVectorImpl<SDValue> &OutVals,
-                                  const SDLoc &dl, SelectionDAG &DAG) const {
+                                  const SDLoc &DL, SelectionDAG &DAG) const {
 
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
@@ -525,13 +537,35 @@ SuperHTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   MachineFunction &MF = DAG.getMachineFunction();
   CCInfo.AnalyzeReturn(Outs, RetCC_SH);
 
-  // Fill out values into registers.
+  // Set up return values.
   SDValue Glue;
-  SmallVector<SDValue, 4> RetOps(1, Chain);
+  SmallVector<SDValue, 5> RetOps;
+  RetOps.push_back(Chain);
+
+  // Copy the result values into the output registers.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
     CCValAssign &VA = RVLocs[i];
+    SDValue OutVal = OutVals[i];
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Glue);
+    // Promote values to the appropriate types.
+    switch(VA.getLocInfo()) {
+    case CCValAssign::SExt:
+      OutVal = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), OutVal);
+      break;
+    case CCValAssign::ZExt:
+      OutVal = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), OutVal);
+      break;
+    case CCValAssign::AExt:
+      OutVal = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), OutVal);
+      break;
+    case CCValAssign::BCvt:
+      OutVal = DAG.getBitcast(VA.getLocVT(), OutVal);
+      break;
+    default:
+      break;
+    }
+
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
@@ -543,17 +577,12 @@ SuperHTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // Update chain.
   RetOps[0] = Chain;
+
+  // Add the glue if we have it.
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  return DAG.getNode(SHISD::RET_GLUE, dl, MVT::Other, RetOps);
-}
-
-SDValue
-SuperHTargetLowering::getPICJumpTableRelocBase(SDValue Table,
-                                               SelectionDAG &DAG) const {
-  return DAG.getRegister(Subtarget->getRegisterInfo()->getGOTRegister(),
-                         getPointerTy(DAG.getDataLayout()));
+  return DAG.getNode(SHISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
 
@@ -563,6 +592,13 @@ SuperHTargetLowering::getPICJumpTableRelocBase(SDValue Table,
 //===----------------------------------------------------------------------===//
 //                              CALL LOWERING
 //===----------------------------------------------------------------------===//
+
+SDValue
+SuperHTargetLowering::getPICJumpTableRelocBase(SDValue Table,
+                                               SelectionDAG &DAG) const {
+  return DAG.getRegister(Subtarget->getRegisterInfo()->getGOTRegister(),
+                         getPointerTy(DAG.getDataLayout()));
+}
 
 SDValue
 SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI,
@@ -715,16 +751,16 @@ SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI,
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InGlue.getNode()) {
+  if (InGlue.getNode())
     Ops.push_back(InGlue);
-  }
 
   Chain = DAG.getNode(SHISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, DL);
-  InGlue = Chain.getValue(1);
+  if (!Ins.empty())
+    InGlue = Chain.getValue(1);
 
   return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG,
                          InVals);
@@ -744,26 +780,12 @@ SDValue SuperHTargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_SH);
 
   // Copy all of the result registers out of their specified physreg.
-  for (CCValAssign const &VA : RVLocs) {
-    SDValue RV;
-    RV = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), VA.getValVT(), InGlue);
-    Chain = RV.getValue(1);
+  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
+    CCValAssign &VA = RVLocs[i];
+    Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), VA.getValVT(), InGlue)
+      .getValue(1);
+    SDValue RV = Chain.getValue(0);
     InGlue = Chain.getValue(2);
-
-    // The callee promoted the return value, so insert an Assert?ext SDNode so
-    // we won't promote the value again in this function.
-    switch (VA.getLocInfo()) {
-    case CCValAssign::SExt:
-      RV = DAG.getNode(ISD::AssertSext, dl, VA.getLocVT(), RV,
-                       DAG.getValueType(VA.getValVT()));
-      break;
-    case CCValAssign::ZExt:
-      RV = DAG.getNode(ISD::AssertZext, dl, VA.getLocVT(), RV,
-                       DAG.getValueType(VA.getValVT()));
-      break;
-    default:
-      break;
-    }
 
     // Truncate the register down to the return value type.
     if (VA.isExtInLoc())

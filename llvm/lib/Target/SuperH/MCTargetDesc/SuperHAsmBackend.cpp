@@ -8,6 +8,8 @@
 
 #include "SuperHAsmBackend.h"
 #include "SuperHFixupKinds.h"
+#include "SuperHSubtarget.h"
+#include "TargetInfo/SuperHTargetInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,6 +24,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
@@ -34,11 +37,14 @@
 
 using namespace llvm;
 
-SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI)
+#define DEBUG_TYPE "sh-asmbackend"
+
+SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, const MCInstrInfo *TII, 
+                                   uint8_t OSABI)
     : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
                        ? llvm::endianness::little
                        : llvm::endianness::big),
-      STI(STI), OSABI(OSABI) {}
+      STI(STI), TII(TII), OSABI(OSABI) {}
 
 bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {
@@ -140,6 +146,9 @@ bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
                                    bool IsResolved) {
   if (!IsResolved) {
     Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+
+    MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+    LLVM_DEBUG(dbgs() << "Recorded relocation " << Info.Name << "...\n");
     return false;
   }
   return true;
@@ -213,6 +222,11 @@ void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, Ctx,
                            getSubtargetInfo(F));
 
+  LLVM_DEBUG({
+    dbgs() << "Applying fixup " << Info.Name << " " << Value;
+    dbgs() << "...\n";
+  });
+
   if (!Value)
     return; // No encoding change.
 
@@ -241,5 +255,5 @@ MCAsmBackend *llvm::createSuperHAsmBackend(const Target &T,
                                            const MCTargetOptions &Options) {
   uint8_t OSABI =
       MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
-  return new SuperHAsmBackend(STI, OSABI);
+  return new SuperHAsmBackend(STI, T.createMCInstrInfo(), OSABI);
 }

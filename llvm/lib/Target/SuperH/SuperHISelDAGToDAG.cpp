@@ -54,6 +54,7 @@ public:
 
   bool SelectAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
   bool SelectFrAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
+  bool SelectImm(SDNode *Op, SDValue N, SDValue &Value);
 
   /// Return a target constant with the specified value of type i4.
   inline SDValue getI4Imm(int64_t Imm, const SDLoc &DL) {
@@ -119,38 +120,32 @@ bool SuperHDAGToDAGISel::SelectInlineAsmMemoryOperand(
 bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
                                     SDValue &Disp) {
   auto DL = CurDAG->getDataLayout();
-  MVT PtrVT = getTargetLowering()->getPointerTy(DL);
 
-  // if the address is a wrapper, get the underlying data.
-  if (N.getOpcode() == SHISD::WRAPPER) {
+  MachineFunction &MF = CurDAG->getMachineFunction();
+  SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
+
+  switch(N.getOpcode()) {
+  case SHISD::WRAPPER:
+  case ISD::LOAD:
+    // Address is a wrapper, get the underlying data.
     Base = N;
-    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32);
+    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
     return true;
+  default:
+    break;
   }
 
-  // Constant displacements has more operands, if there's 2 or more, assume
-  // the address may be a form of displacement.
-  if (N.getNumOperands() >= 2) { 
-    if (const ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-
-      // Handle frame index + offset
-      if (N.getOperand(0).getOpcode() == ISD::FrameIndex) {
-        int RHSC = (int)RHS->getZExtValue();
-        int FI = cast<FrameIndexSDNode>(N.getOperand(0))->getIndex();
-
-        Base = CurDAG->getTargetFrameIndex(FI, PtrVT);
-        Disp = CurDAG->getTargetConstant(RHSC, SDLoc(Op), MVT::i32);
-        return true;
-      }
-
-      // Handle reg + offset
-      if (N.getOpcode() == ISD::ADD) {
-        Base = N.getOperand(0);
-        Disp =
-            CurDAG->getTargetConstant(RHS->getZExtValue(), SDLoc(Op), MVT::i32);
-        return true;
-      }
+  // Address is a constant pointer, lower to constpool.
+  MVT VT = cast<MemSDNode>(Op)->getMemoryVT().getSimpleVT();
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
+    if (auto *CPV = SFI->tryGetConstant(C, *CurDAG, SHCP::no_modifier)) {
+      SDValue TGA = CurDAG->getTargetConstantPool(CPV, VT, Align(4), 0);
+      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, SDLoc(Op), MVT::i32, TGA);
+      Base = SDValue(Res, 0);
+      Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
+      return true;
     }
+
   }
   return false;
 }
@@ -164,10 +159,33 @@ bool SuperHDAGToDAGISel::SelectFrAddr(SDNode *Op, SDValue N, SDValue &Base,
   // if the address is a frame index get the TargetFrameIndex.
   if (const FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
-    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32);
+    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
     return true;
   }
+  return false;
+}
 
+// Selects frame address operands.
+bool SuperHDAGToDAGISel::SelectImm(SDNode *Op, SDValue N, SDValue &Value) {
+  auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
+  auto DL = SDLoc(N);
+
+  MachineFunction &MF = CurDAG->getMachineFunction();
+  SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
+
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
+
+    // Constant would fit in immediate
+    if (isInt<8>(C->getSExtValue())) {
+      Value = CurDAG->getTargetConstant(*C->getConstantIntValue(), DL, C->getValueType(0));
+      return true;
+    }
+
+    if (auto *CPV = SFI->tryGetConstant(C, *CurDAG, SHCP::no_modifier)) {
+      Value = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+      return true;
+    }
+  }
   return false;
 }
 
@@ -250,14 +268,6 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   default:
     break;
   case SHCC::COND_EQ: {
-
-    // TST would be faster in this case.
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      if (C->getSExtValue() == 0) {
-        Res = CurDAG->getMachineNode(SH::TST, DL, MVT::Glue, LHS, LHS);
-        break;
-      }
-    }
     Res = CurDAG->getMachineNode(SH::CMPEQ, DL, MVT::Glue, LHS, RHS);
     break;
   }
@@ -283,6 +293,10 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   }
   case SHCC::COND_PZ: {
     Res = CurDAG->getMachineNode(SH::CMPPZ, DL, MVT::Glue, LHS, RHS);
+    break;
+  }
+  case SHCC::COND_Z: {
+    Res = CurDAG->getMachineNode(SH::TST, DL, MVT::Glue, LHS, LHS);
     break;
   }
   }

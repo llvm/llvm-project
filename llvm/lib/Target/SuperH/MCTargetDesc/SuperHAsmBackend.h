@@ -23,10 +23,11 @@ class raw_ostream;
 class SuperHAsmBackend : public MCAsmBackend {
 protected:
   const MCSubtargetInfo &STI;
+  const MCInstrInfo *TII;
   uint8_t OSABI;
 
 public:
-  SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI);
+  SuperHAsmBackend(const MCSubtargetInfo &STI, const MCInstrInfo *TII, uint8_t OSABI);
   ~SuperHAsmBackend() override = default;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;

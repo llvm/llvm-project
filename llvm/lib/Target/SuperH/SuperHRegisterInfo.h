@@ -45,9 +45,7 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
-  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
-    return true;
-  }
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override { return true; }
 
   // Helpers
   Register getFrameRegister() const;

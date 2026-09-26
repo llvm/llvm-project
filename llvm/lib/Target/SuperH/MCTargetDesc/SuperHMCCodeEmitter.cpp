@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHFixupKinds.h"
+#include "SuperHInstrInfo.h"
 #include "SuperHMCTargetDesc.h"
+#include "SuperHSubtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
@@ -44,9 +47,12 @@ namespace {
 
 class SuperHMCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
+  const SuperHInstrInfo *TII;
 
 public:
-  SuperHMCCodeEmitter(const MCInstrInfo &, MCContext &ctx) : Ctx(ctx) {}
+  SuperHMCCodeEmitter(const MCInstrInfo &II, MCContext &ctx) : 
+    Ctx(ctx),
+    TII((const SuperHInstrInfo *)&II) {}
   SuperHMCCodeEmitter(const SuperHMCCodeEmitter &) = delete;
   SuperHMCCodeEmitter &operator=(const SuperHMCCodeEmitter &) = delete;
   ~SuperHMCCodeEmitter() override = default;
@@ -74,6 +80,9 @@ public:
   unsigned getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
+  
+  MCFixup getFixupForOpcode(const MCInst &MI, const MCExpr *Expr,
+                                 MCContext &Ctx) const;
 
   // Displacement
   template <int Scale>
@@ -86,58 +95,22 @@ public:
   unsigned getPCRelOpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
-
-  unsigned getOpBits(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
-                     const MCSubtargetInfo &STI) const;
 };
 
 } // end namespace
 
 #include "SuperHGenMCCodeEmitter.inc"
 
-// Some SuperH instructions are 32-bits wide.
-//
-// Checks the passed opcode for any bit patterns
-// that must be encoded as 32-bits.
-static bool isOpcode32(uint32_t Opcode) {
-
-  // movi20 & movi20s
-  if ((Opcode & 0xF00F) <= 0x0001)
-    return true;
-
-  // Other SH2A 32-bit instructions
-  if ((Opcode & 0xF00F) == 0x3001)
-    return true;
-
-  // Opcodes bigger than 0xFFFF are always 32-bits.
-  return Opcode > 0xFFFF;
-}
-
-// Helper that gets the bits for the given instruction.
-unsigned SuperHMCCodeEmitter::getOpBits(const MCInst &MI,
-                                        SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const {
-  MCInst Inst = MCInst();
-  Inst.setOpcode(MI.getOpcode());
-  for (unsigned i = 0; i < MI.getNumOperands(); i++) {
-    Inst.addOperand(MCOperand::createImm(0));
-  }
-
-  return getBinaryCodeForInstr(Inst, Fixups, STI);
-}
-
 // @getFixupForOpcode - Helper that gets the neccesary fixup for
 // the given opcode.
 // This is neccesary due to the various opcodes that access memory
 // have different scaling factors applied.
-static MCFixup getFixupForOpcode(unsigned Opcode, const MCExpr *Expr,
-                                 MCContext &Ctx) {
+MCFixup SuperHMCCodeEmitter::getFixupForOpcode(const MCInst &MI, const MCExpr *Expr,
+                                               MCContext &Ctx) const {
+  int Size = TII->getInstSizeInBytes(MI);
+  MCFixupKind Kind = Size == 4 ? FK_Data_4 : FK_Data_2;
 
-  // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
-  //        We handle those quite crudely.
-  MCFixupKind Kind = isOpcode32(Opcode) ? FK_Data_4 : FK_Data_2;
-
-  switch (Opcode) {
+  switch (MI.getOpcode()) {
   default:
     break;
 
@@ -190,22 +163,16 @@ void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                             SmallVectorImpl<char> &CB,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
+  auto Size = TII->getInstSizeInBytes(MI);
   uint64_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
 
-  // NOTE:  All base instructions are 16-bit in SH ASM
-  //        But some instructions may be 32-bit for eg. SH2A or the DSP
-  //        extensions. This is ugly, but it'll work.
-  if (isOpcode32(OpCode)) {
-    support::endian::write(CB, (uint32_t)OpCode,
-                           Ctx.getAsmInfo().isLittleEndian()
-                               ? llvm::endianness::little
-                               : llvm::endianness::big);
-  } else {
-    support::endian::write(CB, (uint16_t)OpCode,
-                           Ctx.getAsmInfo().isLittleEndian()
-                               ? llvm::endianness::little
-                               : llvm::endianness::big);
+  // Fill buffer of data to insert to the instruction stream.
+  bool SwapValue = !Ctx.getAsmInfo().isLittleEndian();
+  for (unsigned i = 0; i < Size; ++i) {
+    unsigned Idx = SwapValue ? (Size - 1 - i) : i;
+    CB.push_back(uint8_t(((OpCode >> (Idx * 8)) & 0xff)));
   }
+
   ++MCNumEmitted;
 }
 
@@ -293,7 +260,7 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI,
     return 0;
   }
   case MCExpr::ExprKind::SymbolRef: {
-    Fixups.push_back(getFixupForOpcode(MI.getOpcode(), Expr, Ctx));
+    Fixups.push_back(getFixupForOpcode(MI, Expr, Ctx));
     return 0;
   }
   case MCExpr::ExprKind::Constant: {

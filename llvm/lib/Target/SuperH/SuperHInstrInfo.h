@@ -39,10 +39,28 @@ enum CondCode {
   COND_HS, //!< Higher than or same
   COND_PL, //!< Greater than 0
   COND_PZ, //!< Greater than or equal to 0
+  COND_Z,  //!< Zero
   COND_T,  //!< True
   COND_F,  //!< False
   COND_INVALID
 };
+
+static StringRef getCondName(CondCode CC) {
+  switch(CC) {
+  default:
+    return "<invalid>";
+  case COND_EQ: return "eq";
+  case COND_GT: return "gt";
+  case COND_GE: return "ge";
+  case COND_HI: return "hi";
+  case COND_HS: return "hs";
+  case COND_PL: return "pl";
+  case COND_PZ: return "pz";
+  case COND_Z:  return "z";
+  case COND_T:  return "t";
+  case COND_F:  return "f";
+  }
+}
 
 } // end of namespace SHCC
 
@@ -71,6 +89,7 @@ public:
 
   // Instruction Info
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+  unsigned getInstSizeInBytes(const MCInst &MI) const;
 
   /// Return the noop instruction to use for a noop.
   MCInst getNop() const override;

@@ -141,18 +141,18 @@ class SHScaledOp<ValueType vt, string name, int scale, bit encode = 1>
 // Immediate
 class SHImmOp<int width, ValueType vt>
       : Operand<vt>, ImmLeaf<vt, [{ return isInt<}] # width # [{>(Imm); }]> {
-    let ParserMatchClass = SHImmClass<width>;
-    let OperandType = "OPERAND_IMMEDIATE";
-    let PrintMethod = "printImm";
-    let MCOperandPredicate = [{
-      int64_t Imm;
-      if (MCOp.evaluateAsConstantImm(Imm))
-        return isInt<}] # width # [{>(Imm)
-      return false;
-    }];
+  let ParserMatchClass = SHImmClass<width>;
+  let OperandType = "OPERAND_IMMEDIATE";
+  let PrintMethod = "printImm";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<}] # width # [{>(Imm)
+    return false;
+  }];
 }
 
-def imm8 : SHImmOp<8, i32>;
+def imm8  : SHImmOp<8, i32>;
 
 // Displacement
 class SHDispOp<int width, ValueType vt, int scale = 0>
@@ -231,14 +231,19 @@ def IGPR    : SHIndirectRegOp<GPR, "">;
 def IGPRInc : SHIndirectRegOp<GPR, "Inc">;
 def IGPRDec : SHIndirectRegOp<GPR, "Dec">;
 
+let WantsRoot = true in {
+
 // Addressing mode pattern reg+disp
-let WantsRoot = true in
 def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
 
 // Addressing mode pattern reg+disp (Frame)
-let WantsRoot = true in
 def fraddr : ComplexPattern<iPTR, 2, "SelectFrAddr">;
 
+// Immediate lowering.
+def anyimm8 : ComplexPattern<i8, 1, "SelectImm", [imm]>;
+def anyimm16 : ComplexPattern<i16, 1, "SelectImm", [imm]>;
+def anyimm32 : ComplexPattern<i32, 1, "SelectImm", [imm]>;
+}
 
 
 
@@ -322,7 +327,7 @@ let hasSideEffects = 0 in
 def MOVI          : InstRnI8<0b1110000000000000,
                             (outs GPR:$Rn), (ins imm8:$imm),
                             "mov $imm,$Rn",
-                            [(set i32:$Rn, imm:$imm)]>;
+                            []>;
 
 // mova @(disp, PC), R0
 let hasSideEffects = 0, mayLoad = 1, Uses = [PC], Defs = [R0], isDelayIllegal = 1 in
@@ -1450,7 +1455,7 @@ def Select32    : SHSelectPseudo<(outs GPR:$dst),
                                  (SHselectcc i32:$src, i32:$src2, timm:$cc))]>;
 
 //===--------------------------------------------------------------------------===//
-// Frame Load/Store
+// Load/Store
 //===--------------------------------------------------------------------------===//
 
 let mayLoad = 1, isReMaterializable = 1 in {
@@ -1488,13 +1493,13 @@ def MOVLLF    : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                             []>;
 }
 
-let mayStore = 1, isReMaterializable = 1 in {
+let isReMaterializable = 1 in {
 
 // STORE TO ADDRESS
 let Defs = [R0, R1] in
 def MOVBSP    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVBSP $src, $dst",
-                             []>;
+                             [(truncstorei8 i32:$src, addr:$dst)]>;
 
 let Defs = [R0, R1] in
 def MOVWSP    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
@@ -1510,20 +1515,37 @@ def MOVLSP    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
 let Defs = [R0, R1] in
 def MOVBSF    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVBSF $src, $dst",
-                             []>;
+                             [(truncstorei8 i32:$src, fraddr:$dst)]>;
 
 let Defs = [R0, R1] in
 def MOVWSF    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVWSF $src, $dst",
-                             []>;
+                             [(truncstorei16 i32:$src, fraddr:$dst)]>;
 
 let Defs = [R1] in
 def MOVLSF    : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVLSF $src, $dst",
-                             []>;
+                             [(store i32:$src, fraddr:$dst)]>;
 
 }
 
+//===--------------------------------------------------------------------------===//
+// Load Immediate
+//===--------------------------------------------------------------------------===//
+
+let isReMaterializable = 1 in {
+def MOVIB         : SHPseudo<(outs GPR:$dst), (ins i8imm:$src),
+                             "! MOVIB $src, $dst",
+                             [(set i8:$dst, anyimm8:$src)]>;
+
+def MOVIW         : SHPseudo<(outs GPR:$dst), (ins i16imm:$src),
+                             "! MOVIW $src, $dst",
+                             [(set i16:$dst, anyimm16:$src)]>;
+
+def MOVIL         : SHPseudo<(outs GPR:$dst), (ins i32imm:$src),
+                             "! MOVIL $src, $dst",
+                             [(set i32:$dst, anyimm32:$src)]>;
+}
 
 
 
@@ -1637,14 +1659,3 @@ def : Pat<(i32 (sextloadi16    i32:$src)),        (EXTSW (MOVWL     i32:$src))>;
 def : Pat<(i32 (zextloadi1     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
 def : Pat<(i32 (zextloadi8     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
 def : Pat<(i32 (zextloadi16    i32:$src)),        (EXTUW (MOVWL     i32:$src))>;
-
-//===--------------------------------------------------------------------------===//
-// Stores
-//===--------------------------------------------------------------------------===//
-def : Pat<(store          i32:$src,    i32:$dst),      (MOVLS   i32:$src,    i32:$dst)>;
-def : Pat<(truncstorei8   i32:$src,   addr:$dst),      (MOVBSP  i32:$src,   addr:$dst)>;
-def : Pat<(truncstorei16  i32:$src,   addr:$dst),      (MOVWSP  i32:$src,   addr:$dst)>;
-def : Pat<(store          i32:$src,   addr:$dst),      (MOVLSP  i32:$src,   addr:$dst)>;
-def : Pat<(truncstorei8   i32:$src, fraddr:$dst),      (MOVBSF  i32:$src, fraddr:$dst)>;
-def : Pat<(truncstorei16  i32:$src, fraddr:$dst),      (MOVWSF  i32:$src, fraddr:$dst)>;
-def : Pat<(store          i32:$src, fraddr:$dst),      (MOVLSF  i32:$src, fraddr:$dst)>;

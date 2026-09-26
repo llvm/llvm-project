@@ -30,9 +30,16 @@ public:
 
 // This part is for ELF object output
 class SuperHTargetELFStreamer : public SuperHTargetStreamer {
+private:
+  ELFObjectWriter &W;
+  const MCSubtargetInfo &STI;
+
 public:
   SuperHTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
   MCELFStreamer &getStreamer();
+
+  void setEFlags();
+  unsigned getCPUTypeFlag() const;
 };
 } // end namespace llvm
 
