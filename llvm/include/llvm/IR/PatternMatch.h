@@ -2995,6 +2995,12 @@ inline CmpClass_match<LHS, RHS, ICmpInst, true> m_c_ICmp(const LHS &L,
   return CmpClass_match<LHS, RHS, ICmpInst, true>(L, R);
 }
 
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, CmpInst, true> m_c_Cmp(const LHS &L,
+                                                       const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst, true>(L, R);
+}
+
 /// Matches a specific opcode with LHS and RHS in either order.
 template <typename LHS, typename RHS>
 inline SpecificBinaryOp_match<LHS, RHS, true>

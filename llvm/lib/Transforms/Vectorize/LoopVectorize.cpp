@@ -2723,8 +2723,24 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (Legal->hasUncountableEarlyExit() && TheLoop->getLoopLatch() != E)
       continue;
     auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
-    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-      AddToWorklistIfAllowed(Cmp);
+    if (!Cmp || !TheLoop->contains(Cmp) || !Cmp->hasOneUse())
+      continue;
+
+    // If we have an exit condition that is actually two conditions (one
+    // countable and the other uncountable) combined via an or, only add the
+    // countable comparison as a uniform value.
+    if (Legal->hasUncountableExitWithSideEffects() &&
+        TheLoop->getLoopLatch() == E) {
+      if (Instruction *Countable =
+              Legal->findCountableComparisonInCombinedCondition(Cmp)) {
+        if (Countable->hasOneUse())
+          AddToWorklistIfAllowed(Countable);
+        continue;
+      }
+    }
+
+    // Normal exit comparisons are uniform.
+    AddToWorklistIfAllowed(Cmp);
   }
 
   auto PrevVF = VF.divideCoefficientBy(2);
@@ -6485,6 +6501,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   //       the presence of an uncountable exit and the presence of stores in
   //       the loop inside handleUncountableEarlyExits itself.
   if (Legal->hasUncountableEarlyExit()) {
+    if (!RUN_VPLAN_PASS(VPlanTransforms::splitCombinedExits, *VPlan0, PSE,
+                        OrigLoop))
+      return nullptr;
+
     // TODO: Check target preference for style.
     UncountableExitStyle EEStyle =
         Legal->hasUncountableExitWithSideEffects()
