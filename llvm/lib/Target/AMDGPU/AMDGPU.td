@@ -3134,6 +3134,9 @@ def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
 
 def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarryInsts()">;
 
+def UseVGPRIndexMode : Predicate<"Subtarget->useVGPRIndexMode()">;
+def NotUseVGPRIndexMode : Predicate<"!Subtarget->useVGPRIndexMode()">;
+
 def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
 def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,

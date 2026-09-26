@@ -3088,6 +3088,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
+  case AMDGPU::G_AMDGPU_REG_LOAD:
+  case AMDGPU::G_AMDGPU_REG_STORE: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(B, MI, {1});
+    return;
+  }
   case AMDGPU::G_AMDGPU_BUFFER_LOAD:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
@@ -4486,6 +4492,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Size = getSizeInBits(MI.getOperand(i).getReg(), MRI, *TRI);
       OpdsMapping[i] = AMDGPU::getValueMapping(Bank, Size);
     }
+    break;
+  }
+  case AMDGPU::G_AMDGPU_REG_LOAD:
+  case AMDGPU::G_AMDGPU_REG_STORE: {
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
     break;
   }
   case AMDGPU::G_AMDGPU_BUFFER_LOAD:

@@ -1060,6 +1060,124 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
 
+//===----------------------------------------------------------------------===//
+// VGPR "as memory" indexed load/store pseudos (address space 13)
+//===----------------------------------------------------------------------===//
+
+// An entry in the VLdStIdxOpcodeInfo searchable table.
+class VLdStIdxOpcodeInfo<int size, bit isStore, bit isGPRIdx> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bits<12> BitWidth = size;
+  bit IsStore = isStore;
+  bit IsGPRIdx = isGPRIdx;
+}
+
+foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
+              VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
+              VReg_512, VReg_1024] in {
+  // $offset and the index are in dwords. As with V_INDIRECT_REG_*_MOVREL and
+  // _GPR_IDX, the movrel form reads the index from M0 and the GPR_IDX form
+  // takes it in an SGPR and clobbers M0. The storage is the whole register
+  // file, which no operand can name, so these are memory accesses with an MMO.
+  def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data),
+    (ins i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 0, 0> {
+      let mayLoad = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+      let Uses = [M0, EXEC];
+  }
+  def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 1, 0> {
+      let mayStore = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+      let Uses = [M0, EXEC];
+  }
+  def V_LOAD_IDX_GPR_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data),
+    (ins SReg_32:$idx, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 0, 1> {
+      let mayLoad = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+      let Uses = [M0, EXEC];
+      let Defs = [M0];
+  }
+  def V_STORE_IDX_GPR_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 1, 1> {
+      let mayStore = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+      let Uses = [M0, EXEC];
+      let Defs = [M0];
+  }
+}
+
+// v_movrel[sd]_b32 for the moves the pseudos above expand into. The verifier
+// requires a movrel to use the tuple it indexes, and no operand can name the
+// register file, so these have their own opcodes, mapped back by
+// AMDGPUMCInstLower. AMDGPULowerVGPREncoding needs their named operand table.
+let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
+    UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
+  def V_MOVRELS_B32_as_mem
+      : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;
+  def V_MOVRELD_B32_as_mem
+      : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
+}
+
+// An (add idx, imm) index folds the constant into $offset. The movrel patterns
+// take the index as an M0 input, so selection itself writes M0.
+multiclass VRegIdxLoadStorePat<ValueType vt> {
+  defvar load_inst = !cast<Instruction>("V_LOAD_IDX_B"#vt.Size);
+  defvar store_inst = !cast<Instruction>("V_STORE_IDX_B"#vt.Size);
+  defvar gpr_idx_load_inst = !cast<Instruction>("V_LOAD_IDX_GPR_IDX_B"#vt.Size);
+  defvar gpr_idx_store_inst =
+      !cast<Instruction>("V_STORE_IDX_GPR_IDX_B"#vt.Size);
+
+  let OtherPredicates = [NotUseVGPRIndexMode] in {
+    def : GCNPat<
+      (vt (SIreg_load (add M0, (i32 imm:$offset)))),
+      (load_inst imm:$offset)>;
+    def : GCNPat<
+      (vt (SIreg_load M0)),
+      (load_inst 0)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, (add M0, (i32 imm:$offset))),
+      (store_inst $data, imm:$offset)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, M0),
+      (store_inst $data, 0)>;
+  }
+
+  let OtherPredicates = [UseVGPRIndexMode] in {
+    def : GCNPat<
+      (vt (SIreg_load (add i32:$idx, (i32 imm:$offset)))),
+      (gpr_idx_load_inst $idx, imm:$offset)>;
+    def : GCNPat<
+      (vt (SIreg_load i32:$idx)),
+      (gpr_idx_load_inst $idx, 0)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, (add i32:$idx, (i32 imm:$offset))),
+      (gpr_idx_store_inst $data, $idx, imm:$offset)>;
+    def : GCNPat<
+      (SIreg_store vt:$data, i32:$idx),
+      (gpr_idx_store_inst $data, $idx, 0)>;
+  }
+}
+
+foreach vt = !listconcat(
+    Reg32Types.types, Reg64Types.types, Reg96Types.types, Reg128Types.types,
+    Reg160Types.types, Reg192Types.types, Reg224Types.types, Reg256Types.types,
+    Reg288Types.types, Reg320Types.types, Reg352Types.types, Reg384Types.types,
+    Reg512Types.types, Reg1024Types.types) in
+defm : VRegIdxLoadStorePat<vt>;
+
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
 // vector operand appears only twice, once as def and once as use. Using this
 // pseudo avoids problems with the Two Address instructions pass.
@@ -4826,6 +4944,22 @@ def G_AMDGPU_BUFFER_STORE_FORMAT : BufferStoreGenericInstruction;
 def G_AMDGPU_BUFFER_STORE_FORMAT_D16 : BufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT : TBufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT_D16 : TBufferStoreGenericInstruction;
+
+// GlobalISel equivalents, selected through the same patterns (GINodeEquiv in
+// AMDGPUGISel.td).
+def G_AMDGPU_REG_LOAD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_REG_STORE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$data, type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
 
 def G_AMDGPU_FMIN_LEGACY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

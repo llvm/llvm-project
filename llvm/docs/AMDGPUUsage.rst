@@ -1380,6 +1380,10 @@ supported for the ``amdgcn`` target.
   ``alloca`` is not visible while in a called function. Attempting to dereference
   a pointer to such memory in a called function is undefined behavior.
 
+  Pointers can be cast to and from the generic address space, which uses a
+  :ref:`synthetic aperture<amdgpu-synthetic-apertures>`; a generic pointer
+  obtained this way cannot be dereferenced.
+
 **Barrier**
   This address space represents barrier IDs (introduced in GFX12) as addresses.
   It does not map directly to any addressable memory and is implemented using
@@ -1429,6 +1433,7 @@ The following synthetic apertures are defined:
     Name         Number  Mask           Corresponding :ref:`Address Space<amdgpu-address-spaces-table>`
     ============ ======= ============== ================================================================
     BARRIER      1       ``0x00000001`` Barrier
+    VGPR         3       ``0x00000003`` VGPR
     ============ ======= ============== ================================================================
 
 Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:

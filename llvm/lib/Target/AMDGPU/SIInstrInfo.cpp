@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -306,6 +307,11 @@ bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
 // Returns true if the result of a VALU instruction depends on exec.
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   assert(isVALU(MI, /*AllowLDSDMA=*/true));
+
+  // Which lanes are active is part of what such an access does, so its implicit
+  // use of EXEC is not ignorable; otherwise it could move across an EXEC write.
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+    return true;
 
   // If it is convergent it depends on EXEC.
   if (MI.isConvergent())
@@ -660,6 +666,24 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     if (DataOpIdx == -1) // LDS DMA
       return false;
     Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
+    return true;
+  }
+
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    // The movrel form's index is whatever M0 holds, which can change between
+    // accesses, so it has no base operand to report.
+    if (!LdStIdx->isGPRIdx())
+      return false;
+    BaseOp = &LdStIdx->getIdxOp();
+    OffsetOp = &LdStIdx->getOffsetOp();
+    if (!BaseOp->isReg() || !BaseOp->getReg().isVirtual())
+      return false;
+
+    BaseOps.push_back(BaseOp);
+    Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
+
+    // Get appropriate operand, and compute width accordingly.
+    Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
 
@@ -4304,6 +4328,15 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.isBundle() || MIb.isBundle())
     return false;
 
+  // These only alias each other, and only on overlapping dword ranges.
+  const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
+  const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
+  if (IsLdStIdxA || IsLdStIdxB) {
+    if (IsLdStIdxA && IsLdStIdxB)
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    return true;
+  }
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,
@@ -7757,6 +7790,18 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
+  // The GPR_IDX form needs its index in an SGPR. For the movrel form, a
+  // divergent M0 write is waterfalled where the copy into M0 is lowered.
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    if (!LdStIdx->isGPRIdx())
+      return CreatedBB;
+    MachineOperand *Idx = &LdStIdx->getIdxOp();
+    // A physical VGPR index is waterfalled too; isSGPRReg covers both.
+    if (Idx->isReg() && !RI.isSGPRReg(MRI, Idx->getReg()))
+      CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
+    return CreatedBB;
+  }
+
   // Legalize PHI
   // The register class of the operands must be the same type as the register
   // class of the output.
@@ -8172,7 +8217,7 @@ void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
 
 void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
                              MachineDominatorTree *MDT) const {
-  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
+  MapVector<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
   DenseMap<MachineInstr *, bool> V2SPhyCopiesToErase;
   while (!Worklist.empty()) {
     MachineInstr &Inst = *Worklist.top();
@@ -8195,6 +8240,9 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
     if (Entry.first->getOpcode() == AMDGPU::SI_CALL_ISEL)
       createWaterFallForSiCall(Entry.first, MDT, Entry.second.MOs,
                                Entry.second.SGPRs);
+    else if (isa<AMDGPUMI::VLoadStoreIdxInst>(Entry.first))
+      generateWaterFallLoop(*this, *Entry.first, Entry.second.MOs, MDT, nullptr,
+                            nullptr, Entry.second.SGPRs);
   }
 
   for (std::pair<MachineInstr *, bool> Entry : V2SPhyCopiesToErase)
@@ -8238,16 +8286,45 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
 void SIInstrInfo::handleCopyToPhysHelper(
     SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
     MachineRegisterInfo &MRI,
-    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    MapVector<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
-  if (DstReg == AMDGPU::M0) {
-    createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    V2SPhyCopiesToErase.try_emplace(&Inst, true);
-    return;
-  }
   Register SrcReg = Inst.getOperand(1).getReg();
   MachineBasicBlock::iterator I = Inst.getIterator();
   MachineBasicBlock::iterator E = Inst.getParent()->end();
+  if (DstReg == AMDGPU::M0) {
+    // A VGPR "as memory" access uses M0 in every lane, so, like the SGPR
+    // arguments of SI_CALL_ISEL below, it is waterfalled. Other readers of M0
+    // take lane 0.
+    SmallVector<MachineOperand *, 4> IdxOps;
+    bool HasOtherReaders = false;
+    while (++I != E) {
+      auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*I);
+      if (LdSt && !LdSt->isGPRIdx())
+        IdxOps.push_back(I->findRegisterUseOperand(DstReg, &RI));
+      else if (I->readsRegister(DstReg, &RI))
+        HasOtherReaders = true;
+      if (I->findRegisterDefOperand(DstReg, &RI))
+        break;
+    }
+    // The waterfall loop reads the whole register.
+    if (!IdxOps.empty() && Inst.getOperand(1).getSubReg()) {
+      SrcReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*Inst.getParent(), Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
+              SrcReg)
+          .addReg(Inst.getOperand(1).getReg(), {},
+                  Inst.getOperand(1).getSubReg());
+    }
+    for (MachineOperand *MO : IdxOps) {
+      MO->setReg(SrcReg);
+      V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[MO->getParent()];
+      V2SCopyInfo.MOs.push_back(MO);
+      V2SCopyInfo.SGPRs.push_back(DstReg);
+    }
+    if (IdxOps.empty() || HasOtherReaders)
+      createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
+    V2SPhyCopiesToErase.try_emplace(&Inst, true);
+    return;
+  }
   // Only search current block since phyreg's def & use cannot cross
   // blocks when MF.NoPhi = false.
   while (++I != E) {
@@ -8282,7 +8359,7 @@ void SIInstrInfo::handleCopyToPhysHelper(
 
 void SIInstrInfo::moveToVALUImpl(
     SIInstrWorklist &Worklist, MachineDominatorTree *MDT, MachineInstr &Inst,
-    DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
+    MapVector<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
 
   MachineBasicBlock *MBB = Inst.getParent();
@@ -11274,9 +11351,14 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
+  // Each lane reads its own registers, however uniform the index.
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+    return ValueUniformity::NeverUniform;
+
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. So are VGPR address space loads, before they become
+  // G_AMDGPU_REG_LOAD.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
@@ -11287,7 +11369,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
 
     if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
           return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::VGPR;
         })) {
       // At least one MMO in a non-global address space.
       return ValueUniformity::NeverUniform;
@@ -11382,6 +11465,10 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
 
     return ValueUniformity::Default;
   }
+
+  // As above, after instruction selection.
+  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
+    return ValueUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
