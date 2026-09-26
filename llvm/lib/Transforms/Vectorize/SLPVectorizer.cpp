@@ -21027,11 +21027,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         GatherNodes.push_back(E);
       }
     } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
-               E && TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E && !TEUserNeedsEmitFirst &&
+               TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
                E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
                !E->UserTreeIndex.UserTE->isGather()) {
       // Regular gathers reuse only perfectly matched transformed nodes of the
-      // same user.
+      // same user. Gathers, emitted before their user, cannot reuse transformed
+      // nodes, which are emitted with the user.
       GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
