@@ -15,11 +15,18 @@
 namespace Fortran::runtime {
 // A simple dynamic array that only supports appending to avoid std::vector.
 template <typename T> struct DynamicArray {
-  ~DynamicArray() {
+  ~DynamicArray() { clear(); }
+
+  // clear() - remove all elements from array and free allocated memory.
+  void clear() {
+    if (capacity_ == 0) {
+      return;
+    }
     for (std::size_t i = 0; i < size_; ++i) {
       data_[i].~T();
     }
     FreeMemory(data_);
+    size_ = capacity_ = 0;
   }
 
   void emplace_back(T &&value) {
@@ -47,6 +54,8 @@ template <typename T> struct DynamicArray {
 
   T *begin() const { return data_; }
   T *end() const { return data_ + size_; }
+  std::size_t size() const { return size_; }
+  bool empty() const { return 0 == size_; }
 
 private:
   T *data_ = nullptr;
