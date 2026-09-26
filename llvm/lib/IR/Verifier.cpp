@@ -3494,6 +3494,17 @@ void Verifier::visitFunction(const Function &F) {
           PrintDecl);
   }
 
+  // A function used as the oracle of llvm.speculative.load may not be
+  // referenced in any other way.
+  if (isMaterialized && any_of(F.uses(), isSpeculativeLoadOracleUse)) {
+    Check(F.hasLocalLinkage(), "oracle function must have local linkage", &F);
+    for (const Use &U : F.uses())
+      Check(isSpeculativeLoadOracleUse(U),
+            "oracle function may only be used as the oracle operand of "
+            "llvm.speculative.load",
+            &F, U.getUser());
+  }
+
   auto *N = F.getSubprogram();
   HasDebugInfo = (N != nullptr);
   if (!HasDebugInfo)
