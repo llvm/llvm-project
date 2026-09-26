@@ -29427,6 +29427,96 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
                      AnyPred, Default, LastB.getOperand(1));
 }
 
+// Optimize CSEL of a CSEL with the same flags:
+// (CSEL (CSEL a b  cc F) d cc F) => (CSEL a d cc F)
+// (CSEL (CSEL a b !cc F) d cc F) => (CSEL b d cc F)
+// (CSEL d (CSEL a b  cc F) cc F) => (CSEL d b cc F)
+// (CSEL d (CSEL a b !cc F) cc F) => (CSEL d a cc F)
+// (CSEL (OP x.. (CSEL a b  cc F) y..) d cc F) => (CSEL (OP x.. a y..) d cc F)
+// (CSEL (OP x.. (CSEL a b !cc F) y..) d cc F) => (CSEL (OP x.. b y..) d cc F)
+// (CSEL d (OP x.. (CSEL a b  cc F) y..) cc F) => (CSEL d (OP x.. b y..) cc F)
+// (CSEL d (OP x.. (CSEL a b !cc F) y..) cc F) => (CSEL d (OP x.. a y..) cc F)
+// CSINC/CSINV/CSNEG absorb (ADD x 1), (XOR x -1), (SUB 0 x), respectively.
+static SDValue foldCSELOfCSELSameFlags(SDNode *N, SelectionDAG &DAG) {
+  SDValue Flags = N->getOperand(3);
+  auto CC = static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+  // AArch64CC::getInvertedCondCode for AL returns NV and vice versa. Which may
+  // select the wrong value. So ignore those cases entirely as they rarely used.
+  if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+    return SDValue();
+
+  auto GetSelectedInnerCSELValue = [](SDValue Inner, unsigned ValNo,
+                                      AArch64CC::CondCode CC,
+                                      SDValue Flags) -> SDValue {
+    if (Inner.getOpcode() != AArch64ISD::CSEL || Inner.getOperand(3) != Flags)
+      return SDValue();
+    auto ICC =
+        static_cast<AArch64CC::CondCode>(Inner->getConstantOperandVal(2));
+    bool TakesTVal;
+    if (ICC == CC)
+      TakesTVal = (ValNo == 0);
+    else if (ICC == AArch64CC::getInvertedCondCode(CC))
+      TakesTVal = (ValNo != 0);
+    else
+      return SDValue();
+    return Inner.getOperand(TakesTVal ? 0 : 1);
+  };
+
+  for (unsigned OperandNo : {0, 1}) {
+    SDValue Val = N->getOperand(OperandNo);
+
+    // The expression is the inner CSEL itself, so directly substitute.
+    if (SDValue SelectedVal =
+            GetSelectedInnerCSELValue(Val, OperandNo, CC, Flags)) {
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[OperandNo] = SelectedVal;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+
+    unsigned Opc = Val.getOpcode();
+    if (Val->getNumValues() != 1 || Val.getNumOperands() == 0 ||
+        !DAG.isSafeToSpeculativelyExecuteNode(Val.getNode()) ||
+        any_of(Val->op_values(), [](SDValue Operand) {
+          EVT VT = Operand.getValueType();
+          return VT == MVT::Other || VT == MVT::Glue;
+        }))
+      continue;
+
+    // Only profitable to duplicate forms that can be folded back into the CSEL
+    // as CSINC/CSINV/CSNEG: (ADD x 1), (XOR x -1), and (SUB 0 x).
+    if (!Val.hasOneUse()) {
+      bool IsProfitableFormToFold =
+          Val.getNumOperands() == 2 &&
+          ((Opc == ISD::ADD && isOneConstant(Val.getOperand(1))) ||
+           (Opc == ISD::XOR && isAllOnesConstant(Val.getOperand(1))) ||
+           (Opc == ISD::SUB && isNullConstant(Val.getOperand(0))));
+      if (!IsProfitableFormToFold)
+        continue;
+    }
+
+    // The inner CSEL is an operand of the OP expression, so the expression has
+    // to be rebuilt around the substituted value.
+    for (unsigned InnerOperandNo = 0; InnerOperandNo != Val.getNumOperands();
+         ++InnerOperandNo) {
+      SDValue Inner = Val.getOperand(InnerOperandNo);
+      SDValue SelectedInner =
+          GetSelectedInnerCSELValue(Inner, OperandNo, CC, Flags);
+      if (!SelectedInner)
+        continue;
+      SmallVector<SDValue, 4> Ops(Val->op_values());
+      Ops[InnerOperandNo] = SelectedInner;
+      SDNodeFlags ValFlags =
+          Val->getFlags() & ~SDNodeFlags::PoisonGeneratingFlags;
+      SDValue NewVal =
+          DAG.getNode(Opc, SDLoc(Val), Val.getValueType(), Ops, ValFlags);
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[OperandNo] = NewVal;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+  }
+  return SDValue();
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -29434,6 +29524,9 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL x, x, cc -> x
   if (N->getOperand(0) == N->getOperand(1))
     return N->getOperand(0);
+
+  if (SDValue R = foldCSELOfCSELSameFlags(N, DAG))
+    return R;
 
   if (SDValue R = foldCSELOfCSEL(N, DAG))
     return R;
