@@ -66,3 +66,12 @@ const char* hello_macro = HELLO;
 const char* preprocessor_concatenation = HELLO_WORLD;
 //CHECK: c"\C8\85\93\93\96@\E6\96\99\93\84Z\00"
 //CHECK-UTF8: c"Hello World!\00"
+
+void asm_labeled_fn(void) __asm__("\174asm_sym");
+void asm_labeled_fn(void) {}
+//CHECK: define{{.*}}void @"@asm_sym"(
+//CHECK-UTF8: define{{.*}}void @"@asm_sym"(
+
+void asm_stmt_fn(void) { __asm__("\225\226\227nop"); }
+//CHECK: call void asm{{.*}}"nopnop"
+//CHECK-UTF8: call void asm{{.*}}"nopnop"

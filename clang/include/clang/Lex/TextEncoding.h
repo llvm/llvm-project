@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LEX_TEXTENCODING_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -17,16 +18,22 @@ class TextEncodingConverter;
 } // namespace llvm
 
 namespace clang {
-enum ConversionAction { CA_NoConversion, CA_ToLiteralEncoding };
+enum ConversionAction {
+  CA_NoConversion,
+  CA_ToSystemEncoding,
+  CA_ToLiteralEncoding
+};
 
 class TextEncoding {
   llvm::StringRef LiteralEncoding;
   std::unique_ptr<llvm::TextEncodingConverter> ToLiteralEncodingConverter;
+  std::unique_ptr<llvm::TextEncodingConverter> ToSystemEncodingConverter;
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
   static std::error_code
-  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts);
+  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts,
+                           clang::TargetInfo &TInfo);
 
   llvm::StringRef getLiteralEncoding() { return LiteralEncoding; }
 };
