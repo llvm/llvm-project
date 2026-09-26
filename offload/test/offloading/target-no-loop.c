@@ -72,6 +72,48 @@ int main(void) {
   if (red != 1024)
     ++errors;
 
+  // No-loop kernel with a lastprivate variable (final value from thread executing last iteration)
+  for (int i = 0; i < 1024; ++i)
+    array[i] = 1;
+
+  int last = -1;
+#pragma omp target teams distribute parallel for lastprivate(last)
+  for (int i = 0; i < 1024; ++i) {
+    array[i] = i + 1;
+    last = i;
+  }
+  errors += check_errors(array);
+#ifdef ASSERT_LASTPRIVATE
+  if (last != 1023)
+    ++errors;
+#endif
+
+  // No-loop kernel with a lastprivate loop counter (final value from evaluation at distribution level)
+  for (int i = 0; i < 1024; ++i)
+    array[i] = 1;
+  int iv = -1;
+#pragma omp target teams distribute parallel for lastprivate(iv)
+  for (iv = 0; iv < 1024; ++iv)
+    array[iv] = iv + 1;
+  errors += check_errors(array);
+#ifdef ASSERT_LASTPRIVATE
+  if (iv != 1024)
+    ++errors;
+#endif
+
+  // No-loop simd kernel with a lastprivate loop counter
+  for (int i = 0; i < 1024; ++i)
+    array[i] = 1;
+  int simd_iv = -1;
+#pragma omp target teams distribute parallel for simd lastprivate(simd_iv)
+  for (simd_iv = 0; simd_iv < 1024; ++simd_iv)
+    array[simd_iv] = simd_iv + 1;
+  errors += check_errors(array);
+#ifdef ASSERT_LASTPRIVATE
+  if (simd_iv != 1024)
+    ++errors;
+#endif
+
   printf("number of errors: %d\n", errors);
   return 0;
 }
@@ -88,4 +130,10 @@ int main(void) {
 // CHECK:  info: #Args: 2 Teams x Thrds:   16x  16 {{.*}}
 // CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
 // CHECK:  info: #Args: 3 Teams x Thrds:   16x  16 {{.*}}
+// CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
+// CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
+// CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
 // CHECK:  number of errors: 0

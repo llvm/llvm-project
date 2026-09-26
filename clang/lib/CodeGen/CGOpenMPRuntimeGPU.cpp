@@ -1171,9 +1171,7 @@ bool CGOpenMPRuntimeGPU::canPromoteToNoLoop(
           DKind == OMPD_target_teams_distribute_parallel_for_simd) &&
          LangOpts.OpenMPTeamSubscription && LangOpts.OpenMPThreadSubscription &&
          !D.hasClausesOfKind<OMPNumTeamsClause>() &&
-         !D.hasClausesOfKind<OMPReductionClause>() &&
-         !D.hasClausesOfKind<OMPLastprivateClause>() &&
-         !D.hasClausesOfKind<OMPLinearClause>();
+         !D.hasClausesOfKind<OMPReductionClause>();
 }
 
 std::pair<llvm::Value *, llvm::Value *>
