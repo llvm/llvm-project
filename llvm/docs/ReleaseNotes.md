@@ -288,6 +288,11 @@ Makes programs 10x faster by doing Special New Thing.
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
   size collided with the sentinel value MachineFrameInfo used to mark dead
   stack objects.
+* Fixed a crash
+  ([#204079](https://github.com/llvm/llvm-project/issues/204079)) in the
+  SelectionDAG pre-RA schedulers when they tried to unfold a load-folded
+  instruction to break a physical register dependency and the unfolded load
+  already existed in the DAG.
 
 ### Changes to the Metadata Info
 

@@ -14,25 +14,27 @@ define void @existing_load(i64 %a, ptr %p, ptr %q) {
 ; LIST:       # %bb.0:
 ; LIST-NEXT:    movl $1, other(%rip)
 ; LIST-NEXT:    movl val(%rip), %eax
+; LIST-NEXT:    cmpl $0, val(%rip)
+; LIST-NEXT:    setne %cl
 ; LIST-NEXT:    testq %rdi, %rdi
 ; LIST-NEXT:    setne (%rdx)
-; LIST-NEXT:    testl %eax, %eax
-; LIST-NEXT:    movl (%rsi), %ecx
-; LIST-NEXT:    movl %ecx, val(%rip)
-; LIST-NEXT:    setne (%rdx)
+; LIST-NEXT:    movl (%rsi), %edi
+; LIST-NEXT:    movl %edi, val(%rip)
+; LIST-NEXT:    movb %cl, (%rdx)
 ; LIST-NEXT:    movl %eax, (%rsi)
 ; LIST-NEXT:    retq
 ;
 ; FAST-LABEL: existing_load:
 ; FAST:       # %bb.0:
+; FAST-NEXT:    cmpl $0, val(%rip)
 ; FAST-NEXT:    movl $1, other(%rip)
 ; FAST-NEXT:    movl val(%rip), %eax
+; FAST-NEXT:    setne %cl
 ; FAST-NEXT:    testq %rdi, %rdi
 ; FAST-NEXT:    setne (%rdx)
-; FAST-NEXT:    testl %eax, %eax
-; FAST-NEXT:    movl (%rsi), %ecx
-; FAST-NEXT:    movl %ecx, val(%rip)
-; FAST-NEXT:    setne (%rdx)
+; FAST-NEXT:    movl (%rsi), %edi
+; FAST-NEXT:    movl %edi, val(%rip)
+; FAST-NEXT:    movb %cl, (%rdx)
 ; FAST-NEXT:    movl %eax, (%rsi)
 ; FAST-NEXT:    retq
   store i32 1, ptr @other
