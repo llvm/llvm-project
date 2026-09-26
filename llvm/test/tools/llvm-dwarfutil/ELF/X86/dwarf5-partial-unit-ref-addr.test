@@ -1,0 +1,303 @@
+## This test checks that a cross-unit DW_FORM_ref_addr reference into a
+## DW_TAG_partial_unit is rewritten to the section-absolute offset of the
+## referenced DIE, as it already is for a DW_TAG_compile_unit.
+##
+## The two documents differ only in the root tag and unit type of the unit
+## holding the referenced type, so the compile unit document is the control.
+##
+## Only the classic linker is exercised. The parallel linker asserts on a type
+## under a partial unit root, which is issue #219613, and --verify rejects the
+## output because a partial unit still ships under a DW_UT_compile header,
+## which is issue #219365.
+
+# RUN: yaml2obj --docnum=1 %s -o %t-cu.o
+# RUN: yaml2obj --docnum=2 %s -o %t-pu.o
+
+# RUN: llvm-dwarfutil %t-cu.o %t-cu.out
+# RUN: llvm-dwarfdump --debug-info %t-cu.out | FileCheck %s
+
+# RUN: llvm-dwarfutil %t-pu.o %t-pu.out
+# RUN: llvm-dwarfdump --debug-info %t-pu.out | FileCheck %s
+
+## Update mode keeps every DIE, so the same reference has to be resolved there.
+
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF \
+# RUN:   %t-cu.o %t-cu.upd
+# RUN: llvm-dwarfdump --debug-info %t-cu.upd | FileCheck %s
+
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF \
+# RUN:   %t-pu.o %t-pu.upd
+# RUN: llvm-dwarfdump --debug-info %t-pu.upd | FileCheck %s
+
+## U01 owns the type, U02 names it across the unit boundary.
+# CHECK: DW_AT_name{{.*}}"U01"
+
+# CHECK: 0x[[S:[0-9a-f]*]]: DW_TAG_structure_type
+# CHECK-NEXT: DW_AT_name{{.*}}"S"
+
+# CHECK: DW_AT_name{{.*}}"U02"
+
+# CHECK: DW_TAG_subprogram
+# CHECK-NEXT: DW_AT_name{{.*}}"foo2"
+# CHECK-NEXT: DW_AT_type{{.*}}(0x00000000[[S]] "{{.*}}S")
+
+## The control: U01 is an ordinary compilation unit.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x20
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      DW_TAG_partial_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 5
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - CStr: ns
+        - AbbrCode: 4
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 5
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1140
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 6
+          Values:
+            - CStr: foo2
+            - Value: 0x49
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 0
+
+## The case: U01 is a partial unit, and nothing else changes.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x20
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      DW_TAG_partial_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_partial
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - CStr: ns
+        - AbbrCode: 4
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 5
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1140
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 6
+          Values:
+            - CStr: foo2
+            - Value: 0x49
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 0
+...
