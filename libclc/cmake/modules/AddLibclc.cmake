@@ -128,7 +128,7 @@ function(libclc_add_library target_name)
   # Link the object files, using a temporary library for internalization.
   set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
   set(link_cmd ${llvm-link_exe})
-  set(link_deps ${llvm-link_target})
+  set(link_deps "")
 
   add_library(${target_name}-src STATIC)
   target_link_libraries(${target_name}-src PRIVATE ${ARG_SOURCE_TARGET})
@@ -183,7 +183,7 @@ function(libclc_add_library target_name)
     set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.bc)
     add_custom_command(OUTPUT ${builtins_lib}
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_lib} ${linked_bc}
-      DEPENDS ${opt_target} ${linked_bc}
+      DEPENDS ${linked_bc}
     )
   endif()
 

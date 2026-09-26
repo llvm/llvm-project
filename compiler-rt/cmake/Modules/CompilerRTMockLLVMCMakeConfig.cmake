@@ -76,5 +76,5 @@ endfunction()
 
 macro(compiler_rt_mock_llvm_cmake_config_include_cmake_files)
   # Some compiler-rt CMake code needs to call code in this file.
-  include("${LLVM_CMAKE_DIR}/AddLLVM.cmake")
+  include(AddLit)
 endmacro()

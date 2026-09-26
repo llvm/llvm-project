@@ -1,5 +1,6 @@
 # Utility functions for packaging an LLVM distribution. See the
 # BuildingADistribution documentation for more details.
+include(GetSubprojectTitle)
 
 # These functions assume a number of conventions that are common across all LLVM
 # subprojects:

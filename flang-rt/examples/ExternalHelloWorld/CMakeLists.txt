@@ -6,10 +6,10 @@
 #
 #===------------------------------------------------------------------------===#
 
-# This test is not run by default as it requires input.
-add_llvm_example(external-hello-world
+add_executable(external-hello-world
   external-hello.cpp
 )
+set_target_properties(external-hello-world PROPERTIES FOLDER "Flang-RT/Examples")
 
 target_link_libraries(external-hello-world
   PRIVATE

@@ -1,4 +1,5 @@
 # CMake build rules for the OCaml language.
+include(GetSubprojectTitle)
 # Assumes FindOCaml is used.
 # http://ocaml.org/
 #
