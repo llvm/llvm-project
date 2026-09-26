@@ -1557,7 +1557,11 @@ void SystemZXPLINKFrameLowering::determineFrameLayout(
       static_cast<SystemZXPLINK64Registers *>(Subtarget.getSpecialRegisters());
 
   uint64_t StackSize = MFFrame.getStackSize();
-  if (StackSize == 0)
+  // A function which saves callee-saved registers needs a register save area of
+  // its own, even if it has no other stack objects. Otherwise the registers are
+  // stored relative to the unchanged stack pointer, i.e. into the save area of
+  // the caller's DSA.
+  if (StackSize == 0 && MFFrame.getCalleeSavedInfo().empty())
     return;
 
   // Add the size of the register save area and the reserved area to the size.
