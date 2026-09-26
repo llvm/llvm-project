@@ -104,7 +104,7 @@ def TestTarget : Target;
 // CHECK:      	SuperClasses:
 //
 // CHECK-LABEL: RegisterClass DRegs:
-// CHECK:      	LaneMask: 0000000000000044
+// CHECK:      	LaneMask: 0000000000000003
 // CHECK:      	HasDisjunctSubRegs: 1
 // CHECK:      	CoveredBySubRegs: 1
 // CHECK:      	Regs: D0 D1 D2
@@ -112,35 +112,35 @@ def TestTarget : Target;
 // CHECK:      	SuperClasses:
 //
 // CHECK-LABEL: RegisterClass QRegs:
-// CHECK:      	LaneMask: 0000000000000045
+// CHECK:      	LaneMask: 0000000000000007
 // CHECK:      	HasDisjunctSubRegs: 1
 // CHECK:      	CoveredBySubRegs: 1
 // CHECK:      	Regs: Q0 Q1 Q2
 // CHECK:      	SubClasses: QRegs
 // CHECK:      	SuperClasses:
 //
-// CHECK-LABEL: SubRegIndex dsub:
-// CHECK-NEXT: 	LaneMask: 0000000000000044
-// CHECK-LABEL: SubRegIndex dsub0:
-// CHECK-NEXT: 	LaneMask: 0000000000000044
-// CHECK-LABEL: SubRegIndex dsub1:
-// CHECK-NEXT: 	LaneMask: 0000000000000090
-// CHECK-LABEL: SubRegIndex dsub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000120
-// CHECK-LABEL: SubRegIndex dsub_hi:
-// CHECK-NEXT: 	LaneMask: 0000000000000001
-// CHECK:       Artificial: 1
 // CHECK-LABEL: SubRegIndex ssub:
-// CHECK-NEXT: 	LaneMask: 0000000000000004
-// CHECK-LABEL: SubRegIndex ssub0:
-// CHECK-NEXT: 	LaneMask: 0000000000000008
-// CHECK-LABEL: SubRegIndex ssub1:
-// CHECK-NEXT: 	LaneMask: 0000000000000010
-// CHECK-LABEL: SubRegIndex ssub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000020
+// CHECK-NEXT: 	LaneMask: 0000000000000001
 // CHECK-LABEL: SubRegIndex ssub_hi:
-// CHECK-NEXT: 	LaneMask: 0000000000000040
+// CHECK-NEXT: 	LaneMask: 0000000000000002
 // CHECK:       Artificial: 1
+// CHECK-LABEL: SubRegIndex dsub:
+// CHECK-NEXT: 	LaneMask: 0000000000000003
+// CHECK-LABEL: SubRegIndex dsub_hi:
+// CHECK-NEXT: 	LaneMask: 0000000000000004
+// CHECK:       Artificial: 1
+// CHECK-LABEL: SubRegIndex dsub0:
+// CHECK-NEXT: 	LaneMask: 0000000000000003
+// CHECK-LABEL: SubRegIndex dsub1:
+// CHECK-NEXT: 	LaneMask: 00000000000000A0
+// CHECK-LABEL: SubRegIndex dsub2:
+// CHECK-NEXT: 	LaneMask: 0000000000000140
+// CHECK-LABEL: SubRegIndex ssub0:
+// CHECK-NEXT: 	LaneMask: 0000000000000010
+// CHECK-LABEL: SubRegIndex ssub1:
+// CHECK-NEXT: 	LaneMask: 0000000000000020
+// CHECK-LABEL: SubRegIndex ssub2:
+// CHECK-NEXT: 	LaneMask: 0000000000000040
 // CHECK-LABEL: SubRegIndex dsub1_then_ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000080
 // CHECK:       Artificial: 1
@@ -148,17 +148,17 @@ def TestTarget : Target;
 // CHECK-NEXT: 	LaneMask: 0000000000000100
 // CHECK:       Artificial: 1
 // CHECK-LABEL: SubRegIndex ssub_ssub1:
-// CHECK-NEXT: 	LaneMask: 0000000000000014
-// CHECK-LABEL: SubRegIndex dsub0_dsub1:
-// CHECK-NEXT: 	LaneMask: 00000000000000D4
-// CHECK-LABEL: SubRegIndex dsub1_dsub2:
-// CHECK-NEXT: 	LaneMask: 00000000000001B0
+// CHECK-NEXT: 	LaneMask: 0000000000000021
 // CHECK-LABEL: SubRegIndex ssub_ssub1_ssub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000034
+// CHECK-NEXT: 	LaneMask: 0000000000000061
+// CHECK-LABEL: SubRegIndex dsub0_dsub1:
+// CHECK-NEXT: 	LaneMask: 00000000000000A3
+// CHECK-LABEL: SubRegIndex dsub1_dsub2:
+// CHECK-NEXT: 	LaneMask: 00000000000001E0
 // CHECK-LABEL: SubRegIndex ssub1_ssub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000030
+// CHECK-NEXT: 	LaneMask: 0000000000000060
 // CHECK-LABEL: SubRegIndex ssub0_ssub1:
-// CHECK-NEXT: 	LaneMask: 0000000000000018
+// CHECK-NEXT: 	LaneMask: 0000000000000030
 
 // CHECK-LABEL: Register D0:
 // CHECK: 	CoveredBySubregs: 1
@@ -169,10 +169,10 @@ def TestTarget : Target;
 // CHECK-LABEL: Register Q0:
 // CHECK: 	CoveredBySubregs: 1
 // CHECK: 	HasDisjunctSubRegs: 1
-// CHECK: 	SubReg dsub = D0
-// CHECK: 	SubReg dsub_hi = D0_HI
 // CHECK: 	SubReg ssub = S0
 // CHECK: 	SubReg ssub_hi = S0_HI
+// CHECK: 	SubReg dsub = D0
+// CHECK: 	SubReg dsub_hi = D0_HI
 //
 // CHECK-LABEL: Register S0:
 // CHECK: 	CoveredBySubregs: 0
@@ -187,30 +187,30 @@ def TestTarget : Target;
 // CHECK-LABEL: Register D0_D1:
 // CHECK: 	CoveredBySubregs: 1
 // CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg ssub = S0
+// CHECK: 	SubReg ssub_hi = S0_HI
 // CHECK: 	SubReg dsub0 = D0
 // CHECK: 	SubReg dsub1 = D1
-// CHECK: 	SubReg ssub = S0
 // CHECK: 	SubReg ssub1 = S1
-// CHECK: 	SubReg ssub_hi = S0_HI
 // CHECK: 	SubReg dsub1_then_ssub_hi = S1_HI
 // CHECK: 	SubReg ssub_ssub1 = S0_S1
 //
 // CHECK-LABEL: Register D0_D1_D2:
 // CHECK: 	CoveredBySubregs: 1
 // CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg ssub = S0
+// CHECK: 	SubReg ssub_hi = S0_HI
 // CHECK: 	SubReg dsub0 = D0
 // CHECK: 	SubReg dsub1 = D1
 // CHECK: 	SubReg dsub2 = D2
-// CHECK: 	SubReg ssub = S0
 // CHECK: 	SubReg ssub1 = S1
 // CHECK: 	SubReg ssub2 = S2
-// CHECK: 	SubReg ssub_hi = S0_HI
 // CHECK: 	SubReg dsub1_then_ssub_hi = S1_HI
 // CHECK: 	SubReg dsub2_then_ssub_hi = S2_HI
 // CHECK: 	SubReg ssub_ssub1 = S0_S1
+// CHECK: 	SubReg ssub_ssub1_ssub2 = S0_S1_S2
 // CHECK: 	SubReg dsub0_dsub1 = D0_D1
 // CHECK: 	SubReg dsub1_dsub2 = D1_D2
-// CHECK: 	SubReg ssub_ssub1_ssub2 = S0_S1_S2
 // CHECK: 	SubReg ssub1_ssub2 = S1_S2
 //
 // CHECK-LABEL: Register S0_S1:

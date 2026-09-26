@@ -1449,6 +1449,21 @@ unsigned AArch64RegisterInfo::getLocalAddressRegister(
   return getFrameRegister(MF);
 }
 
+/// Return true if \p RC is one of the SVE register classes that can only be
+/// spilled and reloaded using SVE instructions. This must be kept in sync with
+/// the classes handled by AArch64InstrInfo::storeRegToStackSlot() and
+/// loadRegFromStackSlot().
+static bool isSVERegClass(const TargetRegisterClass *RC) {
+  return AArch64::ZPRRegClass.hasSubClassEq(RC) ||
+         AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
+         AArch64::ZPR3RegClass.hasSubClassEq(RC) ||
+         AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
+         AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC) ||
+         AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC) ||
+         AArch64::PPRRegClass.hasSubClassEq(RC) ||
+         AArch64::PPR2RegClass.hasSubClassEq(RC);
+}
+
 /// SrcRC and DstRC will be morphed into NewRC if this returns true
 bool AArch64RegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
@@ -1456,6 +1471,15 @@ bool AArch64RegisterInfo::shouldCoalesce(
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
   MachineFunction &MF = *MI->getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // The SVE Z register tuples overlap the NEON Q and D tuples, so both ZPR2 and
+  // QQ (for example) are valid answers when the coalescer asks for a register
+  // class covering a pair of D registers. If it picks an SVE class on a
+  // subtarget without SVE then the register allocator has no way to spill or
+  // reload the result, so reject the coalesce and leave the copy alone.
+  if (NewRC && isSVERegClass(NewRC) &&
+      !MF.getSubtarget<AArch64Subtarget>().isSVEorStreamingSVEAvailable())
+    return false;
 
   if (MI->isSubregToReg() && MRI.subRegLivenessEnabled() &&
       !MF.getSubtarget<AArch64Subtarget>().enableSRLTSubregToRegMitigation())

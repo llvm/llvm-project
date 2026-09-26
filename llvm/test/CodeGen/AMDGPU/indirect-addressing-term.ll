@@ -85,7 +85,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   renamable $sgpr2 = V_READFIRSTLANE_B32 [[COPY]](i32), implicit $exec
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr2, [[COPY]](i32), implicit $exec
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 killed renamable $sgpr0_sgpr1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 [[COPY17]], killed $sgpr2, 11, implicit-def $m0, implicit $m0, implicit $exec
+  ; GCN-NEXT:   [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 [[COPY17]], killed $sgpr2, 4, implicit-def $m0, implicit $m0, implicit $exec
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = COPY [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]]
   ; GCN-NEXT:   renamable $sgpr2_sgpr3 = COPY renamable $sgpr0_sgpr1
   ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)
