@@ -14,8 +14,10 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <limits>
 
 using namespace llvm;
 
@@ -1468,4 +1470,41 @@ unsigned llvm::SignBitsOps::rot(unsigned SrcSignBits, unsigned BitWidth,
   if (SrcSignBits > Amt + 1)
     return SrcSignBits - Amt;
   return 1;
+}
+
+unsigned llvm::SignBitsOps::insertSubvector(
+    ElementCount SrcEC, ElementCount SubEC, uint64_t Idx,
+    const APInt &DemandedElts,
+    function_ref<unsigned(unsigned, const APInt &)> ComputeNumSignBits) {
+
+  unsigned Result = std::numeric_limits<unsigned>::max();
+  if (SrcEC.isScalable()) {
+    APInt DemandedSubElts = SubEC.isScalable()
+                                ? APInt(1, 1)
+                                : APInt::getAllOnes(SubEC.getFixedValue());
+    Result = ComputeNumSignBits(1, DemandedSubElts);
+    if (Result == 1)
+      return 1;
+    return std::min(Result, ComputeNumSignBits(0, APInt(1, 1)));
+  }
+
+  unsigned NumSubElts = SubEC.getFixedValue();
+  unsigned Offset = static_cast<unsigned>(Idx);
+  APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Offset);
+  APInt DemandedSrcElts = DemandedElts;
+  DemandedSrcElts.clearBits(Offset, Offset + NumSubElts);
+
+  // Only query the operands that contribute demanded elements, and take the
+  // minimum over them.
+  if (!!DemandedSubElts) {
+    Result = ComputeNumSignBits(1, DemandedSubElts);
+    // If we don't know any bits, early out.
+    if (Result == 1)
+      return 1;
+  }
+  if (!!DemandedSrcElts) {
+    unsigned SrcAnswer = ComputeNumSignBits(0, DemandedSrcElts);
+    Result = std::min(Result, SrcAnswer);
+  }
+  return Result;
 }
