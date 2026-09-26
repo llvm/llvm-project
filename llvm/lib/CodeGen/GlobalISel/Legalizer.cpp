@@ -232,7 +232,6 @@ LegalizerMFResult llvm::legalizeMachineFunction(
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        salvageDebugInfo(MRI, MI);
         eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
@@ -280,7 +279,6 @@ LegalizerMFResult llvm::legalizeMachineFunction(
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        salvageDebugInfo(MRI, MI);
         eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
