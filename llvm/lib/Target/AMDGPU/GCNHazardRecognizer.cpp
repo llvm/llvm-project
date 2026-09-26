@@ -2689,6 +2689,11 @@ bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
   if (SIInstrInfo::isSWMMAC(WMMA)) {
     Register Idx0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2)->getReg();
     WMMARegs.push_back(Idx0);
+  } else {
+    // src2 is C, which is not always tied to vdst and may be an immediate.
+    const MachineOperand *C0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2);
+    if (C0->isReg())
+      WMMARegs.push_back(C0->getReg());
   }
 
   for (const MachineOperand &ValuDef : MI.defs()) {
