@@ -700,7 +700,7 @@ define i8 @sel_op_sel_tval_multi_use(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sel_op_sel_tval_multi_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A]], [[W:%.*]]
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
@@ -719,7 +719,7 @@ define i8 @sel_op_sel_fval_multi_use(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sel_op_sel_fval_multi_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[B]], [[W:%.*]]
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[X:%.*]], i8 [[I]]
 ; CHECK-NEXT:    call void @use8(i8 [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[Y:%.*]], i8 [[I]]
@@ -738,7 +738,7 @@ define i8 @sel_op_sel_commute(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sel_op_sel_commute(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = sub i8 [[W:%.*]], [[S]]
+; CHECK-NEXT:    [[I:%.*]] = sub i8 [[W:%.*]], [[A]]
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
@@ -759,7 +759,7 @@ define i8 @sel_op_sel_both_operands(i1 %c, i8 %a, i8 %b, i8 %d, i8 %e, i8 %x, i8
 ; CHECK-NEXT:    call void @use8(i8 [[S0]])
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C]], i8 [[D:%.*]], i8 [[E:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S1]])
-; CHECK-NEXT:    [[I:%.*]] = mul i8 [[S0]], [[S1]]
+; CHECK-NEXT:    [[I:%.*]] = mul i8 [[A]], [[D]]
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
@@ -780,7 +780,7 @@ define i1 @sel_icmp_sel(i1 %c, i8 %a, i8 %b, i8 %w, i1 %x) {
 ; CHECK-LABEL: @sel_icmp_sel(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[A]], [[W:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i1 [[I]], i1 [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -795,7 +795,7 @@ define i16 @sel_zext_sel(i1 %c, i8 %a, i8 %b, i16 %x) {
 ; CHECK-LABEL: @sel_zext_sel(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = zext i8 [[S]] to i16
+; CHECK-NEXT:    [[I:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i16 [[I]], i16 [[X:%.*]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -810,7 +810,7 @@ define i8 @sel_umin_sel(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x) {
 ; CHECK-LABEL: @sel_umin_sel(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = call i8 @llvm.umin.i8(i8 [[S]], i8 [[W:%.*]])
+; CHECK-NEXT:    [[I:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 [[W:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -825,7 +825,7 @@ define ptr @sel_gep_sel(i1 %c, ptr %p, ptr %q, ptr %x) {
 ; CHECK-LABEL: @sel_gep_sel(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]
 ; CHECK-NEXT:    call void @useptr(ptr [[S]])
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], ptr [[I]], ptr [[X:%.*]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
@@ -840,7 +840,7 @@ define float @sel_fneg_sel(i1 %c, float %a, float %b, float %x) {
 ; CHECK-LABEL: @sel_fneg_sel(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]
 ; CHECK-NEXT:    call void @usef(float [[S]])
-; CHECK-NEXT:    [[I:%.*]] = fneg float [[S]]
+; CHECK-NEXT:    [[I:%.*]] = fneg float [[A]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float [[I]], float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -855,7 +855,7 @@ define i8 @sel_op_sel_nuw_nsw(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sel_op_sel_nuw_nsw(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = add nuw nsw i8 [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add nuw nsw i8 [[A]], [[W:%.*]]
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i8 [[I]], i8 [[Y:%.*]]
@@ -874,7 +874,7 @@ define float @sel_op_sel_fmf(i1 %c, float %a, float %b, float %w, float %x, floa
 ; CHECK-LABEL: @sel_op_sel_fmf(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]
 ; CHECK-NEXT:    call void @usef(float [[S]])
-; CHECK-NEXT:    [[I:%.*]] = fadd nnan float [[S]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = fadd nnan float [[A]], [[W:%.*]]
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], float [[I]], float [[X:%.*]]
 ; CHECK-NEXT:    call void @usef(float [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], float [[I]], float [[Y:%.*]]
@@ -893,7 +893,7 @@ define i8 @sel_udiv_sel_dividend(i1 %c, i8 %a, i8 %b, i8 %x) {
 ; CHECK-LABEL: @sel_udiv_sel_dividend(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[S]])
-; CHECK-NEXT:    [[I:%.*]] = udiv i8 [[S]], 7
+; CHECK-NEXT:    [[I:%.*]] = udiv i8 [[A]], 7
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -908,7 +908,7 @@ define <2 x i8> @sel_op_sel_vec(<2 x i1> %c, <2 x i8> %a, <2 x i8> %b, <2 x i8> 
 ; CHECK-LABEL: @sel_op_sel_vec(
 ; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C:%.*]], <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]
 ; CHECK-NEXT:    call void @usev(<2 x i8> [[S]])
-; CHECK-NEXT:    [[I:%.*]] = add <2 x i8> [[S]], splat (i8 1)
+; CHECK-NEXT:    [[I:%.*]] = add <2 x i8> [[A]], splat (i8 1)
 ; CHECK-NEXT:    [[R0:%.*]] = select <2 x i1> [[C]], <2 x i8> [[I]], <2 x i8> [[X:%.*]]
 ; CHECK-NEXT:    call void @usev(<2 x i8> [[R0]])
 ; CHECK-NEXT:    [[R1:%.*]] = select <2 x i1> [[C]], <2 x i8> [[I]], <2 x i8> [[Y:%.*]]
