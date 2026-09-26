@@ -60,13 +60,13 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
   if (m_objfile_sp) {
     const Symtab *symtab = m_objfile_sp->GetSymtab();
     if (symtab) {
+      if (symtab->GetNumSymbols() > 0)
+        abilities |= Symbols;
+
       // Get the indexes of source, code, data, and function-related entries in
       // the module symbol table. Only source-file entries provide a genuine
       // debug-info ability. Code and data entries remain available as symbols
       // but are not equivalent to debug-info functions or global variables.
-      if (symtab->GetNumSymbols() > 0)
-        abilities |= Symbols;
-
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeSourceFile,
                                               m_source_indexes)) {
         abilities |= CompileUnits;

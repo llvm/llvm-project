@@ -716,12 +716,24 @@ Sections:
     Address:         0x0000000000400180
     AddressAlign:    0x0000000000000010
     Content:         554889E58B042500106000890425041060005DC3
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000601000
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
 Symbols:
   - Name:            _start
     Type:            STT_FUNC
     Section:         .text
     Value:           0x0000000000400180
     Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+  - Name:            global_data
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x0000000000601000
+    Size:            0x0000000000000004
     Binding:         STB_GLOBAL
 ...
 )");
@@ -735,6 +747,14 @@ Symbols:
   // But it should be created on demand.
   module_symtab = module_sp->GetSymtab(/*can_create=*/true);
   ASSERT_NE(module_symtab, nullptr);
+  ASSERT_NE(module_symtab->FindFirstSymbolWithNameAndType(
+                ConstString("_start"), eSymbolTypeCode, Symtab::eDebugAny,
+                Symtab::eVisibilityAny),
+            nullptr);
+  ASSERT_NE(module_symtab->FindFirstSymbolWithNameAndType(
+                ConstString("global_data"), eSymbolTypeData, Symtab::eDebugAny,
+                Symtab::eVisibilityAny),
+            nullptr);
 
   // And we should be able to get it again once it has been created.
   Symtab *cached_module_symtab = module_sp->GetSymtab(/*can_create=*/false);
@@ -742,6 +762,8 @@ Symbols:
 
   SymbolFile *symbol_file = module_sp->GetSymbolFile();
   ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetPluginName(),
+            SymbolFileSymtab::GetPluginNameStatic());
   EXPECT_EQ(symbol_file->GetAbilities(),
             static_cast<uint32_t>(SymbolFile::Symbols));
 }
