@@ -145,4 +145,25 @@ SymbolizedStack* Offload::Symbolize(uptr PC) {
   return Frames;
 }
 
+bool Offload::SymbolizeData(uptr Addr, DataInfo* Info) {
+  if (!Addr || !Info)
+    return false;
+
+  char* Path = nullptr;
+  uptr Offset = 0;
+  if (!SnapshotImage(Addr, &Path, &Offset) || !Path)
+    return false;
+
+  bool Symbolized =
+      Symbolizer::GetOrInit()->SymbolizeModuleData(Path, Offset, Info);
+  InternalFree(Path);
+  if (!Symbolized)
+    return false;
+  if (!Info->name || !Info->name[0] || Info->name[0] == '?') {
+    Info->Clear();
+    return false;
+  }
+  return true;
+}
+
 }  // namespace __sanitizer
