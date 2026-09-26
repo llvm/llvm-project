@@ -716,10 +716,10 @@ define <3 x i16> @s_usubsat_v3i16(<3 x i16> inreg %lhs, <3 x i16> inreg %rhs) {
 ; GFX9-LABEL: s_usubsat_v3i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s19
-; GFX9-NEXT:    v_pk_sub_u16 v1, s17, v0 clamp
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s18
+; GFX9-NEXT:    v_mov_b32_e32 v1, s19
 ; GFX9-NEXT:    v_pk_sub_u16 v0, s16, v0 clamp
+; GFX9-NEXT:    v_pk_sub_u16 v1, s17, v1 clamp
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: s_usubsat_v3i16:
@@ -771,8 +771,8 @@ define <3 x i16> @v_usubsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX9-LABEL: v_usubsat_v3i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_sub_u16 v1, v1, v3 clamp
 ; GFX9-NEXT:    v_pk_sub_u16 v0, v0, v2 clamp
+; GFX9-NEXT:    v_pk_sub_u16 v1, v1, v3 clamp
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10PLUS-LABEL: v_usubsat_v3i16:
