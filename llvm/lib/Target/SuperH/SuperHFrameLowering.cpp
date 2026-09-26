@@ -147,6 +147,7 @@ SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   if (HasFP) {
 
     // Adjust down to remove FP.
+    FrameOffset += 4;
     FrameReg = RegInfo->getFrameRegister();
     return StackOffset::getFixed(-FrameOffset);
   }
