@@ -38,6 +38,12 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class GPU_Op<string mnemonic, list<Trait> traits = []> :
     Op<GPU_Dialect, mnemonic, traits>;
 
+// Scalar element types supported by gpu.mma_matrix
+def GPU_MMAMatrixElementType :
+    AnyTypeOf<[SI8, UI8, AnyI32, F16, F32, F64]> {
+  let cppFunctionName = "isValidMMAMatrixElementType";
+}
+
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
         Pure,
@@ -2082,7 +2088,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[SI8, UI8, I32, F16, F32]>:$value);
+  let arguments = (ins GPU_MMAMatrixElementType:$value);
 
   let results = (outs GPU_MMAMatrix:$res);
 
@@ -2133,7 +2139,7 @@ def GPU_SubgroupMmaExtractThreadLocalOp : GPU_Op<"subgroup_mma_extract_thread_lo
 
   let arguments = (ins GPU_MMAMatrix:$matrix, Variadic<Index>:$indices);
 
-  let results = (outs AnyIntegerOrFloat:$res);
+  let results = (outs GPU_MMAMatrixElementType:$res);
 
   let assemblyFormat = [{
     $matrix`[`$indices`]` attr-dict `:` type($matrix) `->` type($res)
@@ -2141,10 +2147,7 @@ def GPU_SubgroupMmaExtractThreadLocalOp : GPU_Op<"subgroup_mma_extract_thread_lo
 }
 
 def GPU_SubgroupMmaInsertThreadLocalOp : GPU_Op<"subgroup_mma_insert_thread_local",
-    [Pure,
-     TypesMatchWith<"value type matches element type of mma_matrix",
-                    "matrix", "value",
-                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()"> ]>{
+    [Pure, AllTypesMatch<["matrix", "res"]>]> {
 
   let summary = "Insert a value into GPU warp by invocation and indices";
 
@@ -2154,6 +2157,8 @@ def GPU_SubgroupMmaInsertThreadLocalOp : GPU_Op<"subgroup_mma_insert_thread_loca
 
     This operation takes scalar value as its first operand and `!gpu.mma_matrix`
     as its second operand. The op inserts the scalar value to the matrix.
+    A signless `i8` value may be inserted into an `si8` or `ui8` matrix; this
+    preserves the payload bits while the matrix type carries the signedness.
 
     Since `matrix` is packed into the the threads within a subgroup, `indices` are
     the indices into the values stored by each thread. That is, an index of 0 (or [0, 0])
@@ -2176,14 +2181,21 @@ def GPU_SubgroupMmaInsertThreadLocalOp : GPU_Op<"subgroup_mma_insert_thread_loca
     ```
   }];
 
-  let arguments = (ins AnyIntegerOrFloat:$value, GPU_MMAMatrix:$matrix,
+  let arguments = (ins AnyTypeOf<[I8, GPU_MMAMatrixElementType]>:$value,
+                       GPU_MMAMatrix:$matrix,
                        Variadic<Index>:$indices);
 
   let results = (outs GPU_MMAMatrix:$res);
 
+  let extraClassDeclaration = [{
+    static bool canBitcastToMatrixElement(
+        ::mlir::Type valueType, ::mlir::Type elementType);
+  }];
+
   let assemblyFormat = [{
     $value`,` $matrix`[`$indices`]` attr-dict `:` type($value)`,` type($matrix) `->` type($res)
   }];
+  let hasVerifier = 1;
 }
 
 def GPU_ElementwiseOpAddF  : I32EnumAttrCase<"ADDF", 0, "addf">;
