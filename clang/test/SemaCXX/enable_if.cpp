@@ -5,6 +5,14 @@
 
 typedef int (*fp)(int);
 int surrogate(int);
+
+template <class T> void attr_syntax() {}
+
+template <class T>
+[[clang::enable_if(sizeof(T) > 1, "too big")]] T attr_syntax() {
+  return T();
+}
+
 struct Incomplete;  // expected-note{{forward declaration of 'Incomplete'}} \
                     // expected-note {{forward declaration of 'Incomplete'}}
 
@@ -136,6 +144,8 @@ void test4() {
   int t0 = y.h(0);
   int t1 = y.h(1, 2);  // expected-error{{no matching member function for call to 'h'}}
 }
+
+void test_attr_syntax() { int a[sizeof(*attr_syntax<char (*)[2]>()) - 2]; }
 
 // FIXME: issue an error (without instantiation) because ::h(T()) is not
 // convertible to bool, because return types aren't overloadable.

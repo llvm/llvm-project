@@ -20,6 +20,10 @@ void alwayswarn() _diagnose_if(!T(), "oh no", "warning") {} // expected-note 4{{
 template <typename T>
 void neverwarn() _diagnose_if(T(), "oh no", "warning") {}
 
+template <class T>
+[[clang::diagnose_if(sizeof(T) > 1, "too big", "error")]] // expected-note{{from 'diagnose_if' attribute}}
+void attr_syntax() {}
+
 void runAll() {
   alwaysok<int>();
   alwaysok<int>();
@@ -53,6 +57,9 @@ void runAll() {
     void (*pok)() = neverwarn<int>;
     pok = &neverwarn<int>;
   }
+
+  attr_syntax<char>();
+  attr_syntax<int>(); // expected-error{{too big}}
 }
 
 template <typename T>
