@@ -47,15 +47,6 @@ using namespace llvm::VPlanPatternMatch;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// It is sometimes necessary to disable printing of metadata in tests in order
-// to avoid non-deterministic behaviour due to metadata introduced by VPlan
-// that wasn't present in the original scalar IR.
-static cl::opt<bool> VPlanPrintMetadata(
-    "vplan-print-metadata", cl::init(true), cl::Hidden,
-    cl::desc("Controls the printing of recipe metadata when debugging."));
-#endif
-
 namespace llvm {
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 } // namespace llvm
@@ -2163,7 +2154,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M || !VPlanPrintMetadata)
+  if (Metadata.empty() || !M)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
@@ -2195,7 +2186,7 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
       O << Freq.getFrequency() << " (" << PercentStr << "%"
         << (IsEstimated ? ", estimated" : "") << ")";
     } else {
-      Node->printAsOperand(O, M);
+      SlotTracker.printMetadataAsOperand(O, Node);
     }
   });
   O << ")";
