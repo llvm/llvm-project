@@ -316,8 +316,9 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
       uint64_t Frequency =
           ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
               .scale(MBFI->getEntryFreq().getFrequency());
-      WaveFrequencies[&BB] =
-          BlockFrequency(Count ? std::max(Frequency, uint64_t(1)) : 0);
+      // A measured zero is still a reachable block. Avoid giving spills a
+      // zero-cost path through it.
+      WaveFrequencies[&BB] = BlockFrequency(std::max(Frequency, uint64_t(1)));
     }
   }
 
