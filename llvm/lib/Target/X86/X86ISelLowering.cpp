@@ -3804,6 +3804,8 @@ bool X86TargetLowering::isCtlzFast() const {
 
 bool X86TargetLowering::preferZeroCompareBranch() const { return true; }
 
+bool X86TargetLowering::preferUSubOverflowBranch() const { return true; }
+
 bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   return true;

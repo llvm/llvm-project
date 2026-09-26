@@ -8878,6 +8878,10 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
 static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
                            SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                            bool IsHugeFunc) {
+  if (TLI.preferUSubOverflowBranch())
+    assert(TLI.preferZeroCompareBranch() &&
+           "preferUSubOverflowBranch requires preferZeroCompareBranch");
+
   // Try and convert
   //  %c = icmp ult %x, 8
   //  br %c, bla, blb
@@ -8925,6 +8929,7 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
       replaceAllUsesWith(Cmp, NewCmp, FreshBBs, IsHugeFunc);
       return true;
     }
+
     if (Cmp->isEquality() &&
         (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
          match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))) ||
@@ -8938,6 +8943,40 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
       LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
       LLVM_DEBUG(dbgs() << " to compare on zero: " << *NewCmp << "\n");
       replaceAllUsesWith(Cmp, NewCmp, FreshBBs, IsHugeFunc);
+      return true;
+    }
+
+    if (TLI.preferUSubOverflowBranch() &&
+        Cmp->getPredicate() == ICmpInst::ICMP_ULT &&
+        (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
+         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))))) {
+      // Convert
+      //
+      //   %cmp = icmp ult i32 %x, 3
+      //   br i1 %cmp, label %bb1, label %bb2
+      //   bb2:
+      //   %sub = add i32 %x, -3
+      //
+      // into
+      //
+      //   %usub = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %x, i32 -3)
+      //   %sub = extractvalue { i32, i1 } %usub, 0
+      //   %oflow = extractvalue { i32, i1 } %usub, 1
+      //   br i1 %oflow, label %bb1, label %bb2
+      //
+      // for targets where lowering the intrinsic and branching on its overflow
+      // flag is efficient.
+      Function *USubWithOverflow = Intrinsic::getOrInsertDeclaration(
+          Branch->getModule(), Intrinsic::usub_with_overflow, {UI->getType()});
+      IRBuilder<> Builder(Branch);
+      Value *Call = Builder.CreateCall(
+          USubWithOverflow, {UI->getOperand(0), UI->getOperand(1)}, "usub");
+      Value *Sub = Builder.CreateExtractValue(Call, 0, "sub");
+      Value *Overflow = Builder.CreateExtractValue(Call, 1, "oflow");
+      LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
+      LLVM_DEBUG(dbgs() << " to llvm.usub.with.overflow: " << *Call << "\n");
+      replaceAllUsesWith(Cmp, Overflow, FreshBBs, IsHugeFunc);
+      replaceAllUsesWith(UI, Sub, FreshBBs, IsHugeFunc);
       return true;
     }
   }
