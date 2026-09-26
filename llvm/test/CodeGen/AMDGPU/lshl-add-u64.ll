@@ -108,10 +108,10 @@ define i64 @add_u64_vv(i64 %v, i64 %a) {
 define amdgpu_kernel void @add_u64_sv(i64 %v) {
 ; GCN-LABEL: add_u64_sv:
 ; GFX942: v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
-; GFX1250: v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], s[0:1], v[0:1]
 ; GISEL-LABEL: add_u64_sv:
 ; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, s{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX1250-GISEL: v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], s[0:1], v[0:1]
   %a = load i64, ptr poison
   %add = add i64 %v, %a
   store i64 %add, ptr poison
@@ -121,10 +121,10 @@ define amdgpu_kernel void @add_u64_sv(i64 %v) {
 define amdgpu_kernel void @add_u64_vs(i64 %a) {
 ; GCN-LABEL: add_u64_vs:
 ; GFX942: v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
-; GFX1250: v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], s[0:1], v[0:1]
 ; GISEL-LABEL: add_u64_vs:
 ; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, s{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX1250-GISEL: v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], s[0:1], v[0:1]
   %v = load i64, ptr poison
   %add = add i64 %v, %a
   store i64 %add, ptr poison

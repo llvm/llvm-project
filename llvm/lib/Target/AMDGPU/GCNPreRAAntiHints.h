@@ -41,6 +41,11 @@ enum : HazardClassMask {
   WMMA = 1u << 7,
   MFMA = 1u << 8,
   EXP = 1u << 9,
+
+  Load = 1u << 10,
+  WritesVGPR = 1u << 11,
+  RawVALU = 1u << 12,
+  LDSDMA = 1u << 13,
 };
 } // namespace HazardClass
 
@@ -50,17 +55,24 @@ enum class HazardOperand : uint8_t {
   Src0,
   Src1,
   Src2,
+  Src0Src1,
   Idx,
   Vaddr,
   AnySrc,
   AnyUse,
 };
 
-enum class ConsumerHint : uint8_t {
+enum class AntiHintDirection : uint8_t {
   OneDirectional,
   Symmetric,
 };
 
+enum class Lifetime : uint8_t {
+  // Wait-state budget.
+  WindowBudget,
+  // Most recent producer regs count cap.
+  RegisterCount,
+};
 struct HazardContext {
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
@@ -72,7 +84,12 @@ struct HazardContext {
 
 struct ClassMatch {
   HazardClassMask AnyOf = 0;
-  bool matches(HazardClassMask Mask) const { return !AnyOf || (Mask & AnyOf); }
+  HazardClassMask AllOf = 0;
+  HazardClassMask NoneOf = 0;
+  bool matches(HazardClassMask Mask) const {
+    return (!AnyOf || (Mask & AnyOf)) && ((Mask & AllOf) == AllOf) &&
+           !(Mask & NoneOf);
+  }
 };
 
 // To enable or disable the whole rule.
@@ -98,7 +115,7 @@ struct HazardSide {
 struct WindowSpec {
   unsigned WindowLength = 0;
   const cl::opt<unsigned> *OptWindowLength = nullptr;
-  unsigned (*Fn)(const MachineInstr &Producer,
+  unsigned (*Fn)(const MachineInstr &Producer, HazardClassMask ConsumerClass,
                  const HazardContext &Ctx) = nullptr;
 };
 
@@ -106,11 +123,12 @@ struct ConsumerTarget {
   HazardSide Side;
   WindowSpec Window;
   HazardClassMask CounterMask = HazardClass::None;
-  ConsumerHint Hint = ConsumerHint::OneDirectional;
+  AntiHintDirection Direction = AntiHintDirection::OneDirectional;
 };
 
 struct HazardAntiHintRule {
   RulePredicate Predicate = nullptr;
+  Lifetime Life = Lifetime::WindowBudget;
   HazardSide Producer;
   SmallVector<ConsumerTarget, 3> Consumers;
   AdvanceForRawWindowFn AdvanceForRawWindow = nullptr;

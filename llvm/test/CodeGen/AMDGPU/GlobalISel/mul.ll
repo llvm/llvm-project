@@ -3842,18 +3842,18 @@ define amdgpu_ps void @s_mul_u64_zext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    global_load_b32 v4, v[2:3], off
+; GFX1250-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_u64_u32 v[2:3], 0x50, v4, 0
-; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    v_mad_nc_u64_u32 v[4:5], 0x50, v2, 0
+; GFX1250-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: s_mul_u64_zext_with_vregs:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    global_load_b32 v4, v[2:3], off
+; GFX13-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mad_co_u64_u32 v[2:3], null, 0x50, v4, 0
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_mad_co_u64_u32 v[4:5], null, 0x50, v2, 0
+; GFX13-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX13-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %ext = zext i32 %val to i64
@@ -4066,18 +4066,18 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    global_load_b32 v4, v[2:3], off
+; GFX1250-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_i64_i32 v[2:3], 0x50, v4, 0
-; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-NEXT:    v_mad_nc_i64_i32 v[4:5], 0x50, v2, 0
+; GFX1250-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: s_mul_u64_sext_with_vregs:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    global_load_b32 v4, v[2:3], off
+; GFX13-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mad_co_i64_i32 v[2:3], null, 0x50, v4, 0
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    v_mad_co_i64_i32 v[4:5], null, 0x50, v2, 0
+; GFX13-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX13-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %ext = sext i32 %val to i64
