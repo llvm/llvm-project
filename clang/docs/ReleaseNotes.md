@@ -632,6 +632,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed an assertion when substituting an incomplete set of template arguments
+  (explicitly specified, or partially deduced during code completion) into a
+  member access whose nested-name-specifier starts with a template parameter
+  that has no corresponding argument yet, such as
+  `decltype(t.U::template B<>::MEM)`. (#GH204059)
+
 - Fixed a CTAD bug when combining with concepts. (#GH124715)
 
 - Fixed a regression where an internal-linkage function (e.g. a `static` or

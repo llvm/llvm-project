@@ -2072,6 +2072,11 @@ TemplateInstantiator::TransformFirstQualifierInScope(NamedDecl *D,
       = cast<TemplateTypeParmType>(getSema().Context.getTypeDeclType(TTPD));
 
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
+      if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(), TTP->getIndex())) {
+        IsIncomplete = true;
+        return BailOutOnIncomplete ? nullptr : D;
+      }
+
       // FIXME: This needs testing w/ member access expressions.
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getIndex());
 
