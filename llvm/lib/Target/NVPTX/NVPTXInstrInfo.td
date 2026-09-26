@@ -148,6 +148,7 @@ class PredNot<Predicate p> : Predicate<"!(" # p.CondString # ")">;
 
 class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
+def hasAtomAddNoFTZ : SubtargetPredicate;
 def hasAtomAddF64 : SubtargetPredicate;
 def hasAtomScope : SubtargetPredicate;
 def hasAtomBitwise64 : SubtargetPredicate;
@@ -160,6 +161,7 @@ def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : PredNot<doF32FTZ>;
+def noLegacyF32AtomAdd : Predicate<"!useLegacyF32AtomAdd()">;
 def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 def doMADWideOpt : Predicate<"doMADWideOpt()">;
 
