@@ -29092,6 +29092,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
           R.isScalarFallbackBlock(BB))
         continue;
       R.clearReductionData();
+      // GEPs is collected per block and is also used to keep its index
+      // computations out of the standalone-seed attempt.
+      collectSeedInstructions(BB);
       Changed |= vectorizeOnceUsedSeeds(BB, R);
     }
   }
@@ -36056,6 +36059,13 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
         !isOnceUsedSeed(&I) || isNonVectorizableInst(&I, TLI) ||
         R.hasResolvedUser(&I))
       continue;
+    // Index chains of collected GEPs are handled by vectorizeGEPIndices.
+    if (isGEPCandidateIndexBundle({&I}, *SE, *LI, SLPReVec, [&](auto *GEP) {
+          auto It = GEPs.find(GEP->getPointerOperand());
+          return It != GEPs.end() && It->second.size() >= 2 &&
+                 is_contained(It->second, GEP);
+        }))
+      continue;
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
     if (VectorizePoorThroughput &&
@@ -36172,6 +36182,12 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         auto *GEPIdx = GEP->idx_begin()->get();
         assert(GEP->getNumIndices() == 1 && !isa<Constant>(GEPIdx));
         Bundle[BundleIndex++] = GEPIdx;
+      }
+
+      if (isStrengthReducibleIndexBundle(Bundle, *SE, *LI, SLPReVec)) {
+        LLVM_DEBUG(dbgs() << "SLP: Not vectorizing strength-reducible address "
+                             "computations.\n");
+        continue;
       }
 
       // Try and vectorize the indices. We are currently only interested in
