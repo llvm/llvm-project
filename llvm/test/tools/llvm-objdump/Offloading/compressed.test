@@ -1,0 +1,41 @@
+# REQUIRES: zstd
+# UNSUPPORTED: system-zos
+
+# RUN: yaml2obj %s --docnum=1 -o %t.bin
+# RUN: llvm-objdump --offloading %t.bin | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+# RUN: yaml2obj %s --docnum=2 -o %t.o
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.o
+# RUN: llvm-objdump --offloading %t.o | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+--- !Offload
+Compression: zstd
+Members:
+  - ImageKind:   IMG_Cubin
+    OffloadKind: OFK_HIP
+    String:
+      - Key:   triple
+        Value: amdgcn-amd-amdhsa
+      - Key:   arch
+        Value: gfx90a
+    Content:   DEADBEEF
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+Sections:
+  - Name:            .llvm.offloading
+    Type:            SHT_LLVM_OFFLOADING
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000008
+
+#        ELF:{{.*}}file format elf64-unknown
+#  ELF-EMPTY:
+#      CHECK:OFFLOADING IMAGE [0]:
+# CHECK-NEXT:kind            cubin
+# CHECK-NEXT:arch            gfx90a
+# CHECK-NEXT:triple          amdgcn-amd-amdhsa
+# CHECK-NEXT:producer        hip
+# CHECK-NEXT:image size      4 bytes
