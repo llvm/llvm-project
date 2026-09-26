@@ -66,10 +66,16 @@ mlir::Value ConvertFIRToLLVMPattern::integerCast(
     mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
     mlir::Type ty, mlir::Value val, bool fold) const {
   auto valTy = val.getType();
-  // If the value was not yet lowered, lower its type so that it can
-  // be used in getPrimitiveTypeSizeInBits.
-  if (!mlir::isa<mlir::IntegerType>(valTy))
-    valTy = convertType(valTy);
+  // If the value was not yet lowered, convert it to the LLVM integer type.
+  if (!mlir::isa<mlir::IntegerType>(valTy)) {
+    mlir::Type llvmValTy = convertType(valTy);
+    if (llvmValTy && llvmValTy != valTy) {
+      val = getTypeConverter()->materializeTargetConversion(rewriter, loc,
+                                                            llvmValTy, val);
+      assert(val && "failed to materialize integer target conversion");
+      valTy = llvmValTy;
+    }
+  }
   auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
   auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
   if (fold) {

@@ -37,7 +37,10 @@ static mlir::LowerToLLVMOptions MakeLowerOptions(mlir::ModuleOp module) {
 
   auto options = mlir::LowerToLLVMOptions(module.getContext());
   auto llvmDL = llvm::DataLayout(dataLayoutString);
-  if (llvmDL.getPointerSizeInBits(0) == 32) {
+  bool use32BitIndices = dataLayoutString.empty()
+                             ? fir::getTargetTriple(module).isArch32Bit()
+                             : llvmDL.getPointerSizeInBits(0) == 32;
+  if (use32BitIndices) {
     // FIXME: Should translateDataLayout in the MLIR layer be doing this?
     options.overrideIndexBitwidth(32);
   }
@@ -174,9 +177,10 @@ mlir::Type LLVMTypeConverter::offsetType() const {
   return mlir::IntegerType::get(&getContext(), 32);
 }
 
-// i64 can be used to index into aggregates like arrays
+// Index width follows the LLVM lowering options / data layout (i32 on
+// 32-bit targets, i64 otherwise).
 mlir::Type LLVMTypeConverter::indexType() const {
-  return mlir::IntegerType::get(&getContext(), 64);
+  return mlir::IntegerType::get(&getContext(), getIndexTypeBitwidth());
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
