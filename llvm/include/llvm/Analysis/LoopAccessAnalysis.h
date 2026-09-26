@@ -961,7 +961,8 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 LLVM_ABI std::optional<int64_t>
 getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
                 const DataLayout &DL, ScalarEvolution &SE,
-                bool StrictCheck = false, bool CheckType = true);
+                bool StrictCheck = false, bool CheckType = true,
+                bool ExpensivePtrCheck = false);
 
 /// Attempt to sort the pointers in \p VL and return the sorted indices
 /// in \p SortedIndices, if reordering is required.
