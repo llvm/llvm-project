@@ -25,21 +25,21 @@ namespace __math {
 
 // fmax
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float fmax(float __x, float __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 float fmax(float __x, float __y) _NOEXCEPT {
   return __builtin_fmaxf(__x, __y);
 }
 
 template <class = int>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double fmax(double __x, double __y) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 double fmax(double __x, double __y) _NOEXCEPT {
   return __builtin_fmax(__x, __y);
 }
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double fmax(long double __x, long double __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 long double fmax(long double __x, long double __y) _NOEXCEPT {
   return __builtin_fmaxl(__x, __y);
 }
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> fmax(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __promote_t<_A1, _A2> fmax(_A1 __x, _A2 __y) _NOEXCEPT {
   using __result_type = __promote_t<_A1, _A2>;
   static_assert(!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value), "");
   return __math::fmax((__result_type)__x, (__result_type)__y);
@@ -47,21 +47,21 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 
 // fmin
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float fmin(float __x, float __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 float fmin(float __x, float __y) _NOEXCEPT {
   return __builtin_fminf(__x, __y);
 }
 
 template <class = int>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double fmin(double __x, double __y) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 double fmin(double __x, double __y) _NOEXCEPT {
   return __builtin_fmin(__x, __y);
 }
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double fmin(long double __x, long double __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 long double fmin(long double __x, long double __y) _NOEXCEPT {
   return __builtin_fminl(__x, __y);
 }
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> fmin(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __promote_t<_A1, _A2> fmin(_A1 __x, _A2 __y) _NOEXCEPT {
   using __result_type = __promote_t<_A1, _A2>;
   static_assert(!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value), "");
   return __math::fmin((__result_type)__x, (__result_type)__y);
