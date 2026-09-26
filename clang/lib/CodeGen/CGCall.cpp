@@ -2453,9 +2453,6 @@ static void getTrivialDefaultFunctionAttributes(
     std::tie(Var, Value) = Attr.split('=');
     FuncAttrs.addAttribute(Var, Value);
   }
-
-  TargetInfo::BranchProtectionInfo BPI(LangOpts);
-  TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
@@ -2557,9 +2554,12 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
   getTrivialDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite,
                                       FuncAttrs);
 
-  if (!AttrOnCallSite)
+  if (!AttrOnCallSite) {
     TargetCodeGenInfo::initPointerAuthFnAttributes(CodeGenOpts.PointerAuth,
                                                    FuncAttrs);
+    TargetInfo::BranchProtectionInfo BPI(LangOpts);
+    TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  }
 
   // If we're just getting the default, get the default values for mergeable
   // attributes.
