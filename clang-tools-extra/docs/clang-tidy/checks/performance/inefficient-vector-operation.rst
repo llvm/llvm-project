@@ -59,6 +59,15 @@ Options
    Semicolon-separated list of names of vector-like classes. By default only
    ``::std::vector`` is considered.
 
+.. option:: RangeLikeClasses
+
+   Semicolon-separated list of names of container classes that can be used as
+   sources in range-based for loops. Each configured class must provide an
+   accessible ``size()`` method whose result is the number of elements visited
+   by the loop. The configured list replaces the default list, which contains
+   ``::std::vector``, ``::std::set``, ``::std::unordered_set``, ``::std::map``,
+   ``::std::unordered_map``, ``::std::array``, and ``::std::deque``.
+
 .. option:: EnableProto
 
    When `true`, the check will also warn on inefficient operations for proto
