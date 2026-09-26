@@ -33,6 +33,7 @@ All objects on the data stack must have one of the following data types. These d
 - *Object* (Basically an `SBValue`)
 - *Type* (Basically an `SBType`)
 - *Selector* (One of the predefine functions)
+- *Dictionary* (A mutable mapping from `String` keys to values of any data type)
 
 *Object* and *Type* are opaque, they can only be used as a parameters of `call`.
 
@@ -176,6 +177,27 @@ Sel.  Mnemonic                         Stack Effect                             
 0x51  ``sprintf``                       ``(String arg0 ... sprintf -> String)``                 ``sprintf``
 0x52  ``strlen``                        ``(String strlen -> String)``                           ``strlen in bytes``
 ====  ===============================  ======================================================  ======================================
+```
+
+### Dictionary objects
+
+ `Dictionary` objects are key-value containers, with `String` value keys, and values of any data type. `Dictionary` is a reference type, mutating it through one reference is visible through any other reference to the same dictionary (e.g. one obtained earlier with `dup`). Empty `Dictionary` objects are created  with `dict`. `Dictionary` objects are populated with `dict_set`. Values are retrieved with `dict_get`. When `dict_get` is called with a key that is not present in the dictionary, an error is emitted. Use `dict_has` first to check for a key's existence. Dictionary operations consumes the `Dictionary` argument, so `dup` it first if the `Dictionary` is needed afterward. For example, to set multiple keys in a row:
+
+```
+dict dup "a" 1 dict_set dup "b" 2 dict_set
+```
+
+A `Dictionary` may be stored as a value in another `Dictionary`, but `dict_set` emits an error if doing so would make a dictionary contain itself, directly or through nested dictionaries.
+
+```{eval-rst}
+========  =============  ============================================================
+ Opcode    Mnemonic      Stack effect
+--------  -------------  ------------------------------------------------------------
+ 0x70      ``dict``       ``( -> Dictionary)`` create an empty dictionary
+ 0x71      ``dict_set``   ``(Dictionary String x -> )`` set a key to a value
+ 0x72      ``dict_get``   ``(Dictionary String -> x)`` look up the value for a key
+ 0x73      ``dict_has``   ``(Dictionary String -> Integer)`` check whether a key is present
+========  =============  ============================================================
 ```
 
 ### Byte Code
