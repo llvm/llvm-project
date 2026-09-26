@@ -224,10 +224,6 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     llvm::GlobalValue::LinkageTypes Linkage =
         CGM.getLLVMLinkageVarDefinition(&D);
 
-    // FIXME: We need to force the emission/use of a guard variable for
-    // some variables even if we can constant-evaluate them because
-    // we can't guarantee every translation unit will constant-evaluate them.
-
     return EmitStaticVarDecl(D, Linkage);
   }
 
@@ -360,8 +356,24 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
 llvm::GlobalVariable *
 CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
                                                llvm::GlobalVariable *GV) {
+  // A static local with vague linkage (e.g. one in an inline function) is
+  // shared by every translation unit that emits it, but only a constant
+  // initializer is guaranteed to be emitted as a constant in all of them. If
+  // we were to fold an initializer that another translation unit can't fold
+  // (say, because it reads a variable whose initializer is only visible here),
+  // that translation unit would perform a guarded initialization which could
+  // store to our copy of the variable (possibly placed in read-only memory) or
+  // race with our unguarded reads of it. Use a guarded initialization here as
+  // well, so that every translation unit agrees on how the variable is
+  // initialized.
+  bool NeedsGuardedInit =
+      getLangOpts().CPlusPlus && !getLangOpts().CUDAIsDevice &&
+      GV->isWeakForLinker() && !D.hasConstantInitialization() &&
+      !D.hasFlexibleArrayInit(getContext());
+
   ConstantEmitter emitter(*this);
-  llvm::Constant *Init = emitter.tryEmitForInitializer(D);
+  llvm::Constant *Init =
+      NeedsGuardedInit ? nullptr : emitter.tryEmitForInitializer(D);
 
   // If constant emission failed, then this should be a C++ static
   // initializer.
