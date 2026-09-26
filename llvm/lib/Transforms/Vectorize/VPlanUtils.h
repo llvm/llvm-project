@@ -135,30 +135,10 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 /// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
-/// Extracts and returns NoWrap and FastMath flags from the induction binop in
-/// \p ID, for use on a wide induction, which adds the step.
-inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
-  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return ID.getInductionBinOp()->getFastMathFlags();
-
-  if (auto *AddO = dyn_cast_if_present<AddOperator>(ID.getInductionBinOp())) {
-    return VPIRFlags::WrapFlagsTy(AddO->hasNoUnsignedWrap(),
-                                  AddO->hasNoSignedWrap());
-  }
-
-  // The step of a sub induction is negated, so NUW cannot be preserved. NSW
-  // can, if the step is not the signed minimum.
-  if (auto *SubO = dyn_cast_if_present<SubOperator>(ID.getInductionBinOp())) {
-    ConstantInt *Step = ID.getConstIntStepValue();
-    return VPIRFlags::WrapFlagsTy(false,
-                                  SubO->hasNoSignedWrap() && Step &&
-                                      !Step->isMinValue(/*IsSigned=*/true));
-  }
-
-  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
-         "Expected int induction");
-  return VPIRFlags::WrapFlagsTy(false, false);
-}
+/// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
+/// ID.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
+                               const VPPhi *PhiR);
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
