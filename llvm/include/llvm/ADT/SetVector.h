@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <initializer_list>
 
 namespace llvm {
 
@@ -52,15 +53,91 @@ namespace llvm {
 /// when searching for elements instead of checking Set, due to it being better
 /// for performance. A value of 0 means that this mode of operation is not used,
 /// and is the default value.
-template <typename T, typename Vector = SmallVector<T, 0>,
-          typename Set = DenseSet<T>, unsigned N = 0>
-class SetVector {
-  // Much like in SmallPtrSet, this value should not be too high to prevent
-  // excessively long linear scans from occuring.
+namespace detail {
+
+template <typename T>
+struct alignas(SmallVectorAlignmentAndSize<T>) SetVectorSmallVectorImpl
+    : public SmallVectorImpl<T> {
+  using SmallVectorImpl<T>::getFirstEl;
+  using SmallVectorImpl<T>::isSmall;
+
+  explicit SetVectorSmallVectorImpl(unsigned N) : SmallVectorImpl<T>(N) {}
+  ~SetVectorSmallVectorImpl() = default;
+  SetVectorSmallVectorImpl(const SetVectorSmallVectorImpl &) = delete;
+  SetVectorSmallVectorImpl &
+  operator=(const SetVectorSmallVectorImpl &) = delete;
+
+  SetVectorSmallVectorImpl &operator=(SetVectorSmallVectorImpl &&RHS) {
+    SmallVectorImpl<T>::operator=(std::move(RHS));
+    return *this;
+  }
+
+  void destroy_elements() { this->destroy_range(this->begin(), this->end()); }
+
+  void resetInlineCapacity(unsigned N) {
+    if (this->isSmall() && this->capacity() == 0)
+      this->set_allocation_range(this->getFirstEl(), N);
+  }
+};
+
+template <typename T, typename Vector> struct SetVectorVectorStorage {
+  using type = Vector;
+};
+
+template <typename T> struct SetVectorVectorStorage<T, SmallVectorImpl<T>> {
+  using type = SetVectorSmallVectorImpl<T>;
+};
+
+template <typename T, typename Vector, typename Set, unsigned N = 0>
+class SetVectorBase {
   static_assert(N <= 32, "Small size should be less than or equal to 32!");
 
   using const_arg_type =
       typename const_pointer_or_const_ref<typename Set::key_type>::type;
+
+protected:
+  using vector_storage_type = typename SetVectorVectorStorage<T, Vector>::type;
+
+  SetVectorBase() = default;
+  explicit SetVectorBase(unsigned InlineCapacity) : vector_(InlineCapacity) {}
+  SetVectorBase(const SetVectorBase &) = default;
+  SetVectorBase(SetVectorBase &&) = default;
+  SetVectorBase &operator=(const SetVectorBase &) = default;
+  SetVectorBase &operator=(SetVectorBase &&) = default;
+  ~SetVectorBase() = default;
+
+  void copyFrom(const SetVectorBase &RHS) {
+    set_.clear();
+    vector_.assign(RHS.vector_.begin(), RHS.vector_.end());
+    if constexpr (std::is_base_of_v<SmallVectorImpl<T>, Vector>) {
+      if (!vector_.isSmall() || vector_.size() > 32)
+        makeBig();
+    } else if constexpr (canBeSmall()) {
+      if (vector_.size() > N)
+        makeBig();
+    } else {
+      set_ = RHS.set_;
+    }
+  }
+
+  void moveFrom(SetVectorBase &&RHS) {
+    set_.clear();
+    if constexpr (std::is_base_of_v<SmallVectorImpl<T>, Vector>) {
+      if (!RHS.vector_.isSmall()) {
+        set_ = std::move(RHS.set_);
+        vector_ = std::move(RHS.vector_);
+        RHS.set_.clear();
+      } else {
+        vector_ = std::move(RHS.vector_);
+        RHS.set_.clear();
+        if (!vector_.isSmall() || vector_.size() > 32)
+          makeBig();
+      }
+    } else {
+      set_ = std::move(RHS.set_);
+      vector_ = std::move(RHS.vector_);
+    }
+  }
 
 public:
   using value_type = typename Vector::value_type;
@@ -75,26 +152,7 @@ public:
   using const_reverse_iterator = typename vector_type::const_reverse_iterator;
   using size_type = typename vector_type::size_type;
 
-  /// Construct an empty SetVector
-  SetVector() = default;
-
-  /// Initialize a SetVector with a range of elements
-  template<typename It>
-  SetVector(It Start, It End) {
-    insert(Start, End);
-  }
-
-  template <typename Range>
-  SetVector(llvm::from_range_t, Range &&R)
-      : SetVector(adl_begin(R), adl_end(R)) {}
-
   [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return vector_; }
-
-  /// Clear the SetVector and return the underlying vector.
-  [[nodiscard]] Vector takeVector() {
-    set_.clear();
-    return std::move(vector_);
-  }
 
   /// Determine if the SetVector is empty or not.
   [[nodiscard]] bool empty() const { return vector_.empty(); }
@@ -159,8 +217,13 @@ public:
       if (isSmall()) {
         if (!llvm::is_contained(vector_, X)) {
           vector_.push_back(X);
-          if (vector_.size() > N)
-            makeBig();
+          if constexpr (std::is_base_of_v<SmallVectorImpl<T>, Vector>) {
+            if (!vector_.isSmall() || vector_.size() > 32)
+              makeBig();
+          } else {
+            if (vector_.size() > N)
+              makeBig();
+          }
           return true;
         }
         return false;
@@ -278,7 +341,8 @@ public:
   /// Remove the last element of the SetVector.
   void pop_back() {
     assert(!empty() && "Cannot remove an element from an empty SetVector!");
-    set_.erase(back());
+    if (!isSmall())
+      set_.erase(back());
     vector_.pop_back();
   }
 
@@ -288,11 +352,11 @@ public:
     return Ret;
   }
 
-  [[nodiscard]] bool operator==(const SetVector &that) const {
+  [[nodiscard]] bool operator==(const SetVectorBase &that) const {
     return vector_ == that.vector_;
   }
 
-  [[nodiscard]] bool operator!=(const SetVector &that) const {
+  [[nodiscard]] bool operator!=(const SetVectorBase &that) const {
     return vector_ != that.vector_;
   }
 
@@ -319,13 +383,21 @@ public:
       remove(Elem);
   }
 
-  void swap(SetVector<T, Vector, Set, N> &RHS) {
+  void swap(SetVectorBase &RHS) {
     set_.swap(RHS.set_);
     vector_.swap(RHS.vector_);
+    if constexpr (std::is_base_of_v<SmallVectorImpl<T>, Vector>) {
+      if (!vector_.isSmall() && isSmall())
+        makeBig();
+      if (!RHS.vector_.isSmall() && RHS.isSmall())
+        RHS.makeBig();
+    }
   }
 
-private:
-  [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
+protected:
+  [[nodiscard]] static constexpr bool canBeSmall() {
+    return std::is_base_of_v<SmallVectorImpl<T>, Vector> || N != 0;
+  }
 
   [[nodiscard]] bool isSmall() const { return set_.empty(); }
 
@@ -335,9 +407,157 @@ private:
         set_.insert(entry);
   }
 
-  set_type set_;         ///< The set.
-  vector_type vector_;   ///< The vector.
+  set_type set_;               ///< The set.
+  vector_storage_type vector_; ///< The vector.
 };
+
+} // end namespace detail
+
+template <typename T, typename Vector = SmallVector<T, 0>,
+          typename Set = DenseSet<T>, unsigned N = 0>
+class SetVector : public detail::SetVectorBase<T, Vector, Set, N> {
+  using Base = detail::SetVectorBase<T, Vector, Set, N>;
+
+public:
+  /// Construct an empty SetVector
+  SetVector() = default;
+
+  /// Initialize a SetVector with a range of elements
+  template <typename It> SetVector(It Start, It End) {
+    this->insert(Start, End);
+  }
+
+  template <typename Range>
+  SetVector(llvm::from_range_t, Range &&R)
+      : SetVector(adl_begin(R), adl_end(R)) {}
+
+  SetVector(std::initializer_list<T> IL) { this->insert(IL.begin(), IL.end()); }
+
+  /// Clear the SetVector and return the underlying vector.
+  [[nodiscard]] Vector takeVector() {
+    this->set_.clear();
+    return std::move(this->vector_);
+  }
+};
+
+template <typename T, typename Set>
+class SetVector<T, SmallVectorImpl<T>, Set, 0>
+    : public detail::SetVectorBase<T, SmallVectorImpl<T>, Set, 0> {
+  using Base = detail::SetVectorBase<T, SmallVectorImpl<T>, Set, 0>;
+
+  static_assert(alignof(Set) <= alignof(detail::SetVectorSmallVectorImpl<T>),
+                "Set alignment must not exceed vector alignment");
+
+protected:
+  explicit SetVector(unsigned InlineCapacity) : Base(InlineCapacity) {}
+  SetVector(const SetVector &) = default;
+  SetVector(SetVector &&) = default;
+  SetVector &operator=(const SetVector &) = default;
+  SetVector &operator=(SetVector &&) = default;
+  ~SetVector() = default;
+
+public:
+  template <unsigned RetN = 0> [[nodiscard]] SmallVector<T, RetN> takeVector() {
+    this->set_.clear();
+    return SmallVector<T, RetN>(std::move(this->vector_));
+  }
+};
+
+template <typename T, unsigned VecN, typename Set, unsigned N>
+class SetVector<T, SmallVector<T, VecN>, Set, N>
+    : public SetVector<T, SmallVectorImpl<T>, Set, 0>,
+      private SmallVectorStorage<T, VecN> {
+  static_assert(VecN <= 32, "Small size should be less than or equal to 32!");
+  static_assert(N <= 32, "Small size should be less than or equal to 32!");
+  using Base = SetVector<T, SmallVectorImpl<T>, Set, 0>;
+
+  void checkStorageLayout() const {
+    if constexpr (VecN > 0)
+      assert(this->vector_.getFirstEl() ==
+                 static_cast<const void *>(
+                     static_cast<const SmallVectorStorage<T, VecN> *>(this)) &&
+             "SmallSetVector inline storage layout mismatch!");
+  }
+
+public:
+  using vector_type = SmallVector<T, VecN>;
+
+  SetVector() : Base(VecN) { checkStorageLayout(); }
+
+  template <typename It> SetVector(It Start, It End) : Base(VecN) {
+    checkStorageLayout();
+    this->insert(Start, End);
+  }
+
+  template <typename Range>
+  SetVector(llvm::from_range_t, Range &&R) : Base(VecN) {
+    checkStorageLayout();
+    this->insert_range(std::forward<Range>(R));
+  }
+
+  SetVector(std::initializer_list<T> IL) : Base(VecN) {
+    checkStorageLayout();
+    this->insert(IL.begin(), IL.end());
+  }
+
+  SetVector(const SetVector &RHS) : Base(VecN) {
+    checkStorageLayout();
+    this->copyFrom(RHS);
+  }
+
+  SetVector(const Base &RHS) : Base(VecN) {
+    checkStorageLayout();
+    this->copyFrom(RHS);
+  }
+
+  SetVector(SetVector &&RHS) : Base(VecN) {
+    checkStorageLayout();
+    this->moveFrom(std::move(RHS));
+  }
+
+  SetVector(Base &&RHS) : Base(VecN) {
+    checkStorageLayout();
+    this->moveFrom(std::move(RHS));
+  }
+
+  SetVector &operator=(const SetVector &RHS) {
+    if (this != &RHS)
+      this->copyFrom(RHS);
+    return *this;
+  }
+
+  SetVector &operator=(const Base &RHS) {
+    if (this != &RHS)
+      this->copyFrom(RHS);
+    return *this;
+  }
+
+  SetVector &operator=(SetVector &&RHS) {
+    if (this != &RHS)
+      this->moveFrom(std::move(RHS));
+    return *this;
+  }
+
+  SetVector &operator=(Base &&RHS) {
+    if (this != &RHS)
+      this->moveFrom(std::move(RHS));
+    return *this;
+  }
+
+  ~SetVector() { this->vector_.destroy_elements(); }
+
+  [[nodiscard]] SmallVector<T, VecN> takeVector() {
+    this->set_.clear();
+    SmallVector<T, VecN> Ret(std::move(this->vector_));
+    this->vector_.resetInlineCapacity(VecN);
+    return Ret;
+  }
+};
+
+/// Common base class for SmallSetVector and SetVector that erases the inline
+/// capacity N from the type, similar to SmallVectorImpl.
+template <typename T, typename Set = DenseSet<T>>
+using SmallSetVectorImpl = SetVector<T, SmallVectorImpl<T>, Set, 0>;
 
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.

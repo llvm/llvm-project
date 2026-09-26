@@ -106,3 +106,43 @@ TEST(SmallSetVector, CtorRange) {
   SmallSetVector<unsigned, 4> Set(llvm::from_range, Args);
   EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
 }
+
+TEST(SetVector, CtorInitList) {
+  SetVector<unsigned> Set = {3, 1, 2, 1};
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}
+
+TEST(SmallSetVector, CtorInitList) {
+  SmallSetVector<unsigned, 4> Set = {3, 1, 2, 1};
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}
+
+TEST(SmallSetVectorImpl, TypeErasedReference) {
+  auto Populate = [](SmallSetVectorImpl<unsigned> &S) {
+    S.insert(3);
+    S.insert(1);
+    S.insert(2);
+    S.insert(1);
+    S.insert(4);
+    S.insert(5);
+  };
+
+  SmallSetVector<unsigned, 2> Small2;
+  Populate(Small2);
+  EXPECT_THAT(Small2, ::testing::ElementsAre(3, 1, 2, 4, 5));
+
+  SmallSetVector<unsigned, 16> Small16;
+  Populate(Small16);
+  EXPECT_THAT(Small16, ::testing::ElementsAre(3, 1, 2, 4, 5));
+
+  SetVector<unsigned> DefaultSV;
+  Populate(DefaultSV);
+  EXPECT_THAT(DefaultSV, ::testing::ElementsAre(3, 1, 2, 4, 5));
+
+  // Cross-capacity copy and move construction/assignment via SmallSetVectorImpl
+  SmallSetVector<unsigned, 4> CopyFrom16(Small16);
+  EXPECT_THAT(CopyFrom16, ::testing::ElementsAre(3, 1, 2, 4, 5));
+
+  SmallSetVector<unsigned, 8> MoveFrom2(std::move(Small2));
+  EXPECT_THAT(MoveFrom2, ::testing::ElementsAre(3, 1, 2, 4, 5));
+}
