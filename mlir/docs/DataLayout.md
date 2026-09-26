@@ -294,3 +294,14 @@ The [DLTI](../Dialects/DLTIDialect/) dialect provides the attributes implementin
 attribute that can be used to attach the specification to a given operation. The
 verifier of this attribute triggers those of the specification and checks the
 compatibility of nested specifications.
+
+DLTI key-value queries use a separate interface from data layout scope
+calculation. `DLTIQueryOpInterface` does not require a single backing
+attribute: an operation can answer the key `"architecture"` using an inherent
+`architecture = "sm_90"` attribute, without storing a `dlti` attribute or a
+`#dlti.map`. Its default implementation answers keys from an operation's
+inherent `dlti` attribute.
+`func.func` and `gpu.module` implement this interface; `builtin.module`
+acquires it when the DLTI dialect is loaded. A query searches the target
+operation and then its ancestors until one answers the first key. Further keys
+are queried on the returned attribute through `DLTIQueryInterface`.
