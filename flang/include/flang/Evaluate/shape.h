@@ -31,6 +31,26 @@ using ExtentExpr = Expr<ExtentType>;
 using MaybeExtentExpr = std::optional<ExtentExpr>;
 using Shape = std::vector<MaybeExtentExpr>;
 
+inline constexpr int ExtentIntKind = Fortran::evaluate::SubscriptIntegerKind;
+
+inline Constant<ExtentType> MakeExtentConstant(int64_t v) {
+  return Constant<ExtentType>{
+      ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
+}
+
+inline Constant<ExtentType> MakeExtentConstant(const value::IntegerValue &v) {
+  return Constant<ExtentType>{
+      ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
+}
+
+inline ExtentExpr MakeExtentExpr(int64_t v) {
+  return ExtentExpr{MakeExtentConstant(v)};
+}
+
+inline ExtentExpr MakeExtentExpr(const value::IntegerValue &v) {
+  return ExtentExpr{MakeExtentConstant(v)};
+}
+
 bool IsImpliedShape(const Symbol &);
 bool IsExplicitShape(const Symbol &);
 
@@ -258,7 +278,7 @@ private:
   template <typename T>
   MaybeExtentExpr GetArrayConstructorExtent(
       const ArrayConstructorValues<T> &values) const {
-    ExtentExpr result{0};
+    ExtentExpr result{MakeExtentConstant(0)};
     for (const auto &value : values) {
       if (MaybeExtentExpr n{GetArrayConstructorValueExtent(value)}) {
         AccumulateExtent(result, std::move(*n));

@@ -207,7 +207,7 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
     auto foldedUpper{evaluate::Fold(context, SomeExpr{*upperExpr})};
     auto upper{ToInt64(foldedUpper)};
     if (lower && upper) {
-      int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
+      int kind{evaluate::ResultKind<evaluate::ImpliedDoIndex>};
       if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
         if (dynamicType->category() == TypeCategory::Integer) {
           kind = dynamicType->kind();
@@ -829,7 +829,7 @@ static bool CombineEquivalencedInitialization(
       minElementBytes = 1;
     }
     const DeclTypeSpec &typeSpec{scope.MakeNumericType(
-        TypeCategory::Integer, KindExpr{minElementBytes})};
+        TypeCategory::Integer, MakeKindExpr(minElementBytes))};
     details.set_type(typeSpec);
     ArraySpec arraySpec;
     arraySpec.emplace_back(ShapeSpec::MakeExplicit(Bound{
