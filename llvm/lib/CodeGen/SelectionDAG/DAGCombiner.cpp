@@ -4660,26 +4660,26 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // smax(a,b) - smin(a,b) --> abds(a,b)
   if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
-      sd_match(N0, &DAG, m_SMaxLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_SMinLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_SMaxLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_SMinLike(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
   // smin(a,b) - smax(a,b) --> neg(abds(a,b))
   if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
-      sd_match(N0, &DAG, m_SMinLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_SMaxLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_SMinLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_SMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDS, DL, VT, A, B), DL, VT);
 
   // umax(a,b) - umin(a,b) --> abdu(a,b)
   if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
-      sd_match(N0, &DAG, m_UMaxLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_UMinLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_UMaxLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_UMinLike(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
 
   // umin(a,b) - umax(a,b) --> neg(abdu(a,b))
   if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
-      sd_match(N0, &DAG, m_UMinLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_UMaxLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_UMinLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
 
   return SDValue();
@@ -16736,14 +16736,24 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   return SDValue();
 }
 
+/// For a unary operation, propagate poison or undef from the operand \p N0 to
+/// the result type \p VT. Returns an empty SDValue if \p N0 is neither.
+static SDValue propagateUnaryUndef(SelectionDAG &DAG, SDValue N0, EVT VT) {
+  if (N0.getOpcode() == ISD::POISON)
+    return DAG.getPOISON(VT);
+  if (N0.getOpcode() == ISD::UNDEF)
+    return DAG.getUNDEF(VT);
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // aext(undef) = undef
-  if (N0.isUndef())
-    return DAG.getUNDEF(VT);
+  // aext(undef) = undef, aext(poison) = poison
+  if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
+    return R;
 
   if (SDValue Res = tryToFoldExtendOfConstant(N, DL, TLI, DAG, LegalTypes))
     return Res;
@@ -17764,9 +17774,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   bool isLE = DAG.getDataLayout().isLittleEndian();
   SDLoc DL(N);
 
-  // trunc(undef) = undef
-  if (N0.isUndef())
-    return DAG.getUNDEF(VT);
+  // trunc(undef) = undef, trunc(poison) = poison
+  if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
+    return R;
 
   // fold (truncate (truncate x)) -> (truncate x)
   if (N0.getOpcode() == ISD::TRUNCATE)
@@ -18305,8 +18315,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (N0.isUndef())
-    return DAG.getUNDEF(VT);
+  if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
+    return R;
 
   // If the input is a BUILD_VECTOR with all constant elements, fold this now.
   // Only do this before legalize types, unless both types are integer and the
@@ -20792,8 +20802,8 @@ SDValue DAGCombiner::visitFP_TO_SINT(SDNode *N) {
   SDLoc DL(N);
 
   // fold (fp_to_sint undef) -> undef
-  if (N0.isUndef())
-    return DAG.getUNDEF(VT);
+  if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
+    return R;
 
   // fold (fp_to_sint c1fp) -> c1
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_TO_SINT, DL, VT, {N0}))
@@ -20808,8 +20818,8 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
   SDLoc DL(N);
 
   // fold (fp_to_uint undef) -> undef
-  if (N0.isUndef())
-    return DAG.getUNDEF(VT);
+  if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
+    return R;
 
   // fold (fp_to_uint c1fp) -> c1
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_TO_UINT, DL, VT, {N0}))
@@ -20824,8 +20834,8 @@ SDValue DAGCombiner::visitXROUND(SDNode *N) {
 
   // fold (lrint|llrint undef) -> undef
   // fold (lround|llround undef) -> undef
-  if (N0.isUndef())
-    return DAG.getUNDEF(VT);
+  if (SDValue R = propagateUnaryUndef(DAG, N0, VT))
+    return R;
 
   // fold (lrint|llrint c1fp) -> c1
   // fold (lround|llround c1fp) -> c1
