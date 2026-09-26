@@ -2090,9 +2090,7 @@ static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
          "Only fadd/fsub can be the root of an fmuladd.");
 
   // Check whether this op is fusable, i.e. -ffp-contract=on. -ffp-contract=fast
-  // needs fast-math flags on the fmul/fadd, which CIR does not model yet, so it
-  // fuses nowhere for now.
-  assert(!cir::MissingFeatures::fastMathFlags());
+  // is represented by the `contract` flag on the fmul/fadd instead.
   if (!op.fpFeatures.allowFPContractWithinStatement())
     return nullptr;
 

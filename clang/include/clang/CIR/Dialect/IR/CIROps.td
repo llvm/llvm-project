@@ -2941,18 +2941,22 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 // and result must all be the same floating-point scalar or vector type.
 //
 // The optional `fenv` attribute describes constraints on the floating-point
-// handling of the operation.
+// handling of the operation. The optional `fastmath_flags` attribute holds the
+// fast-math flags of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
-  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FenvAttr>:$fenv,
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
 
   let constrainedLLVMIntrinsic = mnemonic;
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 }
