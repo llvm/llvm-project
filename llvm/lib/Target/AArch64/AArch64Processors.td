@@ -14,10 +14,16 @@
 //===----------------------------------------------------------------------===//
 
 
-def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
+// Processor families only select tuning, so like the tuning features they
+// imply they do not prevent inlining.
+class ProcFamily<string n, string v, string d,
+                 list<SubtargetFeature> i = []>
+    : SubtargetFeature<n, "ARMProcFamily", v, d, i, InlineIgnore>;
+
+def TuneA35     : ProcFamily<"a35", "CortexA35",
                                 "Cortex-A35 ARM processors">;
 
-def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
+def TuneA320 : ProcFamily<"a320", "CortexA320",
                                    "Cortex-A320 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -26,7 +32,7 @@ def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
                                    FeatureUseFixedOverScalableIfEqualCost,
                                    FeatureAggressiveInterleaving]>;
 
-def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
+def TuneA53     : ProcFamily<"a53", "CortexA53",
                                    "Cortex-A53 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -34,7 +40,7 @@ def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    FeaturePostRAScheduler,
                                    FeatureUseWzrToVecMove]>;
 
-def TuneA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
+def TuneA55     : ProcFamily<"a55", "CortexA55",
                                    "Cortex-A55 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -42,7 +48,7 @@ def TuneA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    FeatureFuseAddress,
                                    FeatureUseWzrToVecMove]>;
 
-def TuneA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
+def TuneA510    : ProcFamily<"a510", "CortexA510",
                                    "Cortex-A510 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -51,7 +57,7 @@ def TuneA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
                                    FeatureUseFixedOverScalableIfEqualCost
                                    ]>;
 
-def TuneA520    : SubtargetFeature<"a520", "ARMProcFamily", "CortexA520",
+def TuneA520    : ProcFamily<"a520", "CortexA520",
                                    "Cortex-A520 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -59,22 +65,21 @@ def TuneA520    : SubtargetFeature<"a520", "ARMProcFamily", "CortexA520",
                                    FeatureUseWzrToVecMove,
                                    FeatureUseFixedOverScalableIfEqualCost]>;
 
-def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520",
+def TuneA520AE  : ProcFamily<"a520ae", "CortexA520",
                                    "Cortex-A520AE ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler,
                                    FeatureUseWzrToVecMove]>;
 
-def TuneC1Nano : SubtargetFeature<"c1-nano", "ARMProcFamily",
-                                  "C1Nano", "C1-Nano ARM Processors",[
+def TuneC1Nano : ProcFamily<"c1-nano", "C1Nano", "C1-Nano ARM Processors",[
                                   FeatureFuseAES,
                                   FeatureFuseAdrpAdd,
                                   FeaturePostRAScheduler,
                                   FeatureUseWzrToVecMove,
                                   FeatureUseFixedOverScalableIfEqualCost]>;
 
-def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
+def TuneA57     : ProcFamily<"a57", "CortexA57",
                                    "Cortex-A57 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureBalanceFPOps,
@@ -86,7 +91,7 @@ def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureMaxInterleaveFactor4]>;
 
-def TuneA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
+def TuneA65     : ProcFamily<"a65", "CortexA65",
                                    "Cortex-A65 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAddress,
@@ -95,7 +100,7 @@ def TuneA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
+def TuneA72     : ProcFamily<"a72", "CortexA72",
                                    "Cortex-A72 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -104,7 +109,7 @@ def TuneA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
+def TuneA73     : ProcFamily<"a73", "CortexA73",
                                    "Cortex-A73 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -112,7 +117,7 @@ def TuneA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
+def TuneA75     : ProcFamily<"a75", "CortexA75",
                                    "Cortex-A75 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -120,7 +125,7 @@ def TuneA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
+def TuneA76     : ProcFamily<"a76", "CortexA76",
                                    "Cortex-A76 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
@@ -129,7 +134,7 @@ def TuneA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
+def TuneA77     : ProcFamily<"a77", "CortexA77",
                                    "Cortex-A77 ARM processors", [
                                    FeatureCmpBccFusion,
                                    FeatureFuseAES,
@@ -139,7 +144,7 @@ def TuneA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA78 : SubtargetFeature<"a78", "ARMProcFamily", "CortexA78",
+def TuneA78 : ProcFamily<"a78", "CortexA78",
                                "Cortex-A78 ARM processors", [
                                FeatureCmpBccFusion,
                                FeatureFuseAES,
@@ -152,8 +157,7 @@ def TuneA78 : SubtargetFeature<"a78", "ARMProcFamily", "CortexA78",
                                FeatureEnableSelectOptimize,
                                FeaturePredictableSelectIsExpensive]>;
 
-def TuneA78AE : SubtargetFeature<"a78ae", "ARMProcFamily",
-                                 "CortexA78AE",
+def TuneA78AE : ProcFamily<"a78ae", "CortexA78AE",
                                  "Cortex-A78AE ARM processors", [
                                  FeatureCmpBccFusion,
                                  FeatureFuseAES,
@@ -166,8 +170,7 @@ def TuneA78AE : SubtargetFeature<"a78ae", "ARMProcFamily",
                                  FeatureEnableSelectOptimize,
                                  FeaturePredictableSelectIsExpensive]>;
 
-def TuneA78C : SubtargetFeature<"a78c", "ARMProcFamily",
-                                "CortexA78C",
+def TuneA78C : ProcFamily<"a78c", "CortexA78C",
                                 "Cortex-A78C ARM processors", [
                                 FeatureCmpBccFusion,
                                 FeatureFuseAES,
@@ -180,7 +183,7 @@ def TuneA78C : SubtargetFeature<"a78c", "ARMProcFamily",
                                 FeatureEnableSelectOptimize,
                                 FeaturePredictableSelectIsExpensive]>;
 
-def TuneA710    : SubtargetFeature<"a710", "ARMProcFamily", "CortexA710",
+def TuneA710    : ProcFamily<"a710", "CortexA710",
                                    "Cortex-A710 ARM processors", [
                                    FeatureCmpBccFusion,
                                    FeatureFuseAES,
@@ -192,7 +195,7 @@ def TuneA710    : SubtargetFeature<"a710", "ARMProcFamily", "CortexA710",
                                    FeatureEnableSelectOptimize,
                                    FeaturePredictableSelectIsExpensive]>;
 
-def TuneA715 : SubtargetFeature<"a715", "ARMProcFamily", "CortexA715",
+def TuneA715 : ProcFamily<"a715", "CortexA715",
                                  "Cortex-A715 ARM processors", [
                                  FeatureFuseAES,
                                  FeaturePostRAScheduler,
@@ -204,7 +207,7 @@ def TuneA715 : SubtargetFeature<"a715", "ARMProcFamily", "CortexA715",
                                  FeatureEnableSelectOptimize,
                                  FeaturePredictableSelectIsExpensive]>;
 
-def TuneA720 : SubtargetFeature<"a720", "ARMProcFamily", "CortexA720",
+def TuneA720 : ProcFamily<"a720", "CortexA720",
                                 "Cortex-A720 ARM processors", [
                                  FeatureFuseAES,
                                  FeaturePostRAScheduler,
@@ -216,7 +219,7 @@ def TuneA720 : SubtargetFeature<"a720", "ARMProcFamily", "CortexA720",
                                  FeatureEnableSelectOptimize,
                                  FeaturePredictableSelectIsExpensive]>;
 
-def TuneA720AE : SubtargetFeature<"a720ae", "ARMProcFamily", "CortexA720",
+def TuneA720AE : ProcFamily<"a720ae", "CortexA720",
                                 "Cortex-A720AE ARM processors", [
                                  FeatureFuseAES,
                                  FeaturePostRAScheduler,
@@ -228,8 +231,7 @@ def TuneA720AE : SubtargetFeature<"a720ae", "ARMProcFamily", "CortexA720",
                                  FeatureEnableSelectOptimize,
                                  FeaturePredictableSelectIsExpensive]>;
 
-def TuneA725 : SubtargetFeature<"cortex-a725", "ARMProcFamily",
-                                "CortexA725",
+def TuneA725 : ProcFamily<"cortex-a725", "CortexA725",
                                 "Cortex-A725 ARM processors", [
                                 FeatureFuseAES,
                                 FeaturePostRAScheduler,
@@ -241,8 +243,7 @@ def TuneA725 : SubtargetFeature<"cortex-a725", "ARMProcFamily",
                                 FeatureEnableSelectOptimize,
                                 FeaturePredictableSelectIsExpensive]>;
 
-def TuneC1Pro : SubtargetFeature<"c1-pro", "ARMProcFamily",
-                                  "C1Pro", "C1-Pro ARM Processors",[
+def TuneC1Pro : ProcFamily<"c1-pro", "C1Pro", "C1-Pro ARM Processors",[
                                   FeatureFuseAES,
                                   FeaturePostRAScheduler,
                                   FeatureCmpBccFusion,
@@ -253,17 +254,15 @@ def TuneC1Pro : SubtargetFeature<"c1-pro", "ARMProcFamily",
                                   FeatureEnableSelectOptimize,
                                   FeaturePredictableSelectIsExpensive]>;
 
-def TuneR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
-                               "CortexR82",
+def TuneR82 : ProcFamily<"cortex-r82", "CortexR82",
                                "Cortex-R82 ARM processors", [
                                FeaturePostRAScheduler]>;
 
-def TuneR82AE : SubtargetFeature<"cortex-r82ae", "ARMProcFamily",
-                                 "CortexR82AE",
+def TuneR82AE : ProcFamily<"cortex-r82ae", "CortexR82AE",
                                  "Cortex-R82-AE ARM processors",
                                  [FeaturePostRAScheduler]>;
 
-def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
+def TuneX1 : ProcFamily<"cortex-x1", "CortexX1",
                                   "Cortex-X1 ARM processors", [
                                   FeatureCmpBccFusion,
                                   FeatureFuseAES,
@@ -275,7 +274,7 @@ def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   FeatureMaxInterleaveFactor4,
                                   FeaturePredictableSelectIsExpensive]>;
 
-def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
+def TuneX2 : ProcFamily<"cortex-x2", "CortexX2",
                                   "Cortex-X2 ARM processors", [
                                   FeatureCmpBccFusion,
                                   FeatureFuseAES,
@@ -287,7 +286,7 @@ def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
                                   FeatureMaxInterleaveFactor4,
                                   FeaturePredictableSelectIsExpensive]>;
 
-def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
+def TuneX3 : ProcFamily<"cortex-x3", "CortexX3",
                               "Cortex-X3 ARM processors", [
                                FeatureALULSLFast,
                                FeatureFuseAdrpAdd,
@@ -299,7 +298,7 @@ def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
-def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
+def TuneX4 : ProcFamily<"cortex-x4", "CortexX4",
                               "Cortex-X4 ARM processors", [
                                FeatureALULSLFast,
                                FeatureFuseAdrpAdd,
@@ -313,8 +312,7 @@ def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
-def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
-                                "CortexX925", "Cortex-X925 ARM processors",[
+def TuneX925 : ProcFamily<"cortex-x925", "CortexX925", "Cortex-X925 ARM processors",[
                                 FeatureALULSLFast,
                                 FeatureFuseAdrpAdd,
                                 FeatureFuseCmpCSel,
@@ -327,8 +325,7 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeatureAvoidLDAPUR,
                                 FeaturePredictableSelectIsExpensive]>;
 
-def TuneC1Premium : SubtargetFeature<"c1-premium", "ARMProcFamily",
-                                  "C1Premium", "C1-Premium ARM Processors",[
+def TuneC1Premium : ProcFamily<"c1-premium", "C1Premium", "C1-Premium ARM Processors",[
                                   FeatureALULSLFast,
                                   FeatureFuseAdrpAdd,
                                   FeatureFuseCmpCSel,
@@ -340,8 +337,7 @@ def TuneC1Premium : SubtargetFeature<"c1-premium", "ARMProcFamily",
                                   FeatureAvoidLDAPUR,
                                   FeaturePredictableSelectIsExpensive]>;
 
-def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
-                                  "C1Ultra", "C1-Ultra ARM Processors",[
+def TuneC1Ultra : ProcFamily<"c1-ultra", "C1Ultra", "C1-Ultra ARM Processors",[
                                   FeatureALULSLFast,
                                   FeatureFuseAdrpAdd,
                                   FeatureFuseCmpCSel,
@@ -354,7 +350,7 @@ def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
                                   FeatureAvoidLDAPUR,
                                   FeaturePredictableSelectIsExpensive]>;
 
-def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
+def TuneA64FX : ProcFamily<"a64fx", "A64FX",
                                  "Fujitsu A64FX processors", [
                                  FeaturePostRAScheduler,
                                  FeatureAggressiveFMA,
@@ -365,7 +361,7 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureMaxInterleaveFactor4,
                                  FeatureUseReciprocalFDivCombineThreshold2]>;
 
-def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
+def TuneMONAKA : ProcFamily<"fujitsu-monaka", "MONAKA",
                                  "Fujitsu FUJITSU-MONAKA processors", [
                                  FeaturePredictableSelectIsExpensive,
                                  FeatureEnableSelectOptimize,
@@ -373,10 +369,10 @@ def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
                                  FeatureArithmeticBccFusion,
                                  ]>;
 
-def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
+def TuneCarmel : ProcFamily<"carmel", "Carmel",
                                   "Nvidia Carmel processors">;
 
-def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
+def TuneOlympus : ProcFamily<"olympus", "Olympus",
                                    "NVIDIA Olympus processors", [
                                    FeatureALULSLFast,
                                    FeatureCmpBccFusion,
@@ -388,7 +384,7 @@ def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
                                    FeatureUseFixedOverScalableIfEqualCost,
                                    FeatureMaxInterleaveFactor4]>;
 
-def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
+def TuneAppleA7  : ProcFamily<"apple-a7", "AppleA7",
                                     "Apple A7 (the CPU formerly known as Cyclone)",
                                     [FeatureAlternateSExtLoadCVTF32Pattern,
                                     FeatureArithmeticBccFusion,
@@ -405,21 +401,21 @@ def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     FeatureNoZCZeroingFPR64,
                                     FeatureZCZeroingFPR128]>;
 
-def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
+def TuneAppleA10 : ProcFamily<"apple-a10", "AppleA10",
                                     "Apple A10",
                                     !listremove(TuneAppleA7.Implies,
                                     [FeatureZCZeroingFPWorkaround])>;
 
-def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
+def TuneAppleA11 : ProcFamily<"apple-a11", "AppleA11",
                                     "Apple A11", TuneAppleA10.Implies>;
 
-def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
+def TuneAppleA12 : ProcFamily<"apple-a12", "AppleA12",
                                     "Apple A12", TuneAppleA11.Implies>;
 
-def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
+def TuneAppleA13 : ProcFamily<"apple-a13", "AppleA13",
                                     "Apple A13", TuneAppleA12.Implies>;
 
-def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
+def TuneAppleA14 : ProcFamily<"apple-a14", "AppleA14",
                                     "Apple A14",
                                     !listconcat(TuneAppleA13.Implies, [
                                     FeatureAggressiveFMA,
@@ -430,34 +426,34 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureFuseLiterals,
                                     FeatureMaxInterleaveFactor4])>;
 
-def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
+def TuneAppleA15 : ProcFamily<"apple-a15", "AppleA15",
                                     "Apple A15",
                                     !listconcat(
                                     !listremove(TuneAppleA14.Implies,
                                     [FeatureAggressiveFMA]),
                                     [FeatureFuseAdrpAdd])>;
 
-def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
+def TuneAppleA16 : ProcFamily<"apple-a16", "AppleA16",
                                     "Apple A16",
                                     !listconcat(TuneAppleA15.Implies,
                                     [FeatureFuseFCmpFCSel])>;
 
-def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
+def TuneAppleA17 : ProcFamily<"apple-a17", "AppleA17",
                                     "Apple A17", TuneAppleA16.Implies>;
 
-def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
+def TuneAppleM4 : ProcFamily<"apple-m4", "AppleM4",
                                     "Apple M4",
                                     !listconcat(
                                     !listremove(TuneAppleA17.Implies,
                                     [FeatureStorePairSuppress]),
                                     [FeatureFuseAppleSMECompute])>;
 
-def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
+def TuneAppleM5 : ProcFamily<"apple-m5", "AppleM5",
                                     "Apple M5",
                                     !listconcat(TuneAppleM4.Implies,
                                     [FeatureFuseFMinFMax])>;
 
-def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
+def TuneExynosM3 : ProcFamily<"exynosm3", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureExynosCheapAsMoveHandling,
                                      FeatureForce32BitJumpTables,
@@ -473,7 +469,7 @@ def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeatureMaxInterleaveFactor4]>;
 
 // Re-uses some scheduling and tunings from the ExynosM3 proc family.
-def TuneExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
+def TuneExynosM4 : ProcFamily<"exynosm4", "ExynosM3",
                                     "Samsung Exynos-M4 processors",
                                     [FeatureArithmeticBccFusion,
                                      FeatureArithmeticCbzFusion,
@@ -492,7 +488,7 @@ def TuneExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
                                      FeatureZCZeroingGPR64,
                                      FeatureMaxInterleaveFactor4]>;
 
-def TuneKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
+def TuneKryo    : ProcFamily<"kryo", "Kryo",
                                    "Qualcomm Kryo processors", [
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
@@ -502,7 +498,7 @@ def TuneKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    FeatureStorePairSuppress,
                                    FeatureMaxInterleaveFactor4]>;
 
-def TuneFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
+def TuneFalkor  : ProcFamily<"falkor", "Falkor",
                                    "Qualcomm Falkor processors", [
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
@@ -513,13 +509,13 @@ def TuneFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    FeatureSlowSTRQro,
                                    FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily", "NeoverseE1",
+def TuneNeoverseE1 : ProcFamily<"neoversee1", "NeoverseE1",
                                       "Neoverse E1 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
                                       FeaturePostRAScheduler]>;
 
-def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1",
+def TuneNeoverseN1 : ProcFamily<"neoversen1", "NeoverseN1",
                                       "Neoverse N1 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
@@ -529,7 +525,7 @@ def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1
                                       FeatureEnableSelectOptimize,
                                       FeaturePredictableSelectIsExpensive]>;
 
-def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2",
+def TuneNeoverseN2 : ProcFamily<"neoversen2", "NeoverseN2",
                                       "Neoverse N2 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
@@ -542,7 +538,7 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureLimited64bitVectorMulBandwidth]>;
 
-def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3",
+def TuneNeoverseN3 : ProcFamily<"neoversen3", "NeoverseN3",
                                       "Neoverse N3 ARM processors", [
                                       FeatureFuseAES,
                                       FeaturePostRAScheduler,
@@ -553,7 +549,7 @@ def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3
                                       FeatureEnableSelectOptimize,
                                       FeaturePredictableSelectIsExpensive]>;
 
-def TuneNeoverse512TVB : SubtargetFeature<"neoverse512tvb", "ARMProcFamily", "Neoverse512TVB",
+def TuneNeoverse512TVB : ProcFamily<"neoverse512tvb", "Neoverse512TVB",
                                       "Neoverse 512-TVB ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
@@ -563,7 +559,7 @@ def TuneNeoverse512TVB : SubtargetFeature<"neoverse512tvb", "ARMProcFamily", "Ne
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1",
+def TuneNeoverseV1 : ProcFamily<"neoversev1", "NeoverseV1",
                                       "Neoverse V1 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
@@ -578,7 +574,7 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       FeatureNoSVEFPLD1R,
                                       FeatureDontPreferPredicatedLD1R]>;
 
-def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
+def TuneNeoverseV2 : ProcFamily<"neoversev2", "NeoverseV2",
                                       "Neoverse V2 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureCmpBccFusion,
@@ -595,7 +591,7 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeatureMaxInterleaveFactor4,
                                       FeatureDontPreferPredicatedLD1R]>;
 
-def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3",
+def TuneNeoverseV3 : ProcFamily<"neoversev3", "NeoverseV3",
                                       "Neoverse V3 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureALULSLFast,
@@ -609,7 +605,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3AE",
+def TuneNeoverseV3AE : ProcFamily<"neoversev3AE", "NeoverseV3AE",
                                       "Neoverse V3AE ARM processors", [
                                       FeatureFuseAES,
                                       FeatureALULSLFast,
@@ -623,7 +619,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureLimited64bitVectorMulBandwidth]>;
 
-def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
+def TuneSaphira  : ProcFamily<"saphira", "Saphira",
                                    "Qualcomm Saphira processors", [
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
@@ -633,7 +629,7 @@ def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    FeatureALULSLFast,
                                    FeatureMaxInterleaveFactor4]>;
 
-def TuneThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily", "ThunderX2T99",
+def TuneThunderX2T99  : ProcFamily<"thunderx2t99", "ThunderX2T99",
                                          "Cavium ThunderX2 processors", [
                                           FeatureAggressiveFMA,
                                           FeatureArithmeticBccFusion,
@@ -642,8 +638,7 @@ def TuneThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily", "Thund
                                           FeaturePredictableSelectIsExpensive,
                                           FeatureMaxInterleaveFactor4]>;
 
-def TuneThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
-                                          "ThunderX3T110",
+def TuneThunderX3T110  : ProcFamily<"thunderx3t110", "ThunderX3T110",
                                           "Marvell ThunderX3 processors", [
                                            FeatureAggressiveFMA,
                                            FeatureArithmeticBccFusion,
@@ -654,40 +649,37 @@ def TuneThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
                                            FeatureStrictAlign,
                                            FeatureMaxInterleaveFactor4]>;
 
-def TuneThunderX : SubtargetFeature<"thunderx", "ARMProcFamily", "ThunderX",
+def TuneThunderX : ProcFamily<"thunderx", "ThunderX",
                                     "Cavium ThunderX processors", [
                                     FeaturePostRAScheduler,
                                     FeatureStorePairSuppress,
                                     FeaturePredictableSelectIsExpensive]>;
 
-def TuneThunderXT88 : SubtargetFeature<"thunderxt88", "ARMProcFamily",
-                                       "ThunderXT88",
+def TuneThunderXT88 : ProcFamily<"thunderxt88", "ThunderXT88",
                                        "Cavium ThunderX processors", [
                                        FeaturePostRAScheduler,
                                        FeatureStorePairSuppress,
                                        FeaturePredictableSelectIsExpensive]>;
 
-def TuneThunderXT81 : SubtargetFeature<"thunderxt81", "ARMProcFamily",
-                                       "ThunderXT81",
+def TuneThunderXT81 : ProcFamily<"thunderxt81", "ThunderXT81",
                                        "Cavium ThunderX processors", [
                                        FeaturePostRAScheduler,
                                        FeatureStorePairSuppress,
                                        FeaturePredictableSelectIsExpensive]>;
 
-def TuneThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
-                                       "ThunderXT83",
+def TuneThunderXT83 : ProcFamily<"thunderxt83", "ThunderXT83",
                                        "Cavium ThunderX processors", [
                                        FeaturePostRAScheduler,
                                        FeatureStorePairSuppress,
                                        FeaturePredictableSelectIsExpensive]>;
 
-def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
+def TuneTSV110 : ProcFamily<"tsv110", "TSV110",
                                   "HiSilicon TS-V110 processors", [
                                   FeatureFuseAES,
                                   FeatureStorePairSuppress,
                                   FeaturePostRAScheduler]>;
 
-def TuneHIP12 : SubtargetFeature<"hip12", "ARMProcFamily", "HIP12",
+def TuneHIP12 : ProcFamily<"hip12", "HIP12",
                                  "HiSilicon HIP12 processors", [
                                  FeatureCmpBccFusion,
                                  FeatureFuseAES,
@@ -696,7 +688,7 @@ def TuneHIP12 : SubtargetFeature<"hip12", "ARMProcFamily", "HIP12",
                                  FeatureStorePairSuppress,
                                  FeaturePostRAScheduler]>;
 
-def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
+def TuneAmpere1 : ProcFamily<"ampere1", "Ampere1",
                                    "Ampere Computing Ampere-1 processors", [
                                    FeaturePostRAScheduler,
                                    FeatureFuseAES,
@@ -712,7 +704,7 @@ def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    FeatureStpAlignedOnly,
                                    FeatureMaxInterleaveFactor4]>;
 
-def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
+def TuneAmpere1A : ProcFamily<"ampere1a", "Ampere1A",
                                     "Ampere Computing Ampere-1A processors", [
                                     FeaturePostRAScheduler,
                                     FeatureFuseAES,
@@ -729,7 +721,7 @@ def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     FeatureStpAlignedOnly,
                                     FeatureMaxInterleaveFactor4]>;
 
-def TuneAmpere1B : SubtargetFeature<"ampere1b", "ARMProcFamily", "Ampere1B",
+def TuneAmpere1B : ProcFamily<"ampere1b", "Ampere1B",
                                     "Ampere Computing Ampere-1B processors", [
                                     FeaturePostRAScheduler,
                                     FeatureFuseAES,
@@ -747,7 +739,7 @@ def TuneAmpere1B : SubtargetFeature<"ampere1b", "ARMProcFamily", "Ampere1B",
                                     FeatureStpAlignedOnly,
                                     FeatureMaxInterleaveFactor4]>;
 
-def TuneAmpere1C : SubtargetFeature<"ampere1c", "ARMProcFamily", "Ampere1C",
+def TuneAmpere1C : ProcFamily<"ampere1c", "Ampere1C",
                                     "Ampere Computing Ampere-1C processors", [
                                     FeaturePostRAScheduler,
                                     FeatureFuseAES,
@@ -763,8 +755,7 @@ def TuneAmpere1C : SubtargetFeature<"ampere1c", "ARMProcFamily", "Ampere1C",
                                     FeaturePredictableSelectIsExpensive,
                                     FeatureMaxInterleaveFactor4]>;
 
-def TuneOryon  : SubtargetFeature<"oryon-1", "ARMProcFamily",
-                                    "Oryon",
+def TuneOryon  : ProcFamily<"oryon-1", "Oryon",
                                     "Nuvia Inc Oryon processors", [
                                     FeatureSHA2,
                                     FeatureAES,

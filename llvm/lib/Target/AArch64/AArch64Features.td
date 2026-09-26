@@ -1019,7 +1019,8 @@ def FeatureMaxInterleaveFactor4 : SubtargetFeature<
 
 def FeatureFixedLoadLatency4 : SubtargetFeature<
     "fixed-load-latency-4", "FixedLoadLatency", "4",
-    "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
+    "Use a fixed latency of 4 for loads instead of querying the scheduling model",
+    [], InlineIgnore>;
 
 def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",

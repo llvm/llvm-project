@@ -9,20 +9,15 @@
 ; always_inline clones clang creates for the fortified mem* builtins when
 ; compiling with -mcpu=neoverse-n1 -mtune=neoverse-v2.
 define internal ptr @callee_n1(ptr %d, ptr %s) #0 {
-; CHECK-LABEL: define internal ptr @callee_n1(
-; CHECK-SAME: ptr [[D:%.*]], ptr [[S:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D]], ptr [[S]], i64 8, i1 false)
-; CHECK-NEXT:    ret ptr [[D]]
-;
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 false)
   ret ptr %d
 }
 
 define ptr @caller_n1_tune_v2(ptr %d, ptr %s) #1 {
 ; CHECK-LABEL: define ptr @caller_n1_tune_v2(
-; CHECK-SAME: ptr [[D:%.*]], ptr [[S:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @callee_n1(ptr [[D]], ptr [[S]])
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-SAME: ptr [[D:%.*]], ptr [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D]], ptr [[S]], i64 8, i1 false)
+; CHECK-NEXT:    ret ptr [[D]]
 ;
   %r = call ptr @callee_n1(ptr %d, ptr %s)
   ret ptr %r
@@ -30,20 +25,15 @@ define ptr @caller_n1_tune_v2(ptr %d, ptr %s) #1 {
 
 ; -mtune on its own: the callee is tuned for the generic CPU.
 define internal ptr @callee_generic(ptr %d, ptr %s) #2 {
-; CHECK-LABEL: define internal ptr @callee_generic(
-; CHECK-SAME: ptr [[D:%.*]], ptr [[S:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D]], ptr [[S]], i64 8, i1 false)
-; CHECK-NEXT:    ret ptr [[D]]
-;
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 false)
   ret ptr %d
 }
 
 define ptr @caller_tune_v2(ptr %d, ptr %s) #3 {
 ; CHECK-LABEL: define ptr @caller_tune_v2(
-; CHECK-SAME: ptr [[D:%.*]], ptr [[S:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @callee_generic(ptr [[D]], ptr [[S]])
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-SAME: ptr [[D:%.*]], ptr [[S:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[D]], ptr [[S]], i64 8, i1 false)
+; CHECK-NEXT:    ret ptr [[D]]
 ;
   %r = call ptr @callee_generic(ptr %d, ptr %s)
   ret ptr %r
@@ -51,19 +41,14 @@ define ptr @caller_tune_v2(ptr %d, ptr %s) #3 {
 
 ; Caller and callee tuned for different CPUs of different families.
 define internal i32 @callee_tune_a55(i32 %x) #4 {
-; CHECK-LABEL: define internal i32 @callee_tune_a55(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], 1
-; CHECK-NEXT:    ret i32 [[R]]
-;
   %r = add i32 %x, 1
   ret i32 %r
 }
 
 define i32 @caller_tune_x925(i32 %x) #5 {
 ; CHECK-LABEL: define i32 @caller_tune_x925(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @callee_tune_a55(i32 [[X]])
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @callee_tune_a55(i32 %x)
@@ -74,7 +59,7 @@ define i32 @caller_tune_x925(i32 %x) #5 {
 ; be inlined.
 define internal i32 @callee_v2(i32 %x) #6 {
 ; CHECK-LABEL: define internal i32 @callee_v2(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -84,7 +69,7 @@ define internal i32 @callee_v2(i32 %x) #6 {
 
 define i32 @caller_n1(i32 %x) #7 {
 ; CHECK-LABEL: define i32 @caller_n1(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @callee_v2(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -97,7 +82,7 @@ define i32 @caller_n1(i32 %x) #7 {
 ; caller without strict-align.
 define internal i32 @callee_tune_thunderx3(i32 %x) #8 {
 ; CHECK-LABEL: define internal i32 @callee_tune_thunderx3(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -107,7 +92,7 @@ define internal i32 @callee_tune_thunderx3(i32 %x) #8 {
 
 define i32 @caller_tune_v2_no_strict_align(i32 %x) #9 {
 ; CHECK-LABEL: define i32 @caller_tune_v2_no_strict_align(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @callee_tune_thunderx3(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -120,7 +105,7 @@ define i32 @caller_tune_v2_no_strict_align(i32 %x) #9 {
 ; still not be inlined into a caller without them.
 define internal i32 @callee_tune_oryon(i32 %x) #10 {
 ; CHECK-LABEL: define internal i32 @callee_tune_oryon(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR10:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -130,7 +115,7 @@ define internal i32 @callee_tune_oryon(i32 %x) #10 {
 
 define i32 @caller_tune_v2_no_oryon(i32 %x) #9 {
 ; CHECK-LABEL: define i32 @caller_tune_v2_no_oryon(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR9]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @callee_tune_oryon(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -143,7 +128,7 @@ define i32 @caller_tune_v2_no_oryon(i32 %x) #9 {
 ; into a caller tuned for a core without it.
 define internal i32 @callee_tune_apple_a7(i32 %x) #11 {
 ; CHECK-LABEL: define internal i32 @callee_tune_apple_a7(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -153,7 +138,7 @@ define internal i32 @callee_tune_apple_a7(i32 %x) #11 {
 
 define i32 @caller_tune_apple_a12(i32 %x) #12 {
 ; CHECK-LABEL: define i32 @caller_tune_apple_a12(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @callee_tune_apple_a7(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
