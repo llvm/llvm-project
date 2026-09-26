@@ -1,0 +1,62 @@
+//===-- PISASubtarget.h - PISA Subtarget Information ----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_PISA_PISASUBTARGET_H
+#define LLVM_LIB_TARGET_PISA_PISASUBTARGET_H
+
+#include "PISAFrameLowering.h"
+#include "PISAInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/Target/TargetMachine.h"
+
+#define GET_SUBTARGETINFO_HEADER
+#include "PISAGenSubtargetInfo.inc"
+
+namespace llvm {
+class StringRef;
+class PISATargetMachine;
+
+class PISASubtarget : public PISAGenSubtargetInfo {
+private:
+  // Bool members for features defined in PISAFeatures.td.
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "PISAGenSubtargetInfo.inc"
+
+  PISAInstrInfo InstrInfo;
+  PISAFrameLowering FrameLowering;
+
+public:
+  // This constructor initializes the data members to match that
+  // of the specified triple.
+  PISASubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
+                const PISATargetMachine &TM);
+  PISASubtarget &initSubtargetDependencies(StringRef CPU, StringRef FS);
+
+  // Parses features string setting specified subtarget options.
+  // TableGen generates the definition from PISA.td, which includes
+  // PISAFeatures.td.
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
+
+  const PISAInstrInfo *getInstrInfo() const override { return &InstrInfo; }
+  const PISAFrameLowering *getFrameLowering() const override {
+    return &FrameLowering;
+  }
+  const PISARegisterInfo *getRegisterInfo() const override {
+    return &InstrInfo.getRegisterInfo();
+  }
+
+  // Getters for features defined in PISAFeatures.td.
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool GETTER() const { return ATTRIBUTE; }
+#include "PISAGenSubtargetInfo.inc"
+};
+} // namespace llvm
+
+#endif // LLVM_LIB_TARGET_PISA_PISASUBTARGET_H
