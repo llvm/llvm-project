@@ -74,7 +74,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
-  `llvm.minimumnum`. 
+  `llvm.minimumnum`.
 * Added `llvm.smulh` and `llvm.umulh` intrinsics for signed and unsigned
   multiply returning the high-order half of the 2N-bit product of iN operands.
 * Added `nofreeobj` attribute for attributes and returns, which forbids
@@ -168,6 +168,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Introduced the generic `!atomic.ignore.denormal.mode` metadata for
   floating-point `atomicrmw` instructions, generalizing the previously
   AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
+
+* Added the `bitinsert` and `bitextract` instructions for bit-range
+  manipulation on byte type values.
 
 ### Changes to LLVM infrastructure
 
@@ -284,6 +287,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
+* Added `-mcpu=gaisler-gr765` for the 64-bit GR765 processor.
 
 ### Changes to the WebAssembly Backend
 

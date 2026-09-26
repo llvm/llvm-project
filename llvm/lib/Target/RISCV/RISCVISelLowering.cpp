@@ -3392,7 +3392,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
 
   unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
   // Don't use RVV for types that don't fit.
-  if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
+  if (LMul > 8)
     return false;
 
   // TODO: Perhaps an artificial restriction, but worth having whilst getting
@@ -9557,7 +9557,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         default:
           llvm_unreachable("Unexpected opcode");
         case ISD::SHL:
-          Opc = RISCVISD::PSHL;
+          Opc = RISCVISD::PSLL;
           break;
         case ISD::SRL:
           Opc = RISCVISD::PSRL;
@@ -12316,6 +12316,12 @@ static unsigned getRVPShiftOpcode(Intrinsic::ID IntNo) {
   default:
     llvm_unreachable(
         "Unexpected RISC-V packed saturating and rounding shift intrinsic");
+  case Intrinsic::riscv_psll:
+    return RISCVISD::PSLL;
+  case Intrinsic::riscv_psrl:
+    return RISCVISD::PSRL;
+  case Intrinsic::riscv_psra:
+    return RISCVISD::PSRA;
   case Intrinsic::riscv_pssha:
     return RISCVISD::PSSHA;
   case Intrinsic::riscv_psshar:
@@ -13149,6 +13155,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
+  case Intrinsic::riscv_psll:
+  case Intrinsic::riscv_psrl:
+  case Intrinsic::riscv_psra:
   case Intrinsic::riscv_pssha:
   case Intrinsic::riscv_psshar:
   case Intrinsic::riscv_psshl:
@@ -15484,7 +15493,10 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     // If index vector is an i8 vector and the element count exceeds 256, we
     // should change the element type of index vector to i16 to avoid
     // overflow.
-    if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
+    uint64_t MaxEltCount = VT.getVectorMinNumElements();
+    if (VT.isScalableVector())
+      MaxEltCount *= Subtarget.getRealMaxVLen() / RISCV::RVVBitsPerBlock;
+    if (IndexEltVT == MVT::i8 && MaxEltCount > 256) {
       // FIXME: We need to do vector splitting manually for LMUL=8 cases.
       assert(getLMUL(IndexVT) != RISCVVType::LMUL_8);
       IndexVT = IndexVT.changeVectorElementType(MVT::i16);
@@ -17803,15 +17815,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       return;
     }
+    case Intrinsic::riscv_psll:
+    case Intrinsic::riscv_psrl:
+    case Intrinsic::riscv_psra:
     case Intrinsic::riscv_pssha:
     case Intrinsic::riscv_psshar:
     case Intrinsic::riscv_psshl:
     case Intrinsic::riscv_psshlr: {
       MVT VT = N->getSimpleValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
 
-      MVT WideVT = MVT::v4i16;
+      EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
       SDValue Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
                                 N->getOperand(1), DAG.getUNDEF(VT));
       SDValue ShAmt = N->getOperand(2);
@@ -19236,7 +19251,8 @@ static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
 }
 
-// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) to
+// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) or
+// (vXi8 (trunc (vselect (setgtu, X, 255), (sext (setgt X, 0)), X))) to
 // (vXi8 (trunc (smin (smax X, 0), 255))). This represents saturating a signed
 // value to an unsigned value. This will be lowered to vmax and series of
 // vnclipu instructions later. This can be extended to other truncated types
@@ -19261,45 +19277,52 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  // FIXME: Support the version of this pattern with the select operands
-  // swapped.
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-  if (CCVal != ISD::SETULT)
-    return SDValue();
-
-  SDValue CondLHS = Cond.getOperand(0);
+  SDValue X = Cond.getOperand(0);
   SDValue CondRHS = Cond.getOperand(1);
-
-  if (CondLHS != True)
-    return SDValue();
-
   unsigned ScalarBits = VT.getScalarSizeInBits();
+
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  SDValue Other;
+  uint64_t ExpectedC;
+  if (CCVal == ISD::SETULT) {
+    if (True != X)
+      return SDValue();
+    Other = False;
+    ExpectedC = 1ULL << ScalarBits;
+  } else if (CCVal == ISD::SETUGT) {
+    if (False != X)
+      return SDValue();
+    Other = True;
+    ExpectedC = (1ULL << ScalarBits) - 1;
+  } else {
+    return SDValue();
+  }
 
   // FIXME: Support other constants.
   ConstantSDNode *CondRHSC = isConstOrConstSplat(CondRHS);
-  if (!CondRHSC || CondRHSC->getAPIntValue() != (1ULL << ScalarBits))
+  if (!CondRHSC || CondRHSC->getAPIntValue() != ExpectedC)
     return SDValue();
 
-  if (False.getOpcode() != ISD::SIGN_EXTEND)
+  if (Other.getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
 
-  False = False.getOperand(0);
+  Other = Other.getOperand(0);
 
-  if (False.getOpcode() != ISD::SETCC || False.getOperand(0) != True)
+  if (Other.getOpcode() != ISD::SETCC || Other.getOperand(0) != X)
     return SDValue();
 
-  ConstantSDNode *FalseRHSC = isConstOrConstSplat(False.getOperand(1));
-  if (!FalseRHSC || !FalseRHSC->isZero())
+  ConstantSDNode *OtherRHSC = isConstOrConstSplat(Other.getOperand(1));
+  if (!OtherRHSC || !OtherRHSC->isZero())
     return SDValue();
 
-  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(False.getOperand(2))->get();
+  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(Other.getOperand(2))->get();
   if (CCVal2 != ISD::SETGT)
     return SDValue();
 
   // Emit the signed to unsigned saturation pattern.
   SDLoc DL(N);
   SDValue Max =
-      DAG.getNode(ISD::SMAX, DL, SrcVT, True, DAG.getConstant(0, DL, SrcVT));
+      DAG.getNode(ISD::SMAX, DL, SrcVT, X, DAG.getConstant(0, DL, SrcVT));
   SDValue Min =
       DAG.getNode(ISD::UMIN, DL, SrcVT, Max,
                   DAG.getConstant((1ULL << ScalarBits) - 1, DL, SrcVT));
@@ -20516,9 +20539,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   unsigned OpSize = OpVT.getSizeInBits();
   // The size should be larger than XLen and smaller than the maximum vector
   // size.
-  if (OpSize <= Subtarget.getXLen() ||
-      OpSize > Subtarget.getRealMinVLen() *
-                   Subtarget.getMaxLMULForFixedLengthVectors())
+  if (OpSize <= Subtarget.getXLen() || OpSize > Subtarget.getRealMinVLen() * 8)
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.

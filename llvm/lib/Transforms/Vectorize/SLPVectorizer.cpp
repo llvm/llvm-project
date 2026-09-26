@@ -3040,16 +3040,6 @@ private:
       return S.getMatchingMainOpOrAltOp(I);
     }
 
-    /// Chooses the correct key for scheduling data. If \p Op has the same (or
-    /// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is
-    /// \p OpValue.
-    Value *isOneOf(Value *Op) const {
-      auto *I = dyn_cast<Instruction>(Op);
-      if (I && getMatchingMainOpOrAltOp(I))
-        return Op;
-      return S.getMainOp();
-    }
-
     void setOperations(const InstructionsState &S) {
       assert(S && "InstructionsState is invalid.");
       this->S = S;
@@ -4239,20 +4229,6 @@ private:
       return Entity->getKind() == Kind::ScheduleCopyableData;
     }
 
-    /// Verify basic self consistency properties
-    void verify() {
-      if (hasValidDependencies()) {
-        assert(UnscheduledDeps <= Dependencies && "invariant");
-      } else {
-        assert(UnscheduledDeps == Dependencies && "invariant");
-      }
-
-      if (IsScheduled) {
-        assert(hasValidDependencies() && UnscheduledDeps == 0 &&
-               "unexpected scheduled state");
-      }
-    }
-
     /// Returns true if the dependency information has been calculated.
     /// Note that depenendency validity can vary between instructions within
     /// a single bundle.
@@ -4710,6 +4686,81 @@ private:
             CD);
       }
       return *CD;
+    }
+
+    /// Unregisters \p Bundle from its instructions and removes its copyable
+    /// data. The caller must destroy the bundle and recalculate the
+    /// dependencies.
+    void cancelScheduling(ScheduleBundle &Bundle) {
+      for (ScheduleEntity *SE : Bundle.getBundle()) {
+        Instruction *I = SE->getInst();
+        auto *CD = dyn_cast<ScheduleCopyableData>(SE);
+        if (!CD) {
+          llvm::erase(ScheduledBundles.find(I)->getSecond(), &Bundle);
+          continue;
+        }
+        const EdgeInfo EI = CD->getEdgeInfo();
+        llvm::erase(ScheduleCopyableDataMapByInst.find(I)->getSecond(), CD);
+        ScheduleCopyableDataMapByUsers[I].remove(CD);
+        if (EI.UserTE) {
+          ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
+          const auto *It = find(Op, I);
+          assert(It != Op.end() && "Lane not set");
+          SmallPtrSet<Instruction *, 4> Visited;
+          bool HadSelfUse = false;
+          do {
+            int Lane = std::distance(Op.begin(), It);
+            assert(Lane >= 0 && "Lane not set");
+            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+                !EI.UserTE->ReorderIndices.empty())
+              Lane = EI.UserTE->ReorderIndices[Lane];
+            assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
+                   "Couldn't find extract lane");
+            auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+            if (!Visited.insert(In).second) {
+              It = find(make_range(std::next(It), Op.end()), I);
+              continue;
+            }
+            HadSelfUse |= In == I;
+            auto ByUserIt = ScheduleCopyableDataMapByInstUser.find(
+                std::make_pair(std::make_pair(In, EI.EdgeIdx), I));
+            assert(ByUserIt != ScheduleCopyableDataMapByInstUser.end() &&
+                   is_contained(ByUserIt->getSecond(), CD) &&
+                   "copyable data is not registered for the user");
+            llvm::erase(ByUserIt->getSecond(), CD);
+            It = find(make_range(std::next(It), Op.end()), I);
+          } while (It != Op.end());
+          // Restore the parent-edge copyable data as a user of I only if the
+          // cancelled data displaced it at creation (chained copyable
+          // self-use); otherwise the extra user dependency is never released.
+          if (HadSelfUse) {
+            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
+            if (ScheduleCopyableData *UserCD =
+                    getScheduleCopyableData(UserEI, I))
+              ScheduleCopyableDataMapByUsers[I].insert(UserCD);
+          }
+        }
+        if (ScheduleCopyableDataMapByUsers[I].empty())
+          ScheduleCopyableDataMapByUsers.erase(I);
+        ScheduleCopyableDataMap.erase(std::make_pair(EI, I));
+      }
+    }
+
+    /// Clears the dependencies of all schedule data in the scheduling region.
+    void clearDependencies() {
+      for_each(ScheduleDataMap, [&](auto &P) {
+        if (BB != P.first->getParent())
+          return;
+        ScheduleData *SD = P.second;
+        if (isInSchedulingRegion(*SD))
+          SD->clearDependencies();
+      });
+      for_each(ScheduleCopyableDataMapByInst, [&](auto &P) {
+        for_each(P.second, [&](ScheduleCopyableData *SD) {
+          if (isInSchedulingRegion(*SD))
+            SD->clearDependencies();
+        });
+      });
     }
 
     ArrayRef<ScheduleBundle *> getScheduleBundles(Value *V) const {
@@ -20975,6 +21026,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         GatherNodes.push_back(E);
       }
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
+               E && TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
+               !E->UserTreeIndex.UserTE->isGather()) {
+      // Regular gathers reuse only perfectly matched transformed nodes of the
+      // same user.
+      GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
       if (TEPtr == TE || TEPtr->Idx == 0 || DeletedNodes.contains(TEPtr))
@@ -22583,6 +22641,14 @@ public:
     if (auto *I = dyn_cast<Instruction>(Vec)) {
       R.GatherShuffleExtractSeq.insert(I);
       R.CSEBlocks.insert(I->getParent());
+      // A vectorized source scalar is erased; extract it for the bitcast.
+      ArrayRef<TreeEntry *> TEs = R.getTreeEntries(Src);
+      const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
+        return R.TransformedToGatherNodes.contains(TE) ||
+               R.DeletedNodes.contains(TE);
+      });
+      if (It != TEs.end())
+        R.ExternalUses.emplace_back(Src, I, **It, (*It)->findLaneForValue(Src));
     }
     Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
     // The extracted fields are unsigned.
@@ -27079,19 +27145,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // It is seldom that this needs to be done a second time after adding the
     // initial bundle to the region.
     if (OldScheduleEnd && ScheduleEnd != OldScheduleEnd) {
-      for_each(ScheduleDataMap, [&](auto &P) {
-        if (BB != P.first->getParent())
-          return;
-        ScheduleData *SD = P.second;
-        if (isInSchedulingRegion(*SD))
-          SD->clearDependencies();
-      });
-      for_each(ScheduleCopyableDataMapByInst, [&](auto &P) {
-        for_each(P.second, [&](ScheduleCopyableData *SD) {
-          if (isInSchedulingRegion(*SD))
-            SD->clearDependencies();
-        });
-      });
+      clearDependencies();
       ReSchedule = true;
     }
     SmallPtrSet<Value *, 4> ExpandedOps;
@@ -27207,6 +27261,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             ReadyInsts.insert(B);
       }
     }
+    cancelScheduling(Bundle);
     ScheduledBundlesList.pop_back();
     SmallVector<ScheduleData *> ControlDependentMembers;
     for (Value *V : VL) {
@@ -27223,52 +27278,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         }
       }
       if (S.isCopyableElement(I)) {
-        // Remove the copyable data from the scheduling region and restore
-        // previous mappings.
-        auto KV = std::make_pair(EI, I);
-        assert(ScheduleCopyableDataMap.contains(KV) &&
-               "no ScheduleCopyableData for copyable element");
-        ScheduleCopyableData *SD =
-            ScheduleCopyableDataMapByInst.find(I)->getSecond().pop_back_val();
-        ScheduleCopyableDataMapByUsers[I].remove(SD);
-        if (EI.UserTE) {
-          ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
-          const auto *It = find(Op, I);
-          assert(It != Op.end() && "Lane not set");
-          SmallPtrSet<Instruction *, 4> Visited;
-          bool HadSelfUse = false;
-          do {
-            int Lane = std::distance(Op.begin(), It);
-            assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
-                !EI.UserTE->ReorderIndices.empty())
-              Lane = EI.UserTE->ReorderIndices[Lane];
-            assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
-                   "Couldn't find extract lane");
-            auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
-            if (!Visited.insert(In).second) {
-              It = find(make_range(std::next(It), Op.end()), I);
-              continue;
-            }
-            HadSelfUse |= In == I;
-            ScheduleCopyableDataMapByInstUser
-                [std::make_pair(std::make_pair(In, EI.EdgeIdx), I)]
-                    .pop_back();
-            It = find(make_range(std::next(It), Op.end()), I);
-          } while (It != Op.end());
-          // Restore the parent-edge copyable data as a user of I only if the
-          // cancelled data displaced it at creation (chained copyable
-          // self-use); otherwise the extra user dependency is never released.
-          if (HadSelfUse) {
-            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
-            if (ScheduleCopyableData *UserCD =
-                    getScheduleCopyableData(UserEI, I))
-              ScheduleCopyableDataMapByUsers[I].insert(UserCD);
-          }
-        }
-        if (ScheduleCopyableDataMapByUsers[I].empty())
-          ScheduleCopyableDataMapByUsers.erase(I);
-        ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data, even
         // if they were already cleared by the failed bundle scheduling attempt.
         if (ScheduleData *OpSD = getScheduleData(I)) {
@@ -27286,9 +27295,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             }
           }
         }
-        continue;
       }
-      ScheduledBundles.find(I)->getSecond().pop_back();
     }
     if (!ControlDependentMembers.empty()) {
       ScheduleBundle Invalid = ScheduleBundle::invalid();
@@ -27827,6 +27834,31 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
 
   LLVM_DEBUG(dbgs() << "SLP: schedule block " << BS->BB->getName() << "\n");
 
+  // The scalars of the trimmed nodes are not vectorized and must not be
+  // grouped as bundles. Cancel their bundles, recalculate all the dependencies
+  // and schedule the scalars as separate instructions: they keep their
+  // original order and stay close to their users.
+  auto IsTrimmed = [&](const TreeEntry *TE) {
+    return DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE);
+  };
+  const size_t NumBundles = BS->ScheduledBundlesList.size();
+  SmallPtrSet<const ScheduleData *, 16> TrimmedSDs;
+  erase_if(BS->ScheduledBundlesList,
+           [&](const std::unique_ptr<ScheduleBundle> &Bundle) {
+             const TreeEntry *TE = Bundle->getTreeEntry();
+             if (!IsTrimmed(TE))
+               return false;
+             LLVM_DEBUG(dbgs() << "SLP: cancel scheduling of the trimmed node "
+                               << TE->Idx << " bundle " << *Bundle << "\n");
+             for (ScheduleEntity *SE : Bundle->getBundle())
+               if (auto *SD = dyn_cast<ScheduleData>(SE))
+                 TrimmedSDs.insert(SD);
+             BS->cancelScheduling(*Bundle);
+             return true;
+           });
+  if (BS->ScheduledBundlesList.size() != NumBundles)
+    BS->clearDependencies();
+
   // A key point - if we got here, pre-scheduling was able to find a valid
   // scheduling of the sub-graph of the scheduling window which consists
   // of all vector bundles and their transitive users.  As such, we do not
@@ -27905,13 +27937,16 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     SmallVector<ScheduleCopyableData *> CopyableData =
         BS->getScheduleCopyableDataUsers(I);
     if (ScheduleData *SD = BS->getScheduleData(I)) {
+      // The bundles of the trimmed nodes are cancelled, check the first
+      // remaining node only.
       [[maybe_unused]] ArrayRef<TreeEntry *> SDTEs = getTreeEntries(I);
-      assert((isVectorLikeInstWithConstOps(SD->getInst()) || SDTEs.empty() ||
-              SDTEs.front()->doesNotNeedToSchedule() ||
+      [[maybe_unused]] const auto *SDTEIt = find_if_not(SDTEs, IsTrimmed);
+      assert((isVectorLikeInstWithConstOps(SD->getInst()) ||
+              SDTEIt == SDTEs.end() || (*SDTEIt)->doesNotNeedToSchedule() ||
               doesNotNeedToBeScheduled(I)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
-      if (!CopyableData.empty() ||
+      if (TrimmedSDs.contains(SD) || !CopyableData.empty() ||
           any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
             assert(TE->isGather() && "expected gather node");
             return TE->hasState() && TE->hasCopyableElements() &&
@@ -30694,17 +30729,6 @@ private:
   /// Total number of operands in the reduction operation.
   static unsigned getNumberOfOperands(Instruction *I) {
     return isCmpSelMinMax(I) ? 3 : (I->isUnaryOp() ? 1 : 2);
-  }
-
-  /// Checks if the instruction is in basic block \p BB.
-  /// For a cmp+sel min/max reduction check that both ops are in \p BB.
-  static bool hasSameParent(Instruction *I, BasicBlock *BB) {
-    if (isCmpSelMinMax(I) || isBoolLogicOp(I)) {
-      auto *Sel = cast<SelectInst>(I);
-      auto *Cmp = dyn_cast<Instruction>(Sel->getCondition());
-      return Sel->getParent() == BB && Cmp && Cmp->getParent() == BB;
-    }
-    return I->getParent() == BB;
   }
 
   /// Expected number of uses for reduction operations/reduced values.

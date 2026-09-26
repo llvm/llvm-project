@@ -1741,11 +1741,6 @@ TEST(CommandLineTest, LongOptions) {
   const char *args2[] = {"prog", "-a", "--ab", "val1"};
   const char *args3[] = {"prog", "-ab", "--ab", "val1"};
 
-  //
-  // The following tests treat `-` and `--` the same, and always match the
-  // longest string.
-  //
-
   EXPECT_TRUE(
       cl::ParseCommandLineOptions(4, args1, StringRef(), &OS));
   EXPECT_TRUE(OptA);
@@ -1765,33 +1760,7 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `val1` is unexpected.
   EXPECT_FALSE(
       cl::ParseCommandLineOptions(4, args3, StringRef(), &OS));
-  outs()<< Errs << "\n";
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  //
-  // The following tests treat `-` and `--` differently, with `-` for short, and
-  // `--` for long options.
-  //
-
-  // Fails because `-ab` is neither a short option nor `--ab`, and `val1` is
-  // unexpected.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(), &OS, nullptr,
-                                           nullptr, true));
-  EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Works because `-a` is treated differently than `--ab`.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(), &OS, nullptr,
-                                          nullptr, true));
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Fails because `-ab` is not `--ab`.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args3, StringRef(), &OS, nullptr,
-                                           nullptr, true));
-  EXPECT_FALSE(Errs.empty());
-  Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
 
@@ -1925,13 +1894,6 @@ TEST(CommandLineTest, Callback) {
 
   cl::ResetAllOptionOccurrences();
 }
-
-enum Enum { Val1, Val2 };
-static cl::bits<Enum> ExampleBits(
-    cl::desc("An example cl::bits to ensure it compiles"),
-    cl::values(
-      clEnumValN(Val1, "bits-val1", "The Val1 value"),
-      clEnumValN(Val1, "bits-val2", "The Val2 value")));
 
 TEST(CommandLineTest, ConsumeAfterOnePositional) {
   cl::ResetCommandLineParser();
@@ -2083,7 +2045,7 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   StackOption<bool> Option("option");
   StackOption<std::string> Str("str");
   enum Vals { ValA, ValB, ValC };
-  StackOption<Vals, cl::bits<Vals>> Bits(
+  StackOption<Vals, cl::list<Vals>> List(
       cl::values(clEnumValN(ValA, "enableA", "Enable A"),
                  clEnumValN(ValB, "enableB", "Enable B"),
                  clEnumValN(ValC, "enableC", "Enable C")));
@@ -2100,7 +2062,9 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
 
   EXPECT_TRUE(Option);
   EXPECT_EQ("STR", Str);
-  EXPECT_EQ((1u << ValA) | (1u << ValC), Bits.getBits());
+  ASSERT_EQ(2u, List.size());
+  EXPECT_EQ(ValA, List[0]);
+  EXPECT_EQ(ValC, List[1]);
   EXPECT_EQ("input", Input);
   EXPECT_EQ(1u, ExtraArgs.size());
   EXPECT_EQ("-arg", ExtraArgs[0]);
@@ -2108,7 +2072,7 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(Option);
   EXPECT_EQ("", Str);
-  EXPECT_EQ(0u, Bits.getBits());
+  EXPECT_TRUE(List.empty());
   EXPECT_EQ(0, Input.getNumOccurrences());
   EXPECT_EQ(0u, ExtraArgs.size());
 }

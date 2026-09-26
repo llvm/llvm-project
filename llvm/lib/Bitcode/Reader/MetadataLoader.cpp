@@ -2647,6 +2647,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
         if (I->second == LLVMContext::MD_tbaa) {
           assert(!MD->isTemporary() && "should load MDs before attachments");
           MD = UpgradeTBAANode(*MD);
+        } else if (I->second == LLVMContext::MD_tbaa_struct) {
+          assert(!MD->isTemporary() && "should load MDs before attachments");
+          MD = UpgradeTBAAStructNode(*MD);
         }
         Inst->setMetadata(I->second, MD);
       }

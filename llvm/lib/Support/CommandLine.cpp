@@ -188,8 +188,7 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
-                               vfs::FileSystem *VFS = nullptr,
-                               bool LongOptionsUseDoubleDash = false);
+                               vfs::FileSystem *VFS = nullptr);
 
   void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
     if (Opt.Subs.empty()) {
@@ -422,14 +421,6 @@ private:
   SubCommand *ActiveSubCommand = nullptr;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
-  Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
-                           bool LongOptionsUseDoubleDash, bool HaveDoubleDash) {
-    Option *Opt = LookupOption(Sub, Arg, Value);
-    if (Opt && LongOptionsUseDoubleDash && !HaveDoubleDash &&
-        Opt->ArgStr.size() != 1)
-      return nullptr;
-    return Opt;
-  }
   SubCommand *LookupSubCommand(StringRef Name, std::string &NearestString);
 };
 
@@ -1407,8 +1398,7 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 vfs::FileSystem *VFS, const char *EnvVar,
-                                 bool LongOptionsUseDoubleDash) {
+                                 vfs::FileSystem *VFS, const char *EnvVar) {
   initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
   BumpPtrAllocator A;
@@ -1428,8 +1418,8 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return globalParser().ParseCommandLineOptions(
-      NewArgc, &NewArgv[0], Overview, Errs, VFS, LongOptionsUseDoubleDash);
+  return globalParser().ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
+                                                Errs, VFS);
 }
 
 /// Reset all options at least once, so that we can parse different options.
@@ -1456,9 +1446,11 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   LibraryArgAlloc.Reset();
 }
 
-bool CommandLineParser::ParseCommandLineOptions(
-    int argc, const char *const *argv, StringRef Overview, raw_ostream *Errs,
-    vfs::FileSystem *VFS, bool LongOptionsUseDoubleDash) {
+bool CommandLineParser::ParseCommandLineOptions(int argc,
+                                                const char *const *argv,
+                                                StringRef Overview,
+                                                raw_ostream *Errs,
+                                                vfs::FileSystem *VFS) {
   assert(hasOptions() && "No options specified!");
 
   ProgramOverview = Overview;
@@ -1574,7 +1566,6 @@ bool CommandLineParser::ParseCommandLineOptions(
     std::string NearestHandlerString;
     StringRef Value;
     StringRef ArgName = "";
-    bool HaveDoubleDash = false;
 
     // Check to see if this is a positional argument.  This argument is
     // considered to be positional if it doesn't start with '-', if it is "-"
@@ -1613,11 +1604,9 @@ bool CommandLineParser::ParseCommandLineOptions(
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (ArgName.consume_front("-"))
-        HaveDoubleDash = true;
+      ArgName.consume_front("-");
 
-      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
-                                 LongOptionsUseDoubleDash, HaveDoubleDash);
+      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
       if (!Handler || Handler->getFormattingFlag() != cl::Positional) {
         ProvidePositionalOption(ActivePositionalArg, StringRef(argv[i]), i);
         continue; // We are done!
@@ -1625,18 +1614,15 @@ bool CommandLineParser::ParseCommandLineOptions(
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (ArgName.consume_front("-"))
-        HaveDoubleDash = true;
+      ArgName.consume_front("-");
 
-      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
-                                 LongOptionsUseDoubleDash, HaveDoubleDash);
+      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
 
       // If Handler is not found in a specialized subcommand, look up handler
       // in the top-level subcommand.
       // cl::opt without cl::sub belongs to top-level subcommand.
       if (!Handler && ChosenSubCommand != &SubCommand::getTopLevel())
-        Handler = LookupLongOption(SubCommand::getTopLevel(), ArgName, Value,
-                                   LongOptionsUseDoubleDash, HaveDoubleDash);
+        Handler = LookupOption(SubCommand::getTopLevel(), ArgName, Value);
 
       if (!Handler && (!LongOptionsUseDoubleDash || HaveDoubleDash)) {
         if (LibraryOptions *L = lookupLibraryOption(ArgName.split('=').first)) {
@@ -1657,7 +1643,7 @@ bool CommandLineParser::ParseCommandLineOptions(
       }
 
       // Check to see if this "option" is really a prefixed argument.
-      if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
+      if (!Handler)
         Handler = HandlePrefixedOption(ArgName, Value, OptionsMap);
 
       // Otherwise, look for the closest available option to report to the user
