@@ -24,6 +24,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
@@ -15494,6 +15495,111 @@ void Sema::CheckThreadLocalForLargeAlignment(VarDecl *VD) {
   }
 }
 
+/// Process a variable definition whose mangled name may be listed in
+/// '-mloadtime-comment-vars=': attach an implicit attribute to supported
+/// string variables so CodeGen preserves them as loadtime identifying
+/// strings, and warn when a named variable cannot be preserved.
+static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
+  if (S.getLangOpts().LoadTimeCommentVars.empty() || VD->isInvalidDecl())
+    return;
+
+  // Declarations that cannot be name-matched are silently skipped: an
+  // automatic variable has no symbol of its own, and neither does a template
+  // pattern (only its specializations do, and those are processed
+  // separately). Only definitions are considered.
+  if (VD->hasLocalStorage())
+    return;
+  if (VD->isTemplated())
+    return;
+  if (VD->isThisDeclarationADefinition(S.Context) != VarDecl::Definition)
+    return;
+
+  // A definition without an initializer carries no string and is silently
+  // skipped.
+  if (!VD->hasInit())
+    return;
+
+  // Extract the character type a pointer points to or an array holds; it is
+  // null for any other type, which is classified (and diagnosed) below once
+  // the name has matched.
+  QualType Ty = VD->getType();
+  const PointerType *PT = Ty->getAsCanonical<PointerType>();
+  const ArrayType *AT = PT ? nullptr : S.Context.getAsArrayType(Ty);
+  QualType Pointee = PT   ? PT->getPointeeType()
+                     : AT ? AT->getElementType()
+                          : QualType();
+
+  // Names are matched against the mangled name, as it appears in the object
+  // file. For plain C file-scope variables this is the source identifier; for
+  // C++ variables it is the mangled symbol.
+  if (!S.LoadTimeCommentVarNameGenerator)
+    S.LoadTimeCommentVarNameGenerator =
+        std::make_unique<ASTNameGenerator>(S.Context);
+  if (!S.getLangOpts().isLoadTimeCommentVar(
+          S.LoadTimeCommentVarNameGenerator->getName(VD)))
+    return;
+
+  std::optional<unsigned> Reason;
+  if (VD->isLocalVarDecl())
+    // Only file- and namespace-scope variables are supported. A name match
+    // on anything else demonstrates intent (scope participates in the
+    // mangled name), so the unsupported kinds are diagnosed rather than
+    // silently ignored.
+    Reason = diag::LoadTimeCommentVarReason::FunctionLocal;
+  else if (isa<VarTemplateSpecializationDecl>(VD))
+    Reason = diag::LoadTimeCommentVarReason::TemplateSpecialization;
+  else if (VD->isStaticDataMember())
+    Reason = diag::LoadTimeCommentVarReason::StaticDataMember;
+  else if (Pointee.isNull() ||
+           !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy))
+    // Only plain `char` pointers/arrays are supported. A name match on a
+    // variable of any other type (int, struct, wide or explicitly
+    // signed/unsigned character types, ...) still demonstrates intent, so it
+    // is diagnosed.
+    Reason = diag::LoadTimeCommentVarReason::UnsupportedType;
+  else if (VD->getStorageDuration() != SD_Static)
+    // The string must have static storage duration; a thread-local variable
+    // is not preserved.
+    Reason = diag::LoadTimeCommentVarReason::BadStorage;
+  else if (Ty.isVolatileQualified() || Pointee.isVolatileQualified())
+    // The intended usage does not intersect with use cases where the character
+    // array or the pointer to it is volatile-qualified; such variables are not
+    // preserved.
+    Reason = diag::LoadTimeCommentVarReason::Volatile;
+  else if (!VD->hasConstantInitialization())
+    // The string has to be present in the object at load time. A dynamically
+    // initialized variable only gets its value from a startup constructor, so
+    // the object would not contain the intended string.
+    Reason = diag::LoadTimeCommentVarReason::DynamicInit;
+  else if (PT && !isa<StringLiteral>(VD->getInit()->IgnoreParenImpCasts()))
+    // For the pointer form, the variable must point directly at a string
+    // literal. A pointer initialized with some other (even constant) address
+    // does not carry the identifying string itself.
+    Reason = diag::LoadTimeCommentVarReason::NotStringLiteral;
+
+  if (Reason) {
+    S.Diag(VD->getLocation(), diag::warn_loadtime_comment_var_not_preserved)
+        << VD << *Reason;
+    return;
+  }
+
+  VD->addAttr(
+      LoadTimeCommentVarAttr::CreateImplicit(S.Context, VD->getLocation()));
+
+  // When a module unit is compiled to object code from its serialized form,
+  // CodeGen finds unreferenced module-purview variables through the
+  // module-initializer lists, and CheckCompleteVariableDeclaration records
+  // only non-discardable variables there. Record an internal-linkage variable
+  // so its definition reaches CodeGen in that compilation.
+  if (Module *M = S.getCurrentModule())
+    if (isDiscardableGVALinkage(S.Context.GetGVALinkageForVariable(VD)))
+      S.Context.addModuleInitializer(M, VD);
+}
+
+void Sema::ProcessLoadTimeCommentVar(VarDecl *VD) {
+  processForLoadTimeCommentVar(*this, VD);
+}
+
 void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // Note that we are no longer parsing the initializer for this declaration.
   ParsingInitForAutoVars.erase(ThisDecl);
@@ -15609,6 +15715,11 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
       VD->dropAttr<RetainAttr>();
     }
   }
+
+  // Validate variables named in '-mloadtime-comment-vars=': supported string
+  // variables get an implicit attribute that CodeGen uses to preserve them;
+  // named variables that cannot be preserved are diagnosed.
+  ProcessLoadTimeCommentVar(VD);
 
   const DeclContext *DC = VD->getDeclContext();
   // If there's a #pragma GCC visibility in scope, and this isn't a class

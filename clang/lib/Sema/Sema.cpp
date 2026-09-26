@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeOrdering.h"
