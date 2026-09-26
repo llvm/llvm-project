@@ -483,6 +483,13 @@ struct MachineOutliner : public ModulePass {
       unsigned StringLen, std::vector<Candidate> &CandidatesForRepeatedSeq,
       OutlinedFunction &OF);
 
+  /// Run the outlining cost model for a group of candidates and append the
+  /// resulting outlined function if it is profitable.
+  void createOutlinedFunctionIfBeneficial(
+      std::vector<Candidate> &Candidates, unsigned StringLen,
+      unsigned MinRepeats, const TargetInstrInfo &TII,
+      std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList);
+
   /// Remark output explaining that a function was outlined.
   void emitOutlinedFunctionRemark(OutlinedFunction &OF);
 
@@ -727,8 +734,7 @@ void MachineOutliner::findGlobalCandidates(
     auto Length = ME.EndIdx - ME.StartIdx + 1;
     MachineBasicBlock *MBB = StartIt->getParent();
     CandidatesForRepeatedSeq.emplace_back(ME.StartIdx, Length, StartIt, EndIt,
-                                          MBB, FunctionList.size(),
-                                          MBBFlagsMap[MBB]);
+                                          MBB, MBBFlagsMap[MBB]);
     const TargetInstrInfo *TII =
         MBB->getParent()->getSubtarget().getInstrInfo();
     unsigned MinRepeats = 1;
@@ -742,6 +748,54 @@ void MachineOutliner::findGlobalCandidates(
     FunctionList.emplace_back(std::make_unique<GlobalOutlinedFunction>(
         std::move(OF.value()), ME.Count));
   }
+}
+
+static StringRef getCandidateInputSection(const Candidate &C) {
+  const Function &F = C.getMF()->getFunction();
+  return F.hasSection() ? F.getSection() : StringRef();
+}
+
+static SmallVector<std::vector<Candidate>>
+partitionCandidatesByInputSection(std::vector<Candidate> &Candidates) {
+  // Each candidate belongs to exactly one MachineFunction, so the partitions
+  // are disjoint and can be outlined independently.
+  SmallVector<std::vector<Candidate>> Partitions;
+  SmallVector<StringRef> Sections;
+  for (Candidate &C : Candidates) {
+    StringRef Section = getCandidateInputSection(C);
+    auto It = llvm::find(Sections, Section);
+    if (It == Sections.end()) {
+      Sections.push_back(Section);
+      Partitions.emplace_back();
+      It = Sections.end() - 1;
+    }
+    Partitions[std::distance(Sections.begin(), It)].push_back(std::move(C));
+  }
+  return Partitions;
+}
+
+void MachineOutliner::createOutlinedFunctionIfBeneficial(
+    std::vector<Candidate> &Candidates, unsigned StringLen, unsigned MinRepeats,
+    const TargetInstrInfo &TII,
+    std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
+  if (Candidates.size() < MinRepeats)
+    return;
+
+  std::optional<std::unique_ptr<OutlinedFunction>> OF =
+      TII.getOutliningCandidateInfo(*MMI, Candidates, MinRepeats);
+
+  // If we deleted too many candidates, then there's nothing worth outlining.
+  // FIXME: This should take target-specified instruction sizes into account.
+  if (!OF.has_value() || OF.value()->Candidates.size() < MinRepeats)
+    return;
+
+  // Is it better to outline this candidate than not?
+  if (OF.value()->getBenefit() < OutlinerBenefitThreshold) {
+    emitNotOutliningCheaperRemark(StringLen, Candidates, *OF.value());
+    return;
+  }
+
+  FunctionList.emplace_back(std::move(OF.value()));
 }
 
 void MachineOutliner::findCandidates(
@@ -813,8 +867,7 @@ void MachineOutliner::findCandidates(
       MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
       MachineBasicBlock *MBB = StartIt->getParent();
       CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt, EndIt,
-                                            MBB, FunctionList.size(),
-                                            Mapper.MBBFlagsMap[MBB]);
+                                            MBB, Mapper.MBBFlagsMap[MBB]);
     }
 #ifndef NDEBUG
     LLVM_DEBUG(dbgs() << "    Candidates discarded: " << NumDiscarded
@@ -834,23 +887,40 @@ void MachineOutliner::findCandidates(
     const TargetInstrInfo *TII =
         CandidatesForRepeatedSeq[0].getMF()->getSubtarget().getInstrInfo();
 
-    std::optional<std::unique_ptr<OutlinedFunction>> OF =
-        TII->getOutliningCandidateInfo(*MMI, CandidatesForRepeatedSeq,
-                                       MinRepeats);
-
-    // If we deleted too many candidates, then there's nothing worth outlining.
-    // FIXME: This should take target-specified instruction sizes into account.
-    if (!OF.has_value() || OF.value()->Candidates.size() < MinRepeats)
-      continue;
-
-    // Is it better to outline this candidate than not?
-    if (OF.value()->getBenefit() < OutlinerBenefitThreshold) {
-      emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq,
-                                    *OF.value());
+    // Targets that do not opt in to section aware outlining never map
+    // functions with a section marking, so every candidate would land in a
+    // single partition. Skip partitioning entirely to avoid the allocation.
+    if (!TII->supportsSectionAwareOutlining()) {
+      createOutlinedFunctionIfBeneficial(CandidatesForRepeatedSeq, StringLen,
+                                         MinRepeats, *TII, FunctionList);
       continue;
     }
 
-    FunctionList.emplace_back(std::move(OF.value()));
+#ifndef NDEBUG
+    LLVM_DEBUG(
+        dbgs()
+        << "*** Section Aware Outlining is enabled for the target *** \n");
+#endif
+
+    SmallVector<std::vector<Candidate>> Partitions =
+        partitionCandidatesByInputSection(CandidatesForRepeatedSeq);
+#ifndef NDEBUG
+    LLVM_DEBUG(dbgs() << "    Input section partitions: " << Partitions.size()
+                      << "\n");
+#endif
+
+    for (std::vector<Candidate> &Partition : Partitions) {
+#ifndef NDEBUG
+      LLVM_DEBUG({
+        StringRef Section = getCandidateInputSection(Partition.front());
+        dbgs() << "    .. section '"
+               << (Section.empty() ? StringRef("<none>") : Section)
+               << "': " << Partition.size() << " candidates\n";
+      });
+#endif
+      createOutlinedFunctionIfBeneficial(Partition, StringLen, MinRepeats, *TII,
+                                         FunctionList);
+    }
   }
 }
 
@@ -919,6 +989,17 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       *FirstCand.getMF()->getSubtarget().getInstrInfo();
 
   TII.mergeOutliningCandidateAttributes(*F, OF.Candidates);
+
+  if (TII.supportsSectionAwareOutlining()) {
+    const Function &ParentFn = FirstCand.getMF()->getFunction();
+    if (ParentFn.hasSection()) {
+      F->setSection(ParentFn.getSection());
+#ifndef NDEBUG
+      LLVM_DEBUG(dbgs() << "  INHERITED SECTION: " << ParentFn.getSection()
+                        << "\n");
+#endif
+    }
+  }
 
   // Set uwtable, so we generate eh_frame.
   UWTableKind UW = std::accumulate(
