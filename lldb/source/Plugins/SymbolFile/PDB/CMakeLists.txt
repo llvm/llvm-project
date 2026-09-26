@@ -10,6 +10,10 @@ lldb_tablegen(SymbolFilePDBEnums.inc -gen-lldb-option-enum-defs
   SOURCE SymbolFilePDBEnums.td
   TARGET LLDBPluginSymbolFilePDBEnumsGen)
 
+lldb_tablegen(SymbolFilePDBEnums.json -dump-json
+  SOURCE SymbolFilePDBEnums.td
+  TARGET LLDBPluginSymbolFilePDBEnumsJsonGen)
+
 lldb_tablegen(SymbolFilePDBProperties.json -dump-json
   SOURCE SymbolFilePDBProperties.td
   TARGET LLDBPluginSymbolFilePDBPropertiesJsonGen)
