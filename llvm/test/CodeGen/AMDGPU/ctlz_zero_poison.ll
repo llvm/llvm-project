@@ -1191,14 +1191,9 @@ define amdgpu_kernel void @v_ctlz_zero_poison_i8(ptr addrspace(1) noalias %out, 
 ; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i8:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v1, v0
-; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v3, vcc
-; GFX9-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
@@ -1730,14 +1725,9 @@ define amdgpu_kernel void @v_ctlz_zero_poison_i8_sel_eq_neg1(ptr addrspace(1) no
 ; GFX9-GISEL-LABEL: v_ctlz_zero_poison_i8_sel_eq_neg1:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v1, v0
-; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v3, vcc
-; GFX9-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xffff
+; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v0
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v2, v2

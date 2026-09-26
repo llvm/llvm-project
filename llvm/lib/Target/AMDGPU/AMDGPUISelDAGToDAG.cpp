@@ -2023,8 +2023,26 @@ static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
   return (ExtSrc.getValueType() == MVT::i32) ? ExtSrc : SDValue();
 }
 
+// Return an i32 equal to \p Op if it already trivially exists. This includes
+// both i32 values themselves, the inputs to extensions from i32, and i64 values
+// with irrelevant high-halves (they can just be the low half).
+static SDValue tryNarrowToI32(SDValue Op, bool IsSigned, SelectionDAG *DAG) {
+  if (SDValue Ext = matchExtFromI32orI32(Op, IsSigned, DAG))
+    return Ext;
+
+  if (Op.getValueType() != MVT::i64)
+    return SDValue();
+
+  if (IsSigned ? DAG->ComputeNumSignBits(Op) > 32
+               : DAG->computeKnownBits(Op).countMinLeadingZeros() >= 32)
+    return DAG->getTargetExtractSubreg(AMDGPU::sub0, SDLoc(Op), MVT::i32, Op);
+
+  return SDValue();
+}
+
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
-// or (64-bit SGPR base) + (sext vgpr offset) + sext(imm offset)
+// or (64-bit SGPR base) + (sext vgpr offset) + sext(imm offset) or cases where
+// the zext/sext has been folded into the offset but it's still a 32-bit value.
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
                                            SDValue &SAddr, SDValue &VOffset,
                                            SDValue &Offset, bool &ScaleOffset,
@@ -2083,16 +2101,16 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
     }
   }
 
-  // Match the variable offset.
-  if (Addr->isAnyAdd()) {
+  // Match the variable offset and don't push constants back into VGPRs.
+  if (Addr->isAnyAdd() && !isa<ConstantSDNode>(Addr.getOperand(1))) {
     LHS = Addr.getOperand(0);
 
     if (!LHS->isDivergent()) {
       // add (i64 sgpr), (*_extend (i32 vgpr))
       RHS = Addr.getOperand(1);
       ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
-      if (SDValue ExtRHS = matchExtFromI32orI32(
-              RHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
+      if (SDValue ExtRHS =
+              tryNarrowToI32(RHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
         SAddr = LHS;
         VOffset = ExtRHS;
       }
@@ -2100,10 +2118,11 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
 
     RHS = Addr.getOperand(1);
     if (!SAddr && !RHS->isDivergent()) {
-      // add (*_extend (i32 vgpr)), (i64 sgpr)
+      // add (*_extend (i32 vgpr)), (i64 sgpr), where the extend may have been
+      // folded.
       ScaleOffset = SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
-      if (SDValue ExtLHS = matchExtFromI32orI32(
-              LHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
+      if (SDValue ExtLHS =
+              tryNarrowToI32(LHS, Subtarget->hasSignedGVSOffset(), CurDAG)) {
         SAddr = RHS;
         VOffset = ExtLHS;
       }
@@ -2479,18 +2498,11 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
     if (!SOffset)
       return false;
 
-    if (ByteOffsetNode.getValueType().isScalarInteger() &&
-        ByteOffsetNode.getValueType().getSizeInBits() == 32) {
-      *SOffset = ByteOffsetNode;
+    if (SDValue S32 =
+            tryNarrowToI32(ByteOffsetNode, /*IsSigned=*/false, CurDAG)) {
+      *SOffset = S32;
       return isSOffsetLegalWithImmOffset(SOffset, Imm32Only, IsBuffer,
                                          ImmOffset);
-    }
-    if (ByteOffsetNode.getOpcode() == ISD::ZERO_EXTEND) {
-      if (ByteOffsetNode.getOperand(0).getValueType().getSizeInBits() == 32) {
-        *SOffset = ByteOffsetNode.getOperand(0);
-        return isSOffsetLegalWithImmOffset(SOffset, Imm32Only, IsBuffer,
-                                           ImmOffset);
-      }
     }
     return false;
   }

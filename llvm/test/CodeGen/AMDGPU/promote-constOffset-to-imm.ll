@@ -581,10 +581,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX900-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX900-NEXT:    s_cbranch_vccz .LBB1_1
 ; GFX900-NEXT:  ; %bb.4: ; %while.end
-; GFX900-NEXT:    v_mov_b32_e32 v1, s35
-; GFX900-NEXT:    v_add_co_u32_e32 v0, vcc, s34, v6
-; GFX900-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX900-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
+; GFX900-NEXT:    global_store_dwordx2 v6, v[4:5], s[34:35]
 ; GFX900-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: clmem_read:
@@ -695,9 +692,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX10-NEXT:    s_cbranch_vccz .LBB1_1
 ; GFX10-NEXT:  ; %bb.4: ; %while.end
-; GFX10-NEXT:    v_add_co_u32 v0, s0, s34, v6
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s35, 0, s0
-; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX10-NEXT:    global_store_dwordx2 v6, v[2:3], s[34:35]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: clmem_read:
@@ -805,10 +800,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB1_1
 ; GFX90A-NEXT:  ; %bb.4: ; %while.end
-; GFX90A-NEXT:    v_mov_b32_e32 v1, s35
-; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, s34, v6
-; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX90A-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX90A-NEXT:    global_store_dwordx2 v6, v[2:3], s[34:35]
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: clmem_read:
@@ -924,10 +916,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_vccz .LBB1_1
 ; GFX11-NEXT:  ; %bb.4: ; %while.end
-; GFX11-NEXT:    v_add_co_u32 v0, s0, s34, v6
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
-; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    global_store_b64 v6, v[2:3], s[34:35]
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
