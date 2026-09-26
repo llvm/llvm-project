@@ -2,9 +2,11 @@
 
 ; There should be multiple debug values for this variable after regalloc. The
 ; value has been spilled, but we shouldn't lose track of the location because
-; of this.
+; of this. Two consecutive DBG_VALUEs naming the same location are redundant,
+; as the first is overridden before it covers anything.
 
-; CHECK-COUNT-4: DBG_VALUE $ebp, 0, !6, !DIExpression(DW_OP_constu, 16, DW_OP_minus), debug-location !10
+; CHECK-COUNT-3: DBG_VALUE $ebp, 0, !6, !DIExpression(DW_OP_constu, 16, DW_OP_minus), debug-location !10
+; CHECK-NOT: DBG_VALUE $ebp, 0, !6, !DIExpression(DW_OP_constu, 16, DW_OP_minus), debug-location !10
 
 define void @main(i32 %call, i32 %xor.i, i1 %tobool4.not, i32 %.pre) #0 !dbg !4 {
 entry:
