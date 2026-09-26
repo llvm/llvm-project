@@ -418,6 +418,11 @@ struct PrepareContractToGPUMMA
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    // The mask is not updated: the rewrite may create ops inside the
+    // vector.mask region or swap the m and n iteration dimensions.
+    if (op.isMasked())
+      return rewriter.notifyMatchFailure(op, "masked contraction");
+
     Location loc = op.getLoc();
     Value lhs = op.getLhs(), rhs = op.getRhs(), res = op.getAcc();
 
