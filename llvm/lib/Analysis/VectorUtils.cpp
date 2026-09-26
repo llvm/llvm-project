@@ -1203,7 +1203,7 @@ llvm::SmallVector<int, 16> llvm::createUnaryMask(ArrayRef<int> Mask,
 
 /// A helper function for concatenating vectors. This function concatenates two
 /// vectors having the same element type. If the second vector has fewer
-/// elements than the first, it is padded with undefs.
+/// elements than the first, it is padded with poison.
 static Value *concatenateTwoVectors(IRBuilderBase &Builder, Value *V1,
                                     Value *V2) {
   VectorType *VecTy1 = dyn_cast<VectorType>(V1->getType());
@@ -1217,9 +1217,12 @@ static Value *concatenateTwoVectors(IRBuilderBase &Builder, Value *V1,
   assert(NumElts1 >= NumElts2 && "Unexpect the first vector has less elements");
 
   if (NumElts1 > NumElts2) {
-    // Extend with UNDEFs.
-    V2 = Builder.CreateShuffleVector(
-        V2, createSequentialMask(0, NumElts2, NumElts1 - NumElts2));
+    // Extend with poison.
+    if (isa<PoisonValue>(V2))
+      V2 = PoisonValue::get(VecTy1);
+    else
+      V2 = Builder.CreateShuffleVector(
+          V2, createSequentialMask(0, NumElts2, NumElts1 - NumElts2));
   }
 
   return Builder.CreateShuffleVector(
