@@ -193,6 +193,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Improvements
 
+### Clang IR Improvements
+
 ## Additional Information
 
 A wide variety of additional information is available on the [Clang web
