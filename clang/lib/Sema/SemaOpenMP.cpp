@@ -8437,6 +8437,8 @@ struct LoopIterationSpace final {
   /// check that the number of iterations for this particular counter must be
   /// finished.
   Expr *FinalCondition = nullptr;
+  /// True if this iteration space corresponds to a range-based for loop.
+  bool IsRangeFor = false;
 };
 
 /// Scan an AST subtree, checking that no decls in the CollapsedLoopVarDecls
@@ -10210,6 +10212,7 @@ static bool checkOpenMPIterationSpace(
   ResultIterSpaces[CurrentNestedLoopCount].Subtract = ISC.shouldSubtractStep();
   ResultIterSpaces[CurrentNestedLoopCount].IsStrictCompare =
       ISC.isStrictTestOp();
+  ResultIterSpaces[CurrentNestedLoopCount].IsRangeFor = (CXXFor != nullptr);
   std::tie(ResultIterSpaces[CurrentNestedLoopCount].MinValue,
            ResultIterSpaces[CurrentNestedLoopCount].MaxValue) =
       ISC.buildMinMaxValues(DSA.getCurScope(), Captures);
@@ -11231,16 +11234,27 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
 
       // Build final: IS.CounterVar = IS.Start + IS.NumIters * IS.Step
-      ExprResult Final =
-          buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
-                             IS.CounterInit, IS.NumIterations, IS.CounterStep,
-                             IS.Subtract, IS.IsNonRectangularLB, &Captures);
-      if (!Final.isUsable()) {
-        HasErrors = true;
-        break;
+      // For class-type iterator loops (non-arithmetic, non-pointer counters)
+      // in loop transformation directives, skip finalization — arithmetic on
+      // such iterators is not expressible via buildCounterUpdate.
+      ExprResult Final;
+      bool IsClassIteratorLoop =
+          !IS.CounterVar->getType()->isArithmeticType() &&
+          !IS.CounterVar->getType()->isPointerType();
+      if (IsClassIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
+        Final = nullptr;
+      } else {
+        Final =
+            buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
+                               IS.CounterInit, IS.NumIterations, IS.CounterStep,
+                               IS.Subtract, IS.IsNonRectangularLB, &Captures);
+        if (!Final.isUsable()) {
+          HasErrors = true;
+          break;
+        }
       }
 
-      if (!Update.isUsable() || !Final.isUsable()) {
+      if (!Update.isUsable()) {
         HasErrors = true;
         break;
       }
@@ -11249,7 +11263,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       Built.PrivateCounters[Cnt] = IS.PrivateCounterVar;
       Built.Inits[Cnt] = Init.get();
       Built.Updates[Cnt] = Update.get();
-      Built.Finals[Cnt] = Final.get();
+      Built.Finals[Cnt] = Final.isUsable() ? Final.get() : nullptr;
       Built.DependentCounters[Cnt] = nullptr;
       Built.DependentInits[Cnt] = nullptr;
       // Transfer the body-guard condition: the loop condition for
@@ -15534,6 +15548,12 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
       // given that they are not bounded to a particular loop nest
       // so they need to be treated independently
       updatePreInits(LoopTransform, SeqAnalysis.LoopSequencePreInits);
+      // The generated loops become individual entries in SeqAnalysis.Loops,
+      // so the enclosing directive can decide per-loop where to emit their
+      // finalization. But the transformation's own Finals aren't attached
+      // to any specific generated loop; propagate to the enclosing directive.
+      if (Stmt *InnerFinal = LoopTransform->getFinals())
+        SeqAnalysis.InnerFinals.push_back(InnerFinal);
       return analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind);
     }
     // Vast majority: (Tile, Unroll, Stripe, Reverse, Interchange, Fuse all)
@@ -15549,6 +15569,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
 
     StoreLoopStatements(NewTransformedSingleLoop, TransformedStmt);
     updatePreInits(LoopTransform, NewTransformedSingleLoop.TransformsPreInits);
+    NewTransformedSingleLoop.TransformFinals = LoopTransform->getFinals();
 
     SeqAnalysis.LoopSeqSize++;
     return true;
@@ -15716,6 +15737,29 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
                           OrigCntVar->getExprLoc());
 }
 
+/// Build loop variable finalization statement from HelperExprs.Finals.
+/// Returns a CompoundStmt containing all finalization statements, or nullptr
+/// if there are no finalization statements.
+/// Note: Loops with non-arithmetic loop variables (e.g., iterators) are skipped
+/// because finalization only applies to integer/floating-point counters.
+static Stmt *buildLoopFinalization(
+    ASTContext &Context,
+    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
+  SmallVector<Stmt *, 8> FinalizationStmts;
+
+  for (size_t I : llvm::seq<size_t>(LoopHelpers.size())) {
+    for (auto *Final : LoopHelpers[I].Finals)
+      if (Final)
+        FinalizationStmts.push_back(Final);
+  }
+
+  return FinalizationStmts.empty()
+             ? nullptr
+             : CompoundStmt::Create(Context, FinalizationStmts,
+                                    FPOptionsOverride(), SourceLocation(),
+                                    SourceLocation());
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                                 Stmt *AStmt,
                                                 SourceLocation StartLoc,
@@ -15745,7 +15789,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   // Delay tiling to when template is completely instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    NumLoops, AStmt, nullptr, nullptr);
+                                    NumLoops, AStmt, nullptr, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting loop iteration space dimensionality to match number of "
@@ -16068,7 +16112,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
                                   AStmt, Inner,
-                                  buildPreInits(Context, PreInits));
+                                  buildPreInits(Context, PreInits),
+                                  buildLoopFinalization(Context, LoopHelpers));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
@@ -16102,7 +16147,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   // Delay striping to when template is completely instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPStripeDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                      NumLoops, AStmt, nullptr, nullptr);
+                                      NumLoops, AStmt, nullptr, nullptr,
+                                      nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting loop iteration space dimensionality to match number of "
@@ -16325,9 +16371,10 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  return OMPStripeDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    NumLoops, AStmt, Inner,
-                                    buildPreInits(Context, PreInits));
+  return OMPStripeDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
@@ -16634,7 +16681,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
-                                       NumLoops, nullptr, nullptr);
+                                       NumLoops, nullptr, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -16793,9 +16840,10 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
       ForStmt(Context, Init.get(), Cond.get(), nullptr, Incr.get(),
               ReversedBody, LoopHelper.Init->getBeginLoc(),
               LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
-  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
-                                     ReversedFor,
-                                     buildPreInits(Context, PreInits));
+  return OMPReverseDirective::Create(
+      Context, StartLoc, EndLoc, AStmt, NumLoops, ReversedFor,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers));
 }
 
 /// Build the AST for \#pragma omp split counts(c1, c2, ...).
@@ -16832,7 +16880,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                     NumLoops, AStmt, nullptr, nullptr);
+                                     NumLoops, AStmt, nullptr, nullptr,
+                                     nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -16875,12 +16924,14 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     Expr *CountExpr = Refs[I];
     if (!CountExpr)
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       NumLoops, AStmt, nullptr, nullptr);
+                                       NumLoops, AStmt, nullptr, nullptr,
+                                       nullptr);
     std::optional<llvm::APSInt> OptVal =
         CountExpr->getIntegerConstantExpr(Context);
     if (!OptVal || OptVal->isNegative())
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       NumLoops, AStmt, nullptr, nullptr);
+                                       NumLoops, AStmt, nullptr, nullptr,
+                                       nullptr);
     CountValues[I] = OptVal->getLimitedValue();
   }
 
@@ -17024,7 +17075,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
                                    AStmt, SplitStmt,
-                                   buildPreInits(Context, PreInits));
+                                   buildPreInits(Context, PreInits),
+                                   buildLoopFinalization(Context, LoopHelpers));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
@@ -17054,7 +17106,8 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
   // Delay interchange to when template is completely instantiated.
   if (CurContext->isDependentContext())
     return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                           NumLoops, AStmt, nullptr, nullptr);
+                                           NumLoops, AStmt, nullptr, nullptr,
+                                           nullptr);
 
   // An invalid expression in the permutation clause is set to nullptr in
   // ActOnOpenMPPermutationClause.
@@ -17107,7 +17160,8 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
         return Idx == Arg;
       }))
     return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                           NumLoops, AStmt, AStmt, nullptr);
+                                           NumLoops, AStmt, AStmt, nullptr,
+                                           nullptr);
 
   // Find the affected loops.
   SmallVector<Stmt *> LoopStmts(NumLoops, nullptr);
@@ -17217,9 +17271,10 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
         SourceHelper.Inc->getEndLoc());
   }
 
-  return OMPInterchangeDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                         NumLoops, AStmt, Inner,
-                                         buildPreInits(Context, PreInits));
+  return OMPInterchangeDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers));
 }
 
 StmtResult
@@ -17605,7 +17660,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // because a dependent context could prevent determining its true value
   if (CurrContext->isDependentContext())
     return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    /* NumLoops */ 1, AStmt, nullptr, nullptr);
+                                    /* NumLoops */ 1, AStmt, nullptr, nullptr,
+                                    nullptr);
 
   // Validate that the potential loop sequence is transformable for fusion
   // Also collect the HelperExprs, Loop Stmts, Inits, and Number of loops
@@ -17696,7 +17752,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<VarDecl *, 4> LBVarDecls;
   SmallVector<VarDecl *, 4> STVarDecls;
   SmallVector<VarDecl *, 4> NIVarDecls;
-  SmallVector<VarDecl *, 4> UBVarDecls;
   SmallVector<VarDecl *, 4> IVVarDecls;
 
   // Helper lambda to create variables for bounds, strides, and other
@@ -17779,8 +17834,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                       SeqAnalysis.Loops[I].TheForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
     }
-    auto [UBVD, UBDStmt] =
-        CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.UB, "ub", J);
     auto [LBVD, LBDStmt] =
         CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.LB, "lb", J);
     auto [STVD, STDStmt] =
@@ -17793,7 +17846,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     assert(LBVD && STVD && NIVD && IVVD &&
            "OpenMP Fuse Helper variables creation failed");
 
-    UBVarDecls.push_back(UBVD);
     LBVarDecls.push_back(LBVD);
     STVarDecls.push_back(STVD);
     NIVarDecls.push_back(NIVD);
@@ -18011,6 +18063,45 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               FusedBody, InitStmt.get()->getBeginLoc(), SourceLocation(),
               IncrExpr.get()->getEndLoc());
 
+  // 8. Build finalization statements for fused loops.
+  // Collect HelperExprs from the fused loops.
+  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
+  for (unsigned I = FirstVal - 1; I < LastVal; ++I) {
+    if (SeqAnalysis.Loops[I].isRegularLoop() &&
+        isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt)) {
+      FusedLoopHelpers.push_back(SeqAnalysis.Loops[I].HelperExprs);
+    }
+  }
+
+  // Build Finals for this fuse and combine with:
+  //   - Finals from inner sequence-generating transformations (looprange
+  //     fuse, split) that produced our SeqAnalysis.Loops entries.
+  //   - Finals from inner single-loop transformations (reverse, tile, ...)
+  //     whose loops are in-range and thus consumed by this fuse.
+  // Out-of-range loops carry their own Finals inline; see the FinalLoops
+  // assembly below.
+  Stmt *OwnFinals = buildLoopFinalization(Context, FusedLoopHelpers);
+  SmallVector<Stmt *, 4> AllFinalsStmts;
+  for (Stmt *InnerFinal : SeqAnalysis.InnerFinals) {
+    assert(InnerFinal && "null Finals should never be pushed");
+    AllFinalsStmts.push_back(InnerFinal);
+  }
+  for (unsigned I : llvm::seq<unsigned>(SeqAnalysis.LoopSeqSize)) {
+    if (LRC && (I < FirstVal - 1 || I >= FirstVal + CountVal - 1))
+      continue;
+    if (Stmt *F = SeqAnalysis.Loops[I].TransformFinals)
+      AllFinalsStmts.push_back(F);
+  }
+  if (OwnFinals)
+    AllFinalsStmts.push_back(OwnFinals);
+  Stmt *CombinedFinals = nullptr;
+  if (AllFinalsStmts.size() == 1)
+    CombinedFinals = AllFinalsStmts.front();
+  else if (!AllFinalsStmts.empty())
+    CombinedFinals =
+        CompoundStmt::Create(Context, AllFinalsStmts, FPOptionsOverride(),
+                             SourceLocation(), SourceLocation());
+
   //  In the case of looprange, the result of fuse won't simply
   //  be a single loop (ForStmt), but rather a loop sequence
   //  (CompoundStmt) of 3 parts: the pre-fusion loops, the fused loop
@@ -18021,6 +18112,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //  treatment is skipped)
 
   Stmt *FusionStmt = FusedForStmt;
+  unsigned FusedLoopIdx = 0;
   if (LRC && CountVal != SeqAnalysis.LoopSeqSize) {
     SmallVector<Stmt *, 4> FinalLoops;
 
@@ -18051,16 +18143,29 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
           llvm::append_range(PreInits, TransformPreInit);
       }
 
-      FinalLoops.push_back(SeqAnalysis.Loops[I].TheForStmt);
+      // For out-of-range loop-transformations, emit their finalization inline
+      // right after the transformed loop so that IVs are restored as if the
+      // transformation had not been present (OpenMP 6.0 finalization rule).
+      Stmt *LoopStmt = SeqAnalysis.Loops[I].TheForStmt;
+      if (Stmt *LoopFinals = SeqAnalysis.Loops[I].TransformFinals)
+        LoopStmt = CompoundStmt::Create(Context, {LoopStmt, LoopFinals},
+                                        FPOptionsOverride(), SourceLocation(),
+                                        SourceLocation());
+      FinalLoops.push_back(LoopStmt);
     }
 
-    FinalLoops.insert(FinalLoops.begin() + (FirstVal - 1), FusedForStmt);
+    // Insert the fused loop and record its position. Codegen uses this index
+    // to know where to emit Finals (right after the fused loop, before any
+    // post-fusion loops so that post-fusion code observes finalized values).
+    FusedLoopIdx = FirstVal - 1;
+    FinalLoops.insert(FinalLoops.begin() + FusedLoopIdx, FusedForStmt);
     FusionStmt = CompoundStmt::Create(Context, FinalLoops, FPOptionsOverride(),
                                       SourceLocation(), SourceLocation());
   }
   return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                   NumGeneratedTopLevelLoops, AStmt, FusionStmt,
-                                  buildPreInits(Context, PreInits));
+                                  buildPreInits(Context, PreInits),
+                                  CombinedFinals, FusedLoopIdx);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
