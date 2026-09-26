@@ -723,14 +723,19 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   cloneConstantsIntoTheRegion(op.getRegion(), rewriter);
 
   // Compute trip count for each loop induction variable:
-  //   tripCount = ceil_div(upperBound - lowerBound, step);
+  //   tripCount = max(ceil_div(upperBound - lowerBound, step), 0);
+  // Each dimension is clamped at zero so that empty dimensions (where
+  // upperBound < lowerBound) contribute zero iterations rather than negative
+  // values which can cancel when multiplied together.
+  Value c0 = arith::ConstantIndexOp::create(b, 0);
   SmallVector<Value> tripCounts(op.getNumLoops());
   for (size_t i = 0; i < op.getNumLoops(); ++i) {
     auto lb = op.getLowerBound()[i];
     auto ub = op.getUpperBound()[i];
     auto step = op.getStep()[i];
     auto range = b.createOrFold<arith::SubIOp>(ub, lb);
-    tripCounts[i] = b.createOrFold<arith::CeilDivSIOp>(range, step);
+    Value rawTripCount = b.createOrFold<arith::CeilDivSIOp>(range, step);
+    tripCounts[i] = b.createOrFold<arith::MaxSIOp>(rawTripCount, c0);
   }
 
   // Compute a product of trip counts to get the 1-dimensional iteration space
@@ -741,7 +746,6 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
 
   // Short circuit no-op parallel loops (zero iterations) that can arise from
   // the memrefs with dynamic dimension(s) equal to zero.
-  Value c0 = arith::ConstantIndexOp::create(b, 0);
   Value isZeroIterations =
       arith::CmpIOp::create(b, arith::CmpIPredicate::eq, tripCount, c0);
 
