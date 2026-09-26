@@ -241,4 +241,43 @@ contains
       end do
     end do
   end subroutine
+  ! SIMD clauses see TEAMS and DISTRIBUTE (CPU scores 5). The bound and
+  ! post-loop call see only TEAMS (CPU scores 3, losing to vendor score 4).
+  ! CHECK-LABEL: func.func @_QMloop_contextPdistribute_simd_clauses(
+  ! CHECK: omp.teams
+  ! CHECK: fir.call @_QMloop_contextPcpu_count(
+  ! CHECK: fir.call @_QMloop_contextPscored_count(
+  ! CHECK: omp.distribute
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMloop_contextPscored_count(
+  ! CHECK: return
+  subroutine distribute_simd_clauses(n, a)
+    integer :: n, a(n), i
+    !$omp teams
+    !$omp distribute simd if(simd: thread_count(n) > 0)
+    do i = 1, thread_count(n)
+      a(i) = i
+    end do
+    i = thread_count(n)
+    !$omp end teams
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMloop_contextPnested_distribute_simd_clauses(
+  ! CHECK: omp.teams
+  ! CHECK: omp.distribute
+  ! CHECK: fir.call @_QMloop_contextPcpu_count(
+  ! CHECK: omp.simd
+  ! CHECK: return
+  subroutine nested_distribute_simd_clauses(n, a)
+    integer :: n, a(n, n), i, j
+    !$omp teams
+    !$omp distribute
+    do i = 1, n
+      !$omp simd if(simd: thread_count(n) > 0)
+      do j = 1, n
+        a(i, j) = i + j
+      end do
+    end do
+    !$omp end teams
+  end subroutine
 end module
