@@ -13,9 +13,9 @@ void debug_captured(void) {
   int x = 10;
 
 // Check both debug_captured counters, so we can do this all in one pass
-// PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 1
+// PGOGEN: store {{.*}} @[[DCC]], i64 8
 // PGOUSE: br {{.*}} !prof ![[DC1:[0-9]+]]
-// PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 2
+// PGOGEN: store {{.*}} @[[DCC]], i64 16
 // PGOUSE: br {{.*}} !prof ![[DC2:[0-9]+]]
 // PGOALL: ret
 
@@ -23,7 +23,7 @@ void debug_captured(void) {
 // PGOGEN: store {{.*}} @[[CSC]]
 #pragma clang __debug captured
   {
-    // PGOGEN: store {{.*}} @[[CSC]], i32 0, i32 1
+    // PGOGEN: store {{.*}} @[[CSC]], i64 8
     // PGOUSE: br {{.*}} !prof ![[CS1:[0-9]+]]
     if (x) {}
     // PGOALL: ret
@@ -35,10 +35,10 @@ void debug_captured(void) {
 // PGOGEN: store {{.*}} @[[C1C]]
 #pragma clang __debug captured
   {
-    // PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 1
+    // PGOGEN: store {{.*}} @[[C1C]], i64 8
     // PGOUSE: br {{.*}} !prof ![[C11:[0-9]+]]
     for (int i = 0; i < x; ++i) {}
-    // PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 2
+    // PGOGEN: store {{.*}} @[[C1C]], i64 16
     // PGOUSE: br {{.*}} !prof ![[C12:[0-9]+]]
     if (x) {}
     // PGOALL: ret

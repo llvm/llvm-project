@@ -66,12 +66,12 @@ define void @load_ifuncs() addrspace(0) {
 ;
 ;
 ; CHECK-LABEL: define void @call_ifuncs() addrspace(0) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 3), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 24), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
 ; CHECK-NEXT:    call addrspace(0) void [[TMP2]]()
-; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 4), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 32), align 8
 ; CHECK-NEXT:    call addrspace(1) void [[TMP3]]()
-; CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 5), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 40), align 8
 ; CHECK-NEXT:    call addrspace(1) void [[TMP4]]()
 ; CHECK-NEXT:    ret void
 ;
@@ -87,15 +87,15 @@ define void @load_ifuncs() addrspace(0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call addrspace(1) ptr addrspace(1) @resolver1_in_1()
 ; CHECK-NEXT:    store ptr addrspace(1) [[TMP1]], ptr @[[GLOB0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP2]], ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP2]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call addrspace(1) ptr @resolver0_in_1()
 ; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[TMP3]] to ptr addrspace(1)
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP4]], ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 2), align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP4]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 16), align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP5]], ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 3), align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP5]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 24), align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = call addrspace(1) ptr addrspace(1) @resolver1_in_1()
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP6]], ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 4), align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP6]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 32), align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP7]], ptr getelementptr inbounds ([6 x ptr addrspace(1)], ptr @[[GLOB0]], i32 0, i32 5), align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP7]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 40), align 8
 ; CHECK-NEXT:    ret void
 ;

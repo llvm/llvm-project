@@ -166,7 +166,7 @@ define i32 @i8_gep_store() {
 @g = local_unnamed_addr addrspace(3) global [2 x float] zeroinitializer, align 4
 define float @i8_gep_global_index() {
   ; CHECK-LABEL: define float @i8_gep_global_index(
-  ; CHECK-NEXT: [[LOAD:%.*]] = load float, ptr addrspace(3) getelementptr inbounds nuw ([2 x float], ptr addrspace(3) @g, i32 0, i32 1), align 4
+  ; CHECK-NEXT: [[LOAD:%.*]] = load float, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g, i32 4), align 4
   ; CHECK-NEXT:    ret float [[LOAD]]
   %1 = getelementptr inbounds nuw i8, ptr addrspace(3) @g, i32 4
   %2 = load float, ptr addrspace(3) %1, align 4
@@ -175,7 +175,7 @@ define float @i8_gep_global_index() {
 
 define float @i8_gep_global_constexpr() {
   ; CHECK-LABEL: define float @i8_gep_global_constexpr(
-  ; CHECK-NEXT: [[LOAD:%.*]] = load float, ptr addrspace(3) getelementptr inbounds nuw ([2 x float], ptr addrspace(3) @g, i32 0, i32 1), align 4
+  ; CHECK-NEXT: [[LOAD:%.*]] = load float, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g, i32 4), align 4
   ; CHECK-NEXT: ret float [[LOAD]]
   %1 = load float, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g, i32 4), align 4
   ret float %1

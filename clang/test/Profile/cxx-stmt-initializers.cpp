@@ -13,8 +13,8 @@
 // PGOGEN: store {{.*}} @[[SIC]]
 void switch_init() {
   switch (int i = true ? 0 : 1; i) {}
-  // PGOGEN: store {{.*}} @[[SIC]], i32 0, i32 2
-  // PGOGEN: store {{.*}} @[[SIC]], i32 0, i32 1
+  // PGOGEN: store {{.*}} @[[SIC]], i64 16
+  // PGOGEN: store {{.*}} @[[SIC]], i64 8
 }
 
 // Note: We expect counters for the function entry block, the condition in the
@@ -24,6 +24,6 @@ void switch_init() {
 // PGOGEN: store {{.*}} @[[IIC]]
 void if_init() {
   if (int i = true ? 0 : 1; i) {}
-  // PGOGEN: store {{.*}} @[[IIC]], i32 0, i32 2
-  // PGOGEN: store {{.*}} @[[IIC]], i32 0, i32 1
+  // PGOGEN: store {{.*}} @[[IIC]], i64 16
+  // PGOGEN: store {{.*}} @[[IIC]], i64 8
 }

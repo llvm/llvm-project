@@ -22,8 +22,8 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MALLOC:%.*]], label [[TMP7:%.*]]
 ; CHECK:       Malloc:
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 2, i32 0), align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 2, i32 2), align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 24), align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 32), align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP16]] to i64
 ; CHECK-NEXT:    [[TMP23:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)

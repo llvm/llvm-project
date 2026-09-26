@@ -92,8 +92,8 @@ define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MALLOC:%.*]], label [[TMP7:%.*]]
 ; CHECK:       Malloc:
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MY_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i32 0, i32 1, i32 0), align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MY_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i64 12), align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i64 20), align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
