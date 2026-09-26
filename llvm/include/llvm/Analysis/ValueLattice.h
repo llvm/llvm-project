@@ -83,30 +83,64 @@ class ValueLatticeElement {
   // Pointer constants derived from equality predicates may have different
   // provenance than the original value. Limit constant propagation if this
   // happens to be the case.
-  bool MayHaveDifferentProvenance = false;
+  unsigned MayHaveDifferentProvenance : 1;
 
-  /// The union either stores a pointer to a constant or a constant range,
-  /// associated to the lattice element. We have to ensure that Range is
-  /// initialized or destroyed when changing state to or from constantrange.
+  /// Set when a constant range wider than 64 bits.
+  unsigned IsWideRange : 1;
+
+  /// Bit width of packaged constant range (log2(64) = 6).
+  unsigned RangeBitWidth : 7;
+
+  /// Stores either a constant pointer, the lower bound of a packed range, or
+  /// a pointer to an out-of-line range for widths above 64 bits.
   union {
     Constant *ConstVal;
-    ConstantRange Range;
+    uint64_t RangeLo;
+    ConstantRange *WideRange;
   };
+
+  /// Upper bound of a packed range.
+  uint64_t RangeHi;
+
+  bool hasRangeTag() const {
+    return Tag == constantrange || Tag == constantrange_including_undef;
+  }
+
+  ConstantRange getRangeImpl() const {
+    assert(hasRangeTag() && "not a range");
+    if (IsWideRange)
+      return *WideRange;
+    return ConstantRange(APInt(RangeBitWidth, RangeLo),
+                         APInt(RangeBitWidth, RangeHi));
+  }
+
+  void setRangeImpl(ConstantRange CR) {
+    unsigned BW = CR.getBitWidth();
+    if (BW <= 64) {
+      IsWideRange = 0;
+      RangeBitWidth = BW;
+      RangeLo = CR.getLower().getZExtValue();
+      RangeHi = CR.getUpper().getZExtValue();
+    } else {
+      IsWideRange = 1;
+      RangeBitWidth = 0;
+      WideRange = new ConstantRange(std::move(CR));
+    }
+  }
+
+  /// True if the packed range holds exactly one element.
+  bool isSingleElementRange() const {
+    assert(hasRangeTag() && "not a range");
+    if (IsWideRange)
+      return WideRange->isSingleElement();
+    uint64_t Mask = RangeBitWidth >= 64 ? ~0ULL : ((1ULL << RangeBitWidth) - 1);
+    return RangeHi == ((RangeLo + 1) & Mask);
+  }
 
   /// Destroy contents of lattice value, without destructing the object.
   void destroy() {
-    switch (Tag) {
-    case overdefined:
-    case unknown:
-    case undef:
-    case constant:
-    case notconstant:
-      break;
-    case constantrange_including_undef:
-    case constantrange:
-      Range.~ConstantRange();
-      break;
-    };
+    if (hasRangeTag() && IsWideRange)
+      delete WideRange;
   }
 
 public:
@@ -148,18 +182,28 @@ public:
   };
 
   // ConstVal and Range are initialized on-demand.
-  ValueLatticeElement() : Tag(unknown), NumRangeExtensions(0) {}
+  ValueLatticeElement()
+      : Tag(unknown), NumRangeExtensions(0), MayHaveDifferentProvenance(0),
+        IsWideRange(0), RangeBitWidth(0), ConstVal(nullptr), RangeHi(0) {}
 
   ~ValueLatticeElement() { destroy(); }
 
   ValueLatticeElement(const ValueLatticeElement &Other)
       : Tag(Other.Tag), NumRangeExtensions(0),
-        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance),
+        IsWideRange(0), RangeBitWidth(0), ConstVal(nullptr), RangeHi(0) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
-      new (&Range) ConstantRange(Other.Range);
       NumRangeExtensions = Other.NumRangeExtensions;
+      RangeBitWidth = Other.RangeBitWidth;
+      if (LLVM_UNLIKELY(Other.IsWideRange)) {
+        IsWideRange = 1;
+        WideRange = new ConstantRange(*Other.WideRange);
+      } else {
+        RangeLo = Other.RangeLo;
+        RangeHi = Other.RangeHi;
+      }
       break;
     case constant:
     case notconstant:
@@ -174,12 +218,20 @@ public:
 
   ValueLatticeElement(ValueLatticeElement &&Other)
       : Tag(Other.Tag), NumRangeExtensions(0),
-        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance),
+        IsWideRange(0), RangeBitWidth(0), ConstVal(nullptr), RangeHi(0) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
-      new (&Range) ConstantRange(std::move(Other.Range));
       NumRangeExtensions = Other.NumRangeExtensions;
+      RangeBitWidth = Other.RangeBitWidth;
+      IsWideRange = Other.IsWideRange;
+      if (LLVM_UNLIKELY(Other.IsWideRange))
+        WideRange = Other.WideRange;
+      else {
+        RangeLo = Other.RangeLo;
+        RangeHi = Other.RangeHi;
+      }
       break;
     case constant:
     case notconstant:
@@ -191,6 +243,7 @@ public:
       break;
     }
     Other.Tag = unknown;
+    Other.IsWideRange = 0;
   }
 
   ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
@@ -253,7 +306,7 @@ public:
   /// contains a single element. In that case, it can be replaced by a constant.
   bool isConstantRange(bool UndefAllowed = true) const {
     return Tag == constantrange || (Tag == constantrange_including_undef &&
-                                    (UndefAllowed || Range.isSingleElement()));
+                                    (UndefAllowed || isSingleElementRange()));
   }
   bool isOverdefined() const { return Tag == overdefined; }
 
@@ -271,10 +324,10 @@ public:
   /// non-singleton constant ranges that may also be undef. Note that this
   /// function also returns a range if the range may include undef, but only
   /// contains a single element. In that case, it can be replaced by a constant.
-  const ConstantRange &getConstantRange(bool UndefAllowed = true) const {
+  ConstantRange getConstantRange(bool UndefAllowed = true) const {
     assert(isConstantRange(UndefAllowed) &&
            "Cannot get the constant-range of a non-constant-range!");
-    return Range;
+    return getRangeImpl();
   }
 
   std::optional<APInt> asConstantInteger() const {
@@ -388,7 +441,9 @@ public:
 
       assert(NewR.contains(getConstantRange()) &&
              "Existing range must be a subset of NewR");
-      Range = std::move(NewR);
+      if (LLVM_UNLIKELY(IsWideRange))
+        delete WideRange;
+      setRangeImpl(std::move(NewR));
       return true;
     }
 
@@ -398,7 +453,7 @@ public:
 
     NumRangeExtensions = 0;
     Tag = NewTag;
-    new (&Range) ConstantRange(std::move(NewR));
+    setRangeImpl(std::move(NewR));
     return true;
   }
 
@@ -509,7 +564,7 @@ public:
   void setMayHaveDifferentProvenance(bool V) { MayHaveDifferentProvenance = V; }
 };
 
-static_assert(sizeof(ValueLatticeElement) <= 40,
+static_assert(sizeof(ValueLatticeElement) <= 24,
               "size of ValueLatticeElement changed unexpectedly");
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
