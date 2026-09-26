@@ -10,21 +10,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdServer.h"
 #include "CompileCommands.h"
 #include "Compiler.h"
+#include "ConfigProvider.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
 #include "index/Ref.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolCollector.h"
+#include "support/Context.h"
 #include "support/Logger.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
+#include <memory>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -46,6 +54,12 @@ static llvm::cl::list<std::string> QueryDriverGlobs{
         "will be used to extract system includes. e.g. "
         "/usr/bin/**/clang-*,/path/to/repo/**/g++-*"),
     llvm::cl::CommaSeparated,
+};
+
+static llvm::cl::opt<bool> EnableConfig{
+    "enable-config",
+    llvm::cl::desc(config::Provider::EnableConfigFlagDesc),
+    llvm::cl::init(false),
 };
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
@@ -152,6 +166,17 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
+  clang::clangd::RealThreadsafeFS TFS;
+  std::vector<std::unique_ptr<clang::clangd::config::Provider>> ProviderStack;
+  if (clang::clangd::EnableConfig)
+    ProviderStack =
+        clang::clangd::config::Provider::createDefaultProviders(TFS);
+  auto ConfigProvider =
+      clang::clangd::config::Provider::combine(std::move(ProviderStack));
+  auto ContextProvider =
+      clang::clangd::ClangdServer::createConfiguredContextProvider(
+          ConfigProvider.get(), /*Callbacks=*/nullptr);
+
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
   auto Mangler = std::make_shared<clang::clangd::CommandMangler>(
@@ -162,8 +187,26 @@ int main(int argc, const char **argv) {
   auto Err = Executor->get()->execute(
       std::make_unique<clang::clangd::IndexActionFactory>(Data),
       clang::tooling::ArgumentsAdjuster(
-          [Mangler = std::move(Mangler)](const std::vector<std::string> &Args,
-                                         llvm::StringRef File) {
+          [Mangler = std::move(Mangler),
+           ContextProvider = std::move(ContextProvider)](
+              const std::vector<std::string> &Args, llvm::StringRef File) {
+            // FIXME: If File is relative, it's relative to the compile
+            // command's "directory", not our CWD, but ToolExecutor doesn't
+            // expose "directory" here, so make_absolute can resolve it wrong
+            // and miss the .clangd file. See
+            // indexer-clangd-config-relative-path.test.
+            llvm::SmallString<256> AbsFile(File);
+            llvm::sys::fs::make_absolute(AbsFile);
+            // FIXME: WithCfg only lives for this ArgumentsAdjuster call, so
+            // it's visible to Mangler below but not to the parse that follows.
+            // That's harmless today since clangd-indexer doesn't consult
+            // config during the parse, but a real fix would need libTooling
+            // changes to keep the context alive for the whole invocation.
+            std::optional<clang::clangd::WithContext> WithCfg;
+            if (llvm::sys::path::is_absolute(File)) {
+              WithCfg.emplace(ContextProvider(File));
+            }
+
             clang::tooling::CompileCommand Cmd;
             Cmd.CommandLine = Args;
             Mangler->operator()(Cmd, File);
