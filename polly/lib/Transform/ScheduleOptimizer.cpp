@@ -596,7 +596,10 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
     isl::id Id = Set.get_tuple_id();
     if (Id.is_null())
       return Node;
-    Stmts.push_back({static_cast<ScopStmt *>(Id.get_user()), Set});
+    auto *Stmt = static_cast<ScopStmt *>(Id.get_user());
+    if (!Stmt)
+      return Node;
+    Stmts.push_back({Stmt, Set});
   }
   unsigned NumStmts = Stmts.size();
   if (NumStmts < 2)
