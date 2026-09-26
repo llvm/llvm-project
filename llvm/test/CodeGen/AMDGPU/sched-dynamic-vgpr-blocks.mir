@@ -4,7 +4,7 @@
 # In dynamic VGPR mode we don't want to waste VGPR blocks, so we revert any
 # schedule that increases the number of blocks we need to allocate. The
 # scheduler will try to hoist the loads above the dependent adds, which will
-# increase the pressure in the region from 5 to 17 VGPRs, i.e. from one block of
+# increase the pressure in the region from 5 to 18 VGPRs, i.e. from one block of
 # 16 to 2. This should trigger the code that performs the revert based on the
 # number of VGPR blocks.
 # The -amdgpu-stress-vgpr flag is only there to keep the test small (the
@@ -16,7 +16,7 @@
 ...
 ---
 # DEBUG: Region register pressure: VGPRs: 5
-# DEBUG: Pressure after scheduling: VGPRs: 17
+# DEBUG: Pressure after scheduling: VGPRs: 18
 # DEBUG-NEXT: Region: 0
 # DEBUG-NEXT: Occupancy before scheduling: 16, after 16.
 # DEBUG-NEXT: Reverting scheduling for region 0
@@ -68,5 +68,7 @@ body: |
     %acc14:vgpr_32 = V_ADD_U32_e32 %acc13, %l13, implicit $exec
     %l14:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 56, 0, implicit $exec
     %acc15:vgpr_32 = V_ADD_U32_e32 %acc14, %l14, implicit $exec
-    S_ENDPGM 0, implicit %acc15
+    %l15:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 60, 0, implicit $exec
+    %acc16:vgpr_32 = V_ADD_U32_e32 %acc15, %l15, implicit $exec
+    S_ENDPGM 0, implicit %acc16
 ...
