@@ -3327,7 +3327,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   }
 
   // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
-  if (N0.getOpcode() == ISD::ADD &&
+  if (TLI.isDesirableToFoldVScaleAdd() && N0.getOpcode() == ISD::ADD &&
       N0.getOperand(1).getOpcode() == ISD::VSCALE &&
       N1.getOpcode() == ISD::VSCALE) {
     const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
