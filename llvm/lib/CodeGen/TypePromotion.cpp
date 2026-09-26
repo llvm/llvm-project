@@ -277,7 +277,7 @@ bool TypePromotionImpl::isSink(Value *V) {
   if (auto *ZExt = dyn_cast<ZExtInst>(V))
     return GreaterThanTypeSize(ZExt);
   if (auto *SExt = dyn_cast<SExtInst>(V))
-    return GreaterThanTypeSize(SExt);
+    return UseSExt && GreaterThanTypeSize(SExt);
   if (auto *Switch = dyn_cast<SwitchInst>(V))
     return LessThanTypeSize(Switch->getCondition());
   if (auto *ICmp = dyn_cast<ICmpInst>(V))
