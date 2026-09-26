@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
+#include "hdr/limits_macros.h"
 #include "hdr/types/struct___pthread_cleanup_frame.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
@@ -161,11 +162,20 @@ void call_atexit_callbacks() {
   atexit_callback_mgr.call();
 
   // Thread-specific keys (pthread_key_create).
-  for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
-    TSSValueUnit &unit = tss_values[i];
-    // Both dtor and value need to nonnull to call dtor
-    if (unit.dtor != nullptr && unit.payload != nullptr)
-      unit.dtor(unit.payload);
+  for (size_t iter = 0; iter < PTHREAD_DESTRUCTOR_ITERATIONS; ++iter) {
+    bool called_dtor = false;
+    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+      TSSValueUnit &unit = tss_values[i];
+      // Both dtor and value need to be nonnull to call dtor
+      if (unit.dtor != nullptr && unit.payload != nullptr) {
+        void *val = unit.payload;
+        unit.payload = nullptr;
+        unit.dtor(val);
+        called_dtor = true;
+      }
+    }
+    if (!called_dtor)
+      break;
   }
 }
 
