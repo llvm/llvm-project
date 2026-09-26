@@ -124,7 +124,7 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
 
 // CHECK: @vt = external constant { [3 x ptr] }
 llvm.mlir.global external constant @vt() : !llvm.struct<(array<3 x ptr>)>
-// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @vt, i32 0, i32 0, i32 2)
+// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @vt, i64 16)
 llvm.mlir.global internal constant @int_gep_inrange() : !llvm.ptr {
   %addr = llvm.mlir.addressof @vt : !llvm.ptr
   %gepinit = llvm.getelementptr inbounds inrange <i64, -16, 8> %addr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
