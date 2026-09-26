@@ -51,38 +51,35 @@ middle.block:
 define void @init_array_of_ptrs_to_structs_interleave4(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
 ; CHECK-LABEL: init_array_of_ptrs_to_structs_interleave4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-NEXT:    cnth x10
-; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    inch x9
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    cntd x8, all, mul #3
-; CHECK-NEXT:    index z2.d, #0, #1
-; CHECK-NEXT:    mov z3.d, x8
-; CHECK-NEXT:    mov z4.d, x10
-; CHECK-NEXT:    mov z5.d, x1
-; CHECK-NEXT:    mov z6.d, #72 // =0x48
-; CHECK-NEXT:    and x8, x9, x2
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    cntd x9, all, mul #3
+; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    cntd x11
+; CHECK-NEXT:    mov w13, #2147483647 // =0x7fffffff
+; CHECK-NEXT:    inch x13
+; CHECK-NEXT:    mov z0.d, x10
+; CHECK-NEXT:    umull x9, w9, w8
+; CHECK-NEXT:    umull x12, w10, w8
+; CHECK-NEXT:    umull x8, w11, w8
+; CHECK-NEXT:    mov w11, #72 // =0x48
+; CHECK-NEXT:    index z1.d, x1, x11
+; CHECK-NEXT:    mov z2.d, x9
+; CHECK-NEXT:    mov z3.d, x12
+; CHECK-NEXT:    mov z4.d, x8
+; CHECK-NEXT:    and x8, x13, x2
 ; CHECK-NEXT:    sub x8, x8, x2
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add z7.d, z2.d, z0.d
-; CHECK-NEXT:    add z16.d, z2.d, z1.d
-; CHECK-NEXT:    movprfx z18, z5
-; CHECK-NEXT:    mla z18.d, p0/m, z2.d, z6.d
-; CHECK-NEXT:    add z17.d, z2.d, z3.d
+; CHECK-NEXT:    add z5.d, z1.d, z4.d
+; CHECK-NEXT:    add z6.d, z1.d, z3.d
+; CHECK-NEXT:    str z1, [x0]
+; CHECK-NEXT:    add z7.d, z1.d, z2.d
 ; CHECK-NEXT:    inch x8
-; CHECK-NEXT:    add z2.d, z2.d, z4.d
-; CHECK-NEXT:    mad z7.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    mad z16.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    mad z17.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    str z18, [x0]
-; CHECK-NEXT:    str z7, [x0, #1, mul vl]
-; CHECK-NEXT:    str z16, [x0, #2, mul vl]
-; CHECK-NEXT:    str z17, [x0, #3, mul vl]
+; CHECK-NEXT:    add z1.d, z1.d, z0.d
+; CHECK-NEXT:    str z5, [x0, #1, mul vl]
+; CHECK-NEXT:    str z6, [x0, #2, mul vl]
+; CHECK-NEXT:    str z7, [x0, #3, mul vl]
 ; CHECK-NEXT:    incb x0, all, mul #4
 ; CHECK-NEXT:    cbnz x8, .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit
