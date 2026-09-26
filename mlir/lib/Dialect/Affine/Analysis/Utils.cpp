@@ -1120,15 +1120,32 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
 
   // Create constraints for the slice using the dst loop nest information. We
   // retrieve existing dst loops from the lbOperands.
-  SmallVector<Value> consumerIVs;
-  for (Value lbOp : lbOperands[0])
-    if (getForInductionVarOwner(lbOp))
-      consumerIVs.push_back(lbOp);
-
-  // Add empty IV Values for those new loops that are not equalities and,
-  // therefore, are not yet materialized in the IR.
-  for (int i = consumerIVs.size(), end = ivs.size(); i < end; ++i)
-    consumerIVs.push_back(Value());
+  //
+  // `addDomainFromSliceMaps` assumes that dimension `i` of the system is the
+  // loop at position `i` of the nest (see its doc comment). Build the Values
+  // in that order: dimension `i` describes source IV `ivs[i]`, so use the
+  // consumer IV that slice bound `i` is an equality on, and leave the rest
+  // null for slice loops that aren't materialized in the IR yet. Collecting
+  // the operands in their own order instead would put the dimensions out of
+  // step with `lbs`/`ubs`, leaving some dimensions unconstrained -- and an
+  // unconstrained dimension makes the slice look unbounded, which in turn
+  // makes a non-maximal slice test as maximal.
+  SmallVector<Value> consumerIVs(ivs.size(), Value());
+  for (unsigned i = 0, e = std::min<size_t>(lbs.size(), ivs.size()); i < e;
+       ++i) {
+    AffineMap lbMap = lbs[i], ubMap = ubs[i];
+    if (!lbMap || !ubMap || lbMap.getNumResults() != 1 ||
+        ubMap.getNumResults() != 1 ||
+        lbMap.getResult(0) + 1 != ubMap.getResult(0) ||
+        isa<AffineConstantExpr>(lbMap.getResult(0)))
+      continue;
+    auto dim = dyn_cast<AffineDimExpr>(lbMap.getResult(0));
+    if (!dim || dim.getPosition() >= lbOperands[i].size())
+      continue;
+    Value operand = lbOperands[i][dim.getPosition()];
+    if (getForInductionVarOwner(operand))
+      consumerIVs[i] = operand;
+  }
 
   FlatAffineValueConstraints sliceConstraints(/*numDims=*/consumerIVs.size(),
                                               /*numSymbols=*/0,
