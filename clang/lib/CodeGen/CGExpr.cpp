@@ -6146,15 +6146,22 @@ CodeGenFunction::EmitLValueForFieldInitialization(LValue Base,
                         CGM.getTBAAInfoForSubobject(Base, FieldType));
 }
 
-LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
-  if (E->isFileScope()) {
-    ConstantAddress GlobalPtr = CGM.GetAddrOfConstantCompoundLiteral(E);
-    return MakeAddrLValue(GlobalPtr, E->getType(), AlignmentSource::Decl);
-  }
+LValue
+CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E) {
   if (E->getType()->isVariablyModifiedType())
     // make sure to emit the VLA size.
     EmitVariablyModifiedType(E->getType());
 
+  if (E->hasGlobalStorage()) {
+    ConstantAddress GlobalPtr = CGM.GetAddrOfConstantCompoundLiteral(E);
+    if (E->hasThreadStorage()) {
+      llvm::Value *V = Builder.CreateThreadLocalAddress(GlobalPtr.getPointer());
+      return MakeAddrLValue(
+          Address(V, ConvertTypeForMem(E->getType()), GlobalPtr.getAlignment()),
+          E->getType(), AlignmentSource::Decl);
+    }
+    return MakeAddrLValue(GlobalPtr, E->getType(), AlignmentSource::Decl);
+  }
   Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
@@ -6166,16 +6173,19 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
                                                 DeclPtr);
   }
 
-  EmitAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
-                   /*Init*/ true);
+  if (E->getType()->isAtomicType())
+    EmitAtomicInit(const_cast<Expr *>(InitExpr), Result);
+  else
+    EmitInitializationToLValue(InitExpr, Result);
 
   // Block-scope compound literals are destroyed at the end of the enclosing
   // scope in C.
-  if (!getLangOpts().CPlusPlus)
+  if (!getLangOpts().CPlusPlus) {
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
       pushLifetimeExtendedDestroy(getCleanupKind(DtorKind), DeclPtr,
                                   E->getType(), getDestroyer(DtorKind),
                                   DtorKind & EHCleanup);
+  }
 
   return Result;
 }

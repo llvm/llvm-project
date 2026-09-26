@@ -226,6 +226,7 @@ extern int dr339_v;
 void *dr339 = &(int (*)[dr339_v]){ 0 }; /* c89only-warning {{variable length arrays are a C99 feature}}
                                            c99andup-warning {{variable length array used}}
                                            c89only-warning {{compound literals are a C99-specific feature}}
+                                           c23andup-error {{variably modified type declaration not allowed at file scope}}
                                          */
 
 /* WG14 DR340: yes

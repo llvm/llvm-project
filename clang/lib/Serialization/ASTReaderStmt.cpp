@@ -1239,6 +1239,9 @@ void ASTStmtReader::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   E->setTypeSourceInfo(readTypeSourceInfo());
   E->setInitializer(Record.readSubExpr());
   E->setFileScope(Record.readInt());
+  E->setStorageClass(static_cast<StorageClass>(Record.readInt()));
+  E->setTSCSpec(static_cast<ThreadStorageClassSpecifier>(Record.readInt()));
+  E->setConstexpr(Record.readInt());
 }
 
 void ASTStmtReader::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
