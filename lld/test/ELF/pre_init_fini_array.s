@@ -29,7 +29,7 @@ _start:
 
 // CHECK-LABEL: Section Headers:
 // CHECK:      Name           Type          Address                 Off       Size                    ES Flg
-// CHECK:      .init_array    INIT_ARRAY    [[# %x, INIT_ADDR:]]    [[# %x,]] [[# %x, INIT_SIZE:]]    00 WA
+// CHECK:      .init_array    INIT_ARRAY    [[# %x, INIT_ADDR:]]    [[# %x,]] [[# %x, INIT_SIZE:]]    08 WA
 // CHECK-NEXT: .preinit_array PREINIT_ARRAY [[# %x, PREINIT_ADDR:]] [[# %x,]] [[# %x, PREINIT_SIZE:]] 00 WA
 // CHECK-NEXT: .fini_array    FINI_ARRAY    [[# %x, FINI_ADDR:]]    [[# %x,]] [[# %x, FINI_SIZE:]]    00 WA
 

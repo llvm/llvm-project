@@ -56,7 +56,18 @@ uint32_t OutputSection::getPhdrFlags() const {
 
 template <class ELFT>
 void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
-  shdr->sh_entsize = entsize;
+  // .init_array, .fini_array, and .preinit_array hold tables of pointers, so
+  // use the word size if no entry size is available (the integrated assembler
+  // and linker script sections leave sh_entsize 0). Keep 0 if sh_size is not
+  // a multiple of the word size: such a section is not a table of fixed-size
+  // entries. GNU ld uses the word size even then.
+  uint64_t es = entsize;
+  if (es == 0 &&
+      (type == SHT_INIT_ARRAY || type == SHT_FINI_ARRAY ||
+       type == SHT_PREINIT_ARRAY) &&
+      size % ctx.arg.wordsize == 0)
+    es = ctx.arg.wordsize;
+  shdr->sh_entsize = es;
   shdr->sh_addralign = addralign;
   shdr->sh_type = type;
   shdr->sh_offset = offset;
