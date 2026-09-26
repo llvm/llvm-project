@@ -1083,3 +1083,65 @@ TEST(IOApiTests, ATEditDescriptorOutput) {
         << "Multiple AT test: expected 'abc def#' got '" << got << "'";
   }
 }
+
+// Real output fields and their blank/zero padding are emitted in bulk rather
+// than one piece (or one character) at a time.  The resulting text must not
+// depend on how the field is broken up internally, so exercise a range of
+// field widths that straddles those internal boundaries, along with the modes
+// and descriptors that contribute pieces to a field.
+TEST(IOApiTests, RealOutputFieldPadding) {
+  // Leading blank padding, from a field that barely fits its value up to one
+  // too wide to be built in a single fixed-size buffer.
+  for (int width :
+      {5, 12, 60, 63, 64, 65, 127, 128, 129, 511, 512, 513, 514, 600}) {
+    std::string format{"(F" + std::to_string(width) + ".2)"};
+    std::string expect{std::string(width - 4, ' ') + "3.25"};
+    std::string got;
+    EXPECT_TRUE(CompareFormatReal(format.c_str(), 3.25, expect.c_str(), got))
+        << "'" << format << "': expected '" << expect << "', got '" << got
+        << "'";
+  }
+
+  // A value too large for its field is replaced by a field of asterisks.
+  for (int width : {5, 63, 64, 65, 129}) {
+    std::string format{"(F" + std::to_string(width) + ".3)"};
+    std::string expect(width, '*');
+    std::string got;
+    EXPECT_TRUE(CompareFormatReal(format.c_str(), 1.0e300, expect.c_str(), got))
+        << "'" << format << "': expected " << width << " asterisks, got '"
+        << got << "'";
+  }
+
+  // Trailing blanks, decimal comma, sign control and a processor-selected
+  // width all contribute to the field.  A '#' marker pins the field's right
+  // edge so that trailing blanks are verified rather than stripped.
+  using TestCaseTy = std::tuple<const char *, double, std::string>;
+  const std::vector<TestCaseTy> testCases{
+      {"(E140.10)", 1.0, std::string(124, ' ') + "0.1000000000E+01"},
+      {"(DC,F10.3)", 3.25, "     3,250"},
+      {"(SP,F12.4)", 3.25, "     +3.2500"},
+      {"(F0.4)", 3.25, "3.2500"},
+      {"(G14.4,'#')", 3.25, "     3.250    #"},
+  };
+  for (auto const &[format, value, expect] : testCases) {
+    std::string got;
+    EXPECT_TRUE(CompareFormatReal(format, value, expect.c_str(), got))
+        << "'" << format << "': expected '" << expect << "', got '" << got
+        << "'";
+  }
+
+  // List-directed real output is prefixed by a leading blank and its prefix
+  // decides whether the record must advance first, so it is not assembled
+  // together with the value.
+  {
+    char buffer[32];
+    auto cookie{IONAME(BeginInternalListOutput)(buffer, sizeof buffer)};
+    EXPECT_TRUE(IONAME(OutputReal64)(cookie, 3.25));
+    auto status{IONAME(EndIoStatement)(cookie)};
+    EXPECT_EQ(status, 0);
+    EXPECT_TRUE(
+        CompareFormattedStrings(" 3.25", std::string{buffer, sizeof buffer}))
+        << "list-directed real: got '" << std::string{buffer, sizeof buffer}
+        << "'";
+  }
+}
