@@ -165,7 +165,7 @@ function(libclc_add_library target_name)
     if(LIBCLC_USE_SPIRV_BACKEND)
       add_custom_command(OUTPUT ${builtins_lib}
         COMMAND ${CMAKE_CLC_COMPILER} -c --target=${ARG_TRIPLE}
-                -mllvm --spirv-ext=+SPV_KHR_fma
+                -mllvm
                 -x ir -o ${builtins_lib} ${linked_bc}
         DEPENDS ${linked_bc}
       )
@@ -173,7 +173,6 @@ function(libclc_add_library target_name)
       add_custom_command(OUTPUT ${builtins_lib}
         COMMAND ${llvm-spirv_exe}
                 --spirv-max-version=1.1
-                --spirv-ext=+SPV_KHR_fma
                 -o ${builtins_lib} ${linked_bc}
         DEPENDS ${linked_bc}
       )
