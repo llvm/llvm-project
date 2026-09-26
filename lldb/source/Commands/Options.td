@@ -1585,6 +1585,10 @@ let Command = "scripting extension list" in {
   def scripting_extension_list_json
       : Option<"json", "j">,
         Desc<"Output the scripted extension list in json format.">;
+  def scripting_extension_list_instances
+      : Option<"instances", "i">,
+        Desc<"List the instantiated scripted extensions, grouped by class, "
+             "instead of the available templates.">;
 }
 
 let Command = "scripting extension generate" in {
