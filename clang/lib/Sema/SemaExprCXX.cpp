@@ -981,11 +981,11 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     isPointer = true;
   }
 
-  // reject trowing of pointers with Non-default address space cause runtimes
-  // dosen't have support for cross-address-space conversions yet;
+  // Reject throwing of ptr's involving non-default address spaces runtimes
+  // cannot perform cross-address-space conversions yet.
   if (isPointer && Ty.getAddressSpace() != LangAS::Default) {
-    Diag(ThrowLoc, diag::err_throw_address_space_qualified_ptr)
-        << E->getType() << E->getSourceRange();
+    Diag(ThrowLoc, diag::err_throw_or_catch_address_space_qualified_ptr)
+        << /*IsCatch=*/0 << /*IsRef=*/0 << E->getType() << E->getSourceRange();
     return true;
   }
 
