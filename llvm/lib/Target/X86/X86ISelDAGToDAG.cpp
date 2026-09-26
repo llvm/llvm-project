@@ -4146,11 +4146,12 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
 //   c) x &  (-1 >> (32 - y))
 //   d) x << (32 - y) >> (32 - y)
 //   e) (1 << nbits) - 1
+//   f) ~(-1 << nbits)
 bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
-  assert(
-      (Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::AND ||
-       Node->getOpcode() == ISD::SRL) &&
-      "Should be either an and-mask, or right-shift after clearing high bits.");
+  assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::AND ||
+          Node->getOpcode() == ISD::XOR || Node->getOpcode() == ISD::SRL) &&
+         "Should be either an and-mask, a standalone low-bits mask, or "
+         "right-shift after clearing high bits.");
 
   // BEXTR is BMI instruction, BZHI is BMI2 instruction. We need at least one.
   if (!Subtarget->hasBMI() && !Subtarget->hasBMI2())
@@ -5818,6 +5819,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     [[fallthrough]];
   case ISD::OR:
   case ISD::XOR:
+    // A standalone ~(-1 << n) mask is (-1 & lowmask(n)): mov -1; bzhi beats
+    // mov -1; shlx; not.
+    if (Opcode == ISD::XOR && Subtarget->hasBMI2() && matchBitExtract(Node))
+      return;
     if (tryShrinkShlLogicImm(Node))
       return;
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))
