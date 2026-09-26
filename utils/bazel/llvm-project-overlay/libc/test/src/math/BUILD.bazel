@@ -282,7 +282,23 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add ffma, ffmal test.  Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "ffma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "ffmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "floor",
@@ -310,7 +326,46 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_bfloat16"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
+# TODO: Add fmal tests. Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+# TODO: Add dfmal tests. Missing stdlib/rand dependency.
+
+math_mpfr_test(
+    name = "fmul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+# TODO: Add dmull tests. Missing stdlib/rand dependency.
 
 math_mpfr_test(
     name = "f16mul",
@@ -390,6 +445,16 @@ math_mpfr_test(
 math_mpfr_test(
     name = "frexpf",
     hdrs = ["FrexpTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmaxl",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_mpfr_test(
+    name = "fminl",
+    hdrs = ["FMinTest.h"],
 )
 
 math_mpfr_test(
