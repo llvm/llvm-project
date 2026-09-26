@@ -683,15 +683,15 @@ static isl::union_map keepBoundedDistances(const isl::union_map &Simplified,
     isl::space Space = Map.get_space();
     if (Space.domain().is_equal(Space.range()) && !hasBoundedDistances(Map)) {
       // Only add the constraints that bound the distances before the
-      // simplification, i.e. the hull of the exact distances, rather than
-      // restoring all constraints of the exact dependence.
-      isl::map ExactMap = Exact.extract_map(Space);
-      isl::map Bounded =
-          Map.intersect(ExactMap.deltas().simple_hull().translation());
+      // simplification rather than restoring all constraints of the exact
+      // dependence: preferably the hull of the exact distances, which is a
+      // single convex set, otherwise the exact distances themselves.
+      isl::set ExactDeltas = Exact.extract_map(Space).deltas();
+      isl::map Bounded = Map.intersect(ExactDeltas.simple_hull().translation());
+      if (!hasBoundedDistances(Bounded))
+        Bounded = Map.intersect(ExactDeltas.translation());
       if (hasBoundedDistances(Bounded))
         Map = Bounded;
-      else if (hasBoundedDistances(ExactMap))
-        Map = ExactMap;
     }
     Result = Result.unite(isl::union_map(Map));
   }
