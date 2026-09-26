@@ -99,11 +99,8 @@ bool SystemZSubtarget::isAddressedViaADA(const GlobalValue *GV) const {
 
     SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(
         GO, TLInfo.getTargetMachine());
-    if (!GOKind.isReadOnly()) {
-      return true;
-    }
-
-    return false; // R/O variable with multiple of 2 byte alignment
+    // Must match the section selection in TargetLoweringObjectFileGOFF.
+    return !TargetLoweringObjectFileGOFF::isReadOnlyInCodeSection(GO, GOKind);
   }
   return true;
 }
