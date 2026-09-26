@@ -31,6 +31,21 @@ struct ol_platform_impl_t {
       : BackendType(BackendType), Plugin(std::move(Plugin)) {}
   ol_platform_backend_t BackendType;
 
+  /// Get the plugin, lazily initializing it if necessary.
+  llvm::Expected<GenericPluginTy *> getPlugin() {
+    if (llvm::Error Err = init())
+      return Err;
+    return Plugin.get();
+  }
+
+  /// Get the device list, lazily initializing it if necessary.
+  llvm::Expected<llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> &>
+  getDevices() {
+    if (llvm::Error Err = init())
+      return Err;
+    return Devices;
+  }
+
   /// Complete all pending work for this platform and perform any needed
   /// cleanup.
   ///
@@ -44,6 +59,11 @@ struct ol_platform_impl_t {
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
+private:
+  std::once_flag Initialized;
+  /// Most plugins don't allow to retry initialization after failure, so
+  /// remember that it failed.
+  bool InitFailed = false;
   llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> Devices;
 };
 
@@ -62,27 +82,51 @@ struct ol_device_impl_t {
   InfoTreeNode Info;
 };
 
-llvm::Error ol_platform_impl_t::destroy() { return Plugin->deinit(); }
-
-llvm::Error ol_platform_impl_t::init() {
-  if (!Plugin)
+llvm::Error ol_platform_impl_t::destroy() {
+  if (!Plugin || !Plugin->is_initialized())
     return llvm::Error::success();
 
-  if (llvm::Error Err = Plugin->init())
-    return Err;
+  Devices.clear();
+  return Plugin->deinit();
+}
 
-  for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
-    if (llvm::Error Err = Plugin->initDevice(Id))
-      return Err;
+llvm::Error ol_platform_impl_t::init() {
+  std::unique_ptr<llvm::Error> Storage;
 
-    GenericDeviceTy *Device = &Plugin->getDevice(Id);
-    llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
-    if (llvm::Error Err = Info.takeError())
-      return Err;
-    Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
-                                                            std::move(*Info)));
-  }
+  // This can be called concurrently, make sure we only do the actual
+  // initialization once.
+  std::call_once(Initialized, [&]() {
+    // FIXME: Need better handling for the host platform.
+    if (!Plugin)
+      return;
 
+    auto SetError = [&](llvm::Error Err) {
+      InitFailed = true;
+      Storage = std::make_unique<llvm::Error>(std::move(Err));
+    };
+
+    if (llvm::Error Err = Plugin->init())
+      return SetError(std::move(Err));
+
+    for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
+      if (llvm::Error Err = Plugin->initDevice(Id))
+        return SetError(std::move(Err));
+
+      GenericDeviceTy *Device = &Plugin->getDevice(Id);
+      llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
+      if (llvm::Error Err = Info.takeError())
+        return SetError(std::move(Err));
+      Devices.emplace_back(std::make_unique<ol_device_impl_t>(
+          Id, Device, *this, std::move(*Info)));
+    }
+  });
+
+  if (Storage)
+    return std::move(*Storage);
+  if (InitFailed)
+    return createOffloadError(
+        ErrorCode::BACKEND_FAILURE,
+        "platform not available because initialization failure");
   return llvm::Error::success();
 }
 
@@ -304,8 +348,9 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #include "Shared/Targets.def"
 
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
+  bool InitAll = InitArgs && InitArgs->NumPlatforms == OL_ALL_PLATFORMS;
   SmallSet<ol_platform_backend_t, 0> Requested;
-  if (InitArgs && InitArgs->NumPlatforms > 0)
+  if (InitArgs && !InitAll && InitArgs->NumPlatforms > 0)
     for (uint32_t I = 0; I < InitArgs->NumPlatforms; I++)
       Requested.insert(InitArgs->Platforms[I]);
 
@@ -322,12 +367,14 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   } while (false);
 #include "Shared/Targets.def"
 
-  // Eagerly initialize all of the plugins and devices. We need to make sure
-  // that the platform is initialized at a consistent point to maintain the
-  // expected teardown order in the vendor libraries.
-  for (auto &Platform : Context.Platforms) {
-    if (Error Err = Platform->init())
-      return Err;
+  // If platforms were explicitly requested, eagerly initialize all the created
+  // ones (the requested ones and the host). Otherwise they are initialized
+  // lazily on their first use.
+  if (InitAll || !Requested.empty()) {
+    for (auto &Platform : Context.Platforms) {
+      if (Error Err = Platform->init())
+        return Err;
+    }
   }
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
@@ -348,7 +395,8 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
     if (InitArgs->Size < sizeof(ol_init_args_t))
       return createOffloadError(ErrorCode::INVALID_SIZE,
                                 "ol_init_args_t Size field is too small");
-    if (InitArgs->NumPlatforms > 0 && !InitArgs->Platforms)
+    if (InitArgs->NumPlatforms > 0 &&
+        InitArgs->NumPlatforms != OL_ALL_PLATFORMS && !InitArgs->Platforms)
       return createOffloadError(ErrorCode::INVALID_NULL_POINTER,
                                 "NumPlatforms > 0 but Platforms is null");
   }
@@ -373,10 +421,6 @@ Error olShutDown_impl() {
   auto *OldContext = OffloadContextVal.exchange(nullptr);
 
   for (auto &Platform : OldContext->Platforms) {
-    // Host plugin is nullptr and has no deinit
-    if (!Platform->Plugin || !Platform->Plugin->is_initialized())
-      continue;
-
     if (auto Res = Platform->destroy())
       Result = joinErrors(std::move(Result), std::move(Res));
   }
@@ -428,7 +472,11 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
 
 Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
                                          ol_platform_rpc_cb_t Callback) {
-  Platform->Plugin->getRPCServer().registerCallback(Callback);
+  auto PluginOrErr = Platform->getPlugin();
+  if (!PluginOrErr)
+    return PluginOrErr.takeError();
+
+  (*PluginOrErr)->getRPCServer().registerCallback(Callback);
   return Error::success();
 }
 
@@ -602,7 +650,10 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
-    for (auto &Device : Platform->Devices) {
+    auto DevicesOrErr = Platform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    for (auto &Device : *DevicesOrErr) {
       if (!Callback(Device.get(), UserData)) {
         return Error::success();
       }

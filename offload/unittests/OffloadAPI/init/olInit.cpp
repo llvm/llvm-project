@@ -42,6 +42,19 @@ TEST_F(olInitTest, WithInitArgs) {
   ASSERT_SUCCESS(olShutDown());
 }
 
+TEST_F(olInitTest, WithInitArgsNoPlatforms) {
+  ol_init_args_t Args = OL_INIT_ARGS_INIT;
+  ASSERT_SUCCESS(olInit(&Args));
+  ASSERT_SUCCESS(olShutDown());
+}
+
+TEST_F(olInitTest, WithInitArgsAllPlatforms) {
+  ol_init_args_t Args = OL_INIT_ARGS_INIT;
+  Args.NumPlatforms = OL_ALL_PLATFORMS;
+  ASSERT_SUCCESS(olInit(&Args));
+  ASSERT_SUCCESS(olShutDown());
+}
+
 TEST_F(olInitTest, InvalidSize) {
   ol_init_args_t Args = OL_INIT_ARGS_INIT;
   Args.Size = 0;
