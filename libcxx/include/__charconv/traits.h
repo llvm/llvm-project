@@ -155,7 +155,8 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
 } // namespace __itoa
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _Tp __complement(_Tp __x) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
+    _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Tp __complement(_Tp __x) {
   static_assert(is_unsigned<_Tp>::value, "cast to unsigned first");
   return _Tp(~__x + 1);
 }
