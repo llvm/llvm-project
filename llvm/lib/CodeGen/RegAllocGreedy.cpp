@@ -190,6 +190,7 @@ struct RAGreedy::RequiredAnalyses {
   EdgeBundles *Bundles = nullptr;
   SpillPlacement *SpillPlacer = nullptr;
   LiveDebugVariables *DebugVars = nullptr;
+  RegisterClassInfo *RCI = nullptr;
 
   // Used by InlineSpiller
   LiveStacks *LSS;
@@ -218,6 +219,7 @@ RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F)
   LSS = Analyses.LSS;
   EvictProvider = Analyses.EvictProvider;
   PriorityProvider = Analyses.PriorityProvider;
+  RegClassInfo = Analyses.RCI;
 }
 
 void RAGreedyPass::printPipeline(
@@ -244,6 +246,7 @@ RAGreedy::RequiredAnalyses::RequiredAnalyses(
   PriorityProvider =
       MFAM.getResult<RegAllocPriorityAdvisorAnalysis>(MF).Provider;
   VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
+  RCI = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
 }
 
 PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
@@ -284,6 +287,7 @@ RAGreedy::RequiredAnalyses::RequiredAnalyses(Pass &P) {
       &P.getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider();
   PriorityProvider =
       &P.getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getProvider();
+  RCI = &P.getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 }
 
 bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -310,6 +314,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacementWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegAllocEvictionAdvisorAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(RegAllocPriorityAdvisorAnalysisLegacy)
 INITIALIZE_PASS_END(RAGreedyLegacy, "greedy", "Greedy Register Allocator",
@@ -358,6 +363,7 @@ void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<EdgeBundlesWrapperLegacy>();
   AU.addRequired<SpillPlacementWrapperLegacy>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<RegAllocEvictionAdvisorAnalysisLegacy>();
   AU.addRequired<RegAllocPriorityAdvisorAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -1080,7 +1086,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
   // That guarantees register class inflation for the stack interval because it
   // is all copies.
   Register Reg = SA->getParent().reg();
-  bool SingleInstrs = RegClassInfo.isProperSubClass(MRI->getRegClass(Reg));
+  bool SingleInstrs = RegClassInfo->isProperSubClass(MRI->getRegClass(Reg));
 
   // First handle all the blocks with uses.
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
@@ -1474,7 +1480,7 @@ MCRegister RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &NewVRegs) {
   assert(&SA->getParent() == &VirtReg && "Live range wasn't analyzed");
   Register Reg = VirtReg.reg();
-  bool SingleInstrs = RegClassInfo.isProperSubClass(MRI->getRegClass(Reg));
+  bool SingleInstrs = RegClassInfo->isProperSubClass(MRI->getRegClass(Reg));
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
   SE->reset(LREdit, SplitSpillMode);
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
@@ -1598,7 +1604,7 @@ MCRegister RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   // There is no point to this if there are no larger sub-classes.
 
   bool SplitSubClass = true;
-  if (!RegClassInfo.isProperSubClass(CurRC)) {
+  if (!RegClassInfo->isProperSubClass(CurRC)) {
     if (!VirtReg.hasSubRanges())
       return MCRegister();
     SplitSubClass = false;
@@ -1619,7 +1625,7 @@ MCRegister RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   const TargetRegisterClass *SuperRC =
       TRI->getLargestLegalSuperClass(CurRC, *MF);
   unsigned SuperRCNumAllocatableRegs =
-      RegClassInfo.getNumAllocatableRegs(SuperRC);
+      RegClassInfo->getNumAllocatableRegs(SuperRC);
   // Split around every non-copy instruction if this split will relax
   // the constraints on the virtual register.
   // Otherwise, splitting just inserts uncoalescable copies that do not help
@@ -1630,7 +1636,7 @@ MCRegister RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
           (SplitSubClass &&
            SuperRCNumAllocatableRegs ==
                getNumAllocatableRegsForConstraints(MI, VirtReg.reg(), SuperRC,
-                                                   TII, TRI, RegClassInfo)) ||
+                                                   TII, TRI, *RegClassInfo)) ||
           // TODO: Handle split for subranges with subclass constraints?
           (!SplitSubClass && VirtReg.hasSubRanges() &&
            !readsLaneSubset(*MRI, MI, VirtReg, TRI, Use, TII))) {
@@ -2663,7 +2669,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   uint8_t CostPerUseLimit = uint8_t(~0u);
   // First try assigning a free register.
   auto Order =
-      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
+      AllocationOrder::create(VirtReg.reg(), *VRM, *RegClassInfo, Matrix);
   if (MCRegister PhysReg =
           tryAssign(VirtReg, Order, NewVRegs, FixedRegisters)) {
     // When NewVRegs is not empty, we may have made decisions such as evicting
@@ -2952,7 +2958,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before greedy register allocator", &errs());
 
-  RegAllocBase::init(*this->VRM, *this->LIS, *this->Matrix);
+  RegAllocBase::init(*this->VRM, *this->LIS, *this->Matrix,
+                     *this->RegClassInfo);
 
   // Early return if there is no virtual register to be allocated to a
   // physical register.
