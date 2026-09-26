@@ -43,7 +43,7 @@ public:
                           AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                                  TargetAllocTy Kind,
+                                  void *HostPtr, TargetAllocTy Kind,
                                   size_t Alignment) override;
   llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
                          TargetAllocTy Kind) override;

@@ -456,9 +456,6 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
   if (DriverArgs.getLastArg(options::OPT_fwasm_exceptions)) {
     BanIncompatibleOptionsForWasmEHSjLj("-fwasm-exceptions");
     EnableFeaturesForWasmEHSjLj();
-    // Backend needs -wasm-enable-eh to enable Wasm EH
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("-wasm-enable-eh");
   }
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
@@ -483,8 +480,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    for (const auto *Option :
-         {"-wasm-enable-eh", "-wasm-enable-sjlj", "-wasm-use-legacy-eh"}) {
+    for (const auto *Option : {"-wasm-enable-sjlj", "-wasm-use-legacy-eh"}) {
       if (Opt.starts_with(Option)) {
         BanIncompatibleOptionsForWasmEHSjLj(Option);
         EnableFeaturesForWasmEHSjLj();

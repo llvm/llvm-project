@@ -21,21 +21,6 @@
 #include <cstdint>
 #include <mutex>
 
-// TODO: Some plugins expect to be linked into libomptarget which defines these
-// symbols to implement ompt callbacks. The least invasive workaround here is to
-// define them in libLLVMOffload as false/null so they are never used. In future
-// it would be better to allow the plugins to implement callbacks without
-// pulling in details from libomptarget.
-#ifdef OMPT_SUPPORT
-namespace llvm::omp::target {
-namespace ompt {
-bool Initialized = false;
-ompt_get_callback_t lookupCallbackByCode = nullptr;
-ompt_function_lookup_t lookupCallbackByName = nullptr;
-} // namespace ompt
-} // namespace llvm::omp::target
-#endif
-
 using namespace llvm::omp::target;
 using namespace llvm::omp::target::plugin;
 using namespace error;
@@ -182,10 +167,11 @@ struct ol_context_impl_t {
   }
 
   llvm::Expected<void *> allocate(ol_device_handle_t Device, int64_t Size,
-                                  TargetAllocTy Kind, size_t Alignment = 0) {
+                                  TargetAllocTy Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    return PluginCtx->allocate(*Device->Device, Size, Kind, Alignment);
+    return PluginCtx->allocate(*Device->Device, Size, /*HostPtr=*/nullptr, Kind,
+                               Alignment);
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }

@@ -1297,7 +1297,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-  const auto *Template = Entity.dyn_cast<const NamedDecl *>();
+  const auto *Template = dyn_cast_if_present<const NamedDecl *>(Entity);
   if (!Template) {
     return ::CheckConstraintSatisfaction(
         *this, nullptr, AssociatedConstraints, TemplateArgsLists,
@@ -2531,8 +2531,7 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   }
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
+  const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
   auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
