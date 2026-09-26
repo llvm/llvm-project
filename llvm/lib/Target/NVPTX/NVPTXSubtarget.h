@@ -121,6 +121,9 @@ public:
   }
   bool hasLocalVolatile() const { return hasFeature(NVPTX::PTX91); }
   bool hasDotInstructions() const { return hasFeature(NVPTX::SM61); }
+  bool hasReduxSync() const {
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX70);
+  }
   bool hasCLMAD() const {
     return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX93);
   }
