@@ -300,3 +300,69 @@ define i1 @icmp_eq_x_invertable_y_fail_immconstant(i8 %x, i8 %y) {
   %r = icmp eq i8 %and, 7
   ret i1 %r
 }
+
+define i1 @icmp_eq_and1_zero(i8 %x){
+; CHECK-LABEL: @icmp_eq_and1_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and = and i8 %x, 1
+  %r = icmp eq i8 %and, 0
+  ret i1 %r
+}
+
+define <2 x i1> @icmp_eq_and1_zero_vec(<2 x i8> %x){
+; CHECK-LABEL: @icmp_eq_and1_zero_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %and = and <2 x i8> %x, splat (i8 1)
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define i1 @icmp_ne_and1_zero(i8 %x) {
+; CHECK-LABEL: @icmp_ne_and1_zero(
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and = and i8 %x, 1
+  %r = icmp ne i8 %and, 0
+  ret i1 %r
+}
+
+define i1 @icmp_eq_and1_zero_fail_multiuse(i8 %x) {
+; CHECK-LABEL: @icmp_eq_and1_zero_fail_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    call void @use.i8(i8 [[AND]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and = and i8 %x, 1
+  %r = icmp eq i8 %and, 0
+  call void @use.i8(i8 %and)
+  ret i1 %r
+}
+
+define i1 @icmp_eq_and2_zero(i8 %x) {
+; CHECK-LABEL: @icmp_eq_and2_zero(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and = and i8 %x, 2
+  %r = icmp eq i8 %and, 0
+  ret i1 %r
+}
+
+define i1 @icmp_eq_and1_one(i8 %x) {
+; CHECK-LABEL: @icmp_eq_and1_one(
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and = and i8 %x, 1
+  %r = icmp eq i8 %and, 1
+  ret i1 %r
+}
