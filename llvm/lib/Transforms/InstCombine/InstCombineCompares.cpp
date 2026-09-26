@@ -5535,12 +5535,25 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   // if C2 has greater magnitude than C1:
   //  icmp (A + C1), (C + C2) -> icmp A, (C + C3)
   //  s.t. C3 = C2 - C1
+  //
+  // For unsigned predicates, C1 and C2 are compared as unsigned values.
   if (A && C && NoOp0WrapProblem && NoOp1WrapProblem &&
-      (BO0->hasOneUse() || BO1->hasOneUse()) && !I.isUnsigned()) {
+      (BO0->hasOneUse() || BO1->hasOneUse())) {
     const APInt *AP1, *AP2;
     // TODO: Support non-uniform vectors.
     // TODO: Allow poison passthrough if B or D's element is poison.
-    if (match(B, m_APIntAllowPoison(AP1)) &&
+    if (I.isUnsigned() && match(B, m_APIntAllowPoison(AP1)) &&
+        match(D, m_APIntAllowPoison(AP2))) {
+      // Both adds are nuw here. Subtracting the smaller constant from both
+      // sides keeps the remaining add nuw, as its constant only decreases.
+      if (AP1->uge(*AP2)) {
+        Constant *C3 = Constant::getIntegerValue(BO0->getType(), *AP1 - *AP2);
+        return new ICmpInst(Pred, Builder.CreateNUWAdd(A, C3), C);
+      }
+      Constant *C3 = Constant::getIntegerValue(BO0->getType(), *AP2 - *AP1);
+      return new ICmpInst(Pred, A, Builder.CreateNUWAdd(C, C3));
+    }
+    if (!I.isUnsigned() && match(B, m_APIntAllowPoison(AP1)) &&
         match(D, m_APIntAllowPoison(AP2)) &&
         AP1->isNegative() == AP2->isNegative()) {
       APInt AP1Abs = AP1->abs();
