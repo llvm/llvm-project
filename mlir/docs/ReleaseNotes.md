@@ -8,6 +8,39 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 [TOC]
 
+## LLVM 24
+
+### GPU/AMDGPU Changes
+
+- `mlir::amdgpu::Chipset` is deprecated in favour of `mlir::ROCDL::TargetInfo`,
+  which describes a target by its triple, subarch, and the resolved set of
+  target features from LLVM's own tables. Lowerings should ask whether a target
+  has a feature rather than inaccurately compare chipset versions.
+  `TargetInfo` also represents generic targets such as `gfx9-4-generic` and, unlike
+  `Chipset`, explicitly stores the wavesize for targets where it is configurable.
+- The `chipset` option in AMDGPU passes is renamed to an `arch` option, which uses
+  Clang target naming syntax. It accepts a GPU name with optional
+  modifiers (`gfx942`, `gfx942:xnack+`, `gfx9-4-generic`), a triple
+  (`amdgpu9.42-amd-amdhsa`), or a full target ID
+  (`amdgpu9.42-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo` prints
+  for a device's ISA). `chipset` or `chip` remain as compatibility names.
+  The default arch is `invalid`, so a target must be passed
+  explicitly, removing the old "fallback" `gfx000` GPU.
+- Wavefront size is not a target-ID feature, so `convert-gpu-to-rocdl` takes it
+  as a separate `wavesize` option (32, 64, or 0 for the architecture's
+  default). The `wave64` flag on `gpu-lower-to-rocdl-pipeline` and on
+  `rocdl-attach-target` is likewise replaced by the same `wavesize` option,
+  which has the same allowed values.
+- In keeping with broader LLVM changes, `xnack` and `sramecc` are no longer
+  architecture features but module flags. In keeping with Clang, the target
+  specifier still includes these xnack/sramecc flags where they're configurable,
+  but lowering passes now convert these to module flags. Downstream users should
+  call `migrateArchFeaturesToModuleFlags` to lower these attributes in custom
+  pipelines.
+- `rocdl-attach-target` gains `arch` alongside its existing `triple`, `chip` and
+  `features`. When `arch` is given, it overrides `triple` and `chip`, and handles
+  xnack/sramecc modifier migration.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

@@ -9,7 +9,7 @@
 #define MLIR_CONVERSION_MATHTOROCDL_MATHTOROCDL_H_
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/IR/PatternMatch.h"
 #include <memory>
 
@@ -20,11 +20,11 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate the given list with patterns that convert from Math to ROCDL calls.
-// `chipset` specifies the AMDGPU chipset to target. If `std::nullopt`,
-// none of the chipset dependent patterns are added.
+// `target` describes the AMDGPU target. If `std::nullopt`, none of the
+// target-dependent patterns are added.
 void populateMathToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    std::optional<amdgpu::Chipset> chipset);
+    std::optional<ROCDL::TargetInfo> target);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOROCDL_MATHTOROCDL_H_

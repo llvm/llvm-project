@@ -28,6 +28,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
@@ -42,12 +43,13 @@ namespace {
 //===----------------------------------------------------------------------===//
 void buildCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToROCDLPipelineOptions &options) {
+  std::string arch = ROCDL::resolveArchOption(options.arch, options.chip).str();
   // Lower AMDGPU dialect ops (e.g. amdgpu.lds_barrier, amdgpu.dpp,
   // amdgpu.mfma, amdgpu.dot, ...) to ROCDL intrinsics first, while they may
   // still live in unout-lined `gpu.launch` bodies. Mirrors the way NVVM's
   // pipeline runs `convert-nvgpu-to-nvvm` before kernel outlining.
   ConvertAMDGPUToROCDLPassOptions amdgpuToROCDLOpt;
-  amdgpuToROCDLOpt.chipset = options.chip;
+  amdgpuToROCDLOpt.arch = arch;
   pm.addPass(createConvertAMDGPUToROCDLPass(amdgpuToROCDLOpt));
 
   pm.addPass(createGpuKernelOutliningPass());
@@ -57,12 +59,10 @@ void buildCommonPassPipeline(
   pm.addPass(memref::createExpandStridedMetadataPass());
 
   GpuROCDLAttachTargetOptions rocdlTargetOptions;
-  rocdlTargetOptions.triple = options.triple;
-  rocdlTargetOptions.chip = options.chip;
-  rocdlTargetOptions.features = options.features;
+  rocdlTargetOptions.arch = arch;
   rocdlTargetOptions.abiVersion = options.abiVersion;
   rocdlTargetOptions.optLevel = options.optLevel;
-  rocdlTargetOptions.wave64Flag = options.wave64;
+  rocdlTargetOptions.waveSize = options.waveSize;
   pm.addPass(createGpuROCDLAttachTarget(rocdlTargetOptions));
 
   pm.addPass(createLowerAffinePass());
@@ -79,8 +79,10 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToROCDLPipelineOptions &options) {
+  std::string arch = ROCDL::resolveArchOption(options.arch, options.chip).str();
   ConvertGpuOpsToROCDLOpsOptions opt;
-  opt.chipset = options.chip;
+  opt.arch = arch;
+  opt.waveSize = options.waveSize;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
   // Always declare HIP as the runtime so that gpu.printf etc. lower to the
