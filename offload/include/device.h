@@ -36,6 +36,7 @@
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
+#include "Program.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
@@ -69,7 +70,8 @@ struct DeviceTy {
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
+  /// Load \p Img onto the device and return the resulting program.
+  llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -190,5 +192,11 @@ private:
   /// Flag to indicate pending images (true after construction).
   bool HasPendingImages = true;
 };
+
+/// Resolve the device address of the global variable \p Name in \p Program,
+/// recording it for kernel record/replay if recording is currently active.
+llvm::Expected<void *> getAndRecordGlobalAddress(DeviceTy &Device,
+                                                 const ProgramTy &Program,
+                                                 const char *Name);
 
 #endif
