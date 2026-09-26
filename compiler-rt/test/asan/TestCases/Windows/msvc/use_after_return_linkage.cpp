@@ -2,9 +2,12 @@
 // directives.
 
 // REQUIRES: asan-dynamic-runtime
-// RUN: %clang_cl_asan -LD %s | FileCheck %s
-// CHECK: Creating library
-// CHECK-NOT: LIBCMT
+// RUN: %clang_cl_asan -c %s -Fo%t.obj
+// RUN: llvm-readobj --coff-directives %t.obj | FileCheck %s
+// RUN: %clang_cl_asan -LD %t.obj -Fe%t.dll
+// CHECK-NOT: {{[Ll][Ii][Bb][Cc][Mm][Tt]}}
+// CHECK: /DEFAULTLIB:msvcrt.lib
+// CHECK-NOT: {{[Ll][Ii][Bb][Cc][Mm][Tt]}}
 
 void foo(int *p) { *p = 42; }
 
