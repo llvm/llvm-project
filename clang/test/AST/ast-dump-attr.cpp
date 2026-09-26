@@ -36,6 +36,27 @@ void TestAttributedStmt() {
 // CHECK:      FunctionDecl{{.*}}TestCXX11DeclAttr
 // CHECK-NEXT:   WarnUnusedResultAttr
 
+void TestNoIPA(void) __attribute__((noipa));
+// CHECK:      FunctionDecl{{.*}}TestNoIPA
+// CHECK-NEXT:   NoIPAAttr
+// CHECK-NEXT:   NoInlineAttr{{.*}} Implicit
+
+void TestNoIPAAlwaysInline(void) __attribute__((noipa, always_inline));
+// CHECK:      FunctionDecl{{.*}}TestNoIPAAlwaysInline
+// CHECK-NEXT:   NoIPAAttr
+// CHECK-NEXT:   AlwaysInlineAttr
+// CHECK-NOT:    NoInlineAttr
+
+void TestInheritedNoIPA(void) __attribute__((noipa));
+void TestInheritedNoIPA(void) {}
+// CHECK:      FunctionDecl{{.*}}TestInheritedNoIPA
+// CHECK-NEXT:   NoIPAAttr
+// CHECK-NEXT:   NoInlineAttr{{.*}} Implicit
+// CHECK:      FunctionDecl{{.*}}TestInheritedNoIPA
+// CHECK-NEXT:   CompoundStmt
+// CHECK-NEXT:   NoIPAAttr{{.*}} Inherited
+// CHECK-NEXT:   NoInlineAttr{{.*}} Implicit
+
 int TestAlignedNull __attribute__((aligned));
 // CHECK:      VarDecl{{.*}}TestAlignedNull
 // CHECK-NEXT:   AlignedAttr {{.*}} aligned
