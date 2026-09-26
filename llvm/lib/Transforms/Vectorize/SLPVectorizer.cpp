@@ -21026,6 +21026,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         GatherNodes.push_back(E);
       }
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
+               E && TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
+               !E->UserTreeIndex.UserTE->isGather()) {
+      // Regular gathers reuse only perfectly matched transformed nodes of the
+      // same user.
+      GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
       if (TEPtr == TE || TEPtr->Idx == 0 || DeletedNodes.contains(TEPtr))
