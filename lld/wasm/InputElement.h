@@ -98,7 +98,7 @@ private:
 } // namespace wasm
 
 inline std::string toString(const wasm::InputElement *d) {
-  return (toString(d->file) + ":(" + d->getName() + ")").str();
+  return (Twine(toString(d->file)) + ":(" + d->getName() + ")").str();
 }
 
 } // namespace lld

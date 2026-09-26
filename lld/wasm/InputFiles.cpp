@@ -40,7 +40,7 @@ std::string toString(const wasm::InputFile *file) {
   if (file->archiveName.empty())
     return std::string(file->getName());
 
-  return (file->archiveName + "(" + file->getName() + ")").str();
+  return (Twine(file->archiveName) + "(" + file->getName() + ")").str();
 }
 
 namespace wasm {

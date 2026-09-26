@@ -52,7 +52,7 @@ bool relocIs64(uint8_t relocType) {
 }
 
 std::string toString(const wasm::InputChunk *c) {
-  return (toString(c->file) + ":(" + c->name + ")").str();
+  return (Twine(toString(c->file)) + ":(" + c->name + ")").str();
 }
 
 namespace wasm {
