@@ -272,7 +272,8 @@ RISCVTargetMachine::getTargetTransformInfo(const Function &F) const {
 // for all memory accesses, so it is reasonable to assume that an
 // implementation has no-op address space casts. If an implementation makes a
 // change to this, they can override it here.
-bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool RISCVTargetMachine::isNoopAddrSpaceCast(const DataLayout &DL,
+                                             unsigned SrcAS,
                                              unsigned DstAS) const {
   return true;
 }

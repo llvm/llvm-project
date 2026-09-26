@@ -99,7 +99,6 @@ void VETargetLowering::initRegisterClasses() {
 }
 
 void VETargetLowering::initSPUActions() {
-  const auto &TM = getTargetMachine();
   /// Load & Store {
 
   // VE doesn't have i1 sign extending load.
@@ -125,7 +124,7 @@ void VETargetLowering::initSPUActions() {
   /// } Load & Store
 
   // Custom legalize address nodes into LO/HI parts.
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = MVT::i64;
   setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
   setOperationAction(ISD::GlobalTLSAddress, PtrVT, Custom);
