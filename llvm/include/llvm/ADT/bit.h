@@ -190,9 +190,9 @@ template <typename T> [[nodiscard]] constexpr int popcount(T Value) noexcept {
 template <typename T> [[nodiscard]] constexpr int countr_zero_constexpr(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-  // "(Val & -Val) - 1" generates a mask with all bits set up to (but not
+  // "~Val & (Val - 1)" generates a mask with all bits set up to (but not
   // including) the least significant set bit of Val.
-  return llvm::popcount(static_cast<std::make_unsigned_t<T>>((Val & -Val) - 1));
+  return llvm::popcount(static_cast<std::make_unsigned_t<T>>(~Val & (Val - 1)));
 }
 
 /// Count number of 0's from the least significant bit to the most

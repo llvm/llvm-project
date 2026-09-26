@@ -159,10 +159,9 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     Fmt << "*ABS*";
   }
   if (Addend != 0) {
-      Fmt << (Addend < 0
-          ? "-"
-          : "+") << format("0x%" PRIx64,
-                          (Addend < 0 ? -(uint64_t)Addend : (uint64_t)Addend));
+    Fmt << (Addend < 0 ? "-" : "+")
+        << format("0x%" PRIx64,
+                  (Addend < 0 ? 0ULL - (uint64_t)Addend : (uint64_t)Addend));
   }
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();

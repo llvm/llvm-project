@@ -135,7 +135,8 @@ struct LinearCallStackIdConverter {
       // Follow a pointer to the parent, if any.  See comments below on
       // CallStackRadixTreeBuilder for the description of the radix tree format.
       if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
-        Ptr += (-Elem) * sizeof(LinearFrameId);
+        Ptr += -static_cast<std::make_signed_t<LinearFrameId>>(Elem) *
+               sizeof(LinearFrameId);
         Elem =
             support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
       }

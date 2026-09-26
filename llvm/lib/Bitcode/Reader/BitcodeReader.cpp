@@ -3240,7 +3240,7 @@ uint64_t BitcodeReader::decodeSignRotatedValue(uint64_t V) {
   if ((V & 1) == 0)
     return V >> 1;
   if (V != 1)
-    return -(V >> 1);
+    return 0ULL - (V >> 1);
   // There is no such thing as -0 with integers.  "-0" really means MININT.
   return 1ULL << 63;
 }
