@@ -25,7 +25,8 @@ AST_MATCHER(clang::CallExpr, isOperator) { return llvm::isa<clang::CXXOperatorCa
 
 AST_MATCHER(clang::UnresolvedLookupExpr, isCustomizationPoint) {
   return std::ranges::any_of(
-      std::array{"swap", "make_error_code", "make_error_condition", "begin", "end", "size", "rend", "rbegin"},
+      std::array{
+          "swap", "make_error_code", "make_error_condition", "begin", "end", "size", "rend", "rbegin", "reserve_hint"},
       [&](const char* func) { return Node.getName().getAsString() == func; });
 }
 
