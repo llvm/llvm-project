@@ -1037,19 +1037,20 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
-  for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
+  for (const auto &Op : {ISD::FDIV, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
-    // only div/rem/sqrt are legal for f64
-    if (Op == ISD::FDIV || Op == ISD::FREM || Op == ISD::FSQRT) {
+    // Only div/sqrt are legal for f64.
+    if (Op == ISD::FDIV || Op == ISD::FSQRT) {
       setOperationAction(Op, MVT::f64, Legal);
     }
     setOperationAction(Op, {MVT::v2f16, MVT::v2bf16, MVT::v2f32}, Expand);
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
-  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
+  // Expand remainders at the IR level using ExpandIRInsts.
+  setOperationAction(ISD::FREM, {MVT::f16, MVT::bf16, MVT::f32, MVT::f64},
+                     Expand);
 
   // FTANH support:
   // - f32 (sm_75+, PTX 7.0+)
@@ -3301,34 +3302,6 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
                      SDLoc(Op), Opcode, DAG);
 }
 
-static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
-  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
-  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
-  // the semantics of LLVM's frem.
-  SDLoc DL(Op);
-  SDValue X = Op->getOperand(0);
-  SDValue Y = Op->getOperand(1);
-  EVT Ty = Op.getValueType();
-  SDNodeFlags Flags = Op->getFlags();
-
-  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
-  SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
-                            Flags | SDNodeFlags::AllowContract);
-  SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
-                            Flags | SDNodeFlags::AllowContract);
-
-  if (Flags.hasNoInfs())
-    return Sub;
-
-  // If Y is infinite, return X
-  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
-  SDValue Inf =
-      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
-  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
-  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
-}
-
 static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
 
@@ -3560,8 +3533,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTPOP:
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
-  case ISD::FREM:
-    return lowerFREM(Op, DAG);
   case ISD::BSWAP:
     return lowerBSWAP(Op, DAG);
   default:

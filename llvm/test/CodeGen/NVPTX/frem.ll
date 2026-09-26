@@ -7,9 +7,8 @@ target triple = "nvptx64-unknown-cuda"
 define half @frem_f16(half %a, half %b) {
 ; CHECK-LABEL: frem_f16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [frem_f16_param_0];
@@ -17,35 +16,33 @@ define half @frem_f16(half %a, half %b) {
 ; CHECK-NEXT:    cvt.f32.f16 %r1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %r2, %rs1;
 ; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.f32 %r5, %r4;
-; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, %r2;
-; CHECK-NEXT:    testp.infinite.f32 %p1, %r1;
-; CHECK-NEXT:    selp.f32 %r7, %r2, %r6, %p1;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r7;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
+; CHECK-NEXT:    cvt.rzi.f16.f16 %rs4, %rs3;
+; CHECK-NEXT:    xor.b16 %rs5, %rs4, -32768;
+; CHECK-NEXT:    fma.rn.f16 %rs6, %rs5, %rs2, %rs1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-NEXT:    ret;
-  %r = frem half %a, %b
+  %r = frem afn half %a, %b
   ret half %r
 }
 
 define half @frem_f16_fast(half %a, half %b) {
 ; CHECK-LABEL: frem_f16_fast(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [frem_f16_fast_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [frem_f16_fast_param_1];
 ; CHECK-NEXT:    cvt.f32.f16 %r1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %r2, %rs1;
-; CHECK-NEXT:    div.approx.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.f32 %r5, %r4;
-; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, %r2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r6;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
+; CHECK-NEXT:    cvt.rzi.f16.f16 %rs4, %rs3;
+; CHECK-NEXT:    xor.b16 %rs5, %rs4, -32768;
+; CHECK-NEXT:    fma.rn.f16 %rs6, %rs5, %rs2, %rs1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-NEXT:    ret;
   %r = frem afn ninf half %a, %b
   ret half %r
@@ -54,8 +51,7 @@ define half @frem_f16_fast(half %a, half %b) {
 define float @frem_f32(float %a, float %b) {
 ; CHECK-LABEL: frem_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_param_0];
@@ -64,11 +60,9 @@ define float @frem_f32(float %a, float %b) {
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
-; CHECK-NEXT:    testp.infinite.f32 %p1, %r2;
-; CHECK-NEXT:    selp.f32 %r7, %r1, %r6, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %r = frem float %a, %b
+  %r = frem afn float %a, %b
   ret float %r
 }
 
@@ -80,7 +74,7 @@ define float @frem_f32_fast(float %a, float %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_fast_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_f32_fast_param_1];
-; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    div.rn.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
@@ -93,8 +87,7 @@ define float @frem_f32_fast(float %a, float %b) {
 define double @frem_f64(double %a, double %b) {
 ; CHECK-LABEL: frem_f64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [frem_f64_param_0];
@@ -103,11 +96,9 @@ define double @frem_f64(double %a, double %b) {
 ; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
 ; CHECK-NEXT:    neg.f64 %rd5, %rd4;
 ; CHECK-NEXT:    fma.rn.f64 %rd6, %rd5, %rd2, %rd1;
-; CHECK-NEXT:    testp.infinite.f64 %p1, %rd2;
-; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd7;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %r = frem double %a, %b
+  %r = frem afn double %a, %b
   ret double %r
 }
 
@@ -132,8 +123,8 @@ define double @frem_f64_fast(double %a, double %b) {
 define half @frem_f16_ninf(half %a, half %b) {
 ; CHECK-LABEL: frem_f16_ninf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [frem_f16_ninf_param_0];
@@ -141,33 +132,33 @@ define half @frem_f16_ninf(half %a, half %b) {
 ; CHECK-NEXT:    cvt.f32.f16 %r1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %r2, %rs1;
 ; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.f32 %r5, %r4;
-; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, %r2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r6;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
+; CHECK-NEXT:    cvt.rzi.f16.f16 %rs4, %rs3;
+; CHECK-NEXT:    xor.b16 %rs5, %rs4, -32768;
+; CHECK-NEXT:    fma.rn.f16 %rs6, %rs5, %rs2, %rs1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-NEXT:    ret;
-  %r = frem ninf half %a, %b
+  %r = frem afn ninf half %a, %b
   ret half %r
 }
 
 define half @frem_f16_ninf_fast(half %a, half %b) {
 ; CHECK-LABEL: frem_f16_ninf_fast(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [frem_f16_ninf_fast_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [frem_f16_ninf_fast_param_1];
 ; CHECK-NEXT:    cvt.f32.f16 %r1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %r2, %rs1;
-; CHECK-NEXT:    div.approx.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.f32 %r5, %r4;
-; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, %r2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r6;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
+; CHECK-NEXT:    cvt.rzi.f16.f16 %rs4, %rs3;
+; CHECK-NEXT:    xor.b16 %rs5, %rs4, -32768;
+; CHECK-NEXT:    fma.rn.f16 %rs6, %rs5, %rs2, %rs1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-NEXT:    ret;
   %r = frem afn ninf half %a, %b
   ret half %r
@@ -187,7 +178,7 @@ define float @frem_f32_ninf(float %a, float %b) {
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %r = frem ninf float %a, %b
+  %r = frem afn ninf float %a, %b
   ret float %r
 }
 
@@ -199,7 +190,7 @@ define float @frem_f32_ninf_fast(float %a, float %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_ninf_fast_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_f32_ninf_fast_param_1];
-; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    div.rn.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
@@ -223,7 +214,7 @@ define double @frem_f64_ninf(double %a, double %b) {
 ; CHECK-NEXT:    fma.rn.f64 %rd6, %rd5, %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %r = frem ninf double %a, %b
+  %r = frem afn ninf double %a, %b
   ret double %r
 }
 
@@ -252,12 +243,12 @@ define float @frem_f32_imm1_fast(float %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_fast_param_0];
-; CHECK-NEXT:    mul.rn.f32 %r2, %r1, 0f3E124925;
+; CHECK-NEXT:    div.rn.f32 %r2, %r1, 0f40E00000;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
 ; CHECK-NEXT:    fma.rn.f32 %r4, %r3, 0fC0E00000, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %r = frem arcp float %a, 7.0
+  %r = frem afn arcp float %a, 7.0
   ret float %r
 }
 define float @frem_f32_imm1_normal(float %a) {
@@ -272,15 +263,14 @@ define float @frem_f32_imm1_normal(float %a) {
 ; CHECK-NEXT:    fma.rn.f32 %r4, %r3, 0fC0E00000, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %r = frem float %a, 7.0
+  %r = frem afn float %a, 7.0
   ret float %r
 }
 
 define float @frem_f32_imm2(float %a) {
 ; CHECK-LABEL: frem_f32_imm2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_imm2_param_0];
@@ -289,11 +279,9 @@ define float @frem_f32_imm2(float %a) {
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, 0f40E00000;
-; CHECK-NEXT:    testp.infinite.f32 %p1, %r1;
-; CHECK-NEXT:    selp.f32 %r7, 0f40E00000, %r6, %p1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %r = frem float 7.0, %a
+  %r = frem afn float 7.0, %a
   ret float %r
 }
 
@@ -305,7 +293,7 @@ define float @frem_f32_imm2_fast(float %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_imm2_fast_param_0];
 ; CHECK-NEXT:    mov.b32 %r2, 0f40E00000;
-; CHECK-NEXT:    div.approx.f32 %r3, %r2, %r1;
+; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, 0f40E00000;
@@ -313,4 +301,68 @@ define float @frem_f32_imm2_fast(float %a) {
 ; CHECK-NEXT:    ret;
   %r = frem afn ninf float 7.0, %a
   ret float %r
+}
+
+; The aggregate fast flag also permits the approximate expansion.
+define float @frem_f32_fast_all(float %a, float %b) {
+; CHECK-LABEL: frem_f32_fast_all(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_fast_all_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [frem_f32_fast_all_param_1];
+; CHECK-NEXT:    div.rn.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
+; CHECK-NEXT:    neg.f32 %r5, %r4;
+; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ret;
+  %r = frem fast float %a, %b
+  ret float %r
+}
+
+define bfloat @frem_bf16(bfloat %a, bfloat %b) {
+; CHECK-LABEL: frem_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<27>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %r1, [frem_bf16_param_1];
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    ld.param.b16 %r3, [frem_bf16_param_0];
+; CHECK-NEXT:    shl.b32 %r4, %r3, 16;
+; CHECK-NEXT:    div.rn.f32 %r5, %r4, %r2;
+; CHECK-NEXT:    bfe.u32 %r6, %r5, 16, 1;
+; CHECK-NEXT:    add.s32 %r7, %r6, %r5;
+; CHECK-NEXT:    add.s32 %r8, %r7, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p1, %r5, %r5;
+; CHECK-NEXT:    or.b32 %r9, %r5, 4194304;
+; CHECK-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
+; CHECK-NEXT:    and.b32 %r11, %r10, -65536;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r12, %r11;
+; CHECK-NEXT:    bfe.u32 %r13, %r12, 16, 1;
+; CHECK-NEXT:    add.s32 %r14, %r13, %r12;
+; CHECK-NEXT:    add.s32 %r15, %r14, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p2, %r12, %r12;
+; CHECK-NEXT:    or.b32 %r16, %r12, 4194304;
+; CHECK-NEXT:    selp.b32 %r17, %r16, %r15, %p2;
+; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r17; }
+; CHECK-NEXT:    xor.b16 %rs2, %rs1, -32768;
+; CHECK-NEXT:    cvt.u32.u16 %r18, %rs2;
+; CHECK-NEXT:    shl.b32 %r19, %r18, 16;
+; CHECK-NEXT:    fma.rn.f32 %r20, %r19, %r2, %r4;
+; CHECK-NEXT:    bfe.u32 %r21, %r20, 16, 1;
+; CHECK-NEXT:    add.s32 %r22, %r21, %r20;
+; CHECK-NEXT:    add.s32 %r23, %r22, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p3, %r20, %r20;
+; CHECK-NEXT:    or.b32 %r24, %r20, 4194304;
+; CHECK-NEXT:    selp.b32 %r25, %r24, %r23, %p3;
+; CHECK-NEXT:    shr.u32 %r26, %r25, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r26;
+; CHECK-NEXT:    ret;
+  %r = frem afn bfloat %a, %b
+  ret bfloat %r
 }
