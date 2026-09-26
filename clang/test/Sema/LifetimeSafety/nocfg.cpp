@@ -179,7 +179,7 @@ struct LifetimeBoundCtor {
 };
 
 auto lifetimebound_make_unique_single_param() {
-  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{stack memory associated with temporary object is returned}} tu-note {{returned here}}
+  return std::make_unique<LifetimeBoundCtor>(MyIntOwner{}); // tu-warning {{stack memory associated with temporary object is returned}} tu-note {{returned here}} tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyIntOwner>' aliases the storage of temporary object because parameter 'args' is inferred as lifetimebound}}
 }
 
 
@@ -255,14 +255,14 @@ std::string_view containerWithAnnotatedElements() {
   use(c2);
 
   std::vector<std::string> local;
-  return local.at(0); // expected-warning {{address of stack memory associated with local variable}} \
+  return local.at(0); // expected-warning {{address of stack memory associated with local variable}} cfg-note {{result of call to 'at' aliases the storage of local variable 'local' because the implicit object parameter is inferred as lifetimebound}} \
                       // cfg-warning {{stack memory associated with local variable 'local' is returned}} cfg-note {{returned here}}
 }
 
 std::string_view localUniquePtr(int i) {
   std::unique_ptr<std::string> c1;
   if (i)
-    return *c1; // expected-warning {{address of stack memory associated with local variable}} \
+    return *c1; // expected-warning {{address of stack memory associated with local variable}} cfg-note {{result of call to 'operator*' aliases the storage of local variable 'c1' because the implicit object parameter is inferred as lifetimebound}} \
                 // cfg-warning {{stack memory associated with local variable 'c1' is returned}} cfg-note {{returned here}}
   std::unique_ptr<std::string_view> c2;
   return *c2; // expect no-warning.
@@ -271,7 +271,7 @@ std::string_view localUniquePtr(int i) {
 std::string_view localOptional(int i) {
   std::optional<std::string> o;
   if (i)
-    return o.value(); // expected-warning {{address of stack memory associated with local variable}} \
+    return o.value(); // expected-warning {{address of stack memory associated with local variable}} cfg-note {{result of call to 'value' aliases the storage of local variable 'o' because the implicit object parameter is inferred as lifetimebound}} \
                       // cfg-warning {{stack memory associated with local variable 'o' is returned}} cfg-note {{returned here}}
   std::optional<std::string_view> abc;
   return abc.value(); // expect no warning
@@ -295,14 +295,14 @@ int *danglingUniquePtrFromTemp2() {
 }
 
 const int& danglingRefToOptionalFromTemp3() {
-  return std::optional<int>().value(); // expected-warning {{returning reference to local temporary object}} \
+  return std::optional<int>().value(); // expected-warning {{returning reference to local temporary object}} cfg-note {{result of call to 'value' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
                                        // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}}
 }
 
 std::optional<std::string> getTempOptStr();
 
 std::string_view danglingRefToOptionalFromTemp4() {
-  return getTempOptStr().value(); // expected-warning {{returning address of local temporary object}} \
+  return getTempOptStr().value(); // expected-warning {{returning address of local temporary object}} cfg-note {{result of call to 'value' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
                                   // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}}
 }
 
@@ -355,7 +355,7 @@ int &usedToBeFalsePositive(std::vector<int> &v) {
 int &doNotFollowReferencesForLocalOwner() {
 // Warning caught by CFG analysis.
   std::unique_ptr<int> localOwner;
-  int &p = *localOwner // cfg-warning {{stack memory associated with local variable 'localOwner' is returned}}
+  int &p = *localOwner // cfg-warning {{stack memory associated with local variable 'localOwner' is returned}} cfg-note {{result of call to 'get' aliases the storage of local variable 'localOwner' because the implicit object parameter is inferred as lifetimebound}}
             .get();
   return p; // cfg-note {{returned here}}
 }
@@ -456,11 +456,11 @@ std::vector<std::string_view> GetTemporaryView();
 
 std::string_view test_str_local() {
   std::vector<std::string> v;
-  return *std::find(v.begin(), // cfg-warning {{stack memory associated with local variable 'v' is returned}} cfg-note {{returned here}}
+  return *std::find(v.begin(), // cfg-warning {{stack memory associated with local variable 'v' is returned}} cfg-note {{returned here}} cfg-note {{result of call to 'begin' aliases the storage of local variable 'v' because the implicit object parameter is inferred as lifetimebound}} cfg-note {{result of call to 'find<__gnu_cxx::basic_iterator<std::basic_string<char>>, char[3]>' aliases the storage of local variable 'v' because parameter 'first' is inferred as lifetimebound}} cfg-note {{result of call to 'operator*' aliases the storage of local variable 'v' because the implicit object parameter is inferred as lifetimebound}}
                     v.end(), "42");
 }
 std::string_view test_str_temporary() {
-  return *std::find(GetTemporaryString().begin(), // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}}
+  return *std::find(GetTemporaryString().begin(), // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}} cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} cfg-note {{result of call to 'find<__gnu_cxx::basic_iterator<std::basic_string<char>>, char[3]>' aliases the storage of temporary object because parameter 'first' is inferred as lifetimebound}} cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
                     GetTemporaryString().end(), "42");
 }
 std::string_view test_view() {
@@ -594,10 +594,10 @@ struct FooView {
 };
 FooView test3(int i, std::optional<Foo> a) {
   if (i)
-    return *a; // expected-warning {{address of stack memory}} \
+    return *a; // expected-warning {{address of stack memory}} cfg-note {{result of call to 'operator*' aliases the storage of parameter 'a' because the implicit object parameter is inferred as lifetimebound}} \
                // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
                // cfg-note {{returned here}}
-  return a.value(); // expected-warning {{address of stack memory}} \
+  return a.value(); // expected-warning {{address of stack memory}} cfg-note {{result of call to 'value' aliases the storage of parameter 'a' because the implicit object parameter is inferred as lifetimebound}} \
                     // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
                     // cfg-note {{returned here}}
 }
@@ -658,7 +658,7 @@ std::string_view test2() {
   // We expect dangling issues as the conversion operator is marked as lifetimebound。
   std::string_view bad = StatusOr<Wrapper2<std::string_view>>().value(); // expected-warning {{temporary whose address is used as value of}}
   
-  return k.value(); // expected-warning {{address of stack memory associated}} \
+  return k.value(); // expected-warning {{address of stack memory associated}} cfg-note {{result of call to 'value' aliases the storage of local variable 'k' because the implicit object parameter is marked as lifetimebound}} \
                     // cfg-warning {{stack memory associated with local variable 'k' is returned}} cfg-note {{returned here}}
 }
 } // namespace GH108272
@@ -810,7 +810,7 @@ std::vector<int*> test8(StatusOr<std::vector<int*>> aa) {
 
 // Pointer<Pointer> from Owner<Owner<Pointer>>
 Span<int*> test9(StatusOr<std::vector<int*>> aa) {
-  return aa.valueLB(); // expected-warning {{address of stack memory associated}} \
+  return aa.valueLB(); // expected-warning {{address of stack memory associated}} cfg-note {{result of call to 'valueLB' aliases the storage of parameter 'aa' because the implicit object parameter is marked as lifetimebound}} \
                        // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}}
   return aa.valueNoLB(); // OK.
 }
@@ -819,7 +819,7 @@ Span<int*> test9(StatusOr<std::vector<int*>> aa) {
 
 // Pointer<Owner>> from Owner<Owner>
 Span<std::string> test10(StatusOr<std::vector<std::string>> aa) {
-  return aa.valueLB(); // expected-warning {{address of stack memory}} \
+  return aa.valueLB(); // expected-warning {{address of stack memory}} cfg-note {{result of call to 'valueLB' aliases the storage of parameter 'aa' because the implicit object parameter is marked as lifetimebound}} \
                        // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}}
   return aa.valueNoLB(); // OK.
 }
@@ -877,7 +877,7 @@ std::string_view test1_1() {
                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                            // cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is marked as lifetimebound}}
   use(t1);                 // cfg-note {{later used here}}
-  return Ref(std::string()); // expected-warning {{returning address}} \
+  return Ref(std::string()); // expected-warning {{returning address}} cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is marked as lifetimebound}} \
                              // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}}
 }
 
@@ -931,7 +931,7 @@ std::string_view test2_1(Foo<std::string> r1, Foo<std::string_view> r2) {
                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                  // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}}
   use(t1);                       // cfg-note {{later used here}}
-  return r1.get(); // expected-warning {{address of stack}} \
+  return r1.get(); // expected-warning {{address of stack}} cfg-note {{result of call to 'get' aliases the storage of parameter 'r1' because the implicit object parameter is marked as lifetimebound}} \
                    // cfg-warning {{stack memory associated with parameter 'r1' is returned}} cfg-note {{returned here}}
 }
 std::string_view test2_2(Foo<std::string> r1, Foo<std::string_view> r2) {
@@ -999,14 +999,14 @@ void test4() {
 
 namespace range_based_for_loop_variables {
 std::string_view test_view_loop_var(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}}
+  for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}} cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings'}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}}
+  for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}} cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings'}}
     return s.data(); //cfg-note {{returned here}}
   }
   return "";
@@ -1020,15 +1020,15 @@ std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
 }
 
 std::string_view test_string_ref_var(std::vector<std::string> strings) {
-  for (const std::string& s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}}
-    return s; //cfg-note {{returned here}}
+  for (const std::string& s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}} cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings'}}
+    return s; //cfg-note {{returned here}} cfg-note {{result of call to 'operator basic_string_view' aliases the storage of parameter 'strings'}}
   }
   return "";
 }
 
 std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
-  for (const std::string& s : *strings_or) {  // cfg-warning {{stack memory associated with parameter 'strings_or' is returned}}
-    return s; //cfg-note {{returned here}}
+  for (const std::string& s : *strings_or) {  // cfg-warning {{stack memory associated with parameter 'strings_or' is returned}} cfg-note {{result of call to 'operator*' aliases the storage of parameter 'strings_or' because the implicit object parameter is inferred as lifetimebound}} cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings_or'}}
+    return s; //cfg-note {{returned here}} cfg-note {{result of call to 'operator basic_string_view' aliases the storage of parameter 'strings_or'}}
   }
   return "";
 }
@@ -1037,7 +1037,7 @@ std::string_view test_opt_strings(std::optional<std::vector<std::string>> string
 namespace iterator_arrow {
 std::string_view test() {
   std::vector<std::string> strings;
-  return strings.begin()->data(); // cfg-warning {{stack memory associated with local variable 'strings' is returned}} cfg-note {{returned here}}
+  return strings.begin()->data(); // cfg-warning {{stack memory associated with local variable 'strings' is returned}} cfg-note {{returned here}} cfg-note {{result of call to 'begin' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}} cfg-note {{result of call to 'operator->' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}} cfg-note {{result of call to 'data' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}}
 }
 
 void operator_star_arrow_reference() {
@@ -1185,7 +1185,7 @@ struct StatusOr {
 
 const char* foo() {
   StatusOr<std::string> s;
-  return s->data(); // expected-warning {{address of stack memory associated with local variable}} \
+  return s->data(); // expected-warning {{address of stack memory associated with local variable}} cfg-note {{result of call to 'operator->' aliases the storage of local variable 's' because the implicit object parameter is marked as lifetimebound}} \
                     // cfg-warning {{stack memory associated with local variable 's' is returned}} cfg-note {{returned here}}
 
   StatusOr<std::string_view> s2;
