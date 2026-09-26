@@ -123,3 +123,86 @@ define { float, ptr } @freeze_const_struct_float_ptr() {
   %fr = freeze { float, ptr } { float 2.5, ptr null }
   ret { float, ptr } %fr
 }
+
+declare { i32, i32 } @opaque()
+declare void @usep({ i32, i32 })
+
+; freeze guarantees that every use observes the same value, but
+; replacing an aggregate is not atomic -- extractvalue folds one element
+; independently of whether the freeze itself is replaced.
+define void @freeze_struct_poison_elt_split_uses(i1 %c) {
+; CHECK-LABEL: define void @freeze_struct_poison_elt_split_uses(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[O:%.*]] = call { i32, i32 } @opaque()
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } [[O]], i32 poison, 1
+; CHECK-NEXT:    br label %[[M:.*]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[O]], i32 9, 1
+; CHECK-NEXT:    br label %[[M]]
+; CHECK:       [[M]]:
+; CHECK-NEXT:    [[P:%.*]] = phi { i32, i32 } [ [[A]], %[[T]] ], [ [[B]], %[[F]] ]
+; CHECK-NEXT:    [[FR:%.*]] = freeze { i32, i32 } [[P]]
+; CHECK-NEXT:    [[E1:%.*]] = extractvalue { i32, i32 } [[FR]], 1
+; CHECK-NEXT:    call void @use(i32 [[E1]])
+; CHECK-NEXT:    call void @usep({ i32, i32 } [[FR]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %o = call { i32, i32 } @opaque()
+  br i1 %c, label %t, label %f
+t:
+  %a = insertvalue { i32, i32 } %o, i32 poison, 1
+  br label %m
+f:
+  %b = insertvalue { i32, i32 } %o, i32 9, 1
+  br label %m
+m:
+  %p = phi { i32, i32 } [ %a, %t ], [ %b, %f ]
+  %fr = freeze { i32, i32 } %p
+  %e1 = extractvalue { i32, i32 } %fr, 1
+  call void @use(i32 %e1)
+  call void @usep({ i32, i32 } %fr)
+  ret void
+}
+
+; Same shape, but element 1 is a real constant on both paths, so nothing may be
+; poison and folding is correct.
+define void @freeze_struct_const_elt_split_uses(i1 %c) {
+; CHECK-LABEL: define void @freeze_struct_const_elt_split_uses(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[O:%.*]] = call { i32, i32 } @opaque()
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } [[O]], i32 9, 1
+; CHECK-NEXT:    br label %[[M:.*]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[O]], i32 9, 1
+; CHECK-NEXT:    br label %[[M]]
+; CHECK:       [[M]]:
+; CHECK-NEXT:    [[P:%.*]] = phi { i32, i32 } [ [[A]], %[[T]] ], [ [[B]], %[[F]] ]
+; CHECK-NEXT:    [[FR:%.*]] = freeze { i32, i32 } [[P]]
+; CHECK-NEXT:    call void @use(i32 9)
+; CHECK-NEXT:    call void @usep({ i32, i32 } [[FR]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %o = call { i32, i32 } @opaque()
+  br i1 %c, label %t, label %f
+t:
+  %a = insertvalue { i32, i32 } %o, i32 9, 1
+  br label %m
+f:
+  %b = insertvalue { i32, i32 } %o, i32 9, 1
+  br label %m
+m:
+  %p = phi { i32, i32 } [ %a, %t ], [ %b, %f ]
+  %fr = freeze { i32, i32 } %p
+  %e1 = extractvalue { i32, i32 } %fr, 1
+  call void @use(i32 %e1)
+  call void @usep({ i32, i32 } %fr)
+  ret void
+}

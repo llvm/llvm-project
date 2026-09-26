@@ -1736,6 +1736,12 @@ void SCCPInstVisitor::visitFreezeInst(FreezeInst &I) {
     if (V0State.isUnknownOrUndef())
       return;
 
+    // freeze must yield one value that every use observes. Replacing an
+    // aggregate is not atomic: visitExtractValueInst folds a single element
+    // independently of whether the freeze itself is replaced.
+    if (I.getType()->isStructTy() && V0State.isConstantRangeIncludingUndef())
+      return (void)markOverdefined(IV, &I);
+
     // Freeze is a no-op on a constant that is guaranteed not to be undef or
     // poison. Integer constants are represented as single-element ranges and
     // can never be undef or poison.
