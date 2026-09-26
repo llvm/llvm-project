@@ -92,9 +92,30 @@ float test_sve_reduce_min_float(svfloat32_t x) {
   return __builtin_reduce_min(x);
 }
 
+float test_sve_reduce_assoc_fadd(svfloat32_t x, float start) {
+  // CIR-LABEL: @test_sve_reduce_assoc_fadd
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<[4] x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  // CIR: cir.return
+  // LLVM-LABEL: @test_sve_reduce_assoc_fadd
+  // LLVM: call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float %{{.*}}, <vscale x 4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_assoc_fadd(x, start);
+}
+
+float test_sve_reduce_assoc_fadd_default_start(svfloat32_t x) {
+  // CIR-LABEL: @test_sve_reduce_assoc_fadd_default_start
+  // CIR: %[[START:.*]] = cir.const #cir.fp<-0.000000e+00> : !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[START]], {{.*}} : (!cir.float, !cir.vector<[4] x !cir.float>) -> !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
+  // CIR: cir.return
+  // LLVM-LABEL: @test_sve_reduce_assoc_fadd_default_start
+  // LLVM: call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_assoc_fadd(x);
+}
+
 float test_sve_reduce_in_order_fadd(svfloat32_t x, float start) {
   // CIR-LABEL: @test_sve_reduce_in_order_fadd
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<[4] x !cir.float>) -> !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<[4] x !cir.float>) -> !cir.float{{( loc.*)?$}}
   // CIR: cir.return
   // LLVM-LABEL: @test_sve_reduce_in_order_fadd
   // LLVM: call float @llvm.vector.reduce.fadd.nxv4f32(float %{{.*}}, <vscale x 4 x float>
