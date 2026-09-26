@@ -769,6 +769,23 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          FlagStringValue.Value + "'");
       Info.Flags |= FlagValue;
     }
+    if (!VReg.AntiHints.empty() && Info.Kind != VRegInfo::NORMAL)
+      return error(VReg.AntiHints.front().SourceRange.Start,
+                   "anti-hints can only be set for normal vregs");
+
+    for (const auto &AntiHintValue : VReg.AntiHints) {
+      Register AntiHintReg;
+      if (parseRegisterReference(PFS, AntiHintReg, AntiHintValue.Value, Error))
+        return error(Error, AntiHintValue.SourceRange);
+
+      if (!AntiHintReg.isVirtual()) {
+        return error(AntiHintValue.SourceRange.Start,
+                     "anti-hint '" + Twine(AntiHintValue.Value) +
+                         "' must be a virtual register");
+      }
+
+      Info.AntiHints.push_back(AntiHintReg);
+    }
     RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
@@ -875,6 +892,8 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
       MRI.setRegClass(Reg, Info.D.RC);
       if (Info.PreferredReg != 0)
         MRI.setSimpleHint(Reg, Info.PreferredReg);
+      if (!Info.AntiHints.empty())
+        MRI.addRegAllocationAntiHints(Reg, Info.AntiHints);
       break;
     case VRegInfo::GENERIC:
       break;

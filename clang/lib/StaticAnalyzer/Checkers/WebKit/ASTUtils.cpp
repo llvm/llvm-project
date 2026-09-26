@@ -454,7 +454,7 @@ bool tryToFindPtrOrigin(
       /*PtrIsLifetimeBoundToOrigin=*/false);
 }
 
-bool isASafeCallArg(const Expr *E) {
+bool originOutlivesCall(const Expr *E) {
   assert(E);
   auto IsCheckedLocalVarOrParam = [](const VarDecl *Decl) {
     auto Ty = Decl->getType();

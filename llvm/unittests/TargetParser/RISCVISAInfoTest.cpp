@@ -1683,7 +1683,7 @@ Experimental extensions
     zvdot4a8i            0.1
     zvfbdota32f          0.2
     zvfbfa               0.1
-    zvfofp8min           0.2
+    zvfofp8min           0.9
     zvfqwbdota8f         0.2
     zvfqwdota8f          0.2
     zvfwbdota16bf        0.2

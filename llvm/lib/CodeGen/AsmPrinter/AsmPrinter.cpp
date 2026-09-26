@@ -143,10 +143,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-// This is a replication of fields of object::PGOAnalysisMap::Features. It
-// should match the order of the fields so that
-// `object::PGOAnalysisMap::Features::decode(PgoAnalysisMapFeatures.getBits())`
-// succeeds.
 enum class PGOMapFeaturesEnum {
   None,
   FuncEntryCount,
@@ -155,7 +151,7 @@ enum class PGOMapFeaturesEnum {
   PropellerCFG,
   All,
 };
-static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
+static cl::list<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
     cl::values(
         clEnumValN(PGOMapFeaturesEnum::None, "none", "Disable all options"),
@@ -1493,25 +1489,23 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
                     bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
-  if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
-       PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
-      popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
+  auto IsSet = [](PGOMapFeaturesEnum F) {
+    return is_contained(PgoAnalysisMapFeatures, F);
+  };
+  bool NoFeatures = IsSet(PGOMapFeaturesEnum::None);
+  bool AllFeatures = IsSet(PGOMapFeaturesEnum::All);
+  if ((NoFeatures || AllFeatures) && !all_equal(PgoAnalysisMapFeatures)) {
     MF.getFunction().getContext().emitError(
         "-pgo-analysis-map can accept only all or none with no additional "
         "values.");
   }
 
-  bool NoFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None);
-  bool AllFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All);
   bool FuncEntryCountEnabled =
-      AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
-                                         PGOMapFeaturesEnum::FuncEntryCount));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::FuncEntryCount));
   bool BBFreqEnabled =
-      AllFeatures ||
-      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BBFreq));
   bool BrProbEnabled =
-      AllFeatures ||
-      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BrProb));
   bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
@@ -2565,7 +2559,7 @@ void AsmPrinter::emitFunctionBody() {
   if (HasAnyRealCode) {
     if (MF->getTarget().Options.BBAddrMap)
       emitBBAddrMapSection(*MF);
-    else if (PgoAnalysisMapFeatures.getBits() != 0)
+    else if (!PgoAnalysisMapFeatures.empty())
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
                        " but it does not have labels");

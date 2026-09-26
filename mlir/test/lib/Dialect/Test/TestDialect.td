@@ -13,6 +13,8 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
+  // Keep legacy assembly format coverage for test operations.
+  let useStrictPropertiesInAssemblyFormat = 0;
   let cppNamespace = "::test";
   let hasCanonicalizer = 1;
   let hasConstantMaterializer = 1;

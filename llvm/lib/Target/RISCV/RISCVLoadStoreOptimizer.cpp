@@ -822,23 +822,19 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
     // X10 = LW killed X10, 0
     if (FirstReg == BaseReg) {
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addDef(SecondReg, getDeadRegState(SecondOp.isDead()))
                  .addReg(BaseReg);
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addDef(FirstReg, getDeadRegState(FirstOp.isDead()))
                  .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
 
     } else {
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addDef(FirstReg, getDeadRegState(FirstOp.isDead()))
                  .addReg(BaseReg);
 
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addDef(SecondReg, getDeadRegState(SecondOp.isDead()))
                  .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
     }
 
@@ -923,8 +919,7 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
 
   if (IsLoad) {
     // For LD, the register pair is the destination
-    MIB.addReg(RegPair, RegState::Define | getDeadRegState(FirstOp.isDead() &&
-                                                           SecondOp.isDead()));
+    MIB.addDef(RegPair, getDeadRegState(FirstOp.isDead() && SecondOp.isDead()));
   } else {
     // For SD, the register pair is the source
     MIB.addReg(RegPair, getKillRegState(FirstOp.isKill() && SecondOp.isKill()));

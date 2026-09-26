@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -86,6 +87,16 @@ public:
 } // namespace shared
 } // namespace orc
 } // namespace llvm
+
+// Controller-interface descriptors for the MachO platform runtime's SPS
+// wrapper calls.
+namespace llvm::orc::macho_sps_ci {
+struct CreatePThreadKey {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_create_pthread_key");
+  using SPSSig = SPSExpected<uint64_t>();
+};
+} // namespace llvm::orc::macho_sps_ci
 
 namespace {
 
@@ -799,11 +810,12 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
         "not been loaded yet",
         inconvertibleErrorCode());
 
-  Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          CreatePThreadKey.Addr, Result))
-    return std::move(Err);
-  return Result;
+  using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
+  CreatePThreadKeyProxy CreateKey(
+      sps::ProxySpec<CreatePThreadKeyProxy,
+                     macho_sps_ci::CreatePThreadKey>::dispatch,
+      CreatePThreadKey.Addr);
+  return CreateKey(ES);
 }
 
 void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(

@@ -42,6 +42,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a pointer is a dummy pointer.
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK);
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK);
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);

@@ -17,6 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
+  let useStrictPropertiesInAssemblyFormat = 0;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "

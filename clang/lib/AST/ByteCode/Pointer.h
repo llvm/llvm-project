@@ -447,6 +447,7 @@ struct OpaquePointer {
   bool hasDeclBase() const { return Base.isDecl(); }
   const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
+  bool hasValidBase() const;
 
   OpaquePointer
   withFieldType(const Type *FieldTy,

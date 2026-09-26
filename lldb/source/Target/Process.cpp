@@ -200,6 +200,12 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyHighmemVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
   }
 }
 
@@ -262,6 +268,18 @@ uint32_t ProcessProperties::GetHighmemVirtualAddressableBits() const {
 void ProcessProperties::SetHighmemVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
   SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
+}
+
+void ProcessProperties::AddressMaskChangedCallback() {
+  if (!m_process)
+    return;
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&m_process->GetRunLock()))
+    return;
+  // Never call this from address-fixing code, which runs while frames are being
+  // constructed.
+  for (ThreadSP thread_sp : m_process->Threads())
+    thread_sp->ClearStackFrames();
 }
 
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
@@ -5184,7 +5202,7 @@ HandleStoppedEvent(lldb::tid_t thread_id, const ThreadPlanSP &thread_plan_sp,
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
-                       const EvaluateExpressionOptions &options,
+                       const EvaluateExpressionOptions &requested_options,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
@@ -5219,6 +5237,31 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // Record the thread's id so we can tell when a thread we were using
   // to run the expression exits during the expression evaluation.
   lldb::tid_t expr_thread_id = thread->GetID();
+
+  // Clearing stop-others is a request to run the inferior's other threads, and
+  // it is not the default, so refuse it outright rather than quietly running
+  // single-threaded. Asking for the all-threads retry is refused the same way,
+  // since it resumes those same threads a moment later.
+  EvaluateExpressionOptions options = requested_options;
+  const Policy policy = PolicyStack::Get().Current();
+  if (!policy.capabilities.can_run_all_threads) {
+    if (!options.GetStopOthers()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot run the process's other threads to evaluate this "
+          "expression: the current context does not allow resuming them");
+      return eExpressionSetupError;
+    }
+    options.SetTryAllThreads(false);
+  } else if (!policy.capabilities.can_try_all_threads) {
+    if (options.GetTryAllThreads()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot retry this expression with the process's other threads "
+          "running: the current context does not allow that fallback");
+      return eExpressionSetupError;
+    }
+  }
 
   // We need to change some of the thread plan attributes for the thread plan
   // runner.  This will restore them when we are done:

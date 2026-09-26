@@ -38,7 +38,7 @@ static cl::opt<int, true>
 cl::opt<bool> PollyVectorizeMetadata(
     "polly-annotate-metadata-vectorize",
     cl::desc("Append vectorize enable/disable metadata from polly"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",

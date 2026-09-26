@@ -38,7 +38,7 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-ptrue-coalesce"
 
 static cl::opt<bool> EnablePTrueCoalescing(
-    "aarch64-enable-ptrue-coalescing", cl::init(false), cl::Hidden,
+    "aarch64-enable-ptrue-coalescing", cl::init(true), cl::Hidden,
     cl::desc("Enable coalescing of compatible AArch64 SVE PTRUE instructions"));
 
 namespace {

@@ -74,7 +74,6 @@ def IRDL_Dialect : Dialect {
 
   let name = "irdl";
   let cppNamespace = "::mlir::irdl";
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 #endif // MLIR_DIALECT_IRDL_IR_IRDL

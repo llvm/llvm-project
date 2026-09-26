@@ -92,7 +92,7 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "Get start index of block arguments defined by `" # clauseNameSnake # "`.",
     "unsigned", "get" # clauseNameCamel # "BlockArgsStart", (ins),
     !if(!initialized(previousClause), [{
-        auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+        auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
       }] # "return iface." # previousClause.startMethod.name # "() + iface."
         # previousClause.numArgsMethod.name # "();",
         "return 0;"
@@ -111,8 +111,8 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "Get block arguments defined by `" # clauseNameSnake # "`.",
     "::llvm::MutableArrayRef<::mlir::BlockArgument>",
     "get" # clauseNameCamel # "BlockArgs", (ins), [{
-      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
-      return $_op->getRegion(0).getArguments().slice(
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
+      return $_raw_op->getRegion(0).getArguments().slice(
     }] # "iface." # startMethod.name # "(), iface." # numArgsMethod.name # "());"
   >;
 }
@@ -159,8 +159,11 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
       InterfaceMethod<
         "Get the total number of clause-defined entry block arguments",
         "unsigned", "numClauseBlockArgs", (ins),
-        "return " # !interleave(
-          !foreach(clause, clauses, "$_op." # clause.numArgsMethod.name # "()"),
+        [{
+          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
+          return
+        }] # !interleave(
+          !foreach(clause, clauses, "iface." # clause.numArgsMethod.name # "()"),
           " + ") # ";"
       >,
       InterfaceMethod<
@@ -168,7 +171,7 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
         "and entry block arguments.", "void", "getBlockArgsPairs",
         (ins "::llvm::SmallVectorImpl<std::pair<::mlir::Value, ::mlir::BlockArgument>> &" : $pairs),
         [{
-          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
           pairs.reserve(pairs.size() + iface.numClauseBlockArgs());
         }] # !interleave(!foreach(clause, clauses, [{
         }] # "if (iface." # clause.numArgsMethod.name # "() > 0) {" # [{
@@ -205,9 +208,9 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
       // For taskloop: put the allocas inside of the wrapped loop. Loop wrappers
       // are expected to contain only the wrapped loop (or another loop wrapper)
       if (LoopWrapperInterface loopWrapper =
-              mlir::dyn_cast<LoopWrapperInterface>($_op.getOperation()))
+              mlir::dyn_cast<LoopWrapperInterface>($_raw_op))
         return &loopWrapper.getWrappedLoop()->getRegion(0).front();
-      return &$_op.getRegion().front();
+      return &$_raw_op->getRegion(0).front();
       }]>,
   ];
 }
@@ -235,8 +238,9 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
                       "int64_t",
                       "getOperandIndexForMap",
       (ins "::mlir::Value":$map), [{
-         return std::distance($_op.getMapVars().begin(),
-                              llvm::find($_op.getMapVars(), map));
+         auto vars = ::mlir::cast<MapClauseOwningOpInterface>(*$_raw_op)
+                         .getMapVars();
+         return std::distance(vars.begin(), llvm::find(vars, map));
       }]>,
   ];
 }
