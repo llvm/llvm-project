@@ -338,6 +338,9 @@ namespace llvm {
       return true;
     }
 
+    /// True unless the subtarget has FeatureFenceKeepsReservation.
+    bool fenceClearsLoadLinkedReservation() const override;
+
     Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                           AtomicOrdering Ord) const override;
 

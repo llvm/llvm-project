@@ -2314,6 +2314,11 @@ public:
     return false;
   }
 
+  /// Whether a fence between the load-linked and the store-conditional can
+  /// clear the reservation. If true, AtomicExpandPass places the release fence
+  /// of a weak cmpxchg before the load-linked. Defaults to false.
+  virtual bool fenceClearsLoadLinkedReservation() const { return false; }
+
   /// Whether AtomicExpandPass should automatically insert a seq_cst trailing
   /// fence without reducing the ordering for this atomic store. Defaults to
   /// false.

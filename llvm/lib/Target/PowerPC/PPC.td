@@ -177,6 +177,11 @@ def FeaturePartwordAtomic : SubtargetFeature<"partword-atomics",
 def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
                                              "HasQuadwordAtomics", "true",
                                              "Enable lqarx and stqcx.">;
+// Some PowerPC implementations clear the LL/SC reservation on a fence.
+def FeatureFenceKeepsReservation :
+  SubtargetFeature<"fence-keeps-reservation", "FenceKeepsReservation", "true",
+                   "A fence between larx and stcx. keeps the reservation", [],
+                   InlineIgnore>;
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
@@ -506,7 +511,8 @@ def ProcessorFeatures {
      FeatureQuadwordAtomic,
      FeaturePredictableSelectIsExpensive,
      FeatureISA2_07,
-     FeatureCRBits
+     FeatureCRBits,
+     FeatureFenceKeepsReservation
     ];
 
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
