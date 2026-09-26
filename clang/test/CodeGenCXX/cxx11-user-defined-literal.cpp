@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-ASCII -check-prefix=CHECK %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fexec-charset IBM-1047 -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-EBCDIC -check-prefix=CHECK %s
 
 struct S { S(); ~S(); S(const S &); void operator()(int); };
 using size_t = decltype(sizeof(int));
@@ -9,11 +10,16 @@ S operator"" _f(long double);
 S operator"" _r(const char *);
 template<char...Cs> S operator"" _t() { return S(); }
 
-// CHECK: @[[s_foo:.*]] = {{.*}} constant [4 x i8] c"foo\00"
-// CHECK: @[[s_bar:.*]] = {{.*}} constant [4 x i8] c"bar\00"
-// CHECK: @[[s_123:.*]] = {{.*}} constant [4 x i8] c"123\00"
-// CHECK: @[[s_4_9:.*]] = {{.*}} constant [4 x i8] c"4.9\00"
-// CHECK: @[[s_0xffffeeee:.*]] = {{.*}} constant [11 x i8] c"0xffffeeee\00"
+// CHECK-ASCII:  @[[s_foo:.*]] = {{.*}} constant [4 x i8] c"foo\00"
+// CHECK-EBCDIC: @[[s_foo:.*]] = {{.*}} constant [4 x i8] c"\86\96\96\00"
+// CHECK-ASCII:  @[[s_bar:.*]] = {{.*}} constant [4 x i8] c"bar\00"
+// CHECK-EBCDIC: @[[s_bar:.*]] = {{.*}} constant [4 x i8] c"\82\81\99\00"
+// CHECK-ASCII:  @[[s_123:.*]] = {{.*}} constant [4 x i8] c"123\00"
+// CHECK-EBCDIC: @[[s_123:.*]] = {{.*}} constant [4 x i8] c"\F1\F2\F3\00"
+// CHECK-ASCII:  @[[s_4_9:.*]] = {{.*}} constant [4 x i8] c"4.9\00"
+// CHECK-EBCDIC: @[[s_4_9:.*]] = {{.*}} constant [4 x i8] c"\F4K\F9\00"
+// CHECK-ASCII:  @[[s_0xffffeeee:.*]] = {{.*}} constant [11 x i8] c"0xffffeeee\00"
+// CHECK-EBCDIC: @[[s_0xffffeeee:.*]] = {{.*}} constant [11 x i8] c"\F0\A7\86\86\86\86\85\85\85\85\00"
 
 void f() {
   // CHECK: call void @_Zli2_xPKcm({{.*}}, ptr noundef @[[s_foo]], i64 noundef 3)
