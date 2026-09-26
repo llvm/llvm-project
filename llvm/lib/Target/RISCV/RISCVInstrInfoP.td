@@ -1977,6 +1977,20 @@ def riscv_pmaccsu_halves_00
 def riscv_pmaccsu_halves_11
     : RVSDNode<"PMACCSU_HALVES_11", SDT_RISCVWideningMulAccByHalves>;
 
+// The pwmacc*/pwmaccsu* instructions use a 64-bit accumulator on RV32.
+// The accumulator and result are represented as two i32 values in the
+// SelectionDAG; custom ISel combines and splits the register pair.
+def SDT_RISCVPackedWideningMulAccPair
+    : SDTypeProfile<2, 4, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                           SDTCisSameAs<0, 2>, SDTCisSameAs<1, 3>,
+                           SDTCisVec<4>, SDTCisSameAs<4, 5>]>;
+def riscv_pwmacc_h   : RVSDNode<"PWMACC_H",
+                                SDT_RISCVPackedWideningMulAccPair>;
+def riscv_pwmaccu_h  : RVSDNode<"PWMACCU_H",
+                                SDT_RISCVPackedWideningMulAccPair>;
+def riscv_pwmaccsu_h : RVSDNode<"PWMACCSU_H",
+                                SDT_RISCVPackedWideningMulAccPair>;
+
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
                                                       SDTCisSameAs<0, 2>,
@@ -2011,6 +2025,7 @@ def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                  SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>]>;
 def riscv_ppairoe_h : RVSDNode<"PPAIROE_H", SDT_RISCVPackedBinary>;
+def riscv_zip16p : RVSDNode<"ZIP16P", SDT_RISCVPackedBinary>;
 
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
@@ -3227,6 +3242,9 @@ let append Predicates = [IsRV64] in {
   def : PatMulPartsAcc<riscv_pmaccu_halves_11, PMACCU_W_H11, v2i32, v4i16>;
   def : PatMulPartsAcc<riscv_pmaccsu_halves_00, PMACCSU_W_H00, v2i32, v4i16>;
   def : PatMulPartsAcc<riscv_pmaccsu_halves_11, PMACCSU_W_H11, v2i32, v4i16>;
+
+  def : Pat<(v4i16 (riscv_zip16p (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (ZIP16P GPR:$rs1, GPR:$rs2)>;
 
   // Scalar word multiply-parts accumulate patterns.
   def : PatMulPartsAcc<riscv_pmacc_halves_00, MACC_W00, i64, v2i32>;

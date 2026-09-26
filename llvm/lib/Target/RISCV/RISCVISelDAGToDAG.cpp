@@ -2149,6 +2149,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case RISCVISD::MQWACC:
   case RISCVISD::MQRWACC:
+  case RISCVISD::PWMACC_H:
+  case RISCVISD::PWMACCU_H:
+  case RISCVISD::PWMACCSU_H:
   case RISCVISD::WMACC:
   case RISCVISD::WMACCU:
   case RISCVISD::WMACCSU: {
@@ -2166,6 +2169,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     case RISCVISD::MQRWACC:
       Opc = RISCV::MQRWACC;
+      break;
+    case RISCVISD::PWMACC_H:
+      Opc = RISCV::PWMACC_H;
+      break;
+    case RISCVISD::PWMACCU_H:
+      Opc = RISCV::PWMACCU_H;
+      break;
+    case RISCVISD::PWMACCSU_H:
+      Opc = RISCV::PWMACCSU_H;
       break;
     case RISCVISD::WMACC:
       Opc = RISCV::WMACC;
