@@ -69,10 +69,6 @@ protected:
     R = &*ROrErr;
   }
 
-  EntityId method(llvm::StringRef NameOrSignature) {
-    return require(entityIdOf(AST.fn(NameOrSignature)), NameOrSignature);
-  }
-
   EntityId param(llvm::StringRef NameOrSignature, unsigned Index = 0) {
     return require(entityIdOf(AST.findParam(NameOrSignature, Index)),
                    NameOrSignature);
@@ -85,15 +81,6 @@ protected:
   const VirtualMethodFamilyAnalysisResult &result() const { return *R; }
 
 private:
-  VirtualMethodFamilyAnalysisResult::Data at(EntityId ParamId) const {
-    auto It = R->RetAndParamData.find(ParamId);
-    if (It != R->RetAndParamData.end())
-      return It->second;
-    ADD_FAILURE() << "no data recorded for " << ParamId;
-    // Let's just return some fallback value. The test fails anyway.
-    return {ParamId, ParamId};
-  }
-
   // EntityId has no default constructor, so report the miss and fall back to
   // an arbitrary id; the ADD_FAILURE() above makes the test fail regardless.
   EntityId require(std::optional<EntityId> Id, llvm::StringRef QualifiedName) {
@@ -111,14 +98,9 @@ private:
 };
 
 static VirtualMethodFamilyAnalysisResult
-createResult(llvm::ArrayRef<std::pair<EntityId, std::pair<EntityId, EntityId>>>
-                 Entries) {
+createResult(llvm::ArrayRef<std::pair<EntityId, EntityId>> Entries) {
   VirtualMethodFamilyAnalysisResult Res;
-  Res.RetAndParamData.reserve(Entries.size());
-  for (const auto &[Id, Data] : Entries) {
-    auto [FamilyId, OwnerMethodId] = Data;
-    Res.RetAndParamData.insert({Id, {FamilyId, OwnerMethodId}});
-  }
+  Res.RetAndParamData.insert(Entries.begin(), Entries.end());
   return Res;
 }
 
@@ -136,10 +118,6 @@ TEST_F(VirtualMethodFamilyAnalysisTest, ChainOneFamily) {
     };
   )cpp");
 
-  EntityId BaseFoo = method("Base::foo");
-  EntityId MidFoo = method("Mid::foo");
-  EntityId DerFoo = method("Der::foo");
-
   EntityId BaseFooP = param("Base::foo");
   EntityId MidFooP = param("Mid::foo");
   EntityId DerFooP = param("Der::foo");
@@ -148,17 +126,16 @@ TEST_F(VirtualMethodFamilyAnalysisTest, ChainOneFamily) {
   EntityId MidFooR = ret("Mid::foo");
   EntityId DerFooR = ret("Der::foo");
 
-  EXPECT_EQ(result(),
-            createResult({
-                // Params
-                {BaseFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/BaseFoo}},
-                {MidFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/MidFoo}},
-                {DerFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/DerFoo}},
-                // Returns
-                {BaseFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/BaseFoo}},
-                {MidFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/MidFoo}},
-                {DerFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/DerFoo}},
-            }))
+  EXPECT_EQ(result(), createResult({
+                          // Params
+                          {BaseFooP, /*FamilyId=*/BaseFooP},
+                          {MidFooP, /*FamilyId=*/BaseFooP},
+                          {DerFooP, /*FamilyId=*/BaseFooP},
+                          // Returns
+                          {BaseFooR, /*FamilyId=*/BaseFooR},
+                          {MidFooR, /*FamilyId=*/BaseFooR},
+                          {DerFooR, /*FamilyId=*/BaseFooR},
+                      }))
       << legend();
 }
 
@@ -181,10 +158,6 @@ TEST_F(VirtualMethodFamilyAnalysisTest, UnrelatedMultipleInheritanceMerges) {
     };
   )cpp");
 
-  EntityId Base1Foo = method("Base1::foo");
-  EntityId Base2Foo = method("Base2::foo");
-  EntityId DerFoo = method("Der::foo");
-
   EntityId Base1FooP = param("Base1::foo");
   EntityId Base2FooP = param("Base2::foo");
   EntityId DerFooP = param("Der::foo");
@@ -193,18 +166,16 @@ TEST_F(VirtualMethodFamilyAnalysisTest, UnrelatedMultipleInheritanceMerges) {
   EntityId Base2FooR = ret("Base2::foo");
   EntityId DerFooR = ret("Der::foo");
 
-  EXPECT_EQ(
-      result(),
-      createResult({
-          // Params
-          {Base1FooP, {/*FamilyId=*/Base1FooP, /*OwnerMethodId=*/Base1Foo}},
-          {Base2FooP, {/*FamilyId=*/Base1FooP, /*OwnerMethodId=*/Base2Foo}},
-          {DerFooP, {/*FamilyId=*/Base1FooP, /*OwnerMethodId=*/DerFoo}},
-          // Returns
-          {Base1FooR, {/*FamilyId=*/Base1FooR, /*OwnerMethodId=*/Base1Foo}},
-          {Base2FooR, {/*FamilyId=*/Base1FooR, /*OwnerMethodId=*/Base2Foo}},
-          {DerFooR, {/*FamilyId=*/Base1FooR, /*OwnerMethodId=*/DerFoo}},
-      }))
+  EXPECT_EQ(result(), createResult({
+                          // Params
+                          {Base1FooP, /*FamilyId=*/Base1FooP},
+                          {Base2FooP, /*FamilyId=*/Base1FooP},
+                          {DerFooP, /*FamilyId=*/Base1FooP},
+                          // Returns
+                          {Base1FooR, /*FamilyId=*/Base1FooR},
+                          {Base2FooR, /*FamilyId=*/Base1FooR},
+                          {DerFooR, /*FamilyId=*/Base1FooR},
+                      }))
       << legend();
 }
 
@@ -221,9 +192,6 @@ TEST_F(VirtualMethodFamilyAnalysisTest, OverloadsNotMerged) {
     };
   )cpp");
 
-  EntityId BaseFooInt = method("Base::foo(int *)");
-  EntityId DerFoo = method("Der::foo");
-
   EntityId BaseFooIntP = param("Base::foo(int *)");
   EntityId DerFooP = param("Der::foo");
 
@@ -232,11 +200,11 @@ TEST_F(VirtualMethodFamilyAnalysisTest, OverloadsNotMerged) {
 
   const auto Expected = createResult({
       // Params
-      {BaseFooIntP, {/*FamilyId=*/BaseFooIntP, /*OwnerMethodId=*/BaseFooInt}},
-      {DerFooP, {/*FamilyId=*/BaseFooIntP, /*OwnerMethodId=*/DerFoo}},
+      {BaseFooIntP, /*FamilyId=*/BaseFooIntP},
+      {DerFooP, /*FamilyId=*/BaseFooIntP},
       // Returns
-      {BaseFooIntR, {/*FamilyId=*/BaseFooIntR, /*OwnerMethodId=*/BaseFooInt}},
-      {DerFooR, {/*FamilyId=*/BaseFooIntR, /*OwnerMethodId=*/DerFoo}},
+      {BaseFooIntR, /*FamilyId=*/BaseFooIntR},
+      {DerFooR, /*FamilyId=*/BaseFooIntR},
   });
   // "Base::foo(char *)" is not mentioned because that is not overridden by
   // anyone.
@@ -255,18 +223,13 @@ TEST_F(VirtualMethodFamilyAnalysisTest, CovariantReturnUnifiesReturnSlots) {
     };
   )cpp");
 
-  EntityId BaseClone = method("Base::clone");
-  EntityId DerClone = method("Der::clone");
-
   EntityId BaseCloneR = ret("Base::clone");
   EntityId DerCloneR = ret("Der::clone");
 
-  EXPECT_EQ(
-      result(),
-      createResult({
-          {BaseCloneR, {/*FamilyId=*/BaseCloneR, /*OwnerMethodId=*/BaseClone}},
-          {DerCloneR, {/*FamilyId=*/BaseCloneR, /*OwnerMethodId=*/DerClone}},
-      }))
+  EXPECT_EQ(result(), createResult({
+                          {BaseCloneR, /*FamilyId=*/BaseCloneR},
+                          {DerCloneR, /*FamilyId=*/BaseCloneR},
+                      }))
       << legend();
 }
 
@@ -291,11 +254,6 @@ TEST_F(VirtualMethodFamilyAnalysisTest, DiamondOneFamily) {
     };
   )cpp");
 
-  EntityId BaseFoo = method("Base::foo");
-  EntityId LeftFoo = method("Left::foo");
-  EntityId RightFoo = method("Right::foo");
-  EntityId DiaFoo = method("Dia::foo");
-
   EntityId BaseFooP = param("Base::foo");
   EntityId LeftFooP = param("Left::foo");
   EntityId RightFooP = param("Right::foo");
@@ -306,20 +264,18 @@ TEST_F(VirtualMethodFamilyAnalysisTest, DiamondOneFamily) {
   EntityId RightFooR = ret("Right::foo");
   EntityId DiaFooR = ret("Dia::foo");
 
-  EXPECT_EQ(
-      result(),
-      createResult({
-          // Params
-          {BaseFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/BaseFoo}},
-          {LeftFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/LeftFoo}},
-          {RightFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/RightFoo}},
-          {DiaFooP, {/*FamilyId=*/BaseFooP, /*OwnerMethodId=*/DiaFoo}},
-          // Returns
-          {BaseFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/BaseFoo}},
-          {LeftFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/LeftFoo}},
-          {RightFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/RightFoo}},
-          {DiaFooR, {/*FamilyId=*/BaseFooR, /*OwnerMethodId=*/DiaFoo}},
-      }))
+  EXPECT_EQ(result(), createResult({
+                          // Params
+                          {BaseFooP, /*FamilyId=*/BaseFooP},
+                          {LeftFooP, /*FamilyId=*/BaseFooP},
+                          {RightFooP, /*FamilyId=*/BaseFooP},
+                          {DiaFooP, /*FamilyId=*/BaseFooP},
+                          // Returns
+                          {BaseFooR, /*FamilyId=*/BaseFooR},
+                          {LeftFooR, /*FamilyId=*/BaseFooR},
+                          {RightFooR, /*FamilyId=*/BaseFooR},
+                          {DiaFooR, /*FamilyId=*/BaseFooR},
+                      }))
       << legend();
 }
 

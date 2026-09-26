@@ -55,25 +55,9 @@ struct VirtualMethodFamilyAnalysisResult final : AnalysisResult {
     return AnalysisName("VirtualMethodFamilyAnalysisResult");
   }
 
-  struct Data {
-    /// Represents the ID of the family the given parameter or return ID
-    /// corresponds to.
-    /// Right now, this ID is the "smallest" ID of the method in
-    /// the overloading set.
-    EntityId FamilyId;
-
-    /// The virtual method IDs of the param/return IDs it correspond to.
-    /// Basically, for "param" in "fun(param)" it will be "fun".
-    EntityId OwnerMethodId;
-  };
-
-  llvm::DenseMap<EntityId, Data> RetAndParamData;
-
-  friend bool operator==(const Data &L, const Data &R) {
-    return std::tie(L.FamilyId, L.OwnerMethodId) ==
-           std::tie(R.FamilyId, R.OwnerMethodId);
-  }
-  friend bool operator!=(const Data &L, const Data &R) { return !(L == R); }
+  /// Maps each parameter or return slot to the ID of the family it belongs to.
+  /// The family ID is the smallest slot ID in the family.
+  llvm::DenseMap<EntityId, EntityId> RetAndParamData;
 
   bool operator==(const VirtualMethodFamilyAnalysisResult &Other) const {
     return RetAndParamData == Other.RetAndParamData;
@@ -84,12 +68,8 @@ struct VirtualMethodFamilyAnalysisResult final : AnalysisResult {
   }
 };
 
-/// Prints \p D as "{family=EntityId(1), owner=EntityId(2)}".
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const VirtualMethodFamilyAnalysisResult::Data &D);
-
-/// Prints \p R as one "<param/return id> -> <data>" line per entry, ordered by
-/// the param/return id so that the output is stable across runs.
+/// Prints \p R as one "<param/return id> -> <family id>" line per entry,
+/// ordered by the param/return id so that the output is stable across runs.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const VirtualMethodFamilyAnalysisResult &R);
 

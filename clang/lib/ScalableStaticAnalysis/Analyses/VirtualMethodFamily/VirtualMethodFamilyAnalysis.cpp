@@ -34,20 +34,6 @@ private:
   llvm::DenseMap<EntityId, EntityId> Roots;
 };
 
-// Keeps track of what method declared the given parameter or return value.
-struct Owners {
-  void recordOwner(EntityId Owner, const VirtualMethodSummary &S);
-  void recordOwner(EntityId E, EntityId Owner);
-
-  EntityId getOwnerOf(EntityId Id) const {
-    assert(Owners.count(Id));
-    return Owners.at(Id);
-  }
-
-private:
-  llvm::DenseMap<EntityId, EntityId> Owners;
-};
-
 class VirtualMethodFamilyAnalysis final
     : public SummaryAnalysis<VirtualMethodFamilyAnalysisResult,
                              VirtualMethodSummary> {
@@ -60,14 +46,13 @@ public:
   llvm::Error finalize() override;
 
 private:
-  /// Fill the \c Owners and \c Family maps.
+  /// Fill the \c Family map.
   void groupParamsAndReturnEntities();
 
   /// Make the param and return IDs share a family.
   void unionParamsAndReturnEntitiesInSummaries(const VirtualMethodSummary &LHS,
                                                const VirtualMethodSummary &RHS);
 
-  Owners Owners;
   MethodFamilyUnionFind Family;
   std::map<EntityId, const VirtualMethodSummary *> Data;
 };
@@ -99,21 +84,6 @@ void MethodFamilyUnionFind::unionSets(EntityId A, EntityId B) {
   Roots.insert_or_assign(RootB, RootA);
 }
 
-void Owners::recordOwner(EntityId Owner, const VirtualMethodSummary &S) {
-  for (EntityId P : S.ParamEntities)
-    recordOwner(P, Owner);
-  if (S.ReturnEntity.has_value())
-    recordOwner(S.ReturnEntity.value(), Owner);
-}
-
-void Owners::recordOwner(EntityId E, EntityId Owner) {
-  auto [Slot, Inserted] = Owners.try_emplace(E, Owner);
-  if (!Inserted) {
-    assert(Slot->second == Owner &&
-           "Only one Owner can be associated with an Entity");
-  }
-}
-
 void VirtualMethodFamilyAnalysis::unionParamsAndReturnEntitiesInSummaries(
     const VirtualMethodSummary &LHS, const VirtualMethodSummary &RHS) {
   assert(LHS.ParamEntities.size() == RHS.ParamEntities.size());
@@ -128,9 +98,7 @@ void VirtualMethodFamilyAnalysis::unionParamsAndReturnEntitiesInSummaries(
 }
 
 void VirtualMethodFamilyAnalysis::groupParamsAndReturnEntities() {
-  for (const auto &[CurrId, CurrSum] : Data) {
-    Owners.recordOwner(CurrId, *CurrSum);
-
+  for (const VirtualMethodSummary *CurrSum : llvm::make_second_range(Data)) {
     for (EntityId OverriddenMethodId : CurrSum->OverriddenMethods) {
       auto BaseSumIt = Data.find(OverriddenMethodId);
       assert(BaseSumIt != Data.end());
@@ -144,9 +112,8 @@ llvm::Error VirtualMethodFamilyAnalysis::finalize() {
   groupParamsAndReturnEntities();
 
   auto &R = getResult();
-  for (EntityId E : Family.keys()) {
-    R.RetAndParamData.insert({E, {Family.find(E), Owners.getOwnerOf(E)}});
-  }
+  for (EntityId E : Family.keys())
+    R.RetAndParamData.insert({E, Family.find(E)});
   return llvm::Error::success();
 }
 
@@ -159,12 +126,6 @@ static AnalysisRegistry::Add<VirtualMethodFamilyAnalysis>
 
 namespace clang::ssaf {
 
-llvm::raw_ostream &
-operator<<(llvm::raw_ostream &OS,
-           const VirtualMethodFamilyAnalysisResult::Data &D) {
-  return OS << "{family=" << D.FamilyId << ", owner=" << D.OwnerMethodId << "}";
-}
-
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const VirtualMethodFamilyAnalysisResult &R) {
   OS << "VirtualMethodFamilyAnalysisResult with " << R.RetAndParamData.size()
@@ -173,15 +134,15 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
     return OS << "{}";
 
   // DenseMap iteration order depends on hashing, so sort for stable output.
-  using Entry = std::pair<EntityId, VirtualMethodFamilyAnalysisResult::Data>;
+  using Entry = std::pair<EntityId, EntityId>;
   llvm::SmallVector<Entry> Entries(R.RetAndParamData.begin(),
                                    R.RetAndParamData.end());
   llvm::sort(Entries,
              [](const Entry &L, const Entry &R) { return L.first < R.first; });
 
   OS << "{\n";
-  for (const auto &[Id, D] : Entries)
-    OS << "  " << Id << " -> " << D << "\n";
+  for (const auto &[Id, FamilyId] : Entries)
+    OS << "  " << Id << " -> " << FamilyId << "\n";
   return OS << "}";
 }
 
