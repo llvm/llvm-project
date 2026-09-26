@@ -215,9 +215,8 @@ static bool isShortenableAtTheEnd(Instruction *I) {
 /// Returns true if the beginning of this instruction can be safely shortened
 /// in length.
 static bool isShortenableAtTheBeginning(Instruction *I) {
-  // FIXME: Handle only memset for now. Supporting memcpy/memmove should be
-  // easily done by offsetting the source address.
-  return isa<AnyMemSetInst>(I);
+  // FIXME: Add memmove if it's also safe to transform.
+  return isa<AnyMemSetInst, AnyMemCpyInst>(I);
 }
 
 static std::optional<TypeSize> getPointerSize(const Value *V,
@@ -705,6 +704,20 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
     adjustArgAttributes(DeadIntrinsic, 0, ToRemoveSize);
+
+    if (auto *MT = dyn_cast<AnyMemTransferInst>(DeadIntrinsic)) {
+      Value *OrigSrc = MT->getRawSource();
+      Instruction *NewSrcGEP = GetElementPtrInst::CreateInBounds(
+          Type::getInt8Ty(DeadIntrinsic->getContext()), OrigSrc, Indices, "",
+          DeadI->getIterator());
+      NewSrcGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
+      MT->setSource(NewSrcGEP);
+      Align NewSrcAlign =
+          commonAlignment(MT->getSourceAlign().valueOrOne(), ToRemoveSize);
+      MT->setSourceAlignment(NewSrcAlign);
+      adjustArgAttributes(DeadIntrinsic, 1, ToRemoveSize);
+    }
+    DeadIntrinsic->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
   // Update attached dbg.assign intrinsics. Assume 8-bit byte.

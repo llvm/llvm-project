@@ -130,7 +130,9 @@ define void @dse_strncpy_memcpy_chk_test2(ptr noalias %out, ptr noalias %in, i64
 
 define void @test_memcpy_intrinsic_and_memcpy_chk(ptr %A, ptr %B, ptr noalias %C) {
 ; CHECK-LABEL: @test_memcpy_intrinsic_and_memcpy_chk(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[A:%.*]], ptr [[B:%.*]], i64 48, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP1]], ptr align 1 [[TMP2]], i64 47, i1 false)
 ; CHECK-NEXT:    [[CALL:%.*]] = call ptr @__memcpy_chk(ptr [[A]], ptr [[C:%.*]], i64 1, i64 10)
 ; CHECK-NEXT:    ret void
 ;
