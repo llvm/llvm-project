@@ -60,6 +60,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::log10f16(10.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::log10p1f16(9.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::log2f16(2.0f16));
+  EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::log1pf16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::log2p1f16(1.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::logbf16(1.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::lgammaf16(1.0f16));

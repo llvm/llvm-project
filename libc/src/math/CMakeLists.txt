@@ -405,6 +405,7 @@ add_math_entrypoint_object(log10p1f16)
 
 add_math_entrypoint_object(log1p)
 add_math_entrypoint_object(log1pf)
+add_math_entrypoint_object(log1pf16)
 
 add_math_entrypoint_object(log2)
 add_math_entrypoint_object(log2f)
