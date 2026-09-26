@@ -24,10 +24,12 @@ __attribute__((target("avx512f"))) v16f call_ptr_l512(v16f x) {
   return fp(x);
 }
 
-// SYSV-LABEL: define dso_local <8 x float> @g256(
+// SYSV-LABEL: define dso_local void @g256(
+// SYSV: sret(<8 x float>) align 32
 // SYSV: byval(<8 x float>) align 32
 
-// SYSV-LABEL: define dso_local <16 x float> @g512(
+// SYSV-LABEL: define dso_local void @g512(
+// SYSV: sret(<16 x float>) align 64
 // SYSV: byval(<16 x float>) align 64
 
 // SYSV-LABEL: define dso_local <8 x float> @l256(<8 x float> noundef %x)
