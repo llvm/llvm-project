@@ -505,6 +505,13 @@ class VectorType;
 
     bool useFPRegsForHalfType() const override { return true; }
 
+    MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                      EVT VT) const override;
+
+    unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                           CallingConv::ID CC,
+                                           EVT VT) const override;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

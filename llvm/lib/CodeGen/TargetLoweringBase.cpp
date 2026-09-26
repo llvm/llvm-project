@@ -1536,8 +1536,8 @@ void TargetLoweringBase::computeRegisterProperties(
   // promote it to f32, because there are no bf16 library calls (except for
   // converting from f32 to bf16).
   if (!isTypeLegal(MVT::bf16)) {
-    NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::f32];
-    RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::f32];
+    NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::i16];
+    RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::i16];
     TransformToType[MVT::bf16] = MVT::f32;
     ValueTypeActions.setTypeAction(MVT::bf16, TypeSoftPromoteHalf);
   }

@@ -312,6 +312,72 @@ define i16 @bfloat_to_i16(bfloat %a) nounwind {
   ret i16 %1
 }
 
+define void @bfloat_to_i16_in_branch(bfloat %a, i1 %c, ptr %p) nounwind {
+; RV32I-ILP32-LABEL: bfloat_to_i16_in_branch:
+; RV32I-ILP32:       # %bb.0: # %entry
+; RV32I-ILP32-NEXT:    andi a1, a1, 1
+; RV32I-ILP32-NEXT:    beqz a1, .LBB6_2
+; RV32I-ILP32-NEXT:  # %bb.1: # %bitcast
+; RV32I-ILP32-NEXT:    sh a0, 0(a2)
+; RV32I-ILP32-NEXT:  .LBB6_2: # %exit
+; RV32I-ILP32-NEXT:    ret
+;
+; RV64I-LP64-LABEL: bfloat_to_i16_in_branch:
+; RV64I-LP64:       # %bb.0: # %entry
+; RV64I-LP64-NEXT:    andi a1, a1, 1
+; RV64I-LP64-NEXT:    beqz a1, .LBB6_2
+; RV64I-LP64-NEXT:  # %bb.1: # %bitcast
+; RV64I-LP64-NEXT:    sh a0, 0(a2)
+; RV64I-LP64-NEXT:  .LBB6_2: # %exit
+; RV64I-LP64-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: bfloat_to_i16_in_branch:
+; RV32ID-ILP32:       # %bb.0: # %entry
+; RV32ID-ILP32-NEXT:    andi a1, a1, 1
+; RV32ID-ILP32-NEXT:    beqz a1, .LBB6_2
+; RV32ID-ILP32-NEXT:  # %bb.1: # %bitcast
+; RV32ID-ILP32-NEXT:    sh a0, 0(a2)
+; RV32ID-ILP32-NEXT:  .LBB6_2: # %exit
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: bfloat_to_i16_in_branch:
+; RV64ID-LP64:       # %bb.0: # %entry
+; RV64ID-LP64-NEXT:    andi a1, a1, 1
+; RV64ID-LP64-NEXT:    beqz a1, .LBB6_2
+; RV64ID-LP64-NEXT:  # %bb.1: # %bitcast
+; RV64ID-LP64-NEXT:    sh a0, 0(a2)
+; RV64ID-LP64-NEXT:  .LBB6_2: # %exit
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-ILP32D-LABEL: bfloat_to_i16_in_branch:
+; RV32ID-ILP32D:       # %bb.0: # %entry
+; RV32ID-ILP32D-NEXT:    andi a0, a0, 1
+; RV32ID-ILP32D-NEXT:    beqz a0, .LBB6_2
+; RV32ID-ILP32D-NEXT:  # %bb.1: # %bitcast
+; RV32ID-ILP32D-NEXT:    fmv.x.w a0, fa0
+; RV32ID-ILP32D-NEXT:    sh a0, 0(a1)
+; RV32ID-ILP32D-NEXT:  .LBB6_2: # %exit
+; RV32ID-ILP32D-NEXT:    ret
+;
+; RV64ID-LP64D-LABEL: bfloat_to_i16_in_branch:
+; RV64ID-LP64D:       # %bb.0: # %entry
+; RV64ID-LP64D-NEXT:    andi a0, a0, 1
+; RV64ID-LP64D-NEXT:    beqz a0, .LBB6_2
+; RV64ID-LP64D-NEXT:  # %bb.1: # %bitcast
+; RV64ID-LP64D-NEXT:    fmv.x.w a0, fa0
+; RV64ID-LP64D-NEXT:    sh a0, 0(a1)
+; RV64ID-LP64D-NEXT:  .LBB6_2: # %exit
+; RV64ID-LP64D-NEXT:    ret
+entry:
+  br i1 %c, label %bitcast, label %exit
+bitcast:
+  %b = bitcast bfloat %a to i16
+  store i16 %b, ptr %p
+  br label %exit
+exit:
+  ret void
+}
+
 define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV32I-ILP32-LABEL: bfloat_add:
 ; RV32I-ILP32:       # %bb.0:

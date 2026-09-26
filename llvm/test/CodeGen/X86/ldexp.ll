@@ -65,7 +65,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ;
 ; WIN32-LABEL: ldexp_bf16:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    subl $20, %esp
+; WIN32-NEXT:    subl $16, %esp
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fld1
@@ -75,11 +75,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstps (%esp)
 ; WIN32-NEXT:    calll ___truncsfbf2
-; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
-; WIN32-NEXT:    shll $16, %eax
-; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $20, %esp
+; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl
   %zext = zext i8 %x to i32
   %ldexp = call bfloat @llvm.ldexp.bf16.i32(bfloat 1.000000e+00, i32 %zext)
