@@ -33,13 +33,17 @@ int main(int argc, char** argv) {
   // A transformation/reduction that does miniscule work per element
   struct cheap {
     double operator()(double x) const { return -x + 0.25; }
-    double operator()(double x, double y) const { return x / 2. * 2. / 2. * 2. + y / 2. * 2. / 2. * 2.; }
+    double operator()(double x, double y) const {
+      // (compilers aren't allowed to optimize away the FP divisions and multiplications without fast-math)
+      return x / 2. * 2. / 2. * 2. + y / 2. * 2. / 2. * 2.;
+    }
   };
 
   // A transformation/reduction that does significant work per element
   struct expensive {
     double operator()(double x) const { return (-x + 0.25) * (x + 10.); }
     double operator()(double x, double y) const {
+      // (compilers aren't allowed to optimize away the FP divisions and multiplications without fast-math)
       return x / 2. * 2. / 3. * 3. / 4. * 4. / 5. * 5. + y / 2. * 2. / 2. * 2. / 4. * 4. / 5. * 5.;
     }
   };

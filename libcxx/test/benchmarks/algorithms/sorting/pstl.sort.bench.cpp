@@ -11,6 +11,7 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -28,18 +29,24 @@ int main(int argc, char** argv) {
     benchmark::RegisterBenchmark(
         name,
         [&policy, generate_data](auto& st) mutable {
-          std::size_t size      = st.range(0);
-          std::vector<int> data = generate_data(size);
-          std::vector<int> c    = data;
+          constexpr std::size_t BatchSize = 32;
+          std::size_t size                = st.range(0);
+          std::vector<int> data           = generate_data(size);
+          std::array<std::vector<int>, BatchSize> c;
+          std::fill_n(c.begin(), BatchSize, data);
 
-          for ([[maybe_unused]] auto _ : st) {
-            benchmark::DoNotOptimize(c);
-            std::sort(policy, c.begin(), c.end());
-            benchmark::DoNotOptimize(c);
+          while (st.KeepRunningBatch(BatchSize)) {
+            for (std::size_t i = 0; i != BatchSize; ++i) {
+              benchmark::DoNotOptimize(c[i]);
+              std::sort(policy, c[i].begin(), c[i].end());
+              benchmark::DoNotOptimize(c[i]);
+            }
 
             // Reset c to its original unsorted state
             st.PauseTiming();
-            std::copy(data.begin(), data.end(), c.begin());
+            for (std::size_t i = 0; i != BatchSize; ++i) {
+              std::copy(data.begin(), data.end(), c[i].begin());
+            }
             st.ResumeTiming();
           }
         })
