@@ -6623,13 +6623,13 @@ def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexAddOp and ComplexSubOp
+// Complex binary operations
 //===----------------------------------------------------------------------===//
 
 class CIR_ComplexBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
-  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins CIR_ComplexOfIntType:$lhs, CIR_ComplexOfIntType:$rhs);
+  let results = (outs CIR_ComplexOfIntType:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($result)) attr-dict
@@ -6645,7 +6645,7 @@ def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
     Example:
 
     ```
-    %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
+    %2 = cir.complex.add %0, %1 : !cir.complex<s32i>
     ```
   }];
 }
@@ -6659,13 +6659,83 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
     Example:
 
     ```
-    %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
+    %2 = cir.complex.sub %0, %1 : !cir.complex<s32i>
+    ```
+  }];
+}
+
+def CIR_ComplexMulOp : CIR_ComplexBinOp<"complex.mul"> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.mul` operation takes two complex numbers and returns
+    their product.
+
+    Example:
+
+    ```
+    %2 = cir.complex.mul %0, %1 : !cir.complex<s32i>
+    ```
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.div` operation takes two complex numbers and returns
+    their quotient.
+
+    Example:
+
+    ```
+    %2 = cir.complex.div %0, %1 : !cir.complex<s32i>
+    ```
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+class CIR_ComplexFPBinOp<string mnemonic>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins CIR_ComplexOfFloatType:$lhs, CIR_ComplexOfFloatType:$rhs);
+  let results = (outs CIR_ComplexOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexFAddOp : CIR_ComplexFPBinOp<"complex.fadd"> {
+  let summary = "Complex addition";
+  let description = [{
+    The `cir.complex.fadd` operation takes two complex numbers and returns
+    their sum.
+
+    Example:
+
+    ```
+    %2 = cir.complex.fadd %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+}
+
+def CIR_ComplexFSubOp : CIR_ComplexFPBinOp<"complex.fsub"> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.fsub` operation takes two complex numbers and returns
+    their difference.
+
+    Example:
+
+    ```
+    %2 = cir.complex.fsub %0, %1 : !cir.complex<!cir.float>
     ```
   }];
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp and ComplexDivOp
+// Complex binary operations with range
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32Enum<
@@ -6682,12 +6752,12 @@ def CIR_ComplexRangeKindAttr
 class CIR_ComplexRangeBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins
-    CIR_ComplexType:$lhs,
-    CIR_ComplexType:$rhs,
+    CIR_ComplexOfFloatType:$lhs,
+    CIR_ComplexOfFloatType:$rhs,
     CIR_ComplexRangeKindAttr:$range
   );
 
-  let results = (outs CIR_ComplexType:$result);
+  let results = (outs CIR_ComplexOfFloatType:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `range` `(` enum($range) `)` `:` qualified(type($result))
@@ -6697,16 +6767,15 @@ class CIR_ComplexRangeBinOp<string mnemonic>
   let hasLLVMLowering = false;
 }
 
-def CIR_ComplexMulOp : CIR_ComplexRangeBinOp<"complex.mul"> {
+def CIR_ComplexFMulOp : CIR_ComplexRangeBinOp<"complex.fmul"> {
   let summary = "Complex multiplication";
   let description = [{
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    For complex types with floating-point components, the `range` attribute
-    specifies the algorithm to be used when the operation is lowered to
-    the LLVM dialect. For multiplication, 'improved', 'promoted', and 'basic'
-    are all handled equivalently, producing the algebraic formula with no
+    The `range` attribute specifies the algorithm to be used when the operation 
+    is lowered to the LLVM dialect. For multiplication, 'improved', 'promoted',
+    and 'basic' are all handled equivalently, producing the algebraic formula with no
     special handling for NaN value. If 'full' is used, a runtime-library
     function is called if one of the intermediate calculations produced
     a NaN value.
@@ -6720,16 +6789,15 @@ def CIR_ComplexMulOp : CIR_ComplexRangeBinOp<"complex.mul"> {
   }];
 }
 
-def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
+def CIR_ComplexFDivOp : CIR_ComplexRangeBinOp<"complex.fdiv"> {
   let summary = "Complex division";
   let description = [{
     The `cir.complex.div` operation takes two complex numbers and returns
     their quotient.
 
-    For complex types with floating-point components, the `range` attribute
-    specifies the algorithm to be used when the operation is lowered to
-    the LLVM dialect. For division, 'improved' produces Smith's algorithms for
-    Complex division with no additional handling for NaN values. If 'promoted'
+    The `range` attribute specifies the algorithm to be used when the operation 
+    is lowered to the LLVM dialect. For division, 'improved' produces Smith's algorithms
+    for Complex division with no additional handling for NaN values. If 'promoted'
     is used, the values are promoted to a higher precision type, if possible,
     and the calculation is performed using the algebraic formula, with
     no additional handling for NaN values. We fall back on Smith's algorithm

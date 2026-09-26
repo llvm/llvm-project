@@ -58,7 +58,7 @@ void foo2() {
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[ADD:.*]] = cir.complex.add %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
+// CIR: %[[ADD:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
@@ -104,9 +104,9 @@ void foo3() {
 // CIR: %[[RESULT:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[ADD_A_B:.*]] = cir.complex.add %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
+// CIR: %[[ADD_A_B:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: %[[TMP_C:.*]] = cir.load{{.*}} %[[C_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[ADD_A_B_C:.*]] = cir.complex.add %[[ADD_A_B]], %[[TMP_C]] : !cir.complex<!cir.float>
+// CIR: %[[ADD_A_B_C:.*]] = cir.complex.fadd %[[ADD_A_B]], %[[TMP_C]] : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[ADD_A_B_C]], %[[RESULT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -214,7 +214,7 @@ void foo5() {
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[SUB:.*]] = cir.complex.sub %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
+// CIR: %[[SUB:.*]] = cir.complex.fsub %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
@@ -260,9 +260,9 @@ void foo6() {
 // CIR: %[[RESULT:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[SUB_A_B:.*]] = cir.complex.sub %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
+// CIR: %[[SUB_A_B:.*]] = cir.complex.fsub %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: %[[TMP_C:.*]] = cir.load{{.*}} %[[C_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[SUB_A_B_C:.*]] = cir.complex.sub %[[SUB_A_B]], %[[TMP_C]] : !cir.complex<!cir.float>
+// CIR: %[[SUB_A_B_C:.*]] = cir.complex.fsub %[[SUB_A_B]], %[[TMP_C]] : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[SUB_A_B_C]], %[[RESULT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
