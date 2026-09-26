@@ -5,6 +5,8 @@
 // 0-result (void) calls in addition to the single-result case.
 
 !s32i = !cir.int<s, 32>
+!f32 = !cir.float
+!v4f32 = !cir.vector<4 x !f32>
 
 module {
   // 0-result, 0-operand.
@@ -23,5 +25,22 @@ module {
   cir.func @void_with_operand(%arg0: !s32i) {
     cir.call_llvm_intrinsic "amdgcn.s.sleep" %arg0 : (!s32i) -> ()
     cir.return
+  }
+
+  // Fast-math flags are preserved on the lowered LLVM intrinsic call.
+  // CHECK-LABEL: llvm.func @fastmath_flags
+  // CHECK:         llvm.call_intrinsic "llvm.vector.reduce.fadd"(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<reassoc>} : (f32, vector<4xf32>) -> f32
+  // CHECK:         llvm.return
+  cir.func @fastmath_flags(%arg0: !f32, %arg1: !v4f32) -> !f32 {
+    %0 = cir.call_llvm_intrinsic "vector.reduce.fadd" %arg0, %arg1 : (!f32, !v4f32) -> !f32 {fastmath_flags = #cir.fastmath<reassoc>}
+    cir.return %0 : !f32
+  }
+
+  // CHECK-LABEL: llvm.func @fastmath_fast_group
+  // CHECK:         llvm.call_intrinsic "llvm.vector.reduce.fadd"(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<fast>} : (f32, vector<4xf32>) -> f32
+  // CHECK:         llvm.return
+  cir.func @fastmath_fast_group(%arg0: !f32, %arg1: !v4f32) -> !f32 {
+    %0 = cir.call_llvm_intrinsic "vector.reduce.fadd" %arg0, %arg1 : (!f32, !v4f32) -> !f32 {fastmath_flags = #cir.fastmath<fast>}
+    cir.return %0 : !f32
   }
 }
