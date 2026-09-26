@@ -245,6 +245,16 @@ protected:
   }
 
 private:
+  std::string GetSeparator(bool use_color) {
+    const Debugger &debugger = GetDebugger();
+    return ansi::FormatAnsiTerminalCodes(debugger.GetDividerAnsiPrefix(),
+                                         use_color) +
+           std::string(std::min<uint64_t>(debugger.GetTerminalWidth(), 80),
+                       '-') +
+           ansi::FormatAnsiTerminalCodes(debugger.GetDividerAnsiSuffix(),
+                                         use_color);
+  }
+
   std::vector<std::string>
   GetLanguagesForExtension(const std::vector<size_t> &indices) {
     std::vector<std::string> languages;
@@ -310,27 +320,27 @@ private:
       CommandReturnObject &result) {
     Stream &s = result.GetOutputStream();
     const bool use_color = s.AsRawOstream().colors_enabled();
+    const Debugger &debugger = GetDebugger();
     auto ansi_code = [use_color](llvm::StringRef code) {
       return ansi::FormatAnsiTerminalCodes(code, use_color);
     };
-    const std::string label_color = ansi_code("${ansi.fg.green}${ansi.bold}");
-    const std::string name_color = ansi_code("${ansi.fg.cyan}${ansi.bold}");
-    const std::string sep_color = ansi_code("${ansi.faint}");
-    const std::string reset = ansi_code("${ansi.normal}");
-    const std::string separator(
-        std::min<uint64_t>(GetDebugger().GetTerminalWidth(), 80), '-');
+    const std::string label_prefix = ansi_code(debugger.GetLabelAnsiPrefix());
+    const std::string label_suffix = ansi_code(debugger.GetLabelAnsiSuffix());
+    const std::string title_prefix = ansi_code(debugger.GetTitleAnsiPrefix());
+    const std::string title_suffix = ansi_code(debugger.GetTitleAnsiSuffix());
+    const std::string separator = GetSeparator(use_color);
 
     s.PutCString("Available scripted extension templates:");
 
     auto print_field = [&](llvm::StringRef key, llvm::StringRef value,
-                           const std::string &value_color = std::string()) {
+                           bool is_title = false) {
       if (value.empty())
         return;
       s.IndentMore();
       s.Indent();
-      s << label_color << key << ": " << reset;
-      if (!value_color.empty())
-        s << value_color << value << reset;
+      s << label_prefix << key << ": " << label_suffix;
+      if (is_title)
+        s << title_prefix << value << title_suffix;
       else
         s << value;
       s << '\n';
@@ -346,7 +356,7 @@ private:
       num_listed_interface++;
 
       s.EOL();
-      s << sep_color << separator << reset;
+      s << separator;
       s.EOL();
 
       llvm::StringRef desc =
@@ -356,7 +366,7 @@ private:
           PluginManager::GetScriptedInterfaceUsagesAtIndex(
               extension_pair.second[0]);
 
-      print_field("Name", extension_pair.first(), name_color);
+      print_field("Name", extension_pair.first(), /*is_title=*/true);
       print_field("Description", desc);
       print_field("Language", llvm::join(languages, ""));
       usages.Dump(s, ScriptedInterfaceUsages::UsageKind::API, use_color);
