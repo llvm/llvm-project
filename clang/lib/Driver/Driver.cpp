@@ -5938,7 +5938,7 @@ void Driver::generatePrefixedToolNames(
     StringRef Tool, const ToolChain &TC,
     SmallVectorImpl<std::string> &Names) const {
   // FIXME: Needs a better variable than TargetTriple
-  Names.emplace_back((TargetTriple + "-" + Tool).str());
+  Names.emplace_back((Twine(TargetTriple) + "-" + Tool).str());
   Names.emplace_back(Tool);
 }
 
@@ -5962,7 +5962,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
       if (ScanDirForExecutable(P, Name))
         return std::string(P);
     } else {
-      SmallString<128> P((PrefixDir + Name).str());
+      SmallString<128> P((Twine(PrefixDir) + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
         return std::string(P);
     }

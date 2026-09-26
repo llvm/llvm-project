@@ -24,10 +24,10 @@ namespace targets {
 
 // The x86-32 builtins are a subset and prefix of the x86-64 builtins.
 static constexpr int NumX86Builtins =
-    X86::LastX86CommonBuiltin - Builtin::FirstTSBuiltin + 1;
+    llvm::to_underlying(X86::LastX86CommonBuiltin) - Builtin::FirstTSBuiltin + 1;
 static constexpr int NumX86_64Builtins =
-    X86::LastTSBuiltin - X86::FirstX86_64Builtin;
-static constexpr int NumBuiltins = X86::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(X86::LastTSBuiltin) - X86::FirstX86_64Builtin;
+static constexpr int NumBuiltins = llvm::to_underlying(X86::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 static_assert(NumBuiltins == (NumX86Builtins + NumX86_64Builtins));
 
 namespace X86 {

@@ -22,9 +22,9 @@ using namespace clang;
 using namespace clang::targets;
 
 static constexpr int NumBuiltins =
-    clang::SystemZ::LastSystemZBuiltin - Builtin::FirstTSBuiltin + 1;
+    llvm::to_underlying(clang::SystemZ::LastSystemZBuiltin) - Builtin::FirstTSBuiltin + 1;
 static constexpr int NumBuiltinsZOS =
-    clang::SystemZ::LastTSBuiltin - clang::SystemZ::LastSystemZBuiltin - 1;
+    llvm::to_underlying(clang::SystemZ::LastTSBuiltin) - clang::SystemZ::LastSystemZBuiltin - 1;
 
 #define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsSystemZ.inc"

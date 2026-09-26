@@ -480,7 +480,8 @@ void collectBuiltins(const Record *BuiltinRecord,
     for (StringRef Spelling :
          BuiltinRecord->getValueAsListOfStrings("Spellings")) {
       auto FullSpelling =
-          (Templates.IsPrefix ? Affix + Spelling : Spelling + Affix).str();
+          (Templates.IsPrefix ? Twine(Affix) + Spelling : Twine(Spelling) + Affix)
+              .str();
       BuiltinType BT = BuiltinType::Builtin;
       if (BuiltinRecord->isSubClassOf("AtomicBuiltin")) {
         BT = BuiltinType::AtomicBuiltin;

@@ -87,7 +87,7 @@ public:
                                     : "")
                                    .str();
       reportPiece(WarnID, PD->getLocation().asLocation(),
-                  (PD->getShortDescription() + WarningMsg).str(),
+                  (Twine(PD->getShortDescription()) + WarningMsg).str(),
                   PD->path.back()->getRanges(), PD->path.back()->getFixits());
 
       // First, add extra notes, even if paths should not be included.

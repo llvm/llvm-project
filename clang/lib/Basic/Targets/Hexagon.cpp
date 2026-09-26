@@ -220,7 +220,7 @@ ArrayRef<TargetInfo::GCCRegAlias> HexagonTargetInfo::getGCCRegAliases() const {
 }
 
 static constexpr int NumBuiltins =
-    clang::Hexagon::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(clang::Hexagon::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 
 #define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsHexagon.inc"
