@@ -4295,10 +4295,6 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   llvm::APInt ArySize(ArySizeIn);
   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
 
-  // The type stores only the CVR bits of the index qualifiers, so key on
-  // those.
-  IndexTypeQuals &= Qualifiers::CVRMask;
-
   llvm::FoldingSetNodeID ID;
   ConstantArrayType::Profile(ID, *this, EltTy, ArySize.getZExtValue(), SizeExpr,
                              ASM, IndexTypeQuals);
