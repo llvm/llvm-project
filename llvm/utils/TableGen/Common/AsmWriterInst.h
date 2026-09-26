@@ -16,6 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 #define LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
 
@@ -74,7 +75,9 @@ struct AsmWriterOperand {
   }
 
   /// getCode - Return the code that prints this operand.
-  std::string getCode(bool PassSubtarget) const;
+  /// Receiver, if non-empty, is prepended to member-function calls (e.g.
+  /// "P->" turns "printOperand(...)" into "P->printOperand(...)").
+  std::string getCode(bool PassSubtarget, StringRef Receiver = "") const;
 };
 
 class AsmWriterInst {

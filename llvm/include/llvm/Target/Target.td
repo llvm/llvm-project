@@ -2060,6 +2060,13 @@ class AsmWriter {
   // will specify which alternative to use. For example "{x|y|z}" with Variant
   // == 1, will expand to "y".
   int Variant = 0;
+
+  // UseFunctionPointerTable - If set to 1, emit a function-pointer table
+  // instead of a switch statement for instructions that overflow the 64-bit
+  // table-driven printer.  This keeps printInstruction() small, avoiding
+  // MSVC C1001/C1053 ICEs and R_RISCV_JAL relocation-range overflows on
+  // targets with large instruction sets.
+  bit UseFunctionPointerTable = 0;
 }
 def DefaultAsmWriter : AsmWriter;
 
