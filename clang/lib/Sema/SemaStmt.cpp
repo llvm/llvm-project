@@ -430,6 +430,27 @@ void Sema::ActOnFinishOfCompoundStmt() {
   PopCompoundScope();
 }
 
+// Returns the given statement as if its labels and attributes were
+// stripped, if any.
+static Stmt *GetInnermostStatement(Stmt *Outer) {
+  if (isa<LabelStmt>(Outer))
+    Outer = cast<LabelStmt>(Outer)->getInnermostLabeledStmt();
+
+  if (isa<AttributedStmt>(Outer))
+    Outer = cast<AttributedStmt>(Outer)->getSubStmt();
+
+  return Outer;
+}
+
+// Diagnose if the given statement is a redundant _Defer statement.
+static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
+  Stmt *Inner = GetInnermostStatement(Body);
+
+  if (isa<DeferStmt>(Inner))
+    S.Diag(Inner->getBeginLoc(), diag::warn_redundant_defer)
+        << Inner->getSourceRange();
+}
+
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
   return getCurFunction()->CompoundScopes.back();
 }
@@ -469,6 +490,21 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
     for (unsigned i = 0; i != NumElts - 1; ++i)
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
+
+  // Find defer statements that immediately precede a `break`/`continue`
+  // or a plain `return` statement.
+  if (NumElts > 1) {
+    for (unsigned i = 0; i != NumElts - 1; ++i) {
+      Stmt *Inner = GetInnermostStatement(Elts[i + 1]);
+      if (isa<BreakStmt, ContinueStmt>(Inner) ||
+          (isa<ReturnStmt>(Inner) && !cast<ReturnStmt>(Inner)->getRetValue()))
+        CheckRedundantDeferStmt(*this, Elts[i]);
+    }
+  }
+
+  // Check for defer as last statement.
+  if (NumElts > 0)
+    CheckRedundantDeferStmt(*this, Elts[NumElts - 1]);
 
   // Calculate difference between FP options in this compound statement and in
   // the enclosing one. If this is a function body, take the difference against
@@ -996,6 +1032,10 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
 
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
+
+  CheckRedundantDeferStmt(*this, thenStmt);
+  if (elseStmt)
+    CheckRedundantDeferStmt(*this, elseStmt);
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
@@ -1837,6 +1877,8 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
 
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
+  else
+    CheckRedundantDeferStmt(*this, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2328,6 +2370,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
   Expr *Third  = third.release().getAs<Expr>();
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
+  else
+    CheckRedundantDeferStmt(*this, Body);
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
@@ -4033,11 +4077,15 @@ void Sema::ActOnDeferStmtError([[maybe_unused]] Scope *CurScope) {
   CurrentDefer.pop_back();
 }
 
-StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
-                                     [[maybe_unused]] Scope *CurScope) {
+StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope) {
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
+
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+
+  // Check for superfluous nested defer.
+  CheckRedundantDeferStmt(*this, Body);
+
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
 }
