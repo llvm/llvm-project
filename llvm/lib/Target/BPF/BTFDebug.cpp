@@ -566,7 +566,8 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     struct BTF::BTFMember BTFMember;
 
     switch (Element->getTag()) {
-    case dwarf::DW_TAG_member: {
+    case dwarf::DW_TAG_member:
+    case dwarf::DW_TAG_inheritance: {
       const auto *DDTy = cast<DIDerivedType>(Element);
 
       BTFMember.NameOff = BDebug.addString(DDTy->getName());
@@ -976,14 +977,7 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
-  DINodeArray DIElements = CTy->getElements();
-  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
-  // Structure elements must have nondecreasing offsets in BTF. Preserve DI
-  // order for union and variant-part records.
-  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
-    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
-      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
-    });
+  SmallVector<const DINode *, 8> Elements = getBTFRecordElements(CTy);
   uint32_t VLen = Elements.size();
   // Variant parts might have a discriminator. LLVM DI doesn't consider it as
   // an element and instead keeps it as a separate reference. But we represent
@@ -1022,7 +1016,8 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   int FieldNo = 0;
   for (const auto *Element : Elements) {
     switch (Element->getTag()) {
-    case dwarf::DW_TAG_member: {
+    case dwarf::DW_TAG_member:
+    case dwarf::DW_TAG_inheritance: {
       const auto Elem = cast<DIDerivedType>(Element);
       visitTypeEntry(Elem);
       processDeclAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
@@ -1205,14 +1200,14 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
              Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
-  } else if (Tag != dwarf::DW_TAG_member) {
+  } else if (Tag != dwarf::DW_TAG_member && Tag != dwarf::DW_TAG_inheritance) {
     return;
   }
 
-  // Visit base type of pointer, typedef, const, volatile, restrict or
-  // struct/union member.
+  // Visit base type of pointer, typedef, const, volatile, restrict, or
+  // struct/union member or base class.
   uint32_t TempTypeId = 0;
-  if (Tag == dwarf::DW_TAG_member)
+  if (Tag == dwarf::DW_TAG_member || Tag == dwarf::DW_TAG_inheritance)
     visitTypeEntry(DTy->getBaseType(), TempTypeId, true, false);
   else
     visitTypeEntry(DTy->getBaseType(), TempTypeId, CheckPointer, SeenPointer);
@@ -1328,7 +1323,11 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     const auto *CTy = cast<DICompositeType>(Ty);
     const DINodeArray Elements = CTy->getElements();
     for (const auto *Element : Elements) {
-      const auto *MemberType = cast<DIDerivedType>(Element);
+      // Static data members, methods and other elements of a C++ record are
+      // not part of the map definition.
+      const auto *MemberType = dyn_cast<DIDerivedType>(Element);
+      if (!MemberType || !isBTFRecordElement(Element))
+        continue;
       const DIType *MemberBaseType = MemberType->getBaseType();
       // If the member is a composite type, that may indicate the currently
       // visited composite type is a wrapper, and the member represents the
