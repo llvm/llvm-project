@@ -529,11 +529,11 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v1, v0, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[4:5] offset:8
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[4:5] offset:8
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v3, |v1.l|
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
