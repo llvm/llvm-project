@@ -193,6 +193,7 @@ set(gpu_sources
   type-info.cpp
   utf.cpp
   work-queue.cpp
+  stl-overrides.cpp
   complex-powi.cpp
   reduce.cpp
   reduction.cpp

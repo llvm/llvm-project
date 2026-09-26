@@ -300,6 +300,8 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
           $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
         )
+      # descriptor-io.cpp is not part of the GPU build.
+      target_compile_definitions(${tgtname} PRIVATE RT_CUDA_THIN_IO=1)
     elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
