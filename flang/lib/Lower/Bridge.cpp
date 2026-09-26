@@ -878,13 +878,13 @@ public:
     return owningProc.labelEvaluationMap.lookup(label);
   }
 
-  fir::ExtendedValue
-  genExprAddr(const Fortran::lower::SomeExpr &expr,
-              Fortran::lower::StatementContext &context,
-              mlir::Location *locPtr = nullptr) override final {
+  fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
+                                 Fortran::lower::StatementContext &context,
+                                 mlir::Location *locPtr = nullptr,
+                                 bool allowCoarray = false) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    if (coarrayRef.has_value())
+    if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprAddr of coarray reference.");
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
                                                 context);
@@ -902,11 +902,12 @@ public:
                                               context);
   }
 
-  fir::ExtendedValue
-  genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
-             Fortran::lower::StatementContext &stmtCtx) override final {
+  fir::ExtendedValue genExprBox(mlir::Location loc,
+                                const Fortran::lower::SomeExpr &expr,
+                                Fortran::lower::StatementContext &stmtCtx,
+                                bool allowCoarray = false) override final {
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    if (coarrayRef.has_value())
+    if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprBox of coarray reference.");
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
                                             stmtCtx);
