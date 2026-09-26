@@ -179,7 +179,7 @@ define amdgpu_kernel void @kernel_calls_extern() {
 
 define amdgpu_kernel void @kernel_calls_extern_marked_callsite() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_extern_marked_callsite() {
-; CHECK-NEXT:    call void @unknown() #[[ATTR35:[0-9]+]]
+; CHECK-NEXT:    call void @unknown() #[[ATTR36:[0-9]+]]
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -203,7 +203,7 @@ define amdgpu_kernel void @kernel_calls_indirect(ptr %indirect) {
 define amdgpu_kernel void @kernel_calls_indirect_marked_callsite(ptr %indirect) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_indirect_marked_callsite(
 ; CHECK-SAME: ptr [[INDIRECT:%.*]]) {
-; CHECK-NEXT:    call void [[INDIRECT]]() #[[ATTR35]]
+; CHECK-NEXT:    call void [[INDIRECT]]() #[[ATTR36]]
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -1051,10 +1051,21 @@ define amdgpu_kernel void @kernel_sanitize_thread() sanitize_thread {
   ret void
 }
 
+define amdgpu_kernel void @kernel_sanitize_concurrency() sanitize_concurrency {
+; CHECK: Function Attrs: sanitize_concurrency
+; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_concurrency(
+; CHECK-SAME: ) #[[ATTR27:[0-9]+]] {
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @use_most()
+  ret void
+}
+
 define amdgpu_kernel void @kernel_sanitize_hwaddress() sanitize_hwaddress {
 ; CHECK: Function Attrs: sanitize_hwaddress
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_hwaddress(
-; CHECK-SAME: ) #[[ATTR27:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR28:[0-9]+]] {
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -1069,7 +1080,7 @@ define amdgpu_kernel void @kernel_sanitize_hwaddress() sanitize_hwaddress {
 define amdgpu_kernel void @kernel_sanitize_address_preannotated() #2 {
 ; CHECK: Function Attrs: sanitize_address
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_sanitize_address_preannotated(
-; CHECK-SAME: ) #[[ATTR28:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR29:[0-9]+]] {
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -1092,7 +1103,7 @@ define void @sanitized_callee() sanitize_address {
 
 define amdgpu_kernel void @kernel_calls_sanitized_callee() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_sanitized_callee(
-; CHECK-SAME: ) #[[ATTR29:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR30:[0-9]+]] {
 ; CHECK-NEXT:    call void @sanitized_callee()
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -1140,15 +1151,16 @@ attributes #2 = { sanitize_address "amdgpu-agpr-alloc"="0" }
 ; CHECK: attributes #[[ATTR24]] = { sanitize_address "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR25]] = { sanitize_memory "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR26]] = { sanitize_thread "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR27]] = { sanitize_hwaddress "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR28]] = { sanitize_address "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR29]] = { "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR30:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR31:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR32:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #[[ATTR33:[0-9]+]] = { nounwind }
-; CHECK: attributes #[[ATTR34:[0-9]+]] = { nocallback nounwind }
-; CHECK: attributes #[[ATTR35]] = { "amdgpu-agpr-alloc"="0" }
+; CHECK: attributes #[[ATTR27]] = { sanitize_concurrency "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR28]] = { sanitize_hwaddress "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR29]] = { sanitize_address "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR30]] = { "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR31:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR32:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR33:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #[[ATTR34:[0-9]+]] = { nounwind }
+; CHECK: attributes #[[ATTR35:[0-9]+]] = { nocallback nounwind }
+; CHECK: attributes #[[ATTR36]] = { "amdgpu-agpr-alloc"="0" }
 ;.
 ; CHECK: [[META0]] = !{!"a55"}
 ; CHECK: [[META1]] = !{!"v55"}
