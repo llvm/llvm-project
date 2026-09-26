@@ -1953,20 +1953,21 @@ SourceRange ExplicitInstantiationDecl::getSourceRange() const {
   return SourceRange(Begin, getEndLoc());
 }
 
-CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+CXXExpansionStmtDecl::CXXExpansionStmtDecl(ASTContext &C, DeclContext *DC,
+                                           SourceLocation Loc,
                                            NonTypeTemplateParmDecl *NTTP)
-    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
+    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(C, CXXExpansionStmt),
       IndexNTTP(NTTP) {}
 
 CXXExpansionStmtDecl *
 CXXExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation Loc,
                              NonTypeTemplateParmDecl *NTTP) {
-  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, NTTP);
+  return new (C, DC) CXXExpansionStmtDecl(C, DC, Loc, NTTP);
 }
 CXXExpansionStmtDecl *
 CXXExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID)
-      CXXExpansionStmtDecl(/*DC=*/nullptr, SourceLocation(), /*NTTP=*/nullptr);
+  return new (C, ID) CXXExpansionStmtDecl(C, /*DC=*/nullptr, SourceLocation(),
+                                          /*NTTP=*/nullptr);
 }
 
 SourceRange CXXExpansionStmtDecl::getSourceRange() const {

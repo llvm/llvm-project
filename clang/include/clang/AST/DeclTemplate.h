@@ -3433,7 +3433,7 @@ class CXXExpansionStmtDecl : public Decl, public DeclContext {
   NonTypeTemplateParmDecl *IndexNTTP = nullptr;
   CXXExpansionStmtInstantiation *Instantiations = nullptr;
 
-  CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+  CXXExpansionStmtDecl(ASTContext &C, DeclContext *DC, SourceLocation Loc,
                        NonTypeTemplateParmDecl *NTTP);
 
 public:

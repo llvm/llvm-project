@@ -3299,10 +3299,11 @@ bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {
          getConversionType()->isBlockPointerType();
 }
 
-LinkageSpecDecl::LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
+LinkageSpecDecl::LinkageSpecDecl(ASTContext &C, DeclContext *DC,
+                                 SourceLocation ExternLoc,
                                  SourceLocation LangLoc,
                                  LinkageSpecLanguageIDs lang, bool HasBraces)
-    : Decl(LinkageSpec, DC, LangLoc), DeclContext(LinkageSpec),
+    : Decl(LinkageSpec, DC, LangLoc), DeclContext(C, LinkageSpec),
       ExternLoc(ExternLoc), RBraceLoc(SourceLocation()) {
   setLanguage(lang);
   LinkageSpecDeclBits.HasBraces = HasBraces;
@@ -3315,13 +3316,14 @@ LinkageSpecDecl *LinkageSpecDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation LangLoc,
                                          LinkageSpecLanguageIDs Lang,
                                          bool HasBraces) {
-  return new (C, DC) LinkageSpecDecl(DC, ExternLoc, LangLoc, Lang, HasBraces);
+  return new (C, DC)
+      LinkageSpecDecl(C, DC, ExternLoc, LangLoc, Lang, HasBraces);
 }
 
 LinkageSpecDecl *LinkageSpecDecl::CreateDeserialized(ASTContext &C,
                                                      GlobalDeclID ID) {
   return new (C, ID)
-      LinkageSpecDecl(nullptr, SourceLocation(), SourceLocation(),
+      LinkageSpecDecl(C, nullptr, SourceLocation(), SourceLocation(),
                       LinkageSpecLanguageIDs::C, false);
 }
 
@@ -3364,7 +3366,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                              bool Nested)
-    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
+    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(C, Namespace),
       redeclarable_base(C), LocStart(StartLoc) {
   setInline(Inline);
   setNested(Nested);

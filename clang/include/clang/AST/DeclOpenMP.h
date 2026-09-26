@@ -69,6 +69,30 @@ protected:
     return Inst;
   }
 
+  template <typename T, typename... Params>
+  static T *createDirectiveWithContext(const ASTContext &C, DeclContext *DC,
+                                       ArrayRef<OMPClause *> Clauses,
+                                       unsigned NumChildren, Params &&...P) {
+    auto *Inst = new (C, DC, size(Clauses.size(), NumChildren))
+        T(const_cast<ASTContext &>(C), DC, std::forward<Params>(P)...);
+    Inst->Data = OMPChildren::Create(Inst + 1, Clauses,
+                                     /*AssociatedStmt=*/nullptr, NumChildren);
+    Inst->Data->setClauses(Clauses);
+    return Inst;
+  }
+
+  template <typename T, typename... Params>
+  static T *
+  createEmptyDirectiveWithContext(const ASTContext &C, GlobalDeclID ID,
+                                  unsigned NumClauses, unsigned NumChildren,
+                                  Params &&...P) {
+    auto *Inst = new (C, ID, size(NumClauses, NumChildren))
+        T(const_cast<ASTContext &>(C), nullptr, std::forward<Params>(P)...);
+    Inst->Data = OMPChildren::CreateEmpty(
+        Inst + 1, NumClauses, /*HasAssociatedStmt=*/false, NumChildren);
+    return Inst;
+  }
+
   static size_t size(unsigned NumClauses, unsigned NumChildren) {
     return OMPChildren::size(NumClauses, /*HasAssociatedStmt=*/false,
                              NumChildren);
@@ -261,8 +285,8 @@ class OMPDeclareReductionDecl final : public ValueDecl, public DeclContext {
 
   void anchor() override;
 
-  OMPDeclareReductionDecl(Kind DK, DeclContext *DC, SourceLocation L,
-                          DeclarationName Name, QualType Ty,
+  OMPDeclareReductionDecl(ASTContext &C, Kind DK, DeclContext *DC,
+                          SourceLocation L, DeclarationName Name, QualType Ty,
                           OMPDeclareReductionDecl *PrevDeclInScope);
 
   void setPrevDeclInScope(OMPDeclareReductionDecl *Prev) {
@@ -361,11 +385,12 @@ class OMPDeclareMapperDecl final : public OMPDeclarativeDirective<ValueDecl>,
 
   void anchor() override;
 
-  OMPDeclareMapperDecl(DeclContext *DC, SourceLocation L, DeclarationName Name,
-                       QualType Ty, DeclarationName VarName,
+  OMPDeclareMapperDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
+                       DeclarationName Name, QualType Ty,
+                       DeclarationName VarName,
                        OMPDeclareMapperDecl *PrevDeclInScope)
       : OMPDeclarativeDirective<ValueDecl>(OMPDeclareMapper, DC, L, Name, Ty),
-        DeclContext(OMPDeclareMapper), VarName(VarName),
+        DeclContext(C, OMPDeclareMapper), VarName(VarName),
         PrevDeclInScope(PrevDeclInScope) {}
 
   void setPrevDeclInScope(OMPDeclareMapperDecl *Prev) {
