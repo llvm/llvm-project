@@ -584,7 +584,8 @@ Fortran::lower::genCallOpAndResult(
   // via an indirect call, evaluating arguments once. All candidate procedures
   // share one signature; revisit if declare-variant `adjust_args`/`append_args`
   // land.
-  if (funcSymbolAttr) {
+  if (funcSymbolAttr && Fortran::lower::omp::isDispatchTargetCall(
+                            caller.getCallDescription(), converter)) {
     mlir::Value novariantsCond =
         Fortran::lower::omp::getEnclosingDispatchNovariants(builder);
     mlir::Value nocontextCond =

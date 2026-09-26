@@ -203,6 +203,81 @@ integer function test_external_nocontext(cond, value) result(res)
   !HLFIR: return %[[EXT_RETURN]] : i32
 end function
 
+!HLFIR-LABEL: func @_QPtest_dispatch_argument(
+subroutine test_dispatch_argument(c1, c2)
+  implicit none
+  logical :: c1, c2
+  integer :: result
+  real :: real_result
+  interface
+    integer function argument_dispatch(value)
+      integer, value :: value
+    end function
+    integer function argument_host(value)
+      integer, value :: value
+    end function
+    integer function argument_base(value) result(output)
+      import :: argument_dispatch, argument_host
+      integer, value :: value
+      !$omp declare variant(argument_base:argument_dispatch) match(construct={dispatch})
+      !$omp declare variant(argument_base:argument_host) match(device={kind(host)})
+    end function
+    subroutine target_dispatch(value)
+      integer, value :: value
+    end subroutine
+    subroutine target_host(value)
+      integer, value :: value
+    end subroutine
+    subroutine target_base(value)
+      import :: target_dispatch, target_host
+      integer, value :: value
+      !$omp declare variant(target_base:target_dispatch) match(construct={dispatch})
+      !$omp declare variant(target_base:target_host) match(device={kind(host)})
+    end subroutine
+  end interface
+
+  !HLFIR: omp.dispatch {
+  !$omp dispatch
+  !HLFIR: %[[ARG_RESULT:.*]] = fir.call @_QPargument_host(%{{.*}}) {{.*}}: (i32) -> i32
+  !HLFIR-NEXT: fir.call @_QPtarget_dispatch(%[[ARG_RESULT]]) {{.*}}: (i32) -> ()
+  !HLFIR-NEXT: omp.terminator
+  call target_base(argument_base(3))
+
+  !HLFIR: omp.dispatch nocontext(%[[ARG_C2:.*]]) novariants(%[[ARG_C1:.*]]) {
+  !$omp dispatch novariants(c1) nocontext(c2)
+  !HLFIR-NOT: arith.select
+  !HLFIR: %[[BOTH_ARG_RESULT:.*]] = fir.call @_QPargument_host(%{{.*}}) {{.*}}: (i32) -> i32
+  !HLFIR-NEXT: %[[ARG_DISPATCH:.*]] = fir.address_of(@_QPtarget_dispatch) : (i32) -> ()
+  !HLFIR-NEXT: %[[ARG_HOST:.*]] = fir.address_of(@_QPtarget_host) : (i32) -> ()
+  !HLFIR-NEXT: %[[ARG_CONTEXT:.*]] = arith.select %[[ARG_C2]], %[[ARG_HOST]], %[[ARG_DISPATCH]] : (i32) -> ()
+  !HLFIR-NEXT: %[[ARG_BASE:.*]] = fir.address_of(@_QPtarget_base) : (i32) -> ()
+  !HLFIR-NEXT: %[[ARG_TARGET:.*]] = arith.select %[[ARG_C1]], %[[ARG_BASE]], %[[ARG_CONTEXT]] : (i32) -> ()
+  !HLFIR-NEXT: fir.call %[[ARG_TARGET]](%[[BOTH_ARG_RESULT]]) {{.*}}: (i32) -> ()
+  !HLFIR-NEXT: omp.terminator
+  call target_base(argument_base(3))
+
+  !HLFIR: omp.dispatch nocontext(%[[FUNC_C2:.*]]) novariants(%[[FUNC_C1:.*]]) {
+  !$omp dispatch novariants(c1) nocontext(c2)
+  !HLFIR-NOT: arith.select
+  !HLFIR: %[[INNER_RESULT:.*]] = fir.call @_QPargument_host(%{{.*}}) {{.*}}: (i32) -> i32
+  !HLFIR-NEXT: %[[FUNC_DISPATCH:.*]] = fir.address_of(@_QPargument_dispatch) : (i32) -> i32
+  !HLFIR-NEXT: %[[FUNC_HOST:.*]] = fir.address_of(@_QPargument_host) : (i32) -> i32
+  !HLFIR-NEXT: %[[FUNC_CONTEXT:.*]] = arith.select %[[FUNC_C2]], %[[FUNC_HOST]], %[[FUNC_DISPATCH]] : (i32) -> i32
+  !HLFIR-NEXT: %[[FUNC_BASE:.*]] = fir.address_of(@_QPargument_base) : (i32) -> i32
+  !HLFIR-NEXT: %[[FUNC_TARGET:.*]] = arith.select %[[FUNC_C1]], %[[FUNC_BASE]], %[[FUNC_CONTEXT]] : (i32) -> i32
+  !HLFIR-NEXT: %[[OUTER_RESULT:.*]] = fir.call %[[FUNC_TARGET]](%[[INNER_RESULT]]) {{.*}}: (i32) -> i32
+  !HLFIR-NEXT: hlfir.assign %[[OUTER_RESULT]] to %{{.*}} : i32, !fir.ref<i32>
+  !HLFIR-NEXT: omp.terminator
+  result = argument_base(argument_base(3))
+
+  !HLFIR: omp.dispatch {
+  !$omp dispatch
+  !HLFIR: %[[CONVERT_INNER:.*]] = fir.call @_QPargument_host(%{{.*}}) {{.*}}: (i32) -> i32
+  !HLFIR-NEXT: %[[CONVERT_OUTER:.*]] = fir.call @_QPargument_dispatch(%[[CONVERT_INNER]]) {{.*}}: (i32) -> i32
+  !HLFIR: fir.convert %[[CONVERT_OUTER]] : (i32) -> f32
+  real_result = argument_base(argument_base(3))
+end subroutine
+
 !HLFIR-DAG: func.func private @_QPexternal_variant()
 !HLFIR-DAG: func.func private @_QPexternal_base()
 !HLFIR-DAG: func.func private @_QPexternal_dispatch_func(i32) -> i32

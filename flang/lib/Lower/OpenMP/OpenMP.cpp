@@ -22,6 +22,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
@@ -843,6 +844,24 @@ getSectionsConstructStackTop(lower::AbstractConverter &converter) {
   SectionsConstructStackFrame *frame =
       converter.getStateStack().getStackTop<SectionsConstructStackFrame>();
   return frame ? &frame->sectionsConstruct : nullptr;
+}
+
+class DispatchTargetStackFrame
+    : public mlir::StateStackFrameBase<DispatchTargetStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DispatchTargetStackFrame)
+
+  explicit DispatchTargetStackFrame(const evaluate::ProcedureRef *target)
+      : target{target} {}
+
+  const evaluate::ProcedureRef *target;
+};
+
+bool Fortran::lower::omp::isDispatchTargetCall(
+    const evaluate::ProcedureRef &proc, lower::AbstractConverter &converter) {
+  auto *frame =
+      converter.getStateStack().getStackTop<DispatchTargetStackFrame>();
+  return frame && frame->target == &proc;
 }
 
 /// Bind objects to their corresponding entry block arguments.
@@ -2994,6 +3013,21 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, nameAttr);
 }
 
+class DispatchTargetFinder
+    : public evaluate::AnyTraverse<DispatchTargetFinder,
+                                   const evaluate::ProcedureRef *> {
+public:
+  using Base = evaluate::AnyTraverse<DispatchTargetFinder,
+                                     const evaluate::ProcedureRef *>;
+  DispatchTargetFinder() : Base{*this} {}
+  using Base::operator();
+
+  const evaluate::ProcedureRef *
+  operator()(const evaluate::ProcedureRef &proc) const {
+    return &proc;
+  }
+};
+
 static mlir::omp::DispatchOp genDispatchOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -3002,6 +3036,17 @@ static mlir::omp::DispatchOp genDispatchOp(
   mlir::omp::DispatchOperands clauseOps;
   genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      clauseOps);
+
+  const evaluate::ProcedureRef *target = nullptr;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
+    nested.visit(common::visitors{
+        [&](const parser::CallStmt &stmt) { target = &*stmt.typedCall; },
+        [&](const parser::AssignmentStmt &stmt) {
+          target = DispatchTargetFinder{}(stmt.typedAssignment->v->rhs);
+        },
+        [](const auto &) {}});
+  mlir::SaveStateStack<DispatchTargetStackFrame> saveStateStack{
+      converter.getStateStack(), target};
 
   return genOpWithBody<mlir::omp::DispatchOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,

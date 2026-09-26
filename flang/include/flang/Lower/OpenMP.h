@@ -35,6 +35,10 @@ class FirOpBuilder;
 } // namespace fir
 
 namespace Fortran {
+namespace evaluate {
+class ProcedureRef;
+} // namespace evaluate
+
 namespace parser {
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
@@ -115,6 +119,9 @@ void markOpenMPImportedDeclareTargets(
     semantics::SemanticsContext &semaCtx);
 
 namespace omp {
+bool isDispatchTargetCall(const Fortran::evaluate::ProcedureRef &proc,
+                          AbstractConverter &converter);
+
 /// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
 /// that best matches the enclosing OpenMP context, or nullptr if none matches.
 /// \p base is expected to have variant entries. When \p excludeDispatchContext
