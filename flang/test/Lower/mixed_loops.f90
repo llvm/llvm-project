@@ -6,9 +6,9 @@
 ! outer counted `do` folds back to fir.do_loop.
 ! CHECK-LABEL: while_inside_do_loop
 subroutine while_inside_do_loop
-  ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFwhile_inside_do_loopEi"}
+  ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFwhile_inside_do_loopEi"}>
   ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
-  ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFwhile_inside_do_loopEj"}
+  ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFwhile_inside_do_loopEj"}>
   ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ADDR]]
   integer :: i, j
 
@@ -51,9 +51,9 @@ end subroutine
 ! Test do loop inside while loop.
 ! CHECK-LABEL: do_inside_while_loop
 subroutine do_inside_while_loop
-  ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFdo_inside_while_loopEi"}
+  ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFdo_inside_while_loopEi"}>
   ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
-  ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFdo_inside_while_loopEj"}
+  ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFdo_inside_while_loopEj"}>
   ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ADDR]]
   integer :: i, j
 

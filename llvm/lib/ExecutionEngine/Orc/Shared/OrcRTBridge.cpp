@@ -13,9 +13,9 @@ namespace orc {
 namespace rt {
 
 const SymbolNameSpec RegisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_registerFrame");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_registerSection");
 const SymbolNameSpec DeregisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_deregisterFrame");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_deregisterSection");
 
 const SymbolNameSpec RegisterJITLoaderGDBAllocActionName =
     SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_register");

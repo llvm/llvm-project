@@ -46,6 +46,7 @@ cc_library(
     deps = [
         ":TransformIncGen",
         "//llvm:Support",
+        "//mlir:BytecodeOpInterface",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:SCFDialect",

@@ -5,9 +5,9 @@ subroutine out(x)
   use ieee_arithmetic
   integer, parameter :: k = 8
 
-  ! CHECK:     %[[V_60:[0-9]+]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFoutEl"}
+  ! CHECK:     %[[V_60:[0-9]+]] = fir.alloca !fir.logical<4> <{bindc_name = "l", uniq_name = "_QFoutEl"}>
   ! CHECK:     %[[V_61:[0-9]+]] = fir.declare %[[V_60]] {uniq_name = "_QFoutEl"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
-  ! CHECK:     %[[V_62:[0-9]+]] = fir.alloca f64 {bindc_name = "r", uniq_name = "_QFoutEr"}
+  ! CHECK:     %[[V_62:[0-9]+]] = fir.alloca f64 <{bindc_name = "r", uniq_name = "_QFoutEr"}>
   ! CHECK:     %[[V_63:[0-9]+]] = fir.declare %[[V_62]] {uniq_name = "_QFoutEr"} : (!fir.ref<f64>) -> !fir.ref<f64>
   ! CHECK:     %[[V_64:[0-9]+]] = fir.declare %arg0 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFoutEx"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
   real(k) :: x, r
