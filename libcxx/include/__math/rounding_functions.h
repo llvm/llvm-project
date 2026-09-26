@@ -204,14 +204,14 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 
 // round
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float round(float __x) _NOEXCEPT { return __builtin_round(__x); }
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 float round(float __x) _NOEXCEPT { return __builtin_round(__x); }
 
 template <class = int>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double round(double __x) _NOEXCEPT {
   return __builtin_round(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double round(long double __x) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 long double round(long double __x) _NOEXCEPT {
   return __builtin_roundl(__x);
 }
 
