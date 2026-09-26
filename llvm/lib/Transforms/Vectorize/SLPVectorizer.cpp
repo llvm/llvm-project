@@ -2524,6 +2524,11 @@ private:
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
+  InstructionCost
+  getCompressedLoadCost(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                        ArrayRef<unsigned> Order, const LoadInst *LI0,
+                        const TreeEntry *CompressEntry = nullptr);
+
   /// Estimates spill/reload cost from vector register pressure for \p E at the
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
   /// scalar/slot type used to widen into \p VecTy/\p FinalVecTy and may itself
@@ -6241,60 +6246,19 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     // Check that the sorted loads are consecutive.
     if (static_cast<uint64_t>(Diff) == Sz - 1)
       return LoadsState::Vectorize;
-
-    bool IsMasked;
-    unsigned InterleaveFactor;
-    SmallVector<int> CompressMask;
-    VectorType *LoadVecTy;
-    bool IsMaskedLoadCompress = isMaskedLoadCompress(
-        VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-        [&](Value *V) {
-          return areAllUsersVectorized(cast<Instruction>(V), UserIgnoreList);
-        },
-        SLPReVec, IsMasked, InterleaveFactor, CompressMask, LoadVecTy);
-    // If needs re-ordered, then prefer compressed over strided since will have
-    // to shuffle either way. Interleaved loads are cheaper so prefer compressed
-    // in this case.
-    if (IsMaskedLoadCompress && (!Order.empty() || InterleaveFactor || !IsMasked))
+    if (isMaskedLoadCompress(
+            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
+            [&](Value *V) {
+              return areAllUsersVectorized(cast<Instruction>(V),
+                                           UserIgnoreList);
+            },
+            SLPReVec))
       return LoadsState::CompressVectorize;
-
     // Widened strided loads must be legal for every group, not just the first
     // pointer, which may have a stronger alignment than the remaining loads.
-    bool IsStridedLoad = analyzeConstantStrideCandidate(
-        PointerOps, ScalarTy, CommonAlignment, Order, Diff, Ptr0, SPtrInfo);
-
-    if (IsMaskedLoadCompress && IsStridedLoad) {
-      const auto *LI0 = cast<LoadInst>(VL0);
-      InstructionCost StridedLoadCost =
-          TTI->getMemIntrinsicInstrCost(
-              MemIntrinsicCostAttributes(
-                  Intrinsic::experimental_vp_strided_load, VecTy,
-                  LI0->getPointerOperand(),
-                  /*VariableMask=*/false, CommonAlignment),
-              CostKind);
-      FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-      if (StridedLoadTy != VecTy)
-        StridedLoadCost +=
-          TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
-                                TTI::CastContextHint::None, CostKind);
-
-      InstructionCost MaskedLoadCompressCost;
-      MaskedLoadCompressCost = TTI->getMemIntrinsicInstrCost(
-          MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
-                                     LI0->getAlign(),
-                                     LI0->getPointerAddressSpace()),
-          CostKind);
-      MaskedLoadCompressCost +=
-          getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CostKind,
-                         CompressMask);
-      if (MaskedLoadCompressCost > StridedLoadCost)
-        return LoadsState::StridedVectorize;
-      return LoadsState::CompressVectorize;
-    } else if (IsMaskedLoadCompress) {
-      return LoadsState::CompressVectorize;
-    } else if (IsStridedLoad) {
+    if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                       Order, Diff, Ptr0, SPtrInfo))
       return LoadsState::StridedVectorize;
-    }
   }
   if (!IsMaskedGatherLegal())
     return LoadsState::Gather;
@@ -9338,6 +9302,47 @@ static bool allStructUsersAreExtractValueInsts(ArrayRef<Value *> VL) {
     return !isa<StructType>(V->getType()) ||
            all_of(V->users(), IsaPred<ExtractValueInst>);
   });
+}
+
+InstructionCost BoUpSLP::getCompressedLoadCost(ArrayRef<Value *> VL,
+                                               ArrayRef<Value *> PointerOps,
+                                               ArrayRef<unsigned> Order,
+                                               const LoadInst *LI0,
+                                               const TreeEntry *CompressEntry) {
+  bool IsMasked;
+  unsigned InterleaveFactor;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy;
+  if (!isMaskedLoadCompress(
+          VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
+          [](Value *) { return true; }, SLPReVec, IsMasked, InterleaveFactor,
+          CompressMask, LoadVecTy))
+    return InstructionCost::getInvalid();
+
+  if (CompressEntry)
+    CompressEntryToData.try_emplace(CompressEntry, CompressMask, LoadVecTy,
+                                    InterleaveFactor, IsMasked);
+
+  if (InterleaveFactor)
+    return TTI->getInterleavedMemoryOpCost(
+        Instruction::Load, LoadVecTy, InterleaveFactor, {}, LI0->getAlign(),
+        LI0->getPointerAddressSpace(), CostKind);
+
+  InstructionCost Cost;
+  if (IsMasked) {
+    Cost = TTI->getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+                                   LI0->getAlign(),
+                                   LI0->getPointerAddressSpace()),
+        CostKind);
+  } else {
+    Cost = TTI->getMemoryOpCost(Instruction::Load, LoadVecTy, LI0->getAlign(),
+                                LI0->getPointerAddressSpace(), CostKind,
+                                TTI::getOperandInfo(LI0->getPointerOperand()));
+  }
+  Cost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CostKind,
+                         CompressMask);
+  return Cost;
 }
 
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
@@ -14403,6 +14408,58 @@ void BoUpSLP::transformNodes() {
       continue;
     switch (E.getOpcode()) {
     case Instruction::Load: {
+      if (E.State == TreeEntry::CompressVectorize) {
+        StridedPtrInfo SPtrInfo;
+        auto PreferStridedOverCompressed = [&]() -> bool {
+          // In cases where a shuffle is mandatory regarless of load type,
+          // prefer Compressed since the reorder/reuse shuffle can be merged
+          // with the compress shuffle.
+          if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
+            return false;
+          SmallVector<Value *> PointerOps(E.Scalars.size());
+          transform(E.Scalars, PointerOps.begin(), [](Value *V) {
+            return cast<LoadInst>(V)->getPointerOperand();
+          });
+
+          Type *ScalarTy = E.getMainOp()->getType();
+          Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
+          SmallVector<unsigned> Order;
+          std::optional<int64_t> Diff =
+              getPointersDiff(ScalarTy, PointerOps.front(), ScalarTy,
+                              PointerOps.back(), *DL, *SE);
+          if (!Diff || !analyzeConstantStrideCandidate(
+                           PointerOps, ScalarTy, CommonAlignment, Order, *Diff,
+                           PointerOps.front(), SPtrInfo))
+            return false;
+
+          auto *LI0 = cast<LoadInst>(E.Scalars.front());
+          InstructionCost CompressedCost =
+              getCompressedLoadCost(E.Scalars, PointerOps, {}, LI0);
+          if (!CompressedCost.isValid())
+            return false;
+
+          auto *VecTy = cast<FixedVectorType>(
+              getWidenedType(ScalarTy, E.getVectorFactor()));
+          FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
+          InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(
+                  Intrinsic::experimental_vp_strided_load, StridedLoadTy,
+                  LI0->getPointerOperand(), /*VariableMask=*/false,
+                  CommonAlignment),
+              CostKind);
+          if (StridedLoadTy != VecTy)
+            StridedCost += TTI->getCastInstrCost(
+                Instruction::BitCast, VecTy, StridedLoadTy,
+                TTI::CastContextHint::None, CostKind);
+          return StridedCost < CompressedCost;
+        };
+
+        if (PreferStridedOverCompressed()) {
+          E.State = TreeEntry::StridedVectorize;
+          TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+        }
+      }
+
       // No need to reorder masked gather loads, just reorder the scalar
       // operands.
       if (E.State != TreeEntry::Vectorize)
@@ -17166,10 +17223,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         break;
       }
       case TreeEntry::CompressVectorize: {
-        bool IsMasked;
-        unsigned InterleaveFactor;
-        SmallVector<int> CompressMask;
-        VectorType *LoadVecTy;
         SmallVector<Value *> Scalars(VL);
         if (!E->ReorderIndices.empty()) {
           SmallVector<int> Mask(E->ReorderIndices.begin(),
@@ -17179,35 +17232,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         SmallVector<Value *> PointerOps(Scalars.size());
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
-            *TLI, CostKind, [](Value *) { return true; }, SLPReVec, IsMasked,
-            InterleaveFactor, CompressMask, LoadVecTy);
-        CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
-                                        InterleaveFactor, IsMasked);
-        Align CommonAlignment = LI0->getAlign();
-        if (InterleaveFactor) {
-          VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, LoadVecTy, InterleaveFactor, {},
-              CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
-        } else if (IsMasked) {
-          VecLdCost = TTI->getMemIntrinsicInstrCost(
-              MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
-                                         CommonAlignment,
-                                         LI0->getPointerAddressSpace()),
-              CostKind);
-          // TODO: include this cost into CommonCost.
-          VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CostKind, CompressMask);
-        } else {
-          VecLdCost = TTI->getMemoryOpCost(
-              Instruction::Load, LoadVecTy, CommonAlignment,
-              LI0->getPointerAddressSpace(), CostKind,
-              TTI::getOperandInfo(LI0->getPointerOperand()));
-          // TODO: include this cost into CommonCost.
-          VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CostKind, CompressMask);
-        }
+        VecLdCost = getCompressedLoadCost(Scalars, PointerOps,
+                                          E->ReorderIndices, LI0, E);
         break;
       }
       case TreeEntry::ScatterVectorize: {
