@@ -281,6 +281,37 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+struct GPUSubgroupSizeOpToNVVM : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
+  using ConvertOpToLLVMPattern<gpu::SubgroupSizeOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    MLIRContext *context = rewriter.getContext();
+    // A warp is exactly kWarpSize lanes wide on every NVIDIA target, so the
+    // range is known precisely. An `upper_bound` on the op cannot make it
+    // narrower: an execution with more lanes than the bound is undefined
+    // behaviour, so we are free to keep the exact hardware range.
+    LLVM::ConstantRangeAttr bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+        /*bitWidth=*/32, /*lower=*/kWarpSize, /*upper=*/kWarpSize + 1);
+    Value newOp =
+        NVVM::WarpSizeOp::create(rewriter, loc, rewriter.getI32Type(), bounds);
+    // Truncate or extend the result depending on the index bitwidth specified
+    // by the LLVMTypeConverter options.
+    const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
+    if (indexBitwidth > 32) {
+      newOp = LLVM::SExtOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
+    } else if (indexBitwidth < 32) {
+      newOp = LLVM::TruncOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
+    }
+    rewriter.replaceOp(op, {newOp});
+    return success();
+  }
+};
+
 struct GPUBallotOpToNVVM : public ConvertOpToLLVMPattern<gpu::BallotOp> {
   using ConvertOpToLLVMPattern<gpu::BallotOp>::ConvertOpToLLVMPattern;
 
@@ -536,6 +567,9 @@ struct LowerGpuOpsToNVVMOpsPass final
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
+      // NVVM has no register holding the subgroup index, so expand the op into
+      // a division of the linearized thread id by the subgroup size.
+      populateGpuSubgroupIdPatterns(patterns);
       // Transform N-D vector.from_elements to 1-D vector.from_elements before
       // conversion.
       vector::populateVectorFromElementsUnrollPatterns(patterns);
@@ -671,8 +705,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
       converter, IndexKind::Grid, IntrType::Dim, benefit);
-  patterns.add<GPULaneIdOpToNVVM, GPUBallotOpToNVVM, GPUShuffleOpLowering,
-               GPUReturnOpLowering>(converter, benefit);
+  patterns.add<GPULaneIdOpToNVVM, GPUSubgroupSizeOpToNVVM, GPUBallotOpToNVVM,
+               GPUShuffleOpLowering, GPUReturnOpLowering>(converter, benefit);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit, benefit);
