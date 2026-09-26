@@ -11,6 +11,7 @@ add_lldb_unittest(SymbolTests
   SymStoreTest.cpp
   TestTypeSystem.cpp
   TestTypeSystemClang.cpp
+  TestTypeSystemFortran.cpp
   TestClangASTImporter.cpp
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
@@ -27,6 +28,7 @@ add_lldb_unittest(SymbolTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
     lldbPluginTypeSystemClang
+    lldbPluginTypeSystemFortran
     lldbPluginSymbolLocatorSymStore
     LLVMTestingSupport
   )
