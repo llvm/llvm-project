@@ -426,8 +426,9 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
   return Score;
 }
 
-int llvm::omp::getBestVariantMatchForContext(
-    const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx) {
+SmallVector<std::optional<APInt>, 4>
+llvm::omp::getVariantMatchScores(const SmallVectorImpl<VariantMatchInfo> &VMIs,
+                                 const OMPContext &Ctx) {
   SmallVector<std::optional<APInt>, 4> Scores(VMIs.size());
   for (unsigned u = 0, e = VMIs.size(); u < e; ++u) {
     const VariantMatchInfo &VMI = VMIs[u];
@@ -455,6 +456,12 @@ int llvm::omp::getBestVariantMatchForContext(
     }
   }
 
+  return Scores;
+}
+
+int llvm::omp::getBestVariantMatchForContext(
+    const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx) {
+  auto Scores = getVariantMatchScores(VMIs, Ctx);
   APInt BestScore(1, 0);
   int BestVMIIdx = -1;
   for (unsigned u = 0, e = VMIs.size(); u < e; ++u) {

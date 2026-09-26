@@ -237,6 +237,13 @@ LLVM_ABI bool
 isVariantApplicableInContext(const VariantMatchInfo &VMI, const OMPContext &Ctx,
                              bool DeviceOrImplementationSetOnly = false);
 
+/// Compute scores for all applicable variants, including strict-subset
+/// adjustments against the complete candidate set. Inapplicable entries have
+/// no score. Keep these scores when testing dynamic candidates in order.
+LLVM_ABI SmallVector<std::optional<APInt>, 4>
+getVariantMatchScores(const SmallVectorImpl<VariantMatchInfo> &VMIs,
+                      const OMPContext &Ctx);
+
 /// Return the index (into \p VMIs) of the variant with the highest score
 /// from the ones applicable in \p Ctx. See llvm::isVariantApplicableInContext.
 LLVM_ABI int

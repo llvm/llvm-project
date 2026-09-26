@@ -7511,7 +7511,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
   llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
       reachableVariantSpecs = semantics::omp::GetReachableMetadirectiveVariants(
-          *candidateSet, ompCtx, semaCtx);
+          *candidateSet, semaCtx);
 
   bool hasLoopAssociatedCandidate =
       llvm::any_of(reachableVariantSpecs, [](const auto *spec) {
@@ -7748,7 +7748,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   while (!remainingCandidates.empty()) {
     std::optional<unsigned> selected =
         semantics::omp::SelectBestMetadirectiveCandidate(remainingCandidates,
-                                                         candidates, ompCtx);
+                                                         candidates);
     if (!selected) {
       genVariant(fallback);
       return;
@@ -7763,7 +7763,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
     llvm::SmallVector<unsigned, 4> elsePathCandidates =
         semantics::omp::GetMetadirectiveElsePathCandidates(
-            *selected, remainingCandidates, candidates, ompCtx, semaCtx);
+            *selected, remainingCandidates, candidates, semaCtx);
 
     // match_any may create a guarded condition-true candidate and an unguarded
     // static candidate for the same directive. If the else path picks the
@@ -7773,7 +7773,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
     //   else barrier
     if (std::optional<unsigned> selectedInElse =
             semantics::omp::SelectBestMetadirectiveCandidate(
-                elsePathCandidates, candidates, ompCtx)) {
+                elsePathCandidates, candidates)) {
       const semantics::omp::MetadirectiveCandidate &candidateInElse =
           candidates[*selectedInElse];
       if (!candidateInElse.dynamicCondition &&
