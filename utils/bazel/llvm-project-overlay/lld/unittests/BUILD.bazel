@@ -1,0 +1,48 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+licenses(["notice"])
+
+genrule(
+    name = "as_lib_elf_srcdir",
+    srcs = ["AsLibELF/CMakeLists.txt"],
+    outs = ["llvm.srcdir.txt"],
+    cmd = "p=$(rootpath AsLibELF/CMakeLists.txt); echo $${p%/*} > $@",
+)
+
+cc_test(
+    name = "LLDAsLibELFTests",
+    size = "small",
+    srcs = glob(["AsLibELF/*.cpp"]),
+    data = glob(["AsLibELF/Inputs/*"]) + [":as_lib_elf_srcdir"],
+    deps = [
+        "//lld:Common",
+        "//lld:ELF",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDAsLibAllTests",
+    size = "small",
+    srcs = glob(["AsLibAll/*.cpp"]),
+    deps = [
+        "//lld:COFF",
+        "//lld:Common",
+        "//lld:ELF",
+        "//lld:MachO",
+        "//lld:MinGW",
+        "//lld:Wasm",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
