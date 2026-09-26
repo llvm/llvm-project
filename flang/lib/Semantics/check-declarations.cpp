@@ -3149,9 +3149,12 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
       if (context_.HasError(symbol) || context_.HasError(other)) {
         // don't pile on
       } else if (symbol.has<CommonBlockDetails>() &&
-          other.has<CommonBlockDetails>() && symbol.name() == other.name()) {
-        // Two common blocks can have the same global name so long as
-        // they're not in the same scope.
+          other.has<CommonBlockDetails>() && symbol.owner() != other.owner()) {
+        // Common blocks with the same name in different scoping units are one
+        // entity (F2023 8.10.2.4).  As an extension, differently named common
+        // blocks in different scoping units may share one binding label: their
+        // object names are the label, so they share storage.  Otherwise 19.2 p2
+        // applies and the collision is an error.
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
           (IsProcedure(other) || IsBlockData(other)) &&
           (!IsExternalProcedureDefinition(symbol) ||
