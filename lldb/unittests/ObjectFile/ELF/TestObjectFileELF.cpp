@@ -25,8 +25,10 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -194,9 +196,8 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithOffsetFile) {
   EXPECT_EQ(FileSystem::Instance().GetByteSize(FileSpec(SO)), 4640UL);
 }
 
-// Verify an AMDGPU ELF header decodes to its exact GPU model.
-// An AMDGPU object with no decodable model resolves to the generic "unknown"
-// catch-all.
+// Verify that an AMDGPU ELF header without a decodable model still resolves to
+// the generic AMDGPU architecture.
 TEST_F(ObjectFileELFTest, GPUArchitectureUnknownAMDGPUModel) {
   // No model byte is parsed unless the OS ABI is AMDGPU HSA.
   {
@@ -220,7 +221,9 @@ Sections:
     auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
     const ArchSpec &arch = module_sp->GetArchitecture();
     ASSERT_TRUE(arch.IsValid());
-    EXPECT_EQ(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
+    EXPECT_EQ(ArchSpec::eCore_amd_gpu, arch.GetCore());
+    EXPECT_EQ(llvm::Triple::NoSubArch, arch.GetTriple().getSubArch());
+    EXPECT_TRUE(arch.GetClangTargetCPU().empty());
   }
 
   // HSA code-object v2 (ABIVersion 0) carries no model byte, so even a
@@ -248,7 +251,9 @@ Sections:
     auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
     const ArchSpec &arch = module_sp->GetArchitecture();
     ASSERT_TRUE(arch.IsValid());
-    EXPECT_EQ(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
+    EXPECT_EQ(ArchSpec::eCore_amd_gpu, arch.GetCore());
+    EXPECT_EQ(llvm::Triple::NoSubArch, arch.GetTriple().getSubArch());
+    EXPECT_TRUE(arch.GetClangTargetCPU().empty());
   }
 }
 
@@ -259,13 +264,21 @@ struct AMDGPUModel {
   const char *name; // Canonical model name, e.g. "gfx942".
 };
 
-// Every AMD GPU model, taken from llvm's AMDGPU_MACH_LIST so the tests track
-// the authoritative list instead of duplicating it.
-const AMDGPUModel kAMDGPUModels[] = {
+static std::vector<AMDGPUModel> GetAMDGPUModels() {
+  static constexpr AMDGPUModel all_models[] = {
 #define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
-    AMDGPU_MACH_LIST(AMDGPU_MODEL)
+      AMDGPU_MACH_LIST(AMDGPU_MODEL)
 #undef AMDGPU_MODEL
-};
+  };
+
+  std::vector<AMDGPUModel> models;
+  for (const AMDGPUModel &model : all_models)
+    if (llvm::AMDGPU::parseArchAMDGCN(model.name) != llvm::AMDGPU::GK_NONE)
+      models.push_back(model);
+  return models;
+}
+
+const std::vector<AMDGPUModel> kAMDGPUModels = GetAMDGPUModels();
 
 std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
   // Test names allow only [A-Za-z0-9_]; the generic models contain dashes.
@@ -281,10 +294,13 @@ class ObjectFileELFAMDGPUTest
     : public ObjectFileELFTest,
       public ::testing::WithParamInterface<AMDGPUModel> {};
 
-// Every AMD GPU model must decode from an ELF header (built from YAML) to the
-// right arch and core. The model is the EF_AMDGPU_MACH value in e_flags.
+// Every AMDGPU model must decode from an ELF header (built from YAML) to the
+// right target-parser subarchitecture. The model is the EF_AMDGPU_MACH value
+// in e_flags.
 TEST_P(ObjectFileELFAMDGPUTest, DecodesAMDGPUModel) {
   const AMDGPUModel &model = GetParam();
+  llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
+  ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
   const char *yaml_template = R"(--- !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -308,11 +324,10 @@ Sections:
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
   const ArchSpec &arch = module_sp->GetArchitecture();
   ASSERT_TRUE(arch.IsValid());
-  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
-  EXPECT_EQ(model.name, arch.GetClangTargetCPU());
-  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
-            arch.GetTriple().getArch());
+  EXPECT_EQ(ArchSpec::eCore_amd_gpu, arch.GetCore());
+  EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(kind), arch.GetClangTargetCPU());
+  EXPECT_EQ(llvm::Triple::amdgpu, arch.GetTriple().getArch());
+  EXPECT_EQ(llvm::AMDGPU::getSubArch(kind), arch.GetTriple().getSubArch());
   EXPECT_EQ(llvm::Triple::AMD, arch.GetTriple().getVendor());
   EXPECT_EQ(llvm::Triple::AMDHSA, arch.GetTriple().getOS());
 }
