@@ -55,6 +55,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <list>
 #include <utility>
 #include <vector>
 
@@ -95,25 +96,11 @@ static cl::opt<bool> SchedPrintCycles(
     cl::desc("Report top/bottom cycles when dumping SUnit instances"));
 #endif
 
-static void dumpSUList(const ScheduleDAGInstrs::SUList &L) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "{ ";
-  for (const SUnit *SU : L) {
-    dbgs() << "SU(" << SU->NodeNum << ")";
-    if (SU != L.back())
-      dbgs() << ", ";
-  }
-  dbgs() << "}\n";
-#endif
-}
-
 ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
                                      bool RemoveKillFlags)
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
-      RemoveKillFlags(RemoveKillFlags),
-      UnknownValue(UndefValue::get(
-                             Type::getVoidTy(mf.getFunction().getContext()))), Topo(SUnits, &ExitSU) {
+      RemoveKillFlags(RemoveKillFlags), Topo(SUnits, &ExitSU) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
@@ -552,16 +539,6 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-
-void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
-                                            unsigned Latency) {
-  if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
-    SDep Dep(SUa, SDep::MayAliasMem);
-    Dep.setLatency(Latency);
-    SUb->addPred(Dep);
-  }
-}
-
 /// Creates an SUnit for each real instruction, numbered in top-down
 /// topological order. The instruction order A < B, implies that no edge exists
 /// from B to A.
@@ -620,8 +597,29 @@ void ScheduleDAGInstrs::initSUnits() {
   }
 }
 
-class ScheduleDAGInstrs::Value2SUsMap
-    : public SmallMapVector<ValueType, SUList, 4> {
+namespace {
+/// A list of SUnits, used in Value2SUsMap, during DAG construction.
+/// Note: to gain speed it might be worth investigating an optimized
+/// implementation of this data structure, such as a singly linked list
+/// with a memory pool (SmallVector was tried but slow and SparseSet is not
+/// applicable).
+using SUList = std::list<SUnit *>;
+} // end anonymous namespace
+
+static void dumpSUList(const SUList &L) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  dbgs() << "{ ";
+  for (const SUnit *SU : L) {
+    dbgs() << "SU(" << SU->NodeNum << ")";
+    if (SU != L.back())
+      dbgs() << ", ";
+  }
+  dbgs() << "}\n";
+#endif
+}
+
+namespace {
+class Value2SUsMap : public SmallMapVector<ValueType, SUList, 4> {
   /// Current total number of SUs in map.
   unsigned NumNodes = 0;
 
@@ -634,7 +632,8 @@ public:
   /// To keep NumNodes up to date, insert() is used instead of
   /// this operator w/ push_back().
   ValueType &operator[](const SUList &Key) {
-    llvm_unreachable("Don't use. Use insert() instead."); };
+    llvm_unreachable("Don't use. Use insert() instead.");
+  };
 
   /// Adds SU to the SUList of V. If Map grows huge, reduce its size by calling
   /// reduce().
@@ -673,62 +672,35 @@ public:
     return TrueMemOrderLatency;
   }
 
-  void dump();
-};
+  void dump() {
+    for (const auto &[ValType, SUs] : *this) {
+      if (isa<const Value *>(ValType)) {
+        const Value *V = cast<const Value *>(ValType);
+        if (isa<UndefValue>(V))
+          dbgs() << "Unknown";
+        else
+          V->printAsOperand(dbgs());
+      } else if (isa<const PseudoSourceValue *>(ValType))
+        dbgs() << cast<const PseudoSourceValue *>(ValType);
+      else
+        llvm_unreachable("Unknown Value type.");
 
-void ScheduleDAGInstrs::addChainDependencies(SUnit *SU,
-                                             Value2SUsMap &Val2SUsMap) {
-  for (auto &I : Val2SUsMap)
-    addChainDependencies(SU, I.second,
-                         Val2SUsMap.getTrueMemOrderLatency());
-}
-
-void ScheduleDAGInstrs::addChainDependencies(SUnit *SU,
-                                             Value2SUsMap &Val2SUsMap,
-                                             ValueType V) {
-  Value2SUsMap::iterator Itr = Val2SUsMap.find(V);
-  if (Itr != Val2SUsMap.end())
-    addChainDependencies(SU, Itr->second,
-                         Val2SUsMap.getTrueMemOrderLatency());
-}
-
-void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
-  assert(BarrierChain != nullptr);
-
-  for (auto &[V, SUs] : map) {
-    (void)V;
-    for (auto *SU : SUs)
-      SU->addPredBarrier(BarrierChain);
+      dbgs() << " : ";
+      dumpSUList(SUs);
+    }
   }
-  map.clear();
-}
+};
+} // end anonymous namespace
 
-void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
-                                        RegPressureTracker *RPTracker,
-                                        PressureDiffs *PDiffs,
-                                        LiveIntervals *LIS,
-                                        bool TrackLaneMasks) {
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
-  bool UseAA = EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI
-                                                       : ST.useAA();
-  if (UseAA && AA)
-    AAForDep.emplace(*AA);
+namespace llvm {
+class ScheduleDependencyBuilder {
+private:
+  ScheduleDAGInstrs &DAG;
 
-  BarrierChain = nullptr;
-  MemOpsProcessed = 0;
-
-  this->TrackLaneMasks = TrackLaneMasks;
-  MISUnitMap.clear();
-  ScheduleDAG::clearDAG();
-
-  // Create an SUnit for each real instruction.
-  initSUnits();
-
-  if (PDiffs)
-    PDiffs->init(SUnits.size());
-
-  // We build scheduling units by walking a block's instruction list
-  // from bottom to top.
+  BatchAAResults *AA;
+  RegPressureTracker *RPTracker;
+  PressureDiffs *PDiffs;
+  LiveIntervals *LIS;
 
   // Each MIs' memory operand(s) is analyzed to a list of underlying
   // objects. The SU is then inserted in the SUList(s) mapped from the
@@ -736,7 +708,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   // on it, stores and loads kept separately. Two SUs are trivially
   // non-aliasing if they both depend on only identified Values and do
   // not share any common Value.
-  Value2SUsMap Stores, Loads(1 /*TrueMemOrderLatency*/);
+  Value2SUsMap Stores, Loads;
 
   // Track all instructions that may raise floating-point exceptions.
   // These do not depend on one other (or normal loads or stores), but
@@ -746,33 +718,88 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   // convenience.
   Value2SUsMap FPExceptions;
 
-  // Remove any stale debug info; sometimes BuildSchedGraph is called again
-  // without emitting the info from the previous call.
-  DbgValues.clear();
-  FirstDbgValue = nullptr;
+  /// For an unanalyzable memory access, this Value is used in maps.
+  UndefValue *UnknownValue;
 
-  assert(Defs.empty() && Uses.empty() &&
-         "Only BuildGraph should update Defs/Uses");
-  Defs.setUniverse(TRI->getNumRegs());
-  Uses.setUniverse(TRI->getNumRegs());
+  /// Remember a generic side-effecting instruction as we proceed.
+  /// No other SU ever gets scheduled around it (except in the special
+  /// case of a huge region that gets reduced).
+  SUnit *BarrierChain = nullptr;
 
-  assert(CurrentVRegDefs.empty() && "nobody else should use CurrentVRegDefs");
-  assert(CurrentVRegUses.empty() && "nobody else should use CurrentVRegUses");
-  unsigned NumVirtRegs = MRI.getNumVirtRegs();
-  CurrentVRegDefs.setUniverse(NumVirtRegs);
-  CurrentVRegUses.setUniverse(NumVirtRegs);
+  unsigned MemOpsProcessed = 0;
+
+public:
+  ScheduleDependencyBuilder(ScheduleDAGInstrs &DAG, BatchAAResults *AA,
+                            RegPressureTracker *RPTracker,
+                            PressureDiffs *PDiffs, LiveIntervals *LIS)
+      : DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs), LIS(LIS),
+        Stores(), Loads(1), FPExceptions(),
+        UnknownValue(UndefValue::get(
+            Type::getVoidTy(DAG.MF.getFunction().getContext()))) {}
+
+private:
+  /// Adds a chain edge between SUa and SUb, but only if both
+  /// AAResults and Target fail to deny the dependency.
+  void addChainDependency(SUnit *SUa, SUnit *SUb, unsigned Latency = 0) {
+    if (SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), UseTBAA)) {
+      SDep Dep(SUa, SDep::MayAliasMem);
+      Dep.setLatency(Latency);
+      SUb->addPred(Dep);
+    }
+  }
+
+  /// Adds dependencies as needed from all SUs in list to SU.
+  void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency) {
+    for (SUnit *Entry : SUs)
+      addChainDependency(SU, Entry, Latency);
+  }
+
+  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap) {
+    for (auto &I : Val2SUsMap)
+      addChainDependencies(SU, I.second, Val2SUsMap.getTrueMemOrderLatency());
+  }
+
+  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap, ValueType V) {
+    Value2SUsMap::iterator Itr = Val2SUsMap.find(V);
+    if (Itr != Val2SUsMap.end())
+      addChainDependencies(SU, Itr->second,
+                           Val2SUsMap.getTrueMemOrderLatency());
+  }
+
+  void addBarrierChain(Value2SUsMap &map) {
+    assert(BarrierChain != nullptr);
+
+    for (auto &[V, SUs] : map) {
+      (void)V;
+      for (auto *SU : SUs)
+        SU->addPredBarrier(BarrierChain);
+    }
+
+    map.clear();
+  }
+
+public:
+  void buildDeps();
+};
+} // end namespace llvm
+
+void ScheduleDependencyBuilder::buildDeps() {
+  const TargetSubtargetInfo &ST = DAG.MF.getSubtarget();
+
+  // We build scheduling units by walking a block's instruction list
+  // from bottom to top.
 
   // Model data dependencies between instructions being scheduled and the
   // ExitSU.
-  addSchedBarrierDeps();
+  DAG.addSchedBarrierDeps();
 
   // Walk the list of instructions, from bottom moving up.
   MachineInstr *DbgMI = nullptr;
-  for (MachineBasicBlock::iterator MII = RegionEnd, MIE = RegionBegin;
+  for (MachineBasicBlock::iterator MII = DAG.RegionEnd, MIE = DAG.RegionBegin;
        MII != MIE; --MII) {
     MachineInstr &MI = *std::prev(MII);
     if (DbgMI) {
-      DbgValues.emplace_back(DbgMI, &MI);
+      DAG.DbgValues.emplace_back(DbgMI, &MI);
       DbgMI = nullptr;
     }
 
@@ -784,28 +811,28 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     if (MI.isDebugLabel() || MI.isDebugRef() || MI.isPseudoProbe())
       continue;
 
-    SUnit *SU = MISUnitMap[&MI];
+    SUnit *SU = DAG.MISUnitMap[&MI];
     assert(SU && "No SUnit mapped to this MI");
 
     if (RPTracker) {
       RegisterOperands RegOpers;
-      RegOpers.collect(MI, *TRI, MRI, TrackLaneMasks, false);
-      if (TrackLaneMasks) {
+      RegOpers.collect(MI, *DAG.TRI, DAG.MRI, DAG.TrackLaneMasks, false);
+      if (DAG.TrackLaneMasks) {
         SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx);
+        RegOpers.adjustLaneLiveness(*LIS, DAG.MRI, SlotIdx);
       }
       if (PDiffs != nullptr)
-        PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
+        PDiffs->addInstruction(SU->NodeNum, RegOpers, DAG.MRI);
 
-      if (RPTracker->getPos() == RegionEnd || &*RPTracker->getPos() != &MI)
+      if (RPTracker->getPos() == DAG.RegionEnd || &*RPTracker->getPos() != &MI)
         RPTracker->recedeSkipDebugValues();
       assert(&*RPTracker->getPos() == &MI && "RPTracker in sync");
       RPTracker->recede(RegOpers);
     }
 
-    assert(
-        (CanHandleTerminators || (!MI.isTerminator() && !MI.isPosition())) &&
-        "Cannot schedule terminators or labels!");
+    assert((DAG.CanHandleTerminators ||
+            (!MI.isTerminator() && !MI.isPosition())) &&
+           "Cannot schedule terminators or labels!");
 
     // Add register-based dependencies (data, anti, and output).
     // For some instructions (calls, returns, inline-asm, etc.) there can
@@ -819,10 +846,10 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
         continue;
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
-        addPhysRegDeps(SU, j);
+        DAG.addPhysRegDeps(SU, j);
       } else if (Reg.isVirtual()) {
         HasVRegDef = true;
-        addVRegDefDeps(SU, j);
+        DAG.addVRegDefDeps(SU, j);
       }
     }
     // Now process all uses.
@@ -836,9 +863,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
         continue;
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
-        addPhysRegDeps(SU, j);
+        DAG.addPhysRegDeps(SU, j);
       } else if (Reg.isVirtual() && MO.readsReg()) {
-        addVRegUseDeps(SU, j);
+        DAG.addVRegUseDeps(SU, j);
       }
     }
 
@@ -851,7 +878,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     if (SU->NumSuccs == 0 && SU->Latency > 1 && (HasVRegDef || MI.mayLoad())) {
       SDep Dep(SU, SDep::Artificial);
       Dep.setLatency(SU->Latency - 1);
-      ExitSU.addPred(Dep);
+      DAG.ExitSU.addPred(Dep);
     }
 
     // Add memory dependencies (Note: isStoreToStackSlot and
@@ -923,8 +950,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // empty, or filled with the Values of memory locations which this
     // SU depends on.
     UnderlyingObjectsVector Objs;
-    bool ObjsIdentified =
-        getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
+    bool ObjsIdentified = getUnderlyingObjectsForInstr(&MI, DAG.MFI, Objs,
+                                                       DAG.MF.getDataLayout());
 
     if (MI.mayStore()) {
       if (!ObjsIdentified) {
@@ -975,7 +1002,51 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   }
 
   if (DbgMI)
-    FirstDbgValue = DbgMI;
+    DAG.FirstDbgValue = DbgMI;
+}
+
+void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
+                                        RegPressureTracker *RPTracker,
+                                        PressureDiffs *PDiffs,
+                                        LiveIntervals *LIS,
+                                        bool TrackLaneMasks) {
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  bool UseAA =
+      EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI : ST.useAA();
+  this->TrackLaneMasks = TrackLaneMasks;
+  MISUnitMap.clear();
+  ScheduleDAG::clearDAG();
+
+  // Create an SUnit for each real instruction.
+  initSUnits();
+
+  if (PDiffs)
+    PDiffs->init(SUnits.size());
+
+  // Remove any stale debug info; sometimes BuildSchedGraph is called again
+  // without emitting the info from the previous call.
+  DbgValues.clear();
+  FirstDbgValue = nullptr;
+
+  assert(Defs.empty() && Uses.empty() &&
+         "Only BuildGraph should update Defs/Uses");
+  Defs.setUniverse(TRI->getNumRegs());
+  Uses.setUniverse(TRI->getNumRegs());
+
+  assert(CurrentVRegDefs.empty() && "nobody else should use CurrentVRegDefs");
+  assert(CurrentVRegUses.empty() && "nobody else should use CurrentVRegUses");
+  unsigned NumVirtRegs = MRI.getNumVirtRegs();
+  CurrentVRegDefs.setUniverse(NumVirtRegs);
+  CurrentVRegUses.setUniverse(NumVirtRegs);
+
+  std::optional<BatchAAResults> BatchAA;
+  if (UseAA && AA)
+    BatchAA.emplace(*AA);
+
+  ScheduleDependencyBuilder DepBuilder(
+      *this, BatchAA.has_value() ? &BatchAA.value() : nullptr, RPTracker,
+      PDiffs, LIS);
+  DepBuilder.buildDeps();
 
   Defs.clear();
   Uses.clear();
@@ -988,24 +1059,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
 raw_ostream &llvm::operator<<(raw_ostream &OS, const PseudoSourceValue* PSV) {
   PSV->printCustom(OS);
   return OS;
-}
-
-void ScheduleDAGInstrs::Value2SUsMap::dump() {
-  for (const auto &[ValType, SUs] : *this) {
-    if (isa<const Value *>(ValType)) {
-      const Value *V = cast<const Value *>(ValType);
-      if (isa<UndefValue>(V))
-        dbgs() << "Unknown";
-      else
-        V->printAsOperand(dbgs());
-    } else if (isa<const PseudoSourceValue *>(ValType))
-      dbgs() << cast<const PseudoSourceValue *>(ValType);
-    else
-      llvm_unreachable("Unknown Value type.");
-
-    dbgs() << " : ";
-    dumpSUList(SUs);
-  }
 }
 
 static void toggleKills(const MachineRegisterInfo &MRI, LiveRegUnits &LiveRegs,
