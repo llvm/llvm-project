@@ -248,6 +248,57 @@ TEST_F(InterpreterTest, UndoCommand) {
   EXPECT_FALSE(Err12);
 }
 
+// A failed input is not a PTU, so Undo acts on the last good input.
+TEST_F(InterpreterTest, UndoAfterFailedInput) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // Nothing to undo: a failed input does not count.
+  auto Err1 = Interp->Parse("int bad = ;").takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err1)));
+  auto Err2 = Interp->Undo();
+  EXPECT_EQ("Operation failed. No input left to undo",
+            llvm::toString(std::move(Err2)));
+
+  // Undo after a failed input removes the last good input.
+  cantFail(Interp->Parse("int kept = 1;"));
+  auto Err3 = Interp->Parse("int bad = kept + ;").takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err3)));
+  cantFail(Interp->Undo());
+  auto Err4 = Interp->Parse("int use = kept;").takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err4)));
+  auto Err5 = Interp->Undo();
+  EXPECT_EQ("Operation failed. No input left to undo",
+            llvm::toString(std::move(Err5)));
+
+  // The name is free again.
+  cantFail(Interp->Parse("double kept = 2.0;"));
+}
+
+// Undo frees a C-linkage name, so the same definition can come back.
+TEST_F(InterpreterTest, UndoExternCDefinition) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  cantFail(Interp->Parse("extern \"C\" int f() { return 1; }"));
+  cantFail(Interp->Undo());
+  cantFail(Interp->Parse("extern \"C\" int f() { return 1; }"));
+
+  cantFail(Interp->ParseAndExecute("extern \"C\" int g() { return 1; }"));
+  cantFail(Interp->Undo());
+  cantFail(Interp->ParseAndExecute("extern \"C\" int g() { return 2; }"));
+  auto G = cantFail(Interp->getSymbolAddress("g")).toPtr<int (*)()>();
+  EXPECT_EQ(2, G());
+
+  cantFail(Interp->Parse("extern \"C\" { int h() { return 1; } }"));
+  cantFail(Interp->Undo());
+  cantFail(Interp->Parse("extern \"C\" { int h() { return 1; } }"));
+}
+
 static std::string MangleName(NamedDecl *ND) {
   ASTContext &C = ND->getASTContext();
   std::unique_ptr<MangleContext> MangleC(C.createMangleContext());
@@ -348,6 +399,235 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
   auto fn =
       cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
   EXPECT_EQ(42, fn(NewA.getPtr()));
+}
+
+// A failed input must not leave its implicit instantiations behind. A later
+// input that uses them must instantiate them again, without the declarations
+// of the failed input.
+struct FailedInputInstantiationTest : InterpreterTest {
+  std::string DiagText;
+  llvm::raw_string_ostream DiagOS{DiagText};
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter DiagPrinter{DiagOS, DiagOpts};
+  std::unique_ptr<Interpreter> Interp;
+
+  void SetUp() override {
+    InterpreterTest::SetUp();
+    // FIXME: We cannot yet handle delayed template parsing.
+    Interp = createInterpreter({"-fno-delayed-template-parsing"}, &DiagPrinter);
+  }
+
+  /// The diagnostics of a failed input.
+  std::string ParseFails(llvm::StringRef Code) {
+    DiagText.clear();
+    llvm::Error Err = Interp->Parse(Code).takeError();
+    EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+    return DiagText;
+  }
+
+  void ExpectParseFails(llvm::StringRef Code) { ParseFails(Code); }
+
+  template <typename Fn> Fn *Lookup(llvm::StringRef Name) {
+    return cantFail(Interp->getSymbolAddress(Name)).toPtr<Fn *>();
+  }
+};
+
+TEST_F(FailedInputInstantiationTest, FunctionTemplate) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> T twice(T x) { return x + x; }"));
+  ExpectParseFails("extern \"C\" double twice_fail(double *p) {"
+                   "  return twice(*p) + no_such_name; }");
+  cantFail(Interp->ParseAndExecute(
+      "extern \"C\" double twice_after(double x) { return twice(x); }"));
+  EXPECT_EQ(6.0, Lookup<double(double)>("twice_after")(3.0));
+}
+
+TEST_F(FailedInputInstantiationTest, MemberOfClassTemplate) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> struct Box { T v; T twice() { return v + v; } };"));
+  ExpectParseFails("extern \"C\" int box_fail(Box<int> *b) {"
+                   "  return b->twice() + no_such_name; }");
+  cantFail(Interp->ParseAndExecute("extern \"C\" int box_after(int v) { "
+                                   "Box<int> b{v}; return b.twice(); }"));
+  EXPECT_EQ(8, Lookup<int(int)>("box_after")(4));
+}
+
+TEST_F(FailedInputInstantiationTest, StaticDataMemberOfClassTemplate) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> struct Holder { static T value; };"
+      "template <class T> T Holder<T>::value = T(7);"));
+  ExpectParseFails("extern \"C\" int holder_fail() {"
+                   "  return Holder<int>::value + no_such_name; }");
+  cantFail(Interp->ParseAndExecute(
+      "extern \"C\" int holder_after() { return Holder<int>::value; }"));
+  EXPECT_EQ(7, Lookup<int()>("holder_after")());
+}
+
+TEST_F(FailedInputInstantiationTest, VariableTemplate) {
+  cantFail(Interp->ParseAndExecute("template <class T> T five = T(5);"));
+  ExpectParseFails(
+      "extern \"C\" int five_fail() { return five<int> + no_such_name; }");
+  cantFail(Interp->ParseAndExecute(
+      "extern \"C\" int five_after() { return five<int>; }"));
+  EXPECT_EQ(5, Lookup<int()>("five_after")());
+}
+
+TEST_F(FailedInputInstantiationTest, VTable) {
+  cantFail(
+      Interp->ParseAndExecute("struct V { virtual int f() { return 3; } };"));
+  ExpectParseFails(
+      "extern \"C\" int vtable_fail() { V v; return v.f() + no_such_name; }");
+  cantFail(Interp->ParseAndExecute(
+      "extern \"C\" int vtable_after() { V v; return v.f(); }"));
+  EXPECT_EQ(3, Lookup<int()>("vtable_after")());
+}
+
+TEST_F(FailedInputInstantiationTest, UndoThenReuseTemplate) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> T thrice(T x) { return x + x + x; }"));
+  cantFail(Interp->ParseAndExecute(
+      "extern \"C\" int thrice_a(int x) { return thrice(x); }"));
+  ExpectParseFails("extern \"C\" int thrice_fail(int x) { return thrice(x) + "
+                   "no_such_name; }");
+  // The failed input is not a PTU, so this undoes thrice_a.
+  cantFail(Interp->Undo());
+  ExpectParseFails("extern \"C\" int thrice_b(int x) { return thrice_a(x); }");
+  cantFail(Interp->ParseAndExecute(
+      "extern \"C\" int thrice_a(int x) { return thrice(x) + 1; }"));
+  EXPECT_EQ(7, Lookup<int(int)>("thrice_a")(2));
+}
+
+// The instantiations below bind a dependent call to a function of the failed
+// input. The failed input withdraws the function, so the instantiation must
+// go too. A later use then finds nothing, or a new overload that the stale
+// instantiation would not call: it takes its argument by reference.
+using ::testing::HasSubstr;
+
+TEST_F(FailedInputInstantiationTest, PoisonedFunctionTemplate) {
+  // The unevaluated use declares readv<S> before the failed input.
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> int readv(T t) { return value(t); } struct S {};"
+      "using R = decltype(readv(S{}));"));
+  ExpectParseFails("int value(S) { return no_such_name; }"
+                   "extern \"C\" int bad() { return readv(S{}); }");
+  EXPECT_THAT(ParseFails("extern \"C\" int still_bad() { return readv(S{}); }"),
+              HasSubstr("undeclared identifier 'value'"));
+  cantFail(Interp->ParseAndExecute(
+      "int value(const S &) { return 7; }"
+      "extern \"C\" int good() { return readv(S{}); }"));
+  EXPECT_EQ(7, Lookup<int()>("good")());
+}
+
+// A constexpr function is instantiated at once, not at the end of the input.
+TEST_F(FailedInputInstantiationTest, PoisonedConstexprFunctionTemplate) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> constexpr int readk(T t) { return kval(t) + 1; }"
+      "struct S {};"));
+  ExpectParseFails("constexpr int kval(S) { return no_such_name; }"
+                   "constexpr int bad = readk(S{});");
+  EXPECT_THAT(ParseFails("extern \"C\" int still_bad() { return readk(S{}); }"),
+              HasSubstr("undeclared identifier 'kval'"));
+  cantFail(Interp->ParseAndExecute(
+      "constexpr int kval(const S &) { return 4; }"
+      "extern \"C\" int good() { return readk(S{}); }"));
+  EXPECT_EQ(5, Lookup<int()>("good")());
+}
+
+TEST_F(FailedInputInstantiationTest, PoisonedDeducedReturnType) {
+  cantFail(Interp->ParseAndExecute("template <class T> auto deduced(T t) { "
+                                   "return value(t); } struct S {};"));
+  ExpectParseFails("int value(S) { return no_such_name; }"
+                   "extern \"C\" int bad() { return deduced(S{}); }");
+  // A stale 'int' return type would truncate the result.
+  cantFail(Interp->ParseAndExecute(
+      "double value(const S &) { return 2.5; }"
+      "extern \"C\" double good() { return deduced(S{}); }"));
+  EXPECT_EQ(2.5, Lookup<double()>("good")());
+}
+
+TEST_F(FailedInputInstantiationTest, PoisonedMemberFunction) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> struct Box { int get() { return init(T{}); } };"
+      "struct S {};"));
+  ExpectParseFails("int init(S) { return no_such_name; }"
+                   "extern \"C\" int bad() { return Box<S>{}.get(); }");
+  EXPECT_THAT(
+      ParseFails("extern \"C\" int still_bad() { return Box<S>{}.get(); }"),
+      HasSubstr("undeclared identifier 'init'"));
+  cantFail(Interp->ParseAndExecute(
+      "int init(const S &) { return 3; }"
+      "extern \"C\" int good() { return Box<S>{}.get(); }"));
+  EXPECT_EQ(3, Lookup<int()>("good")());
+}
+
+// The first use of a vtable instantiates all virtual functions of the class.
+TEST_F(FailedInputInstantiationTest, PoisonedVirtualFunction) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> struct VB { virtual int f() { return init(T{}); } };"
+      "struct S {};"));
+  ExpectParseFails("int init(S) { return no_such_name; }"
+                   "extern \"C\" int bad() { VB<S> v; return v.f(); }");
+  EXPECT_THAT(
+      ParseFails("extern \"C\" int still_bad() { VB<S> v; return v.f(); }"),
+      HasSubstr("undeclared identifier 'init'"));
+  cantFail(Interp->ParseAndExecute(
+      "int init(const S &) { return 4; }"
+      "extern \"C\" int good() { VB<S> v; return v.f(); }"));
+  EXPECT_EQ(4, Lookup<int()>("good")());
+}
+
+TEST_F(FailedInputInstantiationTest, PoisonedStaticDataMember) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> struct Holder { static int value; };"
+      "template <class T> int Holder<T>::value = init(T{}); struct S {};"));
+  ExpectParseFails("int init(S) { return no_such_name; }"
+                   "extern \"C\" int bad() { return Holder<S>::value; }");
+  EXPECT_THAT(
+      ParseFails("extern \"C\" int still_bad() { return Holder<S>::value; }"),
+      HasSubstr("undeclared identifier 'init'"));
+  cantFail(Interp->ParseAndExecute(
+      "int init(const S &) { return 9; }"
+      "extern \"C\" int good() { return Holder<S>::value; }"));
+  EXPECT_EQ(9, Lookup<int()>("good")());
+}
+
+TEST_F(FailedInputInstantiationTest, PoisonedVariableTemplate) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> int vt = init(T{}); struct S {};"));
+  ExpectParseFails("int init(S) { return no_such_name; }"
+                   "extern \"C\" int bad() { return vt<S>; }");
+  EXPECT_THAT(ParseFails("extern \"C\" int still_bad() { return vt<S>; }"),
+              HasSubstr("undeclared identifier 'init'"));
+  cantFail(
+      Interp->ParseAndExecute("int init(const S &) { return 8; }"
+                              "extern \"C\" int good() { return vt<S>; }"));
+  EXPECT_EQ(8, Lookup<int()>("good")());
+}
+
+// A type of the failed input as template argument. The new type is a new
+// argument, so a later input gets a new specialization. The old one reached
+// CodeGen before the error, with the same mangled name.
+TEST_F(FailedInputInstantiationTest, TypeOfFailedInputAsArgument) {
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> constexpr int tag(T) { return T::id; }"));
+  ExpectParseFails("struct Tg { static constexpr int id = 1; };"
+                   "constexpr int old_tag = tag(Tg{}); int e = no_such_name;");
+  cantFail(
+      Interp->ParseAndExecute("struct Tg { static constexpr int id = 2; };"
+                              "extern \"C\" int good() { return tag(Tg{}); }"));
+  EXPECT_EQ(2, Lookup<int()>("good")());
+}
+
+// A request without a definition. The template gets its definition later, so
+// the next use must request the instantiation again.
+TEST_F(FailedInputInstantiationTest, DeclaredThenDefinedTemplate) {
+  cantFail(Interp->ParseAndExecute("template <class T> T later(T);"));
+  ExpectParseFails(
+      "extern \"C\" int bad() { return later(1) + no_such_name; }");
+  cantFail(Interp->ParseAndExecute(
+      "template <class T> T later(T x) { return x + 1; }"
+      "extern \"C\" int good() { return later(1); }"));
+  EXPECT_EQ(2, Lookup<int()>("good")());
 }
 
 TEST_F(InterpreterTest, Value) {
