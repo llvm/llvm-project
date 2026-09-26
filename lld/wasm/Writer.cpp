@@ -62,6 +62,9 @@ private:
   void createInitMemoryFunction();
   void createStartFunction();
   void createApplyDataRelocationsFunction();
+  void finalizeRelocationFunction(DefinedFunction *entry,
+                                  std::vector<std::string> &bodies,
+                                  StringRef helperPrefix);
   void createApplyGlobalRelocationsFunction();
   void createApplyTLSRelocationsFunction();
   void createApplyGlobalTLSRelocationsFunction();
@@ -105,6 +108,12 @@ private:
   void writeHeader();
   void writeSections();
   void writeBuildId();
+
+  // __wasm_apply_data_relocs and its relocation code, generated early (to
+  // know whether the function is needed) and turned into bodies late (once
+  // function indexes exist), see finalizeRelocationFunction.
+  DefinedFunction *applyDataRelocs = nullptr;
+  std::vector<std::string> applyDataRelocsBodies;
 
   uint64_t fileSize = 0;
 
@@ -1619,53 +1628,96 @@ void Writer::createStartFunction() {
 // apply any relocations to the data segments on startup.  This function is
 // called `__wasm_apply_data_relocs` and is expected to be called before
 // any user code (i.e. before `__wasm_call_ctors`).
+
+// A function body for the code section: no locals, the code, then END.
+static std::string wrapFunctionBody(StringRef code) {
+  std::string body;
+  {
+    raw_string_ostream os(body);
+    writeUleb128(os, 0, "num locals");
+    os << code;
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+  return body;
+}
+
 void Writer::createApplyDataRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyDataRelocationsFunction\n");
-  // First write the body's contents to a string.
-  std::string bodyContent;
-  {
-    raw_string_ostream os(bodyContent);
-    writeUleb128(os, 0, "num locals");
-    bool generated = false;
-    for (const OutputSegment *seg : segments)
-      if (!ctx.arg.isMultithreaded() || !seg->isTLS())
-        for (const InputChunk *inSeg : seg->inputSegments)
-          generated |= inSeg->generateRelocationCode(os);
+  // Generate the relocation code now, to know whether the function is needed
+  // at all.  It only becomes function bodies in finalizeRelocationFunction,
+  // once function indexes are assigned; see there for why.
+  for (const OutputSegment *seg : segments)
+    if (!ctx.arg.isMultithreaded() || !seg->isTLS())
+      for (const InputChunk *inSeg : seg->inputSegments)
+        inSeg->generateRelocationCode(applyDataRelocsBodies);
 
-    if (!generated) {
-      LLVM_DEBUG(dbgs() << "skipping empty __wasm_apply_data_relocs\n");
-      return;
-    }
-    writeU8(os, WASM_OPCODE_END, "END");
+  if (applyDataRelocsBodies.empty()) {
+    LLVM_DEBUG(dbgs() << "skipping empty __wasm_apply_data_relocs\n");
+    return;
   }
 
   // __wasm_apply_data_relocs
   // Function that applies relocations to data segment post-instantiation.
   static WasmSignature nullSignature = {{}, {}};
-  auto def = symtab->addSyntheticFunction(
+  applyDataRelocs = symtab->addSyntheticFunction(
       "__wasm_apply_data_relocs",
       WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
       make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
-  def->markLive();
+  applyDataRelocs->markLive();
+}
 
-  createFunction(def, bodyContent);
+// Give `entry` the relocation code in `bodies`.  A single body goes into
+// `entry` itself.  More than one means the code exceeded the maximum function
+// body size: each body then becomes a local helper function <helperPrefix><n>
+// and `entry` calls them in turn.
+//
+// This runs after assignIndexes: the TLS relocation code can only be
+// generated then (it uses the index of __tls_base, a defined global), and
+// the calls need the helpers' function indexes.  So the helpers are placed
+// in the function section directly, as createCommandExportWrappers does for
+// the functions it adds at this point.
+void Writer::finalizeRelocationFunction(DefinedFunction *entry,
+                                        std::vector<std::string> &bodies,
+                                        StringRef helperPrefix) {
+  if (bodies.size() <= 1) {
+    StringRef code = bodies.empty() ? StringRef() : StringRef(bodies.front());
+    createFunction(entry, wrapFunctionBody(code));
+    return;
+  }
+
+  static WasmSignature nullSignature = {{}, {}};
+  std::string calls;
+  {
+    raw_string_ostream os(calls);
+    for (size_t i = 0; i < bodies.size(); ++i) {
+      StringRef name = saver().save(Twine(helperPrefix) + Twine(i));
+      auto *func = make<SyntheticFunction>(nullSignature, name);
+      // Local: the helpers are only ever called by index, so they must
+      // neither be exported (which --export-all does even to hidden symbols)
+      // nor be visible to a later link that consumes this module as a shared
+      // library.
+      DefinedFunction *helper =
+          symtab->addSyntheticFunction(name, WASM_SYMBOL_BINDING_LOCAL, func);
+      helper->markLive();
+      out.functionSec->addFunction(func);
+      createFunction(helper, wrapFunctionBody(bodies[i]));
+
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, helper->getFunctionIndex(), "function index");
+    }
+  }
+  createFunction(entry, wrapFunctionBody(calls));
 }
 
 void Writer::createApplyTLSRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyTLSRelocationsFunction\n");
-  std::string bodyContent;
-  {
-    raw_string_ostream os(bodyContent);
-    writeUleb128(os, 0, "num locals");
-    for (const OutputSegment *seg : segments)
-      if (seg->isTLS())
-        for (const InputChunk *inSeg : seg->inputSegments)
-          inSeg->generateRelocationCode(os);
-
-    writeU8(os, WASM_OPCODE_END, "END");
-  }
-
-  createFunction(ctx.sym.applyTLSRelocs, bodyContent);
+  std::vector<std::string> bodies;
+  for (const OutputSegment *seg : segments)
+    if (seg->isTLS())
+      for (const InputChunk *inSeg : seg->inputSegments)
+        inSeg->generateRelocationCode(bodies);
+  finalizeRelocationFunction(ctx.sym.applyTLSRelocs, bodies,
+                             "__wasm_apply_tls_relocs_");
 }
 
 // Similar to createApplyDataRelocationsFunction but generates relocation code
@@ -1942,6 +1994,9 @@ void Writer::run() {
 
   if (!ctx.arg.relocatable) {
     // Create linker synthesized functions
+    if (applyDataRelocs)
+      finalizeRelocationFunction(applyDataRelocs, applyDataRelocsBodies,
+                                 "__wasm_apply_data_relocs_");
     if (ctx.sym.applyGlobalRelocs) {
       createApplyGlobalRelocationsFunction();
     }
