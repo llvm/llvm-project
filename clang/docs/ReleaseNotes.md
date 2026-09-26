@@ -763,6 +763,8 @@ features cannot lower the translation-unit ABI level;
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

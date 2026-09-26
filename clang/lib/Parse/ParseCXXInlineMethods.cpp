@@ -318,27 +318,14 @@ void Parser::LateParsedPragma::ParseLexedPragmas() {
   Self->ParseLexedPragma(*this);
 }
 
-struct Parser::ReenterTemplateScopeRAII {
-  Parser &P;
-  MultiParseScope Scopes;
-  TemplateParameterDepthRAII CurTemplateDepthTracker;
-
-  ReenterTemplateScopeRAII(Parser &P, Decl *MaybeTemplated, bool Enter = true)
-      : P(P), Scopes(P), CurTemplateDepthTracker(P.TemplateParameterDepth) {
-    if (Enter) {
-      CurTemplateDepthTracker.addDepth(
-          P.ReenterTemplateScopes(Scopes, MaybeTemplated));
-    }
-  }
-};
-
 struct Parser::ReenterClassScopeRAII : ReenterTemplateScopeRAII {
+  Parser &P;
   ParsingClass &Class;
 
   ReenterClassScopeRAII(Parser &P, ParsingClass &Class)
       : ReenterTemplateScopeRAII(P, Class.TagOrTemplate,
                                  /*Enter=*/!Class.TopLevelClass),
-        Class(Class) {
+        P(P), Class(Class) {
     // If this is the top-level class, we're still within its scope.
     if (Class.TopLevelClass)
       return;
