@@ -13,12 +13,25 @@
 
 #include "llvm/Support/Signals.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/Program.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#ifdef LLVM_ON_UNIX
+#include <csignal>
+#include <cstdlib>
+#include <unistd.h>
+#endif
+
 using namespace llvm;
 using namespace llvm::sys;
+using testing::HasSubstr;
 using testing::MatchesRegex;
 using testing::Not;
 
@@ -67,3 +80,82 @@ TEST(SignalsTest, SymbolizerMarkupDisabled) {
 }
 
 #endif // defined(HAVE_BACKTRACE) && ...
+
+#ifdef LLVM_ON_UNIX
+extern const char *TestMainArgv0;
+
+TEST(SignalsTest, PrintsFatalSignalDetails) {
+  if (const char *Mode = std::getenv("LLVM_TEST_FATAL_SIGNAL_DETAILS")) {
+    if (StringRef(Mode) == "abort")
+      std::abort();
+    if (StringRef(Mode) == "sent-segv") {
+      raise(SIGSEGV);
+      // Some platforms return after handling a signal sent by this process.
+      raise(SIGSEGV);
+      _exit(1);
+    }
+    *(volatile int *)0x10 = 0;
+    _exit(1);
+  }
+
+  static int ExecutableAnchor;
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ExecutableAnchor);
+  StringRef Args[] = {Executable,
+                      "--gtest_filter=SignalsTest.PrintsFatalSignalDetails"};
+  auto ShardIndex = sys::Process::GetEnv("GTEST_SHARD_INDEX");
+  auto TotalShards = sys::Process::GetEnv("GTEST_TOTAL_SHARDS");
+  scope_exit RestoreShards([&] {
+    if (ShardIndex)
+      setenv("GTEST_SHARD_INDEX", ShardIndex->c_str(), 1);
+    else
+      unsetenv("GTEST_SHARD_INDEX");
+    if (TotalShards)
+      setenv("GTEST_TOTAL_SHARDS", TotalShards->c_str(), 1);
+    else
+      unsetenv("GTEST_TOTAL_SHARDS");
+  });
+  ASSERT_EQ(0, unsetenv("GTEST_SHARD_INDEX"));
+  ASSERT_EQ(0, unsetenv("GTEST_TOTAL_SHARDS"));
+
+  const char *Modes[] = {
+      "abort",
+      "sent-segv",
+#ifdef __linux__
+      "segv",
+#endif
+  };
+  for (const char *Mode : Modes) {
+    int FD;
+    SmallString<128> Path;
+    ASSERT_FALSE(
+        sys::fs::createTemporaryFile("signal-details", "txt", FD, Path));
+    close(FD);
+    scope_exit RemoveFile([&] { sys::fs::remove(Path); });
+
+    ASSERT_EQ(0, setenv("LLVM_TEST_FATAL_SIGNAL_DETAILS", Mode, 1));
+    scope_exit RemoveMode([] { unsetenv("LLVM_TEST_FATAL_SIGNAL_DETAILS"); });
+    std::optional<StringRef> Redirects[] = {std::nullopt, StringRef(),
+                                            Path.str()};
+    EXPECT_EQ(-2, ExecuteAndWait(Executable, Args, {}, Redirects, 10));
+
+    auto Buffer = MemoryBuffer::getFile(Path);
+    ASSERT_TRUE(Buffer);
+    StringRef Output = (*Buffer)->getBuffer();
+    if (StringRef(Mode) == "abort") {
+      EXPECT_THAT(Output, HasSubstr("Fatal signal: SIGABRT (" +
+                                    std::to_string(SIGABRT) + "), code: "));
+      EXPECT_THAT(Output, Not(HasSubstr("fault address:")));
+    } else if (StringRef(Mode) == "sent-segv") {
+      EXPECT_THAT(Output, HasSubstr("Fatal signal: SIGSEGV (" +
+                                    std::to_string(SIGSEGV) + "), code: "));
+      EXPECT_THAT(Output, Not(HasSubstr("fault address:")));
+    } else {
+      EXPECT_THAT(Output, HasSubstr("Fatal signal: SIGSEGV (" +
+                                    std::to_string(SIGSEGV) +
+                                    "), code: SEGV_MAPERR ("));
+      EXPECT_THAT(Output, HasSubstr("fault address: 0x10"));
+    }
+  }
+}
+#endif

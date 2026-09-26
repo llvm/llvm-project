@@ -239,6 +239,210 @@ struct FilesToRemoveCleanup {
 } // namespace
 
 static StringRef Argv0;
+static std::atomic<bool> PrintSignalDetailsOnCrash = false;
+
+static const char *getFatalSignalName(int Sig) {
+  switch (Sig) {
+  case SIGILL:
+    return "SIGILL";
+  case SIGTRAP:
+    return "SIGTRAP";
+  case SIGABRT:
+    return "SIGABRT";
+  case SIGFPE:
+    return "SIGFPE";
+  case SIGBUS:
+    return "SIGBUS";
+  case SIGSEGV:
+    return "SIGSEGV";
+  case SIGQUIT:
+    return "SIGQUIT";
+#ifdef SIGSYS
+  case SIGSYS:
+    return "SIGSYS";
+#endif
+#ifdef SIGXCPU
+  case SIGXCPU:
+    return "SIGXCPU";
+#endif
+#ifdef SIGXFSZ
+  case SIGXFSZ:
+    return "SIGXFSZ";
+#endif
+#ifdef SIGEMT
+  case SIGEMT:
+    return "SIGEMT";
+#endif
+  default:
+    return "unknown";
+  }
+}
+
+static const char *getSignalCodeName(int Sig, int Code) {
+#ifdef SI_USER
+  if (Code == SI_USER)
+    return "SI_USER";
+#endif
+#ifdef SI_QUEUE
+  if (Code == SI_QUEUE)
+    return "SI_QUEUE";
+#endif
+#ifdef SI_TKILL
+  if (Code == SI_TKILL)
+    return "SI_TKILL";
+#endif
+#ifdef SI_KERNEL
+  if (Code == SI_KERNEL)
+    return "SI_KERNEL";
+#endif
+  if (Sig == SIGSEGV) {
+#ifdef SEGV_MAPERR
+    if (Code == SEGV_MAPERR)
+      return "SEGV_MAPERR";
+#endif
+#ifdef SEGV_ACCERR
+    if (Code == SEGV_ACCERR)
+      return "SEGV_ACCERR";
+#endif
+#ifdef SEGV_BNDERR
+    if (Code == SEGV_BNDERR)
+      return "SEGV_BNDERR";
+#endif
+#ifdef SEGV_PKUERR
+    if (Code == SEGV_PKUERR)
+      return "SEGV_PKUERR";
+#endif
+  } else if (Sig == SIGBUS) {
+#ifdef BUS_ADRALN
+    if (Code == BUS_ADRALN)
+      return "BUS_ADRALN";
+#endif
+#ifdef BUS_ADRERR
+    if (Code == BUS_ADRERR)
+      return "BUS_ADRERR";
+#endif
+#ifdef BUS_OBJERR
+    if (Code == BUS_OBJERR)
+      return "BUS_OBJERR";
+#endif
+  }
+  return nullptr;
+}
+
+static char *appendSignalText(char *Out, const char *Text) {
+  while (*Text)
+    *Out++ = *Text++;
+  return Out;
+}
+
+static char *appendSignalUnsigned(char *Out, unsigned Value) {
+  char Digits[sizeof(unsigned) * 3];
+  unsigned Count = 0;
+  do {
+    Digits[Count++] = '0' + Value % 10;
+    Value /= 10;
+  } while (Value);
+  while (Count)
+    *Out++ = Digits[--Count];
+  return Out;
+}
+
+static char *appendSignalSigned(char *Out, int Value) {
+  if (Value < 0) {
+    *Out++ = '-';
+    return appendSignalUnsigned(Out, static_cast<unsigned>(-int64_t(Value)));
+  }
+  return appendSignalUnsigned(Out, static_cast<unsigned>(Value));
+}
+
+static char *appendSignalHex(char *Out, uintptr_t Value) {
+  *Out++ = '0';
+  *Out++ = 'x';
+  bool Started = false;
+  for (int Shift = sizeof(uintptr_t) * 8 - 4; Shift >= 0; Shift -= 4) {
+    unsigned Digit = (Value >> Shift) & 15;
+    if (Digit || Started || Shift == 0) {
+      *Out++ = "0123456789abcdef"[Digit];
+      Started = true;
+    }
+  }
+  return Out;
+}
+
+static bool hasFaultAddress(int Sig, int Code) {
+  if (Sig != SIGILL && Sig != SIGFPE && Sig != SIGSEGV && Sig != SIGBUS &&
+      Sig != SIGTRAP)
+    return false;
+  if (Code <= 0)
+    return false;
+#ifdef SI_USER
+  // On BSD and Darwin, generic SI_* codes are positive and start at SI_USER.
+  if (SI_USER > 0 && Code >= SI_USER)
+    return false;
+#endif
+#ifdef SI_KERNEL
+  if (Code == SI_KERNEL)
+    return false;
+#endif
+#ifdef SI_NOINFO
+  if (Code == SI_NOINFO)
+    return false;
+#endif
+  if (Sig == SIGTRAP) {
+    // Other positive trap codes can describe events without a fault address.
+#ifdef TRAP_BRKPT
+    if (Code == TRAP_BRKPT)
+      return true;
+#endif
+#ifdef TRAP_TRACE
+    if (Code == TRAP_TRACE)
+      return true;
+#endif
+    return false;
+  }
+  return true;
+}
+
+// Use only fixed storage and write(), which is async-signal-safe. In
+// particular, strsignal() and snprintf() cannot be called from a signal
+// handler.
+static void printSignalDetails(int Sig, const siginfo_t *Info) {
+  SaveAndRestore SaveErrnoDuringASignalHandler(errno);
+  char Buffer[256];
+  char *Out = appendSignalText(Buffer, "Fatal signal: ");
+  Out = appendSignalText(Out, getFatalSignalName(Sig));
+  *Out++ = ' ';
+  *Out++ = '(';
+  Out = appendSignalUnsigned(Out, static_cast<unsigned>(Sig));
+  *Out++ = ')';
+  if (Info) {
+    Out = appendSignalText(Out, ", code: ");
+    if (const char *Name = getSignalCodeName(Sig, Info->si_code)) {
+      Out = appendSignalText(Out, Name);
+      *Out++ = ' ';
+      *Out++ = '(';
+      Out = appendSignalSigned(Out, Info->si_code);
+      *Out++ = ')';
+    } else {
+      Out = appendSignalSigned(Out, Info->si_code);
+    }
+
+    if (hasFaultAddress(Sig, Info->si_code)) {
+      Out = appendSignalText(Out, ", fault address: ");
+      Out = appendSignalHex(Out, reinterpret_cast<uintptr_t>(Info->si_addr));
+    }
+  }
+  *Out++ = '\n';
+  const char *Data = Buffer;
+  size_t Length = Out - Buffer;
+  while (Length) {
+    ssize_t Written = write(STDERR_FILENO, Data, Length);
+    if (Written <= 0)
+      break;
+    Data += Written;
+    Length -= Written;
+  }
+}
 
 /// Signals that represent requested termination. There's no bug or failure, or
 /// if there is, it's not our direct responsibility. For whatever reason, our
@@ -454,6 +658,8 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *Context) {
   }
 
   // Otherwise if it is a fault (like SEGV) run any handler.
+  if (PrintSignalDetailsOnCrash.load(std::memory_order_relaxed))
+    printSignalDetails(Sig, Info);
   llvm::sys::RunSignalHandlers();
 
 #ifdef __s390__
@@ -1009,6 +1215,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 }
 
 static void PrintStackTraceSignalHandler(void *) {
+  PrintSignalDetailsOnCrash.store(false, std::memory_order_relaxed);
   sys::PrintStackTrace(llvm::errs());
 }
 
@@ -1020,6 +1227,7 @@ void llvm::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
                                              bool DisableCrashReporting) {
   ::Argv0 = Argv0;
 
+  PrintSignalDetailsOnCrash.store(true, std::memory_order_relaxed);
   AddSignalHandler(PrintStackTraceSignalHandler, nullptr);
 
 #if defined(__APPLE__) && ENABLE_CRASH_OVERRIDES
