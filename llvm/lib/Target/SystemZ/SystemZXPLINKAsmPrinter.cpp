@@ -272,6 +272,11 @@ void SystemZXPLINKAsmPrinter::emitXXStructorList(const DataLayout &DL,
 
 void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
   auto *ZOS = getTargetStreamer();
+  // A main program needs CELQMAIN, through which the Language Environment
+  // startup (CELQSTRT) finds the main routine and its environment.
+  if (const Function *MainFn = M.getFunction("main");
+      MainFn && !MainFn->isDeclaration())
+    emitCELQMAIN(*MainFn);
   emitADASection();
   emitIDRLSection(M);
   // On z/OS, we need to associate an external data reference with an ED
@@ -287,6 +292,53 @@ void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
       }
     }
   }
+}
+
+// Emit CELQMAIN in RENT format (see z/OS Language Environment Vendor
+// Interfaces, "Program initialization and termination for AMODE 64
+// applications"):
+//   +0   X'04000001'
+//   +8   AD(main entry point)
+//   +10  AD(CELQINPL)
+//   +18  A(0) / Q(environment); emitted as 8 byte R-con to main, which the
+//        binder resolves to the offset of the ADA of main (fits into 4 bytes)
+// followed by a reference to the bootstrap routine CELQBST. CELQSTRT only has
+// a weak reference to CELQBST, so without it autocall would not include it.
+void SystemZXPLINKAsmPrinter::emitCELQMAIN(const Function &MainFn) {
+  MCSymbol *MainSym = getSymbol(&MainFn);
+  auto ExternalOSSymbol = [&](StringRef Name) {
+    MCSymbol *Sym = OutContext.getOrCreateSymbol(Name);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_OSLinkage);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    return Sym;
+  };
+  MCSymbol *CELQINPL = ExternalOSSymbol("CELQINPL");
+  MCSymbol *CELQBST = ExternalOSSymbol("CELQBST");
+
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
+  OutStreamer->emitValueToAlignment(Align(8));
+  MCSymbol *CELQMAIN = OutContext.getOrCreateSymbol("CELQMAIN");
+  // Referenced by CELQSTRT, CELQINPL and CELQBST with OS linkage.
+  OutStreamer->emitSymbolAttribute(CELQMAIN, MCSA_OSLinkage);
+  OutStreamer->emitSymbolAttribute(CELQMAIN, MCSA_Global);
+  OutStreamer->emitSymbolAttribute(CELQMAIN, MCSA_Hidden);
+  OutStreamer->emitLabel(CELQMAIN);
+  OutStreamer->AddComment("CELQMAIN, RENT format");
+  OutStreamer->emitInt32(0x04000001);
+  OutStreamer->emitInt32(0);
+  OutStreamer->AddComment("Address of main");
+  OutStreamer->emitValue(MCSymbolRefExpr::create(MainSym, OutContext), 8);
+  OutStreamer->AddComment("Address of CELQINPL");
+  OutStreamer->emitValue(MCSymbolRefExpr::create(CELQINPL, OutContext), 8);
+  OutStreamer->AddComment("Q(environment) of main");
+  OutStreamer->emitValue(
+      MCSpecifierExpr::create(MCSymbolRefExpr::create(MainSym, OutContext),
+                              SystemZ::S_RCon, OutContext),
+      8);
+  OutStreamer->AddComment("Reference to CELQBST");
+  OutStreamer->emitValue(MCSymbolRefExpr::create(CELQBST, OutContext), 8);
+  OutStreamer->popSection();
 }
 
 void SystemZXPLINKAsmPrinter::emitADASection() {
