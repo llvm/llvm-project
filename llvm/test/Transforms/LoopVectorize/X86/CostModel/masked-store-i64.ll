@@ -33,26 +33,26 @@ define void @test(ptr %C) {
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX1:  Cost of 8 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore>
 ; AVX1:  Cost of 8 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX1:  Cost of 16 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX1:  Cost of 32 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX1:  Cost of 64 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX1:  Cost of 20 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX1:  Cost of 44 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX1:  Cost of 92 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX2:  Cost of 8 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore>
 ; AVX2:  Cost of 8 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX2:  Cost of 16 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX2:  Cost of 32 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX2:  Cost of 64 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX2:  Cost of 20 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX2:  Cost of 44 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX2:  Cost of 92 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  Cost of 1 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore>
 ; AVX512:  Cost of 1 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
 ; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX512:  Cost of 2 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX512:  Cost of 4 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
-; AVX512:  Cost of 8 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX512:  Cost of 6 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX512:  Cost of 16 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
+; AVX512:  Cost of 36 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore>
 ;
 entry:
   br label %for.body
