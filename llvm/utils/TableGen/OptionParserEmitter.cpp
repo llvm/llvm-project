@@ -229,6 +229,35 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
+// -foo-bar and -foo-bar= become foo_bar.
+static std::string getSpellingIdentifier(const Record &R) {
+  std::string ID = R.getValueAsString("Name").rtrim('=').str();
+  llvm::replace(ID, '-', '_');
+  if (ID.empty() || isDigit(ID[0]) ||
+      !all_of(ID, [](char C) { return isAlnum(C) || C == '_'; }))
+    PrintFatalError(R.getLoc(), "the spelling is not an identifier; name the "
+                                "defm");
+  return ID;
+}
+
+// `defm : BoolField<"foo-bar", ...>` declares member foo_bar, and a named defm
+// names it.
+static std::string getMemberName(const Record &R) {
+  StringRef Name = R.getValueAsString("FieldName");
+  return Name.starts_with("anonymous_") ? getSpellingIdentifier(R) : Name.str();
+}
+
+// The OPT_ name of an option of an OptionsStruct. `defm :` rows are named
+// after the spelling: -foo-bar= is OPT_foo_bar_EQ.
+static std::string getStructOptionID(const Record &R) {
+  if (!R.getName().starts_with("anonymous_"))
+    return getOptionName(R);
+  std::string ID = getSpellingIdentifier(R);
+  if (R.getValueAsString("Name").ends_with('='))
+    ID += "_EQ";
+  return ID;
+}
+
 // Emits the struct an OptionsStruct def declares: its declaration under
 // OPTIONS_STRUCT_DECL, and under OPTIONS_STRUCT_DEFS the global instance, the
 // option table, and apply(), which sets the member an argument names.
@@ -236,7 +265,8 @@ static void emitOptionsStruct(const Record &Struct,
                               ArrayRef<const Record *> Groups,
                               ArrayRef<const Record *> Opts, raw_ostream &OS) {
   struct Member {
-    StringRef Name, Type, Default;
+    std::string Name;
+    StringRef Type, Default, Spelling;
   };
   std::vector<const Record *> Fields;
   for (const Record *R : Opts) {
@@ -263,45 +293,50 @@ static void emitOptionsStruct(const Record &Struct,
   std::vector<Member> Members;
   StringMap<unsigned> MemberIndex;
   for (const Record *R : ByID) {
-    Member M{R->getValueAsString("FieldName"), R->getValueAsString("FieldType"),
-             R->getValueAsString("FieldDefault")};
+    Member M{getMemberName(*R), R->getValueAsString("FieldType"),
+             R->getValueAsString("FieldDefault"),
+             R->getValueAsString("Name").rtrim('=')};
     auto [It, Inserted] = MemberIndex.try_emplace(M.Name, Members.size());
     if (Inserted) {
       Members.push_back(M);
       continue;
     }
+    // The rows of one BoolField or ValueField share the member.
     Member &Prev = Members[It->second];
-    if (Prev.Type != M.Type || Prev.Default != M.Default)
-      PrintFatalError(R->getLoc(), "member '" + M.Name +
-                                       "' is declared with a different type "
-                                       "or default");
+    if (Prev.Spelling != M.Spelling)
+      PrintFatalError(R->getLoc(), "member '" + M.Name + "' is also set by -" +
+                                       Prev.Spelling);
   }
 
   StringRef Name = Struct.getName();
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
+  StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
-        "class OptTable;\n} // namespace opt\n\n";
+        "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
+  OS << "namespace " << Namespace << " {\n";
   OS << "struct " << Name << " {\n";
+  if (Namespace != "llvm")
+    OS << "  using StringRef = llvm::StringRef;\n";
   for (const Member &M : Members)
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
   OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
   OS << "  static " << Name << " Global;\n\n";
-  OS << "  static const opt::OptTable &optTable();\n";
+  OS << "  static const llvm::opt::OptTable &optTable();\n";
   OS << "  /// Sets the member that \\p A names. Returns false if the value is "
         "invalid.\n";
-  OS << "  bool apply(const opt::Arg &A);\n";
-  OS << "};\n} // namespace llvm\n";
+  OS << "  bool apply(const llvm::opt::Arg &A);\n";
+  OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
-  std::string Qualified = ("llvm::" + Name).str();
+  std::string Qualified = (Namespace + "::" + Name).str();
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
   OS << Qualified << " " << Qualified << "::Global;\n\n";
   OS << "namespace {\nenum ID : unsigned {\n  OPT_INVALID = 0,\n";
   for (const Record *R : Groups)
     OS << "  OPT_" << getOptionName(*R) << ",\n";
   for (const Record *R : Opts)
-    OS << "  OPT_" << getOptionName(*R) << ",\n";
+    OS << "  OPT_" << getStructOptionID(*R) << ",\n";
   OS << "};\n} // namespace\n\n";
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
   OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
@@ -309,8 +344,8 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "bool " << Qualified << "::apply(const llvm::opt::Arg &A) {\n";
   OS << "  switch (A.getOption().getID()) {\n";
   for (const Record *R : Fields) {
-    OS << "  case OPT_" << getOptionName(*R) << ":\n";
-    StringRef Member = R->getValueAsString("FieldName");
+    OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
+    std::string Member = getMemberName(*R);
     if (isa<UnsetInit>(R->getValueInit("FieldValue")))
       OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
          << ");\n";

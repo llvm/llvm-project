@@ -2169,10 +2169,12 @@ LLVM_ABI bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
 class LLVM_ABI LibraryOptions {
 public:
   /// Calls \p Fn with the spelling of each option without its prefix (e.g.
-  /// "x" or "x="), its metavariable, and its help text.
-  virtual void forEachOption(
-      function_ref<void(StringRef Spelling, StringRef MetaVar, StringRef Help)>
-          Fn) const = 0;
+  /// "x" or "x="), its metavariable, its help text, and whether only
+  /// -help-hidden lists it.
+  virtual void
+  forEachOption(function_ref<void(StringRef Spelling, StringRef MetaVar,
+                                  StringRef Help, bool Hidden)>
+                    Fn) const = 0;
 
   /// Parses the option spelled by Args[0], which may take Args[1] as its
   /// value, and sets \p Consumed to the number of arguments it spans. The

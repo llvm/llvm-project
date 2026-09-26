@@ -111,7 +111,7 @@ Error IndexedCodeGenDataReader::read() {
     if (Ptr >= End)
       return error(cgdata_error::eof);
     FunctionMapRecord.setReadStableFunctionMapNames(
-        CGDataOptions::Global.IndexedCodeGenDataReadFunctionMapNames);
+        CGDataOptions::Global.indexed_codegen_data_read_function_map_names);
     if (LazyLoading)
       FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
                                         Header.StableFunctionMapOffset);

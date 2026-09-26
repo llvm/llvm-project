@@ -164,11 +164,11 @@ removeIdenticalIndexPair(StableFunctionMap::StableFunctionEntries &SFS) {
 static bool isProfitable(const StableFunctionMap::StableFunctionEntries &SFS) {
   const CGDataOptions &Opts = CGDataOptions::Global;
   unsigned StableFunctionCount = SFS.size();
-  if (StableFunctionCount < Opts.GlobalMergingMinMerges)
+  if (StableFunctionCount < Opts.global_merging_min_merges)
     return false;
 
   unsigned InstCount = SFS[0]->InstCount;
-  if (InstCount < Opts.GlobalMergingMinInstrs)
+  if (InstCount < Opts.global_merging_min_instrs)
     return false;
 
   double Cost = 0.0;
@@ -178,22 +178,22 @@ static bool isProfitable(const StableFunctionMap::StableFunctionEntries &SFS) {
     for (auto &[IndexPair, Hash] : *SF->IndexOperandHashMap)
       UniqueHashVals.insert(Hash);
     unsigned ParamCount = UniqueHashVals.size();
-    if (ParamCount > Opts.GlobalMergingMaxParams)
+    if (ParamCount > Opts.global_merging_max_params)
       return false;
     // Theoretically, if ParamCount is 0, it results in identical code folding
     // (ICF), which we can skip merging here since the linker already handles
     // ICF. This pass would otherwise introduce unnecessary thunks that are
     // merely direct jumps. However, enabling this could be beneficial depending
     // on downstream passes, so we provide an option for it.
-    if (Opts.GlobalMergingSkipNoParams && ParamCount == 0)
+    if (Opts.global_merging_skip_no_params && ParamCount == 0)
       return false;
-    Cost += ParamCount * Opts.GlobalMergingParamOverhead +
-            Opts.GlobalMergingCallOverhead;
+    Cost += ParamCount * Opts.global_merging_param_overhead +
+            Opts.global_merging_call_overhead;
   }
-  Cost += Opts.GlobalMergingExtraThreshold;
+  Cost += Opts.global_merging_extra_threshold;
 
   double Benefit =
-      InstCount * (StableFunctionCount - 1) * Opts.GlobalMergingInstOverhead;
+      InstCount * (StableFunctionCount - 1) * Opts.global_merging_inst_overhead;
   bool Result = Benefit > Cost;
   LLVM_DEBUG(dbgs() << "isProfitable: Hash = " << SFS[0]->Hash << ", "
                     << "StableFunctionCount = " << StableFunctionCount

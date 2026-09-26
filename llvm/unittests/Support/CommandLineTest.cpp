@@ -2255,10 +2255,11 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
 // rejects "bad".
 struct TestLibrary final : cl::LibraryOptions {
   std::vector<std::string> Args;
-  void forEachOption(
-      function_ref<void(StringRef, StringRef, StringRef)> Fn) const override {
-    Fn("library-flag", "", "A flag");
-    Fn("library-int", " <int>", "");
+  void forEachOption(function_ref<void(StringRef, StringRef, StringRef, bool)>
+                         Fn) const override {
+    Fn("library-flag", "", "A flag", true);
+    Fn("library-int", " <int>", "", true);
+    Fn("library-shown", "", "A visible flag", false);
   }
   Error parse(ArrayRef<const char *> Argv, unsigned &Consumed) override {
     Consumed = 1;
@@ -2320,8 +2321,8 @@ TEST(CommandLineTest, LibraryOptionsHelp) {
   cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
                               &llvm::nulls());
 
-  // Library options are listed only by -help-hidden, aligned with cl::'s.
-  // Options without help text are not listed.
+  // Library options are aligned with cl::'s. Options without help text are not
+  // listed.
   std::string Hidden = interceptStdout(
       [] { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/false); });
   auto HelpColumn = [&](StringRef Line) {
@@ -2337,7 +2338,10 @@ TEST(CommandLineTest, LibraryOptionsHelp) {
   EXPECT_EQ(std::string::npos, Hidden.find("library-int"));
   std::string Visible = interceptStdout(
       [] { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/false); });
-  EXPECT_EQ(std::string::npos, Visible.find("library"));
+  EXPECT_NE(std::string::npos,
+            Visible.find("\nLibrary options:\n\n  --library-shown "))
+      << Visible;
+  EXPECT_EQ(std::string::npos, Visible.find("library-flag"));
   cl::ResetCommandLineParser();
 }
 

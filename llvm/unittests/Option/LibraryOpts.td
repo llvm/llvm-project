@@ -8,9 +8,10 @@
 
 include "llvm/Option/OptParser.td"
 
-def TestLibraryOptions : OptionsStruct;
+def TestLibraryOptions : OptionsStruct<"test">;
 
-defm Enable : BoolField<"lib-enable", "false", "A bool">;
-defm Count : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
-defm Ratio : ValueField<"lib-ratio", "double", "0.5", "A double">;
+defm : BoolField<"lib-enable", "0", "A bool">;
+let Hidden = 0 in
+defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
+defm : ValueField<"lib-ratio", "double", "0.5", "A double">;
 defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;

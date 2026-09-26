@@ -66,8 +66,8 @@ public:
   LibraryOptionsParser(TableFn Table, ApplyFn Apply, void (*Reset)())
       : Table(Table), Apply(Apply), Reset(Reset) {}
 
-  void forEachOption(
-      function_ref<void(StringRef, StringRef, StringRef)> Fn) const override;
+  void forEachOption(function_ref<void(StringRef, StringRef, StringRef, bool)>
+                         Fn) const override;
   Error parse(ArrayRef<const char *> Args, unsigned &Consumed) override;
   void reset() override { Reset(); }
 

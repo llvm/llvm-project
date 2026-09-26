@@ -18,7 +18,7 @@ using namespace llvm::opt;
 LibraryOptTable::~LibraryOptTable() = default;
 
 void LibraryOptionsParser::forEachOption(
-    function_ref<void(StringRef, StringRef, StringRef)> Fn) const {
+    function_ref<void(StringRef, StringRef, StringRef, bool)> Fn) const {
   const OptTable &T = Table();
   for (unsigned ID = 1, E = T.getNumOptions(); ID <= E; ++ID) {
     unsigned Kind = T.getOptionKind(ID);
@@ -28,7 +28,8 @@ void LibraryOptionsParser::forEachOption(
     StringRef MetaVar = T.getOptionMetaVar(ID);
     if (MetaVar.empty() && Kind == Option::JoinedClass)
       MetaVar = "<value>";
-    Fn(T.getOptionName(ID), MetaVar, T.getOptionHelpText(ID));
+    Fn(T.getOptionName(ID), MetaVar, T.getOptionHelpText(ID),
+       T.getOption(ID).hasFlag(HelpHidden));
   }
 }
 

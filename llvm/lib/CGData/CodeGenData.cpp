@@ -109,7 +109,7 @@ const char *CodeGenDataSectNamePrefix[] = {
 } // namespace
 
 bool llvm::cgdata::thinLTOTwoRounds() {
-  return CGDataOptions::Global.CodeGenDataThinLTOTwoRounds;
+  return CGDataOptions::Global.codegen_data_thinlto_two_rounds;
 }
 
 namespace llvm {
@@ -138,18 +138,19 @@ CodeGenData &CodeGenData::getInstance() {
     Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
     const CGDataOptions &Opts = CGDataOptions::Global;
-    if (Opts.CodeGenDataGenerate || Opts.CodeGenDataThinLTOTwoRounds)
+    if (Opts.codegen_data_generate || Opts.codegen_data_thinlto_two_rounds)
       Instance->EmitCGData = true;
-    else if (!Opts.CodeGenDataUsePath.empty()) {
+    else if (!Opts.codegen_data_use_path.empty()) {
       // Initialize the global CGData if the input file name is given.
       // We do not error-out when failing to parse the input file.
       // Instead, just emit an warning message and fall back as if no CGData
       // were available.
       auto FS = vfs::getRealFileSystem();
-      auto ReaderOrErr = CodeGenDataReader::create(
-          Opts.CodeGenDataUsePath, *FS, Opts.IndexedCodeGenDataLazyLoading);
+      auto ReaderOrErr =
+          CodeGenDataReader::create(Opts.codegen_data_use_path, *FS,
+                                    Opts.indexed_codegen_data_lazy_loading);
       if (Error E = ReaderOrErr.takeError()) {
-        warn(std::move(E), Opts.CodeGenDataUsePath);
+        warn(std::move(E), Opts.codegen_data_use_path);
         return;
       }
       // Publish each CGData based on the data type in the header.

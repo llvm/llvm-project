@@ -1576,24 +1576,26 @@ per option, the table that parses them, and the hooks through which
 include "llvm/Option/OptParser.td"
 
 def FooOptions : OptionsStruct;
-// The spellings of FooMode, a C++ enumeration declared elsewhere.
-def FooMode : OptionEnum<"FooMode", [EnumMember<"Fast", "fast">,
-                                     EnumMember<"Small", "small">]>;
 
-defm Enable : BoolField<"foo-enable", "1", "Enable foo">;
-defm Threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
-defm Mode : EnumField<"foo-mode", FooMode, "FooMode::Fast", "Foo's mode">;
+defm : BoolField<"foo-enable", "1", "Enable foo">;
+defm : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+let Hidden = 0 in
+defm : ValueField<"foo-path", "StringRef", "", "The input path">;
 ```
 
-The `defm` name is the member name. A `BoolField` is set by `-x`, `-no-x`, or
-`-x=true|false|1|0`; a `ValueField` of an integer type, `double`,
-or `StringRef` by `-x=value` or `-x value`. Both accept `--` for `-`.
+The struct is in namespace `llvm` unless the def names another, as in
+`OptionsStruct<"mlir">`. A member is named after its option, `foo_enable` for
+`-foo-enable`, unless the `defm` names it. A `BoolField` is set by `-x` or
+`-x=true|false|1|0`; a `ValueField` of an integer type, `double`, or
+`StringRef` by `-x=value` or `-x value`. Both accept `--` for `-`. Only
+`-help-hidden` lists the options, like `cl::Hidden`; those declared in
+`let Hidden = 0 in` are also listed by `-help`.
 
 The header declares the struct after including what the member defaults need,
 and one source file defines it and registers it with `cl::`.
 
-The library then lists `XXOptionsTableGen` under `DEPENDS` and `Option`
-under `LINK_COMPONENTS`. Code reads `XXOptions::Global.CodeGenDataGenerate`,
+The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option`
+under `LINK_COMPONENTS`. Code reads `FooOptions::Global.foo_enable`,
 the instance the command line sets. Keep the header in `lib/`, as private as the
 `static cl::opt` it replaces; another library that needs a value calls a
 function or takes a parameter.

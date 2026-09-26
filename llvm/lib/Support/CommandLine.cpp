@@ -332,7 +332,7 @@ public:
     bool HadErrors = false;
     for (; NumIndexedLibraries != Libraries.size(); ++NumIndexedLibraries) {
       LibraryOptions *L = Libraries[NumIndexedLibraries];
-      L->forEachOption([&](StringRef Spelling, StringRef, StringRef) {
+      L->forEachOption([&](StringRef Spelling, StringRef, StringRef, bool) {
         StringRef Name = Spelling.rtrim('=');
         auto [It, Inserted] = LibraryIndex.try_emplace(Name, L);
         if (Inserted ? none_of(RegisteredSubCommands,
@@ -1624,7 +1624,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       if (!Handler && ChosenSubCommand != &SubCommand::getTopLevel())
         Handler = LookupOption(SubCommand::getTopLevel(), ArgName, Value);
 
-      if (!Handler && (!LongOptionsUseDoubleDash || HaveDoubleDash)) {
+      if (!Handler) {
         if (LibraryOptions *L = lookupLibraryOption(ArgName.split('=').first)) {
           // An option takes at most one separate value.
           StringSaver Saver(LibraryArgAlloc);
@@ -2430,15 +2430,13 @@ public:
     for (const auto &Opt : Opts)
       MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
-    // Library options are all hidden.
     SmallVector<std::pair<std::string, StringRef>, 0> LibraryOpts;
-    if (ShowHidden)
-      for (LibraryOptions *L : globalParser().Libraries)
-        L->forEachOption(
-            [&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
-              if (!Help.empty())
-                LibraryOpts.emplace_back((Spelling + MetaVar).str(), Help);
-            });
+    for (LibraryOptions *L : globalParser().Libraries)
+      L->forEachOption([&](StringRef Spelling, StringRef MetaVar,
+                           StringRef Help, bool Hidden) {
+        if (!Help.empty() && (ShowHidden || !Hidden))
+          LibraryOpts.emplace_back((Spelling + MetaVar).str(), Help);
+      });
     llvm::sort(LibraryOpts);
     for (const auto &[Name, Help] : LibraryOpts)
       MaxArgLen = std::max(MaxArgLen, argPlusPrefixesSize(Name));
