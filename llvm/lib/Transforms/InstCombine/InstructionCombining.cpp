@@ -1879,19 +1879,11 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr()))
     return NewVal;
 
-  // Check if incoming PHI value can be replaced with constant
-  // based on implied condition.
-  CondBrInst *TerminatorBI = dyn_cast<CondBrInst>(InBB->getTerminator());
-  const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I);
-  if (TerminatorBI &&
-      TerminatorBI->getSuccessor(0) != TerminatorBI->getSuccessor(1) && ICmp) {
-    bool LHSIsTrue = TerminatorBI->getSuccessor(0) == PN->getParent();
-    std::optional<bool> ImpliedCond = isImpliedCondition(
-        TerminatorBI->getCondition(), ICmp->getCmpPredicate(), Ops[0], Ops[1],
-        DL, LHSIsTrue);
-    if (ImpliedCond)
-      return ConstantInt::getBool(I.getType(), ImpliedCond.value());
-  }
+  // Fold to a constant when the predecessor edge's branch implies the compare.
+  if (auto *ICmp = dyn_cast<ICmpInst>(&I))
+    if (std::optional<bool> ImpliedCond = isImpliedByEdgeCondition(
+            InBB, PN->getParent(), ICmp->getCmpPredicate(), Ops[0], Ops[1], DL))
+      return ConstantInt::getBool(I.getType(), *ImpliedCond);
 
   return nullptr;
 }

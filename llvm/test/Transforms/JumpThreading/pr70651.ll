@@ -2,7 +2,9 @@
 ; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 ; RUN: opt -S -passes=jump-threading -jump-threading-across-loop-headers < %s | FileCheck %s --check-prefix=THREAD-LOOP
 
-; FIXME: This is a miscompile if -jump-threading-across-loop-headers is enabled.
+; With -jump-threading-across-loop-headers the loop-header phi is detected from
+; a backedge into the header (BB dominates a predecessor), so phi translation
+; across it is refused and it is no longer miscompiled.
 define i64 @test(i64 %v) {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: i64 [[V:%.*]]) {
@@ -27,7 +29,8 @@ define i64 @test(i64 %v) {
 ; THREAD-LOOP-NEXT:    [[SUM:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[SUM_NEXT:%.*]], [[FOR_BODY]] ]
 ; THREAD-LOOP-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[V]]
 ; THREAD-LOOP-NEXT:    [[OVERFLOW:%.*]] = icmp ult i64 [[SUM_NEXT]], [[SUM]]
-; THREAD-LOOP-NEXT:    br i1 [[V_NONNEG]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; THREAD-LOOP-NEXT:    [[CMP:%.*]] = xor i1 [[V_NONNEG]], [[OVERFLOW]]
+; THREAD-LOOP-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; THREAD-LOOP:       exit:
 ; THREAD-LOOP-NEXT:    ret i64 [[SUM]]
 ;
@@ -44,4 +47,61 @@ for.body:
 
 exit:
   ret i64 %sum
+}
+
+; FIXME: For an irreducible loop the dominance-based backedge check cannot
+; identify the loop header, so it is still miscompiled under
+; -jump-threading-across-loop-headers.
+define i64 @test_irreducible(i64 %v, i1 %c) {
+; CHECK-LABEL: define i64 @test_irreducible(
+; CHECK-SAME: i64 [[V:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V_NONNEG:%.*]] = icmp sgt i64 [[V]], -1
+; CHECK-NEXT:    br i1 [[C]], label [[H2:%.*]], label [[ENTRY_H2_CRIT_EDGE:%.*]]
+; CHECK:       entry.h2_crit_edge:
+; CHECK-NEXT:    [[S2_DUP:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[S2N1:%.*]] = add i64 [[S2_DUP]], [[V]]
+; CHECK-NEXT:    [[OV2:%.*]] = icmp ult i64 [[S2N1]], [[S2_DUP]]
+; CHECK-NEXT:    br i1 [[V_NONNEG]], label [[H2]], label [[EXIT:%.*]]
+; CHECK:       h2:
+; CHECK-NEXT:    [[S1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[S2N:%.*]], [[H2]] ], [ [[S2N1]], [[ENTRY_H2_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[S2N]] = add i64 [[S1]], [[V]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[S2N]], [[S1]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[V_NONNEG]], [[OV]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[H2]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[S24:%.*]] = phi i64 [ [[S2_DUP]], [[ENTRY_H2_CRIT_EDGE]] ], [ [[S1]], [[H2]] ]
+; CHECK-NEXT:    ret i64 [[S24]]
+;
+; THREAD-LOOP-LABEL: define i64 @test_irreducible(
+; THREAD-LOOP-SAME: i64 [[V:%.*]], i1 [[C:%.*]]) {
+; THREAD-LOOP-NEXT:  entry:
+; THREAD-LOOP-NEXT:    [[V_NONNEG:%.*]] = icmp sgt i64 [[V]], -1
+; THREAD-LOOP-NEXT:    br i1 [[C]], label [[H2:%.*]], label [[H2]]
+; THREAD-LOOP:       h2:
+; THREAD-LOOP-NEXT:    [[S2:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[ENTRY]] ], [ [[S2N:%.*]], [[H2]] ]
+; THREAD-LOOP-NEXT:    [[S2N]] = add i64 [[S2]], [[V]]
+; THREAD-LOOP-NEXT:    [[OV:%.*]] = icmp ult i64 [[S2N]], [[S2]]
+; THREAD-LOOP-NEXT:    [[CMP:%.*]] = xor i1 [[V_NONNEG]], [[OV]]
+; THREAD-LOOP-NEXT:    br i1 [[CMP]], label [[H2]], label [[EXIT:%.*]]
+; THREAD-LOOP:       exit:
+; THREAD-LOOP-NEXT:    ret i64 [[S2]]
+;
+entry:
+  %v.nonneg = icmp sgt i64 %v, -1
+  br i1 %c, label %h1, label %h2
+
+h1:
+  %s1 = phi i64 [ 0, %entry ], [ %s2n, %h2 ]
+  br label %h2
+
+h2:
+  %s2 = phi i64 [ 0, %entry ], [ %s1, %h1 ]
+  %s2n = add i64 %s2, %v
+  %ov = icmp ult i64 %s2n, %s2
+  %cmp = xor i1 %v.nonneg, %ov
+  br i1 %cmp, label %h1, label %exit
+
+exit:
+  ret i64 %s2
 }
