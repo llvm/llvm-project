@@ -146,7 +146,8 @@ struct Byte {
                 static_cast<uint8_t>(Value << Shift),
                 static_cast<uint8_t>(TagMask << Shift),
                 static_cast<uint8_t>(TagValue << Shift),
-                static_cast<uint8_t>(NoAliasMask << Shift), NoAliasNode};
+                static_cast<uint8_t>(NoAliasMask << Shift),
+                NoAliasNode};
   }
 
   bool areHighBitsZExtd(uint8_t BitsFrom) const {
