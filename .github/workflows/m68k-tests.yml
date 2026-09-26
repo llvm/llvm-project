@@ -1,0 +1,51 @@
+name: M68k Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**/*[Mm]68[Kk]*/**'
+      - '**/*[Mm]68[Kk]*'
+      - '.github/workflows/m68k-tests.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_m68k:
+    if: github.repository_owner == 'llvm'
+    name: Build and Test M68k
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+        with:
+          max-size: 2G
+          key: m68k-ubuntu-24.04
+          variant: sccache
+      - name: Build and Test
+        run: |
+          cmake -GNinja \
+            -S llvm \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DLLVM_TARGETS_TO_BUILD="M68k" \
+            -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=M68k \
+            -DLLVM_PARALLEL_LINK_JOBS=1
+          ninja -C build \
+            check-llvm-codegen-m68k \
+            check-llvm-mc-m68k \
+            check-llvm-mc-disassembler-m68k \
+            check-llvm-debuginfo-m68k
