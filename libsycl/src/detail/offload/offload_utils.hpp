@@ -16,6 +16,7 @@
 #define _LIBSYCL_OFFLOAD_UTILS
 
 #include <sycl/__impl/backend.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
 #include <sycl/__impl/exception.hpp>
@@ -27,6 +28,8 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
+
+class ContextImpl;
 
 /// Converts liboffload error code to C-string.
 ///
@@ -64,6 +67,25 @@ void checkAndThrow(ol_result_t Result) {
   }
 }
 
+/// Checks liboffload API call result, attaches the context to the exception.
+///
+/// Used after calling the API without check.
+/// To be called when specific handling is needed and explicitly done by
+/// developer before throwing exception.
+///
+/// \param Context context the failed API call was made for.
+/// \param Result liboffload result of calling API.
+///
+/// \throw sycl::exception if the call was not successful.
+template <sycl::errc errc = sycl::errc::runtime>
+void checkAndThrow(ContextImpl &Context, ol_result_t Result) {
+  if (isFailed(Result)) {
+    throw sycl::exception(createSyclObjFromImpl<sycl::context>(Context),
+                          sycl::make_error_code(errc),
+                          detail::formatCodeString(Result));
+  }
+}
+
 /// Calls the API, doesn't check result.
 /// To be called when specific handling is needed and explicitly done by
 /// developer after.
@@ -87,6 +109,20 @@ template <typename FunctionType, typename... ArgsT>
 void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
   auto Err = callNoCheck(Function, std::forward<ArgsT>(Args)...);
   checkAndThrow(Err);
+}
+
+/// Calls the API and checks result, attaches the context to the exception.
+///
+/// \param Context context the API call is made for.
+/// \param Function liboffload API function to be called.
+/// \param Args arguments to be passed to the liboffload API function.
+///
+/// \throw sycl::exception if the call was not successful.
+template <typename FunctionType, typename... ArgsT>
+void callAndThrow(ContextImpl &Context, FunctionType &Function,
+                  ArgsT &&...Args) {
+  auto Err = callNoCheck(Function, std::forward<ArgsT>(Args)...);
+  checkAndThrow(Context, Err);
 }
 
 /// Converts liboffload backend to SYCL backend.
