@@ -62,6 +62,17 @@ public:
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::TransposeOp>();
 
+    // TOSA elementwise ops are legal unless they can be lowered to a
+    // linalg.elementwise named op.
+    target.addDynamicallyLegalOp<
+        tosa::AbsOp, tosa::CeilOp, tosa::FloorOp, tosa::ExpOp, tosa::LogOp,
+        tosa::RsqrtOp, tosa::SinOp, tosa::CosOp, tosa::TanhOp, tosa::ErfOp,
+        tosa::ReciprocalOp, tosa::PowOp, tosa::AddOp, tosa::SubOp,
+        tosa::IntDivOp, tosa::MulOp, tosa::NegateOp, tosa::MaximumOp,
+        tosa::MinimumOp, tosa::SelectOp>([](Operation *op) {
+      return !tosa::isConvertibleToLinalgElementwise(op);
+    });
+
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FunctionOpInterface func = getOperation();
