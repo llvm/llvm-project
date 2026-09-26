@@ -891,6 +891,11 @@ void DIEBuilder::cloneScalarAttribute(
     return;
   }
 
+  if (AttrSpec.Attr == dwarf::DW_AT_decl_file ||
+      AttrSpec.Attr == dwarf::DW_AT_call_file)
+    Value =
+        BC.getOutputDwarfFileIndex(InputDIE.getDwarfUnit()->getOffset(), Value);
+
   Die.addValue(getState().DIEAlloc, AttrSpec.Attr, AttrSpec.Form,
                DIEInteger(Value));
 }
