@@ -672,6 +672,18 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidz", MaxNTID[2]});
 }
 
+// Global addresses can only be materialized if they are in generic global or
+// constant space.
+bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
+  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+    const unsigned AS = GV->getAddressSpace();
+    return AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL ||
+           AS == NVPTXAS::ADDRESS_SPACE_CONST;
+  }
+  return true;
+}
+
 ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
   if (isSourceOfDivergence(V))
     return ValueUniformity::NeverUniform;
