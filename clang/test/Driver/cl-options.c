@@ -119,13 +119,22 @@
 
 // Security Buffer Check is on by default.
 // RUN: %clang_cl -### -- %s 2>&1 | FileCheck -check-prefix=GS-default %s
-// GS-default: "-stack-protector" "2"
+// GS-default: "-stack-protector" "4"
 
 // RUN: %clang_cl /GS -### -- %s 2>&1 | FileCheck -check-prefix=GS %s
-// GS: "-stack-protector" "2"
+// GS: "-stack-protector" "4"
 
 // RUN: %clang_cl /GS- -### -- %s 2>&1 | FileCheck -check-prefix=GS_ %s
 // GS_-NOT: -stack-protector
+
+// An explicit GCC-style level is rendered after the /GS default and wins.
+// RUN: %clang_cl /clang:-fstack-protector-strong -### -- %s 2>&1 | FileCheck -check-prefix=GS-strong %s
+// GS-strong: "-stack-protector" "4"
+// GS-strong-SAME: "-stack-protector" "2"
+
+// RUN: %clang_cl /clang:-fstack-protector-all -### -- %s 2>&1 | FileCheck -check-prefix=GS-all %s
+// GS-all: "-stack-protector" "4"
+// GS-all-SAME: "-stack-protector" "3"
 
 // RUN: %clang_cl /Gy -### -- %s 2>&1 | FileCheck -check-prefix=Gy %s
 // Gy: -ffunction-sections
