@@ -1899,30 +1899,84 @@ bool tosa::EqualOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return succeeded(verifyCompatibleShape(l[0], r[0]));
 }
 
+// MATMUL batch shapes are right aligned and may have different ranks. Missing
+// leading dimensions are treated as one, while an unranked input remains
+// unknown because it may contain any number of batch dimensions.
+static int64_t getMatMulBatchDim(const ShapeAdaptor &shape, int64_t outputRank,
+                                 int64_t axis) {
+  if (!shape.hasRank())
+    return ShapedType::kDynamic;
+  const int64_t inputAxis = axis - (outputRank - shape.getRank());
+  return inputAxis < 0 ? 1 : shape.getDimSize(inputAxis);
+}
+
+static FailureOr<SmallVector<int64_t>>
+resolveMatMulOutputShape(const ShapeAdaptor &aShape, const ShapeAdaptor &bShape,
+                         int64_t outputRank, bool transposeB) {
+  if (outputRank < 2 ||
+      (aShape.hasRank() &&
+       (aShape.getRank() < 2 || aShape.getRank() > outputRank)) ||
+      (bShape.hasRank() &&
+       (bShape.getRank() < 2 || bShape.getRank() > outputRank)))
+    return failure();
+
+  SmallVector<int64_t> outputShape(outputRank, ShapedType::kDynamic);
+  for (int64_t axis = 0; axis < outputRank - 2; ++axis) {
+    const int64_t aDim = getMatMulBatchDim(aShape, outputRank, axis);
+    const int64_t bDim = getMatMulBatchDim(bShape, outputRank, axis);
+    FailureOr<int64_t> resolvedDim = resolveBroadcastDim(aDim, bDim);
+    if (failed(resolvedDim))
+      return failure();
+    outputShape[axis] = *resolvedDim;
+  }
+
+  if (aShape.hasRank())
+    outputShape[outputRank - 2] = aShape.getDimSize(aShape.getRank() - 2);
+  if (bShape.hasRank())
+    outputShape[outputRank - 1] =
+        bShape.getDimSize(bShape.getRank() - (transposeB ? 2 : 1));
+  return outputShape;
+}
+
+static LogicalResult inferMatMulReturnTypeComponents(
+    const ShapeAdaptor &aShape, const ShapeAdaptor &bShape, bool transposeB,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  if ((aShape.hasRank() && aShape.getRank() < 2) ||
+      (bShape.hasRank() && bShape.getRank() < 2))
+    return failure();
+
+  // An unranked input can have an arbitrary batch prefix, so the output rank
+  // cannot yet be inferred.
+  if (!aShape.hasRank() || !bShape.hasRank()) {
+    inferredReturnShapes.emplace_back();
+    return success();
+  }
+
+  const int64_t aChannels = aShape.getDimSize(aShape.getRank() - 1);
+  const int64_t bChannels =
+      bShape.getDimSize(bShape.getRank() - (transposeB ? 1 : 2));
+  if (ShapedType::isStatic(aChannels) && ShapedType::isStatic(bChannels) &&
+      aChannels != bChannels)
+    return failure();
+
+  const int64_t outputRank = std::max(aShape.getRank(), bShape.getRank());
+  FailureOr<SmallVector<int64_t>> outputShape =
+      resolveMatMulOutputShape(aShape, bShape, outputRank, transposeB);
+  if (failed(outputShape))
+    return failure();
+
+  inferredReturnShapes.emplace_back(*outputShape);
+  return success();
+}
+
 LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     MatMulOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor lhsShape(adaptor.getA().getType());
-  ShapeAdaptor rhsShape(adaptor.getB().getType());
-
-  // All shapes are dynamic.
-  SmallVector<int64_t> outShape;
-  outShape.resize(3, ShapedType::kDynamic);
-
-  if (lhsShape.hasRank()) {
-    outShape[0] = lhsShape.getDimSize(0);
-    outShape[1] = lhsShape.getDimSize(1);
-  }
-
-  if (rhsShape.hasRank()) {
-    outShape[0] = outShape[0] == ShapedType::kDynamic ? rhsShape.getDimSize(0)
-                                                      : outShape[0];
-    outShape[2] = rhsShape.getDimSize(2);
-  }
-
-  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
-  return success();
+  return inferMatMulReturnTypeComponents(ShapeAdaptor(adaptor.getA().getType()),
+                                         ShapeAdaptor(adaptor.getB().getType()),
+                                         /*transposeB=*/false,
+                                         inferredReturnShapes);
 }
 
 template <typename T>
@@ -1978,11 +2032,68 @@ static LogicalResult verifyMatMulZeroPointType(T op, Value input, Value zp,
   return diag;
 }
 
+static SmallVector<int64_t> getMatMulBatchShape(const ShapeAdaptor &shape) {
+  SmallVector<int64_t> batchShape;
+  if (!shape.hasRank() || shape.getRank() < 2)
+    return batchShape;
+  batchShape.reserve(shape.getRank() - 2);
+  for (int64_t i = 0, e = shape.getRank() - 2; i < e; ++i)
+    batchShape.push_back(shape.getDimSize(i));
+  return batchShape;
+}
+
+template <typename T>
+static LogicalResult verifyMatMulShapes(T op, bool transposeB) {
+  const ShapeAdaptor aShape(op.getA().getType());
+  const ShapeAdaptor bShape(op.getB().getType());
+  const auto outputType = cast<ShapedType>(op.getResult().getType());
+
+  int64_t channels = aShape.hasRank() ? aShape.getDimSize(aShape.getRank() - 1)
+                                      : ShapedType::kDynamic;
+  if (bShape.hasRank() &&
+      failed(tryUpdateDimOrFailure(
+          op, channels,
+          bShape.getDimSize(bShape.getRank() - (transposeB ? 1 : 2)), "b",
+          "channels")))
+    return failure();
+
+  const int64_t minimumOutputRank =
+      std::max(aShape.hasRank() ? aShape.getRank() : 2,
+               bShape.hasRank() ? bShape.getRank() : 2);
+  if (outputType.hasRank() && outputType.getRank() < minimumOutputRank)
+    return op.emitOpError("expected output rank of at least ")
+           << minimumOutputRank << ", got " << outputType.getRank();
+
+  const bool bothInputsRanked = aShape.hasRank() && bShape.hasRank();
+  if (!bothInputsRanked && !outputType.hasRank())
+    return success();
+
+  // When an input is unranked, use the declared output rank to validate every
+  // result dimension constrained by the ranked input.
+  const int64_t expectedOutputRank =
+      bothInputsRanked ? minimumOutputRank : outputType.getRank();
+  FailureOr<SmallVector<int64_t>> expectedOutputShape =
+      resolveMatMulOutputShape(aShape, bShape, expectedOutputRank, transposeB);
+  if (failed(expectedOutputShape)) {
+    InFlightDiagnostic diag = op.emitOpError(
+        "expected batch dimensions of a and b to be broadcast compatible, "
+        "got a=[");
+    printShapeToDiagnostic(diag, getMatMulBatchShape(aShape));
+    diag << "] and b=[";
+    printShapeToDiagnostic(diag, getMatMulBatchShape(bShape));
+    diag << "]";
+    return diag;
+  }
+
+  if (outputType.hasRank())
+    return verifyOutputShapeCompatibleWithExpected(
+        op.getOperation(), outputType, *expectedOutputShape);
+  return success();
+}
+
 LogicalResult MatMulOp::verify() {
-  const ShapeAdaptor aShape(getA().getType());
-  const ShapeAdaptor bShape(getB().getType());
-  const Type aElementType = aShape.getElementType();
-  const Type bElementType = bShape.getElementType();
+  const Type aElementType = getElementTypeOrSelf(getA());
+  const Type bElementType = getElementTypeOrSelf(getB());
 
   if (failed(
           verifyMatMulQuantizedOperandsType(*this, aElementType, bElementType)))
@@ -2000,67 +2111,22 @@ LogicalResult MatMulOp::verify() {
   if (succeeded(maybeBZp) && verifyBZeroPoint(*maybeBZp).failed())
     return failure();
 
-  // Verify input/output shapes
-  int64_t N = ShapedType::kDynamic;
-  int64_t H = ShapedType::kDynamic;
-  int64_t W = ShapedType::kDynamic;
-  int64_t C = ShapedType::kDynamic;
-
-  if (aShape.hasRank()) {
-    N = aShape.getDimSize(0);
-    H = aShape.getDimSize(1);
-    C = aShape.getDimSize(2);
-  }
-
-  if (bShape.hasRank()) {
-    if (failed(tryUpdateDimOrFailure(*this, N, bShape.getDimSize(0), "b",
-                                     "batch")) ||
-        failed(tryUpdateDimOrFailure(*this, C, bShape.getDimSize(1), "b",
-                                     "channels")))
-      return failure();
-    W = bShape.getDimSize(2);
-  }
-
-  const SmallVector<int64_t, 3> expectedOutputShape = {N, H, W};
-  const auto outputType = cast<ShapedType>(getResult().getType());
-  if (outputType.hasRank() &&
-      failed(verifyOutputShapeCompatibleWithExpected(getOperation(), outputType,
-                                                     expectedOutputShape)))
-    return failure();
-
-  return success();
+  return verifyMatMulShapes(*this, /*transposeB=*/false);
 }
 
 LogicalResult tosa::MatMulTOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     MatMulTOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  const ShapeAdaptor lhsShape(adaptor.getA().getType());
-  const ShapeAdaptor rhsShape(adaptor.getB().getType());
-
-  SmallVector<int64_t, 3> outShape(3, ShapedType::kDynamic);
-
-  if (lhsShape.hasRank()) {
-    outShape[0] = lhsShape.getDimSize(0);
-    outShape[1] = lhsShape.getDimSize(1);
-  }
-
-  if (rhsShape.hasRank()) {
-    const int64_t bBatchSize = rhsShape.getDimSize(0);
-    if (bBatchSize != 1 && ShapedType::isDynamic(outShape[0]))
-      outShape[0] = bBatchSize;
-    outShape[2] = rhsShape.getDimSize(1);
-  }
-
-  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
-  return success();
+  return inferMatMulReturnTypeComponents(ShapeAdaptor(adaptor.getA().getType()),
+                                         ShapeAdaptor(adaptor.getB().getType()),
+                                         /*transposeB=*/true,
+                                         inferredReturnShapes);
 }
 
 LogicalResult MatMulTOp::verify() {
-  const ShapeAdaptor aShape(getA().getType());
-  const ShapeAdaptor bShape(getB().getType());
-  const Type aElementType = aShape.getElementType();
-  const Type bElementType = bShape.getElementType();
+  const Type aElementType = getElementTypeOrSelf(getA());
+  const Type bElementType = getElementTypeOrSelf(getB());
 
   if (failed(
           verifyMatMulQuantizedOperandsType(*this, aElementType, bElementType)))
@@ -2078,44 +2144,7 @@ LogicalResult MatMulTOp::verify() {
   if (succeeded(maybeBZp) && verifyBZeroPoint(*maybeBZp).failed())
     return failure();
 
-  // Verify input/output shapes
-  int64_t N = ShapedType::kDynamic;
-  int64_t D = ShapedType::kDynamic;
-  int64_t H = ShapedType::kDynamic;
-  int64_t W = ShapedType::kDynamic;
-  int64_t C = ShapedType::kDynamic;
-
-  if (aShape.hasRank()) {
-    N = aShape.getDimSize(0);
-    H = aShape.getDimSize(1);
-    C = aShape.getDimSize(2);
-  }
-
-  if (bShape.hasRank()) {
-    D = bShape.getDimSize(0);
-    W = bShape.getDimSize(1);
-    if (failed(tryUpdateDimOrFailure(*this, C, bShape.getDimSize(2), "b",
-                                     "channels")))
-      return failure();
-  }
-
-  // Verify B batch size is broadcast compatible with A.
-  if (ShapedType::isStatic(N) && ShapedType::isStatic(D) && N != D && D != 1)
-    return emitOpError("expect B matrix batch size to be broadcast compatible "
-                       "with A, got D=")
-           << D << " vs N=" << N;
-
-  if (ShapedType::isDynamic(N) && ShapedType::isStatic(D) && D != 1)
-    N = D;
-
-  const SmallVector<int64_t, 3> expectedOutputShape = {N, H, W};
-  const auto outputType = cast<ShapedType>(getResult().getType());
-  if (outputType.hasRank() &&
-      failed(verifyOutputShapeCompatibleWithExpected(getOperation(), outputType,
-                                                     expectedOutputShape)))
-    return failure();
-
-  return success();
+  return verifyMatMulShapes(*this, /*transposeB=*/true);
 }
 
 LogicalResult tosa::MatmulTBlockScaledOp::inferReturnTypeComponents(

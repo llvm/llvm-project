@@ -1342,10 +1342,55 @@ func.func @scatter_invalid_K_W(%arg0 : tensor<2x4x5xi32>, %arg1 : tensor<2x6xi32
 
 // -----
 
+func.func @test_matmul_a_rank_too_low(%arg0: tensor<4xf32>, %arg1: tensor<4x5xf32>) -> tensor<1x5xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op operand #0 must be tosa-conformant tensor of at least rank 2 of number values, but got 'tensor<4xf32>'}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x5xf32>
+  return %0 : tensor<1x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_b_rank_too_low(%arg0: tensor<3x4xf32>, %arg1: tensor<4xf32>) -> tensor<3x1xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op operand #1 must be tosa-conformant tensor of at least rank 2 of number values, but got 'tensor<4xf32>'}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<3x4xf32>, tensor<4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x1xf32>
+  return %0 : tensor<3x1xf32>
+}
+
+// -----
+
+func.func @test_matmul_output_rank_too_low(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<5xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op result #0 must be tosa-conformant tensor of at least rank 2 of number values, but got 'tensor<5xf32>'}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<5xf32>
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
+func.func @test_matmul_batch_mismatch_rank4(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<5x4x7x6xf32>) -> tensor<2x3x4x6xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected batch dimensions of a and b to be broadcast compatible, got a=[2, 3] and b=[5, 4]}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<2x3x4x7xf32>, tensor<5x4x7x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x4x6xf32>
+  return %0 : tensor<2x3x4x6xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_output_shape_mismatch_rank5(%arg0: tensor<2x1x3x4x7xf32>, %arg1: tensor<5x3x6x7xf32>) -> tensor<2x5x3x4x8xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op expected output shape 2, 5, 3, 4, 8 to be compatible with inferred shape 2, 5, 3, 4, 6}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<2x1x3x4x7xf32>, tensor<5x3x6x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x3x4x8xf32>
+  return %0 : tensor<2x5x3x4x8xf32>
+}
+
+// -----
+
 func.func @test_matmul_output_batch_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: tensor<5x4x6xf32>) -> tensor<2x3x6xf32> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.matmul' op expected batch of b to match size 2, got 5}}
+  // expected-error@+1 {{'tosa.matmul' op expected batch dimensions of a and b to be broadcast compatible, got a=[2] and b=[5]}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<5x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x6xf32>
   return %0 : tensor<2x3x6xf32>
 }
@@ -1376,7 +1421,7 @@ func.func @test_matmul_output_shape_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: te
 func.func @test_matmul_dynamic_batch_mismatch(%arg0: tensor<2x?x4xf32>, %arg1: tensor<5x4x6xf32>) -> tensor<2x?x6xf32> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // expected-error@+1 {{'tosa.matmul' op expected batch of b to match size 2, got 5}}
+  // expected-error@+1 {{'tosa.matmul' op expected batch dimensions of a and b to be broadcast compatible, got a=[2] and b=[5]}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x?x4xf32>, tensor<5x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x?x6xf32>
   return %0 : tensor<2x?x6xf32>
 }
@@ -1403,7 +1448,6 @@ func.func @test_matmul_dynamic_output_shape_mismatch(%arg0: tensor<?x3x4xf32>, %
 
 // -----
 
-
 func.func @test_matmul_unranked_b_output_shape_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: tensor<*xf32>) -> tensor<2x5x?xf32> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
@@ -1414,6 +1458,35 @@ func.func @test_matmul_unranked_b_output_shape_mismatch(%arg0: tensor<2x3x4xf32>
 
 // -----
 
+func.func @test_matmul_unranked_b_output_batch_mismatch(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<*xf32>) -> tensor<5x3x4x?xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected output shape 5, 3, 4, ? to be compatible with inferred shape 2, 3, 4, ?}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4x7xf32>, tensor<*xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<5x3x4x?xf32>
+  return %0 : tensor<5x3x4x?xf32>
+}
+
+// -----
+
+func.func @test_matmul_unranked_b_output_rank_too_low(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<*xf32>) -> tensor<3x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected output rank of at least 4, got 3}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4x7xf32>, tensor<*xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x4x5xf32>
+  return %0 : tensor<3x4x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_output_rank_too_high(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<1x3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected output shape 1, 3, 5 to be compatible with inferred shape 3, 5}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x3x5xf32>
+  return %0 : tensor<1x3x5xf32>
+}
+
+// -----
 
 func.func @test_matmul_quantized_mixed_operands(%arg0: tensor<2x3x4x!quant.uniform<i8:f32, 0.125>>, %arg1: tensor<2x4x6xf32>) -> tensor<2x3x6xi32> {
   %azp0 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
@@ -1512,7 +1585,7 @@ func.func @test_matmul_t_channel_mismatch(%arg0: tensor<1x14x19xf32>, %arg1: ten
 func.func @test_matmul_t_batch_mismatch(%arg0: tensor<4x14x19xf32>, %arg1: tensor<2x28x19xf32>) -> tensor<4x14x28xf32> {
 %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-// expected-error@+1 {{'tosa.matmul_t' op expect B matrix batch size to be broadcast compatible with A, got D=2 vs N=4}}
+// expected-error@+1 {{'tosa.matmul_t' op expected batch dimensions of a and b to be broadcast compatible, got a=[4] and b=[2]}}
 %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<4x14x19xf32>, tensor<2x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<4x14x28xf32>
   return %0 : tensor<4x14x28xf32>
 }
