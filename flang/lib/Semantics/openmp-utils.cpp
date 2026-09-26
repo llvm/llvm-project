@@ -2506,75 +2506,97 @@ void AppendDirectiveContextTraits(llvm::omp::Directive directive,
 }
 
 namespace {
-struct ConditionNames {
-  template <typename A> bool Pre(const A &) { return true; }
-  template <typename A> void Post(const A &) {}
+// Profile the original parse tree: folding a whole expression would lose
+// declaration identity. Parse-tree operators already unify alternate spellings;
+// analyze only literals to normalize their values and effective kinds.
+struct ConditionIdentity {
+  SemanticsContext &context;
+  llvm::FoldingSetNodeID id;
+
+  template <typename A> void AddNode() {
+    // Type tags and symbol addresses are local to this compilation. Profiles
+    // are rebuilt when importing symbols, never serialized as pointers.
+    static char tag;
+    id.AddPointer(&tag);
+  }
+  template <typename A> bool Pre(const A &x) {
+    AddNode<A>();
+    if constexpr (std::is_enum_v<A> || std::is_integral_v<A>)
+      id.AddInteger(static_cast<uint64_t>(x));
+    else if constexpr (std::is_same_v<A, std::string>)
+      id.AddString(x);
+    return true;
+  }
+  template <typename A> void Post(const A &) { id.AddInteger(0); }
+  // CharBlocks in expression nodes carry source locations, not structure.
+  bool Pre(const parser::CharBlock &) { return false; }
   bool Pre(const parser::Name &name) {
+    AddNode<parser::Name>();
     if (name.symbol)
-      names.push_back(&name);
+      id.AddPointer(&name.symbol->GetUltimate());
+    else
+      id.AddString(name.source.ToString());
     return false;
   }
-  llvm::SmallVector<const parser::Name *> names;
+  bool Pre(const parser::SignedIntLiteralConstant &literal) {
+    AddNode<parser::SignedIntLiteralConstant>();
+    auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)};
+    CHECK(value);
+    id.AddString(value->AsFortran());
+    return false;
+  }
+  bool Pre(const parser::SignedRealLiteralConstant &literal) {
+    AddNode<parser::SignedRealLiteralConstant>();
+    auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)};
+    CHECK(value);
+    id.AddString(value->AsFortran());
+    return false;
+  }
+  bool Pre(const parser::Expr &expr) {
+    if (const auto *parens{std::get_if<parser::Expr::Parentheses>(&expr.u)}) {
+      parser::Walk(parens->v.value(), *this);
+      return false;
+    }
+    AddNode<parser::Expr>();
+    if (const auto *negate{std::get_if<parser::Expr::Negate>(&expr.u)}) {
+      if (const auto *literal{
+              std::get_if<parser::LiteralConstant>(&negate->v.value().u)}) {
+        if (std::holds_alternative<parser::IntLiteralConstant>(literal->u)) {
+          // The magnitude of the most negative integer is not representable
+          // in its kind. Analyze the signed literal together, as semantics
+          // does, rather than reanalyzing its positive magnitude.
+          auto value{evaluate::ExpressionAnalyzer{context}.Analyze(expr)};
+          CHECK(value);
+          AddNode<parser::Expr::Negate>();
+          id.AddString(value->AsFortran());
+          return false;
+        }
+      }
+    }
+    if (const auto *literal{std::get_if<parser::LiteralConstant>(&expr.u)}) {
+      // Complex literal parts may name declarations: retain their structure.
+      if (!std::holds_alternative<parser::ComplexLiteralConstant>(literal->u)) {
+        if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(expr)}) {
+          AddNode<parser::LiteralConstant>();
+          id.AddString(value->AsFortran());
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 };
 
-// Profile the original expression, not its folded value. In particular, two
-// named constants with the same value still denote different declarations.
-// Retain the cooked expression spelling, except for outer parentheses, blanks
-// outside character literals, and names resolved to their ultimate symbols.
 llvm::StringRef GetConditionIdentity(
     const parser::ScalarExpr &condition, SemanticsContext &context) {
   const auto *expr{parser::Unwrap<parser::Expr>(condition)};
   CHECK(expr);
-  while (
-      const auto *parentheses{std::get_if<parser::Expr::Parentheses>(&expr->u)})
-    expr = &parentheses->v.value();
-
-  ConditionNames visitor;
-  parser::Walk(*expr, visitor);
-  llvm::sort(visitor.names, [](const auto *a, const auto *b) {
-    return a->source.begin() < b->source.begin();
-  });
-
-  llvm::FoldingSetNodeID id;
-  auto addText = [&](parser::CharBlock source) {
-    std::string text;
-    char quote{0};
-    for (const char *p{source.begin()}; p != source.end(); ++p) {
-      char ch{*p};
-      if (quote) {
-        text += ch;
-        if (ch == quote)
-          quote = 0;
-        else if (ch == '\\' &&
-            context.IsEnabled(common::LanguageFeature::BackslashEscapes) &&
-            p + 1 != source.end())
-          text += *++p;
-      } else if (ch == '\'' || ch == '"') {
-        quote = ch;
-        text += ch;
-      } else if (!llvm::isSpace(ch)) {
-        text += ch;
-      }
-    }
-    id.AddString(text);
-  };
-
-  const char *next{expr->source.begin()};
-  for (const parser::Name *name : visitor.names) {
-    if (!expr->source.Contains(name->source) || name->source.begin() < next)
-      continue;
-    addText({next, name->source.begin()});
-    id.AddPointer(&name->symbol->GetUltimate());
-    next = name->source.end();
-  }
-  addText({next, expr->source.end()});
-
-  // Intern the full profile in context-owned storage. Recompute it after
-  // reading a module; symbol pointers are local to this compilation.
-  llvm::FoldingSetNodeIDRef profile{id.getRef()};
+  ConditionIdentity profile{context, {}};
+  parser::Walk(*expr, profile);
+  llvm::FoldingSetNodeIDRef data{profile.id.getRef()};
   SourceName saved{context.SaveTempName(
-      std::string{reinterpret_cast<const char *>(profile.data()),
-          profile.size() * sizeof(unsigned)})};
+      std::string{reinterpret_cast<const char *>(data.data()),
+          data.size() * sizeof(unsigned)})};
   return {saved.begin(), saved.size()};
 }
 } // namespace

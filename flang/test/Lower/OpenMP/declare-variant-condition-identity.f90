@@ -4,6 +4,9 @@
 ! RUN: cd %t && %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir use.f90 -o - | FileCheck %s --check-prefix=IMPORTED
 ! RUN: cd %t && %flang_fc1 -fopenmp -fopenmp-version=52 -emit-fir use.f90 -o - | FileCheck %s --check-prefix=IMPORTED
 
+! RUN: cd %t && %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir kinds.f90 -o - | FileCheck %s --check-prefix=DEFAULT4
+! RUN: cd %t && %flang_fc1 -fopenmp -fopenmp-version=52 -fdefault-integer-8 -emit-hlfir kinds.f90 -o - | FileCheck %s --check-prefix=DEFAULT8
+
 ! Identical conditions make the CPU selector a strict superset, zeroing the
 ! high-scoring variant. Distinct expressions and declarations must retain the
 ! high score even when they fold to the same value.
@@ -15,6 +18,16 @@
 ! LOCAL: fir.call @_QMconditionsPhigh()
 ! LOCAL: fir.call @_QMconditionsPhigh()
 ! LOCAL: fir.call @_QMconditionsPhigh()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPhigh()
+! LOCAL: fir.call @_QMconditionsPhigh()
+! LOCAL: fir.call @_QMconditionsPlow()
 ! LOCAL: return
 
 ! Conditions referring to USE-associated names are rebuilt in the importing
@@ -130,8 +143,91 @@ contains
     character_literals = 0
   end function
 
+  integer function spelling_eq()
+    !$omp declare variant(high) match(user={condition(1 .eq. 1)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1 == 1)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_eq = 0
+  end function
+
+  integer function spelling_ne()
+    !$omp declare variant(high) match(user={condition(1 .ne. 2)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1 /= 2)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_ne = 0
+  end function
+
+  integer function spelling_lt()
+    !$omp declare variant(high) match(user={condition(1 .lt. 2)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1 < 2)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_lt = 0
+  end function
+
+  integer function spelling_le()
+    !$omp declare variant(high) match(user={condition(1 .le. 1)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1 <= 1)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_le = 0
+  end function
+
+  integer function spelling_gt()
+    !$omp declare variant(high) match(user={condition(2 .gt. 1)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(2 > 1)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_gt = 0
+  end function
+
+  integer function spelling_ge()
+    !$omp declare variant(high) match(user={condition(1 .ge. 1)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1 >= 1)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_ge = 0
+  end function
+
+  integer function spelling_integer_kind()
+    !$omp declare variant(high) match(user={condition(1 == 1)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1_4 == 1_4)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_integer_kind = 0
+  end function
+
+  integer function spelling_distinct_kind()
+    !$omp declare variant(high) match(user={condition(1_4 == 1_4)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1_8 == 1_8)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_distinct_kind = 0
+  end function
+
+  integer function spelling_complex_values()
+    !$omp declare variant(high) match(user={condition((1,2) == (1,2))}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition((1,3) == (1,3))}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_complex_values = 0
+  end function
+
+  ! The positive magnitude is out of range, but the signed literal is valid.
+  integer function spelling_integer_min()
+    !$omp declare variant(high) &
+    !$omp& match(user={condition(-2147483648 == -2147483648)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) &
+    !$omp& match(user={condition(-2147483648_4 == -2147483648_4)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    spelling_integer_min = 0
+  end function
+
   subroutine local_calls(a)
-    integer :: a(7)
+    integer :: a(17)
     a(1) = parentheses()
     a(2) = aliases()
     a(3) = compound_aliases()
@@ -139,6 +235,16 @@ contains
     a(5) = literal_and_name()
     a(6) = ordered_expression()
     a(7) = character_literals()
+    a(8) = spelling_eq()
+    a(9) = spelling_ne()
+    a(10) = spelling_lt()
+    a(11) = spelling_le()
+    a(12) = spelling_gt()
+    a(13) = spelling_ge()
+    a(14) = spelling_integer_kind()
+    a(15) = spelling_distinct_kind()
+    a(16) = spelling_complex_values()
+    a(17) = spelling_integer_min()
   end subroutine
 end module
 
@@ -195,4 +301,37 @@ subroutine runtime_any()
   !$omp& implementation={extension(match_any), vendor(score(100): llvm)}: taskyield) &
   !$omp& when(user={condition((alias))}, device={kind(cpu)}, &
   !$omp& implementation={extension(match_any), vendor(score(1): llvm)}: taskwait)
+end subroutine
+
+! Imported-symbol runtime expressions also normalize relational operators.
+! IMPORTED-LABEL: func.func @_QPruntime_operators(
+! IMPORTED-NOT: omp.taskyield
+! IMPORTED: fir.if
+! IMPORTED: omp.taskwait
+! IMPORTED-NOT: omp.taskyield
+! IMPORTED: return
+subroutine runtime_operators(n)
+  integer :: n
+  !$omp metadirective &
+  !$omp& when(user={condition(n .eq. 1)}, &
+  !$omp& implementation={vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(user={condition(n == 1)}, device={kind(cpu)}, &
+  !$omp& implementation={vendor(score(1): llvm)}: taskwait)
+end subroutine
+
+!--- kinds.f90
+! DEFAULT4-LABEL: func.func @_QPdefault_kind(
+! DEFAULT4-NOT: omp.taskyield
+! DEFAULT4: omp.taskwait
+! DEFAULT4: return
+! DEFAULT8-LABEL: func.func @_QPdefault_kind(
+! DEFAULT8-NOT: omp.taskwait
+! DEFAULT8: omp.taskyield
+! DEFAULT8: return
+subroutine default_kind()
+  !$omp metadirective &
+  !$omp& when(user={condition(1 == 1)}, &
+  !$omp& implementation={vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(user={condition(1_4 == 1_4)}, device={kind(cpu)}, &
+  !$omp& implementation={vendor(score(1): llvm)}: taskwait)
 end subroutine
