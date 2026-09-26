@@ -77,7 +77,13 @@ define <vscale x 2 x double> @speculative_load_nxv2f64(ptr %ptr) {
 
 ; Oracle form tests
 
-declare i64 @oracle(ptr, i64) memory(argmem: read) nounwind nosync willreturn
+define internal i64 @oracle(ptr %p, i64 %n) memory(argmem: read) nounwind nosync willreturn {
+; CHECK-LABEL: oracle:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    ret
+  ret i64 %n
+}
 
 define b128 @speculative_load_b128_oracle(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: speculative_load_b128_oracle:

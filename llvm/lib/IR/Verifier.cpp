@@ -3202,6 +3202,13 @@ void Verifier::verifySiblingFuncletUnwinds() {
   }
 }
 
+/// Returns true if \p U is the oracle operand of an llvm.speculative.load.
+static bool isSpeculativeLoadOracleUse(const Use &U) {
+  auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+  return II && II->getIntrinsicID() == Intrinsic::speculative_load &&
+         II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2;
+}
+
 // visitFunction - Verify that a function is ok.
 //
 void Verifier::visitFunction(const Function &F) {
@@ -3492,6 +3499,17 @@ void Verifier::visitFunction(const Function &F) {
           "Should be: " +
               ExpectedName,
           PrintDecl);
+  }
+
+  // A function used as the oracle of llvm.speculative.load may not be
+  // referenced in any other way.
+  if (isMaterialized && any_of(F.uses(), isSpeculativeLoadOracleUse)) {
+    Check(F.hasLocalLinkage(), "oracle function must have local linkage", &F);
+    for (const Use &U : F.uses())
+      Check(isSpeculativeLoadOracleUse(U),
+            "oracle function may only be used as the oracle operand of "
+            "llvm.speculative.load",
+            &F, U.getUser());
   }
 
   auto *N = F.getSubprogram();
