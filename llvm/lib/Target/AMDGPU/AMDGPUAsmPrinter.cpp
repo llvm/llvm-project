@@ -1228,7 +1228,7 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       TSTargetID->setXnackSetting(Setting);
   }
 
-  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSupportsSRAMECC)) {
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
         GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
     if (Setting != AMDGPU::TargetIDSetting::Any)

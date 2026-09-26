@@ -1200,6 +1200,14 @@ def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   [], InlineIgnore
 >;
 
+defm SRAMECCOnOffModes : AMDGPUSubtargetFeature<"sramecc-on-off-modes",
+  "Target supports SRAMECC on/off modes",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0,
+  [FeatureSupportsSRAMECC],
+  InlineIgnore
+>;
+
 defm NoSdstCMPX : AMDGPUSubtargetFeature<"no-sdst-cmpx",
   "V_CMPX does not write VCC/SGPR in addition to EXEC"
 >;
@@ -2007,7 +2015,7 @@ def FeatureISAVersion9_0_MI_Common : FeatureSet<
      FeatureMAIInsts,
      FeaturePkFmacF16Inst,
      FeatureAtomicFaddNoRtnInsts,
-     FeatureSupportsSRAMECC])>;
+     FeatureSRAMECCOnOffModes])>;
 
 def FeatureISAVersion9_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -2030,7 +2038,7 @@ def FeatureISAVersion9_0_6 : FeatureSet<
      FeatureDot2Insts,
      FeatureDot7Insts,
      FeatureDot10Insts,
-     FeatureSupportsSRAMECC])>;
+     FeatureSRAMECCOnOffModes])>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
@@ -2102,7 +2110,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAtomicBufferGlobalPkAddF16Insts,
    FeatureAtomicGlobalPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
-   FeatureSupportsSRAMECC,
+   FeatureSRAMECCOnOffModes,
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
    FeatureFullRate64Ops,
@@ -2496,7 +2504,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureSupportsSRAMECC,
+   FeatureSRAMECCOnOffModes,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
    FeatureAsynccnt,
@@ -3355,6 +3363,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
+  FeatureSRAMECCOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
