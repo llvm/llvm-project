@@ -1130,7 +1130,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   if (Mid.empty())
     Mid = "_";
 
-  return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix +
+  return (Twine(Style.Prefix) + HungarianPrefix + Mid + Style.Suffix +
           (KeepTrailingUnderscore ? "_" : ""))
       .str();
 }

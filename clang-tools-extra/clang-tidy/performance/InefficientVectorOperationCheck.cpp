@@ -266,7 +266,8 @@ void InefficientVectorOperationCheck::check(
       << AppendCall->getMethodDecl()->getDeclName();
   if (!ReserveSize.empty()) {
     const std::string ReserveStmt =
-        (VarName + PartialReserveStmt + "(" + ReserveSize + ");\n").str();
+        (Twine(VarName) + PartialReserveStmt + "(" + ReserveSize + ");\n")
+            .str();
     Diag << FixItHint::CreateInsertion(LoopStmt->getBeginLoc(), ReserveStmt);
   }
 }

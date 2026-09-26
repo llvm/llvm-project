@@ -478,7 +478,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       (TypeExpr.front() == ' ' || TypeExpr.front() == '\t'))
     Assign = " =";
 
-  const std::string Replacement = (Using + Name + Assign + TypeExpr).str();
+  const std::string Replacement =
+      (Twine(Using) + Name + Assign + TypeExpr).str();
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
 } // namespace clang::tidy::modernize

@@ -745,7 +745,8 @@ void SimplifyBooleanExprCheck::replaceWithReturnCondition(
   const StringRef Terminator = isa<CompoundStmt>(If->getElse()) ? ";" : "";
   const std::string Condition =
       replacementExpression(Context, Negated, If->getCond());
-  const std::string Replacement = ("return " + Condition + Terminator).str();
+  const std::string Replacement =
+      (Twine("return ") + Condition + Terminator).str();
   const SourceLocation Start = BoolLiteral->getBeginLoc();
 
   const bool HasReplacement =

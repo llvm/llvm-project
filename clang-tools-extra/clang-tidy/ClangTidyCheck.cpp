@@ -55,8 +55,9 @@ ClangTidyCheck::OptionsView::OptionsView(
 std::optional<StringRef>
 ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
   if (Context->getOptionsCollector())
-    Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
-  const auto &Iter = CheckOptions.find((NamePrefix + LocalName).str());
+    Context->getOptionsCollector()->insert(
+        (Twine(NamePrefix) + LocalName).str());
+  const auto &Iter = CheckOptions.find((Twine(NamePrefix) + LocalName).str());
   if (Iter != CheckOptions.end())
     return StringRef(Iter->getValue().Value);
   return std::nullopt;
@@ -129,7 +130,7 @@ ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const {
 void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,
                                         StringRef LocalName,
                                         StringRef Value) const {
-  Options[(NamePrefix + LocalName).str()] = Value;
+  Options[(Twine(NamePrefix) + LocalName).str()] = Value;
 }
 
 void ClangTidyCheck::OptionsView::storeInt(ClangTidyOptions::OptionMap &Options,
@@ -156,11 +157,12 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
                                         ArrayRef<NameAndValue> Mapping,
                                         bool CheckGlobal) const {
   if (!CheckGlobal && Context->getOptionsCollector())
-    Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
+    Context->getOptionsCollector()->insert(
+        (Twine(NamePrefix) + LocalName).str());
   const auto Iter =
       CheckGlobal
           ? findPriorityOption(CheckOptions, NamePrefix, LocalName, Context)
-          : CheckOptions.find((NamePrefix + LocalName).str());
+          : CheckOptions.find((Twine(NamePrefix) + LocalName).str());
   if (Iter == CheckOptions.end())
     return std::nullopt;
 
