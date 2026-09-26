@@ -2027,13 +2027,13 @@ define void @indices_convert() {
 ; SSE3-LABEL: indices_convert:
 ; SSE3:       # %bb.0: # %bb
 ; SSE3-NEXT:    movaps (%rax), %xmm0
+; SSE3-NEXT:    movl (%rax), %eax
 ; SSE3-NEXT:    movaps %xmm0, -24(%rsp)
 ; SSE3-NEXT:    movaps %xmm0, -40(%rsp)
-; SSE3-NEXT:    movl (%rax), %eax
-; SSE3-NEXT:    movaps %xmm0, -56(%rsp)
-; SSE3-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSE3-NEXT:    andl $3, %eax
 ; SSE3-NEXT:    shll $3, %eax
+; SSE3-NEXT:    movaps %xmm0, -56(%rsp)
+; SSE3-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSE3-NEXT:    movsd -72(%rsp,%rax), %xmm0 # xmm0 = mem[0],zero
 ; SSE3-NEXT:    movsd -40(%rsp,%rax), %xmm1 # xmm1 = mem[0],zero
 ; SSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
@@ -2043,13 +2043,13 @@ define void @indices_convert() {
 ; SSSE3-LABEL: indices_convert:
 ; SSSE3:       # %bb.0: # %bb
 ; SSSE3-NEXT:    movaps (%rax), %xmm0
+; SSSE3-NEXT:    movl (%rax), %eax
 ; SSSE3-NEXT:    movaps %xmm0, -24(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, -40(%rsp)
-; SSSE3-NEXT:    movl (%rax), %eax
-; SSSE3-NEXT:    movaps %xmm0, -56(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSSE3-NEXT:    andl $3, %eax
 ; SSSE3-NEXT:    shll $3, %eax
+; SSSE3-NEXT:    movaps %xmm0, -56(%rsp)
+; SSSE3-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSSE3-NEXT:    movsd -72(%rsp,%rax), %xmm0 # xmm0 = mem[0],zero
 ; SSSE3-NEXT:    movsd -40(%rsp,%rax), %xmm1 # xmm1 = mem[0],zero
 ; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
@@ -2059,16 +2059,16 @@ define void @indices_convert() {
 ; SSE41-LABEL: indices_convert:
 ; SSE41:       # %bb.0: # %bb
 ; SSE41-NEXT:    movaps (%rax), %xmm0
-; SSE41-NEXT:    extractps $2, %xmm0, %eax
+; SSE41-NEXT:    extractps $3, %xmm0, %eax
+; SSE41-NEXT:    extractps $2, %xmm0, %ecx
 ; SSE41-NEXT:    movaps %xmm0, -24(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, -40(%rsp)
-; SSE41-NEXT:    andl $3, %eax
-; SSE41-NEXT:    extractps $3, %xmm0, %ecx
+; SSE41-NEXT:    andl $3, %ecx
 ; SSE41-NEXT:    movaps %xmm0, -56(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, -72(%rsp)
-; SSE41-NEXT:    andl $3, %ecx
-; SSE41-NEXT:    movsd -72(%rsp,%rcx,8), %xmm0 # xmm0 = mem[0],zero
-; SSE41-NEXT:    movsd -40(%rsp,%rax,8), %xmm1 # xmm1 = mem[0],zero
+; SSE41-NEXT:    andl $3, %eax
+; SSE41-NEXT:    movsd -72(%rsp,%rax,8), %xmm0 # xmm0 = mem[0],zero
+; SSE41-NEXT:    movsd -40(%rsp,%rcx,8), %xmm1 # xmm1 = mem[0],zero
 ; SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE41-NEXT:    movups %xmm1, (%rax)
 ; SSE41-NEXT:    retq
