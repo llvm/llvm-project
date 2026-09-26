@@ -20,9 +20,13 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
@@ -69,6 +73,7 @@ private:
   void collectUnpackingCandidates(MachineInstr &BeginMI,
                                   SetVector<MachineInstr *> &InstrsToUnpack,
                                   uint16_t NumMFMACycles);
+  bool canUnpackPkMov(const MachineInstr &MI, bool &HighFirst) const;
   // v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3] op_sel:[1,1,1]
   // op_sel_hi:[0,0,0]
   // ==>
@@ -77,10 +82,10 @@ private:
   // Here, we have overwritten v0 before we use it. This function checks if
   // unpacking can lead to such a situation.
   bool canUnpackingClobberRegister(const MachineInstr &MI);
-  // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
-  // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
-  // this transformation.
-  void performF32Unpacking(MachineInstr &I);
+  // Unpack and insert packed instructions, such as V_PK_MUL, V_PK_ADD,
+  // V_PK_FMA, and V_PK_MOV. Currently, V_PK_MUL, V_PK_ADD, V_PK_FMA, and
+  // V_PK_MOV are supported for this transformation.
+  void performUnpacking(MachineInstr &I);
   // Select corresponding unpacked instruction
   uint32_t mapToUnpackedOpcode(MachineInstr &I);
   // Creates the unpacked instruction to be inserted. Adds source modifiers to
@@ -596,6 +601,38 @@ bool SIPreEmitPeephole::removeRedundantModeWrites(
   return Changed;
 }
 
+bool SIPreEmitPeephole::canUnpackPkMov(const MachineInstr &MI,
+                                       bool &HighFirst) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LoDst = TRI->getSubReg(Dst, AMDGPU::sub0);
+  Register HiDst = TRI->getSubReg(Dst, AMDGPU::sub1);
+
+  auto SelectedSrc = [&](AMDGPU::OpName SrcName,
+                         AMDGPU::OpName ModsName) -> Register {
+    const MachineOperand *Src = TII->getNamedOperand(MI, SrcName);
+    if (!Src || !Src->isReg())
+      return Register();
+
+    unsigned Mods = TII->getNamedOperand(MI, ModsName)->getImm();
+    unsigned SubReg = Mods & SISrcMods::OP_SEL_0 ? AMDGPU::sub1 : AMDGPU::sub0;
+    return TRI->getSubReg(Src->getReg(), SubReg);
+  };
+
+  Register HiSrc =
+      SelectedSrc(AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers);
+  bool LowFirstClobbers = HiSrc && TRI->regsOverlap(LoDst, HiSrc);
+
+  Register LoSrc =
+      SelectedSrc(AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers);
+  bool HighFirstClobbers = LoSrc && TRI->regsOverlap(HiDst, LoSrc);
+
+  if (LowFirstClobbers && HighFirstClobbers)
+    return false;
+
+  HighFirst = LowFirstClobbers;
+  return true;
+}
+
 bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -607,6 +644,11 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   // Such scenarios can arise due to specific combinations of op_sel and
   // op_sel_hi modifiers.
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
+
+  if (OpCode == AMDGPU::V_PK_MOV_B32) {
+    bool HighFirst{};
+    return !canUnpackPkMov(MI, HighFirst);
+  }
 
   const MachineOperand *Src0MO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   if (Src0MO && Src0MO->isReg()) {
@@ -655,10 +697,10 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
 
 uint32_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   unsigned Opcode = I.getOpcode();
-  // Use 64 bit encoding to allow use of VOP3 instructions.
+  switch (Opcode) {
+  // Use 64 bit encoding to allow use of arithmetic VOP3 instructions.
   // VOP3 e64 instructions allow source modifiers
   // e32 instructions don't allow source modifiers.
-  switch (Opcode) {
   case AMDGPU::V_PK_ADD_F32:
   case AMDGPU::V_PK_ADD_F32_gfx1250:
     return AMDGPU::V_ADD_F32_e64;
@@ -668,6 +710,8 @@ uint32_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   case AMDGPU::V_PK_FMA_F32:
   case AMDGPU::V_PK_FMA_F32_gfx1250:
     return AMDGPU::V_FMA_F32_e64;
+  case AMDGPU::V_PK_MOV_B32:
+    return AMDGPU::V_MOV_B32_e32;
   default:
     return std::numeric_limits<uint32_t>::max();
   }
@@ -787,21 +831,32 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
   }
 }
 
-void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
+void SIPreEmitPeephole::performUnpacking(MachineInstr &I) {
   const MachineOperand &DstOp = I.getOperand(0);
 
   uint32_t UnpackedOpcode = mapToUnpackedOpcode(I);
   assert(UnpackedOpcode != std::numeric_limits<uint32_t>::max() &&
          "Unsupported Opcode");
 
-  MachineInstrBuilder Op0LOp1L =
-      createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
-  MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
+  bool HighFirst{};
+  if (I.getOpcode() == AMDGPU::V_PK_MOV_B32) {
+    bool CanUnpack = canUnpackPkMov(I, HighFirst);
+    assert(CanUnpack && "Unsafe V_PK_MOV_B32 reached unpacking");
+    (void)CanUnpack;
+  }
 
+  MachineInstrBuilder Op0LOp1L, Op0HOp1H;
+  if (HighFirst) {
+    Op0HOp1H = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
+    Op0LOp1L = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
+  } else {
+    Op0LOp1L = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
+    Op0HOp1H = createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
+  }
+
+  MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
   LoDstOp.setIsUndef(DstOp.isUndef());
 
-  MachineInstrBuilder Op0HOp1H =
-      createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
   MachineOperand HiDstOp = Op0HOp1H->getOperand(0);
 
   uint32_t IFlags = I.getFlags();
@@ -824,6 +879,26 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   unsigned OpCode = I.getOpcode();
   Register UnpackedDstReg = IsHiBits ? TRI->getSubReg(DstReg, AMDGPU::sub1)
                                      : TRI->getSubReg(DstReg, AMDGPU::sub0);
+
+  if (UnpackedOpcode == AMDGPU::V_MOV_B32_e32) {
+    MachineInstrBuilder NewMI = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
+    NewMI.addDef(UnpackedDstReg);
+    const MachineOperand &SrcMO = IsHiBits ? *SrcMO1 : *SrcMO0;
+    unsigned SrcMods =
+        TII->getNamedOperand(I, IsHiBits ? AMDGPU::OpName::src1_modifiers
+                                         : AMDGPU::OpName::src0_modifiers)
+            ->getImm();
+
+    if (SrcMO.isImm()) {
+      NewMI.addImm(SrcMO.getImm());
+    } else {
+      unsigned SrcSubReg =
+          SrcMods & SISrcMods::OP_SEL_0 ? AMDGPU::sub1 : AMDGPU::sub0;
+      Register UnpackedSrcReg = TRI->getSubReg(SrcMO.getReg(), SrcSubReg);
+      NewMI.addReg(UnpackedSrcReg, getRegState(SrcMO));
+    }
+    return NewMI;
+  }
 
   int64_t ClampVal = TII->getNamedOperand(I, AMDGPU::OpName::clamp)->getImm();
   unsigned Src0Mods =
@@ -946,7 +1021,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
       collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
     }
     for (MachineInstr *MI : InstrsToUnpack) {
-      performF32Unpacking(*MI);
+      performUnpacking(*MI);
     }
   }
 
