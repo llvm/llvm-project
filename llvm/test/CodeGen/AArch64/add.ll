@@ -198,9 +198,8 @@ define void @v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x0]
-; CHECK-SD-NEXT:    str h1, [x0, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:

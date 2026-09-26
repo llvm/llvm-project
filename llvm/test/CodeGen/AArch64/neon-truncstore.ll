@@ -41,10 +41,8 @@ define void @v8i64_v8i32(<8 x i64> %a, ptr %result) {
 define void @v2i32_v2i16(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %b = trunc <2 x i32> %a to <2 x i16>
   store <2 x i16> %b, ptr %result
@@ -213,9 +211,9 @@ define void @v32i16_v32i8(<32 x i16> %a, ptr %result) {
 define void @extract_v2i16_v8i16(<8 x i16> %a, ptr %p) {
 ; CHECK-LABEL: extract_v2i16_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> poison, <2 x i32> <i32 0, i32 1>
   store <2 x i16> %c, ptr %p
@@ -235,10 +233,8 @@ define void @extract_v4i16_v8i16(<8 x i16> %a, ptr %p) {
 define void @extract_v2i16_v4i16(<4 x i16> %a, ptr %p) {
 ; CHECK-LABEL: extract_v2i16_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %c = shufflevector <4 x i16> %a, <4 x i16> poison, <2 x i32> <i32 0, i32 1>
   store <2 x i16> %c, ptr %p
