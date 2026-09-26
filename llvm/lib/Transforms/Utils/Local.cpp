@@ -466,7 +466,8 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     // Intrinsics declare sideeffects to prevent them from moving, but they are
     // nops without users.
     if (II->getIntrinsicID() == Intrinsic::allow_runtime_check ||
-        II->getIntrinsicID() == Intrinsic::allow_ubsan_check)
+        II->getIntrinsicID() == Intrinsic::allow_ubsan_check ||
+        II->getIntrinsicID() == Intrinsic::ct_select)
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
