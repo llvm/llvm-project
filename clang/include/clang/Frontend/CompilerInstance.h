@@ -112,6 +112,11 @@ class CompilerInstance : public ModuleLoader {
   /// The cache of PCM files.
   std::shared_ptr<ModuleCache> ModCache;
 
+  /// Directory dependencies from the instance that requested this module build.
+  /// An inferred framework is built from printed module map text rather than by
+  /// repeating the inference, so its \c Frameworks listing is only seen there.
+  std::vector<std::string> InheritedDirectoryDependencies;
+
   /// Functor for getting the dependency preprocessor directives of a file.
   std::unique_ptr<DependencyDirectivesGetter> GetDependencyDirectives;
 
@@ -1000,6 +1005,14 @@ public:
 
   ModuleCache &getModuleCache() const { return *ModCache; }
   std::shared_ptr<ModuleCache> getModuleCachePtr() const { return ModCache; }
+
+  /// See \c InheritedDirectoryDependencies.
+  ArrayRef<std::string> getInheritedDirectoryDependencies() const {
+    return InheritedDirectoryDependencies;
+  }
+  void setInheritedDirectoryDependencies(ArrayRef<std::string> Dirs) {
+    InheritedDirectoryDependencies.assign(Dirs.begin(), Dirs.end());
+  }
 };
 
 } // end namespace clang

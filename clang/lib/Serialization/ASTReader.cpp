@@ -111,6 +111,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DJB.h"
@@ -3344,6 +3345,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+
+        // A header added to a directory the module enumerated was never
+        // recorded as an input file, so the check above misses it.
+        if (!WasValidated && F.Kind == MK_ImplicitModule &&
+            HSOpts.ModulesValidateDirectoryDependencies &&
+            isDirectoryDependencyOutOfDate(F, Complain))
+          return OutOfDate;
       } else {
         F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }
@@ -3687,6 +3695,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (ASTReadResult Result =
               ReadModuleMapFileBlock(Record, F, ImportedBy, ClientLoadCapabilities))
         return Result;
+      break;
+
+    case MODULE_DIRECTORY_DEPENDENCIES:
+      ReadDirectoryDependencies(Record, F);
       break;
 
     case INPUT_FILE_OFFSETS:
@@ -4840,7 +4852,54 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 
   if (Listener)
     Listener->ReadModuleMapFile(F.ModuleMapPath);
+
   return Success;
+}
+
+void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
+                                          ModuleFile &F) {
+  unsigned Idx = 0;
+  unsigned N = Record[Idx++];
+  F.DirectoryDependencies.reserve(N);
+  for (unsigned I = 0; I != N; ++I)
+    F.DirectoryDependencies.push_back(ReadPath(F, Record, Idx));
+}
+
+bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
+  llvm::vfs::FileSystem &FS = PP.getFileManager().getVirtualFileSystem();
+  // Adding or removing an entry updates the modification time of the directory
+  // holding it, so comparing every directory in the tree against the module
+  // file catches a header that was added, even one whose own modification time
+  // is older. A directory that doesn't exist has no listing to depend on.
+  auto IsNewer = [&](StringRef Dir) {
+    llvm::ErrorOr<llvm::vfs::Status> Status = FS.status(Dir);
+    return Status && Status->isDirectory() &&
+           llvm::sys::toTimeT(Status->getLastModificationTime()) > F.ModTime;
+  };
+
+  for (StringRef Dir : F.DirectoryDependencies) {
+    std::optional<std::string> Changed;
+    if (IsNewer(Dir)) {
+      Changed = Dir.str();
+    } else {
+      std::error_code EC;
+      for (llvm::vfs::recursive_directory_iterator I(FS, Dir, EC), E;
+           I != E && !EC; I.increment(EC)) {
+        if (I->type() == llvm::sys::fs::file_type::directory_file &&
+            IsNewer(I->path())) {
+          Changed = I->path().str();
+          break;
+        }
+      }
+    }
+    if (!Changed)
+      continue;
+    Diag(diag::remark_module_directory_dep_changed) << F.ModuleName << *Changed;
+    if (Complain)
+      Diag(diag::err_module_directory_dep_changed) << F.ModuleName << *Changed;
+    return true;
+  }
+  return false;
 }
 
 /// Move the given method to the back of the global list of methods.
