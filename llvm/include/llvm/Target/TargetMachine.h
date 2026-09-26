@@ -466,10 +466,6 @@ public:
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
   MCSymbol *getSymbol(const GlobalValue *GV) const;
 
-  /// The integer bit size to use for SjLj based exception handling.
-  static constexpr unsigned DefaultSjLjDataSize = 32;
-  virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
-
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.
   virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {

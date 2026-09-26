@@ -2518,6 +2518,12 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
+unsigned Triple::getSjLjDataSizeInBits() const {
+  // VE uses 64-bit words in the SjLj jump buffer's data array; everything else
+  // uses 32-bit words.
+  return getArch() == Triple::ve ? 64 : 32;
+}
+
 static FloatABI::ABIType getARMDefaultFloatABI(const Triple &T) {
   Triple::EnvironmentType Env = T.getEnvironment();
   bool IsHard =
