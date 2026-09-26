@@ -7167,6 +7167,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   // Check for other shuffles that are not SK_ kinds but we have native
   // instructions for, for example ZIP and UZP.
   unsigned Unused;
+  bool UnusedRev;
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc ||
@@ -7183,6 +7184,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
                  LT.second.getVectorNumElements(), 32) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 64) ||
+       isEXTMask(Mask, LT.second.getVectorNumElements(), UnusedRev, Unused) ||
+       isSingletonEXTMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))
