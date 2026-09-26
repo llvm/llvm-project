@@ -11,6 +11,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/mips.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
@@ -18,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include <optional>
 
 #define DEBUG_TYPE "orc"
@@ -138,6 +140,7 @@ public:
     auto &ES = ENP.getExecutionSession();
 
     jitlink::Edge::Kind EdgeKind;
+    std::optional<unsigned> PointerSize;
 
     switch (ES.getTargetTriple().getArch()) {
     case Triple::x86_64:
@@ -155,6 +158,18 @@ public:
     case Triple::loongarch64:
       EdgeKind = jitlink::loongarch::Pointer64;
       break;
+    case Triple::mips:
+    case Triple::mipsel:
+      EdgeKind = jitlink::mips::Pointer32;
+      break;
+    case Triple::mips64:
+    case Triple::mips64el:
+      if (ES.getTargetTriple().isABIN32()) {
+        EdgeKind = jitlink::mips::Pointer32;
+        PointerSize = 4;
+      } else
+        EdgeKind = jitlink::mips::Pointer64;
+      break;
     case Triple::systemz:
       EdgeKind = jitlink::systemz::Pointer64;
       break;
@@ -165,7 +180,7 @@ public:
     // void *__dso_handle = &__dso_handle;
     auto G = std::make_unique<jitlink::LinkGraph>(
         "<DSOHandleMU>", ES.getSymbolStringPool(), ES.getTargetTriple(),
-        SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+        SubtargetFeatures(), jitlink::getGenericEdgeKindName, PointerSize);
     auto &DSOHandleSection =
         G->createSection(".data.__dso_handle", MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
@@ -374,6 +389,10 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   case Triple::ppc64le:
   case Triple::loongarch64:
   case Triple::systemz:
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
     return true;
   default:
     return false;
@@ -1207,16 +1226,18 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
         return KeyOrErr.takeError();
     }
 
-    uint64_t PlatformKeyBits =
-        support::endian::byte_swap(*Key, G.getEndianness());
-
     for (auto *B : TLSInfoEntrySection->blocks()) {
       // FIXME: The TLS descriptor byte length may different with different
       // ISA
       assert(B->getSize() == (G.getPointerSize() * 2) &&
              "TLS descriptor must be 2 words length");
       auto TLSInfoEntryContent = B->getMutableContent(G);
-      memcpy(TLSInfoEntryContent.data(), &PlatformKeyBits, G.getPointerSize());
+      if (G.getPointerSize() == 4)
+        support::endian::write<uint32_t>(TLSInfoEntryContent.data(), *Key,
+                                         G.getEndianness());
+      else
+        support::endian::write<uint64_t>(TLSInfoEntryContent.data(), *Key,
+                                         G.getEndianness());
     }
   }
 
