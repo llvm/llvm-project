@@ -78,7 +78,7 @@ public:
     /// All detailed debug-information abilities. Symbols is excluded because
     /// it describes information from the object file's symbol table.
     kAllAbilities = CompileUnits | LineTables | Functions | Blocks |
-                    GlobalVariables | LocalVariables | VariableTypes
+        GlobalVariables | LocalVariables | VariableTypes
   };
 
   static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
