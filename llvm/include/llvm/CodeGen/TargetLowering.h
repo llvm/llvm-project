@@ -3343,6 +3343,10 @@ public:
     return false;
   }
 
+  virtual bool optimizeVectorCrossLaneOperation(Instruction *I) const {
+    return false;
+  }
+
   /// Return true if the target supplies and combines to a paired load
   /// two loaded values of type LoadedType next to each other in memory.
   /// RequiredAlignment gives the minimal alignment constraints that must be met
