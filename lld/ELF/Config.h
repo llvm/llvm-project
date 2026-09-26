@@ -490,6 +490,8 @@ struct Config {
   int32_t splitStackAdjustSize;
   SmallVector<uint8_t, 0> packageMetadata;
 
+  bool ltoPartitionsUsesThinLTOCache;
+
   // The following config options do not directly correspond to any
   // particular command line options.
 
