@@ -776,18 +776,21 @@ class RDTIME_2R<bits<32> op>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class BrCC_2RI16<bits<32> op>
     : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16),
-               "$rj, $rd, $imm16"> {
+               "$rj, $rd, $imm16">,
+      Sched<[WriteIJump, ReadIJump, ReadIJump]> {
   let isBranch = 1;
   let isTerminator = 1;
 }
 class BrCCZ_1RI21<bits<32> op>
     : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2_br:$imm21),
-               "$rj, $imm21"> {
+               "$rj, $imm21">,
+      Sched<[WriteIJump, ReadIJump]> {
   let isBranch = 1;
   let isTerminator = 1;
 }
 class Br_I26<bits<32> op>
-    : FmtI26<op, (outs), (ins simm26_b:$imm26), "$imm26"> {
+    : FmtI26<op, (outs), (ins simm26_b:$imm26), "$imm26">,
+      Sched<[WriteIJump]> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
@@ -799,10 +802,12 @@ class LOAD_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), "$rd, $rj, $rk">;
 class LOAD_2RI12<bits<32> op>
     : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12_addlike:$imm12),
-               "$rd, $rj, $imm12">;
+               "$rd, $rj, $imm12">,
+      Sched<[WriteLD, ReadMemBase]>;
 class LOAD_2RI14<bits<32> op>
     : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
-               "$rd, $rj, $imm14">;
+               "$rd, $rj, $imm14">,
+      Sched<[WriteLDPTR, ReadMemBase]>;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
@@ -811,10 +816,12 @@ class STORE_3R<bits<32> op>
             "$rd, $rj, $rk">;
 class STORE_2RI12<bits<32> op>
     : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12_addlike:$imm12),
-               "$rd, $rj, $imm12">;
+               "$rd, $rj, $imm12">,
+      Sched<[WriteST, ReadSTData, ReadMemBase]>;
 class STORE_2RI14<bits<32> op>
     : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
-               "$rd, $rj, $imm14">;
+               "$rd, $rj, $imm14">,
+      Sched<[WriteSTPTR, ReadSTData, ReadMemBase]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
@@ -870,45 +877,74 @@ class IOCSRWR<bits<32> op>
 //===----------------------------------------------------------------------===//
 
 // Arithmetic Operation Instructions
-def ADD_W : ALU_3R<0x00100000>;
-def SUB_W : ALU_3R<0x00110000>;
-def ADDI_W : ALU_2RI12<0x02800000, simm12_addlike>;
+def ADD_W : ALU_3R<0x00100000>,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SUB_W : ALU_3R<0x00110000>,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def ADDI_W : ALU_2RI12<0x02800000, simm12_addlike>,
+             Sched<[WriteIALU, ReadIALU]>;
 let isReMaterializable = 1 in {
-def LU12I_W : ALU_1RI20<0x14000000, simm20_lu12iw>;
+def LU12I_W : ALU_1RI20<0x14000000, simm20_lu12iw>,
+              Sched<[WriteIALU]>;
 }
-def SLT  : ALU_3R<0x00120000>;
-def SLTU : ALU_3R<0x00128000>;
-def SLTI  : ALU_2RI12<0x02000000, simm12>;
-def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDU12I : ALU_1RI20<0x1c000000, simm20_pcaddu12i>;
-def AND  : ALU_3R<0x00148000>;
-def OR   : ALU_3R<0x00150000>;
-def NOR  : ALU_3R<0x00140000>;
-def XOR  : ALU_3R<0x00158000>;
-def ANDI : ALU_2RI12<0x03400000, uimm12>;
+def SLT  : ALU_3R<0x00120000>, 
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLTU : ALU_3R<0x00128000>, 
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLTI  : ALU_2RI12<0x02000000, simm12>, 
+            Sched<[WriteIALU, ReadIALU]>;
+def SLTUI : ALU_2RI12<0x02400000, simm12>, 
+            Sched<[WriteIALU, ReadIALU]>;
+def PCADDU12I : ALU_1RI20<0x1c000000, simm20_pcaddu12i>,
+                Sched<[WriteIPCAdd]>;
+def AND  : ALU_3R<0x00148000>,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def OR   : ALU_3R<0x00150000>,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def NOR  : ALU_3R<0x00140000>,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def XOR  : ALU_3R<0x00158000>,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def ANDI : ALU_2RI12<0x03400000, uimm12>,
+           Sched<[WriteIALU, ReadIALU]>;
 // See LoongArchInstrInfo::isAsCheapAsAMove for more details.
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-def ORI  : ALU_2RI12<0x03800000, uimm12_ori>;
-def XORI : ALU_2RI12<0x03c00000, uimm12>;
+def ORI  : ALU_2RI12<0x03800000, uimm12_ori>,
+           Sched<[WriteIALU, ReadIALU]>;
+def XORI : ALU_2RI12<0x03c00000, uimm12>,
+           Sched<[WriteIALU, ReadIALU]>;
 }
-def MUL_W   : ALU_3R<0x001c0000>;
-def MULH_W  : ALU_3R<0x001c8000>;
-def MULH_WU : ALU_3R<0x001d0000>;
+def MUL_W   : ALU_3R<0x001c0000>,
+              Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
+def MULH_W  : ALU_3R<0x001c8000>,
+              Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
+def MULH_WU : ALU_3R<0x001d0000>,
+              Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
 let usesCustomInserter = true in {
-def DIV_W   : ALU_3R<0x00200000>;
-def MOD_W   : ALU_3R<0x00208000>;
-def DIV_WU  : ALU_3R<0x00210000>;
-def MOD_WU  : ALU_3R<0x00218000>;
+def DIV_W   : ALU_3R<0x00200000>,
+              Sched<[WriteIDIV32, ReadIDIV32, ReadIDIV32]>;
+def MOD_W   : ALU_3R<0x00208000>,
+              Sched<[WriteIDIV32, ReadIDIV32, ReadIDIV32]>;
+def DIV_WU  : ALU_3R<0x00210000>,
+              Sched<[WriteIDIV32, ReadIDIV32, ReadIDIV32]>;
+def MOD_WU  : ALU_3R<0x00218000>,
+              Sched<[WriteIDIV32, ReadIDIV32, ReadIDIV32]>;
 } // usesCustomInserter = true
 
 // Bit-shift Instructions
-def SLL_W  : ALU_3R<0x00170000>;
-def SRL_W  : ALU_3R<0x00178000>;
-def SRA_W  : ALU_3R<0x00180000>;
+def SLL_W  : ALU_3R<0x00170000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def SRL_W  : ALU_3R<0x00178000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def SRA_W  : ALU_3R<0x00180000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
 
-def SLLI_W  : ALU_2RI5<0x00408000, uimm5>;
-def SRLI_W  : ALU_2RI5<0x00448000, uimm5>;
-def SRAI_W  : ALU_2RI5<0x00488000, uimm5>;
+def SLLI_W  : ALU_2RI5<0x00408000, uimm5>,
+              Sched<[WriteIShift, ReadIShift]>;
+def SRLI_W  : ALU_2RI5<0x00448000, uimm5>,
+              Sched<[WriteIShift, ReadIShift]>;
+def SRAI_W  : ALU_2RI5<0x00488000, uimm5>,
+              Sched<[WriteIShift, ReadIShift]>;
 
 // Branch Instructions
 def BEQ  : BrCC_2RI16<0x58000000>;
@@ -920,10 +956,12 @@ def BGEU : BrCC_2RI16<0x6c000000>;
 def B : Br_I26<0x50000000>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1, Defs=[R1] in
-def BL : FmtI26<0x54000000, (outs), (ins simm26_symbol:$imm26), "$imm26">;
+def BL : FmtI26<0x54000000, (outs), (ins simm26_symbol:$imm26), "$imm26">,
+         Sched<[WriteIJump]>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def JIRL : Fmt2RI16<0x4c000000, (outs GPR:$rd),
-                    (ins GPR:$rj, simm16_lsl2:$imm16), "$rd, $rj, $imm16">;
+                    (ins GPR:$rj, simm16_lsl2:$imm16), "$rd, $rj, $imm16">,
+           Sched<[WriteIJump, ReadIJump]>;
 
 // Common Memory Access Instructions
 def LD_B  : LOAD_2RI12<0x28000000>;
@@ -936,68 +974,93 @@ def ST_H : STORE_2RI12<0x29400000>;
 def ST_W : STORE_2RI12<0x29800000>;
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12),
-                     "$imm5, $rj, $imm12">;
+                     "$imm5, $rj, $imm12">,
+            Sched<[]>;
 
 // Atomic Memory Access Instructions
-def LL_W : LLBase<0x20000000>;
-def SC_W : SCBase<0x21000000>;
+def LL_W : LLBase<0x20000000>,
+           Sched<[WriteAtomic]>;
+def SC_W : SCBase<0x21000000>,
+           Sched<[WriteAtomic]>;
 
 // Barrier Instructions
-def DBAR : MISC_I15<0x38720000>;
-def IBAR : MISC_I15<0x38728000>;
+def DBAR : MISC_I15<0x38720000>, Sched<[]>;
+def IBAR : MISC_I15<0x38728000>, Sched<[]>;
 
 // Other Miscellaneous Instructions
-def SYSCALL : MISC_I15<0x002b0000>;
-def BREAK   : MISC_I15<0x002a0000>;
-def RDTIMEL_W : RDTIME_2R<0x00006000>;
-def RDTIMEH_W : RDTIME_2R<0x00006400>;
+def SYSCALL : MISC_I15<0x002b0000>, Sched<[]>;
+def BREAK   : MISC_I15<0x002a0000>, Sched<[]>;
+def RDTIMEL_W : RDTIME_2R<0x00006000>, Sched<[]>;
+def RDTIMEH_W : RDTIME_2R<0x00006400>, Sched<[]>;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-def UD : FmtUD<(outs), (ins uimm5:$imm5), "$imm5">;
+def UD : FmtUD<(outs), (ins uimm5:$imm5), "$imm5">, Sched<[]>;
 
 // The CPUCFG instruction offers a reliable way to probing CPU features.
 // Although support is not guaranteed on LA32R, having compiler support
 // nevertheless enables applications to rely on its presence, potentially
 // via kernel emulation if not available natively.
-def CPUCFG : ALU_2R<0x00006c00>;
+def CPUCFG : ALU_2R<0x00006c00>, Sched<[]>;
 
 // Cache Maintenance Instructions
 def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12),
-                     "$op, $rj, $imm12">;
+                     "$op, $rj, $imm12">,
+            Sched<[]>;
 
 let Predicates = [Has32S] in {
 // Arithmetic Operation Instructions
-def ALSL_W : ALU_3RI2<0x00040000, uimm2_plus1>;
-def ANDN : ALU_3R<0x00168000>;
-def ORN  : ALU_3R<0x00160000>;
-def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>;
-def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>;
+def ALSL_W : ALU_3RI2<0x00040000, uimm2_plus1>,
+             Sched<[WriteIALSL, ReadIALSL, ReadIALSL]>;
+def ANDN : ALU_3R<0x00168000>,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def ORN  : ALU_3R<0x00160000>,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>,
+                Sched<[WriteIPCAdd]>;
+def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>,
+                Sched<[WriteIPCAdd]>;
 
 // Bit-shift Instructions
-def ROTR_W : ALU_3R<0x001b0000>;
-def ROTRI_W : ALU_2RI5<0x004c8000, uimm5>;
+def ROTR_W : ALU_3R<0x001b0000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def ROTRI_W : ALU_2RI5<0x004c8000, uimm5>,
+              Sched<[WriteIShift, ReadIShift]>;
 
 // Bit-manipulation Instructions
-def EXT_W_B : ALU_2R<0x00005c00>;
-def EXT_W_H : ALU_2R<0x00005800>;
-def CLO_W   : ALU_2R<0x00001000>;
-def CLZ_W   : ALU_2R<0x00001400>;
-def CTO_W   : ALU_2R<0x00001800>;
-def CTZ_W   : ALU_2R<0x00001c00>;
-def BYTEPICK_W : ALU_3RI2<0x00080000, uimm2>;
-def REVB_2H   : ALU_2R<0x00003000>;
-def BITREV_4B : ALU_2R<0x00004800>;
-def BITREV_W  : ALU_2R<0x00005000>;
+def EXT_W_B : ALU_2R<0x00005c00>,
+              Sched<[WriteIEXT, ReadIEXT]>;
+def EXT_W_H : ALU_2R<0x00005800>,
+              Sched<[WriteIEXT, ReadIEXT]>;
+def CLO_W   : ALU_2R<0x00001000>,
+              Sched<[WriteICL, ReadICL]>;
+def CLZ_W   : ALU_2R<0x00001400>,
+              Sched<[WriteICL, ReadICL]>;
+def CTO_W   : ALU_2R<0x00001800>,
+              Sched<[WriteICT, ReadICT]>;
+def CTZ_W   : ALU_2R<0x00001c00>,
+              Sched<[WriteICT, ReadICT]>;
+def BYTEPICK_W : ALU_3RI2<0x00080000, uimm2>, 
+                 Sched<[WriteIBytePick, ReadIBytePick, ReadIBytePick]>;
+def REVB_2H   : ALU_2R<0x00003000>,
+                Sched<[WriteIRev, ReadIRev]>;
+def BITREV_4B : ALU_2R<0x00004800>,
+                Sched<[WriteIBitRev, ReadIBitRev]>;
+def BITREV_W  : ALU_2R<0x00005000>,
+                Sched<[WriteIBitRev, ReadIBitRev]>;
 let Constraints = "$rd = $dst" in {
 def BSTRINS_W  : FmtBSTR_W<0x00600000, (outs GPR:$dst),
                            (ins GPR:$rd, GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
-                           "$rd, $rj, $msbw, $lsbw">;
+                           "$rd, $rj, $msbw, $lsbw">,
+                 Sched<[WriteIBstrins, ReadIBstrins]>;
 }
 def BSTRPICK_W : FmtBSTR_W<0x00608000, (outs GPR:$rd),
                            (ins GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
-                           "$rd, $rj, $msbw, $lsbw">;
-def MASKEQZ : ALU_3R<0x00130000>;
-def MASKNEZ : ALU_3R<0x00138000>;
+                           "$rd, $rj, $msbw, $lsbw">,
+                 Sched<[WriteIBstrPick, ReadIBstrPick]>;
+def MASKEQZ : ALU_3R<0x00130000>,
+              Sched<[WriteIMASK, ReadIMASK]>;
+def MASKNEZ : ALU_3R<0x00138000>,
+              Sched<[WriteIMASK, ReadIMASK]>;
 
 // Branch Instructions
 def BEQZ : BrCCZ_1RI21<0x40000000>;
@@ -1009,190 +1072,260 @@ def BNEZ : BrCCZ_1RI21<0x44000000>;
 let Predicates = [IsLA64] in {
 
 // Arithmetic Operation Instructions for 64-bits
-def ADD_D : ALU_3R<0x00108000>;
-def SUB_D : ALU_3R<0x00118000>;
+def ADD_D : ALU_3R<0x00108000>,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SUB_D : ALU_3R<0x00118000>,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 // ADDI_D isn't always rematerializable, but isReMaterializable will be used as
 // a hint which is verified in isReMaterializableImpl.
 // See LoongArchInstrInfo::isAsCheapAsAMove for more details.
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-def ADDI_D : ALU_2RI12<0x02c00000, simm12_addlike>;
+def ADDI_D : ALU_2RI12<0x02c00000, simm12_addlike>,
+             Sched<[WriteIALU, ReadIALU]>;
 }
-def ADDU16I_D : ALU_2RI16<0x10000000, simm16>;
-def ALSL_WU : ALU_3RI2<0x00060000, uimm2_plus1>;
-def ALSL_D  : ALU_3RI2<0x002c0000, uimm2_plus1>;
+def ADDU16I_D : ALU_2RI16<0x10000000, simm16>,
+                Sched<[WriteIALU, ReadIALU]>;
+def ALSL_WU : ALU_3RI2<0x00060000, uimm2_plus1>,
+              Sched<[WriteIALSL, ReadIALSL, ReadIALSL]>;
+def ALSL_D  : ALU_3RI2<0x002c0000, uimm2_plus1>,
+              Sched<[WriteIALSL, ReadIALSL, ReadIALSL]>;
 let Constraints = "$rd = $dst" in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     isReMaterializable = 1 in
 def LU32I_D : Fmt1RI20<0x16000000, (outs GPR:$dst),
                        (ins GPR:$rd, simm20_lu32id:$imm20),
-                       "$rd, $imm20">;
+                       "$rd, $imm20">,
+              Sched<[WriteIALU]>;
 }
 let isReMaterializable = 1 in {
-def LU52I_D : ALU_2RI12<0x03000000, simm12_lu52id>;
+def LU52I_D : ALU_2RI12<0x03000000, simm12_lu52id>,
+              Sched<[WriteIALU, ReadIALU]>;
 }
-def PCADDU18I : ALU_1RI20<0x1e000000, simm20_pcaddu18i>;
-def MUL_D     : ALU_3R<0x001d8000>;
-def MULH_D    : ALU_3R<0x001e0000>;
-def MULH_DU   : ALU_3R<0x001e8000>;
-def MULW_D_W  : ALU_3R<0x001f0000>;
-def MULW_D_WU : ALU_3R<0x001f8000>;
+def PCADDU18I : ALU_1RI20<0x1e000000, simm20_pcaddu18i>,
+                Sched<[WriteIPCAdd]>;
+def MUL_D     : ALU_3R<0x001d8000>,
+                Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
+def MULH_D    : ALU_3R<0x001e0000>,
+                Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
+def MULH_DU   : ALU_3R<0x001e8000>,
+                Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
+def MULW_D_W  : ALU_3R<0x001f0000>,
+                Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
+def MULW_D_WU : ALU_3R<0x001f8000>,
+                Sched<[WriteIMUL, ReadIMUL, ReadIMUL]>;
 let usesCustomInserter = true in {
-def DIV_D     : ALU_3R<0x00220000>;
-def MOD_D     : ALU_3R<0x00228000>;
-def DIV_DU    : ALU_3R<0x00230000>;
-def MOD_DU    : ALU_3R<0x00238000>;
+def DIV_D     : ALU_3R<0x00220000>,
+                Sched<[WriteIDIV, ReadIDIV, ReadIDIV]>;
+def MOD_D     : ALU_3R<0x00228000>,
+                Sched<[WriteIDIV, ReadIDIV, ReadIDIV]>;
+def DIV_DU    : ALU_3R<0x00230000>,
+                Sched<[WriteIDIV, ReadIDIV, ReadIDIV]>;
+def MOD_DU    : ALU_3R<0x00238000>,
+                Sched<[WriteIDIV, ReadIDIV, ReadIDIV]>;
 } // usesCustomInserter = true
 
 // Bit-shift Instructions for 64-bits
-def SLL_D  : ALU_3R<0x00188000>;
-def SRL_D  : ALU_3R<0x00190000>;
-def SRA_D  : ALU_3R<0x00198000>;
-def ROTR_D : ALU_3R<0x001b8000>;
-def SLLI_D  : ALU_2RI6<0x00410000, uimm6>;
-def SRLI_D  : ALU_2RI6<0x00450000, uimm6>;
-def SRAI_D  : ALU_2RI6<0x00490000, uimm6>;
-def ROTRI_D : ALU_2RI6<0x004d0000, uimm6>;
+def SLL_D  : ALU_3R<0x00188000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def SRL_D  : ALU_3R<0x00190000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def SRA_D  : ALU_3R<0x00198000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def ROTR_D : ALU_3R<0x001b8000>,
+             Sched<[WriteIShift, ReadIShift, ReadIShift]>;
+def SLLI_D  : ALU_2RI6<0x00410000, uimm6>,
+              Sched<[WriteIShift, ReadIShift]>;
+def SRLI_D  : ALU_2RI6<0x00450000, uimm6>,
+              Sched<[WriteIShift, ReadIShift]>;
+def SRAI_D  : ALU_2RI6<0x00490000, uimm6>,
+              Sched<[WriteIShift, ReadIShift]>;
+def ROTRI_D : ALU_2RI6<0x004d0000, uimm6>,
+              Sched<[WriteIShift, ReadIShift]>;
 
 // Bit-manipulation Instructions for 64-bits
-def CLO_D : ALU_2R<0x00002000>;
-def CLZ_D : ALU_2R<0x00002400>;
-def CTO_D : ALU_2R<0x00002800>;
-def CTZ_D : ALU_2R<0x00002c00>;
-def BYTEPICK_D : ALU_3RI3<0x000c0000, uimm3>;
-def REVB_4H   : ALU_2R<0x00003400>;
-def REVB_2W   : ALU_2R<0x00003800>;
-def REVB_D    : ALU_2R<0x00003c00>;
-def REVH_2W   : ALU_2R<0x00004000>;
-def REVH_D    : ALU_2R<0x00004400>;
-def BITREV_8B : ALU_2R<0x00004c00>;
-def BITREV_D  : ALU_2R<0x00005400>;
+def CLO_D : ALU_2R<0x00002000>,
+            Sched<[WriteICL, ReadICL]>;
+def CLZ_D : ALU_2R<0x00002400>,
+            Sched<[WriteICL, ReadICL]>;
+def CTO_D : ALU_2R<0x00002800>,
+            Sched<[WriteICT, ReadICT]>;
+def CTZ_D : ALU_2R<0x00002c00>,
+            Sched<[WriteICT, ReadICT]>;
+def BYTEPICK_D : ALU_3RI3<0x000c0000, uimm3>,
+                 Sched<[WriteIBytePick, ReadIBytePick, ReadIBytePick]>;
+def REVB_4H   : ALU_2R<0x00003400>,
+                Sched<[WriteIRev, ReadIRev]>;
+def REVB_2W   : ALU_2R<0x00003800>,
+                Sched<[WriteIRev, ReadIRev]>;
+def REVB_D    : ALU_2R<0x00003c00>,
+                Sched<[WriteIRev, ReadIRev]>;
+def REVH_2W   : ALU_2R<0x00004000>,
+                Sched<[WriteIRev, ReadIRev]>;
+def REVH_D    : ALU_2R<0x00004400>,
+                Sched<[WriteIRev, ReadIRev]>;
+def BITREV_8B : ALU_2R<0x00004c00>,
+                Sched<[WriteIBitRev, ReadIBitRev]>;
+def BITREV_D  : ALU_2R<0x00005400>,
+                Sched<[WriteIBitRev, ReadIBitRev]>;
 let Constraints = "$rd = $dst" in {
 def BSTRINS_D  : FmtBSTR_D<0x00800000, (outs GPR:$dst),
                            (ins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
-                           "$rd, $rj, $msbd, $lsbd">;
+                           "$rd, $rj, $msbd, $lsbd">,
+                 Sched<[WriteIBstrins, ReadIBstrins]>;
 }
 def BSTRPICK_D : FmtBSTR_D<0x00c00000, (outs GPR:$rd),
                            (ins GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
-                           "$rd, $rj, $msbd, $lsbd">;
+                           "$rd, $rj, $msbd, $lsbd">,
+                 Sched<[WriteIBstrPick, ReadIBstrPick]>;
 
 // Common Memory Access Instructions for 64-bits
 def LD_WU : LOAD_2RI12<0x2a800000>;
 def LD_D  : LOAD_2RI12<0x28c00000>;
 def ST_D : STORE_2RI12<0x29c00000>;
-def LDX_B  : LOAD_3R<0x38000000>;
-def LDX_H  : LOAD_3R<0x38040000>;
-def LDX_W  : LOAD_3R<0x38080000>;
-def LDX_D  : LOAD_3R<0x380c0000>;
-def LDX_BU : LOAD_3R<0x38200000>;
-def LDX_HU : LOAD_3R<0x38240000>;
-def LDX_WU : LOAD_3R<0x38280000>;
-def STX_B : STORE_3R<0x38100000>;
-def STX_H : STORE_3R<0x38140000>;
-def STX_W : STORE_3R<0x38180000>;
-def STX_D : STORE_3R<0x381c0000>;
+def LDX_B  : LOAD_3R<0x38000000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def LDX_H  : LOAD_3R<0x38040000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def LDX_W  : LOAD_3R<0x38080000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def LDX_D  : LOAD_3R<0x380c0000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def LDX_BU : LOAD_3R<0x38200000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def LDX_HU : LOAD_3R<0x38240000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def LDX_WU : LOAD_3R<0x38280000>,
+             Sched<[WriteLDX, ReadMemBase, ReadMemOffset]>;
+def STX_B : STORE_3R<0x38100000>,
+            Sched<[WriteSTX, ReadSTData, ReadMemBase, ReadMemOffset]>;
+def STX_H : STORE_3R<0x38140000>,
+            Sched<[WriteSTX, ReadSTData, ReadMemBase, ReadMemOffset]>;
+def STX_W : STORE_3R<0x38180000>,
+            Sched<[WriteSTX, ReadSTData, ReadMemBase, ReadMemOffset]>;
+def STX_D : STORE_3R<0x381c0000>,
+            Sched<[WriteSTX, ReadSTData, ReadMemBase, ReadMemOffset]>;
 def LDPTR_W : LOAD_2RI14<0x24000000>;
 def LDPTR_D : LOAD_2RI14<0x26000000>;
 def STPTR_W : STORE_2RI14<0x25000000>;
 def STPTR_D : STORE_2RI14<0x27000000>;
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 def PRELDX : FmtPRELDX<(outs), (ins uimm5:$imm5, GPR:$rj, GPR:$rk),
-                       "$imm5, $rj, $rk">;
+                       "$imm5, $rj, $rk">,
+             Sched<[]>;
 
 // Bound Check Memory Access Instructions
-def LDGT_B : LOAD_3R<0x38780000>;
-def LDGT_H : LOAD_3R<0x38788000>;
-def LDGT_W : LOAD_3R<0x38790000>;
-def LDGT_D : LOAD_3R<0x38798000>;
-def LDLE_B : LOAD_3R<0x387a0000>;
-def LDLE_H : LOAD_3R<0x387a8000>;
-def LDLE_W : LOAD_3R<0x387b0000>;
-def LDLE_D : LOAD_3R<0x387b8000>;
-def STGT_B : STORE_3R<0x387c0000>;
-def STGT_H : STORE_3R<0x387c8000>;
-def STGT_W : STORE_3R<0x387d0000>;
-def STGT_D : STORE_3R<0x387d8000>;
-def STLE_B : STORE_3R<0x387e0000>;
-def STLE_H : STORE_3R<0x387e8000>;
-def STLE_W : STORE_3R<0x387f0000>;
-def STLE_D : STORE_3R<0x387f8000>;
+def LDGT_B : LOAD_3R<0x38780000>,
+             Sched<[WriteLDGT, ReadMemBase, ReadMemCmp]>;
+def LDGT_H : LOAD_3R<0x38788000>,
+             Sched<[WriteLDGT, ReadMemBase, ReadMemCmp]>;
+def LDGT_W : LOAD_3R<0x38790000>,
+             Sched<[WriteLDGT, ReadMemBase, ReadMemCmp]>;
+def LDGT_D : LOAD_3R<0x38798000>,
+             Sched<[WriteLDGT, ReadMemBase, ReadMemCmp]>;
+def LDLE_B : LOAD_3R<0x387a0000>,
+             Sched<[WriteLDLE, ReadMemBase, ReadMemCmp]>;
+def LDLE_H : LOAD_3R<0x387a8000>,
+             Sched<[WriteLDLE, ReadMemBase, ReadMemCmp]>;
+def LDLE_W : LOAD_3R<0x387b0000>,
+             Sched<[WriteLDLE, ReadMemBase, ReadMemCmp]>;
+def LDLE_D : LOAD_3R<0x387b8000>,
+             Sched<[WriteLDLE, ReadMemBase, ReadMemCmp]>;
+def STGT_B : STORE_3R<0x387c0000>,
+             Sched<[WriteSTGT, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STGT_H : STORE_3R<0x387c8000>,
+             Sched<[WriteSTGT, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STGT_W : STORE_3R<0x387d0000>,
+             Sched<[WriteSTGT, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STGT_D : STORE_3R<0x387d8000>,
+             Sched<[WriteSTGT, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STLE_B : STORE_3R<0x387e0000>,
+             Sched<[WriteSTLE, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STLE_H : STORE_3R<0x387e8000>,
+             Sched<[WriteSTLE, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STLE_W : STORE_3R<0x387f0000>,
+             Sched<[WriteSTLE, ReadSTData, ReadMemBase, ReadMemCmp]>;
+def STLE_D : STORE_3R<0x387f8000>,
+             Sched<[WriteSTLE, ReadSTData, ReadMemBase, ReadMemCmp]>;
 
 // Atomic Memory Access Instructions for 64-bits
-def AMSWAP_B     : AM_3R<0x385c0000>;
-def AMSWAP_H     : AM_3R<0x385c8000>;
-def AMSWAP_W     : AU_3R<0x38600000>;
-def AMSWAP_D     : AM_3R<0x38608000>;
-def AMADD_B      : AM_3R<0x385d0000>;
-def AMADD_H      : AM_3R<0x385d8000>;
-def AMADD_W      : AM_3R<0x38610000>;
-def AMADD_D      : AM_3R<0x38618000>;
-def AMAND_W      : AM_3R<0x38620000>;
-def AMAND_D      : AM_3R<0x38628000>;
-def AMOR_W       : AM_3R<0x38630000>;
-def AMOR_D       : AM_3R<0x38638000>;
-def AMXOR_W      : AM_3R<0x38640000>;
-def AMXOR_D      : AM_3R<0x38648000>;
-def AMMAX_W      : AM_3R<0x38650000>;
-def AMMAX_D      : AM_3R<0x38658000>;
-def AMMIN_W      : AM_3R<0x38660000>;
-def AMMIN_D      : AM_3R<0x38668000>;
-def AMMAX_WU     : AM_3R<0x38670000>;
-def AMMAX_DU     : AM_3R<0x38678000>;
-def AMMIN_WU     : AM_3R<0x38680000>;
-def AMMIN_DU     : AM_3R<0x38688000>;
-def AMSWAP__DB_B : AM_3R<0x385e0000>;
-def AMSWAP__DB_H : AM_3R<0x385e8000>;
-def AMSWAP__DB_W : AM_3R<0x38690000>;
-def AMSWAP__DB_D : AM_3R<0x38698000>;
-def AMADD__DB_B  : AM_3R<0x385f0000>;
-def AMADD__DB_H  : AM_3R<0x385f8000>;
-def AMADD__DB_W  : AM_3R<0x386a0000>;
-def AMADD__DB_D  : AM_3R<0x386a8000>;
-def AMAND__DB_W  : AM_3R<0x386b0000>;
-def AMAND__DB_D  : AM_3R<0x386b8000>;
-def AMOR__DB_W   : AM_3R<0x386c0000>;
-def AMOR__DB_D   : AM_3R<0x386c8000>;
-def AMXOR__DB_W  : AM_3R<0x386d0000>;
-def AMXOR__DB_D  : AM_3R<0x386d8000>;
-def AMMAX__DB_W  : AM_3R<0x386e0000>;
-def AMMAX__DB_D  : AM_3R<0x386e8000>;
-def AMMIN__DB_W  : AM_3R<0x386f0000>;
-def AMMIN__DB_D  : AM_3R<0x386f8000>;
-def AMMAX__DB_WU : AM_3R<0x38700000>;
-def AMMAX__DB_DU : AM_3R<0x38708000>;
-def AMMIN__DB_WU : AM_3R<0x38710000>;
-def AMMIN__DB_DU : AM_3R<0x38718000>;
-def AMCAS_B      : AMCAS_3R<0x38580000>;
-def AMCAS_H      : AMCAS_3R<0x38588000>;
-def AMCAS_W      : AMCAS_3R<0x38590000>;
-def AMCAS_D      : AMCAS_3R<0x38598000>;
-def AMCAS__DB_B  : AMCAS_3R<0x385a0000>;
-def AMCAS__DB_H  : AMCAS_3R<0x385a8000>;
-def AMCAS__DB_W  : AMCAS_3R<0x385b0000>;
-def AMCAS__DB_D  : AMCAS_3R<0x385b8000>;
-def LL_D : LLBase<0x22000000>;
-def SC_D : SCBase<0x23000000>;
-def SC_Q : SCBase_128<0x38570000>;
-def LLACQ_W : LLBase_ACQ<0x38578000>;
-def SCREL_W : SCBase_REL<0x38578400>;
-def LLACQ_D : LLBase_ACQ<0x38578800>;
-def SCREL_D : SCBase_REL<0x38578C00>;
+def AMSWAP_B     : AM_3R<0x385c0000>, Sched<[WriteAtomic]>;
+def AMSWAP_H     : AM_3R<0x385c8000>, Sched<[WriteAtomic]>;
+def AMSWAP_W     : AU_3R<0x38600000>, Sched<[WriteAtomic]>;
+def AMSWAP_D     : AM_3R<0x38608000>, Sched<[WriteAtomic]>;
+def AMADD_B      : AM_3R<0x385d0000>, Sched<[WriteAtomic]>;
+def AMADD_H      : AM_3R<0x385d8000>, Sched<[WriteAtomic]>;
+def AMADD_W      : AM_3R<0x38610000>, Sched<[WriteAtomic]>;
+def AMADD_D      : AM_3R<0x38618000>, Sched<[WriteAtomic]>;
+def AMAND_W      : AM_3R<0x38620000>, Sched<[WriteAtomic]>;
+def AMAND_D      : AM_3R<0x38628000>, Sched<[WriteAtomic]>;
+def AMOR_W       : AM_3R<0x38630000>, Sched<[WriteAtomic]>;
+def AMOR_D       : AM_3R<0x38638000>, Sched<[WriteAtomic]>;
+def AMXOR_W      : AM_3R<0x38640000>, Sched<[WriteAtomic]>;
+def AMXOR_D      : AM_3R<0x38648000>, Sched<[WriteAtomic]>;
+def AMMAX_W      : AM_3R<0x38650000>, Sched<[WriteAtomic]>;
+def AMMAX_D      : AM_3R<0x38658000>, Sched<[WriteAtomic]>;
+def AMMIN_W      : AM_3R<0x38660000>, Sched<[WriteAtomic]>;
+def AMMIN_D      : AM_3R<0x38668000>, Sched<[WriteAtomic]>;
+def AMMAX_WU     : AM_3R<0x38670000>, Sched<[WriteAtomic]>;
+def AMMAX_DU     : AM_3R<0x38678000>, Sched<[WriteAtomic]>;
+def AMMIN_WU     : AM_3R<0x38680000>, Sched<[WriteAtomic]>;
+def AMMIN_DU     : AM_3R<0x38688000>, Sched<[WriteAtomic]>;
+def AMSWAP__DB_B : AM_3R<0x385e0000>, Sched<[WriteAtomic]>;
+def AMSWAP__DB_H : AM_3R<0x385e8000>, Sched<[WriteAtomic]>;
+def AMSWAP__DB_W : AM_3R<0x38690000>, Sched<[WriteAtomic]>;
+def AMSWAP__DB_D : AM_3R<0x38698000>, Sched<[WriteAtomic]>;
+def AMADD__DB_B  : AM_3R<0x385f0000>, Sched<[WriteAtomic]>;
+def AMADD__DB_H  : AM_3R<0x385f8000>, Sched<[WriteAtomic]>;
+def AMADD__DB_W  : AM_3R<0x386a0000>, Sched<[WriteAtomic]>;
+def AMADD__DB_D  : AM_3R<0x386a8000>, Sched<[WriteAtomic]>;
+def AMAND__DB_W  : AM_3R<0x386b0000>, Sched<[WriteAtomic]>;
+def AMAND__DB_D  : AM_3R<0x386b8000>, Sched<[WriteAtomic]>;
+def AMOR__DB_W   : AM_3R<0x386c0000>, Sched<[WriteAtomic]>;
+def AMOR__DB_D   : AM_3R<0x386c8000>, Sched<[WriteAtomic]>;
+def AMXOR__DB_W  : AM_3R<0x386d0000>, Sched<[WriteAtomic]>;
+def AMXOR__DB_D  : AM_3R<0x386d8000>, Sched<[WriteAtomic]>;
+def AMMAX__DB_W  : AM_3R<0x386e0000>, Sched<[WriteAtomic]>;
+def AMMAX__DB_D  : AM_3R<0x386e8000>, Sched<[WriteAtomic]>;
+def AMMIN__DB_W  : AM_3R<0x386f0000>, Sched<[WriteAtomic]>;
+def AMMIN__DB_D  : AM_3R<0x386f8000>, Sched<[WriteAtomic]>;
+def AMMAX__DB_WU : AM_3R<0x38700000>, Sched<[WriteAtomic]>;
+def AMMAX__DB_DU : AM_3R<0x38708000>, Sched<[WriteAtomic]>;
+def AMMIN__DB_WU : AM_3R<0x38710000>, Sched<[WriteAtomic]>;
+def AMMIN__DB_DU : AM_3R<0x38718000>, Sched<[WriteAtomic]>;
+def AMCAS_B      : AMCAS_3R<0x38580000>, Sched<[WriteAtomic]>;
+def AMCAS_H      : AMCAS_3R<0x38588000>, Sched<[WriteAtomic]>;
+def AMCAS_W      : AMCAS_3R<0x38590000>, Sched<[WriteAtomic]>;
+def AMCAS_D      : AMCAS_3R<0x38598000>, Sched<[WriteAtomic]>;
+def AMCAS__DB_B  : AMCAS_3R<0x385a0000>, Sched<[WriteAtomic]>;
+def AMCAS__DB_H  : AMCAS_3R<0x385a8000>, Sched<[WriteAtomic]>;
+def AMCAS__DB_W  : AMCAS_3R<0x385b0000>, Sched<[WriteAtomic]>;
+def AMCAS__DB_D  : AMCAS_3R<0x385b8000>, Sched<[WriteAtomic]>;
+def LL_D : LLBase<0x22000000>, Sched<[WriteAtomic]>;
+def SC_D : SCBase<0x23000000>, Sched<[WriteAtomic]>;
+def SC_Q : SCBase_128<0x38570000>, Sched<[WriteAtomic]>;
+def LLACQ_W : LLBase_ACQ<0x38578000>, Sched<[WriteAtomic]>;
+def SCREL_W : SCBase_REL<0x38578400>, Sched<[WriteAtomic]>;
+def LLACQ_D : LLBase_ACQ<0x38578800>, Sched<[WriteAtomic]>;
+def SCREL_D : SCBase_REL<0x38578C00>, Sched<[WriteAtomic]>;
 
 // CRC Check Instructions
-def CRC_W_B_W  : ALU_3R<0x00240000>;
-def CRC_W_H_W  : ALU_3R<0x00248000>;
-def CRC_W_W_W  : ALU_3R<0x00250000>;
-def CRC_W_D_W  : ALU_3R<0x00258000>;
-def CRCC_W_B_W : ALU_3R<0x00260000>;
-def CRCC_W_H_W : ALU_3R<0x00268000>;
-def CRCC_W_W_W : ALU_3R<0x00270000>;
-def CRCC_W_D_W : ALU_3R<0x00278000>;
+def CRC_W_B_W  : ALU_3R<0x00240000>, Sched<[WriteCRCB, ReadCRCB, ReadCRCB]>;
+def CRC_W_H_W  : ALU_3R<0x00248000>, Sched<[WriteCRCH, ReadCRCH, ReadCRCH]>;
+def CRC_W_W_W  : ALU_3R<0x00250000>, Sched<[WriteCRCW, ReadCRCW, ReadCRCW]>;
+def CRC_W_D_W  : ALU_3R<0x00258000>, Sched<[WriteCRCD, ReadCRCD, ReadCRCD]>;
+def CRCC_W_B_W : ALU_3R<0x00260000>, Sched<[WriteCRCB, ReadCRCB, ReadCRCB]>;
+def CRCC_W_H_W : ALU_3R<0x00268000>, Sched<[WriteCRCH, ReadCRCH, ReadCRCH]>;
+def CRCC_W_W_W : ALU_3R<0x00270000>, Sched<[WriteCRCW, ReadCRCW, ReadCRCW]>;
+def CRCC_W_D_W : ALU_3R<0x00278000>, Sched<[WriteCRCD, ReadCRCD, ReadCRCD]>;
 
 // Other Miscellaneous Instructions for 64-bits
 def ASRTLE_D : FmtASRT<0x00010000, (outs), (ins GPR:$rj, GPR:$rk),
-                       "$rj, $rk">;
+                       "$rj, $rk">,
+               Sched<[]>;
 def ASRTGT_D : FmtASRT<0x00018000, (outs), (ins GPR:$rj, GPR:$rk),
-                       "$rj, $rk">;
-def RDTIME_D : RDTIME_2R<0x00006800>;
+                       "$rj, $rk">,
+               Sched<[]>;
+def RDTIME_D : RDTIME_2R<0x00006800>, Sched<[]>;
 } // Predicates = [IsLA64]
 
 //===----------------------------------------------------------------------===//
