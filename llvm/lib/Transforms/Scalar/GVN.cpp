@@ -151,6 +151,11 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
     cl::desc("Max number of instructions to scan in each basic block in GVN "
              "(default = 100)"));
 
+static cl::opt<bool> GVNPropagateConstExp(
+    "gvn-const-expr-prop", cl::Hidden, cl::init(true),
+    cl::desc("Propagate expressions defined outside the dominating blocks "
+             "for equality checks"));
+
 struct llvm::GVNPass::Expression {
   uint32_t Opcode;
   bool Commutative = false;
@@ -3111,6 +3116,141 @@ void GVNPass::assignBlockRPONumber(Function &F) {
   InvalidBlockRPONumbers = false;
 }
 
+/// Try to constant-fold \p Expr under the substitutions recorded in
+/// \p SimplifiedExprs, extending the map with a result for every expression
+/// visited on the way: either the constant it folds to, or the expression
+/// itself when it does not fold. Never returns null, so a caller can test for
+/// success with \p Expr itself.
+static Value *trySimplifyExpr(Instruction &Expr,
+                              DenseMap<Value *, Value *> &SimplifiedExprs,
+                              const SimplifyQuery &SQ) {
+  if (Value *Cached = SimplifiedExprs.lookup(&Expr))
+    return Cached;
+
+  // Only handle Cast, BinOp, UnaryOp for now. Excluding PHIs also means the
+  // operand graph below is acyclic, so the walk always terminates.
+  if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr)) {
+    SimplifiedExprs[&Expr] = &Expr;
+    return &Expr;
+  }
+
+  // Post-order walk of the operand DAG: an expression is simplified only once
+  // all of its operands have an entry in the map.
+  struct Frame {
+    Instruction *I;
+    unsigned NextOp;
+  };
+  SmallVector<Frame, 8> Stack;
+  Stack.push_back({&Expr, 0});
+
+  while (!Stack.empty()) {
+    Instruction *I = Stack.back().I;
+    unsigned NextOp = Stack.back().NextOp;
+
+    if (NextOp < I->getNumOperands()) {
+      Value *Op = I->getOperand(NextOp);
+      Stack.back().NextOp = NextOp + 1;
+      if (SimplifiedExprs.count(Op))
+        continue;
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (OpI && isa<CastInst, BinaryOperator, UnaryOperator>(OpI))
+        Stack.push_back({OpI, 0});
+      continue;
+    }
+
+    // Operands with no entry in the map stand for themselves.
+    SmallVector<Value *, 4> NewOps;
+    for (Value *Op : I->operands()) {
+      Value *NewOp = SimplifiedExprs.lookup(Op);
+      NewOps.push_back(NewOp ? NewOp : Op);
+    }
+
+    // InstSimplify never creates instructions, so there is nothing to clean up
+    // when an expression does not fold.
+    Value *Folded = simplifyInstructionWithOperands(I, NewOps, SQ);
+    // Only a constant is usable at the eventual use: any other value would
+    // still have to dominate it.
+    SimplifiedExprs[I] = (Folded && isa<Constant>(Folded)) ? Folded : I;
+    Stack.pop_back();
+  }
+
+  return SimplifiedExprs[&Expr];
+}
+
+bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
+                                        const BasicBlockEdge &Root) {
+  if (!GVNPropagateConstExp)
+    return false;
+
+  if (!LHS || !RHS || !DT)
+    return false;
+
+  // Restrict to integer type for now.
+  if (!LHS->getType()->isIntegerTy())
+    return false;
+
+  // Exactly one of the two should be a constant.
+  if (isa<Constant>(LHS) == isa<Constant>(RHS))
+    return false;
+
+  // Prefer RHS to be the constant.
+  if (!isa<Constant>(RHS))
+    std::swap(LHS, RHS);
+
+  if (!isOnlyReachableViaThisEdge(Root, DT))
+    return false;
+
+  // The equality holds throughout the dominated region, so a single
+  // substitution map and simplification context serve all of its uses. No
+  // context instruction is passed, so a fold can never depend on where in the
+  // region it was discovered.
+  DenseMap<Value *, Value *> SimplifiedExprs;
+  SimplifiedExprs[LHS] = RHS;
+  SimplifyQuery SQ(Root.getEnd()->getParent()->getDataLayout(), TLI, DT, AC);
+
+  bool Changed = false;
+  SmallVector<BasicBlock *, 8> DominatedBlocks;
+  DT->getDescendants(const_cast<BasicBlock *>(Root.getEnd()), DominatedBlocks);
+  for (BasicBlock *Block : DominatedBlocks) {
+    for (auto &I : *Block) {
+
+      if (isa<PHINode>(&I))
+        continue;
+
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::fake_use)
+          continue;
+
+      // Only operands are rewritten here, so the instructions keyed in
+      // SimplifiedExprs stay alive for the whole walk.
+      for (Use &U : I.operands()) {
+        Instruction *OpExpr = dyn_cast<Instruction>(U.get());
+        if (!OpExpr)
+          continue;
+
+        // Skip if OpExpr is not defined outside the dominated region.
+        if (DT->dominates(Root.getEnd(), OpExpr->getParent()))
+          continue;
+
+        Value *Folded = trySimplifyExpr(*OpExpr, SimplifiedExprs, SQ);
+        if (Folded == OpExpr)
+          continue;
+
+        LLVM_DEBUG(dbgs() << "ConstPropExpr: From: " << I);
+        U.set(Folded);
+        LLVM_DEBUG(dbgs() << "\nConstPropExpr: To: " << I << "\n");
+        ++NumGVNEqProp;
+        Changed = true;
+      }
+    }
+  }
+
+  if (Changed)
+    LLVM_DEBUG(dbgs() << "ConstPropExpr: With " << *LHS << " == " << *RHS
+                      << "\n");
+  return Changed;
+}
+
 /// The given values are known to be equal in every use
 /// dominated by 'Root'.  Exploit this, for example by replacing 'LHS' with
 /// 'RHS' everywhere in the scope.  Returns whether a change was made.
@@ -3146,6 +3286,10 @@ bool GVNPass::propagateEquality(
     // Don't try to propagate equalities between constants.
     if (isa<Constant>(LHS) && isa<Constant>(RHS))
       continue;
+
+    // Fold outside integer expressions used in the dominated region.
+    if (auto *Edge = std::get_if<BasicBlockEdge>(&Root))
+      Changed |= propagateConstExpressions(LHS, RHS, *Edge);
 
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))

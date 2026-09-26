@@ -506,6 +506,10 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
+  /// Constant-fold expressions defined outside the region dominated by \p Root
+  /// but used inside it, using the equality known to hold there.
+  bool propagateConstExpressions(Value *LHS, Value *RHS,
+                                 const BasicBlockEdge &Root);
   bool processFoldableCondBr(CondBrInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
