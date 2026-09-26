@@ -10135,6 +10135,7 @@ SDValue SelectionDAG::getMemcpy(
     const CallInst *CI, std::optional<bool> OverrideTailCall,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
     const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
+  Size = getZExtOrTrunc(Size, dl, TLI->getPointerTy(getDataLayout()));
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   const MDNode *DstMemCacheHint =
@@ -10266,6 +10267,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                  MachinePointerInfo SrcPtrInfo,
                                  const AAMDNodes &AAInfo,
                                  BatchAAResults *BatchAA) {
+  Size = getZExtOrTrunc(Size, dl, TLI->getPointerTy(getDataLayout()));
   // Check to see if we should lower the memmove to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -10377,6 +10379,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                 const CallInst *CI,
                                 MachinePointerInfo DstPtrInfo,
                                 const AAMDNodes &AAInfo) {
+  Size = getZExtOrTrunc(Size, dl, TLI->getPointerTy(getDataLayout()));
   // Check to see if we should lower the memset to stores first.
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
