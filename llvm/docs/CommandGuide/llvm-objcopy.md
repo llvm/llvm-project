@@ -143,6 +143,14 @@ For MachO objects, `<section>` must be formatted as
 `<segment name>,<section name>`.
 :::
 
+:::{option} --output-target <format>, -O
+Write the output as the specified format. See [SUPPORTED FORMATS] for a list
+of valid `<format>` values. If unspecified, the output format is assumed to
+be the same as the value specified for {option}`--input-target` or the input
+file's format if that option is also unspecified. For COFF input, only
+`binary` output is supported by this option.
+:::
+
 :::{option} --redefine-sym <old>=<new>
 Rename symbols called `<old>` to `<new>` in the output. Can be specified
 multiple times to rename multiple symbols.
@@ -463,13 +471,6 @@ The default is `default`.
 When adding note sections, do not verify if the section format is valid.
 :::
 
-:::{option} --output-target <format>, -O
-Write the output as the specified format. See [SUPPORTED FORMATS] for a list
-of valid `<format>` values. If unspecified, the output format is assumed to
-be the same as the value specified for {option}`--input-target` or the input
-file's format if that option is also unspecified.
-:::
-
 :::{option} --pad-to <address>
 For binary outputs, pad the output to the load address `<address>` using a value
 of zero or the value specified by {option}`--gap-fill`.
@@ -631,8 +632,9 @@ will be embedded as a data section in an ELF relocatable object, with symbols
 where `<file_name>` is the path of the input file as specified on the command
 line with non-alphanumeric characters converted to `_`.
 
-If `binary` is used as the value for {option}`--output-target`, the output file
-will be a raw binary file, containing the memory image of the input file.
+For ELF and COFF inputs, if `binary` is used as the value for
+{option}`--output-target`, the output file will be a raw binary file, containing
+the memory image of the input file.
 Symbols and relocation information will be discarded. The image will start at
 the address of the first loadable section in the output.
 
