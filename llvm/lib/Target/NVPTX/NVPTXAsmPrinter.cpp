@@ -91,6 +91,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1799,8 +1800,8 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
     if (NumBits == 1)
       return "pred";
     if (NumBits <= 64) {
-      std::string name = "u";
-      return name + utostr(NumBits);
+      // PTX has no sub-byte or non-power-of-two integer types.
+      return "u" + utostr(std::max<unsigned>(8, PowerOf2Ceil(NumBits)));
     }
     llvm_unreachable("Integer too large");
     break;
