@@ -384,6 +384,10 @@ private:
   ComplexRendererFns selectShiftA_64(const MachineOperand &Root) const;
   ComplexRendererFns selectShiftB_64(const MachineOperand &Root) const;
 
+  template <unsigned ShiftWidth>
+  ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
+  ComplexRendererFns selectShiftMask32(MachineOperand &Root) const;
+  ComplexRendererFns selectShiftMask64(MachineOperand &Root) const;
   ComplexRendererFns select12BitValueWithLeftShift(uint64_t Immed) const;
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
   ComplexRendererFns selectNegArithImmed(MachineOperand &Root) const;
@@ -7301,6 +7305,90 @@ AArch64InstructionSelector::selectShiftB_64(const MachineOperand &Root) const {
     return std::nullopt;
   uint64_t Enc = 63 - *MaybeImmed;
   return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(Enc); }}};
+}
+
+template <unsigned ShiftWidth>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register ShAmtReg = Root.getReg();
+
+  // Peek through zext for i32 shifts only. For i64 shifts the zext case
+  // is already handled by existing patterns in the Shift multiclass.
+  if (ShiftWidth == 32) {
+    Register ZExtSrcReg;
+    if (mi_match(ShAmtReg, MRI, m_GZExt(m_Reg(ZExtSrcReg))))
+      ShAmtReg = ZExtSrcReg;
+  }
+
+  // Remove redundant AND mask introduced by legalization of a narrow zext.
+  // Only strip masks that exactly cover a narrow type (byte, halfword, word)
+  // and where the AND result type matches the shift width, to avoid removing
+  // intentional masks used in fshl/fshr computations.
+  APInt AndMask;
+  Register AndSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask))) &&
+      MRI.getType(ShAmtReg).getSizeInBits() == ShiftWidth) {
+    uint64_t UMask = AndMask.getZExtValue();
+    if (UMask == 0xff || UMask == 0xffff || UMask == 0xffffffff)
+      ShAmtReg = AndSrcReg;
+  }
+
+  // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
+  // to avoid the ADD/SUB. Only do this if the ADD/SUB has a single use, so
+  // we don't leave the ADD/SUB behind for other users.
+  Register AddSrcReg;
+  int64_t AddImm;
+  if (MRI.hasOneUse(ShAmtReg) &&
+      (mi_match(ShAmtReg, MRI,
+                m_GAdd(m_Reg(AddSrcReg), m_ICstOrSplat(AddImm))) ||
+       mi_match(ShAmtReg, MRI,
+                m_GSub(m_Reg(AddSrcReg), m_ICstOrSplat(AddImm)))) &&
+      (AddImm % ShiftWidth == 0)) {
+    ShAmtReg = AddSrcReg;
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+  }
+
+  // If shifting by N-X where N == 0 mod ShiftWidth, then just shift by -X
+  // to generate a NEG instead of a SUB from a constant.
+  Register SubSrcReg;
+  int64_t SubImm;
+  if (MRI.hasOneUse(ShAmtReg) &&
+      mi_match(ShAmtReg, MRI, m_GSub(m_ICst(SubImm), m_Reg(SubSrcReg))) &&
+      SubImm != 0 && (SubImm % ShiftWidth == 0)) {
+    return {{[=](MachineInstrBuilder &MIB) {
+      MachineInstr *I = MIB.getInstr();
+      MachineRegisterInfo &MRI2 = I->getMF()->getRegInfo();
+      const TargetRegisterClass &RC =
+          ShiftWidth == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
+      unsigned SubOpc = ShiftWidth == 32 ? AArch64::SUBWrr : AArch64::SUBXrr;
+      Register ZeroReg = ShiftWidth == 32 ? AArch64::WZR : AArch64::XZR;
+      Register NegReg = MRI2.createVirtualRegister(&RC);
+      auto NegMI = BuildMI(*I->getParent(), *I, I->getDebugLoc(),
+                           TII.get(SubOpc), NegReg)
+                       .addReg(ZeroReg)
+                       .addReg(SubSrcReg);
+      constrainSelectedInstRegOperands(*NegMI, TII, TRI, RBI);
+      MIB.addReg(NegReg);
+    }}};
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectShiftMask32(MachineOperand &Root) const {
+  return selectShiftMask<32>(Root);
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectShiftMask64(MachineOperand &Root) const {
+  return selectShiftMask<64>(Root);
 }
 
 /// Helper to select an immediate value that can be represented as a 12-bit

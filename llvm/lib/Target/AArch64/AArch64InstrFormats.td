@@ -2749,6 +2749,16 @@ class BaseShift<bit size, bits<2> shift_type, RegisterClass regtype, string asm,
   let Inst{11-10} = shift_type;
 }
 
+// ComplexPattern to match shift amounts with redundant AND masks.
+// AArch64 shift instructions only use the low 5 bits (i32) or 6 bits (i64),
+// so AND masks that exactly cover a narrow type are redundant.
+def shiftMask32 : ComplexPattern<i32, 1, "SelectShiftMask<32>", [], [], 0>;
+def gi_shift_mask32 : GIComplexOperandMatcher<s32, "selectShiftMask32">,
+                      GIComplexPatternEquiv<shiftMask32>;
+def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
+def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask64">,
+                      GIComplexPatternEquiv<shiftMask64>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2774,6 +2784,11 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
+
+  def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
