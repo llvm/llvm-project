@@ -3510,6 +3510,12 @@ def : MSABitconvertPat<v2i64, v4i32, MSA128D, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v2i64, v8f16, MSA128D, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v2i64, v4f32, MSA128D, [HasMSA, IsLE]>;
 
+def : MSABitconvertPat<v8f16, v16i8, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v4i32, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v2i64, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v4f32, MSA128H, [HasMSA, IsLE]>;
+def : MSABitconvertPat<v8f16, v2f64, MSA128H, [HasMSA, IsLE]>;
+
 def : MSABitconvertPat<v4f32, v16i8, MSA128W, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v4f32, v8i16, MSA128W, [HasMSA, IsLE]>;
 def : MSABitconvertPat<v4f32, v2i64, MSA128W, [HasMSA, IsLE]>;
