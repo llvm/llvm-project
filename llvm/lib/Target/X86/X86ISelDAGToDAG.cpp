@@ -5779,6 +5779,36 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
+  case X86ISD::INSERTPS: {
+    // The lanes of a SCALAR_TO_VECTOR base other than lane 0 are poison, and
+    // in practice hold stale register contents. Zero them through the
+    // immediate, which is free, to keep values such as denormals out of packed
+    // FP operations on a widened vector. Do it at selection, after the shuffle
+    // combines, for which zeroed lanes would be a constraint.
+    if (Node->getOperand(0).getOpcode() != ISD::SCALAR_TO_VECTOR)
+      break;
+    unsigned Imm = Node->getConstantOperandVal(2);
+    unsigned SrcIdx = (Imm >> 6) & 0x3;
+    unsigned DstIdx = (Imm >> 4) & 0x3;
+    unsigned ZMask = Imm & 0xF;
+    // Don't make an INSERTPS that can be commuted (see
+    // X86InstrInfo::commuteInstructionImpl) non-commutable.
+    if (SrcIdx == DstIdx && !(ZMask & (1U << DstIdx)) &&
+        llvm::popcount(ZMask) == 2)
+      break;
+    unsigned NewImm = Imm | (0xE & ~(1U << DstIdx));
+    if (NewImm == Imm)
+      break;
+    SDNode *Updated = CurDAG->UpdateNodeOperands(
+        Node, Node->getOperand(0), Node->getOperand(1), getI8Imm(NewImm, dl));
+    if (Updated != Node) {
+      // An identical node already exists; it is selected after its other users.
+      ReplaceNode(Node, Updated);
+      return;
+    }
+    break;
+  }
+
   case X86ISD::VPTERNLOG: {
     uint8_t Imm = Node->getConstantOperandVal(3);
     if (matchVPTERNLOG(Node, Node, Node, Node, Node->getOperand(0),

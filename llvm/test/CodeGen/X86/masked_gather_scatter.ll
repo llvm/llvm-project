@@ -2122,7 +2122,7 @@ define <2 x float> @test27(ptr %base, <2 x i32> %ind) {
 ; X64-KNL-NEXT:    vmovq %xmm0, %rax
 ; X64-KNL-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-KNL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X64-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test27:
@@ -2133,7 +2133,7 @@ define <2 x float> @test27(ptr %base, <2 x i32> %ind) {
 ; X86-KNL-NEXT:    vmovd %xmm0, %eax
 ; X86-KNL-NEXT:    vpextrd $1, %xmm0, %ecx
 ; X86-KNL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X86-KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: test27:
@@ -2145,7 +2145,7 @@ define <2 x float> @test27(ptr %base, <2 x i32> %ind) {
 ; X64-SKX-NEXT:    vmovq %xmm0, %rax
 ; X64-SKX-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X64-SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; X64-SKX-NEXT:    retq
 ;
 ; X86-SKX-LABEL: test27:
@@ -2155,7 +2155,7 @@ define <2 x float> @test27(ptr %base, <2 x i32> %ind) {
 ; X86-SKX-NEXT:    vmovd %xmm0, %eax
 ; X86-SKX-NEXT:    vpextrd $1, %xmm0, %ecx
 ; X86-SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X86-SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; X86-SKX-NEXT:    retl
   %sext_ind = sext <2 x i32> %ind to <2 x i64>
   %gep.random = getelementptr float, ptr %base, <2 x i64> %sext_ind
