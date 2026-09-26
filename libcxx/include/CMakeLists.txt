@@ -558,6 +558,7 @@ set(files
   __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
+  __locale_dir/support/default.h
   __locale_dir/support/default/get_c_locale.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
@@ -570,6 +571,7 @@ set(files
   __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/openbsd.h
+  __locale_dir/support/wasi.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
   __locale_dir/utf8_conversions.h
