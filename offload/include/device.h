@@ -108,6 +108,15 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
+  /// with \p Size bytes, returning the device-accessible pointer.
+  llvm::Expected<void *> registerMemory(void *HstPtr, int64_t Size,
+                                        bool LockMemory = true);
+
+  /// Unregister (and, if \p UnlockMemory, page-unlock) a host buffer
+  /// previously registered via registerMemory.
+  llvm::Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
+
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);
@@ -191,6 +200,12 @@ private:
 
   /// Flag to indicate pending images (true after construction).
   bool HasPendingImages = true;
+
+  /// Indicate whether mapped host buffers should be locked automatically.
+  bool LockMappedBuffers = false;
+
+  /// Indicate whether failures when locking mapped buffers should be ignored.
+  bool IgnoreLockMappedFailures = true;
 };
 
 /// Resolve the device address of the global variable \p Name in \p Program,
