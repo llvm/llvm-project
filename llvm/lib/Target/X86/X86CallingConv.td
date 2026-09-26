@@ -513,7 +513,7 @@ def RetCC_X86 : CallingConv<[
   CCIfCC<"CallingConv::Intel_OCL_BI", CCDelegateTo<RetCC_Intel_OCL_BI>>,
 
   CCIfSubtarget<"is64Bit()", CCDelegateTo<RetCC_X86_64>>,
-  CCDelegateTo<RetCC_X86_32>
+  CCIfNotSubtarget<"is64Bit()", CCDelegateTo<RetCC_X86_32>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -1030,7 +1030,7 @@ def CC_Intel_OCL_BI : CallingConv<[
 
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
   CCIfSubtarget<"is64Bit()",       CCDelegateTo<CC_X86_64_C>>,
-  CCDelegateTo<CC_X86_32_C>
+  CCIfNotSubtarget<"is64Bit()",       CCDelegateTo<CC_X86_32_C>>
 ]>;
 
 def CC_X86_64_Preserve_None : CallingConv<[
@@ -1114,7 +1114,7 @@ let Entry = 1 in
 def CC_X86 : CallingConv<[
   CCIfCC<"CallingConv::Intel_OCL_BI", CCDelegateTo<CC_Intel_OCL_BI>>,
   CCIfSubtarget<"is64Bit()", CCDelegateTo<CC_X86_64>>,
-  CCDelegateTo<CC_X86_32>
+  CCIfNotSubtarget<"is64Bit()", CCDelegateTo<CC_X86_32>>
 ]>;
 
 //===----------------------------------------------------------------------===//
