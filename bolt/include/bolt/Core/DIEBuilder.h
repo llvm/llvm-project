@@ -17,6 +17,7 @@
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/DebugNames.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -349,6 +350,13 @@ public:
   }
   /// Finish current DIE construction.
   void finish();
+
+  /// Rewrite base type references in a location expression. During the initial
+  /// rewrite, references are padded so their size remains stable when patched
+  /// after DIE layout is finalized.
+  bool rewriteExpressionReferences(ArrayRef<uint8_t> Input, DWARFUnit &U,
+                                   SmallVectorImpl<uint8_t> &Output,
+                                   bool Patch);
 
   /// Update debug names table.
   void updateDebugNamesTable();
