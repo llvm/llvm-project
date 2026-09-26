@@ -6088,6 +6088,9 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA);
 
+  if (MDNode *TBAAStruct = I.getMetadata(LLVMContext::MD_tbaa_struct))
+    TBAAVerifyHelper.visitTBAAStructMetadata(&I, TBAAStruct);
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noalias))
     visitAliasScopeListMetadata(MD);
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alias_scope))
@@ -8388,6 +8391,39 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
 
   CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", I,
             MD);
+  return true;
+}
+
+bool TBAAVerifier::visitTBAAStructMetadata(const Instruction *I,
+                                           const MDNode *MD) {
+  // !tbaa.struct is a list of (offset, size, tag) triples with ascending
+  // offsets. Offset and size must be constants; a non-null tag must be a
+  // valid access tag.
+  CheckTBAA(MD->getNumOperands() % 3 == 0,
+            "!tbaa.struct operands must come in groups of three", I, MD);
+
+  std::optional<APInt> PrevOffset;
+  for (unsigned Idx = 0, E = MD->getNumOperands(); Idx != E; Idx += 3) {
+    auto *OffsetCI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx));
+    CheckTBAA(OffsetCI, "!tbaa.struct field offset must be a constant integer",
+              I, MD);
+    CheckTBAA(
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx + 1)),
+        "!tbaa.struct field size must be a constant integer", I, MD);
+    if (auto *Tag = dyn_cast_or_null<MDNode>(MD->getOperand(Idx + 2)))
+      if (!visitTBAAMetadata(I, Tag))
+        return false;
+
+    const APInt &Offset = OffsetCI->getValue();
+    if (PrevOffset) {
+      unsigned Width =
+          std::max(PrevOffset->getBitWidth(), Offset.getBitWidth());
+      CheckTBAA(PrevOffset->zext(Width).ule(Offset.zext(Width)),
+                "!tbaa.struct field offsets must be non-decreasing", I, MD);
+    }
+    PrevOffset = Offset;
+  }
   return true;
 }
 
