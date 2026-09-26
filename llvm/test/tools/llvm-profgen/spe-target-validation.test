@@ -1,0 +1,45 @@
+# REQUIRES: arm-registered-target
+#
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/arm.exe
+# RUN: not llvm-profgen --binary=%t/arm.exe --perfscript=%t/perfscript \
+# RUN:   --spe-branch-profile --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s
+#
+# CHECK: error: --spe-branch-profile requires an AArch64 binary.
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_ARM
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## bx lr
+    Content:      1EFF2FE1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x1004
+    MemSize:  0x1004
+    Align:    0x1000
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x4
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/arm.exe
+700000001000 0x700000001000/0x700000001000/P/-/-/10/RET/-

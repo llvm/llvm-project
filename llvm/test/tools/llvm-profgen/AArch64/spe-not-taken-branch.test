@@ -1,0 +1,232 @@
+## Arm SPE records a conditional branch that was not taken with the
+## instruction that follows it as its destination, and perf marks such an entry
+## with the N flag. Such a record transferred no control, so it must not be
+## counted as a branch, while the range that follows it did execute and is
+## counted. The binary below places the entry of a function right behind a
+## conditional branch, where counting the branch would invent a call of that
+## function and a head sample for it. The same two addresses without the flag
+## report a branch that was taken to the instruction that follows it, which is
+## a transfer and is counted, so the flag alone tells the two apart.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/spe-not-taken-branch.exe
+# RUN: llvm-profgen --binary=%t/spe-not-taken-branch.exe \
+# RUN:   --perfscript=%t/fall-through.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/fall-through.profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --check-prefix=FALL-THROUGH \
+# RUN:   --input-file=%t/fall-through.profile
+# RUN: llvm-profgen --binary=%t/spe-not-taken-branch.exe \
+# RUN:   --perfscript=%t/fall-through.perfscript --spe-branch-profile \
+# RUN:   --use-offset=0 --format=text --output=%t/fall-through.symbolized
+# RUN: FileCheck %s --check-prefix=HEAD-SAMPLE \
+# RUN:   --input-file=%t/fall-through.symbolized
+# RUN: llvm-profgen --binary=%t/spe-not-taken-branch.exe \
+# RUN:   --perfscript=%t/indirect.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/indirect.profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --check-prefix=INDIRECT --input-file=%t/indirect.profile
+# RUN: llvm-profgen --binary=%t/spe-not-taken-branch.exe \
+# RUN:   --perfscript=%t/taken.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/taken.profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --check-prefix=TAKEN --input-file=%t/taken.profile
+# RUN: llvm-profgen --binary=%t/spe-not-taken-branch.exe \
+# RUN:   --perfscript=%t/taken.perfscript --spe-branch-profile \
+# RUN:   --use-offset=0 --format=text --output=%t/taken.symbolized
+# RUN: FileCheck %s --check-prefix=TAKEN-HEAD --input-file=%t/taken.symbolized
+# RUN: llvm-profgen --binary=%t/spe-not-taken-branch.exe \
+# RUN:   --perfscript=%t/both.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/both.profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --check-prefix=BOTH --input-file=%t/both.profile
+
+## A destination that the instruction does not encode is expected of a branch
+## that was not taken, so it is not reported as a mismatch either.
+# NO-WARN-NOT: warning:
+
+## Both records start their range at the entry of bar, so the range is counted
+## twice, but only the call transferred control there.
+# FALL-THROUGH:      1
+# FALL-THROUGH-NEXT: 1008-100c:2
+# FALL-THROUGH-NEXT: 1
+# FALL-THROUGH-NEXT: 1000->1008:1
+
+## The head count of bar is the number of calls of it, one, and not the number
+## of records whose destination is its entry, two.
+# HEAD-SAMPLE: bar:0:1{{$}}
+
+## An indirect branch encodes no target at all, so its recorded destination is
+## never the one of a branch that was not taken, even where it is the
+## instruction that follows the branch. Count it as the transfer it is. The
+## branch-type field of the record reads RET because that is what the kernel
+## maps an indirect branch to; this reader takes the kind of the branch from
+## the binary and ignores that field. Its prediction field reads M, for a
+## branch perf found mispredicted, which is counted like one it found
+## predicted: only the N suffix of that field changes what a record means.
+# INDIRECT:      1
+# INDIRECT-NEXT: 1014-1014:1
+# INDIRECT-NEXT: 1
+# INDIRECT-NEXT: 1010->1014:1
+
+## A conditional branch whose encoded target is the instruction that follows it
+## does transfer control when it is taken, and the record carries no N flag.
+## Count the branch, so that the function starting at that instruction keeps
+## the head sample of the transfer.
+# TAKEN:      1
+# TAKEN-NEXT: 101c-101c:1
+# TAKEN-NEXT: 1
+# TAKEN-NEXT: 1018->101c:1
+# TAKEN-HEAD: quux:0:1{{$}}
+
+## The same two addresses stand for a taken and for a not-taken branch, which
+## only the flag tells apart, so aggregation must keep the two records separate.
+## Both ranges executed; only the taken record transferred control. The flag is
+## read in both of its spellings: PN above, for a branch perf found predicted,
+## and MN here, for one it found mispredicted.
+# BOTH:      1
+# BOTH-NEXT: 101c-101c:2
+# BOTH-NEXT: 1
+# BOTH-NEXT: 1018->101c:1
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## foo:
+    ##   bl 0x1008
+    ##   b.eq 0x1000
+    ## bar:
+    ##   nop
+    ##   ret
+    ## baz:
+    ##   br x0
+    ##   ret
+    ## qux:
+    ##   b.eq 0x101c
+    ## quux:
+    ##   ret
+    Content:      02000094E0FFFF541F2003D5C0035FD600001FD6C0035FD620000054C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x1020
+    MemSize:  0x1020
+    Align:    0x10000
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x8
+  - Name:    bar
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1008
+    Size:    0x8
+  - Name:    baz
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1010
+    Size:    0x8
+  - Name:    qux
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1018
+    Size:    0x4
+  - Name:    quux
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x101c
+    Size:    0x4
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 0
+      AddrSize:      8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: spe-not-taken-branch.c
+        - AbbrCode: 2
+          Values:
+            - CStr:  foo
+            - Value: 0x1000
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  bar
+            - Value: 0x1008
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  baz
+            - Value: 0x1010
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  qux
+            - Value: 0x1018
+            - Value: 0x4
+        - AbbrCode: 2
+          Values:
+            - CStr:  quux
+            - Value: 0x101c
+            - Value: 0x4
+        - AbbrCode: 0
+
+#--- fall-through.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-not-taken-branch.exe
+700000001004 0x700000001004/0x700000001008/PN/-/-/10/COND/-
+700000001000 0x700000001000/0x700000001008/P/-/-/10/CALL/-
+#--- indirect.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-not-taken-branch.exe
+700000001010 0x700000001010/0x700000001014/M/-/-/10/RET/-
+#--- taken.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-not-taken-branch.exe
+700000001018 0x700000001018/0x70000000101c/P/-/-/10/COND/-
+#--- both.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-not-taken-branch.exe
+700000001018 0x700000001018/0x70000000101c/P/-/-/10/COND/-
+700000001018 0x700000001018/0x70000000101c/MN/-/-/10/COND/-
