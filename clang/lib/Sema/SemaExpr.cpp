@@ -7721,7 +7721,7 @@ ExprResult Sema::BuildCompoundLiteralExpr(
     Expr::EvalResult Eval;
     Eval.Diag = &Notes;
     if (!LiteralExpr->EvaluateAsConstantExpr(Eval, Context) ||
-        Notes.size() > 0) {
+        !Notes.empty()) {
       SourceLocation DiagLoc = ConstexprLoc;
       if (Notes.size() == 1 && Notes.front().second.getDiagID() ==
                                    diag::note_invalid_subexpr_in_const_expr) {
