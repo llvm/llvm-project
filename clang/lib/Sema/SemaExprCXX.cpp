@@ -981,6 +981,14 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     isPointer = true;
   }
 
+  // Reject throwing of ptr's involving non-default address spaces runtimes
+  // cannot perform cross-address-space conversions yet.
+  if (isPointer && Ty.getAddressSpace() != LangAS::Default) {
+    Diag(ThrowLoc, diag::err_throw_or_catch_address_space_qualified_ptr)
+        << /*IsCatch=*/0 << /*IsRef=*/0 << E->getType() << E->getSourceRange();
+    return true;
+  }
+
   // Cannot throw WebAssembly reference type.
   if (Ty.isWebAssemblyReferenceType()) {
     Diag(ThrowLoc, diag::err_wasm_reftype_tc) << 0 << E->getSourceRange();

@@ -5011,7 +5011,7 @@ static void InitCatchParam(CodeGenFunction &CGF,
     }
 
     llvm::Value *ExnCast =
-      CGF.Builder.CreateBitCast(AdjustedExn, LLVMCatchTy, "exn.byref");
+        CGF.Builder.CreateBitCast(AdjustedExn, LLVMCatchTy, "exn.byref");
     CGF.Builder.CreateStore(ExnCast, ParamAddr);
     return;
   }
@@ -5025,7 +5025,7 @@ static void InitCatchParam(CodeGenFunction &CGF,
     // the pointer by value.
     if (CatchType->hasPointerRepresentation()) {
       llvm::Value *CastExn =
-        CGF.Builder.CreateBitCast(AdjustedExn, LLVMCatchTy, "exn.casted");
+          CGF.Builder.CreateBitCast(AdjustedExn, LLVMCatchTy, "exn.casted");
 
       switch (CatchType.getQualifiers().getObjCLifetime()) {
       case Qualifiers::OCL_Strong:
