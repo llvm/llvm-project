@@ -130,13 +130,14 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     return 8;
   case AArch64::RET:
     // RET through another register expands to 2 instructions (guard + ret).
-    // RET through LR may also expand to 2 instructions if a deferred LR guard
-    // is flushed before the return.
-    return 8;
+    if (MI.getOperand(0).getReg() != AArch64::LR)
+      return 8;
+    return std::nullopt;
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
-    // ret).
+    // ret). Any deferred LR guard is discarded, so the flush allowance added
+    // by getInstSizeInBytes is an overestimate here.
     return 12;
   case AArch64::BRAA:
   case AArch64::BRAAZ:
@@ -149,6 +150,13 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // Authenticated branches/calls expand to 3 instructions (authenticate +
     // guard + branch).
     return 12;
+  case AArch64::TLSDESC_CALLSEQ:
+    // adrp + ldr + add + blr, where the ldr and blr each gain a guard.
+    return 24;
+  case AArch64::TLSDESC_AUTH_CALLSEQ:
+    // adrp + ldr + add + blraa, where the ldr gains a guard and the blraa
+    // expands to 3 instructions (authenticate + guard + blr).
+    return 28;
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIAZ:
@@ -209,6 +217,21 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 4;
   }
 
+  unsigned NumBytes = getInstSizeInBytesImpl(MI);
+
+  // The LFI rewriter may flush a deferred LR guard (1 instruction) before any
+  // control-flow instruction. Bundles are skipped because their size is the
+  // sum of the bundled instructions, which already include this.
+  if (Subtarget.isLFI() && !MI.isBundle() &&
+      (MI.isCall() || MI.isBranch() || MI.isReturn()))
+    NumBytes += 4;
+
+  return NumBytes;
+}
+
+unsigned
+AArch64InstrInfo::getInstSizeInBytesImpl(const MachineInstr &MI) const {
+  const MCInstrDesc &Desc = MI.getDesc();
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
@@ -236,6 +259,16 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (!MI.isBundle() && isTailCallReturnInst(MI)) {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    if (STI.isLFI()) {
+      unsigned Opc = MI.getOpcode();
+      if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI)
+        // The braa/brab expands to 3 instructions (authenticate + guard + br).
+        NumBytes += 8;
+      else if (MI.getOperand(0).isReg())
+        // Indirect tail calls expand to 2 instructions (guard + br).
+        NumBytes += 4;
+    }
 
     const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
     if (!MFI->shouldSignReturnAddress(*MF))
