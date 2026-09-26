@@ -352,7 +352,7 @@ computeOpaqueSize(const ASTContext &ASTCtx, const Pointer &Ptr,
     return TypeSize.getQuantity();
 
   // Check if we need to add the flexible array member size.
-  const VarDecl *Base = OP.getBaseVarDecl();
+  const VarDecl *Base = OP.getBaseDecl();
   if (!Base)
     return TypeSize.getQuantity();
 

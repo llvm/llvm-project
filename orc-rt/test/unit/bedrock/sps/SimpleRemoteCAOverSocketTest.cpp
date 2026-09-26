@@ -27,24 +27,25 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
+#include "bedrock/SocketTestUtils.h"
 
 #include "orc-rt-internal/support/Endian.h"
 
 #include <cassert>
-#include <cerrno>
 #include <chrono>
 #include <cstring>
 #include <future>
 #include <string>
 #include <string_view>
-#include <sys/socket.h>
 #include <thread>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
 using namespace orc_rt;
 using namespace orc_rt::test;
+
+using ::testing::HasSubstr;
 
 namespace orc_rt {
 
@@ -83,10 +84,10 @@ public:
   Session S{mockExecutorProcessInfo(), inlineDispatch, noErrors};
 
   void SetUp() override {
-    auto P = makePair();
+    auto P = makeStreamSocketPair();
     ASSERT_TRUE(!!P) << toString(P.takeError());
-    Near = SocketHandle(P->first);
-    Far = SocketHandle(P->second);
+    Near = std::move(P->first);
+    Far = std::move(P->second);
   }
 
   /// Creates a CA over Near and attaches it, the way a connector would.
@@ -115,48 +116,6 @@ public:
     }
   };
 
-  /// A connected pair of blocking stream sockets: one end for the CA to adopt,
-  /// one for the test to drive.
-  static Expected<std::pair<int, int>> makePair() {
-    int FDs[2];
-    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, FDs) != 0)
-      return make_error<StringError>(std::string("socketpair: ") +
-                                     strerror(errno));
-    return std::make_pair(FDs[0], FDs[1]);
-  }
-
-  /// The test's end stays blocking, so these just loop until done.
-  static Error sendAll(int FDNum, const char *Buf, size_t Size) {
-    while (Size) {
-      ssize_t N = ::send(FDNum, Buf, Size, MSG_NOSIGNAL);
-      if (N < 0) {
-        if (errno == EINTR)
-          continue;
-        return make_error<StringError>(std::string("send: ") + strerror(errno));
-      }
-      Buf += N;
-      Size -= N;
-    }
-    return Error::success();
-  }
-
-  /// Returns short only if the peer closed first.
-  static Expected<size_t> recvAll(int FDNum, char *Buf, size_t Size) {
-    size_t Got = 0;
-    while (Got < Size) {
-      ssize_t N = ::recv(FDNum, Buf + Got, Size - Got, 0);
-      if (N == 0)
-        return Got;
-      if (N < 0) {
-        if (errno == EINTR)
-          continue;
-        return make_error<StringError>(std::string("recv: ") + strerror(errno));
-      }
-      Got += N;
-    }
-    return Got;
-  }
-
   /// A framed message, ready to write to the socket.
   static std::vector<char> frame(Opcode Op, uint64_t SeqNo, uint64_t Tag,
                                  std::string_view Payload) {
@@ -167,15 +126,15 @@ public:
     return Buf;
   }
 
-  static Error writeFrame(int FDNum, Opcode Op, uint64_t SeqNo,
+  static Error writeFrame(NativeSocketHandle Sock, Opcode Op, uint64_t SeqNo,
                           uint64_t Tag = 0, std::string_view Payload = {}) {
     auto Buf = frame(Op, SeqNo, Tag, Payload);
-    return sendAll(FDNum, Buf.data(), Buf.size());
+    return sendAll(Sock, Buf.data(), Buf.size());
   }
 
-  static Expected<Frame> readFrame(int FDNum) {
+  static Expected<Frame> readFrame(NativeSocketHandle Sock) {
     char H[HeaderSize];
-    auto N = recvAll(FDNum, H, HeaderSize);
+    auto N = recvAll(Sock, H, HeaderSize);
     if (!N)
       return N.takeError();
     if (*N != HeaderSize)
@@ -189,7 +148,7 @@ public:
 
     if (size_t PayloadSize = F.Fields.MsgSize - HeaderSize) {
       F.Payload.resize(PayloadSize);
-      auto M = recvAll(FDNum, F.Payload.data(), PayloadSize);
+      auto M = recvAll(Sock, F.Payload.data(), PayloadSize);
       if (!M)
         return M.takeError();
       if (*M != PayloadSize)
@@ -324,6 +283,19 @@ void outOfBandErrorWrapper(orc_rt_SessionRef S,
 }
 
 } // namespace
+
+TEST_F(SimpleRemoteCAOverSocketTest, RejectsANonStreamSocket) {
+  // The framing reads a message in as many parts as the stream delivers it, so
+  // a socket that preserves message boundaries would truncate one.
+  auto H = makeNativeNonStreamSocket();
+  ASSERT_TRUE(H.has_value()) << "could not create a socket for the test";
+
+  EXPECT_THAT_EXPECTED(
+      createSimpleRemoteCAOverSocket(S, SocketHandle(*H)),
+      FailedWithMessage(HasSubstr("requires a stream socket")));
+  EXPECT_FALSE(isNativeSocketOpen(*H))
+      << "a rejected socket is still owned, and must be closed";
+}
 
 TEST_F(SimpleRemoteCAOverSocketTest, SetupIsSentOnConnect) {
   ASSERT_FALSE(!!attachOverSocket());
@@ -521,7 +493,7 @@ TEST_F(SimpleRemoteCAOverSocketTest, NothingIsQueuedBehindTheHangup) {
 
   // Echo back more than the socket buffer can hold, so the reactor stalls
   // part-way through sending the result.
-  const std::string Big(1 << 20, 'x');
+  const std::string Big(StallingPayloadSize, 'x');
   auto EchoTag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
   ASSERT_FALSE(
       !!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/1, EchoTag, Big));
@@ -584,7 +556,7 @@ TEST_F(SimpleRemoteCAOverSocketTest, PeerReasonSurvivesAStalledSendQueue) {
 
   // Echo back more than the socket will hold, and never read it, so the reactor
   // is left with a part-sent message queued.
-  const std::string Big(1 << 20, 'x');
+  const std::string Big(StallingPayloadSize, 'x');
   auto Tag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
   ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/1, Tag, Big));
 
@@ -593,7 +565,7 @@ TEST_F(SimpleRemoteCAOverSocketTest, PeerReasonSurvivesAStalledSendQueue) {
   ASSERT_FALSE(!!writeFrame(
       Far.get(), Opcode::Hangup, 0, 0,
       view(hangupPayload(make_error<StringError>("controller ran out of x")))));
-  ::close(Far.release());
+  Far.reset();
 
   auto Err = Disconnected.get();
   ASSERT_TRUE(!!Err) << "a hang-up carrying a reason ends with that reason";
@@ -609,7 +581,7 @@ TEST_F(SimpleRemoteCAOverSocketTest, TruncatedMessageIsReportedAsAnError) {
   // Half a header, then gone: distinguishable from a close at a boundary.
   char Half[HeaderSize / 2] = {};
   ASSERT_FALSE(!!sendAll(Far.get(), Half, sizeof(Half)));
-  ::close(Far.release());
+  Far.reset();
 
   auto Err = Disconnected.get();
   EXPECT_TRUE(!!Err) << "a truncated message must not look like a clean end";
@@ -627,7 +599,7 @@ TEST_F(SimpleRemoteCAOverSocketTest, PeerCloseWithoutAHangupIsAnError) {
   ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
 
   // Closed between messages, so nothing is truncated -- it is simply gone.
-  ::close(Far.release());
+  Far.reset();
 
   auto Err = Disconnected.get();
   ASSERT_TRUE(!!Err) << "a silent close is not an orderly end";

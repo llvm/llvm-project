@@ -24,6 +24,7 @@ include "toy/ShapeInferenceInterface.td"
 // can define our operations.
 def Toy_Dialect : Dialect {
   let name = "toy";
+  let useStrictPropertiesInAssemblyFormat = 0;
   let cppNamespace = "::mlir::toy";
 
   // We set this bit to generate a declaration of the `materializeConstant`

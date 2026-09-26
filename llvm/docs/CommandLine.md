@@ -517,53 +517,6 @@ the list is simple, just like above.  In this example, we used the
 if the user does not specify any `.o` files on our command line.  Again, this
 just reduces the amount of checking we have to do.
 
-### Collecting options as a set of flags
-
-Instead of collecting sets of options in a list, it is also possible to gather
-information for enum values in a **bit vector**.  The representation used by the
-{ref}`cl::bits <cl::bits>` class is an `unsigned` integer.  An enum value is represented by a
-0/1 in the enum's ordinal value bit position. 1 indicating that the enum was
-specified, 0 otherwise.  As each specified value is parsed, the resulting enum's
-bit is set in the option's bit vector:
-
-```cpp
-bits |= 1 << (unsigned)enum;
-```
-
-Options that are specified multiple times are redundant.  Any instances after
-the first are discarded.
-
-Reworking the above list example, we could replace {ref}`cl::list <cl::list>` with {ref}`cl::bits <cl::bits>`:
-
-```cpp
-cl::bits<Opts> OptimizationBits(cl::desc("Available Optimizations:"),
-  cl::values(
-    clEnumVal(dce               , "Dead Code Elimination"),
-    clEnumVal(instsimplify      , "Instruction Simplification"),
-   clEnumValN(inlining, "inline", "Procedure Integration"),
-    clEnumVal(strip             , "Strip Symbols")));
-```
-
-To test to see if `instsimplify` was specified, we can use the `cl:bits::isSet`
-function:
-
-```cpp
-if (OptimizationBits.isSet(instsimplify)) {
-  ...
-}
-```
-
-It's also possible to get the raw bit vector using the `cl::bits::getBits`
-function:
-
-```cpp
-unsigned bits = OptimizationBits.getBits();
-```
-
-Finally, if external storage is used, then the location specified must be of
-**type** `unsigned`. In all other ways a {ref}`cl::bits <cl::bits>` option is equivalent to a
-{ref}`cl::list <cl::list>` option.
-
 (additional extra text)=
 
 ### Adding freeform text to help output
@@ -1323,25 +1276,6 @@ This class works the exact same as the {ref}`cl::opt <cl::opt>` class, except th
 argument is the **type** of the external storage, not a boolean value.  For this
 class, the marker type '`bool`' is used to indicate that internal storage
 should be used.
-
-(cl::bits)=
-
-#### The `cl::bits` class
-
-The `cl::bits` class is the class used to represent a list of command line
-options in the form of a bit vector.  It is also a templated class which can
-take up to three arguments:
-
-```cpp
-namespace cl {
-  template <class DataType, class Storage = bool,
-            class ParserClass = parser<DataType> >
-  class bits;
-}
-```
-
-This class works the exact same as the {ref}`cl::list <cl::list>` class, except that the second
-argument must be of **type** `unsigned` if external storage is used.
 
 (cl::alias)=
 
