@@ -255,6 +255,12 @@ applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
 /// Also performs simple dead-code elimination before attempting to match any of
 /// the provided patterns.
 ///
+/// Operations in blocks that are unreachable from their region's entry block
+/// are skipped, even if they are explicitly listed in `ops`. Making a skipped
+/// operation's block reachable later does not by itself re-enqueue that
+/// operation. Such operations may remain unprocessed even when this function
+/// returns success.
+///
 /// Newly created ops and other pre-existing ops that use results of rewritten
 /// ops or supply operands to such ops are also processed, unless such ops are
 /// excluded via `config.strictMode`. Any other ops remain unmodified (i.e.,
@@ -271,9 +277,9 @@ applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
 /// `applyPatternsGreedily` should be used.
 ///
 /// Returns "success" if the iterative process converged (i.e., fixpoint was
-/// reached) and no more patterns can be matched. `changed` is set to "true" if
-/// the IR was modified at all. `allOpsErased` is set to "true" if all ops in
-/// `ops` were erased.
+/// reached) and no more patterns can be matched, except for operations skipped
+/// as described above. `changed` is set to "true" if the IR was modified at
+/// all. `allOpsErased` is set to "true" if all ops in `ops` were erased.
 LogicalResult
 applyOpPatternsGreedily(ArrayRef<Operation *> ops,
                         const FrozenRewritePatternSet &patterns,
