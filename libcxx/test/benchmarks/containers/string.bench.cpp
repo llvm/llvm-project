@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <functional>
 #include <string>
 #include <vector>
@@ -261,6 +262,33 @@ int main(int argc, char** argv) {
     bench("std::basic_string::erase() (in the middle, transparent)",
           std::bind_front(bench_impl, std::integral_constant<size_t, 2>{}, std::false_type{}),
           [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+  }
+
+  {
+    static auto bench_impl =
+        []<bool opaque, class CharT>(std::bool_constant<opaque>, std::type_identity<CharT>, benchmark::State& state) {
+          std::basic_string<CharT> strings[4096];
+
+          size_t size = state.range();
+          size_t pos  = size / 2;
+          while (state.KeepRunningBatch(std::size(strings))) {
+            state.PauseTiming();
+            for (auto& string : strings)
+              string.resize(size, 'a');
+            state.ResumeTiming();
+            for (auto& string : strings) {
+              if constexpr (opaque)
+                benchmark::DoNotOptimize(pos);
+              string.pop_back();
+            }
+          }
+        };
+    bench("std::basic_string::pop_back() (opaque)", std::bind_front(bench_impl, std::true_type{}), [](auto bm) {
+      bm->Arg(small_size)->Arg(large_size);
+    });
+    bench("std::basic_string::pop_back() (transparent)", std::bind_front(bench_impl, std::false_type{}), [](auto bm) {
+      bm->Arg(small_size)->Arg(large_size);
+    });
   }
 
   // [string.ops]

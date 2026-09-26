@@ -2722,8 +2722,10 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
   // Some API require an ArrayRef of Value * instead of Constant *.
   ArrayRef<Value *> ValIdxs =
       ArrayRef((Value *const *)Idxs.data(), Idxs.size());
-  assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+
+  if (!isSupportedGetElementPtr(Ty))
+    return nullptr;
 
   Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
   Type *IdxTy = DL.getIndexType(RetTy);

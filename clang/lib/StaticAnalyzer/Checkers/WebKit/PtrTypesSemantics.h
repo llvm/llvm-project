@@ -52,6 +52,27 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
 /// std::nullopt if inconclusive.
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class implements the CanBorrow protocol, meaning a
+/// Borrow<T> can be taken on it, false if not, std::nullopt if inconclusive.
+std::optional<bool> isBorrowable(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a Borrow<T>, false if not.
+bool isBorrow(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p T is a Borrow<T>.
+bool isBorrowType(const clang::QualType T);
+
+/// \returns the innermost type reached by stripping every pointer/reference
+/// layer from \p T; \p T itself if it has none; a null type if \p T is null.
+clang::QualType pointeeType(clang::QualType T);
+
+/// \returns the type a Borrow<T> specialization \p T borrows, or a null type
+/// if \p T is not a template specialization whose first argument is a type.
+clang::QualType borrowedType(clang::QualType T);
+
+/// \returns true if a value of type \p T is a pointer/reference/view.
+bool isView(const clang::QualType T);
+
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
 
@@ -141,6 +162,9 @@ bool isRefType(const std::string &Name);
 
 /// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
 bool isCheckedPtr(const std::string &Name);
+
+/// \returns true if \p Name is Borrow, false if not.
+bool isBorrow(const std::string &Name);
 
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtrOrOSPtr(const std::string &Name);

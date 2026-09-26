@@ -168,13 +168,37 @@ LIBC_CONSTINIT pwd::FlatFileDatabase<struct group>
 // Note: These static buffers are process-global and NOT protected by a mutex
 // at this stage. POSIX getgrent is non-reentrant.
 //
-// A single static buffer is reused across non-reentrant group calls via
-// realloc, growing only to the high-water mark of the largest record seen.
-// endgrent() closes the file stream without freeing the buffer so that
-// pointers returned prior to endgrent() remain valid until the next
-// non-reentrant call.
+// getgrent, getgrnam, and getgrgid share a single static buffer and struct
+// group, as allowed by POSIX. The buffer grows as needed to fit the largest
+// record read so far, and is reused without shrinking. endgrent() closes the
+// file stream without freeing the buffer so that pointers returned before
+// endgrent() remain valid until the next non-reentrant call.
 LIBC_CONSTINIT pwd::DynamicBuffer line_buffer;
 LIBC_CONSTINIT struct group grp_entry = {};
+
+// The lookups are shared between the caller-supplied fixed buffer used by the
+// reentrant entrypoints and the process-global growable buffer used by the
+// non-reentrant ones. Both scan a scoped stream of their own so that a lookup
+// does not disturb an in-progress getgrent iteration.
+template <typename BufferType>
+ErrorOr<bool> lookup_by_name(cpp::string_view name, struct group *grp,
+                             BufferType &buffer, const char *path) {
+  pwd::ScopedFlatFileDatabase<struct group> local_db(path);
+  const auto matcher = [name](const struct group &entry) {
+    return cpp::string_view(entry.gr_name) == name;
+  };
+  return local_db.lookup(matcher, grp, buffer);
+}
+
+template <typename BufferType>
+ErrorOr<bool> lookup_by_gid(gid_t gid, struct group *grp, BufferType &buffer,
+                            const char *path) {
+  pwd::ScopedFlatFileDatabase<struct group> local_db(path);
+  const auto matcher = [gid](const struct group &entry) {
+    return entry.gr_gid == gid;
+  };
+  return local_db.lookup(matcher, grp, buffer);
+}
 
 } // namespace
 
@@ -207,22 +231,31 @@ ErrorOr<struct group *> read_next() {
 
 ErrorOr<bool> find_by_name(cpp::string_view name, struct group *grp,
                            cpp::span<char> buffer, const char *path) {
-  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
-                                                          : group_file_path);
-  const auto matcher = [name](const struct group &entry) {
-    return cpp::string_view(entry.gr_name) == name;
-  };
-  return local_db.lookup(matcher, grp, buffer);
+  return lookup_by_name(name, grp, buffer, path ? path : group_file_path);
 }
 
 ErrorOr<bool> find_by_gid(gid_t gid, struct group *grp, cpp::span<char> buffer,
                           const char *path) {
-  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
-                                                          : group_file_path);
-  const auto matcher = [gid](const struct group &entry) {
-    return entry.gr_gid == gid;
-  };
-  return local_db.lookup(matcher, grp, buffer);
+  return lookup_by_gid(gid, grp, buffer, path ? path : group_file_path);
+}
+
+ErrorOr<struct group *> find_by_name(cpp::string_view name) {
+  const auto res =
+      lookup_by_name(name, &grp_entry, line_buffer, group_file_path);
+  if (!res.has_value())
+    return Error(res.error());
+  if (!res.value())
+    return nullptr;
+  return &grp_entry;
+}
+
+ErrorOr<struct group *> find_by_gid(gid_t gid) {
+  const auto res = lookup_by_gid(gid, &grp_entry, line_buffer, group_file_path);
+  if (!res.has_value())
+    return Error(res.error());
+  if (!res.value())
+    return nullptr;
+  return &grp_entry;
 }
 
 } // namespace grp

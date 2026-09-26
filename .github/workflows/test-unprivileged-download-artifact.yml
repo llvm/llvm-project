@@ -19,7 +19,7 @@ jobs:
   upload-test-artifact:
     name: Upload Test Artifact
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Create Test Files
         run: |
@@ -42,7 +42,7 @@ jobs:
   test-download:
     name: Test Unprivileged Download Artifact
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [ upload-test-artifact ]
     steps:
       - name: Checkout LLVM

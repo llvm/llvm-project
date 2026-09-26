@@ -1080,8 +1080,6 @@ define void @invariant(ptr %0) {
 define void @invariant_group(ptr %0) {
   ; CHECK: %{{.+}} = llvm.intr.launder.invariant.group %{{.*}} : !llvm.ptr
   %2 = call ptr @llvm.launder.invariant.group.p0(ptr %0)
-  ; CHECK: %{{.+}} = llvm.intr.strip.invariant.group %{{.*}} : !llvm.ptr
-  %3 = call ptr @llvm.strip.invariant.group.p0(ptr %0)
   ret void
 }
 

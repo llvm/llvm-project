@@ -5,7 +5,7 @@
 
 ! CHECK-LABEL:   acc.private.recipe @privatization_ptr_10xf32 : !fir.ptr<!fir.array<10xf32>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ptr<!fir.array<10xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 10 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
@@ -24,7 +24,7 @@
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1, %[[CONSTANT_2]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1, %[[CONSTANT_2]] : (index, index, index) -> !fir.shape<3>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?x?x2xi32>, %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?x?x2xi32>, %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x?x2xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
@@ -55,7 +55,7 @@
 
 ! CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_section_lb4.ub9_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<6xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<6xi32> <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 4 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 9 : index
@@ -112,7 +112,7 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
@@ -143,7 +143,7 @@
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1, %[[CONSTANT_2]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1, %[[CONSTANT_2]] : (index, index, index) -> !fir.shape<3>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?x?x2xi32>, %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?x?x2xi32>, %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x?x2xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
@@ -175,7 +175,7 @@
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<!fir.array<?xi32>>) {
-! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:           } else {
 ! CHECK:             %[[NULL_ALLOC:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
@@ -204,7 +204,7 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem i32 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
@@ -225,7 +225,7 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
@@ -250,7 +250,7 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.private.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
@@ -269,7 +269,7 @@
 
 ! CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_section_lb50.ub99_ref_100xf32 : !fir.ref<!fir.array<100xf32>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<50xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<50xf32> <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 50 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 99 : index
@@ -312,7 +312,7 @@
 
 ! CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_ref_100xf32 : !fir.ref<!fir.array<100xf32>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
@@ -326,7 +326,7 @@
 
 ! CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
 
 ! CHECK-LABEL:   } copy {
@@ -338,7 +338,7 @@
 
 ! CHECK-LABEL:   acc.private.recipe @privatization_section_lb0.ub49_ref_100xf32 : !fir.ref<!fir.array<100xf32>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<50xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<50xf32> <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 49 : index
@@ -362,7 +362,7 @@
 
 ! CHECK-LABEL:   acc.private.recipe @privatization_ref_100xf32 : !fir.ref<!fir.array<100xf32>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
@@ -371,7 +371,7 @@
 
 ! CHECK-LABEL:   acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
 ! CHECK:         }
 
@@ -382,7 +382,7 @@ program acc_private
 
 ! CHECK: %[[B:.*]] = fir.address_of(@_QFEb) : !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK: %[[C:.*]] = fir.alloca i32 {bindc_name = "c", uniq_name = "_QFEc"}
+! CHECK: %[[C:.*]] = fir.alloca i32 <{bindc_name = "c", uniq_name = "_QFEc"}>
 ! CHECK: %[[DECLC:.*]]:2 = hlfir.declare %[[C]]
 
   !$acc loop private(c)
@@ -617,7 +617,7 @@ subroutine acc_private_use()
 end
 
 ! CHECK-LABEL: func.func @_QPacc_private_use()
-! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFacc_private_useEi"}
+! CHECK: %[[I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFacc_private_useEi"}>
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.parallel
 ! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>

@@ -2690,8 +2690,8 @@ llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
                                       nullptr, vtableName);
   }
   llvm::Constant *Two = llvm::ConstantInt::get(IntTy, 2);
-  auto *BVtable =
-      llvm::ConstantExpr::getGetElementPtr(Vtable->getValueType(), Vtable, Two);
+  auto *BVtable = llvm::ConstantExpr::getGetElementPtr(
+      CGM.getDataLayout(), Vtable->getValueType(), Vtable, Two);
 
   llvm::Constant *typeName =
     ExportUniqueString(className, "__objc_eh_typename_");
@@ -3914,6 +3914,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
       offsetPointerIndexes[2] = llvm::ConstantInt::get(IndexTy, ivarIndex);
       // Get the correct ivar field
       llvm::Constant *offsetValue = llvm::ConstantExpr::getGetElementPtr(
+          CGM.getDataLayout(),
           cast<llvm::GlobalVariable>(IvarList)->getValueType(), IvarList,
           offsetPointerIndexes);
       // Get the existing variable, if one exists.
@@ -4069,7 +4070,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     };
     // FIXME: We're generating redundant loads and stores here!
     llvm::Constant *selPtr = llvm::ConstantExpr::getGetElementPtr(
-        selectorList->getValueType(), selectorList, idxs);
+        CGM.getDataLayout(), selectorList->getValueType(), selectorList, idxs);
     selectorAliases[i]->replaceAllUsesWith(selPtr);
     selectorAliases[i]->eraseFromParent();
   }

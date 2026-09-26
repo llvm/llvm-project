@@ -31,7 +31,6 @@ lit_expand_template(
         "@LLVM_BUILD_EXAMPLES@": "0",
         "@LLVM_BYE_LINK_INTO_TOOLS@": "0",
         "@LLVM_ENABLE_DIA_SDK@": "0",
-        "@LLVM_ENABLE_LIBXML2@": "0",
         "@LLVM_ENABLE_PLUGINS@": "0",
         "@LLVM_ENABLE_THREADS@": "1",
         "@LLVM_ENABLE_ZLIB@": "1",
@@ -41,7 +40,10 @@ lit_expand_template(
         "@LLVM_TARGET_TRIPLE@": "x86_64-unknown-linux-gnu",
         "@Python3_EXECUTABLE@": "python3",
         "@SHLIBEXT@": ".so",
-    },
+    } | select({
+        "//third-party:llvm_libxml2_enabled": {"@LLVM_ENABLE_LIBXML2@": "1"},
+        "//conditions:default": {"@LLVM_ENABLE_LIBXML2@": "0"},
+    }),
     template = "lit.site.cfg.py.in",
 )
 

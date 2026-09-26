@@ -1,7 +1,7 @@
-; RUN: opt < %s -win-eh-prepare -demote-catchswitch-only -wasm-eh-prepare -S | FileCheck %s
-; RUN: opt < %s -win-eh-prepare -demote-catchswitch-only -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
-; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S | FileCheck %s
-; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -win-eh-prepare -wasm-eh-prepare -S | FileCheck %s
+; RUN: opt < %s -win-eh-prepare -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -passes='win-eh-prepare,wasm-eh-prepare' -S | FileCheck %s
+; RUN: opt < %s -passes='win-eh-prepare,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
 ; RUN: llc < %s -exception-model=wasm -mattr=+exception-handling -stop-after=wasm-eh-prepare | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -45,9 +45,9 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(token %[[CATCHPAD]], i32 0)
 ; CHECK-NEXT:   store i32 0, ptr @__wasm_lpad_context
 ; CHECK-NEXT:   %[[LSDA:.*]] = call ptr @llvm.wasm.lsda()
-; CHECK-NEXT:   store ptr %[[LSDA]], ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 1)
+; CHECK-NEXT:   store ptr %[[LSDA]], ptr getelementptr inbounds (i8, ptr @__wasm_lpad_context, i32 4)
 ; CHECK-NEXT:   call i32 @__gxx_wasm_personality_v0(ptr %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
-; CHECK-NEXT:   %[[SELECTOR:.*]] = load i32, ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 2)
+; CHECK-NEXT:   %[[SELECTOR:.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__wasm_lpad_context, i32 8)
 ; CHECK:   icmp eq i32 %[[SELECTOR]]
 
 catch:                                            ; preds = %catch.start
