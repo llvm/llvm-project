@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "llvm/ADT/Twine.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrEnums.h"
@@ -646,10 +647,10 @@ FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
   if (contains(stringKey))
     return UnitAttr::get(getContext());
 
-  if (contains((std::string("+") + stringKey.strref()).str()))
+  if (contains((llvm::Twine("+") + stringKey.strref()).str()))
     return BoolAttr::get(getContext(), true);
 
-  if (contains((std::string("-") + stringKey.strref()).str()))
+  if (contains((llvm::Twine("-") + stringKey.strref()).str()))
     return BoolAttr::get(getContext(), false);
 
   return failure();
