@@ -175,7 +175,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
   cantFail(std::move(Reported)); // force checked state
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error E) noexcept { Reported = std::move(E); });
+            [&](Session &, Error E) noexcept { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
       BootstrapInfo(S),

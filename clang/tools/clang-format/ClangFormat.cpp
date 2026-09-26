@@ -175,7 +175,7 @@ namespace {
 enum class WNoError { Unknown };
 }
 
-static cl::bits<WNoError> WNoErrorList(
+static cl::list<WNoError> WNoErrorList(
     "Wno-error",
     cl::desc("If set, don't error out on the specified warning type."),
     cl::values(
@@ -443,7 +443,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
   Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
-               nullptr, WNoErrorList.isSet(WNoError::Unknown));
+               nullptr, is_contained(WNoErrorList, WNoError::Unknown));
   if (!FormatStyle) {
     llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return true;
