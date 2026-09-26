@@ -11,7 +11,20 @@ define half @round_f16(half %h) {
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    callq roundf@PLT
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    andps %xmm1, %xmm2
+; SSE2-NEXT:    movss {{.*#+}} xmm3 = [4.9999997E-1,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    addss %xmm2, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 8
@@ -74,7 +87,21 @@ entry:
 define float @round_f32(float %x) {
 ; SSE2-LABEL: round_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    jmp roundf@PLT # TAILCALL
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    andps %xmm1, %xmm2
+; SSE2-NEXT:    movss {{.*#+}} xmm3 = [4.9999997E-1,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    addss %xmm2, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
+; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f32:
 ; SSE41:       # %bb.0:
@@ -117,7 +144,22 @@ define float @round_f32(float %x) {
 define double @round_f64(double %x) {
 ; SSE2-LABEL: round_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    jmp round@PLT # TAILCALL
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm2
+; SSE2-NEXT:    andpd %xmm1, %xmm2
+; SSE2-NEXT:    movsd {{.*#+}} xmm3 = [4.9999999999999994E-1,0.0E+0]
+; SSE2-NEXT:    addsd %xmm2, %xmm3
+; SSE2-NEXT:    cvttsd2si %xmm3, %rax
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE2-NEXT:    andpd %xmm1, %xmm3
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm3, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
+; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f64:
 ; SSE41:       # %bb.0:
@@ -161,31 +203,20 @@ define double @round_f64(double %x) {
 define <4 x float> @round_v4f32(<4 x float> %x) {
 ; SSE2-LABEL: round_v4f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    subq $56, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 64
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    addq $56, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    andps %xmm1, %xmm2
+; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; SSE2-NEXT:    addps %xmm2, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm3
+; SSE2-NEXT:    cmpnltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm3, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v4f32:
@@ -227,19 +258,25 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
 define <2 x double> @round_v2f64(<2 x double> %x) {
 ; SSE2-LABEL: round_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    subq $40, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 48
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    addq $40, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm2
+; SSE2-NEXT:    andpd %xmm1, %xmm2
+; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; SSE2-NEXT:    addpd %xmm2, %xmm3
+; SSE2-NEXT:    cvttsd2si %xmm3, %rax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm4
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm3, %rax
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm4 = xmm4[0],xmm3[0]
+; SSE2-NEXT:    andpd %xmm1, %xmm4
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm4, %xmm1
+; SSE2-NEXT:    cmpnltpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v2f64:
@@ -281,53 +318,35 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
 define <8 x float> @round_v8f32(<8 x float> %x) {
 ; SSE2-LABEL: round_v8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    subq $72, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 80
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    addq $72, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    andps %xmm3, %xmm2
+; SSE2-NEXT:    movaps {{.*#+}} xmm4 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; SSE2-NEXT:    movaps %xmm2, %xmm5
+; SSE2-NEXT:    addps %xmm4, %xmm5
+; SSE2-NEXT:    cvttps2dq %xmm5, %xmm5
+; SSE2-NEXT:    cvtdq2ps %xmm5, %xmm5
+; SSE2-NEXT:    andps %xmm3, %xmm5
+; SSE2-NEXT:    movaps %xmm3, %xmm6
+; SSE2-NEXT:    movaps %xmm1, %xmm7
+; SSE2-NEXT:    andps %xmm3, %xmm7
+; SSE2-NEXT:    addps %xmm7, %xmm4
+; SSE2-NEXT:    cvttps2dq %xmm4, %xmm4
+; SSE2-NEXT:    cvtdq2ps %xmm4, %xmm4
+; SSE2-NEXT:    andps %xmm3, %xmm4
+; SSE2-NEXT:    andnps %xmm0, %xmm3
+; SSE2-NEXT:    orps %xmm3, %xmm5
+; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [8.388608E+6,8.388608E+6,8.388608E+6,8.388608E+6]
+; SSE2-NEXT:    cmpnltps %xmm3, %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm5, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm1, %xmm6
+; SSE2-NEXT:    orps %xmm6, %xmm4
+; SSE2-NEXT:    cmpnltps %xmm3, %xmm7
+; SSE2-NEXT:    andps %xmm7, %xmm1
+; SSE2-NEXT:    andnps %xmm4, %xmm7
+; SSE2-NEXT:    orps %xmm7, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v8f32:
@@ -375,29 +394,46 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 define <4 x double> @round_v4f64(<4 x double> %x) {
 ; SSE2-LABEL: round_v4f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    subq $56, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 64
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    addq $56, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm4
+; SSE2-NEXT:    andpd %xmm2, %xmm4
+; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; SSE2-NEXT:    movapd %xmm4, %xmm5
+; SSE2-NEXT:    addpd %xmm3, %xmm5
+; SSE2-NEXT:    cvttsd2si %xmm5, %rax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm6
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm5, %rax
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm5
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm6 = xmm6[0],xmm5[0]
+; SSE2-NEXT:    andpd %xmm2, %xmm6
+; SSE2-NEXT:    movapd %xmm2, %xmm5
+; SSE2-NEXT:    andnpd %xmm0, %xmm5
+; SSE2-NEXT:    orpd %xmm6, %xmm5
+; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    cmpnltpd %xmm6, %xmm4
+; SSE2-NEXT:    andpd %xmm4, %xmm0
+; SSE2-NEXT:    andnpd %xmm5, %xmm4
+; SSE2-NEXT:    orpd %xmm4, %xmm0
+; SSE2-NEXT:    movapd %xmm1, %xmm4
+; SSE2-NEXT:    andpd %xmm2, %xmm4
+; SSE2-NEXT:    addpd %xmm4, %xmm3
+; SSE2-NEXT:    cvttsd2si %xmm3, %rax
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm5
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm3, %rax
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm3
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm5 = xmm5[0],xmm3[0]
+; SSE2-NEXT:    andpd %xmm2, %xmm5
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm5, %xmm2
+; SSE2-NEXT:    cmpnltpd %xmm6, %xmm4
+; SSE2-NEXT:    andpd %xmm4, %xmm1
+; SSE2-NEXT:    andnpd %xmm2, %xmm4
+; SSE2-NEXT:    orpd %xmm4, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v4f64:
@@ -445,99 +481,63 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
 define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-LABEL: round_v16f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    subq $104, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 112
-; SSE2-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    callq roundf@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm3 = xmm3[0],mem[0]
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movaps (%rsp), %xmm2 # 16-byte Reload
-; SSE2-NEXT:    addq $104, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NEXT:    movaps {{.*#+}} xmm5 = [NaN,NaN,NaN,NaN]
+; SSE2-NEXT:    movaps %xmm0, %xmm4
+; SSE2-NEXT:    andps %xmm5, %xmm4
+; SSE2-NEXT:    movaps {{.*#+}} xmm7 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; SSE2-NEXT:    movaps %xmm4, %xmm6
+; SSE2-NEXT:    addps %xmm7, %xmm6
+; SSE2-NEXT:    cvttps2dq %xmm6, %xmm6
+; SSE2-NEXT:    cvtdq2ps %xmm6, %xmm6
+; SSE2-NEXT:    andps %xmm5, %xmm6
+; SSE2-NEXT:    movaps %xmm5, %xmm9
+; SSE2-NEXT:    movaps %xmm1, %xmm8
+; SSE2-NEXT:    andps %xmm5, %xmm8
+; SSE2-NEXT:    movaps %xmm8, %xmm10
+; SSE2-NEXT:    addps %xmm7, %xmm10
+; SSE2-NEXT:    cvttps2dq %xmm10, %xmm10
+; SSE2-NEXT:    cvtdq2ps %xmm10, %xmm10
+; SSE2-NEXT:    andps %xmm5, %xmm10
+; SSE2-NEXT:    movaps %xmm5, %xmm12
+; SSE2-NEXT:    movaps %xmm2, %xmm11
+; SSE2-NEXT:    andps %xmm5, %xmm11
+; SSE2-NEXT:    movaps %xmm11, %xmm13
+; SSE2-NEXT:    addps %xmm7, %xmm13
+; SSE2-NEXT:    cvttps2dq %xmm13, %xmm13
+; SSE2-NEXT:    cvtdq2ps %xmm13, %xmm13
+; SSE2-NEXT:    andps %xmm5, %xmm13
+; SSE2-NEXT:    movaps %xmm5, %xmm15
+; SSE2-NEXT:    movaps %xmm3, %xmm14
+; SSE2-NEXT:    andps %xmm5, %xmm14
+; SSE2-NEXT:    addps %xmm14, %xmm7
+; SSE2-NEXT:    cvttps2dq %xmm7, %xmm7
+; SSE2-NEXT:    cvtdq2ps %xmm7, %xmm7
+; SSE2-NEXT:    andps %xmm5, %xmm7
+; SSE2-NEXT:    andnps %xmm0, %xmm5
+; SSE2-NEXT:    orps %xmm5, %xmm6
+; SSE2-NEXT:    movaps {{.*#+}} xmm5 = [8.388608E+6,8.388608E+6,8.388608E+6,8.388608E+6]
+; SSE2-NEXT:    cmpnltps %xmm5, %xmm4
+; SSE2-NEXT:    andps %xmm4, %xmm0
+; SSE2-NEXT:    andnps %xmm6, %xmm4
+; SSE2-NEXT:    orps %xmm4, %xmm0
+; SSE2-NEXT:    andnps %xmm1, %xmm9
+; SSE2-NEXT:    orps %xmm9, %xmm10
+; SSE2-NEXT:    cmpnltps %xmm5, %xmm8
+; SSE2-NEXT:    andps %xmm8, %xmm1
+; SSE2-NEXT:    andnps %xmm10, %xmm8
+; SSE2-NEXT:    orps %xmm8, %xmm1
+; SSE2-NEXT:    andnps %xmm2, %xmm12
+; SSE2-NEXT:    orps %xmm12, %xmm13
+; SSE2-NEXT:    cmpnltps %xmm5, %xmm11
+; SSE2-NEXT:    andps %xmm11, %xmm2
+; SSE2-NEXT:    andnps %xmm13, %xmm11
+; SSE2-NEXT:    orps %xmm11, %xmm2
+; SSE2-NEXT:    andnps %xmm3, %xmm15
+; SSE2-NEXT:    orps %xmm15, %xmm7
+; SSE2-NEXT:    cmpnltps %xmm5, %xmm14
+; SSE2-NEXT:    andps %xmm14, %xmm3
+; SSE2-NEXT:    andnps %xmm7, %xmm14
+; SSE2-NEXT:    orps %xmm14, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v16f32:
@@ -601,51 +601,86 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 define <8 x double> @round_v8f64(<8 x double> %x) {
 ; SSE2-LABEL: round_v8f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    subq $88, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 96
-; SSE2-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    callq round@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE2-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm0[0]
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movaps (%rsp), %xmm2 # 16-byte Reload
-; SSE2-NEXT:    addq $88, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
+; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [NaN,NaN]
+; SSE2-NEXT:    movapd %xmm0, %xmm7
+; SSE2-NEXT:    andpd %xmm4, %xmm7
+; SSE2-NEXT:    movapd {{.*#+}} xmm5 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; SSE2-NEXT:    movapd %xmm7, %xmm6
+; SSE2-NEXT:    addpd %xmm5, %xmm6
+; SSE2-NEXT:    cvttsd2si %xmm6, %rax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm8
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm6, %rax
+; SSE2-NEXT:    xorps %xmm6, %xmm6
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm6
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm6[0]
+; SSE2-NEXT:    andpd %xmm4, %xmm8
+; SSE2-NEXT:    movapd %xmm4, %xmm9
+; SSE2-NEXT:    andnpd %xmm0, %xmm9
+; SSE2-NEXT:    orpd %xmm8, %xmm9
+; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    cmpnltpd %xmm6, %xmm7
+; SSE2-NEXT:    andpd %xmm7, %xmm0
+; SSE2-NEXT:    andnpd %xmm9, %xmm7
+; SSE2-NEXT:    orpd %xmm7, %xmm0
+; SSE2-NEXT:    movapd %xmm1, %xmm7
+; SSE2-NEXT:    andpd %xmm4, %xmm7
+; SSE2-NEXT:    movapd %xmm7, %xmm8
+; SSE2-NEXT:    addpd %xmm5, %xmm8
+; SSE2-NEXT:    cvttsd2si %xmm8, %rax
+; SSE2-NEXT:    xorps %xmm9, %xmm9
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm9
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm8, %rax
+; SSE2-NEXT:    xorps %xmm8, %xmm8
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm8
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm9 = xmm9[0],xmm8[0]
+; SSE2-NEXT:    andpd %xmm4, %xmm9
+; SSE2-NEXT:    movapd %xmm4, %xmm8
+; SSE2-NEXT:    andnpd %xmm1, %xmm8
+; SSE2-NEXT:    orpd %xmm9, %xmm8
+; SSE2-NEXT:    cmpnltpd %xmm6, %xmm7
+; SSE2-NEXT:    andpd %xmm7, %xmm1
+; SSE2-NEXT:    andnpd %xmm8, %xmm7
+; SSE2-NEXT:    orpd %xmm7, %xmm1
+; SSE2-NEXT:    movapd %xmm2, %xmm7
+; SSE2-NEXT:    andpd %xmm4, %xmm7
+; SSE2-NEXT:    movapd %xmm7, %xmm8
+; SSE2-NEXT:    addpd %xmm5, %xmm8
+; SSE2-NEXT:    cvttsd2si %xmm8, %rax
+; SSE2-NEXT:    xorps %xmm9, %xmm9
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm9
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm8, %rax
+; SSE2-NEXT:    xorps %xmm8, %xmm8
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm8
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm9 = xmm9[0],xmm8[0]
+; SSE2-NEXT:    andpd %xmm4, %xmm9
+; SSE2-NEXT:    movapd %xmm4, %xmm8
+; SSE2-NEXT:    andnpd %xmm2, %xmm8
+; SSE2-NEXT:    orpd %xmm9, %xmm8
+; SSE2-NEXT:    cmpnltpd %xmm6, %xmm7
+; SSE2-NEXT:    andpd %xmm7, %xmm2
+; SSE2-NEXT:    andnpd %xmm8, %xmm7
+; SSE2-NEXT:    orpd %xmm7, %xmm2
+; SSE2-NEXT:    movapd %xmm3, %xmm7
+; SSE2-NEXT:    andpd %xmm4, %xmm7
+; SSE2-NEXT:    addpd %xmm7, %xmm5
+; SSE2-NEXT:    cvttsd2si %xmm5, %rax
+; SSE2-NEXT:    xorps %xmm8, %xmm8
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm8
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm5, %rax
+; SSE2-NEXT:    xorps %xmm5, %xmm5
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm5
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm5[0]
+; SSE2-NEXT:    andpd %xmm4, %xmm8
+; SSE2-NEXT:    andnpd %xmm3, %xmm4
+; SSE2-NEXT:    orpd %xmm8, %xmm4
+; SSE2-NEXT:    cmpnltpd %xmm6, %xmm7
+; SSE2-NEXT:    andpd %xmm7, %xmm3
+; SSE2-NEXT:    andnpd %xmm4, %xmm7
+; SSE2-NEXT:    orpd %xmm7, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_v8f64:

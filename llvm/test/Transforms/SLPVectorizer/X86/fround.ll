@@ -715,12 +715,9 @@ define void @rint_8f64() #0 {
 
 define void @trunc_2f64() #0 {
 ; SSE2-LABEL: @trunc_2f64(
-; SSE2-NEXT:    [[LD0:%.*]] = load double, ptr @src64, align 8
-; SSE2-NEXT:    [[LD1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 1), align 8
-; SSE2-NEXT:    [[TRUNC0:%.*]] = call double @llvm.trunc.f64(double [[LD0]])
-; SSE2-NEXT:    [[TRUNC1:%.*]] = call double @llvm.trunc.f64(double [[LD1]])
-; SSE2-NEXT:    store double [[TRUNC0]], ptr @dst64, align 8
-; SSE2-NEXT:    store double [[TRUNC1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
+; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @src64, align 8
+; SSE2-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP1]])
+; SSE2-NEXT:    store <2 x double> [[TMP2]], ptr @dst64, align 8
 ; SSE2-NEXT:    ret void
 ;
 ; SSE41-LABEL: @trunc_2f64(
@@ -746,18 +743,12 @@ define void @trunc_2f64() #0 {
 
 define void @trunc_4f64() #0 {
 ; SSE2-LABEL: @trunc_4f64(
-; SSE2-NEXT:    [[LD0:%.*]] = load double, ptr @src64, align 8
-; SSE2-NEXT:    [[LD1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 1), align 8
-; SSE2-NEXT:    [[LD2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 2), align 8
-; SSE2-NEXT:    [[LD3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 3), align 8
-; SSE2-NEXT:    [[TRUNC0:%.*]] = call double @llvm.trunc.f64(double [[LD0]])
-; SSE2-NEXT:    [[TRUNC1:%.*]] = call double @llvm.trunc.f64(double [[LD1]])
-; SSE2-NEXT:    [[TRUNC2:%.*]] = call double @llvm.trunc.f64(double [[LD2]])
-; SSE2-NEXT:    [[TRUNC3:%.*]] = call double @llvm.trunc.f64(double [[LD3]])
-; SSE2-NEXT:    store double [[TRUNC0]], ptr @dst64, align 8
-; SSE2-NEXT:    store double [[TRUNC1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
-; SSE2-NEXT:    store double [[TRUNC2]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 2), align 8
-; SSE2-NEXT:    store double [[TRUNC3]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 3), align 8
+; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @src64, align 8
+; SSE2-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP1]])
+; SSE2-NEXT:    store <2 x double> [[TMP2]], ptr @dst64, align 8
+; SSE2-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 2), align 8
+; SSE2-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP3]])
+; SSE2-NEXT:    store <2 x double> [[TMP4]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 2), align 8
 ; SSE2-NEXT:    ret void
 ;
 ; SSE41-LABEL: @trunc_4f64(
@@ -792,30 +783,18 @@ define void @trunc_4f64() #0 {
 
 define void @trunc_8f64() #0 {
 ; SSE2-LABEL: @trunc_8f64(
-; SSE2-NEXT:    [[LD0:%.*]] = load double, ptr @src64, align 8
-; SSE2-NEXT:    [[LD1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 1), align 8
-; SSE2-NEXT:    [[LD2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 2), align 8
-; SSE2-NEXT:    [[LD3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 3), align 8
-; SSE2-NEXT:    [[LD4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 4), align 8
-; SSE2-NEXT:    [[LD5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 5), align 8
-; SSE2-NEXT:    [[LD6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 6), align 8
-; SSE2-NEXT:    [[LD7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 7), align 8
-; SSE2-NEXT:    [[TRUNC0:%.*]] = call double @llvm.trunc.f64(double [[LD0]])
-; SSE2-NEXT:    [[TRUNC1:%.*]] = call double @llvm.trunc.f64(double [[LD1]])
-; SSE2-NEXT:    [[TRUNC2:%.*]] = call double @llvm.trunc.f64(double [[LD2]])
-; SSE2-NEXT:    [[TRUNC3:%.*]] = call double @llvm.trunc.f64(double [[LD3]])
-; SSE2-NEXT:    [[TRUNC4:%.*]] = call double @llvm.trunc.f64(double [[LD4]])
-; SSE2-NEXT:    [[TRUNC5:%.*]] = call double @llvm.trunc.f64(double [[LD5]])
-; SSE2-NEXT:    [[TRUNC6:%.*]] = call double @llvm.trunc.f64(double [[LD6]])
-; SSE2-NEXT:    [[TRUNC7:%.*]] = call double @llvm.trunc.f64(double [[LD7]])
-; SSE2-NEXT:    store double [[TRUNC0]], ptr @dst64, align 8
-; SSE2-NEXT:    store double [[TRUNC1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
-; SSE2-NEXT:    store double [[TRUNC2]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 2), align 8
-; SSE2-NEXT:    store double [[TRUNC3]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 3), align 8
-; SSE2-NEXT:    store double [[TRUNC4]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 4), align 8
-; SSE2-NEXT:    store double [[TRUNC5]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 5), align 8
-; SSE2-NEXT:    store double [[TRUNC6]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 6), align 8
-; SSE2-NEXT:    store double [[TRUNC7]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 7), align 8
+; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @src64, align 8
+; SSE2-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP1]])
+; SSE2-NEXT:    store <2 x double> [[TMP2]], ptr @dst64, align 8
+; SSE2-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 2), align 8
+; SSE2-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP3]])
+; SSE2-NEXT:    store <2 x double> [[TMP4]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 2), align 8
+; SSE2-NEXT:    [[TMP5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 4), align 8
+; SSE2-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP5]])
+; SSE2-NEXT:    store <2 x double> [[TMP6]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 4), align 8
+; SSE2-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([8 x double], ptr @src64, i32 0, i64 6), align 8
+; SSE2-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP7]])
+; SSE2-NEXT:    store <2 x double> [[TMP8]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 6), align 8
 ; SSE2-NEXT:    ret void
 ;
 ; SSE41-LABEL: @trunc_8f64(
@@ -1906,18 +1885,9 @@ define void @rint_16f32() #0 {
 
 define void @trunc_4f32() #0 {
 ; SSE2-LABEL: @trunc_4f32(
-; SSE2-NEXT:    [[LD0:%.*]] = load float, ptr @src32, align 4
-; SSE2-NEXT:    [[LD1:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 1), align 4
-; SSE2-NEXT:    [[LD2:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 2), align 4
-; SSE2-NEXT:    [[LD3:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 3), align 4
-; SSE2-NEXT:    [[TRUNC0:%.*]] = call float @llvm.trunc.f32(float [[LD0]])
-; SSE2-NEXT:    [[TRUNC1:%.*]] = call float @llvm.trunc.f32(float [[LD1]])
-; SSE2-NEXT:    [[TRUNC2:%.*]] = call float @llvm.trunc.f32(float [[LD2]])
-; SSE2-NEXT:    [[TRUNC3:%.*]] = call float @llvm.trunc.f32(float [[LD3]])
-; SSE2-NEXT:    store float [[TRUNC0]], ptr @dst32, align 4
-; SSE2-NEXT:    store float [[TRUNC1]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 1), align 4
-; SSE2-NEXT:    store float [[TRUNC2]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 2), align 4
-; SSE2-NEXT:    store float [[TRUNC3]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 3), align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @src32, align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP1]])
+; SSE2-NEXT:    store <4 x float> [[TMP2]], ptr @dst32, align 4
 ; SSE2-NEXT:    ret void
 ;
 ; SSE41-LABEL: @trunc_4f32(
@@ -1949,30 +1919,12 @@ define void @trunc_4f32() #0 {
 
 define void @trunc_8f32() #0 {
 ; SSE2-LABEL: @trunc_8f32(
-; SSE2-NEXT:    [[LD0:%.*]] = load float, ptr @src32, align 4
-; SSE2-NEXT:    [[LD1:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 1), align 4
-; SSE2-NEXT:    [[LD2:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 2), align 4
-; SSE2-NEXT:    [[LD3:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 3), align 4
-; SSE2-NEXT:    [[LD4:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 4), align 4
-; SSE2-NEXT:    [[LD5:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 5), align 4
-; SSE2-NEXT:    [[LD6:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 6), align 4
-; SSE2-NEXT:    [[LD7:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 7), align 4
-; SSE2-NEXT:    [[TRUNC0:%.*]] = call float @llvm.trunc.f32(float [[LD0]])
-; SSE2-NEXT:    [[TRUNC1:%.*]] = call float @llvm.trunc.f32(float [[LD1]])
-; SSE2-NEXT:    [[TRUNC2:%.*]] = call float @llvm.trunc.f32(float [[LD2]])
-; SSE2-NEXT:    [[TRUNC3:%.*]] = call float @llvm.trunc.f32(float [[LD3]])
-; SSE2-NEXT:    [[TRUNC4:%.*]] = call float @llvm.trunc.f32(float [[LD4]])
-; SSE2-NEXT:    [[TRUNC5:%.*]] = call float @llvm.trunc.f32(float [[LD5]])
-; SSE2-NEXT:    [[TRUNC6:%.*]] = call float @llvm.trunc.f32(float [[LD6]])
-; SSE2-NEXT:    [[TRUNC7:%.*]] = call float @llvm.trunc.f32(float [[LD7]])
-; SSE2-NEXT:    store float [[TRUNC0]], ptr @dst32, align 4
-; SSE2-NEXT:    store float [[TRUNC1]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 1), align 4
-; SSE2-NEXT:    store float [[TRUNC2]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 2), align 4
-; SSE2-NEXT:    store float [[TRUNC3]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 3), align 4
-; SSE2-NEXT:    store float [[TRUNC4]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 4), align 4
-; SSE2-NEXT:    store float [[TRUNC5]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 5), align 4
-; SSE2-NEXT:    store float [[TRUNC6]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 6), align 4
-; SSE2-NEXT:    store float [[TRUNC7]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 7), align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @src32, align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP1]])
+; SSE2-NEXT:    store <4 x float> [[TMP2]], ptr @dst32, align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 4), align 4
+; SSE2-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP3]])
+; SSE2-NEXT:    store <4 x float> [[TMP4]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 4), align 4
 ; SSE2-NEXT:    ret void
 ;
 ; SSE41-LABEL: @trunc_8f32(
@@ -2019,54 +1971,18 @@ define void @trunc_8f32() #0 {
 
 define void @trunc_16f32() #0 {
 ; SSE2-LABEL: @trunc_16f32(
-; SSE2-NEXT:    [[LD0:%.*]] = load float, ptr @src32, align 4
-; SSE2-NEXT:    [[LD1:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 1), align 4
-; SSE2-NEXT:    [[LD2:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 2), align 4
-; SSE2-NEXT:    [[LD3:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 3), align 4
-; SSE2-NEXT:    [[LD4:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 4), align 4
-; SSE2-NEXT:    [[LD5:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 5), align 4
-; SSE2-NEXT:    [[LD6:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 6), align 4
-; SSE2-NEXT:    [[LD7:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 7), align 4
-; SSE2-NEXT:    [[LD8:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 8), align 4
-; SSE2-NEXT:    [[LD9:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 9), align 4
-; SSE2-NEXT:    [[LD10:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 10), align 4
-; SSE2-NEXT:    [[LD11:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 11), align 4
-; SSE2-NEXT:    [[LD12:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 12), align 4
-; SSE2-NEXT:    [[LD13:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 13), align 4
-; SSE2-NEXT:    [[LD14:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 14), align 4
-; SSE2-NEXT:    [[LD15:%.*]] = load float, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 15), align 4
-; SSE2-NEXT:    [[TRUNC0:%.*]] = call float @llvm.trunc.f32(float [[LD0]])
-; SSE2-NEXT:    [[TRUNC1:%.*]] = call float @llvm.trunc.f32(float [[LD1]])
-; SSE2-NEXT:    [[TRUNC2:%.*]] = call float @llvm.trunc.f32(float [[LD2]])
-; SSE2-NEXT:    [[TRUNC3:%.*]] = call float @llvm.trunc.f32(float [[LD3]])
-; SSE2-NEXT:    [[TRUNC4:%.*]] = call float @llvm.trunc.f32(float [[LD4]])
-; SSE2-NEXT:    [[TRUNC5:%.*]] = call float @llvm.trunc.f32(float [[LD5]])
-; SSE2-NEXT:    [[TRUNC6:%.*]] = call float @llvm.trunc.f32(float [[LD6]])
-; SSE2-NEXT:    [[TRUNC7:%.*]] = call float @llvm.trunc.f32(float [[LD7]])
-; SSE2-NEXT:    [[TRUNC8:%.*]] = call float @llvm.trunc.f32(float [[LD8]])
-; SSE2-NEXT:    [[TRUNC9:%.*]] = call float @llvm.trunc.f32(float [[LD9]])
-; SSE2-NEXT:    [[TRUNC10:%.*]] = call float @llvm.trunc.f32(float [[LD10]])
-; SSE2-NEXT:    [[TRUNC11:%.*]] = call float @llvm.trunc.f32(float [[LD11]])
-; SSE2-NEXT:    [[TRUNC12:%.*]] = call float @llvm.trunc.f32(float [[LD12]])
-; SSE2-NEXT:    [[TRUNC13:%.*]] = call float @llvm.trunc.f32(float [[LD13]])
-; SSE2-NEXT:    [[TRUNC14:%.*]] = call float @llvm.trunc.f32(float [[LD14]])
-; SSE2-NEXT:    [[TRUNC15:%.*]] = call float @llvm.trunc.f32(float [[LD15]])
-; SSE2-NEXT:    store float [[TRUNC0]], ptr @dst32, align 4
-; SSE2-NEXT:    store float [[TRUNC1]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 1), align 4
-; SSE2-NEXT:    store float [[TRUNC2]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 2), align 4
-; SSE2-NEXT:    store float [[TRUNC3]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 3), align 4
-; SSE2-NEXT:    store float [[TRUNC4]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 4), align 4
-; SSE2-NEXT:    store float [[TRUNC5]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 5), align 4
-; SSE2-NEXT:    store float [[TRUNC6]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 6), align 4
-; SSE2-NEXT:    store float [[TRUNC7]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 7), align 4
-; SSE2-NEXT:    store float [[TRUNC8]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 8), align 4
-; SSE2-NEXT:    store float [[TRUNC9]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 9), align 4
-; SSE2-NEXT:    store float [[TRUNC10]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 10), align 4
-; SSE2-NEXT:    store float [[TRUNC11]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 11), align 4
-; SSE2-NEXT:    store float [[TRUNC12]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 12), align 4
-; SSE2-NEXT:    store float [[TRUNC13]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 13), align 4
-; SSE2-NEXT:    store float [[TRUNC14]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 14), align 4
-; SSE2-NEXT:    store float [[TRUNC15]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 15), align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @src32, align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP1]])
+; SSE2-NEXT:    store <4 x float> [[TMP2]], ptr @dst32, align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 4), align 4
+; SSE2-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP3]])
+; SSE2-NEXT:    store <4 x float> [[TMP4]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 4), align 4
+; SSE2-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 8), align 4
+; SSE2-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP5]])
+; SSE2-NEXT:    store <4 x float> [[TMP6]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 8), align 4
+; SSE2-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr getelementptr inbounds ([16 x float], ptr @src32, i32 0, i64 12), align 4
+; SSE2-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP7]])
+; SSE2-NEXT:    store <4 x float> [[TMP8]], ptr getelementptr inbounds ([16 x float], ptr @dst32, i32 0, i64 12), align 4
 ; SSE2-NEXT:    ret void
 ;
 ; SSE41-LABEL: @trunc_16f32(
