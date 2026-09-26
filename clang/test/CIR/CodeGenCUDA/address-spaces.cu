@@ -162,15 +162,16 @@ __global__ void fn() {
 // CIR-DEVICE:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-DEVICE:   cir.store {{.*}}%[[ZERO]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CIR-DEVICE:   %[[J:.*]] = cir.get_global @_ZZ2fnvE1j : !cir.ptr<!s32i, target_address_space(3)>
+// CIR-DEVICE:   %[[J_CAST:.*]] = cir.cast address_space %[[J]] : !cir.ptr<!s32i, target_address_space(3)> -> !cir.ptr<!s32i>
 // CIR-DEVICE:   %[[VAL:.*]] = cir.load {{.*}}%[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
-// CIR-DEVICE:   cir.store {{.*}}%[[VAL]], %[[J]] : !s32i, !cir.ptr<!s32i, target_address_space(3)>
+// CIR-DEVICE:   cir.store {{.*}}%[[VAL]], %[[J_CAST]] : !s32i, !cir.ptr<!s32i>
 // CIR-DEVICE:   cir.return
 
 // LLVM-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
 // LLVM-DEVICE:   %[[ALLOCA:.*]] = alloca i32, align 4
 // LLVM-DEVICE:   store i32 0, ptr %[[ALLOCA]], align 4
 // LLVM-DEVICE:   %[[VAL:.*]] = load i32, ptr %[[ALLOCA]], align 4
-// LLVM-DEVICE:   store i32 %[[VAL]], ptr addrspace(3) @_ZZ2fnvE1j, align 4
+// LLVM-DEVICE:   store i32 %[[VAL]], ptr addrspacecast (ptr addrspace(3) @_ZZ2fnvE1j to ptr), align 4
 // LLVM-DEVICE:   ret void
 
 // OGCG-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
