@@ -275,19 +275,18 @@ end subroutine
 ! Both induction variables (j and i) are privatized:
 ! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
 ! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
-! No control(...) on acc.loop — bounds are not on the op:
 ! CHECK: acc.loop combined(serial) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
-! Outer loop trip-count test (j) emitted as cf:
-! CHECK: arith.cmpi sgt
-! CHECK: cf.cond_br
-! Inner loop trip-count test (i) emitted as cf:
-! CHECK: arith.cmpi sgt
-! CHECK: cf.cond_br
-! The if/cycle is a structured cf branch in the body:
+! The IF-guarded CYCLE branches only within the body, so both loops keep their
+! bounds on the op -- control(...) rather than a cf trip-count test -- and the
+! raw blocks are confined to a wrap inside each body.
+! CHECK: acc.loop private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: scf.execute_region no_inline {
+! CHECK: acc.loop private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: scf.execute_region no_inline {
 ! CHECK: arith.cmpi eq
 ! CHECK: cf.cond_br
+! CHECK: scf.yield
 ! CHECK: acc.yield
-! CHECK: }
 
 ! `acc serial loop collapse(N)` with STOP in body: wrap-in-execute-region hides
 ! the unstructured if/stop and the three collapsed iterators lower as a single

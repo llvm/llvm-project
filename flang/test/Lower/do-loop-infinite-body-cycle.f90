@@ -7,6 +7,7 @@
 ! its body.
 
 ! RUN: %flang_fc1 -fdebug-dump-pft -o /dev/null %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s --check-prefix=FIR
 
 ! A GO TO branching to itself never leaves the body.
 subroutine self_cycle(n)
@@ -20,6 +21,14 @@ end subroutine
 ! CHECK: Subroutine self_cycle
 ! CHECK: <<DoConstruct!>>
 
+! The cycle survives as a block branching to itself. No fir.do_loop is emitted:
+! the loop control is unstructured too.
+! FIR-LABEL: func.func @_QPself_cycle
+! FIR:         cf.cond_br %{{.*}}, ^[[SELF:bb[0-9]+]], ^bb{{[0-9]+}}
+! FIR:       ^[[SELF]]:
+! FIR:         cf.br ^[[SELF]]
+! FIR-NOT:     fir.do_loop
+
 ! Two GO TOs branching to each other form the same exit-free cycle.
 subroutine mutual_cycle(n)
   integer :: n, i
@@ -32,6 +41,14 @@ end subroutine
 
 ! CHECK: Subroutine mutual_cycle
 ! CHECK: <<DoConstruct!>>
+
+! Two blocks branching to each other, neither leaving the cycle.
+! FIR-LABEL: func.func @_QPmutual_cycle
+! FIR:       ^[[A:bb[0-9]+]]:
+! FIR:         cf.br ^[[B:bb[0-9]+]]
+! FIR:       ^[[B]]:
+! FIR:         cf.br ^[[A]]
+! FIR-NOT:     fir.do_loop
 
 ! Control: nothing branches here at all. The ASSIGN alone makes label 41 a
 ! branch target, which is what gives the body a block of its own, and with no
@@ -47,3 +64,8 @@ end subroutine
 
 ! CHECK: Subroutine label_target_in_body
 ! CHECK: <<DoConstruct~>>
+
+! The control case keeps its structured form, body folded into a region.
+! FIR-LABEL: func.func @_QPlabel_target_in_body
+! FIR:         fir.do_loop
+! FIR:           scf.execute_region no_inline {
