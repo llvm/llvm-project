@@ -2050,6 +2050,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // (or compatible) type and kind do so.  Check for missing non-optional
   // arguments now, too.
   const ActualArgument *sameArg{nullptr};
+  const char *sameArgName{nullptr};
   const ActualArgument *operandArg{nullptr};
   const IntrinsicDummyArgument *kindDummyArg{nullptr};
   const ActualArgument *kindArg{nullptr};
@@ -2237,6 +2238,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::same: {
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       auto sameType{sameArg->GetType().value()};
       if (name == "move_alloc"s) {
@@ -2247,6 +2249,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             sameType.IsTkLenCompatibleWith(*type);
       } else {
         argOk = sameType.IsTkLenCompatibleWith(*type);
+      }
+      if (!argOk) {
+        CHECK(sameArgName);
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' has type '%s', but '%s=' has type '%s'"_err_en_US,
+            d.keyword, type->AsFortran(), sameArgName, sameType.AsFortran());
+        return std::nullopt;
       }
     } break;
     case KindCode::sameKind:
