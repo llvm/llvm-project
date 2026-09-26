@@ -43,9 +43,14 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
     // Find the return address and set a breakpoint there:
     // FIXME - can we do this more securely if we know first_insn?
 
-    StackFrameSP return_frame_sp(thread.GetStackFrameAtIndex(frame_idx + 1));
+    uint32_t return_frame_idx = frame_idx + 1;
+    StackFrameSP return_frame_sp =
+        thread.GetStackFrameAtIndex(return_frame_idx);
+    while (return_frame_sp && !frame_sp->IsArtificial() &&
+           return_frame_sp->GetConcreteFrameIndex() ==
+               frame_sp->GetConcreteFrameIndex())
+      return_frame_sp = thread.GetStackFrameAtIndex(++return_frame_idx);
     if (return_frame_sp) {
-      // TODO: add inline functionality
       m_return_addr = return_frame_sp->GetStackID().GetPC();
       Breakpoint *return_bp =
           target_sp->CreateBreakpoint(m_return_addr, true, false).get();
@@ -197,7 +202,9 @@ void ThreadPlanStepUntil::AnalyzeStop() {
             StackID frame_zero_id =
                 thread.GetStackFrameAtIndex(0)->GetStackID();
 
-            if (frame_zero_id == m_stack_id)
+            // Inline frames have the CFA of their concrete frame.
+            if (frame_zero_id.GetCallFrameAddressWithoutMetadata() ==
+                m_stack_id.GetCallFrameAddressWithoutMetadata())
               done = true;
             else if (frame_zero_id.IsYoungerThan(m_stack_id))
               done = false;
