@@ -452,6 +452,12 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     loops to be vectorized as well as other loop optimizations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
+  let options = [
+    Option<"enableSlices", "enable-slices", "bool",
+           /*default=*/"true",
+           "Enable versioning for supported static-unit array slices; disabling "
+           "this option leaves other loop versioning active">
+  ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
