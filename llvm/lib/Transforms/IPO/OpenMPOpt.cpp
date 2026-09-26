@@ -998,6 +998,28 @@ private:
   }
 };
 
+/// Copy the max outlined-callback entry count onto the merged wrapper.
+/// \p CallbackOpNo is the callback argument (2 for __kmpc_fork_call's
+/// microtask).
+static void setMergedWrapperEntryCount(Function &WrapperFn,
+                                       ArrayRef<CallInst *> ForkCalls,
+                                       unsigned CallbackOpNo = 2) {
+  std::optional<uint64_t> EntryCount;
+  for (CallInst *CI : ForkCalls) {
+    auto *Callback = dyn_cast<Function>(
+        CI->getArgOperand(CallbackOpNo)->stripPointerCasts());
+    if (!Callback)
+      continue;
+    if (std::optional<uint64_t> EC = Callback->getEntryCount())
+      // Each callback runs once per wrapper entry, so the counts should match.
+      // The Sample profiles can disagree slightly, so take the largest.
+      EntryCount = EntryCount ? std::max(*EntryCount, *EC) : *EC;
+  }
+  // Leave the wrapper unprofiled if none of the callbacks have a count.
+  if (EntryCount)
+    WrapperFn.setEntryCount(*EntryCount);
+}
+
 struct OpenMPOpt {
 
   using OptimizationRemarkGetter =
@@ -1341,6 +1363,7 @@ private:
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
+      setMergedWrapperEntryCount(*OutlinedFn, MergableCIs);
 
       // Replace the __kmpc_fork_call calls with direct calls to the outlined
       // callbacks.
