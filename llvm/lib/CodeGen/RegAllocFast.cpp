@@ -677,14 +677,23 @@ void RegAllocFastImpl::reload(MachineBasicBlock::iterator Before,
   ++NumLoads;
 }
 
-/// Get basic block begin insertion point.
-/// This is not just MBB.begin() because surprisingly we have EH_LABEL
-/// instructions marking the begin of a basic block. This means we must insert
-/// new instructions after such labels...
+/// Find an entry reload point after labels and prologues, but before SEH end
+/// markers. Reloads serving this block must retain its exception protection.
 MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     MachineBasicBlock &MBB, SmallSet<Register, 2> &PrologLiveIns) const {
   MachineBasicBlock::iterator I = MBB.begin();
+  // The pair order matters: skip barrier/begin-label at entry, but stop before
+  // end-label/barrier even if the range has no other instructions yet. A scan
+  // that skips only labels would put a reload outside the protected range.
   while (I != MBB.end()) {
+    if (I->isEHLabel() && std::next(I) != MBB.end() &&
+        std::next(I)->getOpcode() == TargetOpcode::SEH_REGION_BARRIER)
+      break;
+    if (I->getOpcode() == TargetOpcode::SEH_REGION_BARRIER &&
+        std::next(I) != MBB.end() && std::next(I)->isEHLabel()) {
+      ++I;
+      continue;
+    }
     if (I->isLabel()) {
       ++I;
       continue;
