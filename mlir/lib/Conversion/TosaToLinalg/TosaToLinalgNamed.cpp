@@ -1141,5 +1141,8 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
   patterns->add<
       MaxPool2dConverter
     >(converter, patterns->getContext());
+
+  tosa::AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
+      *patterns, patterns->getContext());
   // clang-format on
 }
