@@ -61,8 +61,7 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[TMP6]], [[ADD_US]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

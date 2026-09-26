@@ -16,8 +16,7 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-TWO-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF-TWO-CHECK:       [[VECTOR_PH]]:
-; VF-TWO-CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 31
-; VF-TWO-CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; VF-TWO-CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -32
 ; VF-TWO-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF-TWO-CHECK:       [[VECTOR_BODY]]:
 ; VF-TWO-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -84,12 +83,12 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; VF-TWO-CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_PH]]:
 ; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; VF-TWO-CHECK-NEXT:    [[N_MOD_VF17:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
-; VF-TWO-CHECK-NEXT:    [[N_VEC18:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF17]]
+; VF-TWO-CHECK-NEXT:    [[N_VEC18:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -2
 ; VF-TWO-CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; VF-TWO-CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -118,8 +117,7 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-FOUR-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF-FOUR-CHECK:       [[VECTOR_PH]]:
-; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 31
-; VF-FOUR-CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; VF-FOUR-CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -32
 ; VF-FOUR-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF-FOUR-CHECK:       [[VECTOR_BODY]]:
 ; VF-FOUR-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -186,12 +184,12 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_PH]]:
 ; VF-FOUR-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF17:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
-; VF-FOUR-CHECK-NEXT:    [[N_VEC18:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF17]]
+; VF-FOUR-CHECK-NEXT:    [[N_VEC18:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -4
 ; VF-FOUR-CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; VF-FOUR-CHECK-NEXT:    [[INDEX20:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -251,8 +249,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF-TWO-CHECK:       [[VECTOR_PH]]:
-; VF-TWO-CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 31
-; VF-TWO-CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; VF-TWO-CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -32
 ; VF-TWO-CHECK-NEXT:    [[IND_END18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VF-TWO-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF-TWO-CHECK:       [[VECTOR_BODY]]:
@@ -317,12 +314,12 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; VF-TWO-CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_PH]]:
 ; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; VF-TWO-CHECK-NEXT:    [[N_MOD_VF16:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
-; VF-TWO-CHECK-NEXT:    [[N_VEC17:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF16]]
+; VF-TWO-CHECK-NEXT:    [[N_VEC17:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -2
 ; VF-TWO-CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC17]] to i32
 ; VF-TWO-CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -365,8 +362,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF-FOUR-CHECK:       [[VECTOR_PH]]:
-; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 31
-; VF-FOUR-CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; VF-FOUR-CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -32
 ; VF-FOUR-CHECK-NEXT:    [[IND_END18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VF-FOUR-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF-FOUR-CHECK:       [[VECTOR_BODY]]:
@@ -431,12 +427,12 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_PH]]:
 ; VF-FOUR-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF16:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
-; VF-FOUR-CHECK-NEXT:    [[N_VEC17:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF16]]
+; VF-FOUR-CHECK-NEXT:    [[N_VEC17:%.*]] = and i64 [[WIDE_TRIP_COUNT]], -4
 ; VF-FOUR-CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC17]] to i32
 ; VF-FOUR-CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:

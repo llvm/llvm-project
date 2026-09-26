@@ -24,8 +24,7 @@ define void @sgt_loopguard(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
-; COMMON-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
-; COMMON-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; COMMON-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -89,8 +88,7 @@ define void @sgt_no_loopguard(ptr noalias nocapture readonly %a, ptr noalias noc
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 15
-; COMMON-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
-; COMMON-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; COMMON-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -148,8 +146,7 @@ define void @sgt_extra_use_cmp(ptr noalias nocapture readonly %a, ptr noalias no
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
-; COMMON-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
-; COMMON-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; COMMON-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; COMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N]], i64 0
 ; COMMON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; COMMON-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
@@ -330,8 +327,7 @@ define void @sgt_step_minus_two(ptr noalias nocapture readonly %a, ptr noalias n
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 15
-; COMMON-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
-; COMMON-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; COMMON-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -451,8 +447,7 @@ define void @icmp_eq(ptr noalias nocapture readonly %A, ptr noalias nocapture re
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
-; COMMON-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
-; COMMON-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; COMMON-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -525,9 +520,8 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -16
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
-; DEFAULT-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[N_VEC]]
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -559,8 +553,7 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-PREFER:       [[VECTOR_PH]]:
 ; CHECK-PREFER-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
-; CHECK-PREFER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
-; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -596,9 +589,8 @@ define void @sgt_for_loop(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ENABLE-TP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-ENABLE-TP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_PH]]:
+; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -16
 ; CHECK-ENABLE-TP-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
-; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
-; CHECK-ENABLE-TP-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[N_VEC]]
 ; CHECK-ENABLE-TP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_BODY]]:
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -656,9 +648,8 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[CONV16]], 16
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i64 [[CONV16]], -16
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[CONV16]], 15
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[CONV16]], [[N_MOD_VF]]
-; DEFAULT-NEXT:    [[TMP0:%.*]] = sub i64 [[CONV16]], [[N_VEC]]
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -692,8 +683,7 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-PREFER:       [[VECTOR_PH]]:
 ; CHECK-PREFER-NEXT:    [[N_RND_UP:%.*]] = add i64 [[CONV16]], 15
-; CHECK-PREFER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
-; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -731,9 +721,8 @@ define void @sgt_for_loop_i64(ptr noalias nocapture readonly %a, ptr noalias noc
 ; CHECK-ENABLE-TP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[CONV16]], 16
 ; CHECK-ENABLE-TP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_PH]]:
+; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = and i64 [[CONV16]], -16
 ; CHECK-ENABLE-TP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[CONV16]], 15
-; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = sub i64 [[CONV16]], [[N_MOD_VF]]
-; CHECK-ENABLE-TP-NEXT:    [[TMP0:%.*]] = sub i64 [[CONV16]], [[N_VEC]]
 ; CHECK-ENABLE-TP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_BODY]]:
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -820,9 +809,8 @@ define void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias noca
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[ADD]], 16
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i32 [[ADD]], -16
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[ADD]], 15
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i32 [[ADD]], [[N_MOD_VF]]
-; DEFAULT-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[N_VEC]]
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -865,8 +853,7 @@ define void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias noca
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-PREFER:       [[VECTOR_PH]]:
 ; CHECK-PREFER-NEXT:    [[N_RND_UP:%.*]] = add i32 [[ADD]], 15
-; CHECK-PREFER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
-; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-PREFER-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
 ; CHECK-PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PREFER:       [[VECTOR_BODY]]:
 ; CHECK-PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -909,9 +896,8 @@ define void @sgt_nested_loop(ptr noalias nocapture readonly %a, ptr noalias noca
 ; CHECK-ENABLE-TP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[ADD]], 16
 ; CHECK-ENABLE-TP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_PH]]:
+; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = and i32 [[ADD]], -16
 ; CHECK-ENABLE-TP-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[ADD]], 15
-; CHECK-ENABLE-TP-NEXT:    [[N_VEC:%.*]] = sub i32 [[ADD]], [[N_MOD_VF]]
-; CHECK-ENABLE-TP-NEXT:    [[TMP0:%.*]] = sub i32 [[ADD]], [[N_VEC]]
 ; CHECK-ENABLE-TP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-ENABLE-TP:       [[VECTOR_BODY]]:
 ; CHECK-ENABLE-TP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

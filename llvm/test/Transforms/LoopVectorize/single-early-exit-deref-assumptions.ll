@@ -117,8 +117,7 @@ define i64 @early_exit_alignment_and_deref_known_via_assumption_n_not_zero(ptr n
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
@@ -311,8 +310,7 @@ define i64 @early_exit_alignment_and_deref_known_via_assumption_n_not_zero_i16_p
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IV_NEXT1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -405,8 +403,7 @@ define ptr @find_deref_pointer_distance_align_attribute_argument(ptr align 2 %fi
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -498,8 +495,7 @@ define ptr @find_deref_pointer_distance_align_assumption(ptr %first, ptr %last) 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -711,8 +707,7 @@ define i64 @find_if_pointer_distance_deref_via_assumption(ptr %vec) nofree nosyn
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BEGIN]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1115,8 +1110,7 @@ define i64 @VectorizingWithoutNoSyncAttributeTest(ptr noundef nonnull readonly a
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[L_V]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N]], i64 0
@@ -1232,8 +1226,7 @@ define i64 @volatileNotVectorizingTest(ptr noundef nonnull readonly align 8 capt
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[L_V]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N]], i64 0
@@ -1455,8 +1448,7 @@ define i8 @early_exit_deref_or_null_arg_with_deref_assumption(ptr dereferenceabl
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[LEN]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[LEN]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[LEN]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[LEN]], -4
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
@@ -1646,8 +1638,7 @@ define i64 @early_exit_deref_known_via_assumption_with_i32_variable_size(ptr noa
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_EXT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N_EXT]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_EXT]], [[TMP0]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_EXT]], -4
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]

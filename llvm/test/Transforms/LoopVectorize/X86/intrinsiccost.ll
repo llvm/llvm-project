@@ -25,8 +25,7 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 63
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -64
 ; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END10:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[N_VEC]], 1
@@ -65,12 +64,12 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF6:%.*]] = and i64 [[TMP0]], 7
-; CHECK-NEXT:    [[N_VEC8:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF6]]
+; CHECK-NEXT:    [[N_VEC8:%.*]] = and i64 [[TMP0]], -8
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC8]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[N_VEC8]], 1
@@ -151,12 +150,11 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; AVX1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 16
 ; AVX1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
-; AVX1-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 15
-; AVX1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
-; AVX1-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i32
+; AVX1-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -16
+; AVX1-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; AVX1-NEXT:    [[TMP3:%.*]] = sub i32 [[BLOCKSIZE]], [[TMP2]]
-; AVX1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[N_VEC]]
-; AVX1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[N_VEC]]
+; AVX1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP1]]
+; AVX1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP1]]
 ; AVX1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[OFFSET:%.*]], i64 0
 ; AVX1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -168,47 +166,47 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; AVX1-NEXT:    [[TMP6:%.*]] = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> [[WIDE_LOAD]], <16 x i8> [[WIDE_LOAD]], <16 x i8> [[BROADCAST_SPLAT]])
 ; AVX1-NEXT:    store <16 x i8> [[TMP6]], ptr [[NEXT_GEP2]], align 2
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; AVX1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP1]]
 ; AVX1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX1:       middle.block:
-; AVX1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; AVX1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP1]]
 ; AVX1-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AVX1:       vec.epilog.iter.check:
-; AVX1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
+; AVX1-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; AVX1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
 ; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; AVX1:       vec.epilog.ph:
-; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX1-NEXT:    [[TMP8:%.*]] = and i64 [[TMP0]], 7
-; AVX1-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[TMP8]]
-; AVX1-NEXT:    [[TMP9:%.*]] = trunc i64 [[N_VEC5]] to i32
+; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX1-NEXT:    [[TMP8:%.*]] = and i64 [[TMP0]], -8
+; AVX1-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; AVX1-NEXT:    [[TMP10:%.*]] = sub i32 [[BLOCKSIZE]], [[TMP9]]
-; AVX1-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC5]]
-; AVX1-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC5]]
-; AVX1-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
-; AVX1-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT6]], <8 x i8> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP8]]
+; AVX1-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP8]]
+; AVX1-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
+; AVX1-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT5]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; AVX1:       vec.epilog.vector.body:
-; AVX1-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; AVX1-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX8]]
-; AVX1-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX8]]
-; AVX1-NEXT:    [[WIDE_LOAD11:%.*]] = load <8 x i8>, ptr [[NEXT_GEP9]], align 2
-; AVX1-NEXT:    [[TMP13:%.*]] = call <8 x i8> @llvm.fshl.v8i8(<8 x i8> [[WIDE_LOAD11]], <8 x i8> [[WIDE_LOAD11]], <8 x i8> [[BROADCAST_SPLAT7]])
-; AVX1-NEXT:    store <8 x i8> [[TMP13]], ptr [[NEXT_GEP10]], align 2
-; AVX1-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX8]], 8
-; AVX1-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT12]], [[N_VEC5]]
+; AVX1-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; AVX1-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX7]]
+; AVX1-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX7]]
+; AVX1-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x i8>, ptr [[NEXT_GEP8]], align 2
+; AVX1-NEXT:    [[TMP13:%.*]] = call <8 x i8> @llvm.fshl.v8i8(<8 x i8> [[WIDE_LOAD10]], <8 x i8> [[WIDE_LOAD10]], <8 x i8> [[BROADCAST_SPLAT6]])
+; AVX1-NEXT:    store <8 x i8> [[TMP13]], ptr [[NEXT_GEP9]], align 2
+; AVX1-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX7]], 8
+; AVX1-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[TMP8]]
 ; AVX1-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; AVX1:       vec.epilog.middle.block:
-; AVX1-NEXT:    [[CMP_N13:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
-; AVX1-NEXT:    br i1 [[CMP_N13]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; AVX1-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP0]], [[TMP8]]
+; AVX1-NEXT:    br i1 [[CMP_N12]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX1:       vec.epilog.scalar.ph:
-; AVX1-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i32 [ [[TMP10]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
-; AVX1-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi ptr [ [[TMP11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
-; AVX1-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[TMP12]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
+; AVX1-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i32 [ [[TMP10]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
+; AVX1-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi ptr [ [[TMP11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
+; AVX1-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi ptr [ [[TMP12]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
 ; AVX1-NEXT:    br label [[WHILE_BODY:%.*]]
 ; AVX1:       while.body:
-; AVX1-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL14]], [[VEC_EPILOG_SCALAR_PH]] ]
-; AVX1-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL15]], [[VEC_EPILOG_SCALAR_PH]] ]
-; AVX1-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL16]], [[VEC_EPILOG_SCALAR_PH]] ]
+; AVX1-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL13]], [[VEC_EPILOG_SCALAR_PH]] ]
+; AVX1-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL14]], [[VEC_EPILOG_SCALAR_PH]] ]
+; AVX1-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL15]], [[VEC_EPILOG_SCALAR_PH]] ]
 ; AVX1-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_08]], i32 1
 ; AVX1-NEXT:    [[TMP15:%.*]] = load i8, ptr [[PSRC_ADDR_08]], align 2
 ; AVX1-NEXT:    [[TMP16:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[TMP15]], i8 [[TMP15]], i8 [[OFFSET]])
@@ -234,12 +232,11 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; AVX2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 32
 ; AVX2-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
-; AVX2-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 31
-; AVX2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
-; AVX2-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i32
+; AVX2-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -32
+; AVX2-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; AVX2-NEXT:    [[TMP3:%.*]] = sub i32 [[BLOCKSIZE]], [[TMP2]]
-; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[N_VEC]]
-; AVX2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[N_VEC]]
+; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP1]]
+; AVX2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP1]]
 ; AVX2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i8> poison, i8 [[OFFSET:%.*]], i64 0
 ; AVX2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i8> [[BROADCAST_SPLATINSERT]], <32 x i8> poison, <32 x i32> zeroinitializer
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -251,47 +248,47 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; AVX2-NEXT:    [[TMP6:%.*]] = call <32 x i8> @llvm.fshl.v32i8(<32 x i8> [[WIDE_LOAD]], <32 x i8> [[WIDE_LOAD]], <32 x i8> [[BROADCAST_SPLAT]])
 ; AVX2-NEXT:    store <32 x i8> [[TMP6]], ptr [[NEXT_GEP2]], align 2
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; AVX2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP1]]
 ; AVX2-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX2:       middle.block:
-; AVX2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; AVX2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP1]]
 ; AVX2-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AVX2:       vec.epilog.iter.check:
-; AVX2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
+; AVX2-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; AVX2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
 ; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; AVX2:       vec.epilog.ph:
-; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX2-NEXT:    [[TMP8:%.*]] = and i64 [[TMP0]], 7
-; AVX2-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[TMP8]]
-; AVX2-NEXT:    [[TMP9:%.*]] = trunc i64 [[N_VEC5]] to i32
+; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX2-NEXT:    [[TMP8:%.*]] = and i64 [[TMP0]], -8
+; AVX2-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; AVX2-NEXT:    [[TMP10:%.*]] = sub i32 [[BLOCKSIZE]], [[TMP9]]
-; AVX2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC5]]
-; AVX2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC5]]
-; AVX2-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
-; AVX2-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT6]], <8 x i8> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP8]]
+; AVX2-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP8]]
+; AVX2-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
+; AVX2-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT5]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; AVX2-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; AVX2:       vec.epilog.vector.body:
-; AVX2-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; AVX2-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX8]]
-; AVX2-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX8]]
-; AVX2-NEXT:    [[WIDE_LOAD11:%.*]] = load <8 x i8>, ptr [[NEXT_GEP9]], align 2
-; AVX2-NEXT:    [[TMP13:%.*]] = call <8 x i8> @llvm.fshl.v8i8(<8 x i8> [[WIDE_LOAD11]], <8 x i8> [[WIDE_LOAD11]], <8 x i8> [[BROADCAST_SPLAT7]])
-; AVX2-NEXT:    store <8 x i8> [[TMP13]], ptr [[NEXT_GEP10]], align 2
-; AVX2-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX8]], 8
-; AVX2-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT12]], [[N_VEC5]]
+; AVX2-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; AVX2-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX7]]
+; AVX2-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX7]]
+; AVX2-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x i8>, ptr [[NEXT_GEP8]], align 2
+; AVX2-NEXT:    [[TMP13:%.*]] = call <8 x i8> @llvm.fshl.v8i8(<8 x i8> [[WIDE_LOAD10]], <8 x i8> [[WIDE_LOAD10]], <8 x i8> [[BROADCAST_SPLAT6]])
+; AVX2-NEXT:    store <8 x i8> [[TMP13]], ptr [[NEXT_GEP9]], align 2
+; AVX2-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX7]], 8
+; AVX2-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[TMP8]]
 ; AVX2-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; AVX2:       vec.epilog.middle.block:
-; AVX2-NEXT:    [[CMP_N13:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
-; AVX2-NEXT:    br i1 [[CMP_N13]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; AVX2-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP0]], [[TMP8]]
+; AVX2-NEXT:    br i1 [[CMP_N12]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX2:       vec.epilog.scalar.ph:
-; AVX2-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i32 [ [[TMP10]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
-; AVX2-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi ptr [ [[TMP11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
-; AVX2-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[TMP12]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
+; AVX2-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i32 [ [[TMP10]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
+; AVX2-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi ptr [ [[TMP11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
+; AVX2-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi ptr [ [[TMP12]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
 ; AVX2-NEXT:    br label [[WHILE_BODY:%.*]]
 ; AVX2:       while.body:
-; AVX2-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL14]], [[VEC_EPILOG_SCALAR_PH]] ]
-; AVX2-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL15]], [[VEC_EPILOG_SCALAR_PH]] ]
-; AVX2-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL16]], [[VEC_EPILOG_SCALAR_PH]] ]
+; AVX2-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL13]], [[VEC_EPILOG_SCALAR_PH]] ]
+; AVX2-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL14]], [[VEC_EPILOG_SCALAR_PH]] ]
+; AVX2-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL15]], [[VEC_EPILOG_SCALAR_PH]] ]
 ; AVX2-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_08]], i32 1
 ; AVX2-NEXT:    [[TMP15:%.*]] = load i8, ptr [[PSRC_ADDR_08]], align 2
 ; AVX2-NEXT:    [[TMP16:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[TMP15]], i8 [[TMP15]], i8 [[OFFSET]])
@@ -317,12 +314,11 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; XOP-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 128
 ; XOP-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; XOP:       vector.ph:
-; XOP-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 127
-; XOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
-; XOP-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i32
+; XOP-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -128
+; XOP-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; XOP-NEXT:    [[TMP3:%.*]] = sub i32 [[BLOCKSIZE]], [[TMP2]]
-; XOP-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[N_VEC]]
-; XOP-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[N_VEC]]
+; XOP-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP1]]
+; XOP-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP1]]
 ; XOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i8> poison, i8 [[OFFSET:%.*]], i64 0
 ; XOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i8> [[BROADCAST_SPLATINSERT]], <32 x i8> poison, <32 x i32> zeroinitializer
 ; XOP-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -349,47 +345,47 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; XOP-NEXT:    store <32 x i8> [[TMP11]], ptr [[TMP14]], align 2
 ; XOP-NEXT:    store <32 x i8> [[TMP12]], ptr [[TMP15]], align 2
 ; XOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
-; XOP-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; XOP-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP1]]
 ; XOP-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; XOP:       middle.block:
-; XOP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; XOP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[TMP1]]
 ; XOP-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; XOP:       vec.epilog.iter.check:
-; XOP-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
+; XOP-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; XOP-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
 ; XOP-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; XOP:       vec.epilog.ph:
-; XOP-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; XOP-NEXT:    [[TMP17:%.*]] = and i64 [[TMP0]], 7
-; XOP-NEXT:    [[N_VEC8:%.*]] = sub i64 [[TMP0]], [[TMP17]]
-; XOP-NEXT:    [[TMP18:%.*]] = trunc i64 [[N_VEC8]] to i32
+; XOP-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; XOP-NEXT:    [[TMP17:%.*]] = and i64 [[TMP0]], -8
+; XOP-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP17]] to i32
 ; XOP-NEXT:    [[TMP19:%.*]] = sub i32 [[BLOCKSIZE]], [[TMP18]]
-; XOP-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC8]]
-; XOP-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC8]]
-; XOP-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
-; XOP-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT9]], <8 x i8> poison, <8 x i32> zeroinitializer
+; XOP-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP17]]
+; XOP-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP17]]
+; XOP-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x i8> poison, i8 [[OFFSET]], i64 0
+; XOP-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT8]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; XOP-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; XOP:       vec.epilog.vector.body:
-; XOP-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; XOP-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX11]]
-; XOP-NEXT:    [[NEXT_GEP13:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX11]]
-; XOP-NEXT:    [[WIDE_LOAD14:%.*]] = load <8 x i8>, ptr [[NEXT_GEP12]], align 2
-; XOP-NEXT:    [[TMP22:%.*]] = call <8 x i8> @llvm.fshl.v8i8(<8 x i8> [[WIDE_LOAD14]], <8 x i8> [[WIDE_LOAD14]], <8 x i8> [[BROADCAST_SPLAT10]])
-; XOP-NEXT:    store <8 x i8> [[TMP22]], ptr [[NEXT_GEP13]], align 2
-; XOP-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX11]], 8
-; XOP-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC8]]
+; XOP-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; XOP-NEXT:    [[NEXT_GEP11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX10]]
+; XOP-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX10]]
+; XOP-NEXT:    [[WIDE_LOAD13:%.*]] = load <8 x i8>, ptr [[NEXT_GEP11]], align 2
+; XOP-NEXT:    [[TMP22:%.*]] = call <8 x i8> @llvm.fshl.v8i8(<8 x i8> [[WIDE_LOAD13]], <8 x i8> [[WIDE_LOAD13]], <8 x i8> [[BROADCAST_SPLAT9]])
+; XOP-NEXT:    store <8 x i8> [[TMP22]], ptr [[NEXT_GEP12]], align 2
+; XOP-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX10]], 8
+; XOP-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[TMP17]]
 ; XOP-NEXT:    br i1 [[TMP23]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; XOP:       vec.epilog.middle.block:
-; XOP-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC8]]
-; XOP-NEXT:    br i1 [[CMP_N16]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; XOP-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP0]], [[TMP17]]
+; XOP-NEXT:    br i1 [[CMP_N15]], label [[WHILE_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; XOP:       vec.epilog.scalar.ph:
-; XOP-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi i32 [ [[TMP19]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
-; XOP-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi ptr [ [[TMP20]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
-; XOP-NEXT:    [[BC_RESUME_VAL19:%.*]] = phi ptr [ [[TMP21]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
+; XOP-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi i32 [ [[TMP19]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[BLOCKSIZE]], [[ITER_CHECK]] ]
+; XOP-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi ptr [ [[TMP20]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PSRC]], [[ITER_CHECK]] ]
+; XOP-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi ptr [ [[TMP21]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PDST]], [[ITER_CHECK]] ]
 ; XOP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; XOP:       while.body:
-; XOP-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL17]], [[VEC_EPILOG_SCALAR_PH]] ]
-; XOP-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL18]], [[VEC_EPILOG_SCALAR_PH]] ]
-; XOP-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL19]], [[VEC_EPILOG_SCALAR_PH]] ]
+; XOP-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL16]], [[VEC_EPILOG_SCALAR_PH]] ]
+; XOP-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL17]], [[VEC_EPILOG_SCALAR_PH]] ]
+; XOP-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL18]], [[VEC_EPILOG_SCALAR_PH]] ]
 ; XOP-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_08]], i32 1
 ; XOP-NEXT:    [[TMP24:%.*]] = load i8, ptr [[PSRC_ADDR_08]], align 2
 ; XOP-NEXT:    [[TMP25:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[TMP24]], i8 [[TMP24]], i8 [[OFFSET]])

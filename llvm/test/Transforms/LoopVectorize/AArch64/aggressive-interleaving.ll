@@ -31,8 +31,7 @@ define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; A320:       [[VECTOR_PH]]:
-; A320-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
-; A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; A320-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], -2
 ; A320-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; A320-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[TMP4]]
 ; A320-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 3
@@ -154,8 +153,7 @@ define double @sum_reduction(ptr nocapture readonly %a, i64 %n) {
 ; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; A320:       [[VECTOR_PH]]:
-; A320-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; A320-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; A320:       [[VECTOR_BODY]]:
 ; A320-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -245,8 +243,7 @@ define double @dot_product(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; A320:       [[VECTOR_PH]]:
-; A320-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; A320-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; A320:       [[VECTOR_BODY]]:
 ; A320-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

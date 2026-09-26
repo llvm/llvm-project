@@ -13,8 +13,7 @@ define float @fadd(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
-; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-ORDERED:       vector.body:
 ; CHECK-ORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -50,8 +49,7 @@ define float @fadd(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
-; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UNORDERED:       vector.body:
 ; CHECK-UNORDERED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

@@ -9,7 +9,7 @@
 ; CHECK-NEXT:    [[GEP0:%.+]] = getelementptr inbounds i16, ptr %dst, i32 %index
 ; CHECK-NEXT:    store <4 x i16> [[FSHL]], ptr [[GEP0]], align 2
 ; CHECK-NEXT:    [[IDX_NEXT:%.+]] = add nuw i32 [[IDX]], 4
-; CHECK-NEXT:    [[EC:%.+]] = icmp eq i32 [[IDX_NEXT]], %n.vec
+; CHECK-NEXT:    [[EC:%.+]] = icmp eq i32 [[IDX_NEXT]], {{.*}}
 ; CHECK-NEXT:    br i1 [[EC]], label %middle.block, label %vector.body
 ;
 define void @test_fshl(i32 %width, ptr %dst, ptr %src) {

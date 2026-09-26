@@ -15,8 +15,7 @@ define void @icmp_predicate_and_branch_cost(i32 %size, ptr %dst, i64 %conv5.i) #
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[TMP2]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH1:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP2]], 31
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP2]], -32
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[N_VEC]], 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[CONV5_I:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
@@ -46,13 +45,13 @@ define void @icmp_predicate_and_branch_cost(i32 %size, ptr %dst, i64 %conv5.i) #
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i32 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP3]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
-; CHECK-NEXT:    [[N_MOD_VF5:%.*]] = and i32 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC6:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF5]]
+; CHECK-NEXT:    [[N_VEC6:%.*]] = and i32 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl i32 [[N_VEC6]], 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i64> poison, i64 [[CONV5_I]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT7]], <4 x i64> poison, <4 x i32> zeroinitializer

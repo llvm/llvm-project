@@ -10,8 +10,7 @@ define i32 @postinc(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[K]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[K]], -2
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -39,8 +38,7 @@ define i32 @postinc(i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -72,8 +70,7 @@ define i32 @preinc(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[K]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[K]], -2
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -102,8 +99,7 @@ define i32 @preinc(i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -203,8 +199,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; VEC-NEXT:    [[TMP3:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VEC-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; VEC-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
@@ -249,8 +244,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = trunc i64 [[N_VEC]] to i32
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = shl i64 [[N_VEC]], 2
 ; INTERLEAVE-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP8]]
@@ -294,8 +288,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP3]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -334,8 +327,7 @@ define i32 @multiphi(i32 %k, ptr %p)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[K]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[K]], -2
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -365,8 +357,7 @@ define i32 @multiphi(i32 %k, ptr %p)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -417,8 +408,7 @@ define void @PR30742(ptr %p) {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK4:%.*]] = icmp ult i32 [[TMP4]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK4]], label %[[SCALAR_PH2:.*]], label %[[VECTOR_PH4:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH4]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF6:%.*]] = and i32 [[TMP4]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC7:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF6]]
+; NOTAILFOLD-NEXT:    [[N_VEC7:%.*]] = and i32 [[TMP4]], -2
 ; NOTAILFOLD-NEXT:    [[TMP5:%.*]] = mul i32 [[N_VEC7]], -8
 ; NOTAILFOLD-NEXT:    [[IND_END8:%.*]] = add i32 [[TMP04]], [[TMP5]]
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY7:.*]]
@@ -432,10 +422,10 @@ define void @PR30742(ptr %p) {
 ; NOTAILFOLD-NEXT:    [[CMP_N12:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC7]]
 ; NOTAILFOLD-NEXT:    br i1 [[CMP_N12]], label %[[BB3:.*]], label %[[SCALAR_PH2]]
 ; NOTAILFOLD:       [[SCALAR_PH2]]:
-; NOTAILFOLD-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i32 [ [[IND_END8]], %[[MIDDLE_BLOCK10]] ], [ [[TMP04]], %[[BB1]] ]
+; NOTAILFOLD-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ [[IND_END8]], %[[MIDDLE_BLOCK10]] ], [ [[TMP04]], %[[BB1]] ]
 ; NOTAILFOLD-NEXT:    br label %[[BB2:.*]]
 ; NOTAILFOLD:       [[BB2]]:
-; NOTAILFOLD-NEXT:    [[TMP05:%.*]] = phi i32 [ [[BC_RESUME_VAL10]], %[[SCALAR_PH2]] ], [ [[TMP06:%.*]], %[[BB2]] ]
+; NOTAILFOLD-NEXT:    [[TMP05:%.*]] = phi i32 [ [[BC_RESUME_VAL9]], %[[SCALAR_PH2]] ], [ [[TMP06:%.*]], %[[BB2]] ]
 ; NOTAILFOLD-NEXT:    [[TMP06]] = add i32 [[TMP05]], -8
 ; NOTAILFOLD-NEXT:    [[LOOP1_EC:%.*]] = icmp sgt i32 [[TMP06]], 0
 ; NOTAILFOLD-NEXT:    br i1 [[LOOP1_EC]], label %[[BB2]], label %[[BB3]], {{!llvm.loop ![0-9]+}}
@@ -454,8 +444,7 @@ define void @PR30742(ptr %p) {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP14]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP14]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP14]], [[N_MOD_VF]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP14]], -2
 ; NOTAILFOLD-NEXT:    [[TMP16:%.*]] = mul i32 [[N_VEC]], -8
 ; NOTAILFOLD-NEXT:    [[IND_END:%.*]] = add i32 [[TMP12]], [[TMP16]]
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -497,8 +486,7 @@ define void @PR30742(ptr %p) {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH1:.*]]
 ; TAILFOLD:       [[VECTOR_PH1]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP2:%.*]] = add i32 [[TMP8]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF3:%.*]] = and i32 [[N_RND_UP2]], 1
-; TAILFOLD-NEXT:    [[N_VEC4:%.*]] = sub i32 [[N_RND_UP2]], [[N_MOD_VF3]]
+; TAILFOLD-NEXT:    [[N_VEC4:%.*]] = and i32 [[N_RND_UP2]], -2
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], -8
 ; TAILFOLD-NEXT:    [[TMP10:%.*]] = add i32 [[START1]], [[TMP9]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY5:.*]]
@@ -524,8 +512,7 @@ define void @PR30742(ptr %p) {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP20]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -735,9 +722,8 @@ define i32 @postinc_sub(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[K]], -2
 ; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[K]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
-; NOTAILFOLD-NEXT:    [[TMP0:%.*]] = sub i32 [[K]], [[N_VEC]]
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -748,7 +734,7 @@ define i32 @postinc_sub(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
 ; NOTAILFOLD-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; NOTAILFOLD:       [[SCALAR_PH]]:
-; NOTAILFOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ [[K]], %[[ENTRY]] ]
+; NOTAILFOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_MOD_VF]], %[[MIDDLE_BLOCK]] ], [ [[K]], %[[ENTRY]] ]
 ; NOTAILFOLD-NEXT:    br label %[[FOR_BODY:.*]]
 ; NOTAILFOLD:       [[FOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
@@ -756,7 +742,7 @@ define i32 @postinc_sub(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], 0
 ; NOTAILFOLD-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; NOTAILFOLD:       [[FOR_END]]:
-; NOTAILFOLD-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], %[[FOR_BODY]] ], [ [[TMP0]], %[[MIDDLE_BLOCK]] ]
+; NOTAILFOLD-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], %[[FOR_BODY]] ], [ [[N_MOD_VF]], %[[MIDDLE_BLOCK]] ]
 ; NOTAILFOLD-NEXT:    ret i32 [[INC_LCSSA]]
 ;
 ; TAILFOLD-LABEL: define i32 @postinc_sub(
@@ -765,8 +751,7 @@ define i32 @postinc_sub(i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -798,8 +783,7 @@ define i32 @postinc_swapped_ops(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[K]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[K]], -2
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -827,8 +811,7 @@ define i32 @postinc_swapped_ops(i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -860,8 +843,7 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[K]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[K]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[K]], [[N_MOD_VF]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[K]], -2
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
 ; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -892,8 +874,7 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -964,8 +945,7 @@ define ptr @postinc_not_iv_backedge_value_ptr_runtime_tc(ptr %p.init, i64 %n)  {
 ; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NOTAILFOLD:       [[VECTOR_PH]]:
-; NOTAILFOLD-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
-; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; NOTAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 [[N_VEC]]
 ; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NOTAILFOLD:       [[VECTOR_BODY]]:
@@ -999,8 +979,7 @@ define ptr @postinc_not_iv_backedge_value_ptr_runtime_tc(ptr %p.init, i64 %n)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = and i64 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP0]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1037,8 +1016,7 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; VEC-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
@@ -1087,8 +1065,7 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
@@ -1134,8 +1111,7 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = sitofp i64 [[N]] to float
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = fmul fast float [[FPINC]], [[TMP0]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = fadd fast float [[INIT]], [[TMP1]]
@@ -1195,8 +1171,7 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; VEC-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
@@ -1245,8 +1220,7 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
@@ -1292,8 +1266,7 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = sitofp i64 [[N]] to float
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = fmul fast float [[FPINC]], [[TMP0]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = fadd fast float [[INIT]], [[TMP1]]
@@ -1353,8 +1326,7 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; VEC-NEXT:    [[TMP1:%.*]] = fsub fast float [[INIT]], [[TMP0]]
@@ -1403,8 +1375,7 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -2
 ; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fsub fast float [[INIT]], [[TMP0]]
@@ -1450,8 +1421,7 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = sitofp i64 [[N]] to float
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = fmul fast float [[FPINC]], [[TMP0]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = fsub fast float [[INIT]], [[TMP1]]
@@ -1833,8 +1803,7 @@ define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[UMAX]], 1
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
+; VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[UMAX]], -2
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1876,8 +1845,7 @@ define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 2
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[UMAX]], 1
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[UMAX]], -2
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1924,8 +1892,7 @@ define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
@@ -1991,8 +1958,7 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; VEC-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 0
 ; VEC-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[UMAX1]], 1
-; VEC-NEXT:    [[N_VEC:%.*]] = sub i32 [[UMAX1]], [[N_MOD_VF]]
+; VEC-NEXT:    [[N_VEC:%.*]] = and i32 [[UMAX1]], -2
 ; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
 ; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2034,8 +2000,7 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[UMAX]], 2
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTERLEAVE:       [[VECTOR_PH]]:
-; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[UMAX]], 1
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i32 [[UMAX]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i32 [[UMAX]], -2
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -2081,8 +2046,7 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; TAILFOLD-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; TAILFOLD:       [[VECTOR_PH]]:
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP0]], 1
-; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
-; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -2
 ; TAILFOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
 ; TAILFOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]

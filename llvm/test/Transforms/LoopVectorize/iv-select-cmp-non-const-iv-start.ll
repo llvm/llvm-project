@@ -14,8 +14,7 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
-; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[IV_START]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -74,8 +73,7 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
-; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -16
 ; CHECK-VF4IC4-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[IV_START]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -164,8 +162,7 @@ define i64 @select_non_const_iv_start_signed_guard(ptr %a, i64 %rdx_start, i64 %
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP5]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP5]], 3
-; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP5]], [[N_MOD_VF]]
+; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP5]], -4
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
@@ -270,8 +267,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
-; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -4
 ; CHECK-VF4IC1-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[RDX_START]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -335,8 +331,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 15
-; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -16
 ; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[RDX_START]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -433,8 +428,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP15]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP15]], 3
-; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP15]], [[N_MOD_VF]]
+; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP15]], -4
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:

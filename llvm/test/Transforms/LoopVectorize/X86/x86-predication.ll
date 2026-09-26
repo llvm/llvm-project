@@ -123,8 +123,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -192,8 +191,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 8
 ; SINK-GATHER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-GATHER:       [[VECTOR_PH]]:
-; SINK-GATHER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 7
-; SINK-GATHER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
+; SINK-GATHER-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], -8
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT1]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0

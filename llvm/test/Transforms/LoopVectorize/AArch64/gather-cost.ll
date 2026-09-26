@@ -20,8 +20,7 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[SIZE]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; CHECK:       [[VECTOR_PH1]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SIZE]], 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SIZE]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SIZE]], -16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -371,6 +370,7 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
@@ -378,8 +378,7 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP300]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi float [ [[TMP301]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi float [ [[TMP302]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_PH]] ]
-; CHECK-NEXT:    [[N_MOD_VF38:%.*]] = and i64 [[SIZE]], 3
-; CHECK-NEXT:    [[N_VEC39:%.*]] = sub i64 [[SIZE]], [[N_MOD_VF38]]
+; CHECK-NEXT:    [[N_VEC39:%.*]] = and i64 [[SIZE]], -4
 ; CHECK-NEXT:    [[TMP303:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    [[TMP304:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX36]], i64 0
 ; CHECK-NEXT:    [[TMP305:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX37]], i64 0
@@ -478,15 +477,15 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    br i1 [[CMP_N49]], label %[[EXIT]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC39]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX49:%.*]] = phi float [ [[TMP381]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP300]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX50:%.*]] = phi float [ [[TMP382]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP301]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX51:%.*]] = phi float [ [[TMP383]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP302]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX48:%.*]] = phi float [ [[TMP381]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP300]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX49:%.*]] = phi float [ [[TMP382]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP301]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX50:%.*]] = phi float [ [[TMP383]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP302]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[RDX_0:%.*]] = phi float [ [[BC_MERGE_RDX49]], %[[SCALAR_PH]] ], [ [[RDX_0_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[RDX_1:%.*]] = phi float [ [[BC_MERGE_RDX50]], %[[SCALAR_PH]] ], [ [[RDX_1_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[RED_2:%.*]] = phi float [ [[BC_MERGE_RDX51]], %[[SCALAR_PH]] ], [ [[RDX_2_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[RDX_0:%.*]] = phi float [ [[BC_MERGE_RDX48]], %[[SCALAR_PH]] ], [ [[RDX_0_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[RDX_1:%.*]] = phi float [ [[BC_MERGE_RDX49]], %[[SCALAR_PH]] ], [ [[RDX_1_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[RED_2:%.*]] = phi float [ [[BC_MERGE_RDX50]], %[[SCALAR_PH]] ], [ [[RDX_2_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[IV]], [[OFFSET]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i64 [[ADD2]], 3
 ; CHECK-NEXT:    [[GEP_SRC_DATA2:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[MUL2]]

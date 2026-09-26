@@ -14,8 +14,7 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
-; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
-; LMUL1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; LMUL1-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -8
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -62,8 +61,7 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; LMUL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL2:       vector.ph:
-; LMUL2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
-; LMUL2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; LMUL2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -8
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL2:       vector.body:
 ; LMUL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

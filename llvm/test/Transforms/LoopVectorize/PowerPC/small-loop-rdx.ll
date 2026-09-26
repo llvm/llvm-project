@@ -20,8 +20,7 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -72,13 +71,13 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP21]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF22:%.*]] = and i64 [[TMP1]], 1
-; CHECK-NEXT:    [[N_VEC23:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF22]]
+; CHECK-NEXT:    [[N_VEC23:%.*]] = and i64 [[TMP1]], -2
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> zeroinitializer, double [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -96,11 +95,11 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    br i1 [[CMP_N28]], label %[[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC23]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX28:%.*]] = phi double [ [[TMP28]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP21]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX27:%.*]] = phi double [ [[TMP28]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP21]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[REDX_05:%.*]] = phi double [ [[BC_MERGE_RDX28]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[REDX_05:%.*]] = phi double [ [[BC_MERGE_RDX27]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[ARR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD]] = fadd fast double [[TMP29]], [[REDX_05]]

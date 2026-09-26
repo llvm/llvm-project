@@ -11,8 +11,7 @@ define hidden i32 @accumulate_add_u8_u8(ptr noundef readonly  %a, ptr noundef re
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -60,8 +59,7 @@ define hidden i32 @accumulate_add_u8_u8(ptr noundef readonly  %a, ptr noundef re
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-MAX-BANDWIDTH:       [[VECTOR_PH]]:
-; CHECK-MAX-BANDWIDTH-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
-; CHECK-MAX-BANDWIDTH-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -16
 ; CHECK-MAX-BANDWIDTH-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-MAX-BANDWIDTH:       [[VECTOR_BODY]]:
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

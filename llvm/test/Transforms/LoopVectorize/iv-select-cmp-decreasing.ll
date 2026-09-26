@@ -1111,8 +1111,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC1VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; IC1VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1VF4:       [[VECTOR_PH]]:
-; IC1VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
-; IC1VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; IC1VF4-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -4
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; IC1VF4-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; IC1VF4-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -1177,8 +1176,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC4VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
 ; IC4VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF4:       [[VECTOR_PH]]:
-; IC4VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 15
-; IC4VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; IC4VF4-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -16
 ; IC4VF4-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; IC4VF4-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; IC4VF4-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -1285,8 +1283,7 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC4VF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; IC4VF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[EXIT:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF1:       [[VECTOR_PH]]:
-; IC4VF1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
-; IC4VF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; IC4VF1-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -4
 ; IC4VF1-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:

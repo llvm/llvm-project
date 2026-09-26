@@ -1528,6 +1528,15 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   }
 
   const APInt *APC;
+
+  // (X - (X & Y)) -> (X & ~Y)
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_Sub(m_VPValue(X), m_c_BinaryAnd(m_Deferred(X), m_VPValue(Y)))) &&
+      match(Y, m_APInt(APC)))
+    return Builder.createAnd(X, Plan.getConstantInt(~(*APC)),
+                             Def->getDebugLoc());
+
   if (CanCreateNewRecipe && match(Def, m_URem(m_VPValue(X), m_APInt(APC))) &&
       APC->isPowerOf2())
     return Builder.createAnd(X, Plan.getConstantInt(*APC - 1),

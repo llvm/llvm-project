@@ -25,8 +25,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA510-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA510:       [[VECTOR_PH]]:
-; CHECK-CA510-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; CHECK-CA510-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-CA510-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; CHECK-CA510-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-CA510:       [[VECTOR_BODY]]:
 ; CHECK-CA510-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -91,8 +90,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA520-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA520:       [[VECTOR_PH]]:
-; CHECK-CA520-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; CHECK-CA520-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-CA520-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; CHECK-CA520-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-CA520:       [[VECTOR_BODY]]:
 ; CHECK-CA520-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -157,8 +155,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA320-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA320:       [[VECTOR_PH]]:
-; CHECK-CA320-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; CHECK-CA320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-CA320-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; CHECK-CA320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-CA320:       [[VECTOR_BODY]]:
 ; CHECK-CA320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

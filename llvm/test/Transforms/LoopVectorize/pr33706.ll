@@ -50,8 +50,7 @@ define void @PR33706(ptr nocapture readonly %arg, ptr nocapture %arg1, i32 %arg2
 ; CHECK-NEXT:    [[TMP21:%.*]] = or i1 [[TMP17]], [[TMP20]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP4]], 1
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[TMP22]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP4]], -2
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul i32 [[TMP23]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[VAR_TMP5]], [[TMP24]]

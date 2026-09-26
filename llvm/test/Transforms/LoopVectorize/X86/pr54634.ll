@@ -27,8 +27,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult i64 [[TMP8]], 16
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP8]], 15
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP8]], -16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
@@ -64,12 +63,12 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[L44:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[TMP8]], 3
-; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF4]]
+; CHECK-NEXT:    [[N_VEC5:%.*]] = and i64 [[TMP8]], -4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT10]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0

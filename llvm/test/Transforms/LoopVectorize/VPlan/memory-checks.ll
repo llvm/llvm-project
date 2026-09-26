@@ -32,8 +32,7 @@ define void @three_groups_shared_bounds(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<-4>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
@@ -90,8 +89,7 @@ define void @ptr_minmax_bounds(ptr %a, ptr %b, i64 %n, i64 %s, i64 %t) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = and ir<%n>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = and ir<%n>, ir<-4>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<%step>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = step-vector i64
 ; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = broadcast ir<4>
@@ -143,8 +141,7 @@ define void @diff_check(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<-4>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
@@ -213,8 +210,7 @@ define void @bound_is_addrec_of_sibling_loop(ptr %a, ptr %b, i64 %n, i64 %d, i1 
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and ir<%n>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and ir<%n>, ir<-4>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast ir<%d>
 ; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = broadcast ir<%n>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = broadcast ir<%cond>

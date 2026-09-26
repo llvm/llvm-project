@@ -19,8 +19,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
 ; INTERLEAVE-4-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE-4:       vector.ph:
-; INTERLEAVE-4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; INTERLEAVE-4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-4-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; INTERLEAVE-4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE-4:       vector.body:
 ; INTERLEAVE-4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -51,13 +50,13 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; INTERLEAVE-4-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; INTERLEAVE-4:       vec.epilog.iter.check:
+; INTERLEAVE-4-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; INTERLEAVE-4-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; INTERLEAVE-4-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; INTERLEAVE-4:       vec.epilog.ph:
 ; INTERLEAVE-4-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; INTERLEAVE-4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; INTERLEAVE-4-NEXT:    [[N_MOD_VF10:%.*]] = and i64 [[N]], 3
-; INTERLEAVE-4-NEXT:    [[N_VEC11:%.*]] = sub i64 [[N]], [[N_MOD_VF10]]
+; INTERLEAVE-4-NEXT:    [[N_VEC11:%.*]] = and i64 [[N]], -4
 ; INTERLEAVE-4-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; INTERLEAVE-4-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; INTERLEAVE-4:       vec.epilog.vector.body:
@@ -98,8 +97,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
 ; INTERLEAVE-2-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH1:%.*]]
 ; INTERLEAVE-2:       vector.ph:
-; INTERLEAVE-2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; INTERLEAVE-2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-2-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; INTERLEAVE-2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE-2:       vector.body:
 ; INTERLEAVE-2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -130,13 +128,13 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; INTERLEAVE-2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; INTERLEAVE-2:       vec.epilog.iter.check:
+; INTERLEAVE-2-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; INTERLEAVE-2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; INTERLEAVE-2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; INTERLEAVE-2:       vec.epilog.ph:
 ; INTERLEAVE-2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
 ; INTERLEAVE-2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
-; INTERLEAVE-2-NEXT:    [[N_MOD_VF10:%.*]] = and i64 [[N]], 3
-; INTERLEAVE-2-NEXT:    [[N_VEC11:%.*]] = sub i64 [[N]], [[N_MOD_VF10]]
+; INTERLEAVE-2-NEXT:    [[N_VEC11:%.*]] = and i64 [[N]], -4
 ; INTERLEAVE-2-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; INTERLEAVE-2-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE-2:       vec.epilog.vector.body:

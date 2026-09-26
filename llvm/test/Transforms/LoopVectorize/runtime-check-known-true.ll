@@ -26,8 +26,7 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP4]], -4
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], -8
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[TMP9]]

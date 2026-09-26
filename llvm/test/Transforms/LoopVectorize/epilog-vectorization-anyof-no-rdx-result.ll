@@ -102,8 +102,7 @@ define i32 @dead_anyof_reduction_blend(i1 %c0, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[SMAX]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[TMP0]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], -4
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -114,12 +113,12 @@ define i32 @dead_anyof_reduction_blend(i1 %c0, i32 %n) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[SMAX]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[SMAX]], 1
-; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i32 [[SMAX]], [[TMP2]]
+; CHECK-NEXT:    [[N_VEC2:%.*]] = and i32 [[SMAX]], -2
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX3:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -131,11 +130,11 @@ define i32 @dead_anyof_reduction_blend(i1 %c0, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C0]], label %[[LOOP_LATCH]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[IV]], 0
@@ -157,8 +156,7 @@ define i32 @dead_anyof_reduction_blend(i1 %c0, i32 %n) {
 ; CHECK-IL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; CHECK-IL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-IL2:       [[VECTOR_PH]]:
-; CHECK-IL2-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 7
-; CHECK-IL2-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP1]]
+; CHECK-IL2-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP0]], -8
 ; CHECK-IL2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-IL2:       [[VECTOR_BODY]]:
 ; CHECK-IL2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

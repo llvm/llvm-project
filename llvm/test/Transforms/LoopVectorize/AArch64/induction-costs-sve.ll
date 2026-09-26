@@ -66,8 +66,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_PH]]:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; DEFAULT-NEXT:    [[TMP26:%.*]] = and i64 [[TMP0]], 7
-; DEFAULT-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[TMP26]]
+; DEFAULT-NEXT:    [[N_VEC5:%.*]] = and i64 [[TMP0]], -8
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT6]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP27:%.*]] = trunc <8 x i32> [[BROADCAST_SPLAT7]] to <8 x i16>
@@ -204,8 +203,7 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 3
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -298,8 +296,7 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[TMP14:%.*]] = and i64 [[TMP0]], 3
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP14]]
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
@@ -402,8 +399,7 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 3
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
@@ -514,8 +510,7 @@ define void @exit_cond_zext_iv_store32(ptr %dst, i64 %N) {
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
 ; DEFAULT-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[TMP7:%.*]] = and i64 [[TMP0]], 3
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP7]]
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
@@ -568,8 +563,7 @@ define void @exit_cond_zext_iv_store32(ptr %dst, i64 %N) {
 ; PRED-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 3
-; PRED-NEXT:    [[TMP7:%.*]] = and i64 [[N_RND_UP]], 3
-; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP7]]
+; PRED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -4
 ; PRED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -662,8 +656,7 @@ define void @exit_cond_zext_iv_store64(ptr %dst, i64 %N) {
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
 ; DEFAULT-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[TMP7:%.*]] = and i64 [[TMP0]], 3
-; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP7]]
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:

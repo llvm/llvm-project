@@ -16,8 +16,7 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -32
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE]], i32 15
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -105,8 +104,7 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -32
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE45]], i32 15
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT1:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE44]], i32 15

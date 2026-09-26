@@ -15,8 +15,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 15
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
-; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; IF-EVL-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
@@ -49,8 +48,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 64
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 63
-; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; NO-VP-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -64
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -89,12 +87,12 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; NO-VP:       vec.epilog.iter.check:
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; NO-VP-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; NO-VP:       vec.epilog.ph:
 ; NO-VP-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; NO-VP-NEXT:    [[N_MOD_VF9:%.*]] = and i64 [[N]], 7
-; NO-VP-NEXT:    [[N_VEC10:%.*]] = sub i64 [[N]], [[N_MOD_VF9]]
+; NO-VP-NEXT:    [[N_VEC10:%.*]] = and i64 [[N]], -8
 ; NO-VP-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; NO-VP:       vec.epilog.vector.body:
 ; NO-VP-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]

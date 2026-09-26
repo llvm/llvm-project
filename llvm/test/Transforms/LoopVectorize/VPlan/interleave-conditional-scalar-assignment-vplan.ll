@@ -25,8 +25,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; IC2-EMPTY:
 ; IC2-NEXT:  vector.ph:
-; IC2-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%N>, ir<7>
-; IC2-NEXT:    EMIT vp<%n.vec> = sub ir<%N>, vp<[[VP3]]>
+; IC2-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%N>, ir<-8>
 ; IC2-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast ir<%a>
 ; IC2-NEXT:  Successor(s): vector.body
 ; IC2-EMPTY:
@@ -50,13 +49,13 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-NEXT:    EMIT vp<[[VP13]]> = select vp<[[VP10]]>, ir<%ld>, ir<%data.phi>
 ; IC2-NEXT:    EMIT vp<[[VP14]]> = select vp<[[VP10]]>, ir<%ld>.1, ir<%data.phi>.1
 ; IC2-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
-; IC2-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; IC2-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP3]]>
 ; IC2-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
 ; IC2-NEXT:  Successor(s): middle.block, vector.body
 ; IC2-EMPTY:
 ; IC2-NEXT:  middle.block:
 ; IC2-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP13]]>, vp<[[VP11]]>, vp<[[VP14]]>, vp<[[VP12]]>
-; IC2-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<%n.vec>
+; IC2-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP3]]>
 ; IC2-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; IC2-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; IC2-EMPTY:
@@ -65,7 +64,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-NEXT:  No successors
 ; IC2-EMPTY:
 ; IC2-NEXT:  ir-bb<scalar.ph>:
-; IC2-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%n.vec>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; IC2-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; IC2-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP17]]>, middle.block ], [ ir<-1>, ir-bb<entry> ]
 ; IC2-NEXT:  Successor(s): ir-bb<loop>
 ; IC2-EMPTY:
@@ -90,8 +89,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-EMPTY:
 ; IC2-TF-NEXT:  vector.ph:
 ; IC2-TF-NEXT:    EMIT vp<%n.rnd.up> = add ir<%N>, ir<7>
-; IC2-TF-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = and vp<%n.rnd.up>, ir<7>
-; IC2-TF-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<[[VP2]]>
+; IC2-TF-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = and vp<%n.rnd.up>, ir<-8>
 ; IC2-TF-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
 ; IC2-TF-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; IC2-TF-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast ir<%a>
@@ -127,7 +125,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-NEXT:    EMIT vp<[[VP21]]> = select vp<[[VP18]]>, ir<%ld>, ir<%data.phi>
 ; IC2-TF-NEXT:    EMIT vp<[[VP22]]> = select vp<[[VP18]]>, ir<%ld>.1, ir<%data.phi>.1
 ; IC2-TF-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<8>
-; IC2-TF-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; IC2-TF-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; IC2-TF-NEXT:    EMIT branch-on-cond vp<[[VP23]]>
 ; IC2-TF-NEXT:  Successor(s): middle.block, vector.body
 ; IC2-TF-EMPTY:

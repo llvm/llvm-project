@@ -343,8 +343,7 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_EXT]], 4
 ; I64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
-; I64-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_EXT]], 3
-; I64-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_EXT]], [[N_MOD_VF]]
+; I64-NEXT:    [[N_VEC:%.*]] = and i64 [[N_EXT]], -4
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -389,8 +388,7 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_EXT]], 4
 ; I32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:
-; I32-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_EXT]], 3
-; I32-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_EXT]], [[N_MOD_VF]]
+; I32-NEXT:    [[N_VEC:%.*]] = and i64 [[N_EXT]], -4
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -710,8 +708,7 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
 ; I32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:
-; I32-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 7
-; I32-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
+; I32-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP1]], -8
 ; I32-NEXT:    [[TMP2:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; I32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC_2]], i64 0
 ; I32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT]], <8 x ptr> poison, <8 x i32> zeroinitializer

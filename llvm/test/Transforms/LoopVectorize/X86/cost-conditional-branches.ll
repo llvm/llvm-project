@@ -183,8 +183,7 @@ define i64 @avx512_cond_load_cost(ptr %src, i32 %a, i64 %b, i32 %c, i32 %d) #1 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 7
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP0]], -8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[C]], i64 0

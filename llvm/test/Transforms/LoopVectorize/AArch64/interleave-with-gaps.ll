@@ -450,8 +450,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF:       [[SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP44]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NOTF-NEXT:    [[N_MOD_VF13:%.*]] = and i64 [[N]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC14:%.*]] = sub i64 [[N]], [[N_MOD_VF13]]
+; CHECK-NOTF-NEXT:    [[N_VEC14:%.*]] = and i64 [[N]], -4
 ; CHECK-NOTF-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
@@ -474,11 +473,11 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N22]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NOTF:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC14]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i32 [ [[TMP51]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP44]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX21:%.*]] = phi i32 [ [[TMP51]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP44]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NOTF-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK-NOTF:       [[LOOP1]]:
 ; CHECK-NOTF-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NOTF-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX22]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NOTF-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX21]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NOTF-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV1]], i32 0
 ; CHECK-NOTF-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NOTF-NEXT:    [[ADD:%.*]] = add nsw i32 [[RDX]], [[LD1]]
@@ -570,8 +569,7 @@ define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -866,8 +864,7 @@ define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1071,8 +1068,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF:       [[SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP45]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NOTF-NEXT:    [[N_MOD_VF24:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC25:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF24]]
+; CHECK-NOTF-NEXT:    [[N_VEC25:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NOTF-NEXT:    [[TMP46:%.*]] = sub i64 [[N]], [[N_VEC25]]
 ; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
@@ -1100,12 +1096,12 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[CMP_N36:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC25]]
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N36]], label %[[EXIT_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NOTF:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL36:%.*]] = phi i64 [ [[TMP46]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[LOOP_PREHEADER]] ]
-; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi i32 [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP45]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL35:%.*]] = phi i64 [ [[TMP46]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[LOOP_PREHEADER]] ]
+; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi i32 [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP45]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NOTF-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK-NOTF:       [[LOOP1]]:
-; CHECK-NOTF-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL36]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NOTF-NEXT:    [[RDX:%.*]] = phi i32 [ [[RDX_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_MERGE_RDX37]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NOTF-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL35]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NOTF-NEXT:    [[RDX:%.*]] = phi i32 [ [[RDX_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_MERGE_RDX36]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NOTF-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[IV1]]
 ; CHECK-NOTF-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NOTF-NEXT:    [[ADD:%.*]] = add nsw i32 [[LD1]], [[RDX]]
@@ -1200,8 +1196,7 @@ define void @store_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
@@ -1331,8 +1326,7 @@ define i32 @load_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
@@ -1492,8 +1486,7 @@ define void @store_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
-; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
 ; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:

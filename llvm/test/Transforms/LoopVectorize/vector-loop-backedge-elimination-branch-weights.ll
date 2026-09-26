@@ -11,8 +11,7 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF8UF1-NEXT:  [[ENTRY:.*:]]
 ; VF8UF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
-; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VF8UF1-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
@@ -48,8 +47,7 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF8UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; VF8UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0:![0-9]+]]
 ; VF8UF2:       [[VECTOR_PH]]:
-; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VF8UF2-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
@@ -87,8 +85,7 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF16UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; VF16UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0:![0-9]+]]
 ; VF16UF1:       [[VECTOR_PH]]:
-; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
-; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VF16UF1-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; VF16UF1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:

@@ -18,8 +18,7 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF1-EMPTY:
 ; UF1-NEXT:  vector.ph:
 ; UF1-NEXT:    EMIT vp<%n.rnd.up> = add ir<%N>, ir<3>
-; UF1-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = and vp<%n.rnd.up>, ir<3>
-; UF1-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<[[VP2]]>
+; UF1-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = and vp<%n.rnd.up>, ir<-4>
 ; UF1-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
 ; UF1-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; UF1-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
@@ -41,7 +40,7 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF1-NEXT:    WIDEN ir<%sum.b.next> = add ir<%sum.b>, ir<%lb>
 ; UF1-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<4>
 ; UF1-NEXT:    EMIT vp<%vec.ind.next> = add nuw vp<[[VP7]]>, vp<[[VP6]]>
-; UF1-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; UF1-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; UF1-NEXT:    EMIT branch-on-cond vp<[[VP9]]>
 ; UF1-NEXT:  Successor(s): middle.block, vector.body
 ; UF1-EMPTY:
@@ -56,8 +55,7 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF4-EMPTY:
 ; UF4-NEXT:  vector.ph:
 ; UF4-NEXT:    EMIT vp<%n.rnd.up> = add ir<%N>, ir<15>
-; UF4-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = and vp<%n.rnd.up>, ir<15>
-; UF4-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<[[VP2]]>
+; UF4-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = and vp<%n.rnd.up>, ir<-16>
 ; UF4-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
 ; UF4-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; UF4-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
@@ -114,7 +112,7 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF4-NEXT:    WIDEN ir<%sum.b.next>.2 = add ir<%sum.b>.2, ir<%lb>.2
 ; UF4-NEXT:    WIDEN ir<%sum.b.next>.3 = add ir<%sum.b>.3, ir<%lb>.3
 ; UF4-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<16>
-; UF4-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; UF4-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; UF4-NEXT:    EMIT branch-on-cond vp<[[VP23]]>
 ; UF4-NEXT:  Successor(s): middle.block, vector.body
 ; UF4-EMPTY:
