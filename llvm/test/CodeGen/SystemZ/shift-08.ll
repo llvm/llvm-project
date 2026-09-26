@@ -113,12 +113,10 @@ define i64 @f8(i64 %a, i64 %amt) {
   ret i64 %or
 }
 
-; Check the next value up, which without masking must use a separate
-; addition.
+; Check that an out-of-range constant with zero low shift bits is eliminated.
 define i64 @f9(i64 %a, i64 %amt) {
 ; CHECK-LABEL: f9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    afi %r3, 524288
 ; CHECK-NEXT:    rllg %r2, %r2, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %add = add i64 %amt, 524288
@@ -148,7 +146,7 @@ define i64 @f10(i64 %a, i64 %amt) {
 define i64 @f11(i64 %a, i64 %amt) {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rllg %r2, %r2, -524288(%r3)
+; CHECK-NEXT:    rllg %r2, %r2, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %suba = sub i64 %amt, 524288
   %subb = sub i64 64, %suba
