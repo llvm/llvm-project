@@ -13318,6 +13318,9 @@ public:
       /// We are performing overload resolution for a call to a function
       /// template or variable template named 'sycl_kernel_launch'.
       SYCLKernelLaunchOverloadResolution,
+
+      /// We are copying a constant template argument.
+      CopyingTemplateArg,
     } Kind;
 
     /// Whether we're substituting into constraints.

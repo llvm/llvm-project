@@ -5751,8 +5751,9 @@ def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
 def err_template_arg_not_equivalent_to_its_copy : Error<
   "non-type template argument is not equivalent to its copy">;
-def note_template_arg_requires_copy : Note<
-  "non-type template argument is required to be copyable">;
+def note_copying_template_arg_here : Note<
+  "while copying the non-type template argument "
+  "to verify the copy is equivalent here">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
 def err_pointer_to_member_type : Error<

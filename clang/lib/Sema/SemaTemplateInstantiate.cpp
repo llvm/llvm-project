@@ -594,6 +594,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case PartialOrderingTTP:
   case SYCLKernelLaunchLookup:
   case SYCLKernelLaunchOverloadResolution:
+  case CopyingTemplateArg:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -1308,6 +1309,10 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
                                                 Active->NumCallArgs)));
       break;
     }
+    case CodeSynthesisContext::CopyingTemplateArg:
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_copying_template_arg_here));
+      break;
     }
   }
 }

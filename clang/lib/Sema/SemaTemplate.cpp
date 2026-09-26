@@ -7145,6 +7145,10 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
                                                  const APValue &Value,
                                                  SourceLocation ArgLoc) {
   assert(ParamType->isRecordType() && "no need to check copy equivalence");
+  // Do not create a template parameter object of instantiation-dependent type.
+  // We cannot update its type to make it non-dependent.
+  assert(!ParamType->isInstantiationDependentType() &&
+         "do not check this when the type is instantiation-dependent");
 
   // Fast path. Try to find the copy constructor which will be selected by
   // overload resolution. Trivial copy constructor performs per-element copy.
@@ -7167,47 +7171,57 @@ static bool CheckTemplateArgumentCopyEquivalence(Sema &S, NamedDecl *Param,
           // See comment in `SetEligibleMethods` in SemaDecl.cpp.
           return Ctor->isCopyConstructor(Quals) && Quals == Qualifiers::Const &&
                  !Ctor->isIneligibleOrNotSelected() && Ctor->isTrivial() &&
-                 !Ctor->isDeleted() && !Ctor->isExplicit();
+                 !Ctor->isDeleted() && !Ctor->isExplicit() &&
+                 Ctor->getAccess() == AS_public;
         }))
       return false;
   }
 
   SourceLocation ParamLoc = Param->getLocation();
+  Sema::NonSFINAEContext _(S);
 
-  // Instead of creating a variable (C++26 [temp.arg.nontype]p3),
-  // create a template parameter object to represent the candidate initializer.
-  // They are equivalent when creating a copy.
-  auto *CandidateInitializer =
-      S.BuildDeclRefExpr(S.Context.getTemplateParamObjectDecl(ParamType, Value),
-                         ParamType.withConst(), VK_LValue, ArgLoc);
-  InitializationKind Kind = InitializationKind::CreateForInit(
-      ArgLoc, /*DirectInit=*/false, CandidateInitializer);
-  Expr *Inits[1] = {CandidateInitializer};
-  InitializedEntity Entity =
-      InitializedEntity::InitializeTemplateParameter(ParamType, Param);
-  InitializationSequence InitSeq(S, Entity, Kind, Inits);
-  ExprResult Result = InitSeq.Perform(S, Entity, Kind, Inits);
-  if (Result.isInvalid())
-    return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
+  {
+    Sema::CodeSynthesisContext Ctx;
+    Ctx.Kind = Sema::CodeSynthesisContext::CopyingTemplateArg;
+    Ctx.PointOfInstantiation = ArgLoc;
+    Ctx.Entity = Param;
+    Sema::ScopedCodeSynthesisContext ScopedCtx(S, Ctx);
 
-  Result = S.ActOnConstantExpression(Result);
-  Result = S.ActOnFinishFullExpr(AssertSuccess(Result), ArgLoc,
-                                 /*DiscardedValue=*/false,
-                                 /*IsConstexpr=*/true,
-                                 /*IsTemplateArgument=*/true);
+    // Instead of creating a variable (C++26 [temp.arg.nontype]p3),
+    // create a template parameter object to represent the candidate
+    // initializer. They are equivalent when creating a copy.
+    auto *CandidateInitializer = S.BuildDeclRefExpr(
+        S.Context.getTemplateParamObjectDecl(ParamType, Value),
+        ParamType.withConst(), VK_LValue, ArgLoc);
+    InitializationKind Kind = InitializationKind::CreateForInit(
+        ArgLoc, /*DirectInit=*/false, CandidateInitializer);
+    Expr *Inits[1] = {CandidateInitializer};
+    InitializedEntity Entity =
+        InitializedEntity::InitializeTemplateParameter(ParamType, Param);
+    InitializationSequence InitSeq(S, Entity, Kind, Inits);
+    ExprResult Result = InitSeq.Perform(S, Entity, Kind, Inits);
+    if (Result.isInvalid())
+      return true;
 
-  APValue ValueAfterCopy, PreNarrowingValue;
-  Result = S.EvaluateConvertedConstantExpression(
-      AssertSuccess(Result), ParamType, ValueAfterCopy, CCEKind::TemplateArg,
-      /*RequireInt=*/false, PreNarrowingValue);
-  if (Result.isInvalid())
-    return S.Diag(ParamLoc, diag::note_template_arg_requires_copy);
+    Result = S.ActOnConstantExpression(Result);
+    Result = S.ActOnFinishFullExpr(AssertSuccess(Result), ArgLoc,
+                                   /*DiscardedValue=*/false,
+                                   /*IsConstexpr=*/true,
+                                   /*IsTemplateArgument=*/true);
 
-  llvm::FoldingSetNodeID VID, CID;
-  Value.Profile(VID);
-  ValueAfterCopy.Profile(CID);
-  if (VID == CID)
-    return false;
+    APValue ValueAfterCopy, PreNarrowingValue;
+    Result = S.EvaluateConvertedConstantExpression(
+        AssertSuccess(Result), ParamType, ValueAfterCopy, CCEKind::TemplateArg,
+        /*RequireInt=*/false, PreNarrowingValue);
+    if (Result.isInvalid())
+      return true;
+
+    llvm::FoldingSetNodeID VID, CID;
+    Value.Profile(VID);
+    ValueAfterCopy.Profile(CID);
+    if (VID == CID)
+      return false;
+  }
 
   S.Diag(ArgLoc, diag::err_template_arg_not_equivalent_to_its_copy);
   if (Param->getDeclName())

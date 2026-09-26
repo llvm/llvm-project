@@ -476,6 +476,8 @@ private:
       return "SYCLKernelLaunchLookup";
     case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution:
       return "SYCLKernelLaunchOverloadResolution";
+    case CodeSynthesisContext::CopyingTemplateArg:
+      return "CopyingTemplateArg";
     }
     return "";
   }
