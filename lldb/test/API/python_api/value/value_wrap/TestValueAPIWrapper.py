@@ -226,13 +226,13 @@ class ValueAPIWrapper(TestBase):
         self.assertEqual(kind, 6)
 
         # Test __itruediv__(other).
-        kind /= 2
-        self.assertEqual(kind, 3)
-        self.assertIsInstance(kind, float)
-        kind = engine.kind
-        # Keeps its value, because we try to set "3.0".
-        # FIXME: Raise error here.
+        with self.assertRaisesRegex(
+            ValueError,
+            r"^Failed to set value: '3\.0' is not a valid integer string value$",
+        ):
+            kind /= 2
         self.assertEqual(kind, 6)
+        self.assertIsInstance(kind, lldb.value)
 
         # Test __ifloordiv__(other).
         kind //= 5
