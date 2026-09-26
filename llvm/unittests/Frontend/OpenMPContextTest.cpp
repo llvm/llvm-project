@@ -574,6 +574,25 @@ TEST_F(OpenMPContextTest, StrictSubsetScoreIsZero) {
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
 }
 
+TEST_F(OpenMPContextTest, PreserveSubsetAdjustedScores) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt High(64, 100), Low(64, 1), Guard(64, 20), Medium(64, 10);
+  VariantMatchInfo Subset, Superset, Other;
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &High);
+  Superset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Low);
+  Superset.addTrait(TraitProperty::user_condition_true, "flag", &Guard);
+  Other.addTrait(TraitProperty::user_condition_true, "literal", &Medium);
+  SmallVector<VariantMatchInfo, 3> Candidates{Subset, Superset, Other};
+  auto Scores = getVariantMatchScores(Candidates, Context);
+  ASSERT_TRUE(Scores[0] && Scores[1] && Scores[2]);
+  EXPECT_EQ(Scores[0]->getZExtValue(), 0u);
+  EXPECT_EQ(Scores[1]->getZExtValue(), 22u);
+  EXPECT_EQ(Scores[2]->getZExtValue(), 11u);
+  // Consumers can retain these scores after the superset's runtime guard
+  // fails, so Other continues to precede Subset.
+  EXPECT_TRUE(Scores[0]->zext(64).ult(Scores[2]->zext(64)));
+}
+
 TEST_F(OpenMPContextTest, IncompatibleSupersetDoesNotZeroScore) {
   OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
   APInt HighScore(64, 100), LowScore(64, 5);

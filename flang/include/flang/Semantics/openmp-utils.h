@@ -265,6 +265,8 @@ struct MetadirectiveCandidate {
   bool isExplicit{false};
   std::optional<DynamicUserCondition> dynamicCondition;
   bool conditionShouldBeTrue{true};
+  /// Position in the original candidate ordering, including subset scores.
+  unsigned rank{0};
 };
 
 struct MetadirectiveCandidateSet {
@@ -281,10 +283,10 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     const parser::OmpClauseList &clauses, SemanticsContext &context,
     const OmpVariantMatchContext &matchContext);
 
+/// Select the first remaining candidate in the original ranking.
 std::optional<unsigned> SelectBestMetadirectiveCandidate(
     llvm::ArrayRef<unsigned> candidateIndices,
-    llvm::ArrayRef<MetadirectiveCandidate> candidates,
-    const OmpVariantMatchContext &matchContext);
+    llvm::ArrayRef<MetadirectiveCandidate> candidates);
 
 /// Return true when repeated evaluation of \p condition cannot call a
 /// procedure or observe asynchronously changing state.
@@ -300,13 +302,13 @@ bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
     unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
     llvm::ArrayRef<MetadirectiveCandidate> candidates,
-    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+    SemanticsContext &context);
 
 /// Return every replacement that can be selected, retaining lower-ranked
 /// candidates after a dynamic condition. Null represents NOTHING.
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
-GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
-    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+GetReachableMetadirectiveVariants(
+    const MetadirectiveCandidateSet &candidateSet, SemanticsContext &context);
 
 /// True if a variant guarded by \p selector may be selected in the current
 /// compilation context.

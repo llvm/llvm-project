@@ -2809,48 +2809,36 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       result.fallback = getFallbackVariant(defaultVariantClause->v.v.value());
     }
   }
+  // Rank against the complete set once. Removing a failed runtime guard must
+  // not restore the raw score of a selector that was its strict subset.
+  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
+  llvm::SmallVector<unsigned, 4> order;
+  for (const auto &[index, candidate] : llvm::enumerate(result.candidates)) {
+    vmis.push_back(candidate.vmi);
+    order.push_back(index);
+  }
+  auto scores{llvm::omp::getVariantMatchScores(vmis, matchContext)};
+  llvm::stable_sort(order, [&](unsigned a, unsigned b) {
+    CHECK(scores[a] && scores[b]);
+    const auto &left{*scores[a]}, &right{*scores[b]};
+    unsigned width{std::max(left.getBitWidth(), right.getBitWidth())};
+    if (left.zextOrTrunc(width) != right.zextOrTrunc(width))
+      return left.zextOrTrunc(width).ugt(right.zextOrTrunc(width));
+    return result.candidates[a].isExplicit && !result.candidates[b].isExplicit;
+  });
+  for (auto [rank, index] : llvm::enumerate(order))
+    result.candidates[index].rank = rank;
   return result;
 }
 
 std::optional<unsigned> SelectBestMetadirectiveCandidate(
     llvm::ArrayRef<unsigned> candidateIndices,
-    llvm::ArrayRef<MetadirectiveCandidate> candidates,
-    const OmpVariantMatchContext &matchContext) {
-  if (candidateIndices.empty()) {
+    llvm::ArrayRef<MetadirectiveCandidate> candidates) {
+  if (candidateIndices.empty())
     return std::nullopt;
-  }
-  if (candidateIndices.size() == 1) {
-    return candidateIndices.front();
-  }
-
-  // The context scorer preserves input order for ties. Explicit replacements
-  // take precedence over an omitted directive's implicit NOTHING.
-  llvm::SmallVector<unsigned, 4> candidateOrder;
-  candidateOrder.reserve(candidateIndices.size());
-  for (unsigned index : candidateIndices) {
-    if (candidates[index].isExplicit) {
-      candidateOrder.push_back(index);
-    }
-  }
-  for (unsigned index : candidateIndices) {
-    if (!candidates[index].isExplicit) {
-      candidateOrder.push_back(index);
-    }
-  }
-
-  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> orderedVMIs;
-  orderedVMIs.reserve(candidateOrder.size());
-  for (unsigned index : candidateOrder) {
-    orderedVMIs.push_back(candidates[index].vmi);
-  }
-
-  int bestIndex{
-      llvm::omp::getBestVariantMatchForContext(orderedVMIs, matchContext)};
-  if (bestIndex < 0) {
-    return std::nullopt;
-  }
-  CHECK(static_cast<std::size_t>(bestIndex) < candidateOrder.size());
-  return candidateOrder[bestIndex];
+  return *llvm::min_element(candidateIndices, [&](unsigned a, unsigned b) {
+    return candidates[a].rank < candidates[b].rank;
+  });
 }
 
 namespace {
@@ -2917,7 +2905,7 @@ bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
     unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
     llvm::ArrayRef<MetadirectiveCandidate> candidates,
-    const OmpVariantMatchContext &matchContext, SemanticsContext &context) {
+    SemanticsContext &context) {
   CHECK(selectedIndex < candidates.size());
   const MetadirectiveCandidate &selected{candidates[selectedIndex]};
   CHECK(selected.dynamicCondition);
@@ -2934,8 +2922,8 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
   // condition because it can change state before a lower-ranked occurrence is
   // evaluated.
   llvm::SmallVector<unsigned, 4> candidatesToInspect{result};
-  while (std::optional<unsigned> next{SelectBestMetadirectiveCandidate(
-      candidatesToInspect, candidates, matchContext)}) {
+  while (std::optional<unsigned> next{
+      SelectBestMetadirectiveCandidate(candidatesToInspect, candidates)}) {
     const MetadirectiveCandidate &candidate{candidates[*next]};
     if (!candidate.dynamicCondition ||
         !IsRepeatableMetadirectiveCondition(
@@ -2955,8 +2943,8 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
 }
 
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
-GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
-    const OmpVariantMatchContext &matchContext, SemanticsContext &context) {
+GetReachableMetadirectiveVariants(
+    const MetadirectiveCandidateSet &candidateSet, SemanticsContext &context) {
   llvm::SmallVector<unsigned, 4> candidates;
   candidates.reserve(candidateSet.candidates.size());
   for (unsigned index{0}; index < candidateSet.candidates.size(); ++index) {
@@ -2965,8 +2953,8 @@ GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
 
   llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4> reachable;
   while (true) {
-    std::optional<unsigned> selected{SelectBestMetadirectiveCandidate(
-        candidates, candidateSet.candidates, matchContext)};
+    std::optional<unsigned> selected{
+        SelectBestMetadirectiveCandidate(candidates, candidateSet.candidates)};
     if (!selected) {
       reachable.push_back(candidateSet.fallback);
       break;
@@ -2981,10 +2969,10 @@ GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
     }
 
     candidates = GetMetadirectiveElsePathCandidates(
-        *selected, candidates, candidateSet.candidates, matchContext, context);
+        *selected, candidates, candidateSet.candidates, context);
 
     if (std::optional<unsigned> selectedInElse{SelectBestMetadirectiveCandidate(
-            candidates, candidateSet.candidates, matchContext)}) {
+            candidates, candidateSet.candidates)}) {
       const MetadirectiveCandidate &elseCandidate{
           candidateSet.candidates[*selectedInElse]};
       if (!elseCandidate.dynamicCondition &&

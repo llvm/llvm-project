@@ -678,3 +678,38 @@ subroutine test_multi_dynamic_multi_static(a, b)
   !$omp & default(nothing)
 #endif
 end subroutine
+
+! Rank once: the vendor-only selector scores zero as a subset of the guarded
+! candidate. If that guard fails, its subset must not regain score 101 and
+! overtake the static candidate (score 11). The original order is 22, 11, 0.
+! CHECK-LABEL: func.func @_QPtest_dynamic_subset_order(
+! CHECK: fir.if
+! CHECK-NEXT: omp.barrier
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.taskwait
+! CHECK-NOT: omp.taskyield
+! CHECK: return
+subroutine test_dynamic_subset_order(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(implementation={vendor(score(1): llvm)}, &
+  !$omp& user={condition(score(20): flag)}: barrier) &
+  !$omp& when(user={condition(score(10): .true.)}: taskwait)
+end subroutine
+
+! The same ordering applies when the guarded replacement is implicit NOTHING.
+! CHECK-LABEL: func.func @_QPtest_dynamic_subset_nothing_order(
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.taskwait
+! CHECK-NOT: omp.taskyield
+! CHECK: return
+subroutine test_dynamic_subset_nothing_order(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(implementation={vendor(score(1): llvm)}, &
+  !$omp& user={condition(score(20): flag)}:) &
+  !$omp& when(user={condition(score(10): .true.)}: taskwait)
+end subroutine

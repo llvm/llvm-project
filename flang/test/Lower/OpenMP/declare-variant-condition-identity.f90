@@ -63,11 +63,13 @@
 
 ! Both runtime outcomes under match_any retain condition identity, even when
 ! the implementation selector makes each candidate applicable independently.
+! Both outcomes select TASKWAIT, so the runtime branch can be eliminated.
 ! IMPORTED-LABEL: func.func @_QPruntime_any(
-! IMPORTED: fir.if
+! IMPORTED-NOT: fir.if
+! IMPORTED-NOT: omp.taskyield
 ! IMPORTED: omp.taskwait
-! IMPORTED: } else {
-! IMPORTED: omp.taskwait
+! IMPORTED-NOT: fir.if
+! IMPORTED-NOT: omp.taskyield
 ! IMPORTED: return
 
 !--- settings.f90
