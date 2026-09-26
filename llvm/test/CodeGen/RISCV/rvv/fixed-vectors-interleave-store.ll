@@ -9,20 +9,25 @@
 define void @vector_interleave_store_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_v32i1_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v0, v8, 2
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v9, v0
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v11, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    vwmaccu.vx v8, a1, v11
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v12, v8, v10
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    vwmaccu.vx v12, a2, v10
+; CHECK-NEXT:    vmsne.vi v9, v10, 0
+; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 2
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v12, 0
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <32 x i1> @llvm.vector.interleave2.v32i1(<16 x i1> %a, <16 x i1> %b)

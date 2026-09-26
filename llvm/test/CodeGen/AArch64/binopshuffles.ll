@@ -251,25 +251,13 @@ entry:
 }
 
 define <4 x float> @twosrc_intrinsic(ptr %pSrc1, ptr %pSrc2) {
-; CHECK-IAENABLED-LABEL: twosrc_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
-; CHECK-IAENABLED-NEXT:    fmul v0.4s, v3.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    fmla v0.4s, v2.4s, v4.4s
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: twosrc_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
-; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x1]
-; CHECK-IADISABLED-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v5.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v5.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fmla v0.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: twosrc_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
+; CHECK-NEXT:    fmul v0.4s, v3.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    ret
 entry:
   %intrinsic.load.0 = load <8 x float>, ptr %pSrc1, align 4
   %ldN = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.0)
@@ -286,25 +274,13 @@ entry:
 }
 
 define <4 x float> @twosrc2_intrinsic(ptr %pSrc1, ptr %pSrc2) {
-; CHECK-IAENABLED-LABEL: twosrc2_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
-; CHECK-IAENABLED-NEXT:    fmul v0.4s, v3.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    fmla v0.4s, v2.4s, v4.4s
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: twosrc2_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
-; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x1]
-; CHECK-IADISABLED-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v5.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v5.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fmla v0.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: twosrc2_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
+; CHECK-NEXT:    fmul v0.4s, v3.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    ret
 entry:
   %intrinsic.load.0 = load <8 x float>, ptr %pSrc1, align 4
   %ldN = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.0)
@@ -321,21 +297,12 @@ entry:
 }
 
 define <4 x float> @vld2_intrinsic(ptr %pSrc) {
-; CHECK-IAENABLED-LABEL: vld2_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    fmul v0.4s, v1.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    fmla v0.4s, v2.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: vld2_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fmla v0.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: vld2_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v2.4s
+; CHECK-NEXT:    ret
 entry:
   %intrinsic.load.0 = load <8 x float>, ptr %pSrc, align 4
   %ldN = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.0)

@@ -226,97 +226,145 @@ define {<3 x i32>, <3 x i32>, <3 x i32>} @vector_deinterleave3_v3i32_v9i32(<9 x 
 define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(<45 x i32> %v) nounwind {
 ; RV32-LABEL: vector_deinterleave3_v15i32_v45i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -640
-; RV32-NEXT:    sw ra, 636(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 632(sp) # 4-byte Folded Spill
-; RV32-NEXT:    addi s0, sp, 640
+; RV32-NEXT:    addi sp, sp, -656
+; RV32-NEXT:    sw ra, 652(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 648(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s0, sp, 656
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    li a2, 12
+; RV32-NEXT:    mul a1, a1, a2
+; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -128
-; RV32-NEXT:    addi a1, sp, 252
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vse32.v v23, (a1)
-; RV32-NEXT:    addi a1, sp, 248
-; RV32-NEXT:    vse32.v v22, (a1)
-; RV32-NEXT:    addi a1, sp, 244
-; RV32-NEXT:    vse32.v v21, (a1)
-; RV32-NEXT:    addi a1, sp, 240
-; RV32-NEXT:    vse32.v v20, (a1)
-; RV32-NEXT:    addi a1, sp, 236
-; RV32-NEXT:    vse32.v v19, (a1)
-; RV32-NEXT:    addi a1, sp, 232
-; RV32-NEXT:    vse32.v v18, (a1)
-; RV32-NEXT:    addi a1, sp, 228
-; RV32-NEXT:    vse32.v v17, (a1)
-; RV32-NEXT:    addi a1, sp, 224
-; RV32-NEXT:    vse32.v v16, (a1)
-; RV32-NEXT:    addi a1, sp, 220
-; RV32-NEXT:    vse32.v v15, (a1)
-; RV32-NEXT:    addi a1, sp, 216
-; RV32-NEXT:    vse32.v v14, (a1)
-; RV32-NEXT:    addi a1, sp, 212
-; RV32-NEXT:    vse32.v v13, (a1)
-; RV32-NEXT:    addi a1, sp, 208
-; RV32-NEXT:    vse32.v v12, (a1)
-; RV32-NEXT:    addi a1, sp, 204
-; RV32-NEXT:    vse32.v v11, (a1)
-; RV32-NEXT:    addi a1, sp, 200
-; RV32-NEXT:    vse32.v v10, (a1)
-; RV32-NEXT:    addi a1, sp, 196
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    addi a1, sp, 192
-; RV32-NEXT:    vse32.v v8, (a1)
-; RV32-NEXT:    addi a2, a0, 64
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a2)
+; RV32-NEXT:    vmv1r.v v2, v23
+; RV32-NEXT:    vmv1r.v v0, v21
+; RV32-NEXT:    vmv1r.v v24, v19
+; RV32-NEXT:    addi a1, sp, 640
+; RV32-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    vmv1r.v v24, v17
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 1
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 640
+; RV32-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 640
+; RV32-NEXT:    vs2r.v v16, (a1) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    vmv1r.v v16, v15
+; RV32-NEXT:    vmv1r.v v24, v13
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    li a2, 6
+; RV32-NEXT:    mul a1, a1, a2
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 640
+; RV32-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    vmv1r.v v24, v11
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 640
+; RV32-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    vmv1r.v v24, v9
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    li a2, 10
+; RV32-NEXT:    mul a1, a1, a2
+; RV32-NEXT:    add a1, sp, a1
+; RV32-NEXT:    addi a1, a1, 640
+; RV32-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    addi a1, a0, 64
+; RV32-NEXT:    vle32.v v24, (a1)
 ; RV32-NEXT:    addi a2, sp, 384
-; RV32-NEXT:    vse32.v v8, (a2)
-; RV32-NEXT:    addi a3, a0, 96
+; RV32-NEXT:    vse32.v v24, (a2)
+; RV32-NEXT:    addi a1, a0, 96
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a3)
-; RV32-NEXT:    addi a3, sp, 416
-; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    vle32.v v9, (a1)
+; RV32-NEXT:    addi a1, sp, 416
+; RV32-NEXT:    vse32.v v9, (a1)
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    addi a3, sp, 64
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v8, (a3)
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v12, (a1)
+; RV32-NEXT:    vle32.v v24, (a0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v16, v12, 8
-; RV32-NEXT:    mv a1, sp
-; RV32-NEXT:    vslidedown.vi v8, v8, 8
+; RV32-NEXT:    vslidedown.vi v28, v24, 8
+; RV32-NEXT:    addi a1, sp, 64
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v12, (a1)
-; RV32-NEXT:    addi a3, sp, 32
-; RV32-NEXT:    vse32.v v16, (a3)
-; RV32-NEXT:    addi a3, sp, 96
-; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    vse32.v v28, (a1)
 ; RV32-NEXT:    lw a0, 112(a0)
 ; RV32-NEXT:    sw a0, 432(sp)
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vle32.v v8, (a2)
+; RV32-NEXT:    vle32.v v28, (a2)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v8, 8
+; RV32-NEXT:    vslidedown.vi v4, v28, 8
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; RV32-NEXT:    vslideup.vi v22, v2, 1
+; RV32-NEXT:    vslideup.vi v0, v22, 1
+; RV32-NEXT:    vslideup.vi v20, v0, 1
+; RV32-NEXT:    addi a0, sp, 640
+; RV32-NEXT:    vl2r.v v22, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v22, v20, 1
+; RV32-NEXT:    vslideup.vi v18, v22, 1
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 640
+; RV32-NEXT:    vl2r.v v20, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v20, v18, 1
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 2
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 640
+; RV32-NEXT:    vl2r.v v18, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v18, v20, 1
+; RV32-NEXT:    vslideup.vi v14, v16, 1
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    li a2, 6
+; RV32-NEXT:    mul a0, a0, a2
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 640
+; RV32-NEXT:    vl2r.v v16, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v16, v14, 1
+; RV32-NEXT:    vslideup.vi v12, v16, 1
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 3
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 640
+; RV32-NEXT:    vl2r.v v14, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v14, v12, 1
+; RV32-NEXT:    addi a0, sp, 96
+; RV32-NEXT:    vse32.v v28, (a0)
+; RV32-NEXT:    vslideup.vi v10, v14, 1
 ; RV32-NEXT:    addi a0, sp, 128
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vse32.v v4, (a0)
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    li a2, 10
+; RV32-NEXT:    mul a0, a0, a2
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 640
+; RV32-NEXT:    vl2r.v v12, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vslideup.vi v12, v10, 1
+; RV32-NEXT:    addi a0, sp, 224
+; RV32-NEXT:    vse32.v v24, (a0)
+; RV32-NEXT:    addi a0, sp, 192
+; RV32-NEXT:    vslideup.vi v8, v12, 1
+; RV32-NEXT:    vse32.v v18, (a0)
 ; RV32-NEXT:    addi a0, sp, 160
-; RV32-NEXT:    vse32.v v12, (a0)
-; RV32-NEXT:    vlseg3e32.v v20, (a3)
-; RV32-NEXT:    vlseg3e32.v v12, (a1)
+; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vlseg3e32.v v20, (a1)
+; RV32-NEXT:    vlseg3e32.v v12, (a0)
 ; RV32-NEXT:    vmv4r.v v28, v20
 ; RV32-NEXT:    vmv2r.v v30, v8
 ; RV32-NEXT:    vmv4r.v v8, v12
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v28, 8
-; RV32-NEXT:    vmv2r.v v12, v14
 ; RV32-NEXT:    vmv2r.v v20, v22
-; RV32-NEXT:    vslideup.vi v12, v20, 8
+; RV32-NEXT:    vmv2r.v v12, v14
 ; RV32-NEXT:    vslideup.vi v16, v24, 8
-; RV32-NEXT:    addi sp, s0, -640
-; RV32-NEXT:    lw ra, 636(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 632(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 640
+; RV32-NEXT:    vslideup.vi v12, v20, 8
+; RV32-NEXT:    addi sp, s0, -656
+; RV32-NEXT:    lw ra, 652(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 648(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 656
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_deinterleave3_v15i32_v45i32:
@@ -325,92 +373,142 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; RV64-NEXT:    sd ra, 632(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 624(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    addi s0, sp, 640
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    li a2, 12
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    andi sp, sp, -128
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vmv1r.v v2, v23
+; RV64-NEXT:    vmv1r.v v0, v21
+; RV64-NEXT:    vmv1r.v v24, v19
+; RV64-NEXT:    addi a1, sp, 624
+; RV64-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV64-NEXT:    vmv1r.v v24, v17
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 1
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vs2r.v v16, (a1) # vscale x 16-byte Folded Spill
+; RV64-NEXT:    vmv1r.v v16, v15
+; RV64-NEXT:    vmv1r.v v24, v13
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    li a2, 6
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV64-NEXT:    vmv1r.v v24, v11
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV64-NEXT:    vmv1r.v v24, v9
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    li a2, 10
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; RV64-NEXT:    addi a1, a0, 64
+; RV64-NEXT:    vle32.v v24, (a1)
 ; RV64-NEXT:    addi a1, a0, 112
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v24, (a1)
-; RV64-NEXT:    addi a1, sp, 252
-; RV64-NEXT:    vse32.v v23, (a1)
-; RV64-NEXT:    addi a1, sp, 248
-; RV64-NEXT:    vse32.v v22, (a1)
-; RV64-NEXT:    addi a1, sp, 244
-; RV64-NEXT:    vse32.v v21, (a1)
-; RV64-NEXT:    addi a1, sp, 240
-; RV64-NEXT:    vse32.v v20, (a1)
-; RV64-NEXT:    addi a1, sp, 236
-; RV64-NEXT:    vse32.v v19, (a1)
-; RV64-NEXT:    addi a1, sp, 232
-; RV64-NEXT:    vse32.v v18, (a1)
-; RV64-NEXT:    addi a1, sp, 228
-; RV64-NEXT:    vse32.v v17, (a1)
-; RV64-NEXT:    addi a1, sp, 224
-; RV64-NEXT:    vse32.v v16, (a1)
-; RV64-NEXT:    addi a1, sp, 220
-; RV64-NEXT:    vse32.v v15, (a1)
-; RV64-NEXT:    addi a1, sp, 216
-; RV64-NEXT:    vse32.v v14, (a1)
-; RV64-NEXT:    addi a1, sp, 212
-; RV64-NEXT:    vse32.v v13, (a1)
-; RV64-NEXT:    addi a1, sp, 208
-; RV64-NEXT:    vse32.v v12, (a1)
-; RV64-NEXT:    addi a1, sp, 204
-; RV64-NEXT:    vse32.v v11, (a1)
-; RV64-NEXT:    addi a1, sp, 200
-; RV64-NEXT:    vse32.v v10, (a1)
-; RV64-NEXT:    addi a1, sp, 196
-; RV64-NEXT:    vse32.v v9, (a1)
-; RV64-NEXT:    addi a1, sp, 192
-; RV64-NEXT:    vse32.v v8, (a1)
-; RV64-NEXT:    addi a2, a0, 64
+; RV64-NEXT:    vle32.v v9, (a1)
+; RV64-NEXT:    addi a1, sp, 384
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vle32.v v8, (a2)
-; RV64-NEXT:    addi a2, sp, 384
-; RV64-NEXT:    vse32.v v8, (a2)
-; RV64-NEXT:    addi a3, a0, 96
+; RV64-NEXT:    vse32.v v24, (a1)
+; RV64-NEXT:    addi a2, a0, 96
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vle32.v v8, (a3)
-; RV64-NEXT:    addi a3, sp, 416
-; RV64-NEXT:    vse32.v v8, (a3)
-; RV64-NEXT:    addi a3, sp, 432
+; RV64-NEXT:    vle32.v v11, (a2)
+; RV64-NEXT:    addi a2, sp, 416
+; RV64-NEXT:    vse32.v v11, (a2)
+; RV64-NEXT:    addi a2, sp, 432
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:    vse32.v v24, (a3)
+; RV64-NEXT:    vse32.v v9, (a2)
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    vle32.v v24, (a0)
+; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV64-NEXT:    vslidedown.vi v28, v24, 8
 ; RV64-NEXT:    addi a0, sp, 64
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v8, (a0)
+; RV64-NEXT:    vse32.v v28, (a0)
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v12, (a1)
+; RV64-NEXT:    vle32.v v28, (a1)
 ; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v12, 8
-; RV64-NEXT:    mv a0, sp
-; RV64-NEXT:    vslidedown.vi v8, v8, 8
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v12, (a0)
-; RV64-NEXT:    addi a1, sp, 32
-; RV64-NEXT:    vse32.v v16, (a1)
+; RV64-NEXT:    vslidedown.vi v4, v28, 8
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; RV64-NEXT:    vslideup.vi v22, v2, 1
+; RV64-NEXT:    vslideup.vi v0, v22, 1
+; RV64-NEXT:    vslideup.vi v20, v0, 1
+; RV64-NEXT:    addi a1, sp, 624
+; RV64-NEXT:    vl2r.v v22, (a1) # vscale x 16-byte Folded Reload
+; RV64-NEXT:    vslideup.vi v22, v20, 1
+; RV64-NEXT:    vslideup.vi v18, v22, 1
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 1
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vl2r.v v20, (a1) # vscale x 16-byte Folded Reload
+; RV64-NEXT:    vslideup.vi v20, v18, 1
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vl2r.v v18, (a1) # vscale x 16-byte Folded Reload
+; RV64-NEXT:    vslideup.vi v18, v20, 1
+; RV64-NEXT:    vslideup.vi v14, v16, 1
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    li a2, 6
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vl2r.v v16, (a1) # vscale x 16-byte Folded Reload
+; RV64-NEXT:    vslideup.vi v16, v14, 1
+; RV64-NEXT:    vslideup.vi v12, v16, 1
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vl2r.v v14, (a1) # vscale x 16-byte Folded Reload
+; RV64-NEXT:    vslideup.vi v14, v12, 1
 ; RV64-NEXT:    addi a1, sp, 96
+; RV64-NEXT:    vse32.v v28, (a1)
+; RV64-NEXT:    vslideup.vi v10, v14, 1
+; RV64-NEXT:    addi a1, sp, 128
+; RV64-NEXT:    vse32.v v4, (a1)
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    li a2, 10
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 624
+; RV64-NEXT:    vl2r.v v12, (a1) # vscale x 16-byte Folded Reload
+; RV64-NEXT:    vslideup.vi v12, v10, 1
+; RV64-NEXT:    addi a1, sp, 224
+; RV64-NEXT:    vse32.v v24, (a1)
+; RV64-NEXT:    addi a1, sp, 192
+; RV64-NEXT:    vslideup.vi v8, v12, 1
+; RV64-NEXT:    vse32.v v18, (a1)
+; RV64-NEXT:    addi a1, sp, 160
 ; RV64-NEXT:    vse32.v v8, (a1)
-; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-NEXT:    vle32.v v8, (a2)
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v8, 8
-; RV64-NEXT:    addi a2, sp, 128
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v8, (a2)
-; RV64-NEXT:    addi a2, sp, 160
-; RV64-NEXT:    vse32.v v12, (a2)
-; RV64-NEXT:    vlseg3e32.v v20, (a1)
-; RV64-NEXT:    vlseg3e32.v v12, (a0)
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vlseg3e32.v v20, (a0)
+; RV64-NEXT:    vlseg3e32.v v12, (a1)
 ; RV64-NEXT:    vmv4r.v v28, v20
 ; RV64-NEXT:    vmv2r.v v30, v8
 ; RV64-NEXT:    vmv4r.v v8, v12
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v28, 8
-; RV64-NEXT:    vmv2r.v v12, v14
 ; RV64-NEXT:    vmv2r.v v20, v22
-; RV64-NEXT:    vslideup.vi v12, v20, 8
+; RV64-NEXT:    vmv2r.v v12, v14
 ; RV64-NEXT:    vslideup.vi v16, v24, 8
+; RV64-NEXT:    vslideup.vi v12, v20, 8
 ; RV64-NEXT:    addi sp, s0, -640
 ; RV64-NEXT:    ld ra, 632(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 624(sp) # 8-byte Folded Reload
@@ -423,92 +521,142 @@ define {<15 x i32>, <15 x i32>, <15 x i32>} @vector_deinterleave3_v15i32_v45i32(
 ; ZVZIP-NEXT:    sd ra, 632(sp) # 8-byte Folded Spill
 ; ZVZIP-NEXT:    sd s0, 624(sp) # 8-byte Folded Spill
 ; ZVZIP-NEXT:    addi s0, sp, 640
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    li a2, 12
+; ZVZIP-NEXT:    mul a1, a1, a2
+; ZVZIP-NEXT:    sub sp, sp, a1
 ; ZVZIP-NEXT:    andi sp, sp, -128
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVZIP-NEXT:    vmv1r.v v2, v23
+; ZVZIP-NEXT:    vmv1r.v v0, v21
+; ZVZIP-NEXT:    vmv1r.v v24, v19
+; ZVZIP-NEXT:    addi a1, sp, 624
+; ZVZIP-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; ZVZIP-NEXT:    vmv1r.v v24, v17
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vs2r.v v16, (a1) # vscale x 16-byte Folded Spill
+; ZVZIP-NEXT:    vmv1r.v v16, v15
+; ZVZIP-NEXT:    vmv1r.v v24, v13
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    li a2, 6
+; ZVZIP-NEXT:    mul a1, a1, a2
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; ZVZIP-NEXT:    vmv1r.v v24, v11
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; ZVZIP-NEXT:    vmv1r.v v24, v9
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    li a2, 10
+; ZVZIP-NEXT:    mul a1, a1, a2
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vs2r.v v24, (a1) # vscale x 16-byte Folded Spill
+; ZVZIP-NEXT:    addi a1, a0, 64
+; ZVZIP-NEXT:    vle32.v v24, (a1)
 ; ZVZIP-NEXT:    addi a1, a0, 112
 ; ZVZIP-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; ZVZIP-NEXT:    vle32.v v24, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 252
-; ZVZIP-NEXT:    vse32.v v23, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 248
-; ZVZIP-NEXT:    vse32.v v22, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 244
-; ZVZIP-NEXT:    vse32.v v21, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 240
-; ZVZIP-NEXT:    vse32.v v20, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 236
-; ZVZIP-NEXT:    vse32.v v19, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 232
-; ZVZIP-NEXT:    vse32.v v18, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 228
-; ZVZIP-NEXT:    vse32.v v17, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 224
-; ZVZIP-NEXT:    vse32.v v16, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 220
-; ZVZIP-NEXT:    vse32.v v15, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 216
-; ZVZIP-NEXT:    vse32.v v14, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 212
-; ZVZIP-NEXT:    vse32.v v13, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 208
-; ZVZIP-NEXT:    vse32.v v12, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 204
-; ZVZIP-NEXT:    vse32.v v11, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 200
-; ZVZIP-NEXT:    vse32.v v10, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 196
-; ZVZIP-NEXT:    vse32.v v9, (a1)
-; ZVZIP-NEXT:    addi a1, sp, 192
-; ZVZIP-NEXT:    vse32.v v8, (a1)
-; ZVZIP-NEXT:    addi a2, a0, 64
+; ZVZIP-NEXT:    vle32.v v9, (a1)
+; ZVZIP-NEXT:    addi a1, sp, 384
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vle32.v v8, (a2)
-; ZVZIP-NEXT:    addi a2, sp, 384
-; ZVZIP-NEXT:    vse32.v v8, (a2)
-; ZVZIP-NEXT:    addi a3, a0, 96
+; ZVZIP-NEXT:    vse32.v v24, (a1)
+; ZVZIP-NEXT:    addi a2, a0, 96
 ; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVZIP-NEXT:    vle32.v v8, (a3)
-; ZVZIP-NEXT:    addi a3, sp, 416
-; ZVZIP-NEXT:    vse32.v v8, (a3)
-; ZVZIP-NEXT:    addi a3, sp, 432
+; ZVZIP-NEXT:    vle32.v v11, (a2)
+; ZVZIP-NEXT:    addi a2, sp, 416
+; ZVZIP-NEXT:    vse32.v v11, (a2)
+; ZVZIP-NEXT:    addi a2, sp, 432
 ; ZVZIP-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; ZVZIP-NEXT:    vse32.v v24, (a3)
+; ZVZIP-NEXT:    vse32.v v9, (a2)
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; ZVZIP-NEXT:    vle32.v v8, (a0)
+; ZVZIP-NEXT:    vle32.v v24, (a0)
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; ZVZIP-NEXT:    vslidedown.vi v28, v24, 8
 ; ZVZIP-NEXT:    addi a0, sp, 64
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vse32.v v8, (a0)
+; ZVZIP-NEXT:    vse32.v v28, (a0)
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; ZVZIP-NEXT:    vle32.v v12, (a1)
+; ZVZIP-NEXT:    vle32.v v28, (a1)
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v16, v12, 8
-; ZVZIP-NEXT:    mv a0, sp
-; ZVZIP-NEXT:    vslidedown.vi v8, v8, 8
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vse32.v v12, (a0)
-; ZVZIP-NEXT:    addi a1, sp, 32
-; ZVZIP-NEXT:    vse32.v v16, (a1)
+; ZVZIP-NEXT:    vslidedown.vi v4, v28, 8
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; ZVZIP-NEXT:    vslideup.vi v22, v2, 1
+; ZVZIP-NEXT:    vslideup.vi v0, v22, 1
+; ZVZIP-NEXT:    vslideup.vi v20, v0, 1
+; ZVZIP-NEXT:    addi a1, sp, 624
+; ZVZIP-NEXT:    vl2r.v v22, (a1) # vscale x 16-byte Folded Reload
+; ZVZIP-NEXT:    vslideup.vi v22, v20, 1
+; ZVZIP-NEXT:    vslideup.vi v18, v22, 1
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vl2r.v v20, (a1) # vscale x 16-byte Folded Reload
+; ZVZIP-NEXT:    vslideup.vi v20, v18, 1
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vl2r.v v18, (a1) # vscale x 16-byte Folded Reload
+; ZVZIP-NEXT:    vslideup.vi v18, v20, 1
+; ZVZIP-NEXT:    vslideup.vi v14, v16, 1
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    li a2, 6
+; ZVZIP-NEXT:    mul a1, a1, a2
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vl2r.v v16, (a1) # vscale x 16-byte Folded Reload
+; ZVZIP-NEXT:    vslideup.vi v16, v14, 1
+; ZVZIP-NEXT:    vslideup.vi v12, v16, 1
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vl2r.v v14, (a1) # vscale x 16-byte Folded Reload
+; ZVZIP-NEXT:    vslideup.vi v14, v12, 1
 ; ZVZIP-NEXT:    addi a1, sp, 96
+; ZVZIP-NEXT:    vse32.v v28, (a1)
+; ZVZIP-NEXT:    vslideup.vi v10, v14, 1
+; ZVZIP-NEXT:    addi a1, sp, 128
+; ZVZIP-NEXT:    vse32.v v4, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    li a2, 10
+; ZVZIP-NEXT:    mul a1, a1, a2
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 624
+; ZVZIP-NEXT:    vl2r.v v12, (a1) # vscale x 16-byte Folded Reload
+; ZVZIP-NEXT:    vslideup.vi v12, v10, 1
+; ZVZIP-NEXT:    addi a1, sp, 224
+; ZVZIP-NEXT:    vse32.v v24, (a1)
+; ZVZIP-NEXT:    addi a1, sp, 192
+; ZVZIP-NEXT:    vslideup.vi v8, v12, 1
+; ZVZIP-NEXT:    vse32.v v18, (a1)
+; ZVZIP-NEXT:    addi a1, sp, 160
 ; ZVZIP-NEXT:    vse32.v v8, (a1)
-; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; ZVZIP-NEXT:    vle32.v v8, (a2)
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v12, v8, 8
-; ZVZIP-NEXT:    addi a2, sp, 128
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vse32.v v8, (a2)
-; ZVZIP-NEXT:    addi a2, sp, 160
-; ZVZIP-NEXT:    vse32.v v12, (a2)
-; ZVZIP-NEXT:    vlseg3e32.v v20, (a1)
-; ZVZIP-NEXT:    vlseg3e32.v v12, (a0)
+; ZVZIP-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; ZVZIP-NEXT:    vlseg3e32.v v20, (a0)
+; ZVZIP-NEXT:    vlseg3e32.v v12, (a1)
 ; ZVZIP-NEXT:    vmv4r.v v28, v20
 ; ZVZIP-NEXT:    vmv2r.v v30, v8
 ; ZVZIP-NEXT:    vmv4r.v v8, v12
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vslideup.vi v8, v28, 8
-; ZVZIP-NEXT:    vmv2r.v v12, v14
 ; ZVZIP-NEXT:    vmv2r.v v20, v22
-; ZVZIP-NEXT:    vslideup.vi v12, v20, 8
+; ZVZIP-NEXT:    vmv2r.v v12, v14
 ; ZVZIP-NEXT:    vslideup.vi v16, v24, 8
+; ZVZIP-NEXT:    vslideup.vi v12, v20, 8
 ; ZVZIP-NEXT:    addi sp, s0, -640
 ; ZVZIP-NEXT:    ld ra, 632(sp) # 8-byte Folded Reload
 ; ZVZIP-NEXT:    ld s0, 624(sp) # 8-byte Folded Reload
