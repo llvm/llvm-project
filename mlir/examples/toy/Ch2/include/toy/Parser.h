@@ -463,6 +463,9 @@ private:
       return 20;
     case '*':
       return 40;
+    // support '/' as a binary operator, same precedence as '*'
+    case '/':
+      return 40;
     default:
       return -1;
     }
