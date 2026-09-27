@@ -4,9 +4,14 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   Object
   ObjectYAML
+  Option
   ProfileData
   Support
   )
+
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(Obj2YamlOptsTableGen)
 
 add_llvm_utility(obj2yaml
   archive2yaml.cpp
@@ -21,4 +26,6 @@ add_llvm_utility(obj2yaml
   offload2yaml.cpp
   xcoff2yaml.cpp
   wasm2yaml.cpp
+  DEPENDS
+  Obj2YamlOptsTableGen
   )
