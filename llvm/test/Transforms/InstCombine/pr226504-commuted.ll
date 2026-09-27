@@ -6,10 +6,8 @@ define i8 @src(i1 %c, i8 %x, i8 %y) {
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i8 0, i8 1
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[SEL]] to i1
-; CHECK-NEXT:    [[TRUNC_NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC_NOT]], true
-; CHECK-NEXT:    [[OR_NOT:%.*]] = and i1 [[NOT]], [[TRUNC_NOT]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR_NOT]], i8 [[Y]], i8 [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[TRUNC]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[OR]], i8 [[X]], i8 [[Y]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %sel = select i1 %c, i8 0, i8 1
