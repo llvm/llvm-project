@@ -23,68 +23,9 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/frac128.h"
-#include "src/__support/integer_literals.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/math/check/exp_exceptions.h"
-
-// #include <iomanip>
-// #include <iostream>
-// #include <string>
-// #include <type_traits>
-// #include <vector>
-//
-// std::vector<std::string> split_top_level(const std::string &s) {
-//   std::vector<std::string> parts;
-//   int depth = 0;
-//   size_t start = 0;
-//   for (size_t i = 0; i < s.size(); ++i) {
-//     char c = s[i];
-//     if (c == '(' || c == '[' || c == '{')
-//       ++depth;
-//     else if (c == ')' || c == ']' || c == '}')
-//       --depth;
-//     else if (c == ',' && depth == 0) {
-//       parts.push_back(s.substr(start, i - start));
-//       start = i + 1;
-//     }
-//   }
-//   parts.push_back(s.substr(start));
-//   for (auto &p : parts) {
-//     size_t a = p.find_first_not_of(" \t\n");
-//     size_t b = p.find_last_not_of(" \t\n");
-//     p = (a == std::string::npos) ? "" : p.substr(a, b - a + 1);
-//   }
-//   return parts;
-// }
-//
-// template <typename T>
-// void debug_value(const std::string &name, const T &value) {
-//   using U = std::remove_cv_t<std::remove_reference_t<T>>;
-//   std::cout << std::left << std::setw(24) << name << " = ";
-//   if constexpr (std::is_floating_point_v<U>) {
-//     std::cout << std::defaultfloat << std::setw(24) << value << " ("
-//               << std::hexfloat << std::right << std::setw(24) << value
-//               << std::defaultfloat << std::left << ")";
-//   } else if constexpr (std::is_integral_v<U>) {
-//     std::cout << std::dec << std::setw(24) << value << " (" << std::right
-//               << std::setw(24) << std::showbase << std::hex << value
-//               << std::noshowbase << std::dec << ")";
-//   } else {
-//     std::cout << value;
-//   }
-//   std::cout << '\n';
-// }
-//
-// template <typename... Ts> void debug_all(const char *names, Ts &&...values) {
-//   auto parts = split_top_level(names);
-//   std::cout << "===== DEBUG =====\n";
-//   size_t i = 0;
-//   (debug_value(parts[i++], values), ...);
-//   std::cout << "=================\n\n";
-// }
-//
-// #define DEBUG(...) debug_all(#__VA_ARGS__, __VA_ARGS__)
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -94,11 +35,8 @@ namespace math {
 
 namespace static_rounding {
 
-// TODO: tricky input tests are failing. Debug. Getting the last bits
-// truncating to all-0 in all rounding modes.
 // TODO: test against CORE-MATH
 // TODO: refactor to follow the new structure; dedupe codes
-// TODO: LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // print(2+round(1/log(2), 128, RN));
 // LSB(INV_LN2) = 2^-127
@@ -151,6 +89,21 @@ LIBC_INLINE_VAR constexpr Frac128 EXP_COEFFS[] = {
     Frac128({0x219f'9904'1f29'5f13ULL, 0x0000'0000'1cd9'af73ULL}),
 };
 
+// 64-bit polynomial approximation of 2^x coefficients generated with Sollya:
+// > P = fpminimax(2^x, 6, [|1, 64...|], [0, 1/16], absolute, fixed);
+// Store the fractional part of the coefficients below
+// > dirtyinfnorm(2^x - P(x), [0, 1/16]);
+// 0x1.2ac9...p-57
+// This is different from EXPF_COEFFS: EXPF_COEFFS is for approximating for x in
+// range of [0, 1]
+// LSB(EXP_COEFFS[i]) = 2^-64
+LIBC_INLINE_VAR constexpr Frac64 EXP_64_COEFFS[] = {
+    // degree-0 = 1, add back afterwards to reduce calc ops
+    Frac64(0xb172'17f7'd1cd'3e3cULL), Frac64(0x3d7f'7bff'0838'4d4aULL),
+    Frac64(0x0e35'846a'6f46'd462ULL), Frac64(0x0276'55a0'd536'1dd9ULL),
+    Frac64(0x0057'5d3d'4b45'0056ULL), Frac64(0x000a'504b'13fe'e008ULL),
+};
+
 // Round the fractional result and combine it with its exponent.
 template <typename TFrac, typename TUInt,
           cpp::enable_if_t<cpp::is_same<TFrac, Frac64>::value ||
@@ -182,13 +135,12 @@ LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
     shift_length += d + 1;
   }
 
+  // Get the bits, discarding the leading bit
   auto frac_bits = [&]() -> uint64_t {
     if constexpr (IS_FAST_PATH)
-      return result_frac.val[0];
-    else {
-      // Discarding the leading bit
+      return result_frac.val[0] << 1;
+    else
       return (result_frac.val[1] << 1) | (result_frac.val[0] >> 63);
-    }
   };
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -438,14 +390,10 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
   // LSB(x_lo_frac) = 2^-64
   Frac64 x_lo_frac(x_lo);
 
-  Frac64 p =
-      x_lo_frac *
-      fputil::polyeval(x_lo_frac, EXP_COEFFS[0].to_frac64(),
-                       EXP_COEFFS[1].to_frac64(), EXP_COEFFS[2].to_frac64(),
-                       EXP_COEFFS[3].to_frac64(), EXP_COEFFS[4].to_frac64(),
-                       EXP_COEFFS[5].to_frac64(), EXP_COEFFS[6].to_frac64(),
-                       EXP_COEFFS[7].to_frac64(), EXP_COEFFS[8].to_frac64(),
-                       EXP_COEFFS[9].to_frac64(), EXP_COEFFS[10].to_frac64());
+  Frac64 p = x_lo_frac * fputil::polyeval(x_lo_frac, EXP_64_COEFFS[0],
+                                          EXP_64_COEFFS[1], EXP_64_COEFFS[2],
+                                          EXP_64_COEFFS[3], EXP_64_COEFFS[4],
+                                          EXP_64_COEFFS[5]);
 
   // With:
   //  - p = 2^lo - 1 --> 2^lo = p + 1
@@ -457,11 +405,15 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
   Frac64 mid_val = EXP_MID[x_mid].to_frac64();
   Frac64 result = fputil::multiply_add(mid_val, p, mid_val);
 
-  uint64_t result_bits = result.val[0];
+  uint64_t result_bits = result.val[0] << 1;
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return exp_handle_rounding(result, is_neg, d, e_y, rounding);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // Rounding test
   constexpr uint32_t LAST_BITS = 12;
-  constexpr uint32_t ROUNDING_ERROR = 4;
+  constexpr uint32_t ROUNDING_ERROR = 0x800;
   uint32_t result_last_bits =
       static_cast<uint32_t>(result_bits & ((1u << LAST_BITS) - 1));
   bool is_hard;
@@ -478,11 +430,7 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
               result_last_bits >= (1u << LAST_BITS) - ROUNDING_ERROR;
   }
 
-  // DEBUG(x, is_neg, rounding, x_e_unbiased, x_s, x_ln2_bits, k, l2y_r_hi,
-  //       e_y, d, x_mid, x_lo, result64_bits, result_last_bits,
-  //       is_hard);
-
-  if (false && LIBC_LIKELY(!is_hard)) {
+  if (LIBC_LIKELY(!is_hard)) {
     return exp_handle_rounding(result, is_neg, d, e_y, rounding);
   }
 
