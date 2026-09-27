@@ -777,9 +777,12 @@ void RuntimePointerChecking::groupChecks(
       if (PointerI == PositionMap.end())
         continue;
       for (unsigned Pointer : PointerI->second) {
+        // A read-modify-write access appears in DepCands in both access modes,
+        // but both entries can map to the same runtime-check pointer.
+        if (!Seen.insert(Pointer).second)
+          continue;
+
         bool Merged = false;
-        // Mark this pointer as seen.
-        Seen.insert(Pointer);
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
