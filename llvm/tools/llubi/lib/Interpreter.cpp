@@ -919,6 +919,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return AnyValue();
   }
 
+  /// Returns the oracle function if \p CB is an llvm.speculative.load in
+  /// oracle form, nullptr otherwise.
+  static Function *getSpeculativeLoadOracle(const CallBase &CB) {
+    return CB.getIntrinsicID() == Intrinsic::speculative_load
+               ? dyn_cast<Function>(CB.getArgOperand(2))
+               : nullptr;
+  }
+
   AnyValue callSpeculativeLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                         const AnyValue &NumBytes) {
     Type *RetTy = CB.getType();
@@ -1043,8 +1051,15 @@ public:
 
   void returnFromCallee() {
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
-    CurrentFrame->CalleeArgs.clear();
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+      // RetVal is the oracle's result; use it to complete the load.
+      handleAttributes(Oracle->getReturnType(), RetVal, AttributeSet(),
+                       Oracle->getAttributes().getRetAttrs());
+      RetVal =
+          callSpeculativeLoadIntrinsic(CB, CurrentFrame->CalleeArgs[0], RetVal);
+    }
+    CurrentFrame->CalleeArgs.clear();
     if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
       // Handle attributes on the return value (Attributes from resolved callee
       // should be applied if available).
@@ -1792,12 +1807,6 @@ public:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
     case Intrinsic::speculative_load:
-      // TODO: Support the oracle form.
-      if (isa<Function>(CB.getArgOperand(2))) {
-        Handler.onUnrecognizedInstruction(CB);
-        setFailed();
-        return AnyValue();
-      }
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
@@ -2220,6 +2229,23 @@ public:
     }
 
     CurrentFrame->ResolvedCallee = Callee;
+    ArrayRef<AnyValue> Args = CalleeArgs;
+    // Call the oracle of an llvm.speculative.load with the trailing arguments.
+    // The load is completed in returnFromCallee.
+    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+      if (Oracle->isDeclaration()) {
+        reportError()
+            << "Unsupported llvm.speculative.load oracle declaration: "
+            << Oracle->getName() << ".";
+        return;
+      }
+      Args = Args.drop_front(3);
+      for (auto [Arg, ArgVal] :
+           zip_equal(Oracle->args(), MutableArrayRef(CalleeArgs).drop_front(3)))
+        handleAttributes(Arg.getType(), ArgVal, AttributeSet(),
+                         Arg.getAttributes());
+      Callee = Oracle;
+    }
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
       returnFromCallee();
@@ -2236,7 +2262,6 @@ public:
       }
       assert(!Callee->empty() && "Expected a defined function.");
       // Suspend the current frame and push the callee frame onto the stack.
-      ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
       CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
