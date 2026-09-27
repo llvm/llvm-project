@@ -1489,12 +1489,16 @@ define float @f8() {
 ; MIPS1-PSX-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST1]] LUi
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(e)>>
-; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS1-PSX-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #[[#MCINST28:]] LWC1
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:F0>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(e)>>
+; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:RA>>
+; MIPS1-PSX-NEXT:    nop # <MCInst #[[#MCINST13]] SLL
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:ZERO>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:ZERO>
+; MIPS1-PSX-NEXT:    # <MCOperand Imm:0>>
 entry:
   %0 = load float, ptr @e
   ret float %0

@@ -15,7 +15,6 @@
 #include "Mips.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -287,8 +286,7 @@ Register MipsRegisterInfo::
 getFrameRegister(const MachineFunction &MF) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-  bool IsN64 =
-      static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsN64();
+  bool IsN64 = Subtarget.getABI().IsN64();
 
   if (Subtarget.inMips16Mode())
     return TFI->hasFP(MF) ? Mips::S0 : Mips::SP;
@@ -310,7 +308,7 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   unsigned FP = Subtarget.isGP32bit() ? Mips::FP : Mips::FP_64;
-  unsigned BP = Subtarget.isGP32bit() ? Mips::S7 : Mips::S7_64;
+  unsigned BP = Subtarget.getABI().getSavedReg(7, Subtarget.isGP64bit());
 
   // Support dynamic stack realignment for all targets except Mips16.
   if (Subtarget.inMips16Mode())

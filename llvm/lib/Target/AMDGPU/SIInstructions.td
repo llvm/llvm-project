@@ -599,7 +599,6 @@ def SI_IF: CFPseudoInstSI <
   [(set i1:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 12;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
@@ -607,7 +606,6 @@ def SI_ELSE : CFPseudoInstSI <
   (outs SReg_1:$dst),
   (ins SReg_1:$src, brtarget:$target), [], 1, 1> {
   let Size = 12;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
@@ -624,11 +622,10 @@ def SI_LOOP : CFPseudoInstSI <
   [(AMDGPUloop i1:$saved, bb:$target)], 1, 1> {
   let Size = 8;
   let isBranch = 1;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
-} // End isTerminator = 1
+} // End isTerminator = 1, isNotDuplicable = 1
 
 def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
@@ -4257,6 +4254,11 @@ def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
 >;
+
+def : GCNPat <
+  (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_32:$src0))),
+  (COPY VGPR_32:$src0)
+>;
 }
 
 let True16Predicate = UseRealTrue16Insts in {
@@ -4279,7 +4281,19 @@ def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
+
+def : GCNPat <
+  (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
+  (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
 }
+
+// A bf16 value can only be in the low 16 bits of an SGPR, regardless of
+// Real-True16 or Fake-True16.
+def : GCNPat <
+  (v2bf16 (UniformUnaryFrag<scalar_to_vector> (bf16 SReg_32:$src0))),
+  (COPY SReg_32:$src0)
+>;
 
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,
