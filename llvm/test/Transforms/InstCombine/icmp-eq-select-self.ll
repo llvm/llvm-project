@@ -83,7 +83,7 @@ define i1 @icmp_eq_select_cond_reversed(i32 %x) {
   ret i1 %r
 }
 
-; Vector version
+; Vector version - eq
 define <2 x i1> @icmp_eq_select_sgt_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_select_sgt_zero_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -3)
@@ -91,6 +91,102 @@ define <2 x i1> @icmp_eq_select_sgt_zero_vec(<2 x i32> %x) {
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %cond = icmp sgt <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
+  %r = icmp eq <2 x i32> %x, %s
+  ret <2 x i1> %r
+}
+
+; Vector version - ne
+define <2 x i1> @icmp_ne_select_sgt_zero_vec(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_ne_select_sgt_zero_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -3)
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp sgt <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
+  %r = icmp ne <2 x i32> %x, %s
+  ret <2 x i1> %r
+}
+
+; Vector version - commuted operands
+define <2 x i1> @icmp_eq_select_sgt_zero_vec_commuted(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_select_sgt_zero_vec_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -3)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp sgt <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
+  %r = icmp eq <2 x i32> %s, %x
+  ret <2 x i1> %r
+}
+
+; Vector version - slt predicate
+define <2 x i1> @icmp_eq_select_slt_zero_vec(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_select_slt_zero_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], splat (i32 -5)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[X]], splat (i32 3)
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp slt <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> <i32 -5, i32 -5>, <2 x i32> <i32 3, i32 3>
+  %r = icmp eq <2 x i32> %x, %s
+  ret <2 x i1> %r
+}
+
+; Vector version - condition with constant on LHS (reversed)
+define <2 x i1> @icmp_eq_select_cond_reversed_vec(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_select_cond_reversed_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -3)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp slt <2 x i32> zeroinitializer, %x
+  %s = select <2 x i1> %cond, <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
+  %r = icmp eq <2 x i32> %x, %s
+  ret <2 x i1> %r
+}
+
+; Vector version - unsigned predicate (uge)
+define <2 x i1> @icmp_eq_select_uge_vec(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_select_uge_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -9)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 2)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp uge <2 x i32> %x, <i32 5, i32 5>
+  %s = select <2 x i1> %cond, <2 x i32> <i32 10, i32 10>, <2 x i32> <i32 2, i32 2>
+  %r = icmp eq <2 x i32> %x, %s
+  ret <2 x i1> %r
+}
+
+; Vector negative test - multi use
+define <2 x i1> @negative_multi_use_vec(<2 x i32> %x, ptr %p) {
+; CHECK-LABEL: define <2 x i1> @negative_multi_use_vec(
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> splat (i32 2), <2 x i32> zeroinitializer
+; CHECK-NEXT:    store <2 x i32> [[S]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[X]], [[S]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp sgt <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
+  store <2 x i32> %s, ptr %p
+  %r = icmp eq <2 x i32> %x, %s
+  ret <2 x i1> %r
+}
+
+; Vector negative test - unrelated condition
+define <2 x i1> @negative_unrelated_cond_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: define <2 x i1> @negative_unrelated_cond_vec(
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt <2 x i32> [[Y:%.*]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> splat (i32 2), <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cond = icmp sgt <2 x i32> %y, zeroinitializer
   %s = select <2 x i1> %cond, <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
   %r = icmp eq <2 x i32> %x, %s
   ret <2 x i1> %r
