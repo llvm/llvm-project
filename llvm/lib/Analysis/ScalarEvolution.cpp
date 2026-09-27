@@ -5403,7 +5403,7 @@ static const Loop *isIntegerLoopHeaderPHI(const PHINode *PN, LoopInfo &LI) {
 //      (Trunc iy ((SExt/ZExt ix (%SymbolicPhi) to iy) + InvariantAccum) to ix)
 //    which correspond to a phi->trunc->add->sext/zext->phi update chain.
 //
-// 3) Outline common code with createAddRecFromPHI to avoid duplication.
+// 3) Outline common code with handleAddRecBackedgeForPHI to avoid duplication.
 std::optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
 ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI) {
   SmallVector<const SCEVPredicate *, 3> Predicates;
@@ -5759,11 +5759,11 @@ static std::pair<Value *, Value *> valuesForAddRecFromPHI(LoopInfo &LI,
   return {BEValueV, StartValueV};
 }
 
-/// A helper function for createAddRecFromPHI to handle simple cases.
+/// A helper function to construct simple AddRecs.
 ///
 /// This function tries to find an AddRec expression for the simplest (yet most
 /// common) cases: PN = PHI(Start, OP(Self, LoopInvariant)).
-/// If it fails, createAddRecFromPHI will use a more general, but slow,
+/// If it fails, handleAddRecBackedgeForPHI will use a more general, but slow,
 /// technique for finding the AddRec expression.
 const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN) {
   auto [BEValueV, StartValueV] = valuesForAddRecFromPHI(LI, PN);
