@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 struct A {
   static void b();
@@ -684,4 +685,43 @@ void escape_in_generic_lambda(RefCountable* obj) {
     });
     (void)value;
   });
+}
+
+// The callee is a dependent object rather than an unresolved name, so nothing
+// about the call is known until the template is instantiated.
+struct NoEscapeCallable {
+  void operator()([[clang::noescape]] const WTF::Function<void()>&) const;
+};
+
+struct EscapeCallable {
+  void operator()(const WTF::Function<void()>&) const;
+};
+
+template <typename T>
+void call_through_noescape_callable(T& callable) {
+  RefCountable* obj = make_obj();
+  callable([obj] {
+    obj->method();
+    someFunction();
+  });
+}
+
+template <typename T>
+void call_through_escaping_callable(T& callable) {
+  RefCountable* obj = make_obj();
+  callable([obj] {
+    // expected-warning@-1{{Captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+    obj->method();
+    someFunction();
+  });
+}
+
+void instantiate_dependent_callables(NoEscapeCallable& noEscape,
+                                     EscapeCallable& escape) {
+  call_through_noescape_callable(noEscape);
+  call_through_escaping_callable(escape);
+}
+
+void lambda_in_system_header(RefCountable* ref_countable) {
+  lambdaInSystemHeader(ref_countable);
 }
