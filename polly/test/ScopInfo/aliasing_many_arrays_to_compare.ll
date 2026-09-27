@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=FOUND
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output -polly-rtc-max-arrays-per-group=3 < %s 2>&1 | FileCheck %s --check-prefix=IGNORED
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=FOUND
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output %{polly,}-polly-rtc-max-arrays-per-group=3 < %s 2>&1 | FileCheck %s --check-prefix=IGNORED
 ;
 ; FOUND: Function: foo
 ; IGNORED-NOT: Function: foo

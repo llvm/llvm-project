@@ -77,10 +77,21 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
+// Parses the arguments given by -plugin-arg=Bye,<arg>.
+static Error parseArguments(ArrayRef<const char *> Args) {
+  SmallVector<const char *, 0> Argv = {"Bye"};
+  append_range(Argv, Args);
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
+  return Error::success();
+}
+
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
-          registerPassBuilderCallbacks, preCodeGenCallback};
+          registerPassBuilderCallbacks, preCodeGenCallback, parseArguments};
 }
 
 #ifndef LLVM_BYE_LINK_INTO_TOOLS

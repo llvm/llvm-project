@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop>' -polly-import-jscop-postfix=transformed -polly-print-import-jscop -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop>' %{polly,}-polly-import-jscop-postfix=transformed %{polly,}-polly-print-import-jscop -disable-output < %s | FileCheck %s
 
 define void @change-array-dims(ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:

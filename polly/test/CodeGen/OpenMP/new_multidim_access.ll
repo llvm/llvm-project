@@ -1,6 +1,6 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop>' -polly-print-import-jscop -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' -polly-print-ast -polly-parallel -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -S -polly-parallel < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop>' %{polly,}-polly-print-import-jscop -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' %{polly,}-polly-print-ast %{polly,}-polly-parallel -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -S %{polly,}-polly-parallel < %s | FileCheck %s -check-prefix=IR
 
 ;    void new_multidim_access(long n, long m, float A[][m]) {
 ;      for (long i = 0; i < n; i++)

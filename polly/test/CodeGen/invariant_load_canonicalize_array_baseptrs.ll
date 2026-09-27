@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S %{polly,}-polly-invariant-load-hoisting < %s | FileCheck %s
 
 ; CHECK: %polly.access.A = getelementptr ptr, ptr %A, i64 0
 ; CHECK: %polly.access.A.load = load ptr, ptr %polly.access.A

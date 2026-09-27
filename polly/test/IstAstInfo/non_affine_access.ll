@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -polly-ast-print-accesses -polly-allow-nonaffine -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' %{polly,}-polly-print-ast %{polly,}-polly-ast-print-accesses %{polly,}-polly-allow-nonaffine -disable-output < %s | FileCheck %s
 ;
 ;    void non_affine_access(float A[]) {
 ;      for (long i = 0; i < 1024; i++)

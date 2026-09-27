@@ -213,11 +213,13 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-static cl::list<std::string> PassPlugins(
-    "load-pass-plugin",
-    cl::desc("Load passes from plugin library. The plugin's options follow "
-             "its file name, separated by commas"),
-    cl::value_desc("file[,option...]"));
+static cl::list<std::string> PassPlugins("load-pass-plugin",
+                                         cl::desc("Load plugin library"));
+
+static cl::list<std::string>
+    PluginArgs("plugin-arg",
+               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
+               cl::value_desc("plugin>,<arg"));
 
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
@@ -405,12 +407,14 @@ extern "C" int llcMain(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
 
   SmallVector<PassPlugin, 1> PluginList;
-  for (const std::string &Spec : PassPlugins) {
-    auto Plugin = PassPlugin::load(Spec);
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
     if (!Plugin)
       reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   }
+  if (Error E = PassPlugin::passArguments(PluginList, PluginArgs))
+    reportFatalUsageError(std::move(E));
 
   if (!PassPipeline.empty() && !getRunPassNames().empty()) {
     errs() << "The `llc -run-pass=...` syntax for the new pass manager is "

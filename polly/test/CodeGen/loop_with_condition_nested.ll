@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -disable-output < %s | FileCheck %s
 ; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly<no-default-opts>' < %s | opt -passes='print<loops>' -disable-output 2>&1 | FileCheck %s -check-prefix=LOOPS
 
 

@@ -1,6 +1,6 @@
-; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures -polly-allow-nonaffine-loops=false '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures -polly-allow-nonaffine-loops=true '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-process-unprofitable=false -polly-detect-track-failures -polly-allow-nonaffine-loops=true -polly-allow-nonaffine '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINEALL
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect %{polly,}-polly-detect-track-failures %{polly,}-polly-allow-nonaffine-loops=false '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect %{polly,}-polly-detect-track-failures %{polly,}-polly-allow-nonaffine-loops=true '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect %{polly,}-polly-process-unprofitable=false %{polly,}-polly-detect-track-failures %{polly,}-polly-allow-nonaffine-loops=true %{polly,}-polly-allow-nonaffine '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINEALL
 
 ; void f(int A[], int n) {
 ;   for (int i = 0; i < A[n+i]; i++)

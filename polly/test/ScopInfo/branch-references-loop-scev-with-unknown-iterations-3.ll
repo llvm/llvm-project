@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=NONAFFINE
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-allow-nonaffine-branches=false < %s 2>&1 | FileCheck %s -check-prefix=NO-NONEAFFINE
+; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output %{polly,}-polly-allow-nonaffine-branches=false < %s 2>&1 | FileCheck %s -check-prefix=NO-NONEAFFINE
 
 ; NONAFFINE:      Statements {
 ; NONAFFINE-NEXT: 	Stmt_loop

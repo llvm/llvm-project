@@ -545,23 +545,27 @@ else:
         )
     )
 
-# %{loadX,} is followed by one option of the extension, e.g.
-# %{loadnewpmbye,}-wave-goodbye.
-for name, lib, linked in [
-    ("loadnewpmbye", "Bye", config.linked_bye_extension),
+# %loadX loads the extension as a pass plugin unless it is linked into tools.
+# %{X,} is followed by one argument of the plugin, e.g. %{bye,}-wave-goodbye;
+# the argument is a global option when the extension is linked into tools.
+for load_name, arg_name, lib, plugin, linked in [
+    ("%loadnewpmbye", "%{bye,}", "Bye", "Bye", config.linked_bye_extension),
     (
-        "loadexampleirtransforms",
+        "%loadexampleirtransforms",
+        "%{exampleirtransforms,}",
         "ExampleIRTransforms",
+        "SimplifyCFG",
         config.linked_exampleirtransforms_extension,
     ),
 ]:
-    load = ""
+    load = arg = ""
     if not linked:
         load = "-load-pass-plugin={}/{}{}".format(
             config.llvm_shlib_dir, lib, config.llvm_shlib_ext
         )
-    config.substitutions.append(("%{" + name + ",}", load and load + ","))
-    config.substitutions.append(("%" + name, load))
+        arg = "-plugin-arg={},".format(plugin)
+    config.substitutions.append((load_name, load))
+    config.substitutions.append((arg_name, arg))
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:

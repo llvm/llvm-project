@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -verify-region-info -disable-output < %s
 ;
 ; This is a scop directly precedented by a region, i.e. the scop's entry is the

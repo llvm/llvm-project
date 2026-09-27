@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output %{polly,}-polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
 
 ; Verify that a delinearized and a not delinearized access are not
 ; canonicalized.

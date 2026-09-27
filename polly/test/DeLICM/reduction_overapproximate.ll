@@ -1,6 +1,6 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm-partial-writes=false -polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=APPROX
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm-partial-writes=false -polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=EXACT
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -polly-delicm-compute-known=true -polly-delicm-partial-writes=true -polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=PARTIAL
+; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' %{polly,}-polly-delicm-compute-known=true %{polly,}-polly-delicm-overapproximate-writes=true %{polly,}-polly-delicm-partial-writes=false %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=APPROX
+; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' %{polly,}-polly-delicm-compute-known=true %{polly,}-polly-delicm-overapproximate-writes=false %{polly,}-polly-delicm-partial-writes=false %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=EXACT
+; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' %{polly,}-polly-delicm-compute-known=true %{polly,}-polly-delicm-partial-writes=true %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=PARTIAL
 ;
 ;    void func(double *A {
 ;      for (int j = -1; j < 3; j += 1) { /* outer */

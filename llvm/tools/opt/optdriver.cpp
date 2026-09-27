@@ -281,11 +281,14 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-static cl::list<std::string> PassPlugins(
-    "load-pass-plugin",
-    cl::desc("Load passes from plugin library. The plugin's options follow "
-             "its file name, separated by commas"),
-    cl::value_desc("file[,option...]"));
+static cl::list<std::string>
+    PassPlugins("load-pass-plugin",
+                cl::desc("Load passes from plugin library"));
+
+static cl::list<std::string>
+    PluginArgs("plugin-arg",
+               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
+               cl::value_desc("plugin>,<arg"));
 
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
@@ -452,12 +455,14 @@ optMain(int argc, char **argv,
       argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
   SmallVector<PassPlugin, 1> PluginList;
-  for (const std::string &Spec : PassPlugins) {
-    auto Plugin = PassPlugin::load(Spec);
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
     if (!Plugin)
       reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   }
+  if (Error E = PassPlugin::passArguments(PluginList, PluginArgs))
+    reportFatalUsageError(std::move(E));
 
   LLVMContext Context;
 

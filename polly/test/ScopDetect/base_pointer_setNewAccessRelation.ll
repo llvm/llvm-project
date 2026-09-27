@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts;import-jscop>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --allow-empty
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts;import-jscop>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --allow-empty
 ;
 ; Polly codegen used to generate invalid code (referring to %ptr from the
 ; original region) when regeneration of the access function is necessary.

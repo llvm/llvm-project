@@ -1,4 +1,4 @@
-; RUN: opt  %loadNPMPolly '-passes=polly-custom<codegen>' -polly-invariant-load-hoisting -S < %s | FileCheck %s
+; RUN: opt  %loadNPMPolly '-passes=polly-custom<codegen>' %{polly,}-polly-invariant-load-hoisting -S < %s | FileCheck %s
 ;
 ; https://github.com/llvm/llvm-project/issues/190459
 ; Avoid crash because isl_set_gist_params does not preserve single-valuedness

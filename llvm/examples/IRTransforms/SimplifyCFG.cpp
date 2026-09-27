@@ -40,6 +40,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -391,6 +392,17 @@ struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
 };
 } // namespace
 
+// Parses the arguments given by -plugin-arg=SimplifyCFG,<arg>.
+static Error parseArguments(ArrayRef<const char *> Args) {
+  SmallVector<const char *, 0> Argv = {"SimplifyCFG"};
+  append_range(Argv, Args);
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
+  return Error::success();
+}
+
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "SimplifyCFG", LLVM_VERSION_STRING,
@@ -404,7 +416,8 @@ llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
                   }
                   return false;
                 });
-          }};
+          },
+          nullptr, parseArguments};
 }
 
 #ifndef LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS

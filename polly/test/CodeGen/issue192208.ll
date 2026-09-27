@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -passes="polly-custom<detect>" -polly-invariant-load-hoisting=true -polly-print-detect -disable-output %s | FileCheck %s --check-prefix=DETECT
-; RUN: opt %loadNPMPolly -passes="polly-custom<detect;codegen>" -polly-invariant-load-hoisting=true -S %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly -passes="polly-custom<detect>" %{polly,}-polly-invariant-load-hoisting=true %{polly,}-polly-print-detect -disable-output %s | FileCheck %s --check-prefix=DETECT
+; RUN: opt %loadNPMPolly -passes="polly-custom<detect;codegen>" %{polly,}-polly-invariant-load-hoisting=true -S %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; https://github.com/llvm/llvm-project/issues/192208
 ; If not already cached, getSCEV(%phi) would try to re-derive the

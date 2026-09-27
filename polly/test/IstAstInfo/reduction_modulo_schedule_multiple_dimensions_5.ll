@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' %{polly,}-polly-print-ast %{polly,}-polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; Verify that only the outer dimension needs privatization
 ;

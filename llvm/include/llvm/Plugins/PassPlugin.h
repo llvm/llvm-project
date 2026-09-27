@@ -13,6 +13,7 @@
 #ifndef LLVM_PLUGINS_PASSPLUGIN_H
 #define LLVM_PLUGINS_PASSPLUGIN_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -33,7 +34,7 @@ class TargetMachine;
 /// against that of the plugin. A mismatch is an error. The supported version
 /// will be incremented for ABI-breaking changes to the \c PassPluginLibraryInfo
 /// struct, i.e. when callbacks are added, removed, or reordered.
-#define LLVM_PLUGIN_API_VERSION 2
+#define LLVM_PLUGIN_API_VERSION 3
 
 extern "C" {
 /// Information about the plugin required to load its passes
@@ -61,6 +62,11 @@ struct PassPluginLibraryInfo {
   /// callbacks from running.
   bool (*PreCodeGenCallback)(Module &, TargetMachine &, CodeGenFileType,
                              raw_pwrite_stream &OS) = nullptr;
+
+  /// Callback receiving the arguments given to the plugin, e.g. by
+  /// -plugin-arg=<PluginName>,<arg>. A plugin that defines cl::opt parses them
+  /// with cl::ParseCommandLineOptions.
+  Error (*ParseArguments)(ArrayRef<const char *> Args) = nullptr;
 };
 }
 
@@ -70,13 +76,18 @@ struct PassPluginLibraryInfo {
 /// its interface defined by the \c PassPluginLibraryInfo it exposes.
 class PassPlugin {
 public:
-  /// Attempts to load a pass plugin specified as "<file>[,<option>...]", then
-  /// parses the options, which the plugin defines as cl::opt.
+  /// Attempts to load a pass plugin from a given file.
   ///
   /// \returns Returns an error if either the library cannot be found or loaded,
-  /// there is no public entry point, the plugin implements the wrong API
-  /// version, or an option is invalid.
-  LLVM_ABI static Expected<PassPlugin> load(StringRef Spec);
+  /// there is no public entry point, or the plugin implements the wrong API
+  /// version.
+  LLVM_ABI static Expected<PassPlugin> load(StringRef Filename);
+
+  /// Passes each "<PluginName>,<arg>" in \p Args, as given by -plugin-arg, to
+  /// the \c ParseArguments callback of the plugin in \p Plugins with that
+  /// name. Each plugin receives its arguments in order in one call.
+  LLVM_ABI static Error passArguments(ArrayRef<PassPlugin> Plugins,
+                                      ArrayRef<std::string> Args);
 
   /// Get the filename of the loaded plugin.
   StringRef getFilename() const { return Filename; }

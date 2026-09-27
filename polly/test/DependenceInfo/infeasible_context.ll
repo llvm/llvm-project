@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=FUNC-SCOP
-; RUN: opt %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-detect -polly-print-deps -disable-output < %s 2>&1 | FileCheck %s -check-prefix=FUNC-DEPS
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=FUNC-SCOP
+; RUN: opt %loadNPMPolly '-passes=polly-custom<deps>' %{polly,}-polly-print-detect %{polly,}-polly-print-deps -disable-output < %s 2>&1 | FileCheck %s -check-prefix=FUNC-DEPS
 ;
 ; FUNC-SCOP-NOT: Statement
 ; FUNC-DEPS-NOT: RAW dependences

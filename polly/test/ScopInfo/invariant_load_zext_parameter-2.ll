@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -scalar-evolution-max-value-compare-depth=3 '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -scalar-evolution-max-value-compare-depth=3 '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -disable-output < %s
+; RUN: opt %loadNPMPolly -scalar-evolution-max-value-compare-depth=3 '-passes=polly-custom<scops>' %{polly,}-polly-print-scops %{polly,}-polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -scalar-evolution-max-value-compare-depth=3 '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true -disable-output < %s
 ;
 ; Stress test for the code generation of invariant accesses.
 ;

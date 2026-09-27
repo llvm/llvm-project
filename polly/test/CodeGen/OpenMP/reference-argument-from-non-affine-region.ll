@@ -1,8 +1,8 @@
-; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly %{polly,}-polly-parallel %{polly,}-polly-parallel-force '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -polly-scheduling=runtime -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly %{polly,}-polly-parallel %{polly,}-polly-parallel-force '-passes=polly<no-default-opts>' %{polly,}-polly-scheduling=runtime -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -polly-omp-backend=LLVM -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR
+; RUN: opt %loadNPMPolly %{polly,}-polly-parallel %{polly,}-polly-parallel-force '-passes=polly<no-default-opts>' %{polly,}-polly-omp-backend=LLVM -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR
 
 ; IR: @GOMP_parallel_loop_runtime_start
 

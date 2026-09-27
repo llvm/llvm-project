@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -polly-parallel -polly-parallel-force -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true %{polly,}-polly-parallel %{polly,}-polly-parallel-force -S < %s | FileCheck %s
 ;
 ; Test to verify that we hand down the preloaded A[0] to the OpenMP subfunction but
 ; not B[0] as it is not needed

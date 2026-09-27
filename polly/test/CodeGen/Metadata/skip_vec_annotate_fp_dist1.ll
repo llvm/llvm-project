@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-annotate-metadata-vectorize < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' %{polly,}-polly-annotate-metadata-vectorize < %s | FileCheck %s
 
 ; Verify that vectorize.enable metadata is NOT added for a loop with a dist=1
 ; dependence involving floating-point operations. This is a workaround for

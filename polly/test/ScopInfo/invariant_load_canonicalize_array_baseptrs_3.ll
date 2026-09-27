@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output %{polly,}-polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
 
 ; Verify that we canonicalize accesses even tough one of the accesses (even
 ; the canonical base) has a partial execution context. This is correct as

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<flatten;delicm>' -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<flatten;delicm>' %{polly,}-polly-delicm-overapproximate-writes=true %{polly,}-polly-delicm-compute-known=true %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Verify that delicm can cope with never taken PHI incoming edges.
 ; The edge %body -> %body_phi is never taken, hence the access MemoryKind::PHI,

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
+; RUN: opt %loadNPMPolly %{polly,}-polly-process-unprofitable '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s
 ;
 ; This test contains a infinite loop (bb13) and crashed the domain generation
 ; at some point. Just verify it does not anymore.

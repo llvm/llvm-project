@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -polly-process-unprofitable -pass-remarks-analysis=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' %{polly,}-polly-process-unprofitable -pass-remarks-analysis=polly-delicm -disable-output < %s 2>&1 | FileCheck %s
 
 ; This test exercises the ISL operations guard in the DeLICM phase when
 ; collapsing scalars to a store. The structure of the SCoP below has a few

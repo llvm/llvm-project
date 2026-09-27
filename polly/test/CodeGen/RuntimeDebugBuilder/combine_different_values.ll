@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-codegen-add-debug-printing -polly-ignore-aliasing < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S %{polly,}-polly-codegen-add-debug-printing %{polly,}-polly-ignore-aliasing < %s | FileCheck %s
 
 ;    #define N 10
 ;    void foo(float A[restrict], double B[restrict], char C[restrict],

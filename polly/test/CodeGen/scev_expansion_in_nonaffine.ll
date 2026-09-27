@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S %{polly,}-polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; bugpoint-reduced testcase of MiBench/consumer-lame/quantize-pvt.c from the
 ; test-suite.

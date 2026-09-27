@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;scops>' -polly-print-scops -tailcallopt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=LICM
+; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;scops>' %{polly,}-polly-print-scops -tailcallopt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=LICM
 
 ;    void foo(int n, float A[static const restrict n], float x) {
 ;      //      (0)

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-import-jscop-postfix=transformed '-passes=polly-custom<import-jscop;simplify>' -polly-print-import-jscop -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly %{polly,}-polly-import-jscop-postfix=transformed '-passes=polly-custom<import-jscop;simplify>' %{polly,}-polly-print-import-jscop %{polly,}-polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Remove a redundant store, if its partial domain is a subset of the
 ; read's domain.
