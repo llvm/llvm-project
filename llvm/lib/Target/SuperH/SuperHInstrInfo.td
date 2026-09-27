@@ -1101,25 +1101,25 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
 //===--------------------------------------------------------------------------===//
 
 let isTerminator = 1 in {
-  let isBranch = 1, Uses = [SR] in
+  let isBranch = 1 in
   def BF              : InstD8<0b1000101100000000, 
                               (outs), (ins brtarget:$disp),
                               "bf $disp",
                               []>;
 
-  let isBranch = 1, hasDelaySlot = 1, Uses = [SR] in
+  let isBranch = 1, hasDelaySlot = 1 in
   def BFS             : InstD8<0b1000111100000000, 
                               (outs), (ins brtarget:$disp),
                               "bf/s $disp",
                               []>;
 
-  let isBranch = 1, Uses = [SR] in
+  let isBranch = 1 in
   def BT              : InstD8<0b1000100100000000, 
                               (outs), (ins brtarget:$disp),
                               "bt $disp",
                               []>;
 
-  let isBranch = 1, hasDelaySlot = 1, Uses = [SR] in
+  let isBranch = 1, hasDelaySlot = 1 in
   def BTS             : InstD8<0b1000110100000000, 
                               (outs), (ins brtarget:$disp),
                               "bt/s $disp",
