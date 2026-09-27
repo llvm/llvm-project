@@ -72,6 +72,7 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
@@ -121,6 +122,10 @@ private:
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
+
+  template <typename T>
+  bool foldSharedAddSubConstant(MachineBasicBlock &MBB, unsigned AddOpc,
+                                unsigned SubOpc);
 
   template <typename T>
   bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI);
@@ -577,6 +582,86 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
 }
 
 template <typename T>
+bool AArch64MIPeepholeOptImpl::foldSharedAddSubConstant(MachineBasicBlock &MBB,
+                                                        unsigned AddOpc,
+                                                        unsigned SubOpc) {
+  using SignedT = std::make_signed_t<T>;
+
+  struct CanonicalConst {
+    Register Reg;
+    bool IsNegative;
+  };
+  DenseMap<T, CanonicalConst> Canonical;
+  bool Changed = false;
+
+  for (MachineInstr &MI : make_early_inc_range(MBB)) {
+    unsigned Opc = MI.getOpcode();
+    if (Opc != AddOpc && Opc != SubOpc)
+      continue;
+
+    Register SrcReg = MI.getOperand(2).getReg();
+    if (!SrcReg.isVirtual())
+      continue;
+    MachineInstr *MovMI = MRI->getUniqueVRegDef(SrcReg);
+    if (!MovMI)
+      continue;
+    MachineInstr *SubregToRegMI = nullptr;
+    if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+      SubregToRegMI = MovMI;
+      MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(1).getReg());
+      if (!MovMI)
+        continue;
+    }
+    if (MovMI->getOpcode() != AArch64::MOVi32imm &&
+        MovMI->getOpcode() != AArch64::MOVi64imm)
+      continue;
+
+    MachineLoop *L = MLI->getLoopFor(&MBB);
+    if (L && !L->isLoopInvariant(MI))
+      continue;
+
+    T Imm = static_cast<T>(MovMI->getOperand(1).getImm());
+    if (SubregToRegMI)
+      Imm &= 0xFFFFFFFF;
+    if (Imm == 0)
+      continue;
+
+    SignedT SImm = static_cast<SignedT>(Imm);
+    bool IsNegative = SImm < 0;
+    if (IsNegative && static_cast<T>(-SImm) == Imm)
+      continue;
+    T Key = IsNegative ? static_cast<T>(-SImm) : Imm;
+
+    auto It = Canonical.find(Key);
+    if (It == Canonical.end()) {
+      Canonical[Key] = {SrcReg, IsNegative};
+      continue;
+    }
+
+    CanonicalConst &Canon = It->second;
+    if (Canon.Reg == SrcReg)
+      continue;
+
+    bool EffectIsAdd = (Opc == AddOpc) == !IsNegative;
+    bool NewIsAdd = EffectIsAdd == !Canon.IsNegative;
+    unsigned NewOpc = NewIsAdd ? AddOpc : SubOpc;
+
+    MI.getOperand(2).setReg(Canon.Reg);
+    MI.getOperand(2).setIsKill(false);
+    MI.setDesc(TII->get(NewOpc));
+
+    if (MRI->use_nodbg_empty(SrcReg)) {
+      if (SubregToRegMI)
+        SubregToRegMI->eraseFromParent();
+      MovMI->eraseFromParent();
+    }
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+template <typename T>
 bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
                                                SplitAndOpcFunc<T> SplitAndOpc,
                                                BuildMIFunc BuildInstr) {
@@ -968,6 +1053,11 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+    Changed |= foldSharedAddSubConstant<uint32_t>(MBB, AArch64::ADDWrr,
+                                                  AArch64::SUBWrr);
+    Changed |= foldSharedAddSubConstant<uint64_t>(MBB, AArch64::ADDXrr,
+                                                  AArch64::SUBXrr);
+
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       default:
