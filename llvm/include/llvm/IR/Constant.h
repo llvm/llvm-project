@@ -120,16 +120,16 @@ public:
   /// poison.
   LLVM_ABI bool containsUndefOrPoisonElement() const;
 
-  /// Return true if this is a vector or struct constant that includes any
+  /// Return true if this is a vector or aggregate constant that includes any
   /// poison elements. Nested aggregates are inspected recursively.
   LLVM_ABI bool containsPoisonElement() const;
 
-  /// Return true if this is a vector or struct constant that includes any
+  /// Return true if this is a vector or aggregate constant that includes any
   /// strictly undef (not poison) elements. Nested aggregates are inspected
   /// recursively.
   LLVM_ABI bool containsUndefElement() const;
 
-  /// Return true if this is a fixed width vector, struct or array constant
+  /// Return true if this is a fixed width vector or aggregate constant
   /// that includes any constant expressions. Nested aggregates are inspected
   /// recursively.
   LLVM_ABI bool containsConstantExpression() const;

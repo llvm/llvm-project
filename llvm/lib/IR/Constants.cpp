@@ -322,6 +322,11 @@ static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
 static bool
 containsMatchingElement(const Constant *C,
                         function_ref<bool(const Constant *)> PredFn) {
+  // Simple pruning for large size array. UndefValue is fine as it is filtered
+  // out by PredFn already.
+  if (isa<ConstantData>(C))
+    return false;
+
   std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
   if (!NumElts)
     return false;
@@ -338,13 +343,11 @@ static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
   Type *Ty = C->getType();
-  if (!Ty->isVectorTy() && !Ty->isStructTy())
+  if (!Ty->isVectorTy() && !Ty->isAggregateType())
     return false;
 
   if (HasFn(C))
     return true;
-  if (isa<ConstantAggregateZero>(C) || isa<ConstantDataSequential>(C))
-    return false;
 
   return containsMatchingElement(C, HasFn);
 }
