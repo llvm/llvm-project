@@ -2694,7 +2694,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
              Alias.isValid(); ++Alias)
           RegMask[*Alias / 32] &= ~(1u << (*Alias % 32));
     }
-    
+
     // Create the RegMask Operand according to our updated mask.
     Ops.push_back(DAG.getRegisterMask(RegMask));
   } else {
