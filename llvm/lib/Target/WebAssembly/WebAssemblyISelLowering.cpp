@@ -3458,17 +3458,22 @@ static SDValue performBitcastCombine(SDNode *N,
       SDValue ExtendedConcatOperandBitmask =
           DAG.getZExtOrTrunc(ConcatOperandBitmask, DL, ReturnVT);
 
-      // Shift the previously reconstructed bits to make room for this chunk.
+      // Shift each chunk's mask to its original lane position before merging it
+      // into the result:
+      //   Result bit index = I * ConcatOperandNumElts + local lane index
+      //
+      // Example: four chunks, each containing 8 mask bits:
+      //   result = M0 | (M1 << 8) | (M2 << 16) | (M3 << 24)
+      //
+      SDValue PositionedChunkBitmask = ExtendedConcatOperandBitmask;
       if (I != 0) {
-        ReconstructedBitmask = DAG.getNode(
-            ISD::SHL, DL, ReturnVT, ReconstructedBitmask,
-            DAG.getShiftAmountConstant(ConcatOperandNumElts, ReturnVT, DL));
+        PositionedChunkBitmask = DAG.getNode(
+            ISD::SHL, DL, ReturnVT, ExtendedConcatOperandBitmask,
+            DAG.getShiftAmountConstant(I * ConcatOperandNumElts, ReturnVT, DL));
       }
 
-      // Merge disjoint partial bitmasks with OR.
-      ReconstructedBitmask =
-          DAG.getNode(ISD::OR, DL, ReturnVT, ReconstructedBitmask,
-                      ExtendedConcatOperandBitmask);
+      ReconstructedBitmask = DAG.getNode(
+          ISD::OR, DL, ReturnVT, ReconstructedBitmask, PositionedChunkBitmask);
     }
 
     return ReconstructedBitmask;
