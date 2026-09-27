@@ -32,7 +32,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
-#include <functional>
 #include <optional>
 
 using namespace llvm;
@@ -4909,14 +4908,13 @@ bool X86DAGToDAGISel::matchVPTERNLOG(SDNode *Root, SDNode *ParentA,
   // Unused operand slots may be padded with an IMPLICIT_DEF (e.g. when a tree
   // folds to a VPTERNLOG with fewer than three distinct inputs); padding has no
   // parent node.
-  auto IsPad = [](SDValue V) {
+  [[maybe_unused]] auto IsPad = [](SDValue V) {
     return V.isMachineOpcode() &&
            V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
   };
   assert((IsPad(A) || A.isOperandOf(ParentA)) &&
          (IsPad(B) || B.isOperandOf(ParentB)) &&
          (IsPad(C) || C.isOperandOf(ParentC)) && "Incorrect parent node");
-  (void)IsPad;
 
   auto tryFoldLoadOrBCast =
       [this](SDNode *Root, SDNode *P, SDValue &L, SDValue &Base, SDValue &Scale,
@@ -5092,8 +5090,8 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
                       unsigned &NumOps) -> bool {
     static constexpr uint8_t Seeds[] = {0xF0, 0xCC, 0xAA};
     NumOps = 0;
-    std::function<int(SDValue, SDNode *, bool)> Eval =
-        [&](SDValue Op, SDNode *Parent, bool IsRoot) -> int {
+    auto Eval = [&](auto &&Self, SDValue Op, SDNode *Parent,
+                    bool IsRoot) -> int {
       if (Op.getNode() != Opaque) {
         if (Op.getOpcode() == ISD::BITCAST && (IsRoot || Op.hasOneUse())) {
           Parent = Op.getNode();
@@ -5101,13 +5099,13 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
         }
         if ((IsRoot || Op.hasOneUse()) && IsNot(Op)) {
           ++NumOps;
-          int Inner = Eval(Op.getOperand(0), Op.getNode(), false);
+          int Inner = Self(Self, Op.getOperand(0), Op.getNode(), false);
           return Inner < 0 ? -1 : (~Inner & 0xFF);
         }
         if ((IsRoot || Op.hasOneUse()) && IsLogic(Op.getOpcode())) {
           ++NumOps;
-          int L = Eval(Op.getOperand(0), Op.getNode(), false);
-          int R = Eval(Op.getOperand(1), Op.getNode(), false);
+          int L = Self(Self, Op.getOperand(0), Op.getNode(), false);
+          int R = Self(Self, Op.getOperand(1), Op.getNode(), false);
           if (L < 0 || R < 0)
             return -1;
           switch (Op.getOpcode()) {
@@ -5134,7 +5132,7 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
       Leaves.push_back({Op, Parent});
       return Seed;
     };
-    int Result = Eval(Root, Root.getNode(), /*IsRoot=*/true);
+    int Result = Eval(Eval, Root, Root.getNode(), /*IsRoot=*/true);
     if (Result < 0)
       return false;
     Imm = Result & 0xFF;
@@ -5181,22 +5179,22 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   // that could be made opaque (NOTs are transparent - cutting at one would just
   // spill it to a separate instruction).
   SmallVector<SDNode *, 8> Candidates;
-  std::function<void(SDValue)> Collect = [&](SDValue V) {
+  auto Collect = [&](auto &&Self, SDValue V) -> void {
     V = PeelBitcast(V);
     if (!V.hasOneUse())
       return;
     if (IsNot(V)) {
-      Collect(V.getOperand(0));
+      Self(Self, V.getOperand(0));
       return;
     }
     if (IsLogic(V.getOpcode())) {
       Candidates.push_back(V.getNode());
-      Collect(V.getOperand(0));
-      Collect(V.getOperand(1));
+      Self(Self, V.getOperand(0));
+      Self(Self, V.getOperand(1));
     }
   };
-  Collect(N->getOperand(0));
-  Collect(N->getOperand(1));
+  Collect(Collect, N->getOperand(0));
+  Collect(Collect, N->getOperand(1));
 
   // Pick the cut that lets the root fold the most leaves (a tighter cascade),
   // breaking ties towards folding more ops.

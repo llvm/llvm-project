@@ -1166,23 +1166,14 @@ define void @vec256_v2i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec256_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec256_v2i64:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec256_v2i64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec256_v2i64:
 ; AVX512:       # %bb.0:
@@ -1225,23 +1216,14 @@ define void @vec256_v2f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec256_v2f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec256_v2f64:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec256_v2f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec256_v2f64:
 ; AVX512:       # %bb.0:
@@ -1479,23 +1461,14 @@ define void @vec256_v4i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec256_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec256_v4i32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec256_v4i32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec256_v4i32:
 ; AVX512:       # %bb.0:
@@ -1533,23 +1506,14 @@ define void @vec256_v4f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec256_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec256_v4f32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec256_v4f32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec256_v4f32:
 ; AVX512:       # %bb.0:
@@ -1745,23 +1709,14 @@ define void @vec256_v8i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec256_v8i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec256_v8i16:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec256_v8i16:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec256_v8i16:
 ; AVX512:       # %bb.0:
@@ -1929,23 +1884,14 @@ define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec256_v16i8:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec256_v16i8:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec256_v16i8:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec256_v16i8:
 ; AVX512:       # %bb.0:
@@ -2484,25 +2430,15 @@ define void @vec384_v2i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v2i64:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v2i64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v2i64:
 ; AVX512:       # %bb.0:
@@ -2551,25 +2487,15 @@ define void @vec384_v2f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v2f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v2f64:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v2f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v2f64:
 ; AVX512:       # %bb.0:
@@ -3294,37 +3220,21 @@ define void @vec384_v3i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v3i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, (%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v3i32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v3i32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v3i32:
 ; AVX512:       # %bb.0:
@@ -3456,37 +3366,21 @@ define void @vec384_v3f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v3f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, (%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v3f32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v3f32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v3f32:
 ; AVX512:       # %bb.0:
@@ -3952,25 +3846,15 @@ define void @vec384_v4i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v4i32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v4i32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v4i32:
 ; AVX512:       # %bb.0:
@@ -4013,25 +3897,15 @@ define void @vec384_v4f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v4f32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v4f32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v4f32:
 ; AVX512:       # %bb.0:
@@ -4382,37 +4256,21 @@ define void @vec384_v6i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v6i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, (%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v6i16:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v6i16:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v6i16:
 ; AVX512:       # %bb.0:
@@ -4822,25 +4680,15 @@ define void @vec384_v8i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v8i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v8i16:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v8i16:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v8i16:
 ; AVX512:       # %bb.0:
@@ -4964,37 +4812,21 @@ define void @vec384_v12i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v12i8:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, (%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX1-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX1-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v12i8:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
-; AVX2-ONLY-NEXT:    vmovq %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v12i8:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX1OR2-NEXT:    vmovq %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v12i8:
 ; AVX512:       # %bb.0:
@@ -5276,25 +5108,15 @@ define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec384_v16i8:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec384_v16i8:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec384_v16i8:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec384_v16i8:
 ; AVX512:       # %bb.0:
@@ -6003,27 +5825,16 @@ define void @vec512_v2i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v2i64:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v2i64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v2i64:
 ; AVX512:       # %bb.0:
@@ -6078,27 +5889,16 @@ define void @vec512_v2f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v2f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v2f64:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v2f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v2f64:
 ; AVX512:       # %bb.0:
@@ -6163,31 +5963,18 @@ define void @vec512_v2i128(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec
 ; SSE2-NEXT:    movdqa %xmm1, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v2i128:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpxor 16(%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX1-NEXT:    vmovdqa %xmm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm1, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm1, 32(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v2i128:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm1
-; AVX2-ONLY-NEXT:    vpxor 16(%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm1, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm1, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm1, 32(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v2i128:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm1
+; AVX1OR2-NEXT:    vpxor 16(%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm1, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm1, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm1, 32(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v2i128:
 ; AVX512:       # %bb.0:
@@ -6513,27 +6300,16 @@ define void @vec512_v4i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v4i32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v4i32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v4i32:
 ; AVX512:       # %bb.0:
@@ -6581,27 +6357,16 @@ define void @vec512_v4f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v4f32:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v4f32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v4f32:
 ; AVX512:       # %bb.0:
@@ -7022,27 +6787,16 @@ define void @vec512_v8i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v8i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v8i16:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v8i16:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v8i16:
 ; AVX512:       # %bb.0:
@@ -7467,27 +7221,16 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: vec512_v16i8:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX1-NEXT:    retq
-;
-; AVX2-ONLY-LABEL: vec512_v16i8:
-; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
-; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 48(%rdx)
-; AVX2-ONLY-NEXT:    retq
+; AVX1OR2-LABEL: vec512_v16i8:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX1OR2-NEXT:    vmovdqa %xmm0, 48(%rdx)
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v16i8:
 ; AVX512:       # %bb.0:
