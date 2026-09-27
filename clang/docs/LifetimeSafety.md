@@ -3,7 +3,7 @@
 
 ## Introduction
 
-Clang Lifetime Safety Analysis is a C++ language extension which warns about
+Clang Lifetime Safety Analysis is a C and C++ language extension which warns about
 potential dangling pointer defects in code. The analysis aims to detect
 when a pointer, reference or view type (such as `std::string_view`) refers to an object
 that is no longer alive, a condition that leads to use-after-free bugs and
@@ -57,6 +57,24 @@ The analysis flags the assignment `v = s` as defective because `s` is
 destroyed while `v` is still alive and points to `s`, and adds a note
 to where `v` is used after `s` has been destroyed.
 
+```c
+#include <stdio.h>
+void simple_dangle() {
+  int *ptr = NULL;
+  {
+    int i = 5;
+    ptr = &i;   // warning: local variable 'i' does not live long enough
+  }             // note: local variable 'i' is destroyed here
+  *ptr = 6;     // note: later used here
+}
+```
+
+This example demonstrates a simples use-after-scope bug in C. The `ptr` pointer
+is set to `NULL` in the outer scope. In the inner scope ptr points to `i`, but
+its lifetime ends at the end of the inner block which causes `ptr` to dangle
+when it is set to 6.
+
+
 ### Running The Analysis
 
 To run the analysis, compile with the `-Wlifetime-safety-permissive` flag, e.g.
@@ -66,7 +84,9 @@ clang -c -Wlifetime-safety-permissive example.cpp
 ```
 
 This flag enables a core set of lifetime safety checks. For more fine-grained
-control over warnings, see {ref}`warning_flags`.
+control over warnings, see {ref}`warning_flags`. The analysis runs for both
+C and C++ by default. Use `-fno-lifetime-safety-c` to disable the analysis
+for C code.
 
 ## Lifetime Annotations
 
