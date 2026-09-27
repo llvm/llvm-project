@@ -3226,6 +3226,34 @@ TEST(TargetParserTest, testAMDGPUgetVGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch1100, true), 24u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetVGPREncodingGranule) {
+  for (auto Kind :
+       {AMDGPU::GK_NONE, AMDGPU::GK_GFX600, AMDGPU::GK_GFX1030,
+        AMDGPU::GK_GFX1100, AMDGPU::GK_GFX1200, AMDGPU::GK_GFX1310}) {
+    SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Kind).str());
+    EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Kind, false), 4u);
+    EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Kind, true), 8u);
+  }
+  for (auto Kind : {AMDGPU::GK_GFX90A, AMDGPU::GK_GFX942, AMDGPU::GK_GFX950}) {
+    SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Kind).str());
+    EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Kind, false), 8u);
+    EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Kind, true), 8u);
+  }
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(AMDGPU::GK_GFX1250, false), 8u);
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(AMDGPU::GK_GFX1250, true), 16u);
+
+  // Encoding granules can be smaller than allocation granules.
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Triple::AMDGPUSubArch1030, true),
+            8u);
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Triple::AMDGPUSubArch1100, false),
+            4u);
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Triple::AMDGPUSubArch90A, false),
+            8u);
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Triple::AMDGPUSubArch1250, true),
+            16u);
+  EXPECT_EQ(AMDGPU::getVGPREncodingGranule(Triple::NoSubArch, false), 4u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetTotalNumVGPRs) {
   // Pre-gfx10 the file is 256 registers, and gfx90a doubles it by unifying the
   // AGPRs. From gfx10 on it is split between the waves of a wave64 kernel.

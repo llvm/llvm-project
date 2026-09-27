@@ -853,7 +853,8 @@ public:
 
   /// \returns VGPR encoding granularity supported by the subtarget.
   unsigned getVGPREncodingGranule() const {
-    return AMDGPU::IsaInfo::getVGPREncodingGranule(*this);
+    return AMDGPU::getVGPREncodingGranule(getTargetID().getGPUKind(),
+                                          isWave32());
   }
 
   /// \returns Total number of VGPRs supported by the subtarget.

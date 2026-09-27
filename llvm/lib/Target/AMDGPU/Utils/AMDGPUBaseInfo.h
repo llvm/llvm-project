@@ -241,14 +241,6 @@ unsigned
 getVGPRAllocGranule(const MCSubtargetInfo &STI, unsigned DynamicVGPRBlockSize,
                     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
-/// \returns VGPR encoding granularity for given subtarget \p STI.
-///
-/// For subtargets which support it, \p EnableWavefrontSize32 should match
-/// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned getVGPREncodingGranule(
-    const MCSubtargetInfo &STI,
-    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
-
 /// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
 /// returns the allocation granule for ArchVGPRs.
 unsigned getArchVGPRAllocGranule();

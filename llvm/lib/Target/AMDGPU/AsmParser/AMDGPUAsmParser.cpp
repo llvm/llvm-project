@@ -6193,9 +6193,10 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
     return SubGPR;
   };
 
-  VGPRBlocks = GetNumGPRBlocks(
-      NextFreeVGPR,
-      IsaInfo::getVGPREncodingGranule(getSTI(), EnableWavefrontSize32));
+  bool IsWave32 = EnableWavefrontSize32.value_or(
+      getSTI().getFeatureBits().test(FeatureWavefrontSize32));
+  VGPRBlocks = GetNumGPRBlocks(NextFreeVGPR,
+                               AMDGPU::getVGPREncodingGranule(Gfx, IsWave32));
   SGPRBlocks =
       GetNumGPRBlocks(NumSGPRs, IsaInfo::getSGPREncodingGranule(getSTI()));
 

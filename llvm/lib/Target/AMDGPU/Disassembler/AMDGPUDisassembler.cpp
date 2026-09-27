@@ -2594,9 +2594,11 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   uint32_t GranulatedWorkitemVGPRCount =
       GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT);
 
+  bool IsWave32 = EnableWavefrontSize32.value_or(
+      STI.getFeatureBits().test(AMDGPU::FeatureWavefrontSize32));
   uint32_t NextFreeVGPR =
       (GranulatedWorkitemVGPRCount + 1) *
-      AMDGPU::IsaInfo::getVGPREncodingGranule(STI, EnableWavefrontSize32);
+      AMDGPU::getVGPREncodingGranule(TargetID.getGPUKind(), IsWave32);
 
   KdStream << Indent << ".amdhsa_next_free_vgpr " << NextFreeVGPR << '\n';
 
