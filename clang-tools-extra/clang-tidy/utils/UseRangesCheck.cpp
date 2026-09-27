@@ -272,11 +272,13 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
       if (const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode)) {
         const Expr *RangeArg =
             Call->getArg(Replace == Indexes::Second ? Second : First);
+        const bool NeedsDereference =
+            ArgExpr->getType()->isPointerType() &&
+            isa<CXXMemberCallExpr>(RangeArg->IgnoreParenImpCasts());
         std::string ReplaceText =
-            tooling::fixit::getText(*ArgExpr, *Result.Context).str();
-        if (ArgExpr->getType()->isPointerType() &&
-            isa<CXXMemberCallExpr>(RangeArg->IgnoreParenImpCasts()))
-          ReplaceText = fixit::formatDereference(*ArgExpr, *Result.Context);
+            NeedsDereference
+                ? fixit::formatDereference(*ArgExpr, *Result.Context)
+                : tooling::fixit::getText(*ArgExpr, *Result.Context).str();
         Diag << FixItHint::CreateReplacement(RangeArg->getSourceRange(),
                                              ReplaceText);
       } else {
