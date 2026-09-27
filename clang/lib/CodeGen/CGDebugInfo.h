@@ -103,6 +103,9 @@ class CGDebugInfo {
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
 
+  /// DI element indices used by preserve-access intrinsics.
+  llvm::DenseMap<const FieldDecl *, unsigned> FieldIndexCache;
+
   /// Cache that maps VLA types to size expressions for that type,
   /// represented by instantiated Metadata nodes.
   llvm::SmallDenseMap<QualType, llvm::Metadata *> SizeExprCache;
@@ -623,8 +626,9 @@ public:
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);
 
-  /// Emit record type's standalone debug info.
-  llvm::DIType *getOrCreateRecordType(QualType Ty, SourceLocation L);
+  /// Emit complete record debug info and return the field's element index.
+  std::pair<llvm::DIType *, unsigned>
+  getOrCreateRecordField(QualType Ty, const FieldDecl *Field);
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);
