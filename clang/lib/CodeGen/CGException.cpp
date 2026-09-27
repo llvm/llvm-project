@@ -1412,13 +1412,13 @@ namespace {
         CGF.Builder.CreateCondBr(ShouldRethrow, RethrowBB, ContBB);
 
         CGF.EmitBlock(RethrowBB);
-        if (!SavedExnVar) {
-          CGF.EmitNoreturnRuntimeCallOrInvoke(RethrowFn, {});
+        if (SavedExnVar) {
+          CGF.EmitNoreturnRuntimeCallOrInvoke(
+              RethrowFn, {CGF.Builder.CreateAlignedLoad(
+                              CGF.Int8PtrTy, SavedExnVar,
+                              CGF.getPointerAlign())});
         } else {
-          CGF.EmitRuntimeCallOrInvoke(RethrowFn, CGF.Builder.CreateAlignedLoad(
-                                                     CGF.Int8PtrTy, SavedExnVar,
-                                                     CGF.getPointerAlign()));
-          CGF.Builder.CreateUnreachable();
+          CGF.EmitNoreturnRuntimeCallOrInvoke(RethrowFn, {});
         }
 
         CGF.EmitBlock(ContBB);
