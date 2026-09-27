@@ -2658,8 +2658,9 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
   llvm::Type *ResLTy = ConvertType(LV.getType());
 
   Address Ptr = LV.getBitFieldAddress();
-  llvm::Value *Val =
-      Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
+  auto *Load = Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
+  CGM.DecorateInstructionWithTBAA(Load, LV.getTBAAInfo());
+  llvm::Value *Val = Load;
 
   bool UseVolatile = LV.isVolatileQualified() &&
                      Info.VolatileStorageSize != 0 &&
@@ -3073,8 +3074,9 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
   // and mask together with source before storing.
   if (StorageSize != Info.Size) {
     assert(StorageSize > Info.Size && "Invalid bitfield size.");
-    llvm::Value *Val =
-        Builder.CreateLoad(Ptr, Dst.isVolatileQualified(), "bf.load");
+    auto *Load = Builder.CreateLoad(Ptr, Dst.isVolatileQualified(), "bf.load");
+    CGM.DecorateInstructionWithTBAA(Load, Dst.getTBAAInfo());
+    llvm::Value *Val = Load;
 
     // Mask the source value as needed.
     if (!Dst.getType()->hasBooleanRepresentation())
@@ -3101,12 +3103,14 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     // of the container. The two accesses are not atomic.
     if (Dst.isVolatileQualified() && CodeGenUtils::isAAPCS(CGM.getTarget()) &&
         CGM.getCodeGenOpts().ForceAAPCSBitfieldLoad)
-      Builder.CreateLoad(Ptr, true, "bf.load");
+      CGM.DecorateInstructionWithTBAA(Builder.CreateLoad(Ptr, true, "bf.load"),
+                                      Dst.getTBAAInfo());
   }
 
   // Write the new value back out.
   auto *I = Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
   addInstToCurrentSourceAtom(I, SrcVal);
+  CGM.DecorateInstructionWithTBAA(I, Dst.getTBAAInfo());
 
   // Return the new value of the bit-field, if requested.
   if (Result) {
@@ -6009,10 +6013,27 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
 
     QualType fieldType =
         field->getType().withCVRQualifiers(base.getVRQualifiers());
-    // TODO: Support TBAA for bit fields.
+    TBAAAccessInfo FieldTBAAInfo;
+    if (CGM.getCodeGenOpts().NewStructPathTBAA && !UseVolatile &&
+        !base.getTBAAInfo().isMayAlias() && !rec->hasAttr<MayAliasAttr>() &&
+        !rec->isUnion()) {
+      FieldTBAAInfo = base.getTBAAInfo();
+      if (!FieldTBAAInfo.BaseType) {
+        FieldTBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
+        assert(!FieldTBAAInfo.Offset &&
+               "Nonzero offset for an access with no base type!");
+      }
+
+      // A bit-field access reads or writes its complete storage unit. Use
+      // the character type for that unit while retaining its struct path.
+      if (FieldTBAAInfo.BaseType)
+        FieldTBAAInfo.Offset += Info.StorageOffset.getQuantity();
+      FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(getContext().CharTy);
+      FieldTBAAInfo.Size = getContext().toCharUnitsFromBits(SS).getQuantity();
+    }
     LValueBaseInfo FieldBaseInfo(BaseInfo.getAlignmentSource());
     return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo,
-                                TBAAAccessInfo());
+                                FieldTBAAInfo);
   }
 
   // Fields of may-alias structures are may-alias themselves.
