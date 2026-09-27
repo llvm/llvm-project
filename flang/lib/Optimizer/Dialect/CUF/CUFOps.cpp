@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
-#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -274,6 +273,36 @@ llvm::LogicalResult cuf::KernelOp::verify() {
   return checkStreamType(*this);
 }
 
+bool cuf::KernelOp::canMoveFromDescendant(mlir::Operation *descendant,
+                                          mlir::Operation *candidate) {
+  // Moving operations out of loops inside cuf.kernel is always legal.
+  return true;
+}
+
+bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
+  // In general, some movement of operations out of cuf.kernel is allowed.
+  if (!candidate)
+    return true;
+
+  // Operations that have !fir.ref operands cannot be moved
+  // out of cuf.kernel, because this may break implicit data mapping
+  // passes that may run after LICM.
+  if (llvm::any_of(candidate->getOperands(), [&](mlir::Value operand) {
+        return fir::isa_ref_type(operand.getType());
+      }))
+    return false;
+
+  // Same is true for symbol operands (this has to be revisited,
+  // because this may indicate an issue in ordering between
+  // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
+  bool hasSymbolRefAttr = false;
+  candidate->getName().walkInherentAttrs(
+      candidate, [&](llvm::StringRef, mlir::Attribute &attr) {
+        hasSymbolRefAttr |= mlir::isa_and_present<mlir::SymbolRefAttr>(attr);
+      });
+  return !hasSymbolRefAttr;
+}
+
 //===----------------------------------------------------------------------===//
 // RegisterKernelOp
 //===----------------------------------------------------------------------===//
@@ -333,7 +362,8 @@ void cuf::SharedMemoryOp::build(
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType),
         mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
-        /*offset=*/mlir::Value{});
+        /*offset=*/mlir::Value{}, /*alignment=*/mlir::IntegerAttr{},
+        /*isStatic=*/nullptr);
   result.addAttributes(attributes);
 }
 

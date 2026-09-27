@@ -656,3 +656,50 @@ entry:
   ret <32 x i16> %1
 }
 
+define <8 x half> @ceil_sh(<8 x half> %x, <8 x half> %y) nounwind {
+; CHECK-LABEL: ceil_sh:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vrndscalesh $10, %xmm0, %xmm1, %xmm0 
+; CHECK-NEXT:    retq
+  %s = extractelement <8 x half> %x, i32 0
+  %call = call half @llvm.ceil.f16(half %s)
+  %res = insertelement <8 x half> %y, half %call, i32 0
+  ret <8 x half> %res
+}
+declare half @llvm.ceil.f16(half %s)
+
+define <8 x half> @floor_sh(<8 x half> %x, <8 x half> %y) nounwind {
+; CHECK-LABEL: floor_sh:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vrndscalesh $9, %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %s = extractelement <8 x half> %x, i32 0
+  %call = call half @llvm.floor.f16(half %s)
+  %res = insertelement <8 x half> %y, half %call, i32 0
+  ret <8 x half> %res
+}
+declare half @llvm.floor.f16(half %s)
+
+define <8 x half> @rint_sh(<8 x half> %x, <8 x half> %y) nounwind {
+; CHECK-LABEL: rint_sh:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vrndscalesh $4, %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %s = extractelement <8 x half> %x, i32 0
+  %call = call half @llvm.rint.f16(half %s)
+  %res = insertelement <8 x half> %y, half %call, i32 0
+  ret <8 x half> %res
+}
+declare half @llvm.rint.f16(half %s)
+
+define <8 x half> @nearbyint_sh(<8 x half> %x, <8 x half> %y) nounwind {
+; CHECK-LABEL: nearbyint_sh:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vrndscalesh $12, %xmm0, %xmm1, %xmm0 
+; CHECK-NEXT:    retq
+  %s = extractelement <8 x half> %x, i32 0
+  %call = call half @llvm.nearbyint.f16(half %s)
+  %res = insertelement <8 x half> %y, half %call, i32 0
+  ret <8 x half> %res
+}
+declare half @llvm.nearbyint.f16(half %s)

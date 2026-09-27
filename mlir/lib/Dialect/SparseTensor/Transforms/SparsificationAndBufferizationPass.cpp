@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -221,10 +220,12 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](TensorType tensorType,
+  options.unknownTypeConverterFn = [](TensorLikeType tensorType,
                                       Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
+    return cast<bufferization::BufferLikeType>(
+        getMemRefTypeWithStaticIdentityLayout(cast<TensorType>(tensorType),
+                                              memorySpace));
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;

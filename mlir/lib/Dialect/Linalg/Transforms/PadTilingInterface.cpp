@@ -8,10 +8,13 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -95,10 +98,11 @@ static int64_t extractConstantMultiplier(AffineExpr expr) {
 /// - affine_map<(d0, d1) -> (d0 * 3 + d1)>
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
-SmallVector<OpFoldResult> linalg::computePaddedShape(
-    RewriterBase &rewriter, TypedValue<RankedTensorType> v,
-    AffineMap indexingMap, ArrayRef<OpFoldResult> indexingSizes,
-    const PadTilingInterfaceOptions &options) {
+SmallVector<OpFoldResult>
+linalg::computePaddedShape(OpBuilder &builder, TypedValue<RankedTensorType> v,
+                           AffineMap indexingMap,
+                           ArrayRef<OpFoldResult> indexingSizes,
+                           const PadTilingInterfaceOptions &options) {
   Location loc = v.getLoc();
   SmallVector<OpFoldResult> paddedShape;
   auto tensorType = cast<RankedTensorType>(v.getType());
@@ -109,7 +113,7 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
 
   // "Full-rank" padding specification.
   SmallVector<OpFoldResult> paddingSizes =
-      getFullRankPaddingSizes(rewriter, indexingSizes, options);
+      getFullRankPaddingSizes(builder, indexingSizes, options);
 
   // For each dimension in the operand's shape, iterate over indexingSizes and
   // add the various term contributions.
@@ -147,28 +151,27 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
       OpFoldResult paddingDimOfr;
       if (options.padToMultipleOf) {
         AffineExpr d0, s0;
-        bindDims(rewriter.getContext(), d0);
-        bindSymbols(rewriter.getContext(), s0);
+        bindDims(builder.getContext(), d0);
+        bindSymbols(builder.getContext(), s0);
         AffineMap ceilMap = AffineMap::get(1, 1, d0.ceilDiv(s0) * s0);
         AffineMap composedMap = projectedMap.compose(ceilMap);
         paddingDimOfr = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, composedMap,
-            {indexingSizes[paddingDim], paddingSize},
+            builder, loc, composedMap, {indexingSizes[paddingDim], paddingSize},
             /*composeAffineMin=*/true);
       } else {
         // Otherwise just set to paddingSize.
         paddingDimOfr = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, projectedMap, paddingSize);
+            builder, loc, projectedMap, paddingSize);
       }
 
       // Adjust for the maximum accessed index, which is (paddingSize - 1) *
       // multiplier.
       AffineExpr d0;
-      bindDims(rewriter.getContext(), d0);
+      bindDims(builder.getContext(), d0);
       int64_t multiplier = extractConstantMultiplier(projectedMap.getResult(0));
       AffineMap subtractMap = AffineMap::get(1, 0, d0 - multiplier);
       OpFoldResult maxAccessIdx = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, subtractMap, {paddingDimOfr});
+          builder, loc, subtractMap, {paddingDimOfr});
       terms.push_back(maxAccessIdx);
 
       LLVM_DEBUG(DBGS() << "------new term: " << terms.back() << "\n");
@@ -177,19 +180,19 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
     // If there are no terms, just return the dim.
     if (terms.empty()) {
       paddedShape[resultIndex] =
-          createFoldedDimOp(rewriter, loc, v, resultIndex);
+          createFoldedDimOp(builder, loc, v, resultIndex);
       continue;
     }
 
     // Sum individual terms' contributions.
     SmallVector<AffineExpr> dims(terms.size());
-    bindDimsList(rewriter.getContext(), MutableArrayRef{dims});
+    bindDimsList(builder.getContext(), MutableArrayRef{dims});
     AffineExpr sumExpr = dims.front();
     for (unsigned i = 1; i < dims.size(); ++i)
       sumExpr = sumExpr + dims[i];
     // Add 1 to the maximum accessed index and get the final padded size.
-    OpFoldResult paddedDimOfr = affine::makeComposedFoldedAffineApply(
-        rewriter, loc, sumExpr + 1, terms);
+    OpFoldResult paddedDimOfr =
+        affine::makeComposedFoldedAffineApply(builder, loc, sumExpr + 1, terms);
     paddedShape[resultIndex] = paddedDimOfr;
   }
 
@@ -198,7 +201,7 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
 
 FailureOr<SmallVector<OpFoldResult>>
 linalg::computeIndexingMapOpInterfacePaddedShape(
-    RewriterBase &rewriter, OpOperand &operandToPad,
+    OpBuilder &builder, OpOperand &operandToPad,
     ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options) {
   auto transferOp =
       llvm::dyn_cast<IndexingMapOpInterface>(operandToPad.getOwner());
@@ -206,9 +209,9 @@ linalg::computeIndexingMapOpInterfacePaddedShape(
     return failure();
 
   // clang-format off
-  assert(llvm::all_of(iterationDomain, [&rewriter](Range r) {
-    return r.offset == OpFoldResult(rewriter.getIndexAttr(0)) &&
-    r.stride == OpFoldResult(rewriter.getIndexAttr(1));
+  assert(llvm::all_of(iterationDomain, [&builder](Range r) {
+    return r.offset == OpFoldResult(builder.getIndexAttr(0)) &&
+    r.stride == OpFoldResult(builder.getIndexAttr(1));
   }) && "expected 0-offset 1-stride loop ranges");
   // clang-format on
   SmallVector<OpFoldResult> loopUpperBounds;
@@ -218,13 +221,13 @@ linalg::computeIndexingMapOpInterfacePaddedShape(
 
   AffineMap indexingMap = transferOp.getMatchingIndexingMap(&operandToPad);
   return computePaddedShape(
-      rewriter, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
+      builder, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
       indexingMap, loopUpperBounds, options);
 }
 
 /// Pad a single operand to `paddedShape` using `paddingValueAttr` as padding
 /// Value.
-static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
+static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
                         TypedValue<RankedTensorType> v,
                         ArrayRef<OpFoldResult> paddedShape,
                         Attribute paddingValueAttr) {
@@ -232,15 +235,15 @@ static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
   if (auto complexTy =
           dyn_cast<ComplexType>(getElementTypeOrSelf(v.getType()))) {
     if (auto complexAttr = dyn_cast<ArrayAttr>(paddingValueAttr)) {
-      paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
+      paddingValue = complex::ConstantOp::create(builder, opToPad.getLoc(),
                                                  complexTy, complexAttr);
     }
-  } else if (isa<ub::PoisonAttr>(paddingValueAttr)) {
-    paddingValue = ub::PoisonOp::create(rewriter, opToPad.getLoc(),
+  } else if (matchPattern(paddingValueAttr, ub::m_Poison())) {
+    paddingValue = ub::PoisonOp::create(builder, opToPad.getLoc(),
                                         getElementTypeOrSelf(v.getType()));
   } else if (auto typedAttr = dyn_cast<TypedAttr>(paddingValueAttr)) {
     paddingValue =
-        arith::ConstantOp::create(rewriter, opToPad.getLoc(), typedAttr);
+        arith::ConstantOp::create(builder, opToPad.getLoc(), typedAttr);
   }
   assert(paddingValue && "failed to create value from padding attribute");
 
@@ -259,49 +262,192 @@ static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
       RankedTensorType::get(tensorShape, getElementTypeOrSelf(v));
   LLVM_DEBUG(DBGS() << "--SUCCESS, makeComposedPadHighOp with type: "
                     << paddedTensorType);
-  return makeComposedPadHighOp(rewriter, opToPad.getLoc(), paddedTensorType, v,
+  return makeComposedPadHighOp(builder, opToPad.getLoc(), paddedTensorType, v,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 
-FailureOr<TilingInterface> linalg::rewriteAsPaddedOp(
-    RewriterBase &rewriter, TilingInterface opToPad,
-    const PadTilingInterfaceOptions &constOptions,
-    SmallVector<tensor::PadOp> &padOps,
+/// Returns true if `operand` is indexed along at least one reduction dimension
+/// of `linalgOp`
+static bool isReducedOperand(linalg::LinalgOp linalgOp, OpOperand *operand,
+                             ArrayRef<utils::IteratorType> iterTypes) {
+  assert(operand->getOwner() == linalgOp.getOperation() &&
+         "expected operand to belong to the LinalgOp");
+
+  AffineMap map = linalgOp.getMatchingIndexingMap(operand);
+  return llvm::any_of(llvm::enumerate(iterTypes), [&](auto it) {
+    return it.value() == utils::IteratorType::reduction &&
+           map.isFunctionOfDim(it.index());
+  });
+}
+
+/// On success, returns a vector with pad values for every operand of linalgOp.
+/// Fails if the body of `linalgOp` is not contraction-like, or if its
+/// `elemwise`/`reduce` pair admits no padding value.
+static FailureOr<SmallVector<Attribute>>
+inferContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp linalgOp,
+                              ArrayRef<utils::IteratorType> iterTypes,
+                              ArrayRef<Attribute> defaultPadVals) {
+  // NOTE: For contraction-like Ops, we infer the padding value by looking at
+  // both elemwise and reduce Ops, where (see isContractionBody for details):
+  //   %0 = <elemwise>(permutation-of(cu(block-argument-0),
+  //                                  cu(block-argument-1)))
+  //   %1 = <reduce>(permutation-of(cu(%0), cu(block-argument-2)))
+  //   return-like cu(%1)
+  Operation *elemwise = nullptr, *reduce = nullptr;
+  auto captureBodyOps = [&](Operation *e, Operation *r) {
+    elemwise = e;
+    reduce = r;
+    return true;
+  };
+  if (!linalg::detail::isContractionBody(*linalgOp.getBlock(), captureBodyOps))
+    return failure();
+
+  // Identify the padding value, `p`, for which `elemwise(p, x)` is the neutral
+  // element of `reduce` for every `x`.
+  // Not every contraction can be zero-padded: a body with `elemwise` =
+  // `arith.addf` and `reduce` = `arith.maximumf` (a max-plus contraction) pads
+  // with `-inf` instead.
+  auto getPadValue = [&](Type elementType) -> Attribute {
+    // `0 * x = 0` and `0 + acc = acc`.
+    if ((isa<arith::MulFOp>(elemwise) && isa<arith::AddFOp>(reduce)) ||
+        (isa<arith::MulIOp>(elemwise) && isa<arith::AddIOp>(reduce)) ||
+        (isa<complex::MulOp>(elemwise) && isa<complex::AddOp>(reduce)))
+      return builder.getZeroAttr(elementType);
+    // `false & x = false` and `false | acc = acc`.
+    if (isa<arith::AndIOp>(elemwise) && isa<arith::OrIOp>(reduce) &&
+        elemwise->getResult(0).getType().isInteger(1))
+      return builder.getZeroAttr(elementType);
+    return {};
+  };
+
+  SmallVector<Attribute> paddingValues(defaultPadVals.begin(),
+                                       defaultPadVals.end());
+  for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+    if (!isReducedOperand(linalgOp, input, iterTypes))
+      continue;
+    Attribute padValue =
+        getPadValue(getElementTypeOrSelf(input->get().getType()));
+    if (!padValue)
+      return failure();
+    paddingValues[input->getOperandNumber()] = padValue;
+  }
+  return paddingValues;
+}
+
+/// Infers a semantics-preserving padding value for every operand of `toPad`
+/// (indexed by operand number). Operands that are reduced are padded with the
+/// neutral element of their reduction combiner (e.g. `-inf` for `maximumf`, `1`
+/// for `mulf`); every other operand is padded with the zero value of its
+/// element type.
+///
+/// Inference is conservative: it returns failure when a semantics-preserving
+/// value cannot be determined (a non-LinalgOp reduction, or a reduction whose
+/// neutral element is unknown), letting callers set `options.paddingValues`
+/// explicitly instead.
+static FailureOr<SmallVector<Attribute>>
+inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
+  Operation *op = toPad.getOperation();
+
+  // Padding acts on operands; default each to the zero of its element type.
+  SmallVector<Attribute> paddingValues;
+  for (Type t : op->getOperandTypes())
+    paddingValues.push_back(builder.getZeroAttr(getElementTypeOrSelf(t)));
+
+  // No reduction: padded elements are never combined, so zero is always safe.
+  SmallVector<utils::IteratorType> iterTypes = toPad.getLoopIteratorTypes();
+  if (!llvm::is_contained(iterTypes, utils::IteratorType::reduction))
+    return paddingValues;
+
+  // A reduction's neutral element requires inspecting the combiner, which is
+  // only possible for a LinalgOp; fail conservatively otherwise.
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
+
+  // A contraction-like body accumulates as `acc = reduce(elemwise(a, b), acc)`
+  // and pads with a value derived from that pair.
+  FailureOr<SmallVector<Attribute>> contractionValues =
+      inferContractionPaddingValues(builder, linalgOp, iterTypes,
+                                    paddingValues);
+  if (succeeded(contractionValues))
+    return *contractionValues;
+
+  // Only a single reduction has an unambiguous per-operand neutral.
+  if (linalgOp.getNumDpsInits() != 1)
+    return failure();
+
+  // For reduction-like bodies, the neutral element of the combiner is used to
+  // pad the reduced operands.
+  SmallVector<Operation *> combiners;
+  if (!matchReduction(linalgOp.getRegionOutputArgs(), /*redPos=*/0, combiners))
+    return failure();
+  if (combiners.size() != 1)
+    return failure();
+  Operation *combiner = combiners.front();
+
+  std::optional<TypedAttr> neutral = arith::getNeutralElement(combiner);
+  if (!neutral)
+    return failure();
+
+  // In case fastMath is enabled with `nnan`, the neutral element of
+  // `maxnumf`/`minnumf`, NaN, becomes an invalid padding value. Bail out and
+  // let the caller supply a value explicitly.
+  if (auto floatNeutral = dyn_cast<FloatAttr>(*neutral);
+      floatNeutral && floatNeutral.getValue().isNaN()) {
+    auto fastMath = dyn_cast<arith::ArithFastMathInterface>(combiner);
+    if (fastMath &&
+        arith::bitEnumContainsAny(fastMath.getFastMathFlagsAttr().getValue(),
+                                  arith::FastMathFlags::nnan))
+      return failure();
+  }
+
+  for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+    if (!isReducedOperand(linalgOp, input, iterTypes))
+      continue;
+    // A reduced operand must feed the combiner directly to use its neutral; an
+    // indirect one (e.g. via a math.exp) has no valid pad value -> fail.
+    if (!llvm::is_contained(linalgOp.getMatchingBlockArgument(input).getUsers(),
+                            combiner))
+      return failure();
+    paddingValues[input->getOperandNumber()] = *neutral;
+  }
+  return paddingValues;
+}
+
+FailureOr<PadTilingInterfaceResult> linalg::rewriteAsPaddedOp(
+    OpBuilder &builder, TilingInterface toPad,
+    PadTilingInterfaceOptions options,
     const PadSizeComputationFunction &computePaddingSizeFun) {
-  LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
+  LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << toPad << "\n");
+  SmallVector<tensor::PadOp> padOps;
+  Location loc = toPad.getLoc();
 
-  Location loc = opToPad.getLoc();
-  PadTilingInterfaceOptions options(constOptions);
   // Allow inference of pad values if they are not explicitly specified.
-  // TODO: be mindful about the value depending on the actual operation.
   if (options.paddingValues.empty()) {
-    SmallVector<Type> types(opToPad->getOperandTypes());
-    llvm::append_range(types, opToPad->getResultTypes());
-    for (Type t : types) {
-      options.paddingValues.push_back(
-          rewriter.getZeroAttr(getElementTypeOrSelf(t)));
+    FailureOr<SmallVector<Attribute>> inferred =
+        inferPaddingValues(builder, toPad);
+    if (failed(inferred)) {
+      LLVM_DEBUG(DBGS() << "Could not infer pad values: FAIL\n");
+      return failure();
     }
+    options.paddingValues = std::move(*inferred);
   }
 
-  if (llvm::any_of(opToPad->getOperands(),
+  if (llvm::any_of(toPad->getOperands(),
                    [](Value v) { return isa<MemRefType>(v.getType()); })) {
-    return rewriter.notifyMatchFailure(opToPad,
-                                       "expected operation on tensors");
+    LLVM_DEBUG(DBGS() << "Not an operation on tensors: FAIL\n");
+    return failure();
   }
-
-  OpBuilder::InsertionGuard g(rewriter);
-  // Set IP after opToPad because we also take the dims of opToPad's output.
-  rewriter.setInsertionPointAfter(opToPad);
 
   // 1. Get the loopUpperBounds from the TilingInterface.
-  SmallVector<Range> iterationDomain = opToPad.getIterationDomain(rewriter);
+  SmallVector<Range> iterationDomain = toPad.getIterationDomain(builder);
 
   // 2. For each operand.
   SmallVector<Value> newOperands;
-  newOperands.reserve(opToPad->getNumOperands());
-  for (OpOperand &opOperand : opToPad->getOpOperands()) {
+  newOperands.reserve(toPad->getNumOperands());
+  for (OpOperand &opOperand : toPad->getOpOperands()) {
     Value operand = opOperand.get();
-    LLVM_DEBUG(DBGS() << "--start padding oprd: " << operand << "\n");
+    LLVM_DEBUG(DBGS() << "--start padding operand: " << operand << "\n");
 
     // 2.a. Skip scalar-like operands.
     Type operandType = operand.getType();
@@ -311,30 +457,31 @@ FailureOr<TilingInterface> linalg::rewriteAsPaddedOp(
       newOperands.push_back(operand);
       continue;
     }
+
     // 2.a. Compute padded shape.
     FailureOr<SmallVector<OpFoldResult>> maybePaddedShape =
-        computePaddingSizeFun(rewriter, opOperand, iterationDomain, options);
+        computePaddingSizeFun(builder, opOperand, iterationDomain, options);
     if (failed(maybePaddedShape)) {
-      return rewriter.notifyMatchFailure(opToPad, "could not pad op");
+      LLVM_DEBUG(DBGS() << "Could not get padded shape of operand: FAIL\n");
+      return failure();
     }
 
     // 2.b. Expect proper `paddingValues`.
     // TODO: we may want to allow garbage padding in the future, in which case
     // we would just not assert.
     if (opOperand.getOperandNumber() >= options.paddingValues.size()) {
-      return rewriter.notifyMatchFailure(opToPad,
-                                         "--no padding value specified");
+      LLVM_DEBUG(DBGS() << "Too few padding values specified: FAIL\n");
+      return failure();
     }
     Attribute paddingValueAttr =
         options.paddingValues[opOperand.getOperandNumber()];
 
     // 2.c. Perform actual padding.
-    Value paddedOperand = padOperand(
-        rewriter, opToPad, cast<TypedValue<RankedTensorType>>(operand),
-        *maybePaddedShape, paddingValueAttr);
+    Value paddedOperand =
+        padOperand(builder, toPad, cast<TypedValue<RankedTensorType>>(operand),
+                   *maybePaddedShape, paddingValueAttr);
     LLVM_DEBUG(DBGS() << "--done padding operand: " << paddedOperand << "\n");
 
-    // 2.d. Perform actual padding.
     newOperands.push_back(paddedOperand);
     if (auto padOp = paddedOperand.getDefiningOp<tensor::PadOp>())
       padOps.push_back(padOp);
@@ -342,38 +489,34 @@ FailureOr<TilingInterface> linalg::rewriteAsPaddedOp(
 
   // 3. Form the resulting tensor::ExtractSliceOp.
   ReifiedRankedShapedTypeDims reifiedResultShapes;
-  if (failed(reifyResultShapes(rewriter, opToPad, reifiedResultShapes))) {
-    LLVM_DEBUG(DBGS() << "--failed to reify result shapes -> FAIL\n");
-    return rewriter.notifyMatchFailure(opToPad,
-                                       "failed to reify result shapes");
+  if (failed(reifyResultShapes(builder, toPad, reifiedResultShapes))) {
+    LLVM_DEBUG(DBGS() << "Failed to reify result shapes: FAIL\n");
+    return failure();
   }
-  assert(reifiedResultShapes.size() == opToPad->getNumResults() &&
+  assert(reifiedResultShapes.size() == toPad->getNumResults() &&
          "expected same number of results");
 
-  // Clone `opToPad` to operate on the statically padded shapes.
+  // Clone `toPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
-      ValueRange(newOperands).take_back(opToPad->getNumResults()).getTypes();
-  // clone **should** properly notify the rewriter.
+      ValueRange(newOperands).take_back(toPad->getNumResults()).getTypes();
+  // clone **should** properly notify the builder.
   TilingInterface paddedOp =
-      clone(rewriter, opToPad, resultTensorTypes, newOperands);
+      clone(builder, toPad, resultTensorTypes, newOperands);
   LLVM_DEBUG(DBGS() << "--cloned padded op: " << paddedOp << "\n");
 
-  // Recover the slice out of the new static results. This keeps the original
-  // opToPad around because it uses the dims of the original results.
+  // Recover the slice out of the new static results.
   SmallVector<Value> paddedSubtensorResults;
-  paddedSubtensorResults.reserve(opToPad->getNumResults());
+  paddedSubtensorResults.reserve(toPad->getNumResults());
   for (const auto &en : llvm::enumerate(paddedOp->getResults())) {
     Value paddedResult = en.value();
     int64_t resultNumber = en.index();
     int64_t rank = cast<RankedTensorType>(paddedResult.getType()).getRank();
-    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+    SmallVector<OpFoldResult> offsets(rank, builder.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(rank, builder.getIndexAttr(1));
     paddedSubtensorResults.push_back(tensor::ExtractSliceOp::create(
-        rewriter, loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
+        builder, loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
         strides));
   }
 
-  rewriter.replaceOp(opToPad, paddedSubtensorResults);
-
-  return paddedOp;
+  return PadTilingInterfaceResult{padOps, paddedOp, paddedSubtensorResults};
 }

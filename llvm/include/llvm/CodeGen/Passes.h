@@ -18,6 +18,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <functional>
 #include <string>
@@ -34,9 +35,6 @@ class raw_ostream;
 enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 } // namespace llvm
 
@@ -61,7 +59,7 @@ LLVM_ABI FunctionPass *createUnreachableBlockEliminationPass();
 /// instructions. These blocks confuscate profile analysis (e.g., basic block
 /// sections) since they will share the address of their fallthrough blocks.
 /// This pass garbage-collects such basic blocks.
-LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksPass();
+LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksLegacyPass();
 
 /// createBasicBlockSections Pass - This pass assigns sections to machine
 /// basic blocks and is enabled with -fbasic-block-sections.
@@ -69,18 +67,29 @@ LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
+/// createBasicBlockMatchingAndInferencePass - This pass enables matching
+/// and inference when using propeller.
+LLVM_ABI MachineFunctionPass *createBasicBlockMatchingAndInferencePass();
+
+/// createInsertCodePrefetchPass - This pass enables inserting code prefetch
+/// hints based on the basic block section profile.
+LLVM_ABI MachineFunctionPass *createInsertCodePrefetchPass();
+
+/// createMachineBlockHashInfoPass - This pass computes basic block hashes.
+LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
+
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
 LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
 
 /// createStaticDataSplitterPass - This is a machine-function pass that
 /// categorizes static data hotness using profile information.
-LLVM_ABI MachineFunctionPass *createStaticDataSplitterPass();
+LLVM_ABI MachineFunctionPass *createStaticDataSplitterLegacyPass();
 
 /// createStaticDataAnnotatorPASS - This is a module pass that reads from
 /// StaticDataProfileInfoWrapperPass and annotates the section prefix of
 /// global variables.
-LLVM_ABI ModulePass *createStaticDataAnnotatorPass();
+LLVM_ABI ModulePass *createStaticDataAnnotatorLegacyPass();
 
 /// MachineFunctionPrinter pass - This pass prints out the machine function to
 /// the given stream as a debugging tool.
@@ -92,6 +101,10 @@ createMachineFunctionPrinterPass(raw_ostream &OS,
 /// contents to the given stream as a debugging tool.
 LLVM_ABI MachineFunctionPass *
 createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS);
+
+/// MIR2VecPrinter pass - This pass prints out the MIR2Vec embeddings for
+/// machine functions, basic blocks and instructions.
+LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
 /// StackFramePrinter pass - This pass prints out the machine function's
 /// stack frame to the given stream as a debugging tool.
@@ -107,7 +120,8 @@ LLVM_ABI MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 /// DiagnosticInfoISelFallback for every MachineFunction it resets.
 /// If AbortOnFailedISel is true, abort compilation instead of resetting.
 LLVM_ABI MachineFunctionPass *
-createResetMachineFunctionPass(bool EmitFallbackDiag, bool AbortOnFailedISel);
+createResetMachineFunctionLegacyPass(bool EmitFallbackDiag,
+                                     bool AbortOnFailedISel);
 
 /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
 /// matching during instruction selection.
@@ -271,10 +285,6 @@ LLVM_ABI extern char &BranchRelaxationPassID;
 /// MachineFunctionPrinterPass - This pass prints out MachineInstr's.
 LLVM_ABI extern char &MachineFunctionPrinterPassID;
 
-/// MIRPrintingPass - this pass prints out the LLVM IR using the MIR
-/// serialization format.
-LLVM_ABI extern char &MIRPrintingPassID;
-
 /// TailDuplicate - Duplicate blocks with unconditional branches
 /// into tails of their predecessors.
 LLVM_ABI extern char &TailDuplicateLegacyID;
@@ -329,11 +339,6 @@ LLVM_ABI FunctionPass *createGCLoweringPass();
 /// GCLowering Pass - Used by gc.root to perform its default lowering
 /// operations.
 LLVM_ABI extern char &GCLoweringID;
-
-/// ShadowStackGCLowering - Implements the custom lowering mechanism
-/// used by the shadow stack GC.  Only runs on functions which opt in to
-/// the shadow stack collector.
-LLVM_ABI FunctionPass *createShadowStackGCLoweringPass();
 
 /// ShadowStackGCLowering - Implements the custom lowering mechanism
 /// used by the shadow stack GC.
@@ -417,7 +422,7 @@ LLVM_ABI FunctionPass *createDwarfEHPass(CodeGenOptLevel OptLevel);
 
 /// createWinEHPass - Prepares personality functions used by MSVC on Windows,
 /// in addition to the Itanium LSDA based personalities.
-LLVM_ABI FunctionPass *createWinEHPass(bool DemoteCatchSwitchPHIOnly = false);
+LLVM_ABI FunctionPass *createWinEHPass();
 
 /// createSjLjEHPreparePass - This pass adapts exception handling code to use
 /// the GCC-style builtin setjmp/longjmp (sjlj) to handling EH control flow.
@@ -441,8 +446,8 @@ LLVM_ABI extern char &FinalizeISelID;
 /// UnpackMachineBundles - This pass unpack machine instruction bundles.
 LLVM_ABI extern char &UnpackMachineBundlesID;
 
-LLVM_ABI FunctionPass *
-createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
+LLVM_ABI FunctionPass *createUnpackMachineBundlesLegacy(
+    std::function<bool(const MachineFunction &)> Ftor);
 
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
@@ -535,29 +540,20 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 // the corresponding function in a vector library (e.g., SVML, libmvec).
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandLargeDivRemPass();
-
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandFpPass();
-
-// This pass expands memcmp() to load/stores.
-LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
+// Expands large div/rem and floating-point instructions.
+LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
-LLVM_ABI FunctionPass *createBreakFalseDeps();
+LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 
 // This pass expands indirectbr instructions.
 LLVM_ABI FunctionPass *createIndirectBrExpandPass();
 
 /// Creates CFI Fixup pass. \see CFIFixup.cpp
-LLVM_ABI FunctionPass *createCFIFixup();
+LLVM_ABI FunctionPass *createCFIFixupLegacy();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
-LLVM_ABI FunctionPass *createCFIInstrInserter();
-
-// Expands floating point instructions.
-FunctionPass *createExpandFpPass(CodeGenOptLevel);
+LLVM_ABI FunctionPass *createCFIInstrInserterLegacy();
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -565,7 +561,7 @@ LLVM_ABI FunctionPass *createCFGuardLongjmpPass();
 
 /// Creates Windows EH Continuation Guard target identification pass.
 /// \see EHContGuardTargets.cpp
-LLVM_ABI FunctionPass *createEHContGuardTargetsPass();
+LLVM_ABI FunctionPass *createEHContGuardTargetsLegacy();
 
 /// Create Hardware Loop pass. \see HardwareLoops.cpp
 LLVM_ABI FunctionPass *createHardwareLoopsLegacyPass();
@@ -594,22 +590,15 @@ LLVM_ABI ModulePass *createDebugifyMachineModulePass();
 /// If OnlyDebugified is true then it will only strip debug info if it was
 /// added by a Debugify pass. The module will be left unchanged if the debug
 /// info was generated by another source such as clang.
-LLVM_ABI ModulePass *createStripDebugMachineModulePass(bool OnlyDebugified);
+LLVM_ABI ModulePass *
+createStripDebugMachineModuleLegacyPass(bool OnlyDebugified);
 
 /// Creates MIR Check Debug pass. \see MachineCheckDebugify.cpp
-LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
+LLVM_ABI ModulePass *createCheckDebugMachineModuleLegacyPass();
 
 /// The pass fixups statepoint machine instruction to replace usage of
 /// caller saved registers with stack slots.
 LLVM_ABI extern char &FixupStatepointCallerSavedID;
-
-/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
-/// or split the data to two <128 x i32>.
-LLVM_ABI FunctionPass *createX86LowerAMXTypePass();
-
-/// The pass transforms amx intrinsics to scalar operation if the function has
-/// optnone attribute or it is O0.
-LLVM_ABI FunctionPass *createX86LowerAMXIntrinsicsPass();
 
 /// When learning an eviction policy, extract score(reward) information,
 /// otherwise this does nothing
@@ -621,7 +610,7 @@ LLVM_ABI ModulePass *createJMCInstrumenterPass();
 /// This pass converts conditional moves to conditional jumps when profitable.
 LLVM_ABI FunctionPass *createSelectOptimizePass();
 
-LLVM_ABI FunctionPass *createCallBrPass();
+LLVM_ABI FunctionPass *createInlineAsmPreparePass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
 LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();

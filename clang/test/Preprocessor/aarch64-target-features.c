@@ -41,6 +41,7 @@
 // CHECK: __ARM_NEON_FP 0xE
 // CHECK: __ARM_NEON_SVE_BRIDGE 1
 // CHECK: __ARM_PCS_AAPCS64 1
+// CHECK: __ARM_PREFETCH_RANGE 1
 // CHECK-NOT: __ARM_PCS 1
 // CHECK-NOT: __ARM_PCS_VFP 1
 // CHECK-NOT: __ARM_SIZEOF_MINIMAL_ENUM 1
@@ -215,6 +216,7 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.7-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
@@ -539,6 +541,7 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ALL %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY-ALL %s
+// RUN: %clang -target aarch64-windows-msvc -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS %s
 //
 // Note: PAUTH-OFF - pac-ret is disabled
 //       CPU-NOPAUTH - FEAT_PAUTH support is disabled (but pac-ret can still use HINT-encoded instructions)
@@ -551,6 +554,9 @@
 // CHECK-PAUTH-BKEY-ALL:  #define __ARM_FEATURE_PAC_DEFAULT 6
 // CHECK-CPU-PAUTH:       #define __ARM_FEATURE_PAUTH 1
 // CHECK-CPU-NOPAUTH-NOT: __ARM_FEATURE_PAUTH
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_BTI_DEFAULT 1
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_GCS_DEFAULT 1
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_PAC_DEFAULT 2
 
 // ================== Check Branch Target Identification (BTI).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
@@ -691,6 +697,7 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.7-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
@@ -787,3 +794,86 @@
 // CHECK-SMEF8F16: __ARM_FEATURE_FP8 1
 // CHECK-SMEF8F16: __ARM_FEATURE_SME2 1
 // CHECK-SMEF8F16: __ARM_FEATURE_SME_F8F16 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+fprcvt -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FPRCVT %s
+// CHECK-FPRCVT: __ARM_FEATURE_FPRCVT 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+f8f16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F8F16MM %s
+//  CHECK-F8F16MM: __ARM_FEATURE_F8F16MM 1
+//  CHECK-F8F16MM: __ARM_FEATURE_FP8 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+f8f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F8F32MM %s
+//  CHECK-F8F32MM: __ARM_FEATURE_F8F32MM 1
+//  CHECK-F8F32MM: __ARM_FEATURE_FP8 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+sve-f16f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F16F32MM %s
+//  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE 1
+//  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE_F16F32MM 1
+
+// RUN: %clang --target=aarch64 -march=armv8-a+nosimd+f16f32dot -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32DOT %s
+// CHECK-F16F32DOT: __ARM_FEATURE_F16F32DOT 1
+// CHECK-F16F32DOT: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-F16F32DOT: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-F16F32DOT: __ARM_NEON 1
+// CHECK-F16F32DOT: __ARM_NEON_FP 0xE
+
+// RUN: %clang --target=aarch64 -march=armv8-a+nosimd+f16f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32MM %s
+// CHECK-F16F32MM: __ARM_FEATURE_F16F32MM 1
+// CHECK-F16F32MM: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-F16F32MM: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-F16F32MM: __ARM_NEON 1
+// CHECK-F16F32MM: __ARM_NEON_FP 0xE
+
+// RUN: %clang --target=aarch64 -march=armv9-a+f16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16MM %s
+// CHECK-F16MM: __ARM_FEATURE_F16MM 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sve-b16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-B16MM %s
+// CHECK-SVE-B16MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-B16MM: __ARM_FEATURE_SVE_B16MM 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sve2p3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p3 %s
+// CHECK-SVE2p3: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-SVE2p3: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2p1 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2p2 1
+// CHECK-SVE2p3: __ARM_FEATURE_SVE2p3 1
+// CHECK-SVE2p3: __ARM_NEON 1
+// CHECK-SVE2p3: __ARM_NEON_FP 0xE
+// CHECK-SVE2p3: __ARM_NEON_SVE_BRIDGE 1
+
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2p3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2p3 %s
+// CHECK-SME2p3: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2p3: __ARM_FEATURE_SME 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2p1 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2p2 1
+// CHECK-SME2p3: __ARM_FEATURE_SME2p3 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+sve-bfscale -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BFSCALE %s
+//  CHECK-SVE-BFSCALE: __ARM_FEATURE_SVE_BFSCALE 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+sve-aes2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-AES2 %s
+//  CHECK-SVE-AES2: __ARM_FEATURE_SVE_AES2 1
+
+//  RUN: %clang --target=aarch64 -march=armv9-a+ssve-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SSVE-AES %s
+//  CHECK-SSVE-AES: __ARM_FEATURE_SME2 1
+//  CHECK-SSVE-AES: __ARM_FEATURE_SSVE_AES 1
+//  CHECK-SSVE-AES: __ARM_FEATURE_SVE2_AES 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p2 %s
+// CHECK-SVE2p2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-SVE2p2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-SVE2p2: __ARM_FEATURE_SVE2 1
+// CHECK-SVE2p2: __ARM_FEATURE_SVE2p1 1
+// CHECK-SVE2p2: __ARM_FEATURE_SVE2p2 1
+// CHECK-SVE2p2: __ARM_NEON 1
+// CHECK-SVE2p2: __ARM_NEON_FP 0xE
+// CHECK-SVE2p2: __ARM_NEON_SVE_BRIDGE 1
+//
+// RUN: %clang --target=aarch64 -march=armv9-a+sme2p2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SME2p2 %s
+// CHECK-SME2p2: __ARM_FEATURE_LOCALLY_STREAMING 1
+// CHECK-SME2p2: __ARM_FEATURE_SME 1
+// CHECK-SME2p2: __ARM_FEATURE_SME2 1
+// CHECK-SME2p2: __ARM_FEATURE_SME2p1 1
+// CHECK-SME2p2: __ARM_FEATURE_SME2p2 1

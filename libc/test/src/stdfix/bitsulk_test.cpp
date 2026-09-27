@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // uint_ulk_t
+#include "llvm-libc-types/uint_ulk_t.h" // uint_ulk_t
 #include "src/stdfix/bitsulk.h"
 
 LIST_BITSFX_TESTS(ulk, unsigned long accum, uint_ulk_t,

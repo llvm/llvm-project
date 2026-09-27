@@ -19,9 +19,9 @@ define dso_local signext i32 @undef_early_clobber_chain() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
-; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    mv a1, sp
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    vse32.v v9, (a1)
 ; CHECK-NEXT:    addi sp, sp, 400
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
@@ -50,22 +50,22 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    vadd.vi v10, v9, 1
-; CHECK-NEXT:    vadd.vi v11, v9, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
+; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vadd.vi v10, v9, 1
+; CHECK-NEXT:    vadd.vi v9, v9, 3
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v12, v10, a0
-; CHECK-NEXT:    vslideup.vx v10, v11, a0
+; CHECK-NEXT:    vslideup.vx v10, v9, a0
 ; CHECK-NEXT:  .LBB2_3: # %UseSR
 ; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
 ; CHECK-NEXT:    vrgatherei16.vv v8, v14, v12
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v8, v15, v8
-; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v15, v8
 ; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (zero)
 ; CHECK-NEXT:    ret
@@ -118,11 +118,9 @@ define internal void @SubRegLivenessUndef() {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
 ; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v9, v15, v9
-; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v14, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vand.vv v9, v15, v9
 ; CHECK-NEXT:    vand.vv v9, v9, v11
 ; CHECK-NEXT:    vs1r.v v9, (zero)
 ; CHECK-NEXT:    j .LBB3_1
@@ -145,15 +143,6 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
   store <vscale x 8 x i8> %v60, ptr addrspace(1) null, align 4
   br label %loopIR3.i.i
 }
-
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64) #2
-declare void @llvm.riscv.vse.nxv2f32.i64(<vscale x 2 x float>, ptr nocapture, i64)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
-declare <vscale x 1 x i16> @llvm.stepvector.nxv1i16()
-declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16>, <vscale x 1 x i16>, i64 immarg)
-declare <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i16>, i64)
-
 
 define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
 ; CHECK-LABEL: repeat_shuffle:

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=powerpc-unknown-linux < %s | FileCheck -check-prefix=LINUX32 %s
 ; RUN: llc -mtriple=powerpc64-unknown-linux < %s | FileCheck -check-prefix=LINUX64 %s
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck -check-prefix=AIX32 %s
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck -check-prefix=AIX64 %s
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck -check-prefix=AIX64 %s
 
 define void @func() sspreq nounwind {
 ; OPENBSD32-LABEL: func:

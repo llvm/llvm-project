@@ -18,10 +18,10 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-static_assert(sizeof(void *) != 8 || sizeof(Reloc) == 24,
+static_assert(sizeof(void *) != 8 || sizeof(Relocation) == 24,
               "Try to minimize Reloc's size; we create many instances");
 
-InputSection *Reloc::getReferentInputSection() const {
+InputSection *Relocation::getReferentInputSection() const {
   if (const auto *sym = referent.dyn_cast<Symbol *>()) {
     if (const auto *d = dyn_cast<Defined>(sym))
       return d->isec();
@@ -31,7 +31,7 @@ InputSection *Reloc::getReferentInputSection() const {
   }
 }
 
-StringRef Reloc::getReferentString() const {
+StringRef Relocation::getReferentString() const {
   if (auto *isec = dyn_cast<InputSection *>(referent)) {
     const auto *cisec = dyn_cast<CStringInputSection>(isec);
     assert(cisec && "referent must be a CStringInputSection");
@@ -57,7 +57,8 @@ StringRef Reloc::getReferentString() const {
 }
 
 bool macho::validateSymbolRelocation(const Symbol *sym,
-                                     const InputSection *isec, const Reloc &r) {
+                                     const InputSection *isec,
+                                     const Relocation &r) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
   bool valid = true;
   auto message = [&](const Twine &diagnostic) {
@@ -67,9 +68,37 @@ bool macho::validateSymbolRelocation(const Symbol *sym,
         .str();
   };
 
-  if (relocAttrs.hasAttr(RelocAttrBits::TLV) != sym->isTlv())
-    error(message(Twine("requires that symbol ") + sym->getName() + " " +
-                  (sym->isTlv() ? "not " : "") + "be thread-local"));
+  // A GOT relocation against a thread-local is valid: the slot holds the
+  // address of the TLV descriptor, which is what such a reference asks for.
+  // Branch and unsigned relocations can likewise refer to the descriptor via
+  // a stub or pointer. ld-prime accepts all three kinds.
+  //
+  // A direct relocation against an imported TLV is not valid because an
+  // imported descriptor has no link-time address. Conversely, a TLV
+  // relocation against a symbol known not to be thread-local would interpret
+  // the referent's first word as a resolver function. Keep rejecting both.
+  //
+  // A dynamic-lookup symbol has no defining dylib, and Mach-O cannot express
+  // thread-locality on an undefined reference, so its kind is unknowable here.
+  // dyld resolves it at load time; rejecting it would refuse a valid link.
+  const auto *dysym = dyn_cast<DylibSymbol>(sym);
+  const bool tlvKindIsKnown = !(dysym && dysym->isDynamicLookup());
+  const bool isTlvReloc = relocAttrs.hasAttr(RelocAttrBits::TLV);
+  const bool permitsTlvDescriptor = isTlvReloc ||
+                                    relocAttrs.hasAttr(RelocAttrBits::GOT) ||
+                                    relocAttrs.hasAttr(RelocAttrBits::BRANCH) ||
+                                    relocAttrs.hasAttr(RelocAttrBits::UNSIGNED);
+  const bool isImportedTlv = dysym && sym->isTlv();
+
+  if (tlvKindIsKnown) {
+    if (isTlvReloc && !sym->isTlv())
+      error(message(Twine("requires that symbol ") + sym->getName() +
+                    " be thread-local"));
+    else if (isImportedTlv && !permitsTlvDescriptor)
+      error(message(Twine("cannot reference imported thread-local symbol ") +
+                    sym->getName() +
+                    "; its TLV descriptor has no address at link time"));
+  }
 
   return valid;
 }
@@ -117,7 +146,7 @@ InputSection *macho::offsetToInputSection(uint64_t *off) {
   return nullptr;
 }
 
-void macho::reportRangeError(void *loc, const Reloc &r, const Twine &v,
+void macho::reportRangeError(void *loc, const Relocation &r, const Twine &v,
                              uint8_t bits, int64_t min, uint64_t max) {
   std::string hint;
   uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;

@@ -75,8 +75,9 @@ Examples:
      an implicit conversion of an integer quantity ``i & 1`` to ``bool`` and
      becomes ``return (i & 1) != 0;``
 
-  6. Given ``struct X { explicit operator bool(); };``, and an instance ``x`` of
-     ``struct X``, the conditional return ``if (x) return true; return false;``
+  6. Given ``struct X { explicit operator bool(); };``, and an instance ``x``
+     of ``struct X``, the conditional return
+     ``if (x) return true; return false;``
      becomes ``return static_cast<bool>(x);``
 
 Options

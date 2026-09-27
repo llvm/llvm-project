@@ -13,7 +13,7 @@ module {
 // -----
 
 module {
-  wasmssa.import_global "glob" from "my_module" as @global_0 mutable nested : i32
+  wasmssa.import_global "glob" from "my_module" as @global_0 mutable : i32
   wasmssa.global @global_1 i32 : {
   // expected-error@+1 {{global.get op is considered constant if it's referring to a import.global symbol marked non-mutable}}
     %0 = wasmssa.global_get @global_0 : i32
@@ -28,5 +28,70 @@ module {
   // expected-error@+1 {{symbol @glarble is undefined}}
     %0 = wasmssa.global_get @glarble : i32
     wasmssa.return %0 : i32
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{expecting either `exported` or symbol name. got exproted}}
+  wasmssa.global exproted @global_1 i32 : {
+    %0 = wasmssa.const 17 : i32
+    wasmssa.return %0 : i32
+  }
+}
+
+// -----
+
+module {
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{symbol @missing is undefined}}
+    wasmssa.global_set @missing to %0 : i32
+    wasmssa.return
+  }
+}
+
+// -----
+
+module {
+  wasmssa.global @global_0 i32 : {
+    %0 = wasmssa.const 0 : i32
+    wasmssa.return %0 : i32
+  }
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{global.set target must be mutable}}
+    wasmssa.global_set @global_0 to %0 : i32
+    wasmssa.return
+  }
+}
+
+// -----
+
+module {
+  wasmssa.global @global_0 i64 mutable : {
+    %0 = wasmssa.const 0 : i64
+    wasmssa.return %0 : i64
+  }
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{global.set value type does not match target global type: expected 'i64' but got 'i32'}}
+    wasmssa.global_set @global_0 to %0 : i32
+    wasmssa.return
+  }
+}
+
+// -----
+
+module {
+  wasmssa.func @not_global() {
+    wasmssa.return
+  }
+  wasmssa.func @f() {
+    %0 = wasmssa.const 1 : i32
+    // expected-error@+1 {{symbol @not_global is not a global symbol}}
+    wasmssa.global_set @not_global to %0 : i32
+    wasmssa.return
   }
 }

@@ -14,7 +14,7 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__linux__) && defined(__CET__)
+#ifdef __CET__
 #if __has_include(<cet.h>)
 #include <cet.h>
 #endif
@@ -71,9 +71,24 @@
 
 #endif
 
+#if defined(__aarch64__) && defined(__ELF__) &&                                \
+    defined(COMPILER_RT_EXECUTE_ONLY_CODE)
+// The assembler always creates an implicit '.text' section with default flags
+// (SHF_ALLOC | SHF_EXECINSTR), which is incompatible with the execute-only
+// '.text' section we want to create here because of the missing
+// SHF_AARCH64_PURECODE section flag. To solve this, we use 'unique,0' to
+// differentiate the two sections. The output will therefore have two separate
+// sections named '.text', where code will be placed into the execute-only
+// '.text' section, and the implicitly-created one will be empty.
+#define TEXT_SECTION                                                           \
+  .section .text,"axy",@progbits,unique,0
+#else
+#define TEXT_SECTION                                                           \
+  .text
+#endif
+
 #if defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__)
 #define FUNC_ALIGN                                                             \
-  .text SEPARATOR                                                              \
   .balign 16 SEPARATOR
 #else
 #define FUNC_ALIGN
@@ -188,14 +203,30 @@
 #define JMPc(r, c) mov##c pc, r
 #endif
 
-// pop {pc} can't switch Thumb mode on ARMv4T
+// clang-format off
+#ifdef __ASSEMBLER__
+// ARMv4T ARM returns need BX to interwork with Thumb callers.
 #if __ARM_ARCH >= 5
-#define POP_PC() pop {pc}
+.macro POP_PC
+  pop {pc}
+.endm
+
+.macro POP_PC_WITH_REGS regs:vararg
+  pop {\regs, pc}
+.endm
 #else
-#define POP_PC()                                                               \
-  pop {ip};                                                                    \
+.macro POP_PC
+  pop {ip}
   JMP(ip)
+.endm
+
+.macro POP_PC_WITH_REGS regs:vararg
+  pop {\regs, ip}
+  JMP(ip)
+.endm
 #endif
+#endif
+// clang-format on
 
 #if defined(USE_THUMB_2)
 #define WIDE(op) op.w
@@ -255,6 +286,7 @@
 #endif
 
 #define DEFINE_COMPILERRT_FUNCTION(name)                                       \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -264,6 +296,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_THUMB_FUNCTION(name)                                 \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -273,6 +306,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION(name)                               \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -282,6 +316,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(name)                     \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   .globl FUNC_SYMBOL(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
@@ -290,6 +325,7 @@
   FUNC_SYMBOL(name):
 
 #define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(name)                     \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FUNC_ALIGN                                                                   \
   .globl FUNC_SYMBOL(name) SEPARATOR                                           \
@@ -335,6 +371,11 @@
 #define VMOV_TO_DOUBLE(dst, src0, src1) vmov dst, src0, src1 SEPARATOR
 #define VMOV_FROM_DOUBLE(dst0, dst1, src) vmov dst0, dst1, src SEPARATOR
 #endif
+#endif
+
+#if defined(__ASSEMBLER__) && (defined(__i386__) || defined(__amd64__)) &&     \
+    !defined(__arm64ec__)
+.att_syntax
 #endif
 
 #endif // COMPILERRT_ASSEMBLY_H

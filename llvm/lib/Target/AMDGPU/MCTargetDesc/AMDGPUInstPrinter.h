@@ -71,12 +71,16 @@ private:
                    const MCSubtargetInfo &STI, raw_ostream &O);
   void printSymbolicFormat(const MCInst *MI,
                            const MCSubtargetInfo &STI, raw_ostream &O);
+  void printRsrcReg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
 
-  void printRegOperand(MCRegister Reg, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                       raw_ostream &O);
+  void printAVLdSt32Align2RegOp(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printImmediateInt16(uint32_t Imm, const MCSubtargetInfo &STI,
                            raw_ostream &O);
   void printImmediateBF16(uint32_t Imm, const MCSubtargetInfo &STI,
@@ -199,39 +203,14 @@ public:
                          StringRef Asm, StringRef Default = "");
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                          char Asm);
+
 protected:
-  void printAbs(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printClamp(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
   void printOModSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                   raw_ostream &O);
-  void printLiteral(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
-  void printLast(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printNeg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printOMOD(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printRel(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printUpdateExecMask(const MCInst *MI, unsigned OpNo,
-                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printUpdatePred(const MCInst *MI, unsigned OpNo,
-                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printWrite(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
-  void printBankSwizzle(const MCInst *MI, unsigned OpNo,
-                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printRSel(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printCT(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-               raw_ostream &O);
-  void printKCache(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printSendMsg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printWaitEvent(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printSwizzle(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printSWaitCnt(const MCInst *MI, unsigned OpNo,

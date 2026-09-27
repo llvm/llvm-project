@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy -std=c++17 %s modernize-avoid-c-arrays %t
 
+#include <utility>
+
 int a[] = {1, 2};
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead
 
@@ -99,29 +101,6 @@ const char name[] = "Some string";
 
 void takeCharArray(const char name[]);
 // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use 'std::array' or 'std::vector' instead [modernize-avoid-c-arrays]
-
-namespace std {
-  template<class T, class U>
-  struct is_same { constexpr static bool value{false}; };
-
-  template<class T>
-  struct is_same<T, T> { constexpr static bool value{true}; };
-
-  template<class T, class U>
-  constexpr bool is_same_v = is_same<T, U>::value;
-
-  template<class T> struct remove_const { typedef T type; };
-  template<class T> struct remove_const<const T> { typedef T type; };
-
-  template<class T>
-  using remove_const_t = typename remove_const<T>::type;
-
-  template<bool B, class T = void> struct enable_if {};
-  template<class T> struct enable_if<true, T> { typedef T type; };
-
-  template< bool B, class T = void >
-  using enable_if_t = typename enable_if<B, T>::type;
-}
 
 // within below template decl, no array type findings are expected within the template parameter declarations since not a single C-style array type got written explicitly
 template <typename T,
@@ -232,11 +211,12 @@ T some_constant{};
 // explicit instantiations
 template
 int some_constant<int[5]>[5];
-// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-2]]:19: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 
 template
 int some_constant<decltype(ak)>[4];
-// no diagnostic is expected here since explicit instantiations aren't represented as `TypeLoc` in the AST and we hence cannot match them as such
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 
 MyArrayType mk;
 // no diagnostic is expected here since no C-style array type got written here

@@ -38,7 +38,7 @@ static cl::opt<int, true>
 cl::opt<bool> PollyVectorizeMetadata(
     "polly-annotate-metadata-vectorize",
     cl::desc("Append vectorize enable/disable metadata from polly"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
@@ -52,14 +52,13 @@ static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
                clEnumValN(OMPGeneralSchedulingType::Runtime, "runtime",
                           "Runtime determined (OMP_SCHEDULE)")),
     cl::Hidden, cl::location(polly::PollyScheduling),
-    cl::init(OMPGeneralSchedulingType::Runtime), cl::Optional,
-    cl::cat(PollyCategory));
+    cl::init(OMPGeneralSchedulingType::Runtime), cl::cat(PollyCategory));
 
 static cl::opt<int, true>
     XPollyChunkSize("polly-scheduling-chunksize",
                     cl::desc("Chunksize to use by the OpenMP runtime calls"),
                     cl::Hidden, cl::location(polly::PollyChunkSize),
-                    cl::init(0), cl::Optional, cl::cat(PollyCategory));
+                    cl::init(0), cl::cat(PollyCategory));
 
 // We generate a loop of either of the following structures:
 //
@@ -90,7 +89,8 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
                          DominatorTree &DT, BasicBlock *&ExitBB,
                          ICmpInst::Predicate Predicate,
                          ScopAnnotator *Annotator, bool Parallel, bool UseGuard,
-                         bool LoopVectDisabled) {
+                         bool LoopVectDisabled,
+                         bool SkipVectorizeEnableMetadata) {
   Function *F = Builder.GetInsertBlock()->getParent();
   LLVMContext &Context = F->getContext();
 
@@ -163,17 +163,16 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
       Builder.CreateICmp(Predicate, IncrementedIV, UB, "polly.loop_cond");
 
   // Create the loop latch and annotate it as such.
-  BranchInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
+  CondBrInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
 
-  // Don't annotate vectorize metadata when both LoopVectDisabled and
-  // PollyVectorizeMetadata are disabled. Annotate vectorize metadata to false
-  // when LoopVectDisabled is true. Otherwise we annotate the vectorize metadata
-  // to true.
+  // Emit vectorize.enable=false only for explicit user disable
+  // (LoopVectDisabled). For dist=1 FP loops (SkipVectorizeEnableMetadata), omit
+  // the annotation and let the Loop Vectorizer decide.
   if (Annotator) {
     std::optional<bool> EnableVectorizeMetadata;
     if (LoopVectDisabled)
       EnableVectorizeMetadata = false;
-    else if (PollyVectorizeMetadata)
+    else if (PollyVectorizeMetadata && !SkipVectorizeEnableMetadata)
       EnableVectorizeMetadata = true;
     Annotator->annotateLoopLatch(B, Parallel, EnableVectorizeMetadata);
   }

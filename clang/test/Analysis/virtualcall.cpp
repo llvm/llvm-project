@@ -11,7 +11,12 @@
 // RUN:                    -analyzer-checker=debug.ExprInspection \
 // RUN:                    -std=c++11 -verify=pure,impure -std=c++11 %s
 
+// Verify no warnings for virtual calls in system headers.
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.VirtualCall \
+// RUN:                    -std=c++11 -verify=system,impure %s
+
 #include "virtualcall.h"
+#include "Inputs/virtualcall-system-header.h"
 
 void clang_analyzer_warnIfReached();
 

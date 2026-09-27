@@ -35,6 +35,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc:__support_fputil_manipulation_functions",
             "//libc:__support_fputil_nearest_integer_operations",
             "//libc:__support_fputil_normal_float",
+            "//libc:__support_macros_optimization",
             "//libc:__support_macros_properties_architectures",
             "//libc:__support_macros_properties_os",
             "//libc:__support_macros_properties_types",
@@ -60,6 +61,7 @@ def math_mpfr_test(name, hdrs = [], deps = [], **kwargs):
     math_test(
         name = name,
         hdrs = hdrs,
+        overlay_build_only = True,  # mpfr cannot be built in full-build yet
         deps = deps + ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
         **kwargs
     )

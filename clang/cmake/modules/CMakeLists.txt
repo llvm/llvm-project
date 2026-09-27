@@ -8,23 +8,37 @@ include(FindPrefixFromConfig)
 # the usual CMake convention seems to be ${Project}Targets.cmake.
 set(CLANG_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/clang" CACHE STRING
   "Path for CMake subdirectory for Clang (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/clang')")
-# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
 
 # Keep this in sync with llvm/cmake/CMakeLists.txt!
 set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
   "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir "${LLVM_LIBRARY_DIR}")
-set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
+string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_builddir "${LLVM_LIBRARY_DIR}")
+set(llvm_cmake_builddir "${llvm_builddir}/cmake/llvm")
+if(CLANG_BUILT_STANDALONE)
+  # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+  set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
+else()
+  set(clang_cmake_builddir "${llvm_builddir}/cmake/clang")
+endif()
 
 get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
-export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
+if(NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
+endif()
 
 # Generate ClangConfig.cmake for the build tree.
 set(CLANG_CONFIG_CMAKE_DIR "${clang_cmake_builddir}")
 set(CLANG_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
-set(CLANG_CONFIG_INCLUDE_EXPORTS "include(\"${clang_cmake_builddir}/ClangTargets.cmake\")")
+if("clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  # Clang is enabled only to satisfy another project's dependency, so its
+  # targets file is not exported above. Leave the include out of the config
+  # rather than referring to a file that is never generated, which would make
+  # every find_package(Clang) against this build tree fail.
+  set(CLANG_CONFIG_INCLUDE_EXPORTS "")
+else()
+  set(CLANG_CONFIG_INCLUDE_EXPORTS "include(\"${clang_cmake_builddir}/ClangTargets.cmake\")")
+endif()
 set(CLANG_CONFIG_INCLUDE_DIRS
   "${CLANG_SOURCE_DIR}/include"
   "${CLANG_BINARY_DIR}/include"
@@ -71,7 +85,8 @@ configure_file(
 set(CLANG_CONFIG_CODE)
 set(CLANG_CONFIG_CMAKE_DIR)
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
+    NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
   install_distribution_exports(Clang)
 
   install(FILES

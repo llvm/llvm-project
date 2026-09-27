@@ -11,14 +11,14 @@
 #define HEADER
 
 // CHECK: [[ANON_T:%.+]] = type { ptr, ptr }
-// CHECK-DAG: [[SIZES_TEMPLATE:@.+]] = private {{.+}} constant [5 x i[[PTRSZ:32|64]]] [i{{32|64}} 4, i{{32|64}} 4, i{{32|64}} {{8|16}}, i{{32|64}} 0, i{{32|64}} 0]
-// CHECK-DAG: [[TYPES_TEMPLATE:@.+]] = private {{.+}} constant [5 x i64] [i64 800, i64 800, i64 673, i64 844424930132752, i64 844424930132752]
-// CHECK-DAG: [[SIZES:@.+]] = private {{.+}} constant [3 x i[[PTRSZ:32|64]]] [i{{32|64}} {{8|16}}, i{{32|64}} 0, i{{32|64}} 0]
-// CHECK-DAG: [[TYPES:@.+]] = private {{.+}} constant [3 x i64] [i64 673, i64 281474976711440, i64 281474976711440]
-// CHECK-DAG: [[TYPES3:@.+]] = private {{.+}} constant [3 x i64] [i64 545, i64 281474976711440, i64 800]
-// CHECK-DAG: [[TYPES11:@.+]] = private {{.+}} constant [5 x i64] [i64 800, i64 800, i64 549, i64 844424930132752, i64 844424930132752]
-// CHECK-DAG: [[TYPES13:@.+]] = private {{.+}} constant [2 x i64] [i64 545, i64 281474976711440]
-// CHECK-DAG: [[TYPES15:@.+]] = private {{.+}} constant [2 x i64] [i64 673, i64 281474976711440]
+// CHECK-DAG: [[SIZES_TEMPLATE:@.+]] = private {{.+}} constant [6 x i[[PTRSZ:32|64]]] [i{{32|64}} 4, i{{32|64}} 4, i{{32|64}} {{8|16}}, i{{32|64}} 0, i{{32|64}} 0, i{{32|64}} 0]
+// CHECK-DAG: [[TYPES_TEMPLATE:@.+]] = private {{.+}} constant [6 x i64] [i64 800, i64 800, i64 673, i64 844424930132752, i64 844424930132752, i64 288]
+// CHECK-DAG: [[SIZES:@.+]] = private {{.+}} constant [4 x i[[PTRSZ:32|64]]] [i{{32|64}} {{8|16}}, i{{32|64}} 0, i{{32|64}} 0, i{{32|64}} 0]
+// CHECK-DAG: [[TYPES:@.+]] = private {{.+}} constant [4 x i64] [i64 673, i64 281474976711440, i64 281474976711440, i64 288]
+// CHECK-DAG: [[TYPES3:@.+]] = private {{.+}} constant [4 x i64] [i64 545, i64 281474976711440, i64 800, i64 288]
+// CHECK-DAG: [[TYPES11:@.+]] = private {{.+}} constant [6 x i64] [i64 800, i64 800, i64 549, i64 844424930132752, i64 844424930132752, i64 288]
+// CHECK-DAG: [[TYPES13:@.+]] = private {{.+}} constant [3 x i64] [i64 545, i64 281474976711440, i64 288]
+// CHECK-DAG: [[TYPES15:@.+]] = private {{.+}} constant [3 x i64] [i64 673, i64 281474976711440, i64 288]
 
 template <typename F>
 void omp_loop(int start, int end, F body) {
@@ -71,8 +71,8 @@ int main()
     body(i);
   }
 
-// CHECK: [[BASE_PTRS:%.+]] = alloca [3 x ptr]{{.+}}
-// CHECK: [[PTRS:%.+]] = alloca [3 x ptr]{{.+}}
+// CHECK: [[BASE_PTRS:%.+]] = alloca [4 x ptr]{{.+}}
+// CHECK: [[PTRS:%.+]] = alloca [4 x ptr]{{.+}}
 
 // First gep of pointers inside lambdas to store the values across function call need to be ignored
 // CHECK: {{%.+}} = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
@@ -85,33 +85,33 @@ int main()
 // CHECK: [[PTR2:%.+]] = load ptr, ptr [[BASE_PTR2]]
 
 // storage of pointers in baseptrs and ptrs arrays
-// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store ptr %{{.+}}, ptr [[LOC_LAMBDA]]{{.+}}
-// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store ptr %{{.+}}, ptr [[LOC_LAMBDA]]{{.+}}
 
-// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store ptr [[BASE_PTR1]], ptr [[LOC_PTR1]]{{.+}}
-// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store ptr [[PTR1]], ptr [[LOC_PTR1]]{{.+}}
 
 
-// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store ptr [[BASE_PTR2]], ptr [[LOC_PTR2]]{{.+}}
-// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store ptr [[PTR2]], ptr [[LOC_PTR2]]{{.+}}
 
   // actual target invocation
-  // CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [3 x ptr], ptr [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
-  // CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [3 x ptr], ptr [[PTRS]], {{.+}} 0, {{.+}} 0
+  // CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [4 x ptr], ptr [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
+  // CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [4 x ptr], ptr [[PTRS]], {{.+}} 0, {{.+}} 0
   // CHECK: {{%.+}} = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 0, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
 
   omp_loop(0,100,body);
   omp_loop_ref(0,100,body);
 }
 
-// CHECK: [[BASE_PTRS:%.+]] = alloca [5 x ptr]{{.+}}
-// CHECK: [[PTRS:%.+]] = alloca [5 x ptr]{{.+}}
+// CHECK: [[BASE_PTRS:%.+]] = alloca [6 x ptr]{{.+}}
+// CHECK: [[PTRS:%.+]] = alloca [6 x ptr]{{.+}}
 
 // access of pointers inside lambdas
 // CHECK: [[BASE_PTR1:%.+]] = getelementptr inbounds nuw [[ANON_T]], ptr %{{.+}}, i{{.+}} 0, i{{.+}} 0
@@ -120,25 +120,25 @@ int main()
 // CHECK: [[PTR2:%.+]] = load ptr, ptr [[BASE_PTR2]]
 
 // storage of pointers in baseptrs and ptrs arrays
-// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store ptr %{{.+}}, ptr [[LOC_LAMBDA]]{{.+}}
-// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 2
+// CHECK: [[LOC_LAMBDA:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store ptr %{{.+}}, ptr [[LOC_LAMBDA]]{{.+}}
 
-// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 3
+// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 3
 // CHECK: store ptr [[BASE_PTR1]], ptr [[LOC_PTR1]]{{.+}}
-// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 3
+// CHECK: [[LOC_PTR1:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 3
 // CHECK: store ptr [[PTR1]], ptr [[LOC_PTR1]]{{.+}}
 
 
-// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [5 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 4
+// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BASE_PTRS]], i{{.+}} 0, i{{.+}} 4
 // CHECK: store ptr [[BASE_PTR2]], ptr [[LOC_PTR2]]{{.+}}
-// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [5 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 4
+// CHECK: [[LOC_PTR2:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i{{.+}} 0, i{{.+}} 4
 // CHECK: store ptr [[PTR2]], ptr [[LOC_PTR2]]{{.+}}
 
 // actual target invocation
-// CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [5 x ptr], ptr [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
-// CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [5 x ptr], ptr [[PTRS]], {{.+}} 0, {{.+}} 0
+// CHECK: [[BASES_GEP:%.+]] = getelementptr {{.+}} [6 x ptr], ptr [[BASE_PTRS]], {{.+}} 0, {{.+}} 0
+// CHECK: [[PTRS_GEP:%.+]] = getelementptr {{.+}} [6 x ptr], ptr [[PTRS]], {{.+}} 0, {{.+}} 0
 
 // CHECK: define internal void @{{.+}}omp_loop_ref{{.+}}(
 // CHECK: [[BODY:%body.addr]] = alloca ptr

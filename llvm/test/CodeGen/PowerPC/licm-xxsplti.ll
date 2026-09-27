@@ -70,27 +70,27 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; AIX32-NEXT:  # %bb.2: # %for.body.preheader.new
 ; AIX32-NEXT:    xxspltib 0, 6
 ; AIX32-NEXT:    addi 12, 4, -8
-; AIX32-NEXT:    addi 9, 3, -8
+; AIX32-NEXT:    addi 8, 3, -8
 ; AIX32-NEXT:    rlwinm 7, 5, 0, 1, 30
-; AIX32-NEXT:    li 8, 0
-; AIX32-NEXT:    li 10, 8
-; AIX32-NEXT:    li 11, 12
+; AIX32-NEXT:    li 9, 8
+; AIX32-NEXT:    li 10, 12
+; AIX32-NEXT:    li 11, 0
 ; AIX32-NEXT:    .align 4
 ; AIX32-NEXT:  L..BB0_3: # %for.body
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    lxvwsx 1, 12, 10
+; AIX32-NEXT:    lxvwsx 1, 12, 9
 ; AIX32-NEXT:    addic 6, 6, 2
-; AIX32-NEXT:    addze 8, 8
+; AIX32-NEXT:    addze 11, 11
 ; AIX32-NEXT:    xor 0, 6, 7
-; AIX32-NEXT:    or. 0, 0, 8
+; AIX32-NEXT:    or. 0, 0, 11
 ; AIX32-NEXT:    xxland 1, 1, 0
 ; AIX32-NEXT:    xscvspdpn 1, 1
-; AIX32-NEXT:    stfsu 1, 8(9)
-; AIX32-NEXT:    lxvwsx 1, 12, 11
+; AIX32-NEXT:    stfsu 1, 8(8)
+; AIX32-NEXT:    lxvwsx 1, 12, 10
 ; AIX32-NEXT:    addi 12, 12, 8
 ; AIX32-NEXT:    xxland 1, 1, 0
 ; AIX32-NEXT:    xscvspdpn 1, 1
-; AIX32-NEXT:    stfs 1, 4(9)
+; AIX32-NEXT:    stfs 1, 4(8)
 ; AIX32-NEXT:    bne 0, L..BB0_3
 ; AIX32-NEXT:  L..BB0_4: # %for.cond.cleanup.loopexit.unr-lcssa
 ; AIX32-NEXT:    andi. 5, 5, 1

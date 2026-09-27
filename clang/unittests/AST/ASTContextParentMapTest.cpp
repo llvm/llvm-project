@@ -132,8 +132,7 @@ TEST(GetParents, FriendTypeLoc) {
   TypeLoc FrALoc = FrA.getFriendType()->getTypeLoc();
   TypeLoc FrBLoc = FrB.getFriendType()->getTypeLoc();
   bool FrAOwnsTag = FrALoc.getTypePtr()->getAs<TagType>()->isTagOwned();
-  TagDecl *FrATagDecl =
-      FrALoc.getTypePtr()->getAs<TagType>()->getOriginalDecl();
+  TagDecl *FrATagDecl = FrALoc.getTypePtr()->getAs<TagType>()->getDecl();
   bool FrBOwnsTag = FrBLoc.getTypePtr()->getAs<TagType>()->isTagOwned();
 
   EXPECT_THAT(Ctx.getParents(A), ElementsAre(DynTypedNode::create(TU)));

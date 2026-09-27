@@ -87,4 +87,4 @@ vpinsrd $3, %ebx, %xmm8, %xmm10
 # CHECK-NEXT: 3.     1     6.0    1.0    0.0       vpinsrd	$2, %ebx, %xmm4, %xmm5
 # CHECK-NEXT: 4.     1     5.0    1.0    0.0       vpinsrd	$2, %ebx, %xmm6, %xmm7
 # CHECK-NEXT: 5.     1     5.0    2.0    0.0       vpinsrd	$3, %ebx, %xmm8, %xmm10
-# CHECK-NEXT:        1     5.0    0.8    0.0       <total>
+# CHECK-NEXT:        6     5.0    0.8    0.0       <total>

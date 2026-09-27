@@ -1,10 +1,9 @@
 // RUN: %check_clang_tidy %s readability-ambiguous-smartptr-reset-call %t -- \
 // RUN: -config='{CheckOptions: \
 // RUN:  {readability-ambiguous-smartptr-reset-call.SmartPointers: "::std::unique_ptr;::other_ptr"}}' \
-// RUN: --fix-notes -- -I %S/../modernize/Inputs/smart-ptr
+// RUN: --fix-notes
 
-#include "unique_ptr.h"
-#include "shared_ptr.h"
+#include <memory>
 
 template <typename T>
 struct other_ptr {

@@ -6038,15 +6038,15 @@ entry:
 define <4 x float> @select(<4 x i32> %cond, <4 x float> %arg1, <4 x float> %arg2) {
 ; MIPS32-LABEL: select:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $7, 1
-; MIPS32-NEXT:    lw $2, 16($sp)
-; MIPS32-NEXT:    andi $2, $2, 1
+; MIPS32-NEXT:    lw $1, 16($sp)
+; MIPS32-NEXT:    andi $2, $7, 1
+; MIPS32-NEXT:    andi $1, $1, 1
 ; MIPS32-NEXT:    addiu $3, $sp, 44
 ; MIPS32-NEXT:    addiu $5, $sp, 28
 ; MIPS32-NEXT:    addiu $7, $sp, 48
 ; MIPS32-NEXT:    addiu $8, $sp, 32
-; MIPS32-NEXT:    movn $7, $8, $2
-; MIPS32-NEXT:    movn $3, $5, $1
+; MIPS32-NEXT:    movn $7, $8, $1
+; MIPS32-NEXT:    movn $3, $5, $2
 ; MIPS32-NEXT:    andi $1, $6, 1
 ; MIPS32-NEXT:    addiu $2, $sp, 40
 ; MIPS32-NEXT:    addiu $5, $sp, 24

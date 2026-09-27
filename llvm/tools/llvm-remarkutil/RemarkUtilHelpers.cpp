@@ -54,6 +54,20 @@ getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat) {
                                                     : sys::fs::OF_None);
 }
 
+Format getSerializerFormat(StringRef OutputFileName, Format SelectedFormat,
+                           Format DefaultFormat) {
+  if (SelectedFormat != Format::Auto)
+    return SelectedFormat;
+  SelectedFormat = DefaultFormat;
+  if (OutputFileName.empty() || OutputFileName == "-" ||
+      OutputFileName.ends_with_insensitive(".yaml") ||
+      OutputFileName.ends_with_insensitive(".yml"))
+    SelectedFormat = Format::YAML;
+  if (OutputFileName.ends_with_insensitive(".bitstream"))
+    SelectedFormat = Format::Bitstream;
+  return SelectedFormat;
+}
+
 Expected<FilterMatcher>
 FilterMatcher::createRE(const llvm::cl::opt<std::string> &Arg) {
   return createRE(Arg.ArgStr, Arg);

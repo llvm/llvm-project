@@ -137,6 +137,16 @@ def OIListCustom : TEST_Op<"oilist_custom", [AttrSizedOperandSegments]> {
   }];
 }
 
+def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
+  let arguments = (ins UnitAttr:$keyword, UnitAttr:$otherKeyword,
+                       UnitAttr:$diffNameUnitAttrKeyword);
+  let assemblyFormat = [{
+    oilist<`,`>( `keyword` $keyword
+               | `otherKeyword` $otherKeyword
+               | `thirdKeyword` $diffNameUnitAttrKeyword) attr-dict
+  }];
+}
+
 def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   let assemblyFormat = [{
     oilist( `foo` | `bar` ) `buzz` attr-dict
@@ -174,7 +184,7 @@ def FormatLiteralOp : TEST_Op<"format_literal_op"> {
   }];
 }
 
-// Test that we elide attributes that are within the syntax.
+// Test that inherent and discardable attributes use separate dictionaries.
 def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let arguments = (ins I64Attr:$attr);
   let assemblyFormat = "$attr attr-dict";
@@ -211,7 +221,7 @@ def FormatOptSymbolRefAttrOp : TEST_Op<"format_opt_symbol_ref_attr_op"> {
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "attr-dict-with-keyword";
+  let assemblyFormat = "prop-dict attr-dict-with-keyword";
 }
 
 // Test that we don't need to provide types in the format if they are buildable.
@@ -432,6 +442,39 @@ def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
   let assemblyFormat = "($str^)? ($sym^)? ($e^)? attr-dict";
 }
 
+def FormatOptionalDefaultEnumAttrs : TEST_Op<"format_optional_default_enum_attr"> {
+  let arguments = (ins DefaultValuedEnumAttr<SomeI64Enum, I64Case5>:$e);
+  let assemblyFormat = "($e^)? attr-dict";
+}
+
+// Two adjacent optional enum props with different enum types, to exercise
+// constrained keyword parsing (parseOptionalKeyword with keyword list).
+def TestEnumPropDefault : EnumProp<TestEnum> {
+  let defaultValue = TestEnum.cppType # "::First";
+}
+def TestOtherEnumPropDefault : EnumProp<TestOtherEnum> {
+  let defaultValue = TestOtherEnum.cppType # "::Dog";
+}
+def OpWithTwoDefaultEnumProps : TEST_Op<"op_with_two_default_enum_props"> {
+  let arguments = (ins
+    TestEnumPropDefault:$value1,
+    TestOtherEnumPropDefault:$value2);
+  let assemblyFormat = "($value1^)? ($value2^)? attr-dict";
+}
+
+def TestBitEnumPropDefault : EnumProp<TestBitEnum> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def TestBitEnumVerticalBarPropDefault : EnumProp<TestBitEnumVerticalBar> {
+  let defaultValue = TestBitEnumVerticalBar.cppType # "::User";
+}
+def OpWithTwoDefaultBitEnumProps : TEST_Op<"op_with_two_default_bit_enum_props"> {
+  let arguments = (ins
+    TestBitEnumPropDefault:$value1,
+    TestBitEnumVerticalBarPropDefault:$value2);
+  let assemblyFormat = "($value1^)? ($value2^)? attr-dict";
+}
+
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
@@ -594,7 +637,7 @@ def FormatCustomDirectiveAttrDict
     : TEST_Op<"format_custom_directive_attrdict"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
   let assemblyFormat = [{
-    custom<CustomDirectiveAttrDict>( attr-dict )
+    prop-dict custom<CustomDirectiveAttrDict>( attr-dict )
   }];
 }
 
@@ -662,6 +705,27 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
   let assemblyFormat = "attr-dict $value `:` type($value)";
 }
 
+def FormatTypesMatchOptionalOp : TEST_Op<"format_types_match_optional", [
+    OptionalTypesMatchWith<"optional type matches result", 
+                           "result", "optional", "$_self">
+  ]> {
+  let arguments = (ins Optional<AnyType>:$optional);
+  let results = (outs Optional<AnyType>:$result);
+  let assemblyFormat = [{
+    (`(` $optional^ `:` type($result) `)`)? attr-dict
+  }];
+}
+
+def FormatOptionalOperandTypeOp
+    : TEST_Op<"format_optional_operand_type"> {
+  let arguments = (ins Optional<AnyType>:$optional);
+  let assemblyFormat = [{
+    (`(` $optional^ `)`)?
+    (`:` type($optional)^)?
+    attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
 //===----------------------------------------------------------------------===//
@@ -673,7 +737,7 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
       return ::mlir::success();
@@ -696,7 +760,7 @@ class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::TypeRange operandTypes = operands.getTypes();
       inferredReturnTypes.assign(operandTypes.begin(), operandTypes.end());
@@ -743,7 +807,7 @@ def FormatInferTypeRegionsOp
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       if (regions.empty())
         return ::mlir::failure();
@@ -764,7 +828,7 @@ def FormatInferTypeVariadicOperandsOp
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       FormatInferTypeVariadicOperandsOpAdaptor adaptor(
           operands, attributes, *properties.as<Properties *>(), {});

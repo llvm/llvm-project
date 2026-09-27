@@ -30,8 +30,8 @@
 namespace llvm {
 
 AVRInstrInfo::AVRInstrInfo(const AVRSubtarget &STI)
-    : AVRGenInstrInfo(STI, AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
-      STI(STI) {}
+    : AVRGenInstrInfo(STI, RI, AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP),
+      RI(), STI(STI) {}
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
@@ -90,7 +90,7 @@ Register AVRInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   case AVR::LDDRdPtrQ:
-  case AVR::LDDWRdYQ: { //: FIXME: remove this once PR13375 gets fixed
+  case AVR::LDDWRdYQ: { // FIXME: Remove this once PR13375 gets fixed.
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
@@ -126,8 +126,7 @@ Register AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 void AVRInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
@@ -142,9 +141,9 @@ void AVRInstrInfo::storeRegToStackSlot(
       MFI.getObjectAlign(FrameIndex));
 
   unsigned Opcode = 0;
-  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
+  if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
     Opcode = AVR::STDPtrQRr;
-  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
+  } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
     Opcode = AVR::STDWPtrQRr;
   } else {
     llvm_unreachable("Cannot store this register into a stack slot!");
@@ -161,8 +160,7 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg,
+                                        Register VReg, unsigned SubReg,
                                         MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -173,11 +171,11 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlign(FrameIndex));
 
   unsigned Opcode = 0;
-  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
+  if (TRI.isTypeLegalForClass(*RC, MVT::i8)) {
     Opcode = AVR::LDDRdPtrQ;
-  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
+  } else if (TRI.isTypeLegalForClass(*RC, MVT::i16)) {
     // Opcode = AVR::LDDWRdPtrQ;
-    //: FIXME: remove this once PR13375 gets fixed
+    // FIXME: Remove this once PR13375 gets fixed.
     Opcode = AVR::LDDWRdYQ;
   } else {
     llvm_unreachable("Cannot load this register from a stack slot!");
@@ -287,7 +285,7 @@ bool AVRInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
 
     // Handle unconditional branches.
-    //: TODO: add here jmp
+    // TODO: Add here jmp.
     if (I->getOpcode() == AVR::RJMPk) {
       UnCondBrIter = I;
 
@@ -445,8 +443,8 @@ unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (I->isDebugInstr()) {
       continue;
     }
-    //: TODO: add here the missing jmp instructions once they are implemented
-    // like jmp, {e}ijmp, and other cond branches, ...
+    // TODO: Add here the missing jmp instructions once they are implemented
+    //       like jmp, {e}ijmp, and other cond branches, ...
     if (I->getOpcode() != AVR::RJMPk &&
         getCondFromBranchOpc(I->getOpcode()) == AVRCC::COND_INVALID) {
       break;
@@ -494,7 +492,7 @@ unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         static_cast<const AVRTargetMachine &>(MF.getTarget());
     const TargetInstrInfo &TII = *STI.getInstrInfo();
     return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                                  *TM.getMCAsmInfo());
+                                  TM.getMCAsmInfo());
   }
   }
 }

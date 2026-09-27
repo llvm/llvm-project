@@ -10,9 +10,9 @@
 #define MLIR_IR_BUILTINATTRIBUTES_H
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/Support/Complex.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
-#include <complex>
 #include <optional>
 
 namespace mlir {
@@ -32,7 +32,7 @@ class Operation;
 class RankedTensorType;
 
 namespace detail {
-struct DenseIntOrFPElementsAttrStorage;
+struct DenseTypedElementsAttrStorage;
 struct DenseStringElementsAttrStorage;
 struct StringAttrStorage;
 } // namespace detail
@@ -75,6 +75,8 @@ template <typename T>
 struct is_complex_t : public std::false_type {};
 template <typename T>
 struct is_complex_t<std::complex<T>> : public std::true_type {};
+template <typename T>
+struct is_complex_t<mlir::NonFloatComplex<T>> : public std::true_type {};
 } // namespace detail
 
 /// An attribute that represents a reference to a dense vector or tensor
@@ -167,7 +169,7 @@ public:
   /// element type of 'type'. 'type' must be a vector or tensor with static
   /// shape.
   static DenseElementsAttr get(ShapedType type,
-                               ArrayRef<std::complex<APInt>> values);
+                               ArrayRef<mlir::Complex<APInt>> values);
 
   /// Constructs a dense float elements attribute from an array of APFloat
   /// values. Each APFloat value is expected to have the same bitwidth as the
@@ -180,7 +182,7 @@ public:
   /// element type of 'type'. 'type' must be a vector or tensor with static
   /// shape.
   static DenseElementsAttr get(ShapedType type,
-                               ArrayRef<std::complex<APFloat>> values);
+                               ArrayRef<mlir::Complex<APFloat>> values);
 
   /// Construct a dense elements attribute for an initializer_list of values.
   /// Each value is expected to be the same bitwidth of the element type of
@@ -199,25 +201,12 @@ public:
   ///
   /// The format of the raw buffer is a densely packed array of values that
   /// can be bitcast to the storage format of the element type specified.
-  /// Types that are not byte aligned will be:
-  ///   - For bitwidth > 1: Rounded up to the next byte.
-  ///   - For bitwidth = 1: Packed into 8bit bytes with bits corresponding to
-  ///     the linear order of the shape type from MSB to LSB, padded to on the
-  ///     right.
+  /// Types that are not byte aligned will be rounded up to the next byte.
   static DenseElementsAttr getFromRawBuffer(ShapedType type,
                                             ArrayRef<char> rawBuffer);
 
   /// Returns true if the given buffer is a valid raw buffer for the given type.
-  /// `detectedSplat` is set if the buffer is valid and represents a splat
-  /// buffer. The definition may be expanded over time, but currently, a
-  /// splat buffer is detected if:
-  ///   - For >1bit: The buffer consists of a single element.
-  ///   - For 1bit: The buffer consists of a single byte with value 0 or 255.
-  ///
-  /// User code should be prepared for additional, conformant patterns to be
-  /// identified as splats in the future.
-  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer,
-                               bool &detectedSplat);
+  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer);
 
   //===--------------------------------------------------------------------===//
   // Iterators
@@ -311,11 +300,11 @@ public:
   /// values.
   class ComplexIntElementIterator
       : public detail::DenseElementIndexedIteratorImpl<
-            ComplexIntElementIterator, std::complex<APInt>, std::complex<APInt>,
-            std::complex<APInt>> {
+            ComplexIntElementIterator, mlir::Complex<APInt>,
+            mlir::Complex<APInt>, mlir::Complex<APInt>> {
   public:
-    /// Accesses the raw std::complex<APInt> value at this iterator position.
-    std::complex<APInt> operator*() const;
+    /// Accesses the raw mlir::Complex<APInt> value at this iterator position.
+    mlir::Complex<APInt> operator*() const;
 
   private:
     friend DenseElementsAttr;
@@ -352,10 +341,10 @@ public:
   class ComplexFloatElementIterator final
       : public llvm::mapped_iterator_base<ComplexFloatElementIterator,
                                           ComplexIntElementIterator,
-                                          std::complex<APFloat>> {
+                                          mlir::Complex<APFloat>> {
   public:
     /// Map the element to the iterator result type.
-    std::complex<APFloat> mapElement(const std::complex<APInt> &value) const {
+    mlir::Complex<APFloat> mapElement(const mlir::Complex<APInt> &value) const {
       return {APFloat(*smt, value.real()), APFloat(*smt, value.imag())};
     }
 
@@ -455,7 +444,7 @@ public:
         ElementIterator<T>(rawData, splat, getNumElements()));
   }
 
-  /// Try to get the held element values as a range of std::complex.
+  /// Try to get the held element values as a range of mlir::Complex.
   template <typename T, typename ElementT>
   using ComplexValueTemplateCheckT =
       std::enable_if_t<detail::is_complex_t<T>::value &&
@@ -558,7 +547,7 @@ public:
   /// element type of this attribute must be a complex of integer type.
   template <typename T>
   using ComplexAPIntValueTemplateCheckT =
-      std::enable_if_t<std::is_same<T, std::complex<APInt>>::value>;
+      std::enable_if_t<std::is_same<T, mlir::Complex<APInt>>::value>;
   template <typename T, typename = ComplexAPIntValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<ComplexIntElementIterator>>
   tryGetValues() const {
@@ -579,7 +568,7 @@ public:
   /// element type of this attribute must be a complex of float type.
   template <typename T>
   using ComplexAPFloatValueTemplateCheckT =
-      std::enable_if_t<std::is_same<T, std::complex<APFloat>>::value>;
+      std::enable_if_t<std::is_same<T, mlir::Complex<APFloat>>::value>;
   template <typename T, typename = ComplexAPFloatValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<ComplexFloatElementIterator>>
   tryGetValues() const {
@@ -715,6 +704,12 @@ using DenseResourceElementsHandle = DialectResourceBlobHandle<BuiltinDialect>;
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+/// DenseIntOrFPElementsAttr was renamed to DenseTypedElementsAttr. This alias
+/// is provided for backwards compatibility. It will be removed in the future.
+using DenseIntOrFPElementsAttr [[deprecated(
+    "DenseIntOrFPElementsAttr has been renamed to DenseTypedElementsAttr")]] =
+    DenseTypedElementsAttr;
+
 //===----------------------------------------------------------------------===//
 // DenseArrayAttr
 //===----------------------------------------------------------------------===//
@@ -910,11 +905,11 @@ private:
 
 /// An attribute that represents a reference to a dense float vector or tensor
 /// object. Each element is stored as a double.
-class DenseFPElementsAttr : public DenseIntOrFPElementsAttr {
+class DenseFPElementsAttr : public DenseTypedElementsAttr {
 public:
   using iterator = DenseElementsAttr::FloatElementIterator;
 
-  using DenseIntOrFPElementsAttr::DenseIntOrFPElementsAttr;
+  using DenseTypedElementsAttr::DenseTypedElementsAttr;
 
   /// Get an instance of a DenseFPElementsAttr with the given arguments. This
   /// simply wraps the DenseElementsAttr::get calls.
@@ -949,13 +944,13 @@ public:
 
 /// An attribute that represents a reference to a dense integer vector or tensor
 /// object.
-class DenseIntElementsAttr : public DenseIntOrFPElementsAttr {
+class DenseIntElementsAttr : public DenseTypedElementsAttr {
 public:
   /// DenseIntElementsAttr iterates on APInt, so we can use the raw element
   /// iterator directly.
   using iterator = DenseElementsAttr::IntElementIterator;
 
-  using DenseIntOrFPElementsAttr::DenseIntOrFPElementsAttr;
+  using DenseTypedElementsAttr::DenseTypedElementsAttr;
 
   /// Get an instance of a DenseIntElementsAttr with the given arguments. This
   /// simply wraps the DenseElementsAttr::get calls.
@@ -1109,14 +1104,6 @@ namespace llvm {
 
 template <>
 struct DenseMapInfo<mlir::StringAttr> : public DenseMapInfo<mlir::Attribute> {
-  static mlir::StringAttr getEmptyKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return mlir::StringAttr::getFromOpaquePointer(pointer);
-  }
-  static mlir::StringAttr getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
-    return mlir::StringAttr::getFromOpaquePointer(pointer);
-  }
 };
 template <>
 struct PointerLikeTypeTraits<mlir::StringAttr>

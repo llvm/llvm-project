@@ -13,6 +13,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <limits>
 
 // AIX doesn't support the debug_addr section
 #ifdef _AIX
@@ -444,7 +445,7 @@ TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
 
 INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams,
                          DebugLineUnsupportedVersionFixture,
-                         Values(/*1 below min */ 1, /* 1 above max */ 6,
+                         Values(/*1 below min */ 1, /* 1 above max */ 7,
                                 /* Maximum possible */ 0xffff));
 
 #ifdef NO_SUPPORT_DEBUG_ADDR
@@ -864,7 +865,7 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 }
 
 struct AdjustAddressFixtureBase : public CommonFixture {
-  virtual ~AdjustAddressFixtureBase() {}
+  virtual ~AdjustAddressFixtureBase() = default;
 
   // Create and update the prologue as specified by the subclass, then return
   // the length of the table.
@@ -1395,6 +1396,25 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
       FailedWithMessage(
           "parsing line table prologue at offset 0x00000000: unsupported "
           "reserved unit length of value 0xfffffff0"));
+}
+
+TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForOverflowingLength) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  LineTable &LT = Gen->addLineTable(DWARF64);
+  // Wrap the next offset back to the start of the table.
+  LT.setCustomPrologue(
+      {{dwarf::DW_LENGTH_DWARF64, LineTable::Long},
+       {std::numeric_limits<uint64_t>::max() - 11, LineTable::Quad}});
+  generate();
+
+  DWARFDebugLine::SectionParser Parser(LineData, *Context, Units);
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
+
+  EXPECT_TRUE(Parser.done());
+  EXPECT_FALSE(Recoverable);
+  EXPECT_THAT_ERROR(std::move(Unrecoverable), Failed());
 }
 
 TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {

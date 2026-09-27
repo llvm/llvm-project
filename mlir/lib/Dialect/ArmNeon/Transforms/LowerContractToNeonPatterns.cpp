@@ -150,6 +150,7 @@ protected:
     case MMLA::Nop:
       llvm_unreachable("Uninitialized operation type");
     }
+    llvm_unreachable("Unknown MMLA");
   }
 
   // Check common preconditions for applying the patterns and initialize
@@ -456,6 +457,9 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+      return rewriter.notifyMatchFailure(
+          op, "masked contractions are not supported");
 
     VectorContractRewriterI8MM vcr;
     if (failed(vcr.matchAndInit(op, rewriter)))
@@ -472,6 +476,9 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
+      return rewriter.notifyMatchFailure(
+          op, "masked contractions are not supported");
 
     VectorContractRewriterBFMMLA vcr;
     if (failed(vcr.matchAndInit(op, rewriter)))

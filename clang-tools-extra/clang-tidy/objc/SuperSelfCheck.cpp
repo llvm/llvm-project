@@ -85,16 +85,17 @@ void SuperSelfCheck::registerMatchers(MatchFinder *Finder) {
 void SuperSelfCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Message = Result.Nodes.getNodeAs<ObjCMessageExpr>("message");
 
-  auto Diag = diag(Message->getExprLoc(), "suspicious invocation of %0 in "
-                                          "initializer; did you mean to "
-                                          "invoke a superclass initializer?")
-              << Message->getMethodDecl();
+  const auto Diag =
+      diag(Message->getExprLoc(), "suspicious invocation of %0 in "
+                                  "initializer; did you mean to "
+                                  "invoke a superclass initializer?")
+      << Message->getMethodDecl();
 
-  SourceLocation ReceiverLoc = Message->getReceiverRange().getBegin();
+  const SourceLocation ReceiverLoc = Message->getReceiverRange().getBegin();
   if (ReceiverLoc.isMacroID() || ReceiverLoc.isInvalid())
     return;
 
-  SourceLocation SelectorLoc = Message->getSelectorStartLoc();
+  const SourceLocation SelectorLoc = Message->getSelectorStartLoc();
   if (SelectorLoc.isMacroID() || SelectorLoc.isInvalid())
     return;
 

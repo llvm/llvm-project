@@ -4,10 +4,6 @@
 Motivation and Limitations
 ==========================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Motivation
 ==========
 

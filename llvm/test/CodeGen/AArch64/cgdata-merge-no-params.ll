@@ -19,9 +19,9 @@
 define i32 @f1(i32 %a) {
 entry:
   %idxprom = sext i32 %a to i64
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
-  %1 = load volatile i32, i32* @g1, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %1 = load volatile i32, ptr @g1, align 4
   %mul = mul nsw i32 %1, %0
   %add = add nsw i32 %mul, 1
   ret i32 %add
@@ -30,9 +30,9 @@ entry:
 define i32 @f2(i32 %a) {
 entry:
   %idxprom = sext i32 %a to i64
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @g, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
-  %1 = load volatile i32, i32* @g1, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @g, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %1 = load volatile i32, ptr @g1, align 4
   %mul = mul nsw i32 %1, %0
   %add = add nsw i32 %mul, 1
   ret i32 %add

@@ -22,10 +22,12 @@ namespace clang::tidy::google::readability {
 class TodoCommentCheck : public ClangTidyCheck {
 public:
   TodoCommentCheck(StringRef Name, ClangTidyContext *Context);
-  ~TodoCommentCheck();
+  ~TodoCommentCheck() override;
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
   class TodoCommentHandler;

@@ -17,6 +17,12 @@ template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
 #endif
 
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+}
+
 namespace std {
 
 template <bool, typename U = void> struct enable_if {
@@ -98,12 +104,20 @@ typedef CVImageBufferRef CVPixelBufferRef;
 typedef signed int CVReturn;
 CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut);
 
+extern "C" NSString *NSStringFromSelector(SEL aSelector);
+extern "C" SEL NSSelectorFromString(NSString *aSelectorName);
+
+extern "C" NSString *NSStringFromClass(Class aClass);
+extern "C" Class NSClassFromString(NSString *aClassName);
+
+extern "C" NSString *NSStringFromProtocol(Protocol *proto);
+extern "C" Protocol * NSProtocolFromString(NSString *namestr);
+
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
-extern Class NSClassFromString(NSString *aClassName);
 
 #if __has_feature(objc_arc)
 id CFBridgingRelease(CFTypeRef X) {
@@ -251,9 +265,9 @@ void WTFCrash(void);
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
+template<typename T> RetainPtr<T> adoptNSNullable(T*);
 template<typename T> RetainPtr<T> adoptCF(T);
-
-template <typename T, typename S> T *downcast(S *t) { return static_cast<T*>(t); }
+template<typename T> RetainPtr<T> adoptCFNullable(T);
 
 template <typename T> struct RemovePointer {
   typedef T Type;
@@ -353,7 +367,9 @@ private:
   CFTypeRef toCFTypeRef(const void* ptr) { return (CFTypeRef)ptr; }
 
   template <typename U> friend RetainPtr<U> adoptNS(U*);
+  template <typename U> friend RetainPtr<U> adoptNSNullable(U*);
   template <typename U> friend RetainPtr<U> adoptCF(U);
+  template <typename U> friend RetainPtr<U> adoptCFNullable(U);
 
   enum AdoptTag { Adopt };
   RetainPtr(PtrType t, AdoptTag) : t(t) { }
@@ -382,7 +398,21 @@ RetainPtr<T> adoptNS(T* t) {
 }
 
 template <typename T>
+RetainPtr<T> adoptNSNullable(T* t) {
+#if __has_feature(objc_arc)
+  return t;
+#else
+  return RetainPtr<T>(t, RetainPtr<T>::Adopt);
+#endif
+}
+
+template <typename T>
 RetainPtr<T> adoptCF(T t) {
+  return RetainPtr<T>(t, RetainPtr<T>::Adopt);
+}
+
+template <typename T>
+RetainPtr<T> adoptCFNullable(T t) {
   return RetainPtr<T>(t, RetainPtr<T>::Adopt);
 }
 
@@ -445,7 +475,7 @@ public:
     }
 
     OSObjectPtr(T ptr)
-        : m_ptr(std::move(ptr))
+        : m_ptr(WTF::move(ptr))
     {
         if (m_ptr)
             retainOSObject(m_ptr);
@@ -475,7 +505,7 @@ public:
 
     OSObjectPtr& operator=(T other)
     {
-        OSObjectPtr ptr = std::move(other);
+        OSObjectPtr ptr = WTF::move(other);
         swap(ptr);
         return *this;
     }
@@ -667,11 +697,12 @@ WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFDictionary, CFMutableDictionary);
 
 using WTF::RetainPtr;
 using WTF::adoptNS;
+using WTF::adoptNSNullable;
 using WTF::adoptCF;
+using WTF::adoptCFNullable;
 using WTF::retainPtr;
 using WTF::OSObjectPtr;
 using WTF::adoptOSObject;
-using WTF::downcast;
 using WTF::bridge_cast;
 using WTF::bridge_id_cast;
 using WTF::is_objc;

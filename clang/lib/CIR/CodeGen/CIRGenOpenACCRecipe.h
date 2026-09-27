@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/OpenACCKinds.h"
 
@@ -64,10 +65,10 @@ protected:
   // that this function is not 'insertion point' clean, in that it alters the
   // insertion point to be inside of the 'combiner' section of the recipe, but
   // doesn't restore it aftewards.
-  void createReductionRecipeCombiner(mlir::Location loc, mlir::Location locEnd,
-                                     mlir::Value mainOp,
-                                     mlir::acc::ReductionRecipeOp recipe,
-                                     size_t numBounds);
+  void createReductionRecipeCombiner(
+      mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
+      mlir::acc::ReductionRecipeOp recipe, size_t numBounds, QualType origType,
+      llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe> combinerRecipes);
 
   void createInitRecipe(mlir::Location loc, mlir::Location locEnd,
                         SourceRange exprRange, mlir::Value mainOp,
@@ -169,7 +170,9 @@ public:
       const Expr *varRef, const VarDecl *varRecipe, const VarDecl *temporary,
       OpenACCReductionOperator reductionOp, DeclContext *dc, QualType origType,
       size_t numBounds, llvm::ArrayRef<QualType> boundTypes, QualType baseType,
-      mlir::Value mainOp) {
+      mlir::Value mainOp,
+      llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe>
+          reductionCombinerRecipes) {
     assert(!varRecipe->getType()->isSpecificBuiltinType(
                BuiltinType::ArraySection) &&
            "array section shouldn't make it to recipe creation");
@@ -192,10 +195,12 @@ public:
     RecipeTy recipe;
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
-      recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType(),
+      recipe = RecipeTy::create(modBuilder, loc, recipeName,
+                                /*sym_visibility=*/nullptr, mainOp.getType(),
                                 convertReductionOp(reductionOp));
     } else {
-      recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
+      recipe = RecipeTy::create(modBuilder, loc, recipeName,
+                                /*sym_visibility=*/nullptr, mainOp.getType());
     }
     insertLocation = modBuilder.saveInsertionPoint();
 
@@ -208,7 +213,8 @@ public:
       createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
                        recipe.getInitRegion(), numBounds, boundTypes, varRecipe,
                        origType, /*emitInitExpr=*/true);
-      createReductionRecipeCombiner(loc, locEnd, mainOp, recipe, numBounds);
+      createReductionRecipeCombiner(loc, locEnd, mainOp, recipe, numBounds,
+                                    origType, reductionCombinerRecipes);
     } else {
       static_assert(std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp>);
       createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,

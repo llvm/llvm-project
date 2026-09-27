@@ -40,6 +40,15 @@ struct DirectiveWithTokens {
       : Kind(Kind), NumTokens(NumTokens) {}
 };
 
+enum class CXX20ModuleDirectiveKind {
+  None,
+  GlobalModuleFragment,
+  NamedModuleDeclaration,
+  ImportDeclaration,
+};
+
+static CXX20ModuleDirectiveKind scanFirstCXX20ModuleDirective(StringRef Source);
+
 /// Does an efficient "scan" of the sources to detect the presence of
 /// preprocessor (or module import) directives and collects the raw lexed tokens
 /// for those directives so that the \p Lexer can "replay" them when the file is
@@ -74,6 +83,7 @@ struct Scanner {
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
     LangOpts.RawStringLiterals = true;
+    LangOpts.AllowLiteralDigitSeparator = true;
     // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }
@@ -83,7 +93,9 @@ struct Scanner {
   /// \returns True on error.
   bool scan(SmallVectorImpl<Directive> &Directives);
 
-  friend bool clang::scanInputForCXX20ModulesUsage(StringRef Source);
+  friend CXX20ModuleDirectiveKind
+  scanFirstCXX20ModuleDirective(StringRef Source);
+  friend bool clang::isPreprocessedModuleFile(StringRef Source);
 
 private:
   /// Lexes next token and advances \p First and the \p Lexer.
@@ -174,6 +186,7 @@ private:
   /// true at the end.
   bool reportError(const char *CurPtr, unsigned Err);
 
+  bool ScanningPreprocessedModuleFile = false;
   StringMap<char> SplitIds;
   StringRef Input;
   SmallVectorImpl<dependency_directives_scan::Token> &Tokens;
@@ -544,6 +557,12 @@ static void skipWhitespace(const char *&First, const char *const End) {
 
 bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                                      const char *const End) {
+  assert(Kind == DirectiveKind::cxx_export_import_decl ||
+         Kind == DirectiveKind::cxx_export_module_decl ||
+         Kind == DirectiveKind::cxx_import_decl ||
+         Kind == DirectiveKind::cxx_module_decl ||
+         Kind == DirectiveKind::decl_at_import);
+
   const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
     // Keep a copy of the First char incase it needs to be reset.
@@ -555,12 +574,22 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
       First = Previous;
       return false;
     }
-    if (Tok.is(tok::eof))
+    if (Tok.isOneOf(tok::eof, tok::eod))
       return reportError(
           DirectiveLoc,
           diag::err_dep_source_scanner_missing_semi_after_at_import);
     if (Tok.is(tok::semi))
       break;
+  }
+
+  bool IsCXXModules = Kind == DirectiveKind::cxx_export_import_decl ||
+                      Kind == DirectiveKind::cxx_export_module_decl ||
+                      Kind == DirectiveKind::cxx_import_decl ||
+                      Kind == DirectiveKind::cxx_module_decl;
+  if (IsCXXModules) {
+    lexPPDirectiveBody(First, End);
+    pushDirective(Kind);
+    return false;
   }
 
   const auto &Tok = lexToken(First, End);
@@ -705,7 +734,12 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
     Id = *NextId;
   }
 
-  if (Id != "module" && Id != "import") {
+  StringRef Module =
+      ScanningPreprocessedModuleFile ? "__preprocessed_module" : "module";
+  StringRef Import =
+      ScanningPreprocessedModuleFile ? "__preprocessed_import" : "import";
+
+  if (Id != Module && Id != Import) {
     skipLine(First, End);
     return false;
   }
@@ -718,7 +752,7 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   switch (*First) {
   case ':': {
     // `module :` is never the start of a valid module declaration.
-    if (Id == "module") {
+    if (Id == Module) {
       skipLine(First, End);
       return false;
     }
@@ -737,7 +771,7 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   }
   case ';': {
     // Handle the global module fragment `module;`.
-    if (Id == "module" && !Export)
+    if (Id == Module && !Export)
       break;
     skipLine(First, End);
     return false;
@@ -755,7 +789,7 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   TheLexer.seek(getOffsetAt(First), /*IsAtStartOfLine*/ false);
 
   DirectiveKind Kind;
-  if (Id == "module")
+  if (Id == Module)
     Kind = Export ? cxx_export_module_decl : cxx_module_decl;
   else
     Kind = Export ? cxx_export_import_decl : cxx_import_decl;
@@ -888,6 +922,19 @@ static bool isStartOfRelevantLine(char First) {
   return false;
 }
 
+static inline bool isStartWithPreprocessedModuleDirective(const char *First,
+                                                          const char *End) {
+  assert(First <= End);
+  if (*First == '_') {
+    StringRef Str(First, End - First);
+    return Str.starts_with(
+               tok::getPPKeywordSpelling(tok::pp___preprocessed_module)) ||
+           Str.starts_with(
+               tok::getPPKeywordSpelling(tok::pp___preprocessed_import));
+  }
+  return false;
+}
+
 bool Scanner::lexPPLine(const char *&First, const char *const End) {
   assert(First != End);
 
@@ -906,13 +953,15 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
 
   TheLexer.seek(getOffsetAt(First), /*IsAtStartOfLine*/ true);
 
-  auto ScEx1 = make_scope_exit([&]() {
+  llvm::scope_exit ScEx1([&]() {
     /// Clear Scanner's CurDirToks before returning, in case we didn't push a
     /// new directive.
     CurDirToks.clear();
   });
 
-  if (*First == '_') {
+  bool IsPreprocessedModule =
+      isStartWithPreprocessedModuleDirective(First, End);
+  if (*First == '_' && !IsPreprocessedModule) {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
       return lex_Pragma(First, End);
     return false;
@@ -921,15 +970,14 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   // Handle preprocessing directives.
 
   TheLexer.setParsingPreprocessorDirective(true);
-  auto ScEx2 = make_scope_exit(
+  llvm::scope_exit ScEx2(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
 
-  // Handle "@import".
   if (*First == '@')
     return lexAt(First, End);
 
   // Handle module directives for C++20 modules.
-  if (*First == 'i' || *First == 'e' || *First == 'm')
+  if (*First == 'i' || *First == 'e' || *First == 'm' || IsPreprocessedModule)
     return lexModule(First, End);
 
   // Lex '#'.
@@ -1011,6 +1059,7 @@ bool Scanner::scanImpl(const char *First, const char *const End) {
 }
 
 bool Scanner::scan(SmallVectorImpl<Directive> &Directives) {
+  ScanningPreprocessedModuleFile = clang::isPreprocessedModuleFile(Input);
   bool Error = scanImpl(Input.begin(), Input.end());
 
   if (!Error) {
@@ -1095,33 +1144,103 @@ static void skipUntilMaybeCXX20ModuleDirective(const char *&First,
   }
 }
 
-bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+namespace {
+
+static CXX20ModuleDirectiveKind
+scanFirstCXX20ModuleDirective(StringRef Source) {
   const char *First = Source.begin();
   const char *const End = Source.end();
   skipUntilMaybeCXX20ModuleDirective(First, End);
   if (First == End)
-    return false;
+    return CXX20ModuleDirectiveKind::None;
 
   // Check if the next token can even be a module directive before creating a
   // full lexer.
   if (!(*First == 'i' || *First == 'e' || *First == 'm'))
-    return false;
+    return CXX20ModuleDirectiveKind::None;
 
   llvm::SmallVector<dependency_directives_scan::Token> Tokens;
   Scanner S(StringRef(First, End - First), Tokens, nullptr, SourceLocation());
   S.TheLexer.setParsingPreprocessorDirective(true);
-  if (S.lexModule(First, End))
+  if (S.lexModule(First, End) || S.DirsWithToks.empty())
+    return CXX20ModuleDirectiveKind::None;
+
+  assert(S.DirsWithToks.size() == 1);
+  const DirectiveWithTokens &Directive = S.DirsWithToks.front();
+  switch (Directive.Kind) {
+  case dependency_directives_scan::cxx_module_decl:
+    assert(Directive.NumTokens >= 2);
+    return Tokens[1].is(tok::semi)
+               ? CXX20ModuleDirectiveKind::GlobalModuleFragment
+               : CXX20ModuleDirectiveKind::NamedModuleDeclaration;
+  case dependency_directives_scan::cxx_export_module_decl:
+    return CXX20ModuleDirectiveKind::NamedModuleDeclaration;
+  case dependency_directives_scan::cxx_import_decl:
+  case dependency_directives_scan::cxx_export_import_decl:
+    return CXX20ModuleDirectiveKind::ImportDeclaration;
+  default:
+    llvm_unreachable("unexpected C++20 module directive kind");
+  }
+}
+
+} // namespace
+
+bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+  return scanFirstCXX20ModuleDirective(Source) !=
+         CXX20ModuleDirectiveKind::None;
+}
+
+ModuleUnitKind clang::scanInputForCXX20ModuleUnit(StringRef Source) {
+  switch (scanFirstCXX20ModuleDirective(Source)) {
+  case CXX20ModuleDirectiveKind::GlobalModuleFragment:
+    return ModuleUnitKind::HasGlobalModuleFragment;
+  case CXX20ModuleDirectiveKind::NamedModuleDeclaration:
+    return ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment;
+  case CXX20ModuleDirectiveKind::None:
+  case CXX20ModuleDirectiveKind::ImportDeclaration:
+    return ModuleUnitKind::NotModuleUnit;
+  }
+  llvm_unreachable("unexpected C++20 module directive kind");
+}
+
+bool clang::isPreprocessedModuleFile(StringRef Source) {
+  const char *First = Source.begin();
+  const char *const End = Source.end();
+
+  skipUntilMaybeCXX20ModuleDirective(First, End);
+  if (First == End)
     return false;
-  auto IsCXXNamedModuleDirective = [](const DirectiveWithTokens &D) {
-    switch (D.Kind) {
-    case dependency_directives_scan::cxx_module_decl:
-    case dependency_directives_scan::cxx_import_decl:
-    case dependency_directives_scan::cxx_export_module_decl:
-    case dependency_directives_scan::cxx_export_import_decl:
+
+  llvm::SmallVector<dependency_directives_scan::Token> Tokens;
+  Scanner S(StringRef(First, End - First), Tokens, nullptr, SourceLocation());
+  while (First != End) {
+    if (*First == '#') {
+      ++First;
+      skipToNewlineRaw(First, End);
+    } else if (*First == 'e') {
+      S.TheLexer.seek(S.getOffsetAt(First), /*IsAtStartOfLine=*/true);
+      StringRef Id = S.lexIdentifier(First, End);
+      if (Id == "export") {
+        std::optional<StringRef> NextId =
+            S.tryLexIdentifierOrSkipLine(First, End);
+        if (!NextId)
+          return false;
+        Id = *NextId;
+      }
+      if (Id == "__preprocessed_module" || Id == "__preprocessed_import")
+        return true;
+      skipToNewlineRaw(First, End);
+    } else if (isStartWithPreprocessedModuleDirective(First, End))
       return true;
-    default:
-      return false;
+    else
+      skipToNewlineRaw(First, End);
+
+    skipWhitespace(First, End);
+    if (const auto Len = isEOL(First, End)) {
+      First += Len;
+      continue;
     }
-  };
-  return llvm::any_of(S.DirsWithToks, IsCXXNamedModuleDirective);
+    break;
+  }
+  return false;
 }

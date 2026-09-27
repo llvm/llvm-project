@@ -66,7 +66,7 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
 
   // Record types.
   if (auto recType = type->getAsCanonical<RecordType>()) {
-    addTypedData(recType->getOriginalDecl(), begin);
+    addTypedData(recType->getDecl(), begin);
 
     // Array types.
   } else if (type->isArrayType()) {
@@ -693,7 +693,7 @@ bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 
 bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                                   llvm::Type *eltTy, unsigned numElts) {
-  assert(numElts > 1 && "illegal vector length");
+  assert(numElts > 0 && "illegal vector length");
   return getSwiftABIInfo(CGM).isLegalVectorType(vectorSize, eltTy, numElts);
 }
 
@@ -721,11 +721,14 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
     return;
   }
 
-  // Try to split the vector into legal subvectors.
   auto numElts = cast<llvm::FixedVectorType>(origVectorTy)->getNumElements();
   auto eltTy = origVectorTy->getElementType();
-  assert(numElts != 1);
+  if (numElts == 1) {
+    components.push_back(eltTy);
+    return;
+  }
 
+  // Try to split the vector into legal subvectors.
   // The largest size that we're still considering making subvectors of.
   // Always a power of 2.
   unsigned logCandidateNumElts = llvm::Log2_32(numElts);
@@ -814,7 +817,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
   unsigned IndirectAS = CGM.getDataLayout().getAllocaAddrSpace();
   if (auto recordType = dyn_cast<RecordType>(type)) {
-    auto record = recordType->getOriginalDecl();
+    auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
@@ -822,8 +825,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                      /*AddrSpace=*/IndirectAS, /*byval=*/false);
 
     SwiftAggLowering lowering(CGM);
-    lowering.addTypedData(recordType->getOriginalDecl(), CharUnits::Zero(),
-                          layout);
+    lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);
     lowering.finish();
 
     return classifyExpandedType(lowering, forReturn, layout.getAlignment(),

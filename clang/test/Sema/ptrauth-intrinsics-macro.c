@@ -16,12 +16,17 @@ void test(int *dp, int value) {
   (void)t0;
   dp = ptrauth_sign_unauthenticated(dp, VALID_DATA_KEY, 0);
   dp = ptrauth_auth_and_resign(dp, VALID_DATA_KEY, dp, VALID_DATA_KEY, dp);
+  dp = ptrauth_auth_with_pc_and_resign(dp, VALID_CODE_KEY, dp, dp, VALID_DATA_KEY, dp);
   dp = ptrauth_auth_data(dp, VALID_DATA_KEY, 0);
   int pu0 = 0, pu1 = 0, pu2 = 0, pu3 = 0, pu4 = 0, pu5 = 0, pu6 = 0, pu7 = 0;
   ptrauth_blend_discriminator(&pu0, value);
   ptrauth_auth_and_resign(&pu1, VALID_DATA_KEY, dp, VALID_DATA_KEY, dp);
   ptrauth_auth_and_resign(dp, VALID_DATA_KEY, &pu2, VALID_DATA_KEY, dp);
   ptrauth_auth_and_resign(dp, VALID_DATA_KEY, dp, VALID_DATA_KEY, &pu3);
+  ptrauth_auth_with_pc_and_resign(&pu1, VALID_CODE_KEY, dp, dp, VALID_DATA_KEY, dp);
+  ptrauth_auth_with_pc_and_resign(dp, VALID_CODE_KEY, &pu2, dp, VALID_DATA_KEY, dp);
+  ptrauth_auth_with_pc_and_resign(dp, VALID_CODE_KEY, dp, &pu3, VALID_DATA_KEY, dp);
+  ptrauth_auth_with_pc_and_resign(dp, VALID_CODE_KEY, dp, dp, VALID_DATA_KEY, &pu4);
   ptrauth_sign_generic_data(pu4, dp);
   ptrauth_sign_generic_data(dp, pu5);
   ptrauth_auth_data(&pu6, VALID_DATA_KEY, value);

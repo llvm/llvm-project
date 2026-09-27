@@ -9,9 +9,14 @@
 ; CHECK:  %[[#]] = OpLoad %[[#INT8]] %[[#FNP1]] Aligned 1
 ; CHECK:  %[[#]] = OpLoad %[[#INT8]] %[[#FNP2]] Aligned 1
 
+@G_c = global i8 0
+@G_d = global i8 0
+
 define spir_kernel void @foo(ptr addrspace(1) %a, ptr addrspace(2) %b) {
 entry:
   %c = load i8, ptr addrspace(1) %a
+  store i8 %c, ptr @G_c
   %d = load i8, ptr addrspace(2) %b
+  store i8 %d, ptr @G_d
   ret void
 }

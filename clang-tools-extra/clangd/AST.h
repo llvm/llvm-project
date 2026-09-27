@@ -18,10 +18,12 @@
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 #include <string>
@@ -252,6 +254,33 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 /// whose type is a bare type parameter pack (e.g. `Args...`), or a
 /// reference to one (e.g. `Args&...` or `Args&&...`).
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
+
+/// Heuristic that checks if FT is likely to be forwarding a parameter pack to
+/// another function (e.g. `make_unique`).
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT);
+
+/// Only call if FD is a likely forwarding function. Returns
+/// constructors that might be forwarded to.
+SmallVector<const CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD);
+
+/// Cache mapping forwarding function instantiations (e.g. `make_unique<T>`)
+/// to the constructors they ultimately call.
+using ForwardingToConstructorCache =
+    llvm::DenseMap<const FunctionDecl *,
+                   SmallVector<const CXXConstructorDecl *, 1>>;
+
+/// Returns the constructors that FD forwards to, if FD is a template
+/// instantiation of a likely forwarding function (see
+/// `isLikelyForwardingFunction`). Results are memoized in `Cache`. Returns
+/// an empty range for non-forwarding functions; the cache is only populated
+/// for true forwarding instantiations to keep its size bounded.
+///
+/// FD must not be null. The returned ArrayRef is owned by `Cache`; consume
+/// it before any other call that may insert into the same cache.
+ArrayRef<const CXXConstructorDecl *>
+getForwardedConstructors(const FunctionDecl *FD,
+                         ForwardingToConstructorCache &Cache);
 
 } // namespace clangd
 } // namespace clang

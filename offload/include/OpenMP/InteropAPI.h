@@ -25,8 +25,8 @@ typedef enum kmp_interop_type_t {
 } kmp_interop_type_t;
 
 struct interop_attrs_t {
-  bool inorder : 1;
-  int reserved : 31;
+  uint32_t inorder : 1;
+  uint32_t reserved : 31;
 
   /// Check if the supported attributes are compatible with the current
   ///   attributes. Only if an attribute is supported can the value be true,
@@ -44,15 +44,15 @@ struct interop_spec_t {
 };
 
 struct interop_flags_t {
-  bool implicit : 1; // dispatch (true) or interop (false)
-  bool nowait : 1;   // has nowait flag
-  int reserved : 30;
+  uint32_t implicit : 1; // dispatch (true) or interop (false)
+  uint32_t nowait : 1;   // has nowait flag
+  uint32_t reserved : 30;
 };
 
 struct interop_ctx_t {
   uint32_t version; // version of the interface (current is 0)
   interop_flags_t flags;
-  int gtid;
+  int32_t gtid;
 };
 
 struct dep_pack_t {
@@ -160,17 +160,11 @@ struct InteropTableEntry {
     Interops.push_back(obj);
   }
 
-  template <class ClearFuncTy> void clear(ClearFuncTy f) {
-    for (auto &Obj : Interops) {
-      f(Obj);
-    }
-  }
-
   /// vector interface
   int size() const { return Interops.size(); }
   iterator begin() { return Interops.begin(); }
   iterator end() { return Interops.end(); }
-  iterator erase(iterator it) { return Interops.erase(it); }
+  void clear() { Interops.clear(); }
 };
 
 struct InteropTblTy

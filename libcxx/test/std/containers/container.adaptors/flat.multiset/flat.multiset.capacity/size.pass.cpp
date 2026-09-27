@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=800000000
 
 // <flat_set>
 
@@ -23,7 +25,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer>
-void test_one() {
+constexpr void test_one() {
   using M = std::flat_multiset<int, std::less<int>, KeyContainer>;
   using S = typename M::size_type;
   {
@@ -46,7 +48,7 @@ void test_one() {
   }
   {
     M m;
-    S s = 500000;
+    S s = 5000;
     for (std::size_t i = 0u; i < s; ++i) {
       m.emplace(i);
       m.emplace(i);
@@ -57,15 +59,23 @@ void test_one() {
   }
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<int>>();
-  test_one<std::deque<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
   test_one<std::vector<int, min_allocator<int>>>();
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

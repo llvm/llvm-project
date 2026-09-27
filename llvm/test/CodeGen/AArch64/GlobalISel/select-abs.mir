@@ -18,9 +18,9 @@ body:             |
     ; CHECK-NEXT: [[ABSv4i16_:%[0-9]+]]:fpr64 = ABSv4i16 [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[ABSv4i16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %1:fpr(<4 x s16>) = G_ABS %0
-    $d0 = COPY %1(<4 x s16>)
+    %0:fpr(<4 x i16>) = COPY $d0
+    %1:fpr(<4 x i16>) = G_ABS %0
+    $d0 = COPY %1(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -40,9 +40,9 @@ body:             |
     ; CHECK-NEXT: [[ABSv8i16_:%[0-9]+]]:fpr128 = ABSv8i16 [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[ABSv8i16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s16>) = COPY $q0
-    %1:fpr(<8 x s16>) = G_ABS %0
-    $q0 = COPY %1(<8 x s16>)
+    %0:fpr(<8 x i16>) = COPY $q0
+    %1:fpr(<8 x i16>) = G_ABS %0
+    $q0 = COPY %1(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -62,9 +62,9 @@ body:             |
     ; CHECK-NEXT: [[ABSv2i32_:%[0-9]+]]:fpr64 = ABSv2i32 [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[ABSv2i32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<2 x s32>) = COPY $d0
-    %1:fpr(<2 x s32>) = G_ABS %0
-    $d0 = COPY %1(<2 x s32>)
+    %0:fpr(<2 x i32>) = COPY $d0
+    %1:fpr(<2 x i32>) = G_ABS %0
+    $d0 = COPY %1(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -84,9 +84,9 @@ body:             |
     ; CHECK-NEXT: [[ABSv4i32_:%[0-9]+]]:fpr128 = ABSv4i32 [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[ABSv4i32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<4 x s32>) = COPY $q0
-    %1:fpr(<4 x s32>) = G_ABS %0
-    $q0 = COPY %1(<4 x s32>)
+    %0:fpr(<4 x i32>) = COPY $q0
+    %1:fpr(<4 x i32>) = G_ABS %0
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -106,9 +106,9 @@ body:             |
     ; CHECK-NEXT: [[ABSv8i8_:%[0-9]+]]:fpr64 = ABSv8i8 [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[ABSv8i8_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<8 x s8>) = COPY $d0
-    %1:fpr(<8 x s8>) = G_ABS %0
-    $d0 = COPY %1(<8 x s8>)
+    %0:fpr(<8 x i8>) = COPY $d0
+    %1:fpr(<8 x i8>) = G_ABS %0
+    $d0 = COPY %1(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -128,9 +128,9 @@ body:             |
     ; CHECK-NEXT: [[ABSv16i8_:%[0-9]+]]:fpr128 = ABSv16i8 [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[ABSv16i8_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<16 x s8>) = COPY $q0
-    %1:fpr(<16 x s8>) = G_ABS %0
-    $q0 = COPY %1(<16 x s8>)
+    %0:fpr(<16 x i8>) = COPY $q0
+    %1:fpr(<16 x i8>) = G_ABS %0
+    $q0 = COPY %1(<16 x i8>)
     RET_ReallyLR implicit $q0
 
 ...

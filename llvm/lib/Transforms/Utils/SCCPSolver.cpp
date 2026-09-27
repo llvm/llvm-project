@@ -16,14 +16,17 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -56,6 +59,10 @@ bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
          (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
 }
 
+bool SCCPSolver::isReplaceableConstant(const ValueLatticeElement &LV) {
+  return isConstant(LV) && !LV.mayHaveDifferentProvenance();
+}
+
 bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !SCCPSolver::isConstant(LV);
 }
@@ -82,11 +89,50 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
     return false;
   }
 
+  // For pointer constants derived from PredicateInfo, the constant may have
+  // different provenance. Take this into account during constant pointer
+  // propagation.
+  if (V->getType()->isPointerTy()) {
+    const auto &LV = getLatticeValueFor(V);
+    if (LV.mayHaveDifferentProvenance()) {
+      const DataLayout &DL = getDataLayout();
+      bool Changed = V->replaceUsesWithIf(Const, [&](Use &U) {
+        bool CanReplace = canReplacePointersInUseIfEqual(U, Const, DL);
+        if (CanReplace)
+          LLVM_DEBUG(dbgs() << "  Constant pointer: " << *Const << " = " << *V
+                            << '\n');
+        return CanReplace;
+      });
+      return Changed;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
 
   // Replaces all of the uses of a variable with uses of the constant.
   V->replaceAllUsesWith(Const);
   return true;
+}
+
+/// Helper for propagting !implicit.ref metadata from callee to caller before
+/// erasing a call instruction. This ensures that references to global objects
+/// (e.g., copyright strings) are preserved even when calls are optimized away.
+static void propagateImplicitRefFromCall(CallBase *CB) {
+  Function *Callee = CB->getCalledFunction();
+  if (!Callee)
+    return;
+
+  if (!Callee->hasMetadata(LLVMContext::MD_implicit_ref))
+    return;
+
+  Function *Caller = CB->getParent()->getParent();
+  if (!Caller)
+    return;
+
+  SmallVector<MDNode *> MDs;
+  Callee->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  for (MDNode *MD : MDs)
+    Caller->addMetadata(LLVMContext::MD_implicit_ref, *MD);
 }
 
 /// Helper for getting ranges from \p Solver. Instructions inserted during
@@ -355,11 +401,15 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (wouldInstructionBeTriviallyDead(&Inst))
-        Inst.eraseFromParent();
+      if (isInstructionTriviallyDead(&Inst)) {
+        // Propagate !implicit.ref before erasing the call.
+        if (auto *CB = dyn_cast<CallBase>(&Inst))
+          propagateImplicitRefFromCall(CB);
 
+        Inst.eraseFromParent();
+        ++InstRemovedStat;
+      }
       MadeChanges = true;
-      ++InstRemovedStat;
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
@@ -392,8 +442,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 
   // SCCP can only determine non-feasible edges for br, switch and indirectbr.
   Instruction *TI = BB->getTerminator();
-  assert((isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI)) &&
+  assert((isa<UncondBrInst, CondBrInst, SwitchInst, IndirectBrInst>(TI)) &&
          "Terminator must be a br, switch or indirectbr");
 
   if (FeasibleSuccessors.size() == 0) {
@@ -425,7 +474,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
 
-    Instruction *BI = BranchInst::Create(OnlyFeasibleSuccessor, BB);
+    Instruction *BI = UncondBrInst::Create(OnlyFeasibleSuccessor, BB);
     BI->setDebugLoc(TI->getDebugLoc());
     TI->eraseFromParent();
     DTU.applyUpdatesPermissive(Updates);
@@ -634,17 +683,9 @@ private:
   /// Merge \p MergeWithV into \p IV and push \p V to the worklist, if \p IV
   /// changes.
   bool mergeInValue(ValueLatticeElement &IV, Value *V,
-                    ValueLatticeElement MergeWithV,
+                    const ValueLatticeElement &MergeWithV,
                     ValueLatticeElement::MergeOptions Opts = {
                         /*MayIncludeUndef=*/false, /*CheckWiden=*/false});
-
-  bool mergeInValue(Value *V, ValueLatticeElement MergeWithV,
-                    ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}) {
-    assert(!V->getType()->isStructTy() &&
-           "non-structs should use markConstant");
-    return mergeInValue(ValueState[V], V, MergeWithV, Opts);
-  }
 
   /// getValueState - Return the ValueLatticeElement object that corresponds to
   /// the value.  This function handles the case when the value hasn't been seen
@@ -691,6 +732,19 @@ private:
 
     // All others are underdefined by default.
     return LV;
+  }
+
+  template <typename FnTy> void forEachLatticeElement(Value *V, FnTy Fn) {
+    if (auto *STy = dyn_cast<StructType>(V->getType())) {
+      for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
+        Fn([this, i](Value *Op) -> ValueLatticeElement & {
+          return getStructValueState(Op, i);
+        });
+    } else {
+      Fn([this](Value *Op) -> ValueLatticeElement & {
+        return getValueState(Op);
+      });
+    }
   }
 
   /// Traverse the use-def chain of \p Call, marking itself and its users as
@@ -768,6 +822,7 @@ private:
   void handleCallArguments(CallBase &CB);
   void handleExtractOfWithOverflow(ExtractValueInst &EVI,
                                    const WithOverflowInst *WO, unsigned Idx);
+  bool isInstFullyOverDefined(Instruction &Inst);
 
 private:
   friend class InstVisitor<SCCPInstVisitor>;
@@ -824,6 +879,8 @@ private:
   void visitInstruction(Instruction &I);
 
 public:
+  const DataLayout &getDataLayout() const { return DL; }
+
   void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
     FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(
                                     F, DT, AC, PredicateInfoAllocator)});
@@ -945,8 +1002,7 @@ public:
   const ValueLatticeElement &getLatticeValueFor(Value *V) const {
     assert(!V->getType()->isStructTy() &&
            "Should use getStructLatticeValueFor");
-    DenseMap<Value *, ValueLatticeElement>::const_iterator I =
-        ValueState.find(V);
+    auto I = ValueState.find(V);
     assert(I != ValueState.end() &&
            "V not found in ValueState nor Paramstate map!");
     return I->second;
@@ -987,7 +1043,7 @@ public:
   void trackValueOfArgument(Argument *A) {
     if (A->getType()->isStructTy())
       return (void)markOverdefined(A);
-    mergeInValue(A, getArgAttributeVL(A));
+    mergeInValue(ValueState[A], A, getArgAttributeVL(A));
   }
 
   bool isStructLatticeConstant(Function *F, StructType *STy);
@@ -1052,7 +1108,7 @@ void SCCPInstVisitor::pushToWorkList(Instruction *I) {
   // same blocks that are after the current one, as they will be visited
   // anyway. We do have to push updates to earlier instructions (e.g. phi
   // nodes or loads of tracked globals).
-  if (CurI && I->getParent() == CurI->getParent() && !I->comesBefore(CurI))
+  if (CurI && I->getParent() == CurI->getParent() && CurI->comesBefore(I))
     return;
   // Only push instructions in already visited blocks. Otherwise we'll handle
   // it when we visit the block for the first time.
@@ -1128,8 +1184,7 @@ bool SCCPInstVisitor::isStructLatticeConstant(Function *F, StructType *STy) {
   for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
     const auto &It = TrackedMultipleRetVals.find(std::make_pair(F, i));
     assert(It != TrackedMultipleRetVals.end());
-    ValueLatticeElement LV = It->second;
-    if (!SCCPSolver::isConstant(LV))
+    if (!SCCPSolver::isReplaceableConstant(It->second))
       return false;
   }
   return true;
@@ -1160,7 +1215,7 @@ Constant *SCCPInstVisitor::getConstantOrNull(Value *V) const {
     std::vector<Constant *> ConstVals;
     auto *ST = cast<StructType>(V->getType());
     for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
-      ValueLatticeElement LV = LVs[I];
+      const ValueLatticeElement &LV = LVs[I];
       ConstVals.push_back(SCCPSolver::isConstant(LV)
                               ? getConstant(LV, ST->getElementType(I))
                               : UndefValue::get(ST->getElementType(I)));
@@ -1225,7 +1280,7 @@ void SCCPInstVisitor::visitInstruction(Instruction &I) {
 }
 
 bool SCCPInstVisitor::mergeInValue(ValueLatticeElement &IV, Value *V,
-                                   ValueLatticeElement MergeWithV,
+                                   const ValueLatticeElement &MergeWithV,
                                    ValueLatticeElement::MergeOptions Opts) {
   if (IV.mergeIn(MergeWithV, Opts)) {
     pushUsersToWorkList(V);
@@ -1258,13 +1313,13 @@ bool SCCPInstVisitor::markEdgeExecutable(BasicBlock *Source, BasicBlock *Dest) {
 void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
                                             SmallVectorImpl<bool> &Succs) {
   Succs.resize(TI.getNumSuccessors());
-  if (auto *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(TI)) {
+    Succs[0] = true;
+    return;
+  }
 
-    ValueLatticeElement BCValue = getValueState(BI->getCondition());
+  if (auto *BI = dyn_cast<CondBrInst>(&TI)) {
+    const ValueLatticeElement &BCValue = getValueState(BI->getCondition());
     ConstantInt *CI = getConstantInt(BCValue, BI->getCondition()->getType());
     if (!CI) {
       // Overdefined condition variables, and branches on unfoldable constant
@@ -1326,7 +1381,7 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
   // the target as executable.
   if (auto *IBR = dyn_cast<IndirectBrInst>(&TI)) {
     // Casts are folded by visitCastInst.
-    ValueLatticeElement IBRValue = getValueState(IBR->getAddress());
+    const ValueLatticeElement &IBRValue = getValueState(IBR->getAddress());
     BlockAddress *Addr = dyn_cast_or_null<BlockAddress>(
         getConstant(IBRValue, IBR->getAddress()->getType()));
     if (!Addr) { // Overdefined or unknown condition?
@@ -1383,49 +1438,47 @@ bool SCCPInstVisitor::isEdgeFeasible(BasicBlock *From, BasicBlock *To) const {
 // 7. If a conditional branch has a value that is overdefined, make all
 //    successors executable.
 void SCCPInstVisitor::visitPHINode(PHINode &PN) {
-  // If this PN returns a struct, just mark the result overdefined.
-  // TODO: We could do a lot better than this if code actually uses this.
-  if (PN.getType()->isStructTy())
-    return (void)markOverdefined(&PN);
-
-  if (getValueState(&PN).isOverdefined())
-    return; // Quick exit
-
   // Super-extra-high-degree PHI nodes are unlikely to ever be marked constant,
   // and slow us down a lot.  Just mark them overdefined.
   if (PN.getNumIncomingValues() > 64)
     return (void)markOverdefined(&PN);
 
-  unsigned NumActiveIncoming = 0;
+  if (isInstFullyOverDefined(PN))
+    return;
+  SmallVector<unsigned> FeasibleIncomingIndices;
+  for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+    if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
+      continue;
+    FeasibleIncomingIndices.push_back(i);
+  }
 
   // Look at all of the executable operands of the PHI node.  If any of them
   // are overdefined, the PHI becomes overdefined as well.  If they are all
   // constant, and they agree with each other, the PHI becomes the identical
   // constant.  If they are constant and don't agree, the PHI is a constant
   // range. If there are no executable operands, the PHI remains unknown.
-  ValueLatticeElement PhiState = getValueState(&PN);
-  for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-    if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
-      continue;
-
-    ValueLatticeElement IV = getValueState(PN.getIncomingValue(i));
-    PhiState.mergeIn(IV);
-    NumActiveIncoming++;
+  forEachLatticeElement(&PN, [&](auto GetValueState) {
+    ValueLatticeElement PhiState = GetValueState(&PN);
     if (PhiState.isOverdefined())
-      break;
-  }
-
-  // We allow up to 1 range extension per active incoming value and one
-  // additional extension. Note that we manually adjust the number of range
-  // extensions to match the number of active incoming values. This helps to
-  // limit multiple extensions caused by the same incoming value, if other
-  // incoming values are equal.
-  mergeInValue(&PN, PhiState,
-               ValueLatticeElement::MergeOptions().setMaxWidenSteps(
-                   NumActiveIncoming + 1));
-  ValueLatticeElement &PhiStateRef = getValueState(&PN);
-  PhiStateRef.setNumRangeExtensions(
-      std::max(NumActiveIncoming, PhiStateRef.getNumRangeExtensions()));
+      return;
+    for (unsigned i : FeasibleIncomingIndices) {
+      PhiState.mergeIn(GetValueState(PN.getIncomingValue(i)));
+      if (PhiState.isOverdefined())
+        break;
+    }
+    // We allow up to 1 range extension per active incoming value and one
+    // additional extension. Note that we manually adjust the number of range
+    // extensions to match the number of active incoming values. This helps to
+    // limit multiple extensions caused by the same incoming value, if other
+    // incoming values are equal.
+    ValueLatticeElement &PhiStateRef = GetValueState(&PN);
+    mergeInValue(PhiStateRef, &PN, PhiState,
+                 ValueLatticeElement::MergeOptions().setMaxWidenSteps(
+                     FeasibleIncomingIndices.size() + 1));
+    PhiStateRef.setNumRangeExtensions(
+        std::max((unsigned)FeasibleIncomingIndices.size(),
+                 PhiStateRef.getNumRangeExtensions()));
+  });
 }
 
 void SCCPInstVisitor::visitReturnInst(ReturnInst &I) {
@@ -1481,24 +1534,27 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
     }
   }
 
-  ValueLatticeElement OpSt = getValueState(I.getOperand(0));
+  const ValueLatticeElement &OpSt = getValueState(I.getOperand(0));
   if (OpSt.isUnknownOrUndef())
     return;
 
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
     if (Constant *C =
-            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
-      return (void)markConstant(&I, C);
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL)) {
+      auto &LV = ValueState[&I];
+      mergeInValue(LV, &I, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Ignore bitcasts, as they may change the number of vector elements.
   if (I.getDestTy()->isIntOrIntVectorTy() &&
       I.getSrcTy()->isIntOrIntVectorTy() &&
       I.getOpcode() != Instruction::BitCast) {
-    auto &LV = getValueState(&I);
     ConstantRange OpRange =
         OpSt.asConstantRange(I.getSrcTy(), /*UndefAllowed=*/false);
+    auto &LV = getValueState(&I);
 
     Type *DestTy = I.getDestTy();
     ConstantRange Res = ConstantRange::getEmpty(DestTy->getScalarSizeInBits());
@@ -1516,19 +1572,24 @@ void SCCPInstVisitor::handleExtractOfWithOverflow(ExtractValueInst &EVI,
                                                   const WithOverflowInst *WO,
                                                   unsigned Idx) {
   Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
-  ValueLatticeElement L = getValueState(LHS);
-  ValueLatticeElement R = getValueState(RHS);
+  Type *Ty = LHS->getType();
+
   addAdditionalUser(LHS, &EVI);
   addAdditionalUser(RHS, &EVI);
-  if (L.isUnknownOrUndef() || R.isUnknownOrUndef())
+
+  const ValueLatticeElement &L = getValueState(LHS);
+  if (L.isUnknownOrUndef())
+    return; // Wait to resolve.
+  ConstantRange LR = L.asConstantRange(Ty, /*UndefAllowed=*/false);
+
+  const ValueLatticeElement &R = getValueState(RHS);
+  if (R.isUnknownOrUndef())
     return; // Wait to resolve.
 
-  Type *Ty = LHS->getType();
-  ConstantRange LR = L.asConstantRange(Ty, /*UndefAllowed=*/false);
   ConstantRange RR = R.asConstantRange(Ty, /*UndefAllowed=*/false);
   if (Idx == 0) {
     ConstantRange Res = LR.binaryOp(WO->getBinaryOp(), RR);
-    mergeInValue(&EVI, ValueLatticeElement::getRange(Res));
+    mergeInValue(ValueState[&EVI], &EVI, ValueLatticeElement::getRange(Res));
   } else {
     assert(Idx == 1 && "Index can only be 0 or 1");
     ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
@@ -1560,7 +1621,7 @@ void SCCPInstVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (auto *WO = dyn_cast<WithOverflowInst>(AggVal))
       return handleExtractOfWithOverflow(EVI, WO, i);
     ValueLatticeElement EltVal = getStructValueState(AggVal, i);
-    mergeInValue(getValueState(&EVI), &EVI, EltVal);
+    mergeInValue(ValueState[&EVI], &EVI, EltVal);
   } else {
     // Otherwise, must be extracting from an array.
     return (void)markOverdefined(&EVI);
@@ -1606,38 +1667,38 @@ void SCCPInstVisitor::visitInsertValueInst(InsertValueInst &IVI) {
 }
 
 void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
-  // If this select returns a struct, just mark the result overdefined.
-  // TODO: We could do a lot better than this if code actually uses this.
-  if (I.getType()->isStructTy())
-    return (void)markOverdefined(&I);
-
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (ValueState[&I].isOverdefined())
+  if (isInstFullyOverDefined(I))
     return (void)markOverdefined(&I);
 
-  ValueLatticeElement CondValue = getValueState(I.getCondition());
+  const ValueLatticeElement &CondValue = getValueState(I.getCondition());
   if (CondValue.isUnknownOrUndef())
     return;
 
   if (ConstantInt *CondCB =
           getConstantInt(CondValue, I.getCondition()->getType())) {
     Value *OpVal = CondCB->isZero() ? I.getFalseValue() : I.getTrueValue();
-    mergeInValue(&I, getValueState(OpVal));
+    forEachLatticeElement(&I, [&](auto GetValueState) {
+      ValueLatticeElement OpValState = GetValueState(OpVal);
+      mergeInValue(GetValueState(&I), &I, OpValState);
+    });
     return;
   }
 
   // Otherwise, the condition is overdefined or a constant we can't evaluate.
   // See if we can produce something better than overdefined based on the T/F
   // value.
-  ValueLatticeElement TVal = getValueState(I.getTrueValue());
-  ValueLatticeElement FVal = getValueState(I.getFalseValue());
+  forEachLatticeElement(&I, [&](auto GetValueState) {
+    ValueLatticeElement TVal = GetValueState(I.getTrueValue());
+    ValueLatticeElement FVal = GetValueState(I.getFalseValue());
 
-  ValueLatticeElement &State = ValueState[&I];
-  bool Changed = State.mergeIn(TVal);
-  Changed |= State.mergeIn(FVal);
-  if (Changed)
-    pushUsersToWorkListMsg(State, &I);
+    ValueLatticeElement &State = GetValueState(&I);
+    bool Changed = State.mergeIn(TVal);
+    Changed |= State.mergeIn(FVal);
+    if (Changed)
+      pushUsersToWorkListMsg(State, &I);
+  });
 }
 
 // Handle Unary Operators.
@@ -1711,7 +1772,12 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     Value *V2 = SCCPSolver::isConstant(V2State)
                     ? getConstant(V2State, I.getOperand(1)->getType())
                     : I.getOperand(1);
-    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
+    Value *R;
+    if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+      R = simplifyBinOp(I.getOpcode(), V1, V2, FPOp->getFastMathFlags(),
+                        SimplifyQuery(DL, &I));
+    else
+      R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
       // Conservatively assume that the result may be based on operands that may
@@ -1721,7 +1787,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
       // being a special floating value.
       ValueLatticeElement NewV;
       NewV.markConstant(C, /*MayIncludeUndef=*/true);
-      return (void)mergeInValue(&I, NewV);
+      return (void)mergeInValue(ValueState[&I], &I, NewV);
     }
   }
 
@@ -1736,16 +1802,8 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
       V2State.asConstantRange(I.getType(), /*UndefAllowed=*/false);
 
   auto *BO = cast<BinaryOperator>(&I);
-  ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO))
-    R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
-  else
-    R = A.binaryOp(BO->getOpcode(), B);
-  mergeInValue(&I, ValueLatticeElement::getRange(R));
-
-  // TODO: Currently we do not exploit special values that produce something
-  // better than overdefined with an overdefined operand for vector or floating
-  // point types, like and <4 x i32> overdefined, zeroinitializer.
+  ConstantRange R = A.binaryOp(*BO, B);
+  mergeInValue(ValueState[&I], &I, ValueLatticeElement::getRange(R));
 }
 
 // Handle ICmpInst instruction.
@@ -1767,7 +1825,7 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
   if (C) {
     ValueLatticeElement CV;
     CV.markConstant(C);
-    mergeInValue(&I, CV);
+    mergeInValue(ValueState[&I], &I, CV);
     return;
   }
 
@@ -1800,9 +1858,10 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   SmallVector<Constant *, 8> Operands;
   Operands.reserve(I.getNumOperands());
+  bool PtrMayHaveDifferentProvenance = PtrState.mayHaveDifferentProvenance();
 
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
-    ValueLatticeElement State = getValueState(I.getOperand(i));
+    const ValueLatticeElement &State = getValueState(I.getOperand(i));
     if (State.isUnknownOrUndef())
       return; // Operands are not resolved yet.
 
@@ -1814,9 +1873,14 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     return (void)markOverdefined(&I);
   }
 
-  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
-    markConstant(&I, C);
-  else
+  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL)) {
+    mergeInValue(ValueState[&I], &I, ValueLatticeElement::get(C));
+    // The pointer operand's lattice has found to be a constant, however, the
+    // returned pointer of the GEP may not be freely substituted, as it may have
+    // been derived from a pointer with potentially different provenance.
+    if (PtrMayHaveDifferentProvenance)
+      ValueState[&I].setMayHaveDifferentProvenance(true);
+  } else
     markOverdefined(&I);
 }
 
@@ -1881,14 +1945,13 @@ void SCCPInstVisitor::visitLoadInst(LoadInst &I) {
   if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
-  ValueLatticeElement PtrVal = getValueState(I.getOperand(0));
+  const ValueLatticeElement &PtrVal = getValueState(I.getOperand(0));
   if (PtrVal.isUnknownOrUndef())
     return; // The pointer is not resolved yet!
 
-  ValueLatticeElement &IV = ValueState[&I];
-
   if (SCCPSolver::isConstant(PtrVal)) {
     Constant *Ptr = getConstant(PtrVal, I.getOperand(0)->getType());
+    ValueLatticeElement &IV = ValueState[&I];
 
     // load null is undefined.
     if (isa<ConstantPointerNull>(Ptr)) {
@@ -1916,7 +1979,7 @@ void SCCPInstVisitor::visitLoadInst(LoadInst &I) {
   }
 
   // Fall back to metadata.
-  mergeInValue(&I, getValueFromMetadata(&I));
+  mergeInValue(ValueState[&I], &I, getValueFromMetadata(&I));
 }
 
 void SCCPInstVisitor::visitCallBase(CallBase &CB) {
@@ -1935,16 +1998,20 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
   if (CB.getType()->isStructTy())
     return (void)markOverdefined(&CB);
 
+  if (!F || !F->isDeclaration())
+    return (void)mergeInValue(ValueState[&CB], &CB, getValueFromMetadata(&CB));
+
   // Otherwise, if we have a single return value case, and if the function is
   // a declaration, maybe we can constant fold it.
-  if (F && F->isDeclaration() && canConstantFoldCallTo(&CB, F)) {
+  const TargetLibraryInfo *TLI = &GetTLI(*F);
+  if (canConstantFoldCallTo(&CB, F, TLI)) {
     SmallVector<Constant *, 8> Operands;
     for (const Use &A : CB.args()) {
       if (A.get()->getType()->isStructTy())
         return markOverdefined(&CB); // Can't handle struct args.
       if (A.get()->getType()->isMetadataTy())
         continue;                    // Carried in CB, not allowed in Operands.
-      ValueLatticeElement State = getValueState(A);
+      const ValueLatticeElement &State = getValueState(A);
 
       if (State.isUnknownOrUndef())
         return; // Operands are not resolved yet.
@@ -1959,12 +2026,14 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
 
     // If we can constant fold this, mark the result of the call as a
     // constant.
-    if (Constant *C = ConstantFoldCall(&CB, F, Operands, &GetTLI(*F)))
-      return (void)markConstant(&CB, C);
+    if (Constant *C = ConstantFoldCall(&CB, F, Operands, TLI)) {
+      mergeInValue(ValueState[&CB], &CB, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Fall back to metadata.
-  mergeInValue(&CB, getValueFromMetadata(&CB));
+  mergeInValue(ValueState[&CB], &CB, getValueFromMetadata(&CB));
 }
 
 void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
@@ -1992,10 +2061,11 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
           mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg,
                        getMaxWidenStepsOpts());
         }
-      } else
-        mergeInValue(&*AI,
-                     getValueState(*CAI).intersect(getArgAttributeVL(&*AI)),
-                     getMaxWidenStepsOpts());
+      } else {
+        ValueLatticeElement CallArg =
+            getValueState(*CAI).intersect(getArgAttributeVL(&*AI));
+        mergeInValue(ValueState[&*AI], &*AI, CallArg, getMaxWidenStepsOpts());
+      }
     }
   }
 }
@@ -2041,7 +2111,7 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // a chained predicate, as the != x information is more likely to be
     // helpful in practice.
     if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
-      NewCR = CopyOfCR;
+      NewCR = std::move(CopyOfCR);
 
     // The new range is based on a branch condition. That guarantees that
     // neither of the compare operands can be undef in the branch targets,
@@ -2057,6 +2127,8 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // For non-integer values or integer constant expressions, only
     // propagate equal constants or not-constants.
     addAdditionalUser(OtherOp, I);
+    if (CopyOf->getType()->isPointerTy())
+      CondVal.setMayHaveDifferentProvenance(true);
     mergeInValue(IV, I, CondVal);
     return;
   } else if (Pred == CmpInst::ICMP_NE && CondVal.isConstant()) {
@@ -2076,7 +2148,41 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
     if (II->getIntrinsicID() == Intrinsic::vscale) {
       unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
-      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
+    }
+    if (II->getIntrinsicID() == Intrinsic::experimental_get_vector_length) {
+      Value *CountArg = II->getArgOperand(0);
+      Value *VF = II->getArgOperand(1);
+      bool Scalable = cast<ConstantInt>(II->getArgOperand(2))->isOne();
+
+      // Computation happens in the larger type.
+      unsigned BitWidth = std::max(CountArg->getType()->getScalarSizeInBits(),
+                                   VF->getType()->getScalarSizeInBits());
+
+      ConstantRange Count = getValueState(CountArg)
+                                .asConstantRange(CountArg->getType(), false)
+                                .zeroExtend(BitWidth);
+      ConstantRange MaxLanes = getValueState(VF)
+                                   .asConstantRange(VF->getType(), false)
+                                   .zeroExtend(BitWidth);
+      if (Scalable)
+        MaxLanes =
+            MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
+
+      // The result is always less than both Count and MaxLanes.
+      ConstantRange Result = ConstantRange::getNonEmpty(
+          APInt::getZero(BitWidth),
+          APIntOps::umin(Count.getUnsignedMax(), MaxLanes.getUnsignedMax()) +
+              1);
+
+      // If Count <= MaxLanes, getvectorlength(Count, MaxLanes) = Count
+      if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
+        Result = std::move(Count);
+
+      Result = Result.truncate(II->getType()->getScalarSizeInBits());
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
     }
 
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
@@ -2094,7 +2200,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
       ConstantRange Result =
           ConstantRange::intrinsic(II->getIntrinsicID(), OpRanges);
-      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
     }
   }
 
@@ -2121,8 +2228,23 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       return handleCallOverdefined(CB); // Not tracking this callee.
 
     // If so, propagate the return value of the callee into this call result.
-    mergeInValue(&CB, TFRVI->second, getMaxWidenStepsOpts());
+    mergeInValue(ValueState[&CB], &CB, TFRVI->second, getMaxWidenStepsOpts());
   }
+}
+
+bool SCCPInstVisitor::isInstFullyOverDefined(Instruction &Inst) {
+  // For structure Type, we handle each member separately.
+  // A structure object won't be considered as overdefined when
+  // there is at least one member that is not overdefined.
+  if (StructType *STy = dyn_cast<StructType>(Inst.getType())) {
+    for (unsigned i = 0, e = STy->getNumElements(); i < e; ++i) {
+      if (!getStructValueState(&Inst, i).isOverdefined())
+        return false;
+    }
+    return true;
+  }
+
+  return getValueState(&Inst).isOverdefined();
 }
 
 void SCCPInstVisitor::solve() {
@@ -2248,6 +2370,10 @@ SCCPSolver::SCCPSolver(
     : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI), Ctx)) {}
 
 SCCPSolver::~SCCPSolver() = default;
+
+const DataLayout &SCCPSolver::getDataLayout() const {
+  return Visitor->getDataLayout();
+}
 
 void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
                                   AssumptionCache &AC) {

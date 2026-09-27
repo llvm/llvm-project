@@ -15,7 +15,7 @@ However, this approach quickly becomes awkward if we want to insert a lot of cod
 Currently, our runtime library is written in C++ and contains code that helps us instrument a binary.
 
 ### Limitations
-Our library is not written with regular C++ code as it is not linked against any other libraries (this means we cannnot rely on anything defined on libstdc++, glibc, libgcc etc), but is self sufficient. In runtime/CMakeLists.txt, we can see it is built with -ffreestanding, which requires the compiler to avoid using a runtime library by itself.
+Our library is not written with regular C++ code as it is not linked against any other libraries (this means we cannot rely on anything defined on libstdc++, glibc, libgcc etc), but is self sufficient. In runtime/CMakeLists.txt, we can see it is built with -ffreestanding, which requires the compiler to avoid using a runtime library by itself.
 
 While this requires us to make our own syscalls, it does simplify our linker a lot, which is very limited and can only do basic function name resolving. However, this is a big improvement in comparison with programmatically generating the code in assembly language using MCInsts.
 

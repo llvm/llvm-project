@@ -259,7 +259,7 @@ public:
   /// jointly dominated by the blocks corresponding to the slot indices
   /// in @p Defs. This function is mainly for use in self-verification
   /// checks.
-  LLVM_ABI LLVM_ATTRIBUTE_UNUSED static bool
+  [[maybe_unused]] LLVM_ABI static bool
   isJointlyDominated(const MachineBasicBlock *MBB, ArrayRef<SlotIndex> Defs,
                      const SlotIndexes &Indexes);
 };

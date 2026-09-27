@@ -101,6 +101,19 @@ SymbolizedStack *Symbolizer::SymbolizePC(uptr addr) {
   return res;
 }
 
+SymbolizedStack* Symbolizer::SymbolizeModuleOffset(const char* module_name,
+                                                   uptr module_offset) {
+  Lock l(&mu_);
+  SymbolizedStack* res = SymbolizedStack::New(module_offset);
+  res->info.FillModuleInfo(module_name, module_offset, kModuleArchUnknown);
+  for (auto& tool : tools_) {
+    SymbolizerScope sym_scope(this);
+    if (tool.SymbolizePC(module_offset, res))
+      return res;
+  }
+  return res;
+}
+
 bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   Lock l(&mu_);
   const char *module_name = nullptr;
@@ -476,16 +489,22 @@ const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
   return symbolizer_process_->SendCommand(buffer_);
 }
 
-SymbolizerProcess::SymbolizerProcess(const char *path, bool use_posix_spawn)
+SymbolizerProcess::SymbolizerProcess(const char* path, bool use_posix_spawn)
     : path_(path),
       input_fd_(kInvalidFd),
       output_fd_(kInvalidFd),
+      child_stdin_fd_(kInvalidFd),
       times_restarted_(0),
       failed_to_start_(false),
       reported_invalid_path_(false),
       use_posix_spawn_(use_posix_spawn) {
   CHECK(path_);
   CHECK_NE(path_[0], '\0');
+}
+
+SymbolizerProcess::~SymbolizerProcess() {
+  if (child_stdin_fd_ != kInvalidFd)
+    CloseFile(child_stdin_fd_);
 }
 
 static bool IsSameModule(const char *path) {
@@ -533,6 +552,10 @@ bool SymbolizerProcess::Restart() {
     CloseFile(input_fd_);
   if (output_fd_ != kInvalidFd)
     CloseFile(output_fd_);
+  if (child_stdin_fd_ != kInvalidFd) {
+    CloseFile(child_stdin_fd_);
+    child_stdin_fd_ = kInvalidFd;  // Don't free in destructor
+  }
   return StartSymbolizerSubprocess();
 }
 
@@ -545,8 +568,8 @@ bool SymbolizerProcess::ReadFromSymbolizer() {
     uptr size_before = buffer_.size();
     buffer_.resize(size_before + max_length);
     buffer_.resize(buffer_.capacity());
-    bool ret = ReadFromFile(input_fd_, &buffer_[size_before],
-                            buffer_.size() - size_before, &just_read);
+    ret = ReadFromFile(input_fd_, &buffer_[size_before],
+                       buffer_.size() - size_before, &just_read);
 
     if (!ret)
       just_read = 0;

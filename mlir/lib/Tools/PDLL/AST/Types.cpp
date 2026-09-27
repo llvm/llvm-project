@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/AST/Types.h"
-#include "TypeDetail.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include <optional>
 

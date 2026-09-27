@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=CHECK %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mcpu=mvp -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=CHECK %s
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # 'foo_alias()' is weak alias of function 'foo()'

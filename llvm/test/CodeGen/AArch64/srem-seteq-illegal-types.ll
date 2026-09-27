@@ -61,14 +61,13 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    sbfx x8, x0, #0, #33
 ; CHECK-NEXT:    sbfx x10, x1, #0, #33
 ; CHECK-NEXT:    movk x9, #29127, lsl #16
-; CHECK-NEXT:    mov x13, #7281 // =0x1c71
+; CHECK-NEXT:    mov x13, #-7282 // =0xffffffffffffe38e
 ; CHECK-NEXT:    sbfx x12, x2, #0, #33
 ; CHECK-NEXT:    movk x9, #50972, lsl #32
-; CHECK-NEXT:    movk x13, #29127, lsl #16
+; CHECK-NEXT:    movk x13, #36408, lsl #16
 ; CHECK-NEXT:    movk x9, #7281, lsl #48
-; CHECK-NEXT:    movk x13, #50972, lsl #32
+; CHECK-NEXT:    eon x13, x13, x13, lsl #33
 ; CHECK-NEXT:    smulh x11, x8, x9
-; CHECK-NEXT:    movk x13, #7281, lsl #48
 ; CHECK-NEXT:    smulh x9, x10, x9
 ; CHECK-NEXT:    smulh x13, x12, x13
 ; CHECK-NEXT:    add x11, x11, x11, lsr #63

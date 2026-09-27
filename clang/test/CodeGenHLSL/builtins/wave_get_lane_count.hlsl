@@ -14,13 +14,13 @@ void main() {
   while (a) {
 
 // CHECK-DXIL:  %[[#]] = call i32 @llvm.dx.wave.get.lane.count()
-// CHECK-SPIRV: %[[#]] = call spir_func i32 @llvm.spv.wave.get.lane.count()
+// CHECK-SPIRV: %[[#]] = call i32 @llvm.spv.wave.get.lane.count()
 // CHECK-SPIRV-SAME: [ "convergencectrl"(token %[[#loop_tok]]) ]
     a = WaveGetLaneCount();
   }
 
 // CHECK-DXIL:  %[[#]] = call i32 @llvm.dx.wave.get.lane.count()
-// CHECK-SPIRV: %[[#]] = call spir_func i32 @llvm.spv.wave.get.lane.count()
+// CHECK-SPIRV: %[[#]] = call i32 @llvm.spv.wave.get.lane.count()
 // CHECK-SPIRV-SAME: [ "convergencectrl"(token %[[#entry_tok]]) ]
   b = WaveGetLaneCount();
 }

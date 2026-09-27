@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -26,6 +27,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace llvm {
 namespace orc {
@@ -43,6 +45,13 @@ enum class SimpleRemoteEPCOpcode : uint8_t {
   LastOpC = CallWrapper
 };
 
+/// Result message kind: either a value, or an out-of-band error.
+enum class SimpleRemoteEPCResultKind : uint64_t {
+  Value,
+  OutOfBandError,
+  LastResultKind = OutOfBandError
+};
+
 struct SimpleRemoteEPCExecutorInfo {
   std::string TargetTriple;
   uint64_t PageSize;
@@ -50,7 +59,43 @@ struct SimpleRemoteEPCExecutorInfo {
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-using SimpleRemoteEPCArgBytesVector = SmallVector<char, 128>;
+/// Encode an Error as the payload of a Hangup message.
+///
+/// A Hangup always carries a serialized Error saying why the session is ending:
+/// a success value for an orderly disconnect, otherwise the reason. Both ends
+/// of the protocol encode and decode hangups through these two functions, so
+/// that their idea of the payload format cannot drift apart.
+LLVM_ABI shared::WrapperFunctionBuffer encodeHangupPayload(Error Err);
+
+/// Decode a Hangup payload produced by encodeHangupPayload.
+///
+/// Returns the encoded Error, or an Error describing the payload if it cannot
+/// be decoded -- including an empty payload, which is never valid. Both
+/// outcomes end the session with an error; they are distinguished only by the
+/// message.
+LLVM_ABI Error decodeHangupPayload(shared::WrapperFunctionBuffer Payload);
+
+/// Encode a wrapper function result as the TagAddr and payload of a Result
+/// message.
+///
+/// An ordinary result travels as its own bytes. An out-of-band error -- which
+/// reports a failure of the wrapper machinery itself, rather than one the
+/// wrapper chose to report -- has no bytes of its own, so its message is
+/// serialized into the payload and the result is tagged OutOfBandError instead.
+LLVM_ABI std::pair<ExecutorAddr, shared::WrapperFunctionBuffer>
+encodeResultMessage(shared::WrapperFunctionBuffer ResultBytes);
+
+/// Decode a Result message produced by encodeResultMessage, returning the
+/// result to complete the pending call with.
+///
+/// Returns an Error if TagAddr does not name a known result kind: like an
+/// unrecognized opcode, that means the peer is speaking a dialect this build
+/// does not know, so the session cannot safely continue. A payload that will
+/// not decode is not fatal by contrast -- it comes back as an out-of-band error
+/// describing itself, so the call waiting on it is still unblocked.
+LLVM_ABI Expected<shared::WrapperFunctionBuffer>
+decodeResultMessage(ExecutorAddr TagAddr,
+                    shared::WrapperFunctionBuffer Payload);
 
 class LLVM_ABI SimpleRemoteEPCTransportClient {
 public:
@@ -65,7 +110,7 @@ public:
   /// otherwise.
   virtual Expected<HandleMessageAction>
   handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
-                SimpleRemoteEPCArgBytesVector ArgBytes) = 0;
+                shared::WrapperFunctionBuffer ArgBytes) = 0;
 
   /// Handle a disconnection from the underlying transport. No further messages
   /// should be sent to handleMessage after this is called.

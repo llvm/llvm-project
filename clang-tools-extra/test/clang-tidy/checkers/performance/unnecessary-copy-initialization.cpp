@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++17-or-later %s performance-unnecessary-copy-initialization %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s performance-unnecessary-copy-initialization %t
 
 template <typename T>
 struct Iterator {
@@ -469,7 +469,7 @@ struct NegativeConstructor {
     auto AssignedInMacro = T.reference();                                      \
   }                                                                            \
 // Ensure fix is not applied.
-// CHECK-FIXES: auto AssignedInMacro = T.reference();
+// CHECK-FIXES: auto AssignedInMacro = T.reference(); {{\\}}
 
 UNNECESSARY_COPY_INIT_IN_MACRO_BODY(ExpensiveToCopyType)
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: the variable 'AssignedInMacro' of type 'ExpensiveToCopyType' is copy-constructed
@@ -480,7 +480,7 @@ void PositiveMacroArgument(const ExpensiveToCopyType &Obj) {
   UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(auto CopyInMacroArg = Obj.reference());
   // CHECK-MESSAGES: [[@LINE-1]]:48: warning: the variable 'CopyInMacroArg' of type 'ExpensiveToCopyType' is copy-constructed
   // Ensure fix is not applied.
-  // CHECK-FIXES: auto CopyInMacroArg = Obj.reference()
+  // CHECK-FIXES: UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(auto CopyInMacroArg = Obj.reference());
   CopyInMacroArg.constMethod();
 }
 

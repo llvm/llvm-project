@@ -74,9 +74,9 @@ struct MixedSizeInputShuffleOpRewrite final
     for (int64_t i = 0; i < origNumElems; ++i)
       promoteMask[i] = i;
 
-    Value promotedInput = rewriter.create<vector::ShuffleOp>(
-        shuffleOp.getLoc(), promotedType, inputToPromote, inputToPromote,
-        promoteMask);
+    Value promotedInput =
+        vector::ShuffleOp::create(rewriter, shuffleOp.getLoc(), promotedType,
+                                  inputToPromote, inputToPromote, promoteMask);
 
     // Create the final shuffle with the promoted inputs.
     Value promotedV1 = promoteV1 ? promotedInput : shuffleOp.getV1();

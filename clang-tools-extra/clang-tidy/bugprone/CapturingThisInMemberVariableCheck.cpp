@@ -44,18 +44,17 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
   if (Node.hasSimpleMoveAssignment())
     return false;
 
-  for (const CXXConstructorDecl *C : Node.ctors()) {
-    if (C->isCopyOrMoveConstructor() && C->isDefaulted() && !C->isDeleted())
-      return false;
-  }
-  for (const CXXMethodDecl *M : Node.methods()) {
-    if (M->isCopyAssignmentOperator())
-      llvm::errs() << M->isDeleted() << "\n";
-    if (M->isCopyAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
-      return false;
-    if (M->isMoveAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
-      return false;
-  }
+  if (llvm::any_of(Node.ctors(), [](const CXXConstructorDecl *C) {
+        return C->isCopyOrMoveConstructor() && C->isDefaulted() &&
+               !C->isDeleted();
+      }))
+    return false;
+  if (llvm::any_of(Node.methods(), [](const CXXMethodDecl *M) {
+        return (M->isCopyAssignmentOperator() ||
+                M->isMoveAssignmentOperator()) &&
+               M->isDefaulted() && !M->isDeleted();
+      }))
+    return false;
   // FIXME: find ways to identifier correct handle capture this lambda
   return true;
 }
@@ -84,11 +83,11 @@ void CapturingThisInMemberVariableCheck::storeOptions(
 }
 
 void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
-  auto IsStdFunctionField =
+  const auto IsStdFunctionField =
       fieldDecl(hasType(cxxRecordDecl(
-                    matchers::matchesAnyListedName(FunctionWrapperTypes))))
+                    matchers::matchesAnyListedRegexName(FunctionWrapperTypes))))
           .bind("field");
-  auto CaptureThis = lambdaCapture(anyOf(
+  const auto CaptureThis = lambdaCapture(anyOf(
       // [this]
       capturesThis(),
       // [self = this]
@@ -97,13 +96,13 @@ void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
       lambdaExpr(hasAnyCapture(CaptureThis)).bind("lambda");
 
   auto IsBindCapturingThis =
-      callExpr(
-          callee(functionDecl(matchers::matchesAnyListedName(BindFunctions))
-                     .bind("callee")),
-          hasAnyArgument(cxxThisExpr()))
+      callExpr(callee(functionDecl(
+                          matchers::matchesAnyListedRegexName(BindFunctions))
+                          .bind("callee")),
+               hasAnyArgument(cxxThisExpr()))
           .bind("bind");
 
-  auto IsInitWithLambdaOrBind =
+  const auto IsInitWithLambdaOrBind =
       anyOf(IsLambdaCapturingThis, IsBindCapturingThis,
             cxxConstructExpr(hasArgument(
                 0, anyOf(IsLambdaCapturingThis, IsBindCapturingThis))));

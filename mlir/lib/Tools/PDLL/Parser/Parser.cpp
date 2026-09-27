@@ -27,8 +27,10 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Parser.h"
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -828,6 +830,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   llvm::SourceMgr tdSrcMgr;
   tdSrcMgr.AddNewSourceBuffer(std::move(*includeBuffer), SMLoc());
   tdSrcMgr.setIncludeDirs(parserSrcMgr.getIncludeDirs());
+  tdSrcMgr.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
 
   // This class provides a context argument for the llvm::SourceMgr diagnostic
   // handler.
@@ -2807,8 +2810,12 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       if (it != results.end())
         return it->isVariadic() ? valueRangeTy : valueTy;
     } else if (llvm::isDigit(name[0])) {
-      // Allow unchecked numeric indexing of the results of unregistered
-      // operations. It returns a single value.
+      int32_t index;
+      if (name.getAsInteger(/*Radix=*/10, index))
+        return emitError(loc, "result index is too large");
+
+      // Allow numeric indexing of the results of unregistered operations. It
+      // returns a single value because the result signature is unknown.
       return valueTy;
     }
   } else if (auto tupleType = dyn_cast<ast::TupleType>(parentType)) {

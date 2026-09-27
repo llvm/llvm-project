@@ -12,10 +12,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
 // Mark all our options with this category.
 static cl::OptionCategory OffloadArchCategory("offload-arch options");
+
+extern cl::OptionCategory AMDGPUArchByHIPCategory;
 
 enum VendorName {
   all,
@@ -62,7 +62,7 @@ const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{
      {VendorName::intel, printIntel}}};
 
 int main(int argc, char *argv[]) {
-  cl::HideUnrelatedOptions(OffloadArchCategory);
+  cl::HideUnrelatedOptions({&OffloadArchCategory, &AMDGPUArchByHIPCategory});
 
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
@@ -71,11 +71,6 @@ int main(int argc, char *argv[]) {
       "The tool will output each detected GPU architecture separated by a\n"
       "newline character. If multiple GPUs of the same architecture are found\n"
       "a string will be printed for each\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   // Support legacy binaries.
   if (sys::path::stem(argv[0]).starts_with("amdgpu-arch"))

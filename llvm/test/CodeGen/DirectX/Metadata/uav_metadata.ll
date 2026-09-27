@@ -1,6 +1,6 @@
 ; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="dxil-pretty-printer" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
-; RUN: llc %s --filetype=asm -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
+; RUN: llc %s -o - -disable-dxil-remove-unused-resources -stop-before=dxil-op-lower 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.6-compute"
@@ -19,23 +19,26 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 @Array.str = private unnamed_addr constant [6 x i8] c"Array\00", align 1
 @Array2.str = private unnamed_addr constant [7 x i8] c"Array2\00", align 1
 
+; Make sure heap resource does not appear in the resource list.
+; PRINT-NOT: ; i16
+
 ; PRINT:; Resource Bindings:
 ; PRINT-NEXT:;
 ; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind     Count
 ; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ---------
 ; PRINT-NEXT:; Zero                                  UAV     f16         buf      U0             u0         1
 ; PRINT-NEXT:; One                                   UAV     f32         buf      U1             u1         1
-; PRINT-NEXT:; Two                                   UAV     f64         buf      U2             u2         1
+; PRINT-NEXT:; Two                                   UAV     u32         buf      U2             u2         1
 ; PRINT-NEXT:; Three                                 UAV     i32         buf      U3             u3         1
 ; PRINT-NEXT:; Four                                  UAV    byte         r/w      U4             u5         1
 ; PRINT-NEXT:; Five                                  UAV  struct         r/w      U5             u6         1
 ; PRINT-NEXT:; Six                                   UAV     i32         buf      U6             u7         1
 ; PRINT-NEXT:; Seven                                 UAV  struct         r/w      U7             u8         1
 ; PRINT-NEXT:; Eight                                 UAV    byte         r/w      U8             u9         1
-; PRINT-NEXT:; Nine                                  UAV     u64         buf      U9     u10,space2         1
+; PRINT-NEXT:; Nine                                  UAV     u32         buf      U9     u10,space2         1
 ; PRINT-NEXT:; Array                                 UAV     f32         buf     U10      u4,space3       100
-; PRINT-NEXT:; Array2                                UAV     f64         buf     U11      u2,space4 unbounded
-; PRINT-NEXT:; Ten                                   UAV     u64         buf     U12     u22,space5         1
+; PRINT-NEXT:; Array2                                UAV     u32         buf     U11      u2,space4 unbounded
+; PRINT-NEXT:; Ten                                   UAV     u32         buf     U12     u22,space5         1
 
 define void @test() #0 {
   ; RWBuffer<half4> Zero : register(u0)
@@ -92,19 +95,28 @@ define void @test() #0 {
   ; RWBuffer<double> C1 = Array[10];
   ; RWBuffer<double> C2 = Array[20];
   %Array2_10_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 10, ptr @Array2.str)
   %Array2_20_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 20, ptr @Array2.str)
 
   ; Same buffer type as Nine - should have the same type in metadata
   ; RWBuffer<double> Ten : register(u2);
   %Ten_h = call target("dx.TypedBuffer", i64, 1, 0, 0)
             @llvm.dx.resource.handlefrombinding(i32 5, i32 22, i32 1, i32 0, ptr @Ten.str)
 
+  ; Resource from heap should not appear anywhere in the resource list
+  ; since it does not have a binding. Use <2 x i16> element type to make sure
+  ; it does not match any of the other resources.
+  %heap_resource = tail call target("dx.TypedBuffer", <2 x i16>, 1, 0, 0)
+            @llvm.dx.resource.handlefromheap(i32 5)
+
   ret void
 }
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
+
+; Heap resource is the only one using <2 x i16> and it should not appear in list
+; CHECK-NOT: = type { <2 x i16> }
 
 ; CHECK: %"RWBuffer<half4>" = type { <4 x half> }
 ; CHECK: %"RWBuffer<float2>" = type { <2 x float> }
@@ -144,8 +156,8 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Half]] = !{i32 0, i32 8}
 ; CHECK: ![[One]] = !{i32 1, ptr @One, !"One", i32 0, i32 1, i32 1, i32 10, i1 false, i1 false, i1 false, ![[Float:[0-9]+]]}
 ; CHECK: ![[Float]] = !{i32 0, i32 9}
-; CHECK: ![[Two]] = !{i32 2, ptr @Two, !"Two", i32 0, i32 2, i32 1, i32 10, i1 false, i1 false, i1 false, ![[Double:[0-9]+]]}
-; CHECK: ![[Double]] = !{i32 0, i32 10}
+; CHECK: ![[Two]] = !{i32 2, ptr @Two, !"Two", i32 0, i32 2, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U32:[0-9]+]]}
+; CHECK: ![[U32]] = !{i32 0, i32 5}
 ; CHECK: ![[Three]] = !{i32 3, ptr @Three, !"Three", i32 0, i32 3, i32 1, i32 10, i1 false, i1 false, i1 false, ![[I32:[0-9]+]]}
 ; CHECK: ![[I32]] = !{i32 0, i32 4}
 ; CHECK: ![[Four]] = !{i32 4, ptr @Four, !"Four", i32 0, i32 5, i32 1, i32 11, i1 false, i1 false, i1 false, null}
@@ -155,8 +167,7 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Seven]] = !{i32 7, ptr @Seven, !"Seven", i32 0, i32 8, i32 1, i32 12, i1 false, i1 false, i1 true, ![[SevenStride:[0-9]+]]}
 ; CHECK: ![[SevenStride]] = !{i32 1, i32 16}
 ; CHECK: ![[Eight]] = !{i32 8, ptr @Eight, !"Eight", i32 0, i32 9, i32 1, i32 11, i1 false, i1 false, i1 true, null}
-; CHECK: ![[Nine]] = !{i32 9, ptr @Nine, !"Nine", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U64:[0-9]+]]}
-; CHECK: ![[U64]] = !{i32 0, i32 7}
+; CHECK: ![[Nine]] = !{i32 9, ptr @Nine, !"Nine", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U32]]}
 ; CHECK: ![[Array]] = !{i32 10, ptr @Array, !"Array", i32 3, i32 4, i32 100, i32 10, i1 false, i1 false, i1 false, ![[Float]]}
-; CHECK: ![[Array2]] = !{i32 11, ptr @Array2, !"Array2", i32 4, i32 2, i32 -1, i32 10, i1 false, i1 false, i1 false, ![[Double]]}
+; CHECK: ![[Array2]] = !{i32 11, ptr @Array2, !"Array2", i32 4, i32 2, i32 -1, i32 10, i1 false, i1 false, i1 false, ![[U32]]}
 ; CHECK: ![[Ten]] = !{i32 12, ptr @Ten, !"Ten", i32 5, i32 22, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U64:[0-9]+]]}

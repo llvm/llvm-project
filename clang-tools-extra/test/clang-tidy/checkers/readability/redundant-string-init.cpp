@@ -3,36 +3,7 @@
 // RUN:             {readability-redundant-string-init.StringNames: \
 // RUN:                '::std::basic_string;::std::basic_string_view;our::TestString'} \
 // RUN:             }"
-
-namespace std {
-template <typename T>
-class allocator {};
-template <typename T>
-class char_traits {};
-template <typename C, typename T = std::char_traits<C>, typename A = std::allocator<C>>
-struct basic_string {
-  basic_string();
-  basic_string(const basic_string&);
-  basic_string(const C *, const A &a = A());
-  ~basic_string();
-};
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
-
-template <typename C, typename T = std::char_traits<C>, typename A = std::allocator<C>>
-struct basic_string_view {
-  using size_type = decltype(sizeof(0));
-
-  basic_string_view();
-  basic_string_view(const basic_string_view &);
-  basic_string_view(const C *, size_type);
-  basic_string_view(const C *);
-  template <class It, class End>
-  basic_string_view(It, End);
-};
-typedef basic_string_view<char> string_view;
-typedef basic_string_view<wchar_t> wstring_view;
-}
+#include <string>
 
 void f() {
   std::string a = "";

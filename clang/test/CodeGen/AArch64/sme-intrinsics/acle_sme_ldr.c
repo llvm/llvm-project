@@ -6,53 +6,86 @@
 
 #include <arm_sme.h>
 
-// CHECK-C-LABEL: @test_svldr_vnum_za(
-// CHECK-CXX-LABEL: @_Z18test_svldr_vnum_zajPKv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 0)
-// CHECK-NEXT:    ret void
+// CHECK-C-LABEL: define dso_local void @test_svldr_vnum_za(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 0)
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z18test_svldr_vnum_zajPKv(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 0)
+// CHECK-CXX-NEXT:    ret void
 //
 void test_svldr_vnum_za(uint32_t slice_base, const void *ptr) __arm_out("za") {
   svldr_vnum_za(slice_base, ptr, 0);
 }
 
-// CHECK-C-LABEL: @test_svldr_vnum_za_1(
-// CHECK-CXX-LABEL: @_Z20test_svldr_vnum_za_1jPKv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 15)
-// CHECK-NEXT:    ret void
+// CHECK-C-LABEL: define dso_local void @test_svldr_vnum_za_1(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 15)
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z20test_svldr_vnum_za_1jPKv(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 15)
+// CHECK-CXX-NEXT:    ret void
 //
 void test_svldr_vnum_za_1(uint32_t slice_base, const void *ptr) __arm_out("za") {
   svldr_vnum_za(slice_base, ptr, 15);
 }
 
-// CHECK-C-LABEL: @test_svldr_za(
-// CHECK-CXX-LABEL: @_Z13test_svldr_zajPKv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 0)
-// CHECK-NEXT:    ret void
+// CHECK-C-LABEL: define dso_local void @test_svldr_za(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 0)
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z13test_svldr_zajPKv(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 0)
+// CHECK-CXX-NEXT:    ret void
 //
 void test_svldr_za(uint32_t slice_base, const void *ptr) __arm_out("za") {
   svldr_za(slice_base, ptr);
 }
 
-// CHECK-C-LABEL: @test_svldr_vnum_za_var(
-// CHECK-CXX-LABEL: @_Z22test_svldr_vnum_za_varjPKvl(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[VNUM:%.*]] to i32
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 [[TMP0:%.*]])
-// CHECK-NEXT:    ret void
+// CHECK-C-LABEL: define dso_local void @test_svldr_vnum_za_var(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    [[TMP0:%.*]] = trunc i64 [[VNUM]] to i32
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 [[TMP0]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z22test_svldr_vnum_za_varjPKvl(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = trunc i64 [[VNUM]] to i32
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 [[TMP0]])
+// CHECK-CXX-NEXT:    ret void
 //
 void test_svldr_vnum_za_var(uint32_t slice_base, const void *ptr, int64_t vnum) __arm_out("za") {
   svldr_vnum_za(slice_base, ptr, vnum);
 }
 
-// CHECK-C-LABEL: @test_svldr_vnum_za_2(
-// CHECK-CXX-LABEL: @_Z20test_svldr_vnum_za_2jPKv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 16)
-// CHECK-NEXT:    ret void
+// CHECK-C-LABEL: define dso_local void @test_svldr_vnum_za_2(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 16)
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z20test_svldr_vnum_za_2jPKv(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.ldr.p0(i32 [[SLICE_BASE]], ptr [[PTR]], i32 16)
+// CHECK-CXX-NEXT:    ret void
 //
 void test_svldr_vnum_za_2(uint32_t slice_base, const void *ptr) __arm_out("za") {
   svldr_vnum_za(slice_base, ptr, 16);
 }
+//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+// CHECK: {{.*}}

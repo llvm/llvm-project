@@ -31,6 +31,7 @@ static constexpr Log::Category g_categories[] = {
     {{"step"}, {"log step related activities"}, GDBRLog::Step},
     {{"thread"}, {"log thread events and activities"}, GDBRLog::Thread},
     {{"watch"}, {"log watchpoint related activities"}, GDBRLog::Watchpoints},
+    {{"plugin"}, {"log debug server plugin activities"}, GDBRLog::Plugin},
 };
 
 static Log::Channel g_channel(g_categories, GDBRLog::Packets);
@@ -40,8 +41,7 @@ template <> Log::Channel &lldb_private::LogChannelFor<GDBRLog>() {
 }
 
 void ProcessGDBRemoteLog::Initialize() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    Log::Register("gdb-remote", g_channel);
-  });
+  Log::Register("gdb-remote", g_channel);
 }
+
+void ProcessGDBRemoteLog::Terminate() { Log::Unregister("gdb-remote"); }

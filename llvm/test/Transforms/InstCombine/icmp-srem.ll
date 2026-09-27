@@ -119,6 +119,21 @@ define i1 @icmp_ugt_srem5_m5(i32 %x) {
   ret i1 %c
 }
 
+define i64 @srem_zero_ult_poison(i1 %c) {
+; CHECK-LABEL: define i64 @srem_zero_ult_poison(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:    ret i64 poison
+;
+  %sel = select i1 %c, i64 3, i64 0
+  %trunc = trunc i64 %sel to i8
+  %div = sdiv i8 -1, %trunc
+  %rem = srem i8 -1, %div
+  %cmp = icmp ult i8 %trunc, %rem
+  %zext = zext i1 %cmp to i64
+  %res = select i1 false, i64 %sel, i64 %zext
+  ret i64 %res
+}
+
 define i1 @icmp_ugt_srem5_m4(i32 %x) {
 ; CHECK-LABEL: define i1 @icmp_ugt_srem5_m4(
 ; CHECK-SAME: i32 [[X:%.*]]) {

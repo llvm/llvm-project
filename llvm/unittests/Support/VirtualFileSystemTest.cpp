@@ -22,6 +22,8 @@
 #include "gtest/gtest.h"
 #include <map>
 #include <string>
+#include <thread>
+#include <vector>
 
 using namespace llvm;
 using llvm::sys::fs::UniqueID;
@@ -545,8 +547,7 @@ TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
   ASSERT_EQ(sys::fs::current_path(PrevWD), std::error_code());
   ASSERT_EQ(sys::fs::createUniqueDirectory("d1", WD), std::error_code());
   ASSERT_EQ(sys::fs::set_current_path(WD), std::error_code());
-  auto Restore =
-      llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
+  llvm::scope_exit Restore([&] { sys::fs::set_current_path(PrevWD); });
 
   // Delete the working directory to create an error.
   if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))
@@ -2728,6 +2729,33 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
             errc::no_such_file_or_directory);
 }
 
+TEST_F(VFSFromYAMLTest, ErrorMap) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("/dir");
+  Lower->addRegularFile("/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'use-external-names': false,\n"
+                        "  'case-sensitive': false,\n"
+                        "  'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory',\n"
+                        "  'name': '/root',\n"
+                        "  'contents': [ {\n"
+                        "                  'type': 'file',\n"
+                        "                  'name': 'bar',\n"
+                        "                  'external-contents': '/foo'\n"
+                        "                }\n"
+                        "              ]\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // Lookup a file location that doesn't exist.
+  ASSERT_FALSE(FS->status("/root/bar/file"));
+}
+
 TEST_F(VFSFromYAMLTest, WorkingDirectory) {
   auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
   Lower->addDirectory("//root/");
@@ -3705,4 +3733,32 @@ TEST(TracingFileSystemTest, PrintOutput) {
             "NumIsLocalCalls=6\n"
             "  InMemoryFileSystem\n",
             Output);
+}
+
+TEST(TracingFileSystemTest, AtomicCountersUnderConcurrency) {
+  auto InMemoryFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory("/");
+  InMemoryFS->addFile("/foo", 0, MemoryBuffer::getMemBuffer("hello"));
+
+  auto TracingFS =
+      makeIntrusiveRefCnt<vfs::AtomicTracingFileSystem>(std::move(InMemoryFS));
+
+  constexpr unsigned NumThreads = 8;
+  constexpr unsigned CallsPerThread = 100;
+  std::vector<std::thread> Threads;
+  Threads.reserve(NumThreads);
+  for (unsigned I = 0; I < NumThreads; ++I) {
+    Threads.emplace_back([&] {
+      for (unsigned J = 0; J < CallsPerThread; ++J) {
+        (void)TracingFS->status("/foo");
+        (void)TracingFS->openFileForRead("/foo");
+      }
+    });
+  }
+  for (auto &T : Threads)
+    T.join();
+
+  EXPECT_EQ(TracingFS->NumStatusCalls.load(), NumThreads * CallsPerThread);
+  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls.load(),
+            NumThreads * CallsPerThread);
 }

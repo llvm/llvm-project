@@ -689,12 +689,12 @@ std::string cpp_type_printer::generate_callback_args(int arg, QualType type,
 	int num_params;
 
 	callback = generator::extract_prototype(type);
-	num_params = callback->getNumArgs();
+	num_params = callback->getNumParams();
 	if (cpp)
 		num_params--;
 
 	for (long i = 0; i < num_params; i++) {
-		QualType type = callback->getArgType(i);
+		QualType type = callback->getParamType(i);
 
 		if (cpp)
 			type_str += param(arg + 1 + i, type);

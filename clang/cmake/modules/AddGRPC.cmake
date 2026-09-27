@@ -7,5 +7,8 @@ function(generate_clang_protos_library LibraryName ProtoFile)
 
   add_clang_library(${LibraryName} ${ProtoSource}
     PARTIAL_SOURCES_INTENDED
-    LINK_LIBS PUBLIC grpc++ protobuf)
+    LINK_LIBS PUBLIC grpc++ protobuf
+    # Disable PCH, gRPC adds -pthread.
+    DISABLE_PCH_REUSE
+    )
 endfunction()

@@ -219,7 +219,7 @@ public:
     }
   };
 
-  typedef RepeatedSubstringIterator iterator;
+  using iterator = RepeatedSubstringIterator;
   iterator begin() { return iterator(Root, LeafNodes); }
   iterator end() { return iterator(nullptr); }
 };

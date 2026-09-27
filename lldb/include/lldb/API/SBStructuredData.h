@@ -114,11 +114,11 @@ public:
   /// the previous data.
   void SetValueForKey(const char *key, SBStructuredData &value);
 
-  /// Change the type to unsigned interger and overwrite the previous data with
+  /// Change the type to unsigned integer and overwrite the previous data with
   /// the new value.
   void SetUnsignedIntegerValue(uint64_t value);
 
-  /// Change the type to signed interger and overwrite the previous data with
+  /// Change the type to signed integer and overwrite the previous data with
   /// the new value.
   void SetSignedIntegerValue(int64_t value);
 
@@ -138,6 +138,10 @@ public:
   /// value.
   void SetGenericValue(SBScriptObject value);
 
+#ifndef SWIG
+  void CopyImpl(lldb_private::StructuredDataImpl &new_impl);
+#endif
+
 protected:
   friend class SBAttachInfo;
   friend class SBCommandReturnObject;
@@ -156,6 +160,7 @@ protected:
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
   friend class SBCommandInterpreter;
+  friend class SBInstruction;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 

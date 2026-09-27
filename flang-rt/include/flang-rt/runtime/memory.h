@@ -109,7 +109,10 @@ public:
   RT_API_ATTRS pointer_type operator->() const { return get(); }
 
 private:
-  RT_API_ATTRS void delete_ptr(pointer_type p) { FreeMemory(p); }
+  RT_API_ATTRS void delete_ptr(pointer_type p) {
+    p->~A();
+    FreeMemory(p);
+  }
   pointer_type ptr_{};
 };
 

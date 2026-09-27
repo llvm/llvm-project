@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -1422,6 +1423,7 @@ private:
     std::vector<HNode *> Entries;
   };
 
+  void saveAliasHNode(Node *node, HNode *hnode);
   Input::HNode *createHNodes(Node *node);
   void setError(HNode *hnode, const Twine &message);
   void setError(Node *node, const Twine &message);
@@ -1460,6 +1462,7 @@ private:
   HNode *CurrentNode = nullptr;
   bool ScalarMatchFound = false;
   bool AllowUnknownKeys = false;
+  DenseMap<StringRef, HNode *> AliasMap;
 };
 
 ///
@@ -1921,12 +1924,12 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   using map_type = std::map<std::string, T>;
 
   static void inputOne(IO &io, StringRef key, map_type &v) {
-    io.mapRequired(key.str().c_str(), v[std::string(key)]);
+    io.mapRequired(key, v[std::string(key)]);
   }
 
   static void output(IO &io, map_type &v) {
     for (auto &p : v)
-      io.mapRequired(p.first.c_str(), p.second);
+      io.mapRequired(p.first, p.second);
   }
 };
 

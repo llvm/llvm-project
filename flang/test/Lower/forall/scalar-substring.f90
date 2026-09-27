@@ -12,7 +12,7 @@ end subroutine s
 ! CHECK:           %[[VAL_2:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]] typeparams %[[VAL_4]] dummy_scope %[[VAL_1]] {uniq_name = "_QFsEch"} : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]] typeparams %[[VAL_4]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFsEch"} : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 4 : i32
 ! CHECK:           hlfir.forall lb {

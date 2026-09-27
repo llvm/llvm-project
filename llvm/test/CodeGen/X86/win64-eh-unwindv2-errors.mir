@@ -6,11 +6,17 @@
 # BESTEFFORT-NOT: SEH_UnwindV2Start
 
 ;--- alloc_no_dealloc.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/alloc_no_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=ALLOC-NO-DEALLOC
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/alloc_no_dealloc.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=ALLOC-NO-DEALLOC
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/alloc_no_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/alloc_no_dealloc.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # ALLOC-NO-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'alloc_no_dealloc':
 # ALLOC-NO-DEALLOC-SAME: The prolog made a stack allocation, but the epilog did not deallocate it
@@ -36,11 +42,17 @@ body:             |
 ...
 
 ;--- missed_push.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 2>&1 | FileCheck %s \
+# RUN:    --check-prefix=MISSED-PUSH
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
+# RUN:    -passes=x86-wineh-unwindv2 2>&1 | FileCheck %s \
 # RUN:    --check-prefix=MISSED-PUSH
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/missed_push.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # MISSED-PUSH: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'missed_push':
 # MISSED-PUSH-SAME: The prolog pushed more registers than the epilog popped
@@ -69,11 +81,17 @@ body:             |
 ...
 
 ;--- dealloc_no_alloc.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_no_alloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=DEALLOC-NO-ALLOC
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/dealloc_no_alloc.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=DEALLOC-NO-ALLOC
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/dealloc_no_alloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/dealloc_no_alloc.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # DEALLOC-NO-ALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_no_alloc':
 # DEALLOC-NO-ALLOC-SAME: The epilog is deallocating a stack allocation, but the prolog did not allocate one
@@ -98,11 +116,18 @@ body:             |
 ...
 
 ;--- dealloc_after_epilog.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=DEALLOC-AFTER-EPILOG
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/dealloc_after_epilog.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=DEALLOC-AFTER-EPILOG
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_after_epilog.mir -run-pass=x86-wineh-unwindv2 \
+# RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
+# RUN:    --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/dealloc_after_epilog.mir -passes=x86-wineh-unwindv2 \
 # RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
 # RUN:    --check-prefix=BESTEFFORT
 # DEALLOC-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_after_epilog':
@@ -128,11 +153,17 @@ body:             |
 ...
 
 ;--- pop_before_dealloc.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_before_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=POP-BEFORE-DEALLOC
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/pop_before_dealloc.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-BEFORE-DEALLOC
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_before_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_before_dealloc.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-BEFORE-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_before_dealloc':
 # POP-BEFORE-DEALLOC-SAME: Cannot pop registers before the stack allocation has been deallocated
@@ -162,11 +193,17 @@ body:             |
 ...
 
 ;--- mov_no_setframe.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/mov_no_setframe.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=MOV-NO-SETFRAME
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_no_setframe.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=MOV-NO-SETFRAME
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/mov_no_setframe.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/mov_no_setframe.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # MOV-NO-SETFRAME: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'mov_no_setframe':
 # MOV-NO-SETFRAME-SAME: The epilog is setting frame back, but prolog did not set it
@@ -191,11 +228,18 @@ body:             |
 ...
 
 ;--- mov_after_epilog.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/mov_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=MOV-AFTER-EPILOG
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_after_epilog.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=MOV-AFTER-EPILOG
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/mov_after_epilog.mir -run-pass=x86-wineh-unwindv2 \
+# RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
+# RUN:    --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_after_epilog.mir -passes=x86-wineh-unwindv2 \
 # RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
 # RUN:    --check-prefix=BESTEFFORT
 # MOV-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'mov_after_epilog':
@@ -223,11 +267,17 @@ body:             |
 ...
 
 ;--- pop_before_mov.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_before_mov.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=POP-BEFORE-MOV
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/pop_before_mov.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-BEFORE-MOV
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_before_mov.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_before_mov.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-BEFORE-MOV: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_before_mov':
 # POP-BEFORE-MOV-SAME: The epilog is setting the frame back after popping registers
@@ -257,11 +307,17 @@ body:             |
 ...
 
 ;--- mov_after_dealloc.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/mov_after_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=MOV-AFTER-DEALLOC
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_after_dealloc.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=MOV-AFTER-DEALLOC
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/mov_after_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/mov_after_dealloc.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # MOV-AFTER-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'mov_after_dealloc':
 # MOV-AFTER-DEALLOC-SAME: Cannot set the frame back after the stack allocation has been deallocated
@@ -291,11 +347,17 @@ body:             |
 ...
 
 ;--- too_many_pops.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 2>&1 | FileCheck %s \
+# RUN:    --check-prefix=TOO-MANY-POPS
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
+# RUN:    -passes=x86-wineh-unwindv2 2>&1 | FileCheck %s \
 # RUN:    --check-prefix=TOO-MANY-POPS
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/too_many_pops.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # TOO-MANY-POPS: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'too_many_pops':
 # TOO-MANY-POPS-SAME: The epilog is popping more registers than the prolog pushed
@@ -323,11 +385,17 @@ body:             |
 ...
 
 ;--- pop_in_wrong_order.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_in_wrong_order.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=POP-WRONG-ORDER
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/pop_in_wrong_order.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-WRONG-ORDER
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_in_wrong_order.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_in_wrong_order.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-WRONG-ORDER: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_in_wrong_order':
 # POP-WRONG-ORDER-SAME: The epilog is popping a registers in a different order than the prolog pushed them
@@ -357,11 +425,17 @@ body:             |
 ...
 
 ;--- pop_after_epilog.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/pop_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=POP-AFTER-EPILOG
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/pop_after_epilog.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=POP-AFTER-EPILOG
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_after_epilog.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_after_epilog.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # POP-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_after_epilog':
 # POP-AFTER-EPILOG-SAME: Registers are being popped after the epilog
@@ -386,11 +460,17 @@ body:             |
 ...
 
 ;--- instr_after_epilog.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/instr_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=INSTR-AFTER-END
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/instr_after_epilog.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=INSTR-AFTER-END
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/instr_after_epilog.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/instr_after_epilog.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # INSTR-AFTER-END: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'instr_after_epilog':
 # INSTR-AFTER-END-SAME: Unexpected instruction in or after the epilog
@@ -415,11 +495,17 @@ body:             |
 ...
 
 ;--- dealloc_pop_dealloc.mir
-# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
 # RUN:    %t/dealloc_pop_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=DEALLOC-POP-DEALLOC
+# RUN: env ASAN_OPTIONS=abort_on_error=1 not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/dealloc_pop_dealloc.mir -passes=x86-wineh-unwindv2 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=DEALLOC-POP-DEALLOC
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/dealloc_pop_dealloc.mir \
 # RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/dealloc_pop_dealloc.mir \
+# RUN:    -passes=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
 # RUN:    FileCheck %s --check-prefix=BESTEFFORT
 # DEALLOC-POP-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_pop_dealloc':
 # DEALLOC-POP-DEALLOC-SAME: The epilog is deallocating a stack allocation after popping registers

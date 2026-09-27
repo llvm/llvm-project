@@ -62,5 +62,5 @@ Task task0() {
 // CHECK-LABEL: define{{.*}} void @_Z5task0v.resume
 // This checks we are still in the scope of the current function.
 // CHECK-NOT: {{^}}}
-// CHECK: musttail call fastcc void
+// CHECK: musttail call void
 // CHECK-NEXT: ret void

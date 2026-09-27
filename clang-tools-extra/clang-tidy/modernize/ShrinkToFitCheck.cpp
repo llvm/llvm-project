@@ -50,7 +50,7 @@ void ShrinkToFitCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MemberCall->getBeginLoc().isMacroID()) {
     const LangOptions &Opts = getLangOpts();
     std::string ReplacementText;
-    if (const auto *UnaryOp = llvm::dyn_cast<UnaryOperator>(Container)) {
+    if (const auto *UnaryOp = dyn_cast<UnaryOperator>(Container)) {
       ReplacementText = std::string(
           Lexer::getSourceText(CharSourceRange::getTokenRange(
                                    UnaryOp->getSubExpr()->getSourceRange()),

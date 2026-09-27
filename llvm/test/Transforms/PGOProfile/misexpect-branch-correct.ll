@@ -9,7 +9,6 @@
 ; CHECK-NOT: remark: {{.*}}
 ; CHECK: !{!"branch_weights", i32 0, i32 200000}
 
-
 ; ModuleID = 'misexpect-branch-correct.c'
 source_filename = "misexpect-branch-correct.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -19,14 +18,14 @@ target triple = "x86_64-unknown-linux-gnu"
 @outer_loop = constant i32 2000, align 4
 
 ; Function Attrs: nounwind
-define i32 @bar() #0 {
+define i32 @bar() {
 entry:
   %rando = alloca i32, align 4
   %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(ptr %rando) #4
+  call void @llvm.lifetime.start.p0(ptr %rando)
   %call = call i32 (...) @buzz()
   store i32 %call, ptr %rando, align 4, !tbaa !3
-  call void @llvm.lifetime.start.p0(ptr %x) #4
+  call void @llvm.lifetime.start.p0(ptr %x)
   store i32 0, ptr %x, align 4, !tbaa !3
   %0 = load i32, ptr %rando, align 4, !tbaa !3
   %rem = srem i32 %0, 200000
@@ -52,31 +51,25 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %2 = load i32, ptr %x, align 4, !tbaa !3
-  call void @llvm.lifetime.end.p0(ptr %x) #4
-  call void @llvm.lifetime.end.p0(ptr %rando) #4
+  call void @llvm.lifetime.end.p0(ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %rando)
   ret i32 %2
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
-declare i32 @buzz(...) #2
+declare i32 @buzz(...)
 
 ; Function Attrs: nounwind readnone willreturn
-declare i64 @llvm.expect.i64(i64, i64) #3
+declare i64 @llvm.expect.i64(i64, i64)
 
-declare i32 @baz(i32) #2
+declare i32 @baz(i32)
 
-declare i32 @foo(i32) #2
+declare i32 @foo(i32)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(ptr nocapture) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind readnone willreturn }
-attributes #4 = { nounwind }
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

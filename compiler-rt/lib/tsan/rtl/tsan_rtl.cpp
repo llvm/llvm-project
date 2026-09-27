@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_defs.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -40,7 +41,7 @@ SANITIZER_WEAK_DEFAULT_IMPL
 void __tsan_test_only_on_fork() {}
 #endif
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
 // Override weak symbol from sanitizer_common
 extern void __tsan_set_in_internal_write_call(bool value) {
   __tsan::cur_thread_init()->in_internal_write_call = value;
@@ -775,6 +776,10 @@ void Initialize(ThreadState *thr) {
     while (__tsan_resumed == 0) {}
   }
 
+#if !SANITIZER_GO
+  AdaptiveDelay::Init();
+#endif
+
   OnInitialize();
 }
 
@@ -901,7 +906,7 @@ void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
     ThreadIgnoreSyncBegin(thr, pc);
   }
 
-#  if SANITIZER_APPLE
+#  if SANITIZER_APPLE && !SANITIZER_GO
   // This flag can have inheritance disabled - we are the child so act
   // accordingly
   if (flags()->lock_during_write == kNoLockDuringWritesCurrentProcess)

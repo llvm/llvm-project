@@ -1,13 +1,13 @@
 # Xqciac - Qualcomm uC Load-Store Address Calculation Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciac,+zba -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqciac,+zba -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciac,+zba < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqciac,+zba -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqciac,+zba < %s \
+# RUN:     | llvm-objdump --mattr=+xqciac,+zba -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciac,+zba -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqciac,+zba -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciac,+zba < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqciac,+zba --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqciac,+zba < %s \
+# RUN:     | llvm-objdump --mattr=+xqciac,+zba --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 0
@@ -72,3 +72,8 @@ sh2add x10, x11, x10
 # CHECK-ALIAS: qc.c.muliadd    a0, a1, 8
 # CHECK-ENC: encoding: [0x8a,0x31]
 sh3add x10, x11, x10
+
+# CHECK-NOALIAS: qc.c.muliadd    a0, a1, 16
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 16
+# CHECK-ENC: encoding: [0xaa,0x21]
+qc.shladd x10, x11, x10, 4

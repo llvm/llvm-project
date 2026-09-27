@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
-define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) {
+define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_pr98413_zext_removed(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -54,7 +54,7 @@ exit:
   ret void
 }
 
-define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) {
+define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_pr98413_sext_removed(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -246,6 +246,106 @@ exit:
   ret void
 }
 
+; Test for https://github.com/llvm/llvm-project/issues/162688.
+define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) vscale_range(2, 1024) {
+; CHECK-LABEL: define void @test_minbws_for_trunc(
+; CHECK-SAME: i32 [[N:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P2]], i64 8160
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[P2]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P2]], i64 2042
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[P2]], i64 1021
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[P2]], i64 8168
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP4]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
+; CHECK-NEXT:    [[BOUND09:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[BOUND110:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP4]]
+; CHECK-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
+; CHECK-NEXT:    [[CONFLICT_RDX12:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT11]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 256, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP22:%.*]] = shl i64 [[TMP13]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP14]], i64 16, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]])
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc <vscale x 2 x i32> [[TMP15]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP13]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP8]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i16.p0.i64(<vscale x 2 x i16> [[TMP16]], ptr align 2 [[TMP10]], i64 8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc <vscale x 2 x i32> [[TMP15]] to <vscale x 2 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP13]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP11]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i8.p0.i64(<vscale x 2 x i8> [[TMP18]], ptr align 1 [[TMP12]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META12:![0-9]+]], !noalias [[META13:![0-9]+]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP13]], 5
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP17]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i64(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[TMP19]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META13]]
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP9]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP9]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[IV_EXT:%.*]] = sext i16 [[IV]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P1]], i64 [[IV_EXT]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[V1_TRUNC:%.*]] = trunc i32 [[V1]] to i16
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [1 x [1 x i16]], ptr [[P2]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i16 [[V1_TRUNC]], ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[V1_TRUNC_I8:%.*]] = trunc i32 [[V1]] to i8
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[P2]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i8 [[V1_TRUNC_I8]], ptr [[GEP3]], align 1
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr [1 x i64], ptr [[P2]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i64 0, ptr [[GEP4]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 4
+; CHECK-NEXT:    [[IV_NEXT_EXT:%.*]] = sext i16 [[IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV_NEXT_EXT]], 1024
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.ext = sext i16 %iv to i64
+  %gep1 = getelementptr i32, ptr %p1, i64 %iv.ext
+  %v1 = load i32, ptr %gep1, align 4
+  %v1.trunc = trunc i32 %v1 to i16
+  %gep2 = getelementptr [1 x [1 x i16]], ptr %p2, i64 %iv.ext
+  store i16 %v1.trunc, ptr %gep2, align 2
+  %v1.trunc.i8 = trunc i32 %v1 to i8
+  %gep3 = getelementptr i8, ptr %p2, i64 %iv.ext
+  store i8 %v1.trunc.i8, ptr %gep3, align 1
+  %gep4 = getelementptr [1 x i64], ptr %p2, i64 %iv.ext
+  store i64 0, ptr %gep4, align 8
+  %iv.next = add i16 %iv, 4
+  %iv.next.ext = sext i16 %iv.next to i32
+  %cmp = icmp ne i32 %iv.next.ext, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
 attributes #1 = { "target-features"="+64bit,+v" }
 
@@ -256,4 +356,14 @@ attributes #1 = { "target-features"="+64bit,+v" }
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; CHECK: [[META9]] = !{[[META10:![0-9]+]], [[META11:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]], [[META8]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META8]]}
+; CHECK: [[META12]] = !{[[META10]]}
+; CHECK: [[META13]] = !{[[META11]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]]}
 ;.

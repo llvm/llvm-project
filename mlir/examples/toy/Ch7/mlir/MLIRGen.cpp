@@ -405,8 +405,7 @@ private:
     // The attribute is a vector with a floating point value per element
     // (number) in the array, see `collectData()` below for more details.
     std::vector<double> data;
-    data.reserve(std::accumulate(lit.getDims().begin(), lit.getDims().end(), 1,
-                                 std::multiplies<int>()));
+    data.reserve(llvm::product_of(lit.getDims()));
     collectData(lit, data);
 
     // The type of this attribute is tensor of 64-bit floating-point with the

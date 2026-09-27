@@ -135,6 +135,12 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     if (Field1Ty)
       return false;
     QualType EltTy = CTy->getElementType();
+    // Only floating-point complex types (e.g. _Complex float/double) are
+    // eligible to be passed in floating-point argument registers. Complex
+    // integer types (a GNU extension) should be treated like a normal
+    // aggregate and packed into GARs instead.
+    if (!EltTy->isRealFloatingType())
+      return false;
     if (getContext().getTypeSize(EltTy) > FRLen)
       return false;
     Field1Ty = CGT.ConvertType(EltTy);
@@ -150,7 +156,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
     if (const auto *RTy = EltTy->getAsCanonical<RecordType>()) {
-      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getOriginalDecl()) &&
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
           isEmptyRecord(getContext(), EltTy, true, true))
         return false;
     }
@@ -169,7 +175,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    const RecordDecl *RD = RTy->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RTy->getDecl()->getDefinitionOrSelf();
     if (isEmptyRecord(getContext(), Ty, true, true) &&
         (!RD->isUnion() || !isa<CXXRecordDecl>(RD)))
       return true;

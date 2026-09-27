@@ -11,6 +11,13 @@ define amdgpu_cs_chain void @bad_flags(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr
   unreachable
 }
 
+define amdgpu_cs_chain void @bad_flags_value(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {
+  ; CHECK: flags must be 0 or 1 for llvm.amdgcn.cs.chain
+  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
+  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr, i32 2)
+  unreachable
+}
+
 define amdgpu_cs_chain void @bad_vgpr_args(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } inreg %vgpr) {
   ; CHECK: VGPR arguments must not have the `inreg` attribute
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
@@ -44,7 +51,7 @@ define void @bad_caller_default_cc(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { 
   ; CHECK-NEXT: @llvm.amdgcn.set.inactive.chain.arg
   %unused = call i32 @llvm.amdgcn.set.inactive.chain.arg(i32 0, i32 1)
 
-  ; CHECK: Intrinsic can only be used from functions with the amdgpu_cs, amdgpu_cs_chain or amdgpu_cs_chain_preserve calling conventions
+  ; CHECK: Intrinsic cannot be called from functions with this calling convention
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
   call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
   unreachable
@@ -55,7 +62,7 @@ define amdgpu_kernel void @bad_caller_amdgpu_kernel(ptr %fn, i32 %exec, <4 x i32
   ; CHECK-NEXT: @llvm.amdgcn.set.inactive.chain.arg
   %unused = call i32 @llvm.amdgcn.set.inactive.chain.arg(i32 0, i32 1)
 
-  ; CHECK: Intrinsic can only be used from functions with the amdgpu_cs, amdgpu_cs_chain or amdgpu_cs_chain_preserve calling conventions
+  ; CHECK: Intrinsic cannot be called from functions with this calling convention
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
   call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
   unreachable
@@ -66,7 +73,7 @@ define amdgpu_gfx void @bad_caller_amdgpu_gfx(ptr %fn, i32 %exec, <4 x i32> inre
   ; CHECK-NEXT: @llvm.amdgcn.set.inactive.chain.arg
   %unused = call i32 @llvm.amdgcn.set.inactive.chain.arg(i32 0, i32 1)
 
-  ; CHECK: Intrinsic can only be used from functions with the amdgpu_cs, amdgpu_cs_chain or amdgpu_cs_chain_preserve calling conventions
+  ; CHECK: Intrinsic cannot be called from functions with this calling convention
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
   call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
   unreachable
@@ -77,10 +84,8 @@ define amdgpu_vs void @bad_caller_amdgpu_vs(ptr %fn, i32 %exec, <4 x i32> inreg 
   ; CHECK-NEXT: @llvm.amdgcn.set.inactive.chain.arg
   %unused = call i32 @llvm.amdgcn.set.inactive.chain.arg(i32 0, i32 1)
 
-  ; CHECK: Intrinsic can only be used from functions with the amdgpu_cs, amdgpu_cs_chain or amdgpu_cs_chain_preserve calling conventions
-  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
-  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
-  unreachable
+  ; Unlike llvm.amdgcn.set.inactive.chain.arg, llvm.amdgcn.cs.chain may be called from amdgpu_vs functions.
+  ret void
 }
 
 define amdgpu_cs void @bad_caller_amdgpu_cs(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {

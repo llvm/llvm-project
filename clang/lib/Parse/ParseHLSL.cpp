@@ -126,15 +126,9 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   // semantic index. The semantic index is the number at the end of
   // the semantic, including leading zeroes. Digits located before
   // the last letter are part of the semantic name.
-  bool Invalid = false;
   SmallString<256> Buffer;
   Buffer.resize(Tok.getLength() + 1);
   StringRef Identifier = PP.getSpelling(Tok, Buffer);
-  if (Invalid) {
-    Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {};
-  }
-
   assert(Identifier.size() > 0);
   // Determine the start of the semantic index.
   unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;
@@ -191,6 +185,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
   if (EndLoc)
     *EndLoc = Tok.getLocation();
 
+  SourceLocation AttrEndLoc = Loc;
   ArgsVector ArgExprs;
   switch (AttrKind) {
   case ParsedAttr::AT_HLSLResourceBinding: {
@@ -233,6 +228,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         fixSeparateAttrArgAndNumber(SpaceStr, SpaceLoc, Tok, ArgExprs, *this,
                                     Actions.Context, PP);
     }
+    AttrEndLoc = Tok.getLocation(); // location of the closing ')'
     if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
       SkipUntil(tok::r_paren, StopAtSemi); // skip through )
       return;
@@ -343,6 +339,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     break;
   }
 
-  Attrs.addNew(II, Loc, AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
+  Attrs.addNew(II, SourceRange(Loc, AttrEndLoc), AttributeScopeInfo(),
+               ArgExprs.data(), ArgExprs.size(),
                ParsedAttr::Form::HLSLAnnotation());
 }

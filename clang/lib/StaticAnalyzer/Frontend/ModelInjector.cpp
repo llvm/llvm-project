@@ -17,6 +17,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
@@ -93,6 +94,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   // The instance wants to take ownership, however DisableFree frontend option
   // is set to true to avoid double free issues
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   Instance.setFileManager(CI.getFileManagerPtr());
   Instance.setSourceManager(SM);
   Instance.setPreprocessor(CI.getPreprocessorPtr());

@@ -40,7 +40,7 @@ end
 ! COMMON: %[[UB_K:.*]] = fir.convert %[[C60]] : (i32) -> index
 ! COMMON: %[[STEP_K:.*]] = arith.constant 1 : index
 
-! DEVICE: omp.target host_eval(
+! DEVICE: omp.target kernel_type(spmd) host_eval(
 ! DEVICE-SAME: %[[LB_I]] -> %[[LB_I:[[:alnum:]]+]],
 ! DEVICE-SAME: %[[UB_I]] -> %[[UB_I:[[:alnum:]]+]],
 ! DEVICE-SAME: %[[STEP_I]] -> %[[STEP_I:[[:alnum:]]+]],
@@ -59,13 +59,13 @@ end
 
 ! COMMON: omp.parallel {
 
-! COMMON-NEXT: %[[ITER_VAR_I:.*]] = fir.alloca i32 {bindc_name = "i"}
+! COMMON-NEXT: %[[ITER_VAR_I:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 ! COMMON-NEXT: %[[BINDING_I:.*]]:2 = hlfir.declare %[[ITER_VAR_I]] {uniq_name = "_QFEi"}
 
-! COMMON-NEXT: %[[ITER_VAR_J:.*]] = fir.alloca i32 {bindc_name = "j"}
+! COMMON-NEXT: %[[ITER_VAR_J:.*]] = fir.alloca i32 <{bindc_name = "j"}>
 ! COMMON-NEXT: %[[BINDING_J:.*]]:2 = hlfir.declare %[[ITER_VAR_J]] {uniq_name = "_QFEj"}
 
-! COMMON-NEXT: %[[ITER_VAR_K:.*]] = fir.alloca i32 {bindc_name = "k"}
+! COMMON-NEXT: %[[ITER_VAR_K:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 ! COMMON-NEXT: %[[BINDING_K:.*]]:2 = hlfir.declare %[[ITER_VAR_K]] {uniq_name = "_QFEk"}
 
 ! DEVICE: omp.distribute
@@ -75,7 +75,7 @@ end
 ! COMMON-SAME:   (%[[ARG0:[^[:space:]]+]], %[[ARG1:[^[:space:]]+]], %[[ARG2:[^[:space:]]+]])
 ! COMMON-SAME:   : index = (%[[LB_I]], %[[LB_J]], %[[LB_K]])
 ! COMMON-SAME:     to (%[[UB_I]], %[[UB_J]], %[[UB_K]]) inclusive
-! COMMON-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) {
+! COMMON-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) collapse(3) {
 
 ! COMMON-NEXT: %[[IV_IDX_I:.*]] = fir.convert %[[ARG0]]
 ! COMMON-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#0

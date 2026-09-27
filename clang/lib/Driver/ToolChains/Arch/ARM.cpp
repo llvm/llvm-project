@@ -8,7 +8,7 @@
 
 #include "ARM.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -74,7 +74,7 @@ bool arm::isARMEABIBareMetal(const llvm::Triple &Triple) {
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
     CPU = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     Arch = A->getValue();
@@ -290,6 +290,8 @@ void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
                       // Thumb2 is the default for V7 on Darwin.
                       (llvm::ARM::parseArchVersion(Suffix) == 7 &&
                        Triple.isOSBinFormatMachO()) ||
+                      // Thumb2 is the default for Fuchsia.
+                      Triple.isOSFuchsia() ||
                       // FIXME: this is invalid for WindowsCE
                       Triple.isOSWindows();
 
@@ -398,6 +400,38 @@ void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
   }
 }
 
+void arm::setEABIInTriple(const Driver &D, const ArgList &Args,
+                          llvm::Triple &Triple) {
+  Arg *A = Args.getLastArg(options::OPT_meabi);
+  if (!A)
+    return;
+
+  StringRef Value = A->getValue();
+  if (Value == "gnu") {
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABI:
+      Triple.setEnvironment(llvm::Triple::GNUEABI);
+      break;
+    case llvm::Triple::EABIHF:
+      Triple.setEnvironment(llvm::Triple::GNUEABIHF);
+      break;
+    default:
+      break;
+    }
+  } else if (Value == "4" || Value == "5") {
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::GNUEABI:
+      Triple.setEnvironment(llvm::Triple::EABI);
+      break;
+    case llvm::Triple::GNUEABIHF:
+      Triple.setEnvironment(llvm::Triple::EABIHF);
+      break;
+    default:
+      break;
+    }
+  }
+}
+
 arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
   return arm::getARMFloatABI(TC.getDriver(), TC.getEffectiveTriple(), Args);
 }
@@ -451,6 +485,9 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::Haiku:
   case llvm::Triple::OpenBSD:
     return FloatABI::SoftFP;
+
+  case llvm::Triple::Fuchsia:
+    return FloatABI::Hard;
 
   default:
     if (Triple.isOHOSFamily())
@@ -512,7 +549,8 @@ arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
     else
       ABI = FloatABI::Soft;
 
-    if (Triple.getOS() != llvm::Triple::UnknownOS ||
+    if (((Triple.getOS() != llvm::Triple::UnknownOS) &&
+         !Triple.isOSFirmware()) ||
         !Triple.isOSBinFormatMachO())
       D.Diag(diag::warn_drv_assuming_mfloat_abi_is) << "soft";
   }

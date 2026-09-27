@@ -766,11 +766,13 @@ func.func @affine_parallel(%memref_8: memref<4090x2040xf32>, %x: index) {
       }
     }
   }
+  // The store is inside a loop with an unknown (non-constant) trip count, so
+  // it must not be hoisted: the loop might not execute at runtime.
   // CHECK:       affine.parallel
   // CHECK-NEXT:    affine.for
   // CHECK-NEXT:      affine.parallel
-  // CHECK-NEXT:        affine.store
   // CHECK-NEXT:        affine.for
+  // CHECK-NEXT:          affine.store
 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -787,8 +789,8 @@ func.func @affine_parallel(%memref_8: memref<4090x2040xf32>, %x: index) {
   // CHECK:       scf.parallel
   // CHECK-NEXT:    affine.for
   // CHECK-NEXT:      affine.parallel
-  // CHECK-NEXT:        affine.store
   // CHECK-NEXT:        affine.for
+  // CHECK-NEXT:          affine.store
 
   affine.for %arg3 = 0 to 32 {
     affine.for %arg4 = 0 to 16 {
@@ -817,18 +819,18 @@ func.func @affine_invariant_use_after_dma(%arg0: memref<10485760xi32>, %arg1: me
   %c320 = arith.constant 320 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %alloc = memref.alloc() {alignment = 16 : i64} : memref<0xi32, 2>
+  %alloc = memref.alloc() alignment = 16 : memref<0xi32, 2>
   %alloc_0 = memref.alloc() : memref<1xi32, 2>
   affine.for %arg3 = 0 to 64 {
     %0 = affine.apply #map(%arg3)
-    %alloc_1 = memref.alloc() {alignment = 16 : i64} : memref<0xi32, 2>
+    %alloc_1 = memref.alloc() alignment = 16 : memref<0xi32, 2>
     %alloc_2 = memref.alloc() : memref<320xi32, 2>
     affine.dma_start %arg0[%0], %alloc_2[%c0], %alloc_1[%c0], %c320 : memref<10485760xi32>, memref<320xi32, 2>, memref<0xi32, 2>
     affine.dma_start %arg1[%c0], %alloc_0[%c0], %alloc[%c0], %c1 : memref<1xi32>, memref<1xi32, 2>, memref<0xi32, 2>
     affine.dma_wait %alloc_1[%c0], %c320 : memref<0xi32, 2>
     affine.dma_wait %alloc[%c0], %c1 : memref<0xi32, 2>
     %1 = affine.apply #map(%arg3)
-    %alloc_3 = memref.alloc() {alignment = 16 : i64} : memref<0xi32, 2>
+    %alloc_3 = memref.alloc() alignment = 16 : memref<0xi32, 2>
     %alloc_4 = memref.alloc() : memref<320xi32, 2>
     affine.for %arg4 = 0 to 320 {
       %2 = affine.load %alloc_2[%arg4] : memref<320xi32, 2>
@@ -913,4 +915,74 @@ func.func @side_effecting_ops() {
   // CHECK:            affine.for %{{.*}} = 0 to 16
   // CHECK:          memref.dealloc
   return
+}
+
+// -----
+
+// Pure (side-effect-free) ops may still be hoisted from zero-trip-count loops
+// since they have no observable effect. The side-effectful op that uses the
+// hoisted result must remain in the loop.
+
+// CHECK-LABEL: func @hoist_pure_from_zero_trip_count_loop
+func.func @hoist_pure_from_zero_trip_count_loop(%x: i32, %y: i32) -> i32 {
+  // CHECK:      %[[Z:.*]] = arith.addi %arg0, %arg1
+  // CHECK:      affine.for {{.*}} = 0 to 0 {
+  // CHECK-NEXT:   affine.store %[[Z]]
+  // CHECK-NEXT: }
+  %alloc = memref.alloc() : memref<1xi32>
+  affine.for %i = 0 to 0 {
+    // arith.addi is pure and loop-invariant — it should be hoisted even though
+    // the loop never executes.
+    %z = arith.addi %x, %y : i32
+    // The store is not pure so it must stay in the loop.
+    affine.store %z, %alloc[0] : memref<1xi32>
+  }
+  %r = affine.load %alloc[0] : memref<1xi32>
+  return %r : i32
+}
+
+// -----
+
+// Side-effectful ops must not be hoisted from zero-trip-count loops, because
+// those loops never execute and hoisting would change observable behavior.
+
+// CHECK-LABEL: func @no_hoist_from_zero_trip_count_loop
+func.func @no_hoist_from_zero_trip_count_loop(%x: i32) -> i32 {
+  %alloc = memref.alloc() : memref<1xi32>
+  %c42 = arith.constant 42 : i32
+  affine.store %c42, %alloc[0] : memref<1xi32>
+  affine.for %i = 0 to 0 {
+    // This store must not be hoisted: the loop body is never executed.
+    affine.store %x, %alloc[0] : memref<1xi32>
+  }
+  // CHECK:      affine.store %c42{{.*}}, %alloc[0]
+  // CHECK:      affine.for {{.*}} = 0 to 0 {
+  // CHECK-NEXT:   affine.store %arg0, %alloc[0]
+  // CHECK-NEXT: }
+  %r = affine.load %alloc[0] : memref<1xi32>
+  return %r : i32
+}
+
+// -----
+
+// Side-effectful ops must not be hoisted from loops with an unknown (dynamic)
+// trip count, because such a loop may not execute at all (e.g. when the upper
+// bound is zero at runtime). Only pure ops may be hoisted.
+
+// CHECK-LABEL: func @unknown_trip_count_store_not_hoisted
+func.func @unknown_trip_count_store_not_hoisted(%x: i32, %n: index) -> i32 {
+  %alloc = memref.alloc() : memref<1xi32>
+  %c42 = arith.constant 42 : i32
+  affine.store %c42, %alloc[0] : memref<1xi32>
+  affine.for %i = 0 to %n {
+    // This store must not be hoisted: if %n == 0 at runtime the loop body
+    // never executes, and hoisting would change the observable result.
+    affine.store %x, %alloc[0] : memref<1xi32>
+  }
+  // CHECK:      affine.store %c42{{.*}}, %alloc[0]
+  // CHECK:      affine.for {{.*}} = 0 to %{{.*}} {
+  // CHECK-NEXT:   affine.store %arg0, %alloc[0]
+  // CHECK-NEXT: }
+  %r = affine.load %alloc[0] : memref<1xi32>
+  return %r : i32
 }

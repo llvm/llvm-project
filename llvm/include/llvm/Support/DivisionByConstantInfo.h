@@ -29,11 +29,13 @@ struct SignedDivisionByConstantInfo {
 struct UnsignedDivisionByConstantInfo {
   LLVM_ABI static UnsignedDivisionByConstantInfo
   get(const APInt &D, unsigned LeadingZeros = 0,
-      bool AllowEvenDivisorOptimization = true);
+      bool AllowEvenDivisorOptimization = true,
+      bool AllowWidenOptimization = false);
   APInt Magic;          ///< magic number
   bool IsAdd;           ///< add indicator
   unsigned PostShift;   ///< post-shift amount
   unsigned PreShift;    ///< pre-shift amount
+  bool Widen;           ///< use widen optimization
 };
 
 } // namespace llvm

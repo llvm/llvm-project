@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -92,6 +93,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "elide-resource-data-from-bytecode",
         cl::desc("Elide resources when generating bytecode"),
         cl::location(elideResourceDataFromBytecodeFlag), cl::init(false));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> emitBytecodeProducer(
+        "emit-bytecode-producer",
+        cl::desc("Use specified producer when generating bytecode output"),
+        cl::location(emitBytecodeProducerFlag), cl::init(""));
 
     static cl::opt<std::optional<int64_t>, /*ExternalStorage=*/true,
                    BytecodeVersionParser>
@@ -224,6 +230,18 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                                     "Print yaml file"),
                          clEnumValN(RemarkFormat::REMARK_FORMAT_BITSTREAM,
                                     "bitstream", "Print bitstream file")),
+        llvm::cl::cat(remarkCategory)};
+
+    static llvm::cl::opt<RemarkPolicy, /*ExternalStorage=*/true> remarkPolicy{
+        "remark-policy",
+        llvm::cl::desc("Specify the policy for remark output."),
+        cl::location(remarkPolicyFlag),
+        llvm::cl::value_desc("format"),
+        llvm::cl::init(RemarkPolicy::REMARK_POLICY_ALL),
+        llvm::cl::values(clEnumValN(RemarkPolicy::REMARK_POLICY_ALL, "all",
+                                    "Print all remarks"),
+                         clEnumValN(RemarkPolicy::REMARK_POLICY_FINAL, "final",
+                                    "Print final remarks")),
         llvm::cl::cat(remarkCategory)};
 
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
@@ -517,18 +535,28 @@ performActions(raw_ostream &os,
     return failure();
 
   context->enableMultithreading(wasThreadingEnabled);
-
+  // Set the remark categories and policy.
   remark::RemarkCategories cats{
       config.getRemarksAllFilter(), config.getRemarksPassedFilter(),
       config.getRemarksMissedFilter(), config.getRemarksAnalyseFilter(),
       config.getRemarksFailedFilter()};
 
   mlir::MLIRContext &ctx = *context;
+  // Helper to create the appropriate policy based on configuration
+  auto createPolicy = [&config]()
+      -> std::unique_ptr<mlir::remark::detail::RemarkEmittingPolicyBase> {
+    if (config.getRemarkPolicy() == RemarkPolicy::REMARK_POLICY_ALL)
+      return std::make_unique<mlir::remark::RemarkEmittingPolicyAll>();
+    if (config.getRemarkPolicy() == RemarkPolicy::REMARK_POLICY_FINAL)
+      return std::make_unique<mlir::remark::RemarkEmittingPolicyFinal>();
+
+    llvm_unreachable("Invalid remark policy");
+  };
 
   switch (config.getRemarkFormat()) {
   case RemarkFormat::REMARK_FORMAT_STDOUT:
     if (failed(mlir::remark::enableOptimizationRemarks(
-            ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
+            ctx, nullptr, createPolicy(), cats, true /*printAsEmitRemarks*/)))
       return failure();
     break;
 
@@ -537,7 +565,7 @@ performActions(raw_ostream &os,
                            ? "mlir-remarks.yaml"
                            : config.getRemarksOutputFile();
     if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-            ctx, file, llvm::remarks::Format::YAML, cats)))
+            ctx, file, llvm::remarks::Format::YAML, createPolicy(), cats)))
       return failure();
     break;
   }
@@ -547,7 +575,7 @@ performActions(raw_ostream &os,
                            ? "mlir-remarks.bitstream"
                            : config.getRemarksOutputFile();
     if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-            ctx, file, llvm::remarks::Format::Bitstream, cats)))
+            ctx, file, llvm::remarks::Format::Bitstream, createPolicy(), cats)))
       return failure();
     break;
   }
@@ -570,7 +598,7 @@ performActions(raw_ostream &os,
 
   // Generate reproducers if requested
   if (!config.getReproducerFilename().empty()) {
-    StringRef anchorName = pm.getAnyOpAnchorName();
+    StringRef anchorName = pm.getOpAnchorName();
     const auto &passes = pm.getPasses();
     makeReproducer(anchorName, passes, op.get(),
                    config.getReproducerFilename());
@@ -579,7 +607,10 @@ performActions(raw_ostream &os,
   // Print the output.
   TimingScope outputTiming = timing.nest("Output");
   if (config.shouldEmitBytecode()) {
-    BytecodeWriterConfig writerConfig(fallbackResourceMap);
+    std::optional<StringRef> producer = config.bytecodeProducerToEmit();
+    BytecodeWriterConfig writerConfig =
+        producer ? BytecodeWriterConfig(fallbackResourceMap, producer.value())
+                 : BytecodeWriterConfig(fallbackResourceMap);
     if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
     if (config.shouldElideResourceDataFromBytecode())
@@ -590,9 +621,20 @@ performActions(raw_ostream &os,
   if (config.bytecodeVersionToEmit().has_value())
     return emitError(UnknownLoc::get(pm.getContext()))
            << "bytecode version while not emitting bytecode";
-  AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
-                    &fallbackResourceMap);
+
+  // Don't re-run the verifier if we already ran the verifier at the end of the
+  // pass pipeline.
+  AsmState asmState(op.get(),
+                    OpPrintingFlags().assumeVerified(
+                        config.shouldVerifyPasses() && !pm.empty()),
+                    /*locationMap=*/nullptr, &fallbackResourceMap);
   os << OpWithState(op.get(), asmState) << '\n';
+
+  // This is required if the remark policy is final. Otherwise, the remarks are
+  // not emitted.
+  if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
+    engine->getRemarkEmittingPolicy()->finalize();
+
   return success();
 }
 
@@ -652,17 +694,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   return success();
 }
 
-std::pair<std::string, std::string>
-mlir::registerAndParseCLIOptions(int argc, char **argv,
-                                 llvm::StringRef toolName,
-                                 DialectRegistry &registry) {
-  static cl::opt<std::string> inputFilename(
-      cl::Positional, cl::desc("<input file>"), cl::init("-"));
-
-  static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
-                                             cl::value_desc("filename"),
-                                             cl::init("-"));
-  // Register any command line options.
+std::string mlir::registerCLIOptions(llvm::StringRef toolName,
+                                     DialectRegistry &registry) {
   MlirOptMainConfig::registerCLOptions(registry);
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
@@ -674,17 +707,35 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
   {
     llvm::raw_string_ostream os(helpHeader);
-    interleaveComma(registry.getDialectNames(), os,
+    interleaveComma(registry.getRegisteredDialectNames(), os,
                     [&](auto name) { os << name; });
   }
-  // Parse pass names in main to ensure static initialization completed.
+  return helpHeader;
+}
+
+std::pair<std::string, std::string>
+mlir::parseCLIOptions(int argc, char **argv, llvm::StringRef helpHeader) {
+  static cl::opt<std::string> inputFilename(
+      cl::Positional, cl::desc("<input file>"), cl::init("-"));
+
+  static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
+                                             cl::value_desc("filename"),
+                                             cl::init("-"));
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
   return std::make_pair(inputFilename.getValue(), outputFilename.getValue());
 }
 
+std::pair<std::string, std::string>
+mlir::registerAndParseCLIOptions(int argc, char **argv,
+                                 llvm::StringRef toolName,
+                                 DialectRegistry &registry) {
+  auto helpHeader = registerCLIOptions(toolName, registry);
+  return parseCLIOptions(argc, argv, helpHeader);
+}
+
 static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
   llvm::outs() << "Available Dialects: ";
-  interleave(registry.getDialectNames(), llvm::outs(), ",");
+  interleave(registry.getRegisteredDialectNames(), llvm::outs(), ",");
   llvm::outs() << "\n";
   return success();
 }

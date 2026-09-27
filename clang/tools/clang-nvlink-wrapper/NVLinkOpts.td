@@ -19,6 +19,10 @@ def cuda_path_EQ : Joined<["--"], "cuda-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the system CUDA path">;
 def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the 'ptxas' path">;
+def Xptxas : Separate<["-", "--"], "Xptxas">, Flags<[WrapperOnlyOption]>,
+  MetaVarName<"<arg>">, HelpText<"Pass <arg> to the 'ptxas' invocation">;
+def Xptxas_EQ : Joined<["-", "--"], "Xptxas=">, Flags<[HelpHidden]>,
+  Alias<Xptxas>;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -112,3 +116,8 @@ def mllvm_EQ : Joined<["-"], "mllvm=">, Flags<[HelpHidden]>, Alias<mllvm>;
 
 def dry_run : Flag<["--", "-"], "dry-run">, Flags<[WrapperOnlyOption]>,
   HelpText<"Print generated commands without running.">;
+def assume_device_object
+    : Flag<["--", "-"], "assume-device-object">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<
+          "Assume objects have device object files, only in dry-run mode.">;

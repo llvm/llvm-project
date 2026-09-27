@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %t1.s -o %t1.o
 # RUN: ld.lld -shared %t1.o -soname=t1.so -o %t1.so
-# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux --crel %s -o %t.o
 # RUN: ld.lld %t.o %t1.so -z separate-code -o %t
 # RUN: llvm-readelf -S -s -r -x .got.plt %t | FileCheck %s
 # RUN: llvm-objdump -d %t | FileCheck --check-prefixes=DIS %s

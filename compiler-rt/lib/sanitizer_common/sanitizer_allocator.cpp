@@ -109,14 +109,15 @@ void *InternalReallocArray(void *addr, uptr count, uptr size,
   return InternalRealloc(addr, count * size, cache);
 }
 
-void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
+void* InternalCalloc(uptr count, uptr size, InternalAllocatorCache* cache,
+                     uptr alignment) {
   if (UNLIKELY(CheckForCallocOverflow(count, size))) {
     Report("FATAL: %s: calloc parameters overflow: count * size (%zd * %zd) "
            "cannot be represented in type size_t\n", SanitizerToolName, count,
            size);
     Die();
   }
-  void *p = InternalAlloc(count * size, cache);
+  void* p = InternalAlloc(count * size, cache, alignment);
   if (LIKELY(p))
     internal_memset(p, 0, count * size);
   return p;

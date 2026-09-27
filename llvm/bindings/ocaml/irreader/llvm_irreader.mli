@@ -13,8 +13,14 @@
 
 exception Error of string
 
-(** [parse_ir context mb] parses the IR for a new module [m] from the
-    memory buffer [mb] in the context [context]. Returns [m] if successful, or
-    raises [Error msg] otherwise, where [msg] is a description of the error
-    encountered. See the function [llvm::ParseIR]. *)
-val parse_ir : Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule
+(** [parse_ir_bitcode_or_assembly context mb] parses the IR for a new module [m]
+    from the memory buffer [mb] in the context [context]. Returns [m] if
+    successful, or raises [Error msg] otherwise, where [msg] is a description
+    of the error encountered.
+
+    This function does not take ownership of [mb]; the caller should dispose it
+    (see {!Llvm.MemoryBuffer.dispose}) when it is no longer needed.
+
+    See the function [llvm::ParseIR]. *)
+val parse_ir_bitcode_or_assembly
+  : Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule

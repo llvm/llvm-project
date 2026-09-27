@@ -17,4 +17,4 @@ long fpathconf(int fd, int name);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UNISTD_FSYNC_H
+#endif // LLVM_LIBC_SRC_UNISTD_FPATHCONF_H

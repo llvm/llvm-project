@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-use-auto %t -- \
+// RUN: %check_clang_tidy %s modernize-use-auto %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-auto.RemoveStars: 'true' , modernize-use-auto.MinTypeNameLength: '0'}}" \
 // RUN:   -- -frtti
 
@@ -108,7 +108,7 @@ typedef unsigned char xmlChar;
   do {                           \
     xmlChar *s = (xmlChar *)(x); \
   } while (false);
-// CHECK-FIXES: xmlChar *s = (xmlChar *)(x);
+// CHECK-FIXES: xmlChar *s = (xmlChar *)(x); {{\\}}
 
 void f_cstyle_cast() {
   auto *a = new A();

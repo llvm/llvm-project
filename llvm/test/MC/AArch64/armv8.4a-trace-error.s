@@ -12,12 +12,12 @@ tsb 0
 //CHECK-ERROR: error: too few operands for instruction
 //CHECK-ERROR: tsb
 //CHECK-ERROR: ^
-//CHECK-ERROR: error: 'csync' operand expected
+//CHECK-ERROR: error: invalid operand for instruction
 //CHECK-ERROR: tsb foo
 //CHECK-ERROR:     ^
-//CHECK-ERROR: error: 'csync' operand expected
+//CHECK-ERROR: error: invalid operand for instruction
 //CHECK-ERROR: tsb #0
 //CHECK-ERROR:     ^
-//CHECK-ERROR: error: 'csync' operand expected
+//CHECK-ERROR: error: invalid operand for instruction
 //CHECK-ERROR: tsb 0
 //CHECK-ERROR:     ^

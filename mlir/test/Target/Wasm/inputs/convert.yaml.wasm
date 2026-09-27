@@ -1,0 +1,69 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - F32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - F64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0, 0, 0, 1, 1, 1, 1 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            convert_i32_u_to_f32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            convert_i32_s_to_f32
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            convert_i64_u_to_f32
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            convert_i64s_to_f32
+        Kind:            FUNCTION
+        Index:           3
+      - Name:            convert_i32_u_to_f64
+        Kind:            FUNCTION
+        Index:           4
+      - Name:            convert_i32_s_to_f64
+        Kind:            FUNCTION
+        Index:           5
+      - Name:            convert_i64_u_to_f64
+        Kind:            FUNCTION
+        Index:           6
+      - Name:            convert_i64s_to_f64
+        Kind:            FUNCTION
+        Index:           7
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            410AB30B
+      - Index:           1
+        Locals:          []
+        Body:            412AB20B
+      - Index:           2
+        Locals:          []
+        Body:            4211B50B
+      - Index:           3
+        Locals:          []
+        Body:            420AB40B
+      - Index:           4
+        Locals:          []
+        Body:            410AB80B
+      - Index:           5
+        Locals:          []
+        Body:            412AB70B
+      - Index:           6
+        Locals:          []
+        Body:            4211BA0B
+      - Index:           7
+        Locals:          []
+        Body:            420AB90B
+...

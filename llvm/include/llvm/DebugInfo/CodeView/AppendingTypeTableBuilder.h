@@ -34,7 +34,7 @@ class LLVM_ABI AppendingTypeTableBuilder : public TypeCollection {
 
 public:
   explicit AppendingTypeTableBuilder(BumpPtrAllocator &Storage);
-  ~AppendingTypeTableBuilder();
+  ~AppendingTypeTableBuilder() override;
 
   // TypeCollection overrides
   std::optional<TypeIndex> getFirst() override;

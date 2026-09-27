@@ -1,53 +1,57 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK-LABEL: c.func @_QPis_finite_test
+! CHECK-LABEL: func.func @_QPis_finite_test(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f32> {{.*}}, %[[ARG1:.*]]: !fir.ref<f64> {{.*}})
 subroutine is_finite_test(x, y)
   use ieee_arithmetic, only: ieee_is_finite
   real(4) x
   real(8) y
 
-  ! CHECK:     %[[V_3:[0-9]+]] = fir.load %arg0 : !fir.ref<f32>
-  ! CHECK:     %[[V_4:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_3]]) <{bit = 504 : i32}> : (f32) -> i1
-  ! CHECK:     %[[V_5:[0-9]+]] = fir.convert %[[V_4]] : (i1) -> !fir.logical<4>
-  ! CHECK:     %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (!fir.logical<4>) -> i1
-  ! CHECK:     %[[V_7:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_6]]) {{.*}} : (!fir.ref<i8>, i1) -> i1
+  ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} {uniq_name = "_QFis_finite_testEx"}
+  ! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {{.*}} {uniq_name = "_QFis_finite_testEy"}
+
+  ! CHECK:     %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
+  ! CHECK:     %[[IS_FINITE_X:.*]] = "llvm.intr.is.fpclass"(%[[X_VAL]]) <{bit = 504 : i32}> : (f32) -> i1
+  ! CHECK:     %[[L4_X:.*]] = fir.convert %[[IS_FINITE_X]] : (i1) -> !fir.logical<4>
+  ! CHECK:     %[[I1_X:.*]] = fir.convert %[[L4_X]] : (!fir.logical<4>) -> i1
+  ! CHECK:     fir.call @_FortranAioOutputLogical({{.*}}, %[[I1_X]])
   print*, ieee_is_finite(x)
 
-  ! CHECK:     %[[V_12:[0-9]+]] = fir.load %arg0 : !fir.ref<f32>
-  ! CHECK:     %[[V_13:[0-9]+]] = fir.load %arg0 : !fir.ref<f32>
-  ! CHECK:     %[[V_14:[0-9]+]] = arith.addf %[[V_12]], %[[V_13]] {{.*}} : f32
-  ! CHECK:     %[[V_15:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_14]]) <{bit = 504 : i32}> : (f32) -> i1
-  ! CHECK:     %[[V_16:[0-9]+]] = fir.convert %[[V_15]] : (i1) -> !fir.logical<4>
-  ! CHECK:     %[[V_17:[0-9]+]] = fir.convert %[[V_16]] : (!fir.logical<4>) -> i1
-  ! CHECK:     %[[V_18:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_17]]) {{.*}} : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[X_VAL1:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
+  ! CHECK:     %[[X_VAL2:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
+  ! CHECK:     %[[X_ADD:.*]] = arith.addf %[[X_VAL1]], %[[X_VAL2]] {{.*}} : f32
+  ! CHECK:     %[[IS_FINITE_XADD:.*]] = "llvm.intr.is.fpclass"(%[[X_ADD]]) <{bit = 504 : i32}> : (f32) -> i1
+  ! CHECK:     %[[L4_XADD:.*]] = fir.convert %[[IS_FINITE_XADD]] : (i1) -> !fir.logical<4>
+  ! CHECK:     %[[I1_XADD:.*]] = fir.convert %[[L4_XADD]] : (!fir.logical<4>) -> i1
+  ! CHECK:     fir.call @_FortranAioOutputLogical({{.*}}, %[[I1_XADD]])
   print*, ieee_is_finite(x+x)
 
-  ! CHECK:     %[[V_23:[0-9]+]] = fir.load %arg1 : !fir.ref<f64>
-  ! CHECK:     %[[V_24:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_23]]) <{bit = 504 : i32}> : (f64) -> i1
-  ! CHECK:     %[[V_25:[0-9]+]] = fir.convert %[[V_24]] : (i1) -> !fir.logical<4>
-  ! CHECK:     %[[V_26:[0-9]+]] = fir.convert %[[V_25]] : (!fir.logical<4>) -> i1
-  ! CHECK:     %[[V_27:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_26]]) {{.*}} : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
+  ! CHECK:     %[[IS_FINITE_Y:.*]] = "llvm.intr.is.fpclass"(%[[Y_VAL]]) <{bit = 504 : i32}> : (f64) -> i1
+  ! CHECK:     %[[L4_Y:.*]] = fir.convert %[[IS_FINITE_Y]] : (i1) -> !fir.logical<4>
+  ! CHECK:     %[[I1_Y:.*]] = fir.convert %[[L4_Y]] : (!fir.logical<4>) -> i1
+  ! CHECK:     fir.call @_FortranAioOutputLogical({{.*}}, %[[I1_Y]])
   print*, ieee_is_finite(y)
 
-  ! CHECK:     %[[V_32:[0-9]+]] = fir.load %arg1 : !fir.ref<f64>
-  ! CHECK:     %[[V_33:[0-9]+]] = fir.load %arg1 : !fir.ref<f64>
-  ! CHECK:     %[[V_34:[0-9]+]] = arith.addf %[[V_32]], %[[V_33]] {{.*}} : f64
-  ! CHECK:     %[[V_35:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_34]]) <{bit = 504 : i32}> : (f64) -> i1
-  ! CHECK:     %[[V_36:[0-9]+]] = fir.convert %[[V_35]] : (i1) -> !fir.logical<4>
-  ! CHECK:     %[[V_37:[0-9]+]] = fir.convert %[[V_36]] : (!fir.logical<4>) -> i1
-  ! CHECK:     %[[V_38:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_37]]) {{.*}} : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[Y_VAL1:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
+  ! CHECK:     %[[Y_VAL2:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
+  ! CHECK:     %[[Y_ADD:.*]] = arith.addf %[[Y_VAL1]], %[[Y_VAL2]] {{.*}} : f64
+  ! CHECK:     %[[IS_FINITE_YADD:.*]] = "llvm.intr.is.fpclass"(%[[Y_ADD]]) <{bit = 504 : i32}> : (f64) -> i1
+  ! CHECK:     %[[L4_YADD:.*]] = fir.convert %[[IS_FINITE_YADD]] : (i1) -> !fir.logical<4>
+  ! CHECK:     %[[I1_YADD:.*]] = fir.convert %[[L4_YADD]] : (!fir.logical<4>) -> i1
+  ! CHECK:     fir.call @_FortranAioOutputLogical({{.*}}, %[[I1_YADD]])
   print*, ieee_is_finite(y+y)
 end subroutine is_finite_test
 
-! CHECK-LABEL: c.func @_QQmain
+! CHECK-LABEL: func.func @_QQmain()
   real(4) x
   real(8) y
-  ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca f64 {adapt.valuebyref}
-  ! CHECK:     %[[V_1:[0-9]+]] = fir.alloca f32 {adapt.valuebyref}
-  ! CHECK:     %cst = arith.constant 3.40282347E+38 : f32
-  ! CHECK:     fir.store %cst to %[[V_1]] : !fir.ref<f32>
-  ! CHECK:     %cst_0 = arith.constant 1.7976931348623157E+308 : f64
-  ! CHECK:     fir.store %cst_0 to %[[V_0]] : !fir.ref<f64>
-  ! CHECK:     fir.call @_QPis_finite_test(%[[V_1]], %[[V_0]]) {{.*}} : (!fir.ref<f32>, !fir.ref<f64>) -> ()
+  ! CHECK:     %[[X_HUGE:.*]] = arith.constant 3.40282347E+38 : f32
+  ! CHECK:     %[[Y_HUGE:.*]] = arith.constant 1.7976931348623157E+308 : f64
+  ! CHECK:     %[[X_HUGE_ASSOC:.*]]:3 = hlfir.associate %[[X_HUGE]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+  ! CHECK:     %[[Y_HUGE_ASSOC:.*]]:3 = hlfir.associate %[[Y_HUGE]] {adapt.valuebyref} : (f64) -> (!fir.ref<f64>, !fir.ref<f64>, i1)
+  ! CHECK:     fir.call @_QPis_finite_test(%[[X_HUGE_ASSOC]]#0, %[[Y_HUGE_ASSOC]]#0)
+  ! CHECK:     hlfir.end_associate %[[X_HUGE_ASSOC]]#1, %[[X_HUGE_ASSOC]]#2
+  ! CHECK:     hlfir.end_associate %[[Y_HUGE_ASSOC]]#1, %[[Y_HUGE_ASSOC]]#2
   call is_finite_test(huge(x), huge(y))
 end

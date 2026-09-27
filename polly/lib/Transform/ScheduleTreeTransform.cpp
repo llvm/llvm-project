@@ -972,6 +972,9 @@ BandAttr *polly::getBandAttr(isl::schedule_node MarkOrBand) {
 }
 
 isl::schedule polly::hoistExtensionNodes(isl::schedule Sched) {
+  if (Sched.is_null())
+    return {};
+
   // If there is no extension node in the first place, return the original
   // schedule tree.
   if (!containsExtensionNode(Sched))
@@ -1126,6 +1129,8 @@ isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
 
 isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
                                         unsigned OutDimsNum) {
+  if (IsolateDomain.is_null())
+    return {};
   unsigned Dims = unsignedFromIslSize(IsolateDomain.tuple_dim());
   assert(OutDimsNum <= Dims &&
          "The isl::set IsolateDomain is used to describe the range of schedule "

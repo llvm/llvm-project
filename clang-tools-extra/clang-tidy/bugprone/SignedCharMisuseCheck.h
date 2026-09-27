@@ -30,9 +30,9 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  ast_matchers::internal::BindableMatcher<clang::Stmt> charCastExpression(
+  ast_matchers::internal::BindableMatcher<Stmt> charCastExpression(
       bool IsSigned,
-      const ast_matchers::internal::Matcher<clang::QualType> &IntegerType,
+      const ast_matchers::internal::Matcher<QualType> &IntegerType,
       const std::string &CastBindName) const;
 
   const StringRef CharTypedefsToIgnoreList;

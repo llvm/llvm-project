@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -pass-remarks-missed="polly-detect" -disable-output < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -pass-remarks-missed=polly-detect -disable-output < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ;void foo(int a, int b) {
@@ -19,9 +19,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT: remark: ReportIrreducibleRegion.c:9:4: Irreducible region encountered in control flow.
 ; CHECK-NEXT: remark: ReportIrreducibleRegion.c:9:4: Invalid Scop candidate ends here.
 
-
 ; Function Attrs: nounwind uwtable
-define void @foo(i32 %a, i32 %b) #0 !dbg !4 {
+define void @foo(i32 %a, i32 %b) !dbg !4 {
 entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
@@ -66,10 +65,7 @@ if.end6:                                          ; preds = %if.end5, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}

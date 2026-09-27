@@ -119,11 +119,11 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
       0x14,
       0x00,
       0x00,
-      0x1a, // pcalau12i $t8, %page20(imm)
+      0x1c, // pcaddu12i $t8, %pcadd20(imm)
       static_cast<char>(0x94),
       0x02,
       static_cast<char>(0x80),
-      0x28, // ld.d $t8, $t8, %pageoff12(imm)
+      0x28, // ld.w $t8, $t8, %pcadd12(.Lpcadd_hi)
       static_cast<char>(0x80),
       0x02,
       0x00,
@@ -137,12 +137,12 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
                           StubSym.getBlock().edges().end()),
             2U);
-  auto &PageHighEdge = *StubSym.getBlock().edges().begin();
-  auto &PageLowEdge = *++StubSym.getBlock().edges().begin();
-  EXPECT_EQ(PageHighEdge.getKind(), loongarch::Page20);
-  EXPECT_EQ(&PageHighEdge.getTarget(), &PointerSym);
-  EXPECT_EQ(PageLowEdge.getKind(), loongarch::PageOffset12);
-  EXPECT_EQ(&PageLowEdge.getTarget(), &PointerSym);
+  auto &HighEdge = *StubSym.getBlock().edges().begin();
+  auto &LowEdge = *++StubSym.getBlock().edges().begin();
+  EXPECT_EQ(HighEdge.getKind(), loongarch::PCAddHi20);
+  EXPECT_EQ(&HighEdge.getTarget(), &PointerSym);
+  EXPECT_EQ(LowEdge.getKind(), loongarch::PCAddLo12);
+  EXPECT_EQ(&LowEdge.getTarget(), &StubSym);
   EXPECT_EQ(StubSym.getBlock().getContent(),
             ArrayRef<char>(PointerJumpStubContent));
 }

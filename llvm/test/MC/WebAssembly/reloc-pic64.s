@@ -1,8 +1,8 @@
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj < %s | obj2yaml | FileCheck %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -mcpu=mvp -filetype=obj < %s | obj2yaml | FileCheck %s
 # RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entries result in R_WASM_GLOBAL_INDEX_LEB against
-# against the corrsponding function or data symbol and that the corresponding
+# against the corresponding function or data symbol and that the corresponding
 # data symbols are imported as a wasm globals.
 
 .functype default_func () -> (i32)
@@ -98,12 +98,12 @@ hidden_func:
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           default_data
 # CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         GlobalType:      I32
+# CHECK-NEXT:         GlobalType:      I64
 # CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:       - Module:          GOT.func
 # CHECK-NEXT:         Field:           default_func
 # CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         GlobalType:      I32
+# CHECK-NEXT:         GlobalType:      I64
 # CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0, 0, 1, 1, 0 ]

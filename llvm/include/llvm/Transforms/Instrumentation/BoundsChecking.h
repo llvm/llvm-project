@@ -11,6 +11,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace llvm {
@@ -18,15 +19,17 @@ class Function;
 
 /// A pass to instrument code and perform run-time bounds checking on loads,
 /// stores, and other memory intrinsics.
-class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
+class BoundsCheckingPass : public RequiredPassInfoMixin<BoundsCheckingPass> {
 
 public:
   struct Options {
     struct Runtime {
-      Runtime(bool MinRuntime, bool MayReturn)
-          : MinRuntime(MinRuntime), MayReturn(MayReturn) {}
+      Runtime(bool MinRuntime, bool MayReturn, bool HandlerPreserveAllRegs)
+          : MinRuntime(MinRuntime), MayReturn(MayReturn),
+            HandlerPreserveAllRegs(HandlerPreserveAllRegs) {}
       bool MinRuntime;
       bool MayReturn;
+      bool HandlerPreserveAllRegs;
     };
     std::optional<Runtime> Rt; // Trap if empty.
     bool Merge = false;
@@ -35,7 +38,6 @@ public:
 
   BoundsCheckingPass(Options Opts) : Opts(Opts) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
   LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);

@@ -107,9 +107,7 @@ FunctionPass *llvm::createGCLoweringPass() { return new LowerIntrinsics(); }
 char LowerIntrinsics::ID = 0;
 char &llvm::GCLoweringID = LowerIntrinsics::ID;
 
-LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {
-  initializeLowerIntrinsicsPass(*PassRegistry::getPassRegistry());
-}
+LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {}
 
 StringRef LowerIntrinsics::getPassName() const {
   return "Lower Garbage Collection Instructions";
@@ -179,9 +177,8 @@ static bool InsertRootInitializers(Function &F, ArrayRef<AllocaInst *> Roots) {
 
   for (AllocaInst *Root : Roots)
     if (!InitedRoots.count(Root)) {
-      new StoreInst(
-          ConstantPointerNull::get(cast<PointerType>(Root->getAllocatedType())),
-          Root, std::next(Root->getIterator()));
+      new StoreInst(Constant::getNullValue(Root->getAllocatedType()), Root,
+                    std::next(Root->getIterator()));
       MadeChange = true;
     }
 

@@ -23,7 +23,7 @@ real function test1(x)
   test1 = x%p(42.)
 end function
 ! CHECK-LABEL:   func.func @_QPtest1(
-! CHECK:           %[[VAL_1:.*]] = fir.alloca f32 {bindc_name = "test1", uniq_name = "_QFtest1Etest1"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca f32 <{bindc_name = "test1", uniq_name = "_QFtest1Etest1"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]]  {{.*}}Etest1
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ex
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4.200000e+01 : f32
@@ -57,10 +57,9 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest3(
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ex
 ! CHECK:           %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMproc_comp_defsTt{j:i32,p:!fir.boxproc<(!fir.ref<f32>) -> f32>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
-! CHECK:           %[[VAL_3:.*]] = fir.zero_bits () -> ()
-! CHECK:           %[[VAL_4:.*]] = fir.emboxproc %[[VAL_3]] : (() -> ()) -> !fir.boxproc<() -> ()>
-! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
-! CHECK:           fir.store %[[VAL_5]] to %[[VAL_2]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
+! CHECK:           %[[VAL_3:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
+! CHECK:           %[[VAL_4:.*]] = fir.emboxproc %[[VAL_3]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
+! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 
 subroutine test4(x)
   use proc_comp_defs, only : t

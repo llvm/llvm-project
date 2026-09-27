@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -206,7 +207,7 @@ private:
   }
 
   void initializeAuxiliaryVariables() {
-    for (BinaryFunction *BF : BC.getSortedFunctions()) {
+    for (BinaryFunction *BF : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*BF))
         continue;
 
@@ -234,7 +235,7 @@ private:
   void buildCallGraph() {
     Callers.resize(TotalNumBlocks);
     Callees.resize(TotalNumBlocks);
-    for (const BinaryFunction *SrcFunction : BC.getSortedFunctions()) {
+    for (const BinaryFunction *SrcFunction : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*SrcFunction))
         continue;
 
@@ -337,7 +338,7 @@ private:
     const BinaryBasicBlock *ThisBB = &(ThisBF->front());
     const size_t ThisGI = GlobalIndices[ThisBB];
 
-    for (const BinaryFunction *DstBF : BC.getSortedFunctions()) {
+    for (const BinaryFunction *DstBF : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*DstBF))
         continue;
 
@@ -386,7 +387,7 @@ private:
   }
 
   /// Compute sum of scores over jumps within \p BlockOrder given \p SplitIndex.
-  /// Increament Score.LocalScore in place by the sum.
+  /// Increment Score.LocalScore in place by the sum.
   void computeJumpScore(const BasicBlockOrder &BlockOrder,
                         const size_t SplitIndex, SplitScore &Score) {
 
@@ -413,7 +414,7 @@ private:
   }
 
   /// Compute sum of scores over calls originated in the current function
-  /// given \p SplitIndex. Increament Score.LocalScore in place by the sum.
+  /// given \p SplitIndex. Increment Score.LocalScore in place by the sum.
   void computeLocalCallScore(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex, SplitScore &Score) {
     if (opts::CallScale == 0)
@@ -455,7 +456,7 @@ private:
   }
 
   /// Compute sum of splitting scores for cover calls of the input function.
-  /// Increament Score.CoverCallScore in place by the sum.
+  /// Increment Score.CoverCallScore in place by the sum.
   void computeCoverCallScore(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex,
                              const std::vector<CallInfo> &CoverCalls,
@@ -467,7 +468,7 @@ private:
       assert(CI.Length >= Score.HotSizeReduction &&
              "Length of cover calls must exceed reduced size of hot fragment.");
       // Compute the new length of the call, which is shorter than the original
-      // one by the size of the splitted fragment minus the total size increase.
+      // one by the size of the split fragment minus the total size increase.
       const size_t NewCallLength = CI.Length - Score.HotSizeReduction;
       Score.CoverCallScore += computeCallScore(CI.Count, NewCallLength);
     }
@@ -502,12 +503,12 @@ private:
 
     // First part of LocalScore is the sum over call edges originated in the
     // input function. These edges can get shorter or longer depending on
-    // SplitIndex. Score.LocalScore is increamented in place.
+    // SplitIndex. Score.LocalScore is incremented in place.
     computeLocalCallScore(BlockOrder, SplitIndex, Score);
 
     // Second part of LocalScore is the sum over jump edges with src basic block
     // and dst basic block in the current function. Score.LocalScore is
-    // increamented in place.
+    // incremented in place.
     computeJumpScore(BlockOrder, SplitIndex, Score);
 
     // Compute CoverCallScore and store in Score in place.
@@ -582,6 +583,29 @@ private:
   }
 };
 
+// std::uniform_int_distribution and std::shuffle are implementation-defined:
+// libstdc++ and libc++ produce different sequences from the same engine and
+// seed. The helpers below provide reproducible alternatives so that random
+// splitting is deterministic across C++ standard library implementations (and
+// therefore across host platforms) for a given --bolt-seed.
+
+// Draw a value uniformly from the inclusive range [Lo, Hi].
+template <typename DiffT, typename GenT>
+static DiffT portableUniform(GenT &Gen, DiffT Lo, DiffT Hi) {
+  assert(Hi >= Lo && "Empty range");
+  const uint64_t Range = static_cast<uint64_t>(Hi - Lo) + 1;
+  const uint64_t Draw = static_cast<uint64_t>(Gen()) - GenT::min();
+  return Lo + static_cast<DiffT>(Draw % Range);
+}
+
+// Fisher-Yates shuffle using portableUniform for index selection.
+template <typename It, typename GenT>
+static void portableShuffle(It First, It Last, GenT &Gen) {
+  using DiffT = typename std::iterator_traits<It>::difference_type;
+  for (DiffT I = (Last - First) - 1; I > 0; --I)
+    std::swap(First[I], First[portableUniform<DiffT>(Gen, 0, I)]);
+}
+
 struct SplitRandom2 final : public SplitStrategy {
   std::minstd_rand0 Gen;
 
@@ -598,8 +622,7 @@ struct SplitRandom2 final : public SplitStrategy {
 
     // We want to split at least one block
     const auto LastSplitPoint = std::max<DiffT>(NumBlocks - 1, 1);
-    std::uniform_int_distribution<DiffT> Dist(1, LastSplitPoint);
-    const DiffT SplitPoint = Dist(Gen);
+    const DiffT SplitPoint = portableUniform<DiffT>(Gen, 1, LastSplitPoint);
     for (BinaryBasicBlock *BB : llvm::make_range(Start + SplitPoint, End))
       BB->setFragmentNum(FragmentNum::cold());
 
@@ -628,16 +651,16 @@ struct SplitRandomN final : public SplitStrategy {
     // We want to generate at least two fragment if possible, but if there is
     // only one block, no splits are possible.
     const auto MinimumSplits = std::min<DiffT>(MaximumSplits, 1);
-    std::uniform_int_distribution<DiffT> Dist(MinimumSplits, MaximumSplits);
     // Choose how many splits to perform
-    const DiffT NumSplits = Dist(Gen);
+    const DiffT NumSplits =
+        portableUniform<DiffT>(Gen, MinimumSplits, MaximumSplits);
 
     // Draw split points from a lottery
     SmallVector<unsigned, 0> Lottery(MaximumSplits);
     // Start lottery at 1, because there is no meaningful splitpoint before the
     // first block.
     std::iota(Lottery.begin(), Lottery.end(), 1u);
-    std::shuffle(Lottery.begin(), Lottery.end(), Gen);
+    portableShuffle(Lottery.begin(), Lottery.end(), Gen);
     Lottery.resize(NumSplits);
     llvm::sort(Lottery);
 

@@ -17,6 +17,10 @@ def main(argv):
                 resource.setrlimit(resource.RLIMIT_AS, limit)
             elif limit_str == "RLIMIT_NOFILE":
                 resource.setrlimit(resource.RLIMIT_NOFILE, limit)
+            elif limit_str == "RLIMIT_STACK":
+                resource.setrlimit(resource.RLIMIT_STACK, limit)
+            elif limit_str == "RLIMIT_FSIZE":
+                resource.setrlimit(resource.RLIMIT_FSIZE, limit)
     process_output = subprocess.run(command_args)
     sys.exit(process_output.returncode)
 

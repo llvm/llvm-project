@@ -128,8 +128,9 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
     for (Value input : op->getOperands())
       operands.push_back(
           vector::ExtractOp::create(rewriter, loc, input, positions));
-    Value scalarOp =
-        Op::create(rewriter, loc, vecType.getElementType(), operands);
+    Value scalarOp = Op::create(
+        rewriter, loc, TypeRange{vecType.getElementType()}, operands,
+        op.getProperties(), op->getDiscardableAttrDictionary().getValue());
     result =
         vector::InsertOp::create(rewriter, loc, scalarOp, result, positions);
   }
@@ -197,7 +198,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -424,7 +425,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -674,7 +675,7 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   // set the insertion point to the start of the function
@@ -812,7 +813,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
 
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
-        .Case<math::CountLeadingZerosOp>([&](math::CountLeadingZerosOp op) {
+        .Case([&](math::CountLeadingZerosOp op) {
           if (!convertCtlz || !isConvertible(op))
             return;
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
@@ -824,7 +825,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           if (entry.second)
             entry.first->second = createCtlzFunc(&module, resultType);
         })
-        .Case<math::IPowIOp>([&](math::IPowIOp op) {
+        .Case([&](math::IPowIOp op) {
           if (!isConvertible(op))
             return;
 
@@ -837,7 +838,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           if (entry.second)
             entry.first->second = createElementIPowIFunc(&module, resultType);
         })
-        .Case<math::FPowIOp>([&](math::FPowIOp op) {
+        .Case([&](math::FPowIOp op) {
           if (!isFPowIConvertible(op))
             return;
 

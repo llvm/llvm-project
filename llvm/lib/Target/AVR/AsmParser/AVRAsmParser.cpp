@@ -19,6 +19,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -78,7 +79,7 @@ class AVRAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   MCRegister toDREG(MCRegister Reg, unsigned From = AVR::sub_lo) {
-    MCRegisterClass const *Class = &AVRMCRegisterClasses[AVR::DREGSRegClassID];
+    MCRegisterClass const *Class = &getAVRMCRegisterClass(AVR::DREGSRegClassID);
     return MRI->getMatchingSuperReg(Reg, From, Class);
   }
 
@@ -91,8 +92,8 @@ class AVRAsmParser : public MCTargetAsmParser {
 
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -252,7 +253,7 @@ public:
       O << "Token: \"" << getToken() << "\"";
       break;
     case k_Register:
-      O << "Register: " << getReg();
+      O << "Register: " << getReg().id();
       break;
     case k_Immediate:
       O << "Immediate: \"";
@@ -262,7 +263,7 @@ public:
     case k_Memri: {
       // only manually print the size for non-negative values,
       // as the sign is inserted automatically.
-      O << "Memri: \"" << getReg() << '+';
+      O << "Memri: \"" << getReg().id() << '+';
       MAI.printExpr(O, *getImm());
       O << "\"";
       break;

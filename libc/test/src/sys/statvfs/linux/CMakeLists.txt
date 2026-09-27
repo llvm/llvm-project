@@ -1,12 +1,13 @@
 add_custom_target(libc_sys_statvfs_unittests)
 
-add_libc_unittest(
+add_libc_test(
   statvfs_test
   SUITE
     libc_sys_statvfs_unittests
   SRCS
     statvfs_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.sys.statvfs.statvfs
     libc.src.sys.stat.mkdirat
@@ -15,13 +16,14 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   fstatvfs_test
   SUITE
     libc_sys_statvfs_unittests
   SRCS
     fstatvfs_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.stat.mkdirat

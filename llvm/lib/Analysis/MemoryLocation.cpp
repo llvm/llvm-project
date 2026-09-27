@@ -245,7 +245,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       assert(ArgIdx == 0 && "Invalid argument index");
 
       auto *Ty = cast<VectorType>(II->getType());
-      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(1), Ty))
         return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
       return MemoryLocation(
@@ -255,7 +255,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       assert(ArgIdx == 1 && "Invalid argument index");
 
       auto *Ty = cast<VectorType>(II->getArgOperand(0)->getType());
-      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(3), Ty))
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
         return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
       return MemoryLocation(
@@ -288,6 +288,34 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                             LocationSize::precise(DL.getTypeStoreSize(
                                 II->getArgOperand(1)->getType())),
                             AATags);
+    case Intrinsic::matrix_column_major_load:
+    case Intrinsic::matrix_column_major_store: {
+      bool IsLoad = II->getIntrinsicID() == Intrinsic::matrix_column_major_load;
+      assert(ArgIdx == (IsLoad ? 0 : 1) && "Invalid argument index");
+
+      auto *Stride = dyn_cast<ConstantInt>(II->getArgOperand(IsLoad ? 1 : 2));
+      uint64_t Rows =
+          cast<ConstantInt>(II->getArgOperand(IsLoad ? 3 : 4))->getZExtValue();
+      uint64_t Cols =
+          cast<ConstantInt>(II->getArgOperand(IsLoad ? 4 : 5))->getZExtValue();
+
+      // The stride is dynamic, so there's nothing we can say.
+      if (!Stride)
+        return MemoryLocation(Arg, LocationSize::afterPointer(), AATags);
+
+      uint64_t ConstStride = Stride->getZExtValue();
+      auto *VT = cast<VectorType>(IsLoad ? II->getType()
+                                         : II->getArgOperand(0)->getType());
+      assert(Cols != 0 && "Matrix cannot have 0 columns");
+      TypeSize Size = DL.getTypeAllocSize(VT->getScalarType()) *
+                      (ConstStride * (Cols - 1) + Rows);
+
+      // In the unstrided case, we have a precise size, ...
+      if (ConstStride == Rows)
+        return MemoryLocation(Arg, LocationSize::precise(Size), AATags);
+      // otherwise we merely obtain an upper bound.
+      return MemoryLocation(Arg, LocationSize::upperBound(Size), AATags);
+    }
     }
 
     assert(
@@ -299,8 +327,8 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
   // for memcpy/memset.  This is particularly important because the
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.
-  LibFunc F;
-  if (TLI && TLI->getLibFunc(*Call, F) && TLI->has(F)) {
+  LibFunc F = TLI ? TLI->getLibFunc(*Call) : NotLibFunc;
+  if (F != NotLibFunc && TLI->has(F)) {
     switch (F) {
     case LibFunc_strcpy:
     case LibFunc_strcat:

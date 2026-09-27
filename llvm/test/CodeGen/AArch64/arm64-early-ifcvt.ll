@@ -421,3 +421,83 @@ for.body51:                                       ; preds = %is_sbox.exit155
   unreachable
 }
 declare fastcc void @get_switch_type(i32, i32, i16 signext, i16 signext, ptr nocapture) nounwind ssp
+
+; CHECK-LABEL: fold_imm1_csinc_32:
+; CHECK:      cmp w0, w1
+; CHECK-NEXT: csinc w0, w2, wzr, ge
+; CHECK-NEXT: ret
+define i32 @fold_imm1_csinc_32(i32 %x, i32 %y, i32 %n) nounwind ssp {
+entry:
+  %cmp = icmp slt i32 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i32 [ 1, %if.then ], [ %n, %if.else ]
+  ret i32 %result
+}
+
+; CHECK-LABEL: fold_imm1_csinc_64:
+; CHECK:      cmp x0, x1
+; CHECK-NEXT: csinc x0, x2, xzr, ge
+; CHECK-NEXT: ret
+define i64 @fold_imm1_csinc_64(i64 %x, i64 %y, i64 %n) nounwind ssp {
+entry:
+  %cmp = icmp slt i64 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i64 [ 1, %if.then ], [ %n, %if.else ]
+  ret i64 %result
+}
+
+; CHECK-LABEL: fold_imm1_cset_32:
+; CHECK:      cmp w0, w1
+; CHECK-NEXT: cset w0, lt
+; CHECK-NEXT: ret
+define i32 @fold_imm1_cset_32(i32 %x, i32 %y) nounwind ssp {
+entry:
+  %cmp = icmp slt i32 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i32 [ 1, %if.then ], [ 0, %if.else ]
+  ret i32 %result
+}
+
+; CHECK-LABEL: fold_imm1_cset_64:
+; CHECK:      cmp x0, x1
+; CHECK-NEXT: cset x0, lt
+; CHECK-NEXT: ret
+define i64 @fold_imm1_cset_64(i64 %x, i64 %y) nounwind ssp {
+entry:
+  %cmp = icmp slt i64 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i64 [ 1, %if.then ], [ 0, %if.else ]
+  ret i64 %result
+}

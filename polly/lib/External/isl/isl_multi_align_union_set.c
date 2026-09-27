@@ -1,7 +1,8 @@
-#define ALIGN_DOMBASE union_set
-#define ALIGN_DOM isl_union_set
+#undef SUFFIX
+#define SUFFIX	union_set
+#undef ARG1
+#define ARG1	MULTI(BASE)
+#undef ARG2
+#define ARG2	isl_union_set
 
-#include <isl_multi_align_templ.c>
-
-#undef ALIGN_DOMBASE
-#undef ALIGN_DOM
+#include "isl_align_params_templ.c"

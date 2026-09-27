@@ -14,15 +14,18 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/DenseMap.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "clang/Sema/ScopeInfo.h"
 #include <memory>
 
 namespace clang {
 
+class AnalysisDeclContext;
 class Decl;
 class FunctionDecl;
 class QualType;
 class Sema;
+class VarDecl;
 namespace sema {
   class FunctionScopeInfo;
   class SemaPPCallbacks;
@@ -57,9 +60,15 @@ private:
 
   enum VisitFlag { NotVisited = 0, Visited = 1, Pending = 2 };
   llvm::DenseMap<const FunctionDecl*, VisitFlag> VisitedFD;
+  std::multimap<VarDecl *, PossiblyUnreachableDiag>
+      VarDeclPossiblyUnreachableDiags;
 
   Policy PolicyOverrides;
   void clearOverrides();
+
+  /// Caches results for getPolicyInEffectAt().
+  /// Flushed whenever a diagnostic pragma changes severities.
+  llvm::DenseMap<const void *, Policy> PolicyCache[4];
 
   /// \name Statistics
   /// @{
@@ -95,6 +104,11 @@ private:
   /// a single function.
   unsigned MaxUninitAnalysisBlockVisitsPerFunction;
 
+  /// Statistics collected during lifetime safety analysis.
+  /// These are accumulated across all analyzed functions and printed
+  /// when -print-stats is enabled.
+  clang::lifetimes::LifetimeSafetyStats LSStats;
+
   /// @}
 
 public:
@@ -107,6 +121,15 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
+  // Run analysis-based warnings on an implicitly-defined function body (e.g. a
+  // defaulted/implicit default constructor). Such functions never reach the
+  // normal IssueWarnings path.
+  void IssueWarningsForImplicitFunction(const Decl *D);
+
+  void registerVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
+
+  void issueWarningsForRegisteredVarDecl(VarDecl *VD);
+
   // Gets the default policy which is in effect at the given source location.
   Policy getPolicyInEffectAt(SourceLocation Loc);
 
@@ -114,6 +137,9 @@ public:
   // diagnostic handling. If a caller sets any of these policies to true, that
   // will override the policy used to issue warnings.
   Policy &getPolicyOverrides() { return PolicyOverrides; }
+
+  /// Drop cached getPolicyInEffectAt() results (diagnostic state changed).
+  void clearPolicyCache();
 
   void PrintStats() const;
 };

@@ -851,7 +851,7 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32-LABEL: name: caller_large_scalars
   ; ILP32: bb.1 (%ir-block.0):
   ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 1
-  ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
@@ -868,7 +868,7 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32F-LABEL: name: caller_large_scalars
   ; ILP32F: bb.1 (%ir-block.0):
   ; ILP32F-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 1
-  ; ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32F-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
@@ -885,7 +885,7 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32D-LABEL: name: caller_large_scalars
   ; ILP32D: bb.1 (%ir-block.0):
   ; ILP32D-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 1
-  ; ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32D-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
@@ -947,7 +947,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
   ; ILP32-NEXT:   [[C7:%[0-9]+]]:_(s128) = G_CONSTANT i128 8
   ; ILP32-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
-  ; ILP32-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; ILP32-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32-NEXT:   G_STORE [[C7]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
@@ -985,7 +985,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32F-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
   ; ILP32F-NEXT:   [[C7:%[0-9]+]]:_(s128) = G_CONSTANT i128 8
   ; ILP32F-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
-  ; ILP32F-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; ILP32F-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32F-NEXT:   G_STORE [[C7]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
@@ -1023,7 +1023,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32D-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
   ; ILP32D-NEXT:   [[C7:%[0-9]+]]:_(s128) = G_CONSTANT i128 8
   ; ILP32D-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
-  ; ILP32D-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; ILP32D-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
   ; ILP32D-NEXT:   G_STORE [[C7]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
@@ -1246,7 +1246,7 @@ define fp128 @callee_large_scalar_ret() nounwind {
   ; RV32I-NEXT:   liveins: $x10
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 0xL00000000000000007FFF000000000000
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; RV32I-NEXT:   G_STORE [[C]](s128), [[COPY]](p0) :: (store (s128))
   ; RV32I-NEXT:   PseudoRET
   ret fp128 0xL00000000000000007FFF000000000000

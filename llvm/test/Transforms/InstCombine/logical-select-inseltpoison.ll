@@ -67,11 +67,8 @@ define i32 @poo(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_preds(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[C:%.*]], i32 0
-; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2_NOT]], i32 0, i32 [[D:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP2_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp1 = icmp slt i32 %a, %b
@@ -86,11 +83,8 @@ define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_preds_reverse(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 0, i32 [[C:%.*]]
-; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2_NOT]], i32 [[D:%.*]], i32 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP2_NOT]], i32 [[D:%.*]], i32 [[C:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp1 = icmp slt i32 %a, %b
@@ -106,10 +100,7 @@ define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
 define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_fcmp_preds(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[C:%.*]], i32 0
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uge float [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 [[D:%.*]], i32 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp1 = fcmp olt float %a, %b
@@ -124,11 +115,8 @@ define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
 
 define <2 x i32> @fold_inverted_icmp_vector_preds(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_vector_preds(
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL1:%.*]] = select <2 x i1> [[CMP1_NOT]], <2 x i32> zeroinitializer, <2 x i32> [[C:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP2]], <2 x i32> [[D:%.*]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[CMP2]], <2 x i32> [[D:%.*]], <2 x i32> [[C:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[OR]]
 ;
   %cmp1 = icmp ne <2 x i32> %a, %b
@@ -408,11 +396,8 @@ define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_multi_uses1_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses1_logical(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[NOT]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], [[AND1]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[NOT:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND1]]
 ;
   %not = xor i1 %c, -1
   %and1 = select i1 %not, i1 %a, i1 false
@@ -582,11 +567,8 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
 
 define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 ; CHECK-LABEL: @allSignBits(
-; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt i32 [[COND:%.*]], 0
-; CHECK-NEXT:    [[A1:%.*]] = select i1 [[ISNEG1]], i32 [[TVAL:%.*]], i32 0
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[COND]], 0
-; CHECK-NEXT:    [[A2:%.*]] = select i1 [[ISNEG]], i32 0, i32 [[FVAL:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A1]], [[A2]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[COND:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISNEG]], i32 [[TVAL:%.*]], i32 [[FVAL:%.*]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %bitmask = ashr i32 %cond, 31
@@ -599,11 +581,8 @@ define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 
 define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
 ; CHECK-LABEL: @allSignBits_vec(
-; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
-; CHECK-NEXT:    [[A1:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i8> [[TVAL:%.*]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i8> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[A2:%.*]] = select <4 x i1> [[ISNEG]], <4 x i8> zeroinitializer, <4 x i8> [[FVAL:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = or <4 x i8> [[A2]], [[A1]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[ISNEG]], <4 x i8> [[TVAL:%.*]], <4 x i8> [[FVAL:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[SEL]]
 ;
   %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
@@ -640,14 +619,12 @@ define <2 x i64> @fp_bitcast(<4 x i1> %cmp, <2 x double> %a, <2 x double> %b) {
 define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; CHECK-LABEL: @computesignbits_through_shuffles(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <4 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
-; CHECK-NEXT:    [[SHUF_OR1:%.*]] = or <4 x i32> [[S1]], [[S2]]
-; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
-; CHECK-NEXT:    [[SHUF_OR2:%.*]] = or <4 x i32> [[S3]], [[S4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw <4 x i32> [[SHUF_OR2]] to <4 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i1> [[S3]], [[S4]]
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = bitcast <4 x float> [[SEL_V]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]

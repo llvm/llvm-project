@@ -13,11 +13,11 @@ target triple = "thumbv7-apple-ios3.0.0"
 ;SWIFT: load <4 x i32>
 ;SWIFT: load <4 x i32>
 ;SWIFT: ret
-define i32 @foo(ptr nocapture %A, i32 %n) nounwind readonly ssp {
+define i32 @foo(ptr nocapture %A, i32 %n) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
-.lr.ph:                                           ; preds = %0, %.lr.ph
+.lr.ph:
   %i.02 = phi i32 [ %5, %.lr.ph ], [ 0, %0 ]
   %sum.01 = phi i32 [ %4, %.lr.ph ], [ 0, %0 ]
   %2 = getelementptr inbounds i32, ptr %A, i32 %i.02
@@ -27,7 +27,7 @@ define i32 @foo(ptr nocapture %A, i32 %n) nounwind readonly ssp {
   %exitcond = icmp eq i32 %5, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %sum.0.lcssa = phi i32 [ 0, %0 ], [ %4, %.lr.ph ]
   ret i32 %sum.0.lcssa
 }
@@ -60,7 +60,7 @@ define i32 @register_limit(ptr nocapture %A, i32 %n) {
   %exitcond = icmp eq i32 %5, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
 
-._crit_edge:                                      ; preds = %.lr.ph, %0
+._crit_edge:
   %sum.0.lcssa = phi i32 [ 0, %0 ], [ %4, %.lr.ph ]
   %sum.1.lcssa = phi i32 [ 0, %0 ], [ %6, %.lr.ph ]
   %sum.2.lcssa = phi i32 [ 0, %0 ], [ %7, %.lr.ph ]

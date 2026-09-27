@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fdim.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fdim.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, fdim, (double x, double y)) {
-  return fputil::fdim(x, y);
+  return math::fdim(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

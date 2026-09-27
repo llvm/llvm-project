@@ -19,7 +19,7 @@
 namespace llvm {
 
 class DXILPostOptimizationValidation
-    : public PassInfoMixin<DXILPostOptimizationValidation> {
+    : public OptionalPassInfoMixin<DXILPostOptimizationValidation> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

@@ -11,7 +11,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include <optional>
 
 using namespace mlir;
@@ -25,10 +24,10 @@ static bool isPotentiallyUnknownSymbolTable(Operation *op) {
 /// Returns the string name of the given symbol, or null if this is not a
 /// symbol.
 static StringAttr getNameIfSymbol(Operation *op) {
-  return op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-}
-static StringAttr getNameIfSymbol(Operation *op, StringAttr symbolAttrNameId) {
-  return op->getAttrOfType<StringAttr>(symbolAttrNameId);
+  auto symbol = dyn_cast<SymbolOpInterface>(op);
+  if (!symbol)
+    return {};
+  return symbol.getNameAttr();
 }
 
 /// Computes the nested symbol reference attribute for the symbol 'symbolName'
@@ -40,7 +39,6 @@ collectValidReferencesFor(Operation *symbol, StringAttr symbolName,
                           Operation *within,
                           SmallVectorImpl<SymbolRefAttr> &results) {
   assert(within->isAncestor(symbol) && "expected 'within' to be an ancestor");
-  MLIRContext *ctx = symbol->getContext();
 
   auto leafRef = FlatSymbolRefAttr::get(symbolName);
   results.push_back(leafRef);
@@ -52,14 +50,12 @@ collectValidReferencesFor(Operation *symbol, StringAttr symbolName,
 
   // Collect references until 'symbolTableOp' reaches 'within'.
   SmallVector<FlatSymbolRefAttr, 1> nestedRefs(1, leafRef);
-  StringAttr symbolNameId =
-      StringAttr::get(ctx, SymbolTable::getSymbolAttrName());
   do {
     // Each parent of 'symbol' should define a symbol table.
     if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
     // Each parent of 'symbol' should also be a symbol.
-    StringAttr symbolTableName = getNameIfSymbol(symbolTableOp, symbolNameId);
+    StringAttr symbolTableName = getNameIfSymbol(symbolTableOp);
     if (!symbolTableName)
       return failure();
     results.push_back(SymbolRefAttr::get(symbolTableName, nestedRefs));
@@ -123,17 +119,18 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
   assert(symbolTableOp->getRegion(0).hasOneBlock() &&
          "expected operation to have a single block");
 
-  StringAttr symbolNameId = StringAttr::get(symbolTableOp->getContext(),
-                                            SymbolTable::getSymbolAttrName());
   for (auto &op : symbolTableOp->getRegion(0).front()) {
-    StringAttr name = getNameIfSymbol(&op, symbolNameId);
+    StringAttr name = getNameIfSymbol(&op);
     if (!name)
       continue;
 
-    auto inserted = symbolTable.insert({name, &op});
-    (void)inserted;
-    assert(inserted.second &&
-           "expected region to contain uniquely named symbol operations");
+    // Silently skip duplicate symbol names. Duplicate symbols are an
+    // invalid IR condition diagnosed by the SymbolTable trait's
+    // verifyRegionTrait. The constructor may be called before verification
+    // completes (e.g., when IsolatedFromAbove ops look up symbols in an
+    // ancestor symbol table during verification), so an assert here would
+    // crash instead of producing a proper diagnostic.
+    symbolTable.try_emplace(name, &op);
   }
 }
 
@@ -289,46 +286,29 @@ SymbolTable::renameToUnique(Operation *op, ArrayRef<SymbolTable *> others) {
 
 /// Returns the name of the given symbol operation.
 StringAttr SymbolTable::getSymbolName(Operation *symbol) {
-  StringAttr name = getNameIfSymbol(symbol);
+  auto symbolOp = cast<SymbolOpInterface>(symbol);
+  StringAttr name = symbolOp.getNameAttr();
   assert(name && "expected valid symbol name");
   return name;
 }
 
 /// Sets the name of the given symbol operation.
 void SymbolTable::setSymbolName(Operation *symbol, StringAttr name) {
-  symbol->setAttr(getSymbolAttrName(), name);
+  auto symbolOp = cast<SymbolOpInterface>(symbol);
+  symbolOp.setSymbolName(name);
 }
 
 /// Returns the visibility of the given symbol operation.
 SymbolTable::Visibility SymbolTable::getSymbolVisibility(Operation *symbol) {
-  // If the attribute doesn't exist, assume public.
-  StringAttr vis = symbol->getAttrOfType<StringAttr>(getVisibilityAttrName());
-  if (!vis)
-    return Visibility::Public;
-
-  // Otherwise, switch on the string value.
-  return StringSwitch<Visibility>(vis.getValue())
-      .Case("private", Visibility::Private)
-      .Case("nested", Visibility::Nested)
-      .Case("public", Visibility::Public);
+  auto symbolOp = dyn_cast<SymbolOpInterface>(symbol);
+  assert(symbolOp && "expected valid symbol operation");
+  return symbolOp.getVisibility();
 }
 /// Sets the visibility of the given symbol operation.
 void SymbolTable::setSymbolVisibility(Operation *symbol, Visibility vis) {
-  MLIRContext *ctx = symbol->getContext();
-
-  // If the visibility is public, just drop the attribute as this is the
-  // default.
-  if (vis == Visibility::Public) {
-    symbol->removeAttr(StringAttr::get(ctx, getVisibilityAttrName()));
-    return;
-  }
-
-  // Otherwise, update the attribute.
-  assert((vis == Visibility::Private || vis == Visibility::Nested) &&
-         "unknown symbol visibility kind");
-
-  StringRef visName = vis == Visibility::Private ? "private" : "nested";
-  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(ctx, visName));
+  auto symbolOp = dyn_cast<SymbolOpInterface>(symbol);
+  assert(symbolOp && "expected valid symbol operation");
+  symbolOp.setVisibility(vis);
 }
 
 /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -389,10 +369,8 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
     return nullptr;
 
   // Look for a symbol with the given name.
-  StringAttr symbolNameId = StringAttr::get(symbolTableOp->getContext(),
-                                            SymbolTable::getSymbolAttrName());
   for (auto &op : region.front())
-    if (getNameIfSymbol(&op, symbolNameId) == symbol)
+    if (getNameIfSymbol(&op) == symbol)
       return &op;
   return nullptr;
 }
@@ -413,30 +391,26 @@ static LogicalResult lookupSymbolInImpl(
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Lookup the root reference for this symbol.
-  symbolTableOp = lookupSymbolFn(symbolTableOp, symbol.getRootReference());
-  if (!symbolTableOp)
+  auto *symbolOp = lookupSymbolFn(symbolTableOp, symbol.getRootReference());
+  if (!symbolOp)
     return failure();
-  symbols.push_back(symbolTableOp);
+  symbols.push_back(symbolOp);
 
-  // If there are no nested references, just return the root symbol directly.
-  ArrayRef<FlatSymbolRefAttr> nestedRefs = symbol.getNestedReferences();
-  if (nestedRefs.empty())
-    return success();
-
-  // Verify that the root is also a symbol table.
-  if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>())
-    return failure();
-
-  // Otherwise, lookup each of the nested non-leaf references and ensure that
-  // each corresponds to a valid symbol table.
-  for (FlatSymbolRefAttr ref : nestedRefs.drop_back()) {
-    symbolTableOp = lookupSymbolFn(symbolTableOp, ref.getAttr());
-    if (!symbolTableOp || !symbolTableOp->hasTrait<OpTrait::SymbolTable>())
+  // Lookup each of the nested references.
+  for (FlatSymbolRefAttr ref : symbol.getNestedReferences()) {
+    // Check that we have a valid symbol table to lookup ref.
+    if (!symbolOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
-    symbols.push_back(symbolTableOp);
+    symbolOp = lookupSymbolFn(symbolOp, ref.getAttr());
+    if (!symbolOp)
+      return failure();
+    // If the nested symbol is private, lookup failed.
+    auto nestedSymbol = dyn_cast<SymbolOpInterface>(symbolOp);
+    if (nestedSymbol && nestedSymbol.isPrivate())
+      return failure();
+    symbols.push_back(symbolOp);
   }
-  symbols.push_back(lookupSymbolFn(symbolTableOp, symbol.getLeafReference()));
-  return success(symbols.back());
+  return success();
 }
 
 LogicalResult
@@ -492,8 +466,7 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
   for (auto &block : op->getRegion(0)) {
     for (auto &op : block) {
       // Check for a symbol name attribute.
-      auto nameAttr =
-          op.getAttrOfType<StringAttr>(mlir::SymbolTable::getSymbolAttrName());
+      StringAttr nameAttr = getNameIfSymbol(&op);
       if (!nameAttr)
         continue;
 
@@ -511,7 +484,14 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
   SymbolTableCollection symbolTable;
   auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
-      return WalkResult(user.verifySymbolUses(symbolTable));
+      if (failed(user.verifySymbolUses(symbolTable)))
+        return WalkResult::interrupt();
+    for (auto &attr : op->getDiscardableAttrDictionary().getValue()) {
+      if (auto user = dyn_cast<SymbolUserAttrInterface>(attr.getValue())) {
+        if (failed(user.verifySymbolUses(op, symbolTable)))
+          return WalkResult::interrupt();
+      }
+    }
     return WalkResult::advance();
   };
 
@@ -522,17 +502,18 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
 
 LogicalResult detail::verifySymbol(Operation *op) {
   // Verify the name attribute.
-  if (!op->getAttrOfType<StringAttr>(mlir::SymbolTable::getSymbolAttrName()))
-    return op->emitOpError() << "requires string attribute '"
-                             << mlir::SymbolTable::getSymbolAttrName() << "'";
+  if (!cast<SymbolOpInterface>(op).getNameAttr())
+    return op->emitOpError("requires a symbol name");
 
   // Verify the visibility attribute.
-  if (Attribute vis = op->getAttr(mlir::SymbolTable::getVisibilityAttrName())) {
+  StringRef visAttrName =
+      mlir::SymbolOpInterface::getDefaultVisibilityAttrName();
+  if (Attribute vis = op->getInherentAttr(visAttrName).value_or(Attribute{})) {
     StringAttr visStrAttr = llvm::dyn_cast<StringAttr>(vis);
     if (!visStrAttr)
-      return op->emitOpError() << "requires visibility attribute '"
-                               << mlir::SymbolTable::getVisibilityAttrName()
-                               << "' to be a string attribute, but got " << vis;
+      return op->emitOpError()
+             << "requires visibility attribute '" << visAttrName
+             << "' to be a string attribute, but got " << vis;
 
     if (!llvm::is_contained(ArrayRef<StringRef>{"public", "private", "nested"},
                             visStrAttr.getValue()))
@@ -554,14 +535,23 @@ LogicalResult detail::verifySymbol(Operation *op) {
 static WalkResult
 walkSymbolRefs(Operation *op,
                function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
-  return op->getAttrDictionary().walk<WalkOrder::PreOrder>(
-      [&](SymbolRefAttr symbolRef) {
-        if (callback({op, symbolRef}).wasInterrupted())
-          return WalkResult::interrupt();
+  bool interrupted = false;
+  auto walk = [&](Attribute attr) {
+    if (interrupted)
+      return;
+    interrupted = attr.walk<WalkOrder::PreOrder>([&](SymbolRefAttr symbolRef) {
+                        if (callback({op, symbolRef}).wasInterrupted())
+                          return WalkResult::interrupt();
 
-        // Don't walk nested references.
-        return WalkResult::skip();
-      });
+                        // Don't walk nested references.
+                        return WalkResult::skip();
+                      })
+                      .wasInterrupted();
+  };
+  walk(op->getRawDictionaryAttrs());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef, Attribute &attr) { walk(attr); });
+  return interrupted ? WalkResult::interrupt() : WalkResult::advance();
 }
 
 /// Walk all of the uses, for any symbol, that are nested within the given
@@ -1122,7 +1112,7 @@ ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
 
   StringAttr visibilityAttr = parser.getBuilder().getStringAttr(visibility);
   attrs.push_back(parser.getBuilder().getNamedAttr(
-      SymbolTable::getVisibilityAttrName(), visibilityAttr));
+      SymbolOpInterface::getDefaultVisibilityAttrName(), visibilityAttr));
   return success();
 }
 
@@ -1132,3 +1122,4 @@ ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.cpp.inc"
+#include "mlir/IR/SymbolInterfacesAttrInterface.cpp.inc"

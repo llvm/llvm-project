@@ -20,12 +20,12 @@ namespace llvm {
 
 class BPFMCAsmInfo : public MCAsmInfoELF {
 public:
-  explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
+  explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+      : MCAsmInfoELF(Options) {
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
 
-    PrivateGlobalPrefix = ".L";
-    PrivateLabelPrefix = "L";
+    InternalSymbolPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;

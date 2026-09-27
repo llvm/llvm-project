@@ -16,10 +16,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::abseil {
 
 void DurationComparisonCheck::registerMatchers(MatchFinder *Finder) {
-  auto Matcher = expr(comparisonOperatorWithCallee(functionDecl(
-                          functionDecl(DurationConversionFunction())
-                              .bind("function_decl"))))
-                     .bind("binop");
+  const auto Matcher = expr(comparisonOperatorWithCallee(functionDecl(
+                                functionDecl(durationConversionFunction())
+                                    .bind("function_decl"))))
+                           .bind("binop");
 
   Finder->addMatcher(Matcher, this);
 }
@@ -38,9 +38,9 @@ void DurationComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   // if nothing needs to be done.
   if (isInMacro(Result, Binop->getLHS()) || isInMacro(Result, Binop->getRHS()))
     return;
-  std::string LhsReplacement =
+  const std::string LhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getLHS());
-  std::string RhsReplacement =
+  const std::string RhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS());
 
   diag(Binop->getBeginLoc(), "perform comparison in the duration domain")

@@ -8,11 +8,11 @@
 define <16 x double> @backpropagation_iterations(ptr %A.Ptr, ptr %B.Ptr) {
 ; CHECK-LABEL: @backpropagation_iterations(
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <4 x double>, ptr [[A_PTR:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A_PTR]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <4 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A_PTR]], i64 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <4 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr double, ptr [[A_PTR]], i64 12
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 12
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <4 x double>, ptr [[VEC_GEP4]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x double> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[TMP1]], i64 0
@@ -47,11 +47,11 @@ define <16 x double> @backpropagation_iterations(ptr %A.Ptr, ptr %B.Ptr) {
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x double> [[COL_LOAD5]], i64 3
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x double> [[TMP30]], double [[TMP31]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <4 x double>, ptr [[B_PTR:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[B_PTR]], i64 4
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <4 x double>, ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP9:%.*]] = getelementptr double, ptr [[B_PTR]], i64 8
+; CHECK-NEXT:    [[VEC_GEP9:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <4 x double>, ptr [[VEC_GEP9]], align 8
-; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr double, ptr [[B_PTR]], i64 12
+; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr inbounds double, ptr [[B_PTR]], i64 12
 ; CHECK-NEXT:    [[COL_LOAD12:%.*]] = load <4 x double>, ptr [[VEC_GEP11]], align 8
 ; CHECK-NEXT:    [[TMP33:%.*]] = fmul <4 x double> [[COL_LOAD]], [[COL_LOAD6]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = fmul <4 x double> [[COL_LOAD1]], [[COL_LOAD8]]

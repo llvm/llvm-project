@@ -31,7 +31,6 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:         %[[VAL_0:.*]] = alloca { ptr, ptr }, align 8
 // CHECK:         br label %[[VAL_1:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_2:.*]]
-// CHECK:         %[[VAL_3:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         br label %[[VAL_4:.*]]
 // CHECK:       omp_parallel:                                     ; preds = %[[VAL_1]]
 // CHECK:         %[[VAL_5:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_0]], i32 0, i32 0
@@ -108,6 +107,8 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:       reduce.finalize:                                  ; preds = %[[VAL_49]], %[[VAL_43]]
 // CHECK:         br label %[[VAL_53:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_48]]
+// CHECK:         br label %[[FINI:.*]]
+// CHECK:       .fini:
 // CHECK:         %[[VAL_54:.*]] = load ptr, ptr %[[VAL_20]], align 8
 // CHECK:         %[[VAL_55:.*]] = load ptr, ptr %[[VAL_21]], align 8
 // CHECK:         br label %[[VAL_56:.*]]
@@ -115,5 +116,5 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:         br label %[[VAL_38]]
 // CHECK:       omp.reduction.neutral1:                           ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_30]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_53]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[FINI]]
 // CHECK:         ret void

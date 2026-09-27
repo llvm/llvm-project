@@ -37,7 +37,7 @@ public:
   X86InstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : InstrPostProcess(STI, MCII) {}
 
-  ~X86InstrPostProcess() = default;
+  ~X86InstrPostProcess() override = default;
 
   void postProcessInstruction(Instruction &Inst, const MCInst &MCI) override;
 };

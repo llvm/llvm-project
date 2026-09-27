@@ -39,10 +39,10 @@ func.func @missing_generator(%tc : i32, %ts : i32) {
 func.func @insufficient_sizes(%tc : i32, %ts : i32) {
   %canonloop1 = omp.new_cli
   %canonloop2 = omp.new_cli
-  omp.canonical_loop(%canonloop1) %iv : i32 in range(%tc) {
-    omp.terminator
-  }
-  omp.canonical_loop(%canonloop2) %iv : i32 in range(%tc) {
+  omp.canonical_loop(%canonloop1) %iv1 : i32 in range(%tc) {
+    omp.canonical_loop(%canonloop2) %iv2 : i32 in range(%tc) {
+      omp.terminator
+    }
     omp.terminator
   }
 
@@ -79,6 +79,24 @@ func.func @insufficient_generatees(%tc : i32, %ts : i32) {
   omp.tile (%grid) <- (%canonloop) sizes(%ts : i32)
 
   return
+}
+
+// -----
+
+func.func @not_nested(%tc : i32, %ts : i32) {
+  %canonloop1 = omp.new_cli
+  %canonloop2 = omp.new_cli
+  omp.canonical_loop(%canonloop1) %iv1 : i32 in range(%tc) {
+    omp.terminator
+  }
+  omp.canonical_loop(%canonloop2) %iv2 : i32 in range(%tc) {
+    omp.terminator
+  }
+
+  // expected-error@+1 {{'omp.tile' op tiled loop nest must be nested within each other}}
+  omp.tile <-(%canonloop1, %canonloop2) sizes(%ts, %ts : i32, i32)
+
+  llvm.return
 }
 
 // -----

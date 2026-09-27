@@ -89,7 +89,8 @@ private:
     // outlining candidate.
     for (auto &MI : make_range(MBB->rbegin(),
                                (MachineBasicBlock::reverse_iterator)begin()))
-      FromEndOfBlockToStartOfSeq.stepBackward(MI);
+      if (!MI.isDebugInstr())
+        FromEndOfBlockToStartOfSeq.stepBackward(MI);
   }
 
   /// Populate InSeq with liveness information.
@@ -102,7 +103,8 @@ private:
     InSeqWasSet = true;
     InSeq.init(TRI);
     for (auto &MI : *this)
-      InSeq.accumulate(MI);
+      if (!MI.isDebugInstr())
+        InSeq.accumulate(MI);
   }
 
 public:
@@ -306,7 +308,7 @@ struct GlobalOutlinedFunction : public OutlinedFunction {
   }
 
   GlobalOutlinedFunction() = delete;
-  ~GlobalOutlinedFunction() = default;
+  ~GlobalOutlinedFunction() override = default;
 };
 
 } // namespace outliner

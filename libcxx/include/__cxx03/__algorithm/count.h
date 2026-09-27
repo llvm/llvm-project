@@ -54,18 +54,18 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
-    __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-    __r                    = std::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
+    __storage_type __m     = (__storage_type(~0) << __first.__ctz_) & (__storage_type(~0) >> (__clz_f - __dn));
+    __r                    = std::__libcpp_popcount<__storage_type>(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
     __n -= __dn;
     ++__first.__seg_;
   }
   // do middle whole words
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-    __r += std::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_));
+    __r += std::__libcpp_popcount<__storage_type>(std::__invert_if<!_ToCount>(*__first.__seg_));
   // do last partial word
   if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __r += std::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
+    __storage_type __m = __storage_type(~0) >> (__bits_per_word - __n);
+    __r += std::__libcpp_popcount<__storage_type>(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
   }
   return __r;
 }

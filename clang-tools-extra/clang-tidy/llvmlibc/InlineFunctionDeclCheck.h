@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_INLINEFUNCTIONDECLCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../FileExtensionsSet.h"
 
 namespace clang::tidy::llvm_libc {
 
@@ -37,9 +36,6 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-
-private:
-  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::llvm_libc

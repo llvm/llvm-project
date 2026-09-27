@@ -172,7 +172,7 @@ void ExpandPseudo::expandLoadCCond(MachineBasicBlock &MBB, Iter I) {
   Register VR = MRI.createVirtualRegister(RC);
   Register Dst = I->getOperand(0).getReg(), FI = I->getOperand(1).getIndex();
 
-  TII.loadRegFromStack(MBB, I, VR, FI, RC, &RegInfo, 0);
+  TII.loadRegFromStack(MBB, I, VR, FI, RC, 0);
   BuildMI(MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), Dst)
     .addReg(VR, RegState::Kill);
 }
@@ -189,7 +189,7 @@ void ExpandPseudo::expandStoreCCond(MachineBasicBlock &MBB, Iter I) {
 
   BuildMI(MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), VR)
     .addReg(Src, getKillRegState(I->getOperand(0).isKill()));
-  TII.storeRegToStack(MBB, I, VR, true, FI, RC, &RegInfo, 0);
+  TII.storeRegToStack(MBB, I, VR, true, FI, RC, 0);
 }
 
 void ExpandPseudo::expandLoadACC(MachineBasicBlock &MBB, Iter I,
@@ -210,9 +210,9 @@ void ExpandPseudo::expandLoadACC(MachineBasicBlock &MBB, Iter I,
   DebugLoc DL = I->getDebugLoc();
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
 
-  TII.loadRegFromStack(MBB, I, VR0, FI, RC, &RegInfo, 0);
+  TII.loadRegFromStack(MBB, I, VR0, FI, RC, 0);
   BuildMI(MBB, I, DL, Desc, Lo).addReg(VR0, RegState::Kill);
-  TII.loadRegFromStack(MBB, I, VR1, FI, RC, &RegInfo, RegSize);
+  TII.loadRegFromStack(MBB, I, VR1, FI, RC, RegSize);
   BuildMI(MBB, I, DL, Desc, Hi).addReg(VR1, RegState::Kill);
 }
 
@@ -230,13 +230,13 @@ void ExpandPseudo::expandStoreACC(MachineBasicBlock &MBB, Iter I,
   Register VR0 = MRI.createVirtualRegister(RC);
   Register VR1 = MRI.createVirtualRegister(RC);
   Register Src = I->getOperand(0).getReg(), FI = I->getOperand(1).getIndex();
-  unsigned SrcKill = getKillRegState(I->getOperand(0).isKill());
+  RegState SrcKill = getKillRegState(I->getOperand(0).isKill());
   DebugLoc DL = I->getDebugLoc();
 
   BuildMI(MBB, I, DL, TII.get(MFLoOpc), VR0).addReg(Src);
-  TII.storeRegToStack(MBB, I, VR0, true, FI, RC, &RegInfo, 0);
+  TII.storeRegToStack(MBB, I, VR0, true, FI, RC, 0);
   BuildMI(MBB, I, DL, TII.get(MFHiOpc), VR1).addReg(Src, SrcKill);
-  TII.storeRegToStack(MBB, I, VR1, true, FI, RC, &RegInfo, RegSize);
+  TII.storeRegToStack(MBB, I, VR1, true, FI, RC, RegSize);
 }
 
 bool ExpandPseudo::expandCopy(MachineBasicBlock &MBB, Iter I) {
@@ -262,7 +262,7 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
   const TargetRegisterClass *RC = RegInfo.intRegClass(VRegSize);
   Register VR0 = MRI.createVirtualRegister(RC);
   Register VR1 = MRI.createVirtualRegister(RC);
-  unsigned SrcKill = getKillRegState(I->getOperand(1).isKill());
+  RegState SrcKill = getKillRegState(I->getOperand(1).isKill());
   Register DstLo = RegInfo.getSubReg(Dst, Mips::sub_lo);
   Register DstHi = RegInfo.getSubReg(Dst, Mips::sub_hi);
   DebugLoc DL = I->getDebugLoc();
@@ -277,17 +277,17 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
 }
 
 /// This method expands the same instruction that MipsSEInstrInfo::
-/// expandBuildPairF64 does, for the case when ABI is fpxx and mthc1 is not
-/// available and the case where the ABI is FP64A. It is implemented here
+/// expandBuildPairF64 does, for FPXX/FP64 when mthc1 is not available and
+/// for FP64A. It is implemented here
 /// because frame indexes are eliminated before MipsSEInstrInfo::
 /// expandBuildPairF64 is called.
 bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       bool FP64) const {
-  // For fpxx and when mthc1 is not available, use:
+  // For FPXX/FP64 when mthc1 is not available, use:
   //   spill + reload via ldc1
   //
-  // The case where dmtc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a BuildPairF64 node.
   //
   // The FP64A ABI (fp64 with nooddspreg) must also use a spill/reload sequence
@@ -306,12 +306,6 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
     Register LoReg = I->getOperand(1).getReg();
     Register HiReg = I->getOperand(2).getReg();
 
-    // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
-    // the cases where mthc1 is not available). 64-bit architectures and
-    // MIPS32r2 or later can use FGR64 though.
-    assert(Subtarget.isGP64bit() || Subtarget.hasMTHC1() ||
-           !Subtarget.isFP64bit());
-
     const TargetRegisterClass *RC = &Mips::GPR32RegClass;
     const TargetRegisterClass *RC2 =
         FP64 ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
@@ -321,11 +315,9 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
     int FI = MF.getInfo<MipsFunctionInfo>()->getMoveF64ViaSpillFI(MF, RC2);
     if (!Subtarget.isLittle())
       std::swap(LoReg, HiReg);
-    TII.storeRegToStack(MBB, I, LoReg, I->getOperand(1).isKill(), FI, RC,
-                        &RegInfo, 0);
-    TII.storeRegToStack(MBB, I, HiReg, I->getOperand(2).isKill(), FI, RC,
-                        &RegInfo, 4);
-    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, &RegInfo, 0);
+    TII.storeRegToStack(MBB, I, LoReg, I->getOperand(1).isKill(), FI, RC, 0);
+    TII.storeRegToStack(MBB, I, HiReg, I->getOperand(2).isKill(), FI, RC, 4);
+    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, 0);
     return true;
   }
 
@@ -333,8 +325,8 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
 }
 
 /// This method expands the same instruction that MipsSEInstrInfo::
-/// expandExtractElementF64 does, for the case when ABI is fpxx and mfhc1 is not
-/// available and the case where the ABI is FP64A. It is implemented here
+/// expandExtractElementF64 does, for FPXX/FP64 when mfhc1 is not available and
+/// for FP64A. It is implemented here
 /// because frame indexes are eliminated before MipsSEInstrInfo::
 /// expandExtractElementF64 is called.
 bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
@@ -349,10 +341,10 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     return true;
   }
 
-  // For fpxx and when mfhc1 is not available, use:
+  // For FPXX/FP64 when mfhc1 is not available, use:
   //   spill + reload via ldc1
   //
-  // The case where dmfc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a ExtractElementF64 node.
   //
   // The FP64A ABI (fp64 with nooddspreg) must also use a spill/reload sequence
@@ -372,12 +364,6 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     unsigned N = Op2.getImm();
     int64_t Offset = 4 * (Subtarget.isLittle() ? N : (1 - N));
 
-    // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
-    // the cases where mfhc1 is not available). 64-bit architectures and
-    // MIPS32r2 or later can use FGR64 though.
-    assert(Subtarget.isGP64bit() || Subtarget.hasMTHC1() ||
-           !Subtarget.isFP64bit());
-
     const TargetRegisterClass *RC =
         FP64 ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
     const TargetRegisterClass *RC2 = &Mips::GPR32RegClass;
@@ -385,8 +371,8 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     // We re-use the same spill slot each time so that the stack frame doesn't
     // grow too much in functions with a large number of moves.
     int FI = MF.getInfo<MipsFunctionInfo>()->getMoveF64ViaSpillFI(MF, RC);
-    TII.storeRegToStack(MBB, I, SrcReg, Op1.isKill(), FI, RC, &RegInfo, 0);
-    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, &RegInfo, Offset);
+    TII.storeRegToStack(MBB, I, SrcReg, Op1.isKill(), FI, RC, 0);
+    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, Offset);
     return true;
   }
 
@@ -480,8 +466,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       if (!MBB.isLiveIn(ABI.GetEhDataReg(I)))
         MBB.addLiveIn(ABI.GetEhDataReg(I));
       TII.storeRegToStackSlot(MBB, MBBI, ABI.GetEhDataReg(I), false,
-                              MipsFI->getEhDataRegFI(I), RC, &RegInfo,
-                              Register());
+                              MipsFI->getEhDataRegFI(I), RC, Register());
     }
 
     // Emit .cfi_offset directives for eh data registers.
@@ -512,7 +497,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
       if (hasBP(MF)) {
         // move $s7, $sp
-        unsigned BP = STI.isABI_N64() ? Mips::S7_64 : Mips::S7;
+        unsigned BP = STI.getABI().GetBasePtr();
         BuildMI(MBB, MBBI, dl, TII.get(MOVE), BP)
           .addReg(SP)
           .addReg(ZERO);
@@ -579,8 +564,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
       .setMIFlag(MachineInstr::FrameSetup);
 
   STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
-                                      MipsFI->getISRRegFI(0), PtrRC,
-                                      STI.getRegisterInfo(), 0);
+                                      MipsFI->getISRRegFI(0), PtrRC, 0);
 
   // Fetch and Spill Status
   MBB.addLiveIn(Mips::COP012);
@@ -590,8 +574,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
       .setMIFlag(MachineInstr::FrameSetup);
 
   STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
-                                      MipsFI->getISRRegFI(1), PtrRC,
-                                      STI.getRegisterInfo(), 0);
+                                      MipsFI->getISRRegFI(1), PtrRC, 0);
 
   // Build the configuration for disabling lower priority interrupts. Non EIC
   // interrupts need to be masked off with zero, EIC from the Cause register.
@@ -657,7 +640,6 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
   const MipsSEInstrInfo &TII =
       *static_cast<const MipsSEInstrInfo *>(STI.getInstrInfo());
-  const MipsRegisterInfo &RegInfo = *STI.getRegisterInfo();
 
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MipsABIInfo ABI = STI.getABI();
@@ -690,8 +672,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     // Insert instructions that restore eh data registers.
     for (int J = 0; J < 4; ++J) {
       TII.loadRegFromStackSlot(MBB, I, ABI.GetEhDataReg(J),
-                               MipsFI->getEhDataRegFI(J), RC, &RegInfo,
-                               Register());
+                               MipsFI->getEhDataRegFI(J), RC, Register());
     }
   }
 
@@ -722,17 +703,15 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EHB));
 
   // Restore EPC
-  STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
-                                           MipsFI->getISRRegFI(0), PtrRC,
-                                           STI.getRegisterInfo(), Register());
+  STI.getInstrInfo()->loadRegFromStackSlot(
+      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(0), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP014)
       .addReg(Mips::K1)
       .addImm(0);
 
   // Restore Status
-  STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
-                                           MipsFI->getISRRegFI(1), PtrRC,
-                                           STI.getRegisterInfo(), Register());
+  STI.getInstrInfo()->loadRegFromStackSlot(
+      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(1), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
       .addReg(Mips::K1)
       .addImm(0);
@@ -795,7 +774,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // Insert the spill to the stack frame.
     bool IsKill = !IsRAAndRetAddrIsTaken;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC, TRI,
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC,
                             Register());
   }
 
@@ -830,7 +809,7 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MipsABIInfo ABI = STI.getABI();
   unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
-  unsigned BP = ABI.IsN64() ? Mips::S7_64 : Mips::S7;
+  unsigned BP = ABI.GetBasePtr();
 
   // Mark $ra and $fp as used if function has dedicated frame pointer.
   if (hasFP(MF)) {

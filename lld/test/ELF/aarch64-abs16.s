@@ -1,21 +1,13 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/abs255.s -o %t255.o
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/abs256.s -o %t256.o
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/abs257.s -o %t257.o
-// RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o %t.be.o
-// RUN: llvm-mc -filetype=obj -triple=aarch64_be %S/Inputs/abs256.s -o %t256.be.o
+// RUN: rm -rf %t && mkdir %t && cd %t
 
-.globl _start
-_start:
-.data
-  .hword foo + 0xfeff
-  .hword foo - 0x8100
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o a.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o a.be.o
 
-// RUN: ld.lld %t.o %t256.o -o %t
-// RUN: llvm-objdump -s --section=.data %t | FileCheck %s --check-prefixes=CHECK,LE
-// RUN: ld.lld %t.be.o %t256.be.o -o %t.be
-// RUN: llvm-objdump -s --section=.data %t.be | FileCheck %s --check-prefixes=CHECK,BE
+// RUN: ld.lld a.o --defsym foo=256 -o a
+// RUN: llvm-objdump -s --section=.data a | FileCheck %s --check-prefixes=CHECK,LE
+// RUN: ld.lld a.be.o --defsym foo=256 -o a.be
+// RUN: llvm-objdump -s --section=.data a.be | FileCheck %s --check-prefixes=CHECK,BE
 
 // CHECK: Contents of section .data:
 // 220158: S = 0x100, A = 0xfeff
@@ -25,8 +17,14 @@ _start:
 // LE-NEXT: 220158 ffff0080
 // BE-NEXT: 220158 ffff8000
 
-// RUN: not ld.lld %t.o %t255.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW1
-// OVERFLOW1: relocation R_AARCH64_ABS16 out of range: -32769 is not in [-32768, 65535]; references 'foo'
+// RUN: not ld.lld a.o --defsym foo=255 2>&1 | FileCheck %s --check-prefix=OVERFLOW1 --implicit-check-not=error:
+// OVERFLOW1: error: a.o:(.data+0x2): relocation R_AARCH64_ABS16 out of range: -32769 is not in [-32768, 65535]; references 'foo'
 
-// RUN: not ld.lld %t.o %t257.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW2
-// OVERFLOW2: relocation R_AARCH64_ABS16 out of range: 65536 is not in [-32768, 65535]; references 'foo'
+// RUN: not ld.lld a.o --defsym foo=257 2>&1 | FileCheck %s --check-prefix=OVERFLOW2 --implicit-check-not=error:
+// OVERFLOW2: error: a.o:(.data+0x0): relocation R_AARCH64_ABS16 out of range: 65536 is not in [-32768, 65535]; references 'foo'
+
+.globl _start
+_start:
+.data
+  .hword foo + 0xfeff
+  .hword foo - 0x8100

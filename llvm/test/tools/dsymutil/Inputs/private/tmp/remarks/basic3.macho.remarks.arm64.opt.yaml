@@ -52,7 +52,7 @@ Args:
   - String:          ';'
 ...
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 DebugLoc:        { File: basic3.c, Line: 7, Column: 0 }
 Function:        unused2
@@ -63,7 +63,7 @@ Args:
   - String:          ''''
 ...
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 DebugLoc:        { File: basic3.c, Line: 16, Column: 0 }
 Function:        bar

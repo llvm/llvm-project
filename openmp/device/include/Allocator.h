@@ -14,17 +14,11 @@
 
 #include "DeviceTypes.h"
 
-// Forward declaration.
-struct KernelEnvironmentTy;
-
 namespace ompx {
 
 namespace allocator {
 
 static uint64_t constexpr ALIGNMENT = 16;
-
-/// Initialize the allocator according to \p KernelEnvironment
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
 
 /// Allocate \p Size bytes.
 [[gnu::alloc_size(1), gnu::assume_aligned(ALIGNMENT), gnu::malloc]] void *

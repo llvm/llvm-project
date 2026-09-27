@@ -90,43 +90,6 @@ private:
 };
 
 
-#if TEST_STD_VER >= 11
-
-//==============================================================================
-// MemFun11 - C++11 reference qualified test member functions.
-struct MemFun11 {
-    typedef void*& R;
-    typedef MemFun11 C;
-#define F(...) \
-    R f(__VA_ARGS__) & { return MethodID<R(C::*)(__VA_ARGS__) &>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) const & { return MethodID<R(C::*)(__VA_ARGS__) const &>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) volatile & { return MethodID<R(C::*)(__VA_ARGS__) volatile &>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) const volatile & { return MethodID<R(C::*)(__VA_ARGS__) const volatile &>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) && { return MethodID<R(C::*)(__VA_ARGS__) &&>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) const && { return MethodID<R(C::*)(__VA_ARGS__) const &&>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) volatile && { return MethodID<R(C::*)(__VA_ARGS__) volatile &&>::setUncheckedCall(); } \
-    R f(__VA_ARGS__) const volatile && { return MethodID<R(C::*)(__VA_ARGS__) const volatile &&>::setUncheckedCall(); }
-#
-    F()
-    F(...)
-    F(ArgType&&)
-    F(ArgType&&, ...)
-    F(ArgType&&, ArgType&&)
-    F(ArgType&&, ArgType&&, ...)
-    F(ArgType&&, ArgType&&, ArgType&&)
-    F(ArgType&&, ArgType&&, ArgType&&, ...)
-#undef F
-public:
-    MemFun11() {}
-private:
-    MemFun11(MemFun11 const&);
-    MemFun11& operator=(MemFun11 const&);
-};
-
-#endif // TEST_STD_VER >= 11
-
-
-
 //==============================================================================
 // TestCase - A test case for a single member function.
 //   ClassType - The type of the class being tested.
@@ -167,10 +130,6 @@ private:
         runTestDispatchIf(NotRValue, tag, dref);
         runTestDispatchIf(NotRValue, tag, obj_ptr);
         runTestDispatchIf(NotRValue, tag, der_ptr);
-#if TEST_STD_VER >= 11
-        runTestDispatchIf(NotRValue, tag, rref);
-        runTestDispatchIf(NotRValue, tag, drref);
-#endif
     }
 
     template <class QT, class Tp>
@@ -242,61 +201,6 @@ private:
 template <class Sig, int Arity, class CV>
 struct TestCase : public TestCaseImp<MemFun03, Sig, Arity, CV> {};
 
-#if TEST_STD_VER >= 11
-template <class Sig, int Arity, class CV, bool RValue = false>
-struct TestCase11 : public TestCaseImp<MemFun11, Sig, Arity, CV, RValue, true> {};
-
-template <class Type>
-struct ReferenceWrapper {
-    using type = Type;
-    Type* ptr;
-
-    static void fun(Type&) noexcept;
-    static void fun(Type&&) = delete;
-
-    template <class Type2,
-              class = typename std::enable_if<!std::__is_same_uncvref<Type2, ReferenceWrapper>::value>::type>
-    constexpr ReferenceWrapper(Type2&& t) noexcept : ptr(&t) {}
-
-    constexpr Type& get() const noexcept { return *ptr; }
-    constexpr operator Type&() const noexcept { return *ptr; }
-
-    template <class... _ArgTypes>
-    constexpr std::__invoke_result_t<Type&, _ArgTypes...> operator()(_ArgTypes&&... __args) const {
-      return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
-    }
-};
-
-template <class Tp>
-struct DerivedFromRefWrap : public ReferenceWrapper<Tp> {
-  constexpr DerivedFromRefWrap(Tp& tp) : ReferenceWrapper<Tp>(tp) {}
-};
-
-TEST_CONSTEXPR_CXX14 bool test_derived_from_ref_wrap() {
-    int x = 42;
-    ReferenceWrapper<int> r(x);
-    DerivedFromRefWrap<int> d(x);
-    auto get_fn = &ReferenceWrapper<int>::get;
-    auto& ret = std::__invoke(get_fn, r);
-    assert(&ret == &x);
-    auto& ret2 = std::__invoke(get_fn, d);
-    assert(&ret2 == &x);
-
-    return true;
-}
-
-TEST_CONSTEXPR_CXX20 bool test_reference_wrapper_reference_wrapper() {
-    int x = 42;
-    auto get_fn = &std::reference_wrapper<int>::get;
-    std::reference_wrapper<int> r(x);
-    std::reference_wrapper<std::reference_wrapper<int>> r2(r);
-    auto& ret3 = std::__invoke(get_fn, r2);
-    assert(&ret3 == &x);
-
-    return true;
-}
-#endif
-
 int main(int, char**) {
     typedef void*& R;
     typedef ArgType A;
@@ -332,74 +236,6 @@ int main(int, char**) {
     TestCase<R(A&, A&, A&, ...) const,              3, Q_Const>::run();
     TestCase<R(A&, A&, A&, ...) volatile,           3, Q_Volatile>::run();
     TestCase<R(A&, A&, A&, ...) const volatile,     3, Q_CV>::run();
-
-#if TEST_STD_VER >= 11
-    TestCase11<R() &,                               0, Q_None>::run();
-    TestCase11<R() const &,                         0, Q_Const>::run();
-    TestCase11<R() volatile &,                      0, Q_Volatile>::run();
-    TestCase11<R() const volatile &,                0, Q_CV>::run();
-    TestCase11<R(...) &,                            0, Q_None>::run();
-    TestCase11<R(...) const &,                      0, Q_Const>::run();
-    TestCase11<R(...) volatile &,                   0, Q_Volatile>::run();
-    TestCase11<R(...) const volatile &,             0, Q_CV>::run();
-    TestCase11<R(A&&) &,                            1, Q_None>::run();
-    TestCase11<R(A&&) const &,                      1, Q_Const>::run();
-    TestCase11<R(A&&) volatile &,                   1, Q_Volatile>::run();
-    TestCase11<R(A&&) const volatile &,             1, Q_CV>::run();
-    TestCase11<R(A&&, ...) &,                       1, Q_None>::run();
-    TestCase11<R(A&&, ...) const &,                 1, Q_Const>::run();
-    TestCase11<R(A&&, ...) volatile &,              1, Q_Volatile>::run();
-    TestCase11<R(A&&, ...) const volatile &,        1, Q_CV>::run();
-    TestCase11<R(A&&, A&&) &,                       2, Q_None>::run();
-    TestCase11<R(A&&, A&&) const &,                 2, Q_Const>::run();
-    TestCase11<R(A&&, A&&) volatile &,              2, Q_Volatile>::run();
-    TestCase11<R(A&&, A&&) const volatile &,        2, Q_CV>::run();
-    TestCase11<R(A&&, A&&, ...) &,                  2, Q_None>::run();
-    TestCase11<R(A&&, A&&, ...) const &,            2, Q_Const>::run();
-    TestCase11<R(A&&, A&&, ...) volatile &,         2, Q_Volatile>::run();
-    TestCase11<R(A&&, A&&, ...) const volatile &,   2, Q_CV>::run();
-    TestCase11<R() &&,                              0, Q_None, /* RValue */ true>::run();
-    TestCase11<R() const &&,                        0, Q_Const, /* RValue */ true>::run();
-    TestCase11<R() volatile &&,                     0, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R() const volatile &&,               0, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(...) &&,                           0, Q_None, /* RValue */ true>::run();
-    TestCase11<R(...) const &&,                     0, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(...) volatile &&,                  0, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(...) const volatile &&,            0, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(A&&) &&,                           1, Q_None, /* RValue */ true>::run();
-    TestCase11<R(A&&) const &&,                     1, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(A&&) volatile &&,                  1, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(A&&) const volatile &&,            1, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(A&&, ...) &&,                      1, Q_None, /* RValue */ true>::run();
-    TestCase11<R(A&&, ...) const &&,                1, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(A&&, ...) volatile &&,             1, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(A&&, ...) const volatile &&,       1, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&) &&,                      2, Q_None, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&) const &&,                2, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&) volatile &&,             2, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&) const volatile &&,       2, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, ...) &&,                 2, Q_None, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, ...) const &&,           2, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, ...) volatile &&,        2, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, ...) const volatile &&,  2, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&) &&,                 3, Q_None, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&) const &&,           3, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&) volatile &&,        3, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&) const volatile &&,  3, Q_CV, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&, ...)  &&,                 3, Q_None, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&, ...)  const &&,           3, Q_Const, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&, ...)  volatile &&,        3, Q_Volatile, /* RValue */ true>::run();
-    TestCase11<R(A&&, A&&, A&&, ...)  const volatile &&,  3, Q_CV, /* RValue */ true>::run();
-
-    test_derived_from_ref_wrap();
-    test_reference_wrapper_reference_wrapper();
-#if TEST_STD_VER > 11
-    static_assert(test_derived_from_ref_wrap(), "");
-#endif
-#if TEST_STD_VER > 17
-    static_assert(test_reference_wrapper_reference_wrapper(), "");
-#endif
-#endif // TEST_STD_VER >= 11
 
   return 0;
 }

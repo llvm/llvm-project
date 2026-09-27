@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm-c/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
@@ -469,6 +470,27 @@ TEST(Error, createStringError) {
   auto Res = errorToErrorCode(createStringError(EC, "foo%s", Bar));
   EXPECT_EQ(Res, EC)
     << "Failed to convert createStringError() result to error_code.";
+}
+
+TEST(Error, createStringErrorV) {
+  static const char *Bar = "bar";
+  static const std::error_code EC = errc::invalid_argument;
+  std::string Msg;
+  raw_string_ostream S(Msg);
+  logAllUnhandledErrors(createStringErrorV(EC, "foo{0}{1}{2:x}", Bar, 1, 0xff),
+                        S);
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() log result";
+
+  Msg.clear();
+  auto Res = errorToErrorCode(createStringError(EC, "foo{0}", Bar));
+  EXPECT_EQ(Res, EC)
+      << "Failed to convert createStringError() result to error_code.";
+
+  Msg.clear();
+  logAllUnhandledErrors(createStringErrorV("foo{0}{1}{2:x}", Bar, 1, 0xff), S);
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() (no EC overload) log result";
 }
 
 // Test that the ExitOnError utility works as expected.
@@ -1197,4 +1219,41 @@ TEST(Error, ForwardToExpected) {
   EXPECT_THAT_ERROR(ExpectedReturningFct(false).moveInto(MaybeV), Succeeded());
   EXPECT_EQ(*MaybeV, 42);
 }
+
+TEST(Error, NonNullSuccess) {
+  int tmp = 0;
+  int *ptr = &tmp;
+  const int *cptr = ptr;
+  const int *const ccptr = ptr;
+  auto uptr = std::make_unique<int>(0);
+
+  EXPECT_EQ(ptr, checkNotNull(&tmp));
+  EXPECT_EQ(ptr, checkNotNull(ptr));
+  EXPECT_EQ(ptr, checkNotNull(cptr));
+  EXPECT_EQ(ptr, checkNotNull(ccptr));
+  EXPECT_EQ(uptr, checkNotNull(std::move(uptr)));
+}
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+TEST(Error, NonNullFails) {
+  int *NullPtr = nullptr;
+  EXPECT_DEATH(NullPtr = checkNotNull(NullPtr),
+               "Expected a non-null pointer but got a null pointer")
+      << "checkNotNull(NullPtr) did not cause an abort for null pointer";
+
+  EXPECT_DEATH(NullPtr = checkNotNull(nullptr),
+               "Expected a non-null pointer but got a null pointer")
+      << "checkNotNull(NullPtr) did not cause an abort for null pointer";
+
+  std::unique_ptr<int> UniquePtr;
+  EXPECT_DEATH(auto TmpUniquePtr = checkNotNull(std::move(UniquePtr)),
+               "Expected a non-null pointer but got a null pointer")
+      << "checkNotNull(NullPtr) did not cause an abort for null pointer";
+
+  EXPECT_DEATH(NullPtr = checkNotNull(NullPtr, "custom message"),
+               "custom message")
+      << "checkNotNull(nullptr) did not cause an abort for null pointer";
+}
+#endif
+
 } // namespace

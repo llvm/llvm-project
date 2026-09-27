@@ -23,7 +23,7 @@ contains
     integer, optional, intent(out) :: optional_status
 
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_out, optional>, uniq_name = "_QMmFsetup_signalsEoptional_status"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_out, optional>, uniq_name = "_QMmFsetup_signalsEoptional_status"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMmFsetup_signalsEstat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     call signal(SIGFPE, handler)

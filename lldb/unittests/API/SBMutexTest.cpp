@@ -36,11 +36,16 @@ TEST_F(SBMutexTest, LockTest) {
   std::future<void> f;
   {
     lldb::SBMutex lock = target.GetAPIMutex();
+
+    ASSERT_TRUE(lock.try_lock());
+    lock.unlock();
+
     std::lock_guard<lldb::SBMutex> lock_guard(lock);
     ASSERT_FALSE(locked.exchange(true));
 
     f = std::async(std::launch::async, [&]() {
       ASSERT_TRUE(locked);
+      EXPECT_FALSE(lock.try_lock());
       target.BreakpointCreateByName("foo", "bar");
       ASSERT_FALSE(locked);
     });

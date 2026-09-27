@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
@@ -7,7 +5,6 @@
 ! Intrinsic procedure name is one of MAX, MIN, IAND, IOR, or IEOR.
 
 program OmpAtomic
-   use omp_lib
    real x
    integer :: y, z, a, b, c, d
    x = 5.73
@@ -60,7 +57,7 @@ program OmpAtomic
 !$omp atomic update
    !ERROR: The atomic variable z should appear as an argument of the top-level AND operator
    z = IAND(y, 4)
-!$omp atomic update 
+!$omp atomic update
    !ERROR: The atomic variable z should appear as an argument of the top-level OR operator
    z = IOR(y, 5)
 !$omp atomic update
@@ -101,11 +98,11 @@ subroutine more_invalid_atomic_update_stmts()
         integer :: m(10)
     end type
     type(some_type) :: s
- 
+
     !$omp atomic update
     !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MIN operator
         a = min(a, a, b)
-     
+
     !$omp atomic
     !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MAX operator
         a = max(b, a, b, a)
@@ -116,11 +113,11 @@ subroutine more_invalid_atomic_update_stmts()
     !$omp atomic
     !ERROR: The atomic variable a should be exactly one of the arguments of the top-level MAX operator
         a = max(b, a, b, a, b)
-    
+
     !$omp atomic update
     !ERROR: The atomic variable y should appear as an argument of the top-level MIN operator
         y = min(z, x)
-     
+
     !$omp atomic
         z = max(z, y)
 

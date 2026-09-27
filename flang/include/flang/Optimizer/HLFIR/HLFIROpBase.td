@@ -21,6 +21,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def hlfir_Dialect : Dialect {
   let name = "hlfir";
+  let useStrictPropertiesInAssemblyFormat = 0;
 
   let summary = "High Level Fortran IR.";
 
@@ -39,7 +40,6 @@ def hlfir_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
   let cppNamespace = "hlfir";
   let dependentDialects = ["fir::FIROpsDialect"];
 }

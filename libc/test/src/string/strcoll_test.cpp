@@ -38,3 +38,10 @@ TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
 }
 
 #endif // defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcStrcollTest, CharactersGreaterThan127ShouldBePositive) {
+  const char s1[] = {static_cast<char>(128), '\0'};
+  const char s2[] = {'\0'};
+  int result = LIBC_NAMESPACE::strcoll(s1, s2);
+  ASSERT_GT(result, 0);
+}

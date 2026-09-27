@@ -10,5 +10,5 @@ mlir_target_link_libraries(MLIRMathTestPasses PUBLIC
   MLIRPass
   MLIRTransformUtils
   MLIRVectorDialect
-  MLIRX86VectorDialect
+  MLIRX86Dialect
   )

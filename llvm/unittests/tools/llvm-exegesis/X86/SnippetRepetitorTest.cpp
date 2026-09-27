@@ -16,9 +16,6 @@
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::ElementsAre;
@@ -33,7 +30,7 @@ protected:
     TM = State.createTargetMachine();
     Context = std::make_unique<LLVMContext>();
     Mod = std::make_unique<Module>("X86SnippetRepetitorTest", *Context);
-    Mod->setDataLayout(TM->createDataLayout());
+    Mod->setDataLayout(TM->getTargetTriple().computeDataLayout());
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MF = &createVoidVoidPtrMachineFunction("TestFn", Mod.get(), MMI.get());
   }
@@ -52,8 +49,8 @@ protected:
     Fill(Sink);
   }
 
-  static constexpr const unsigned kMinInstructions = 3;
-  static constexpr const unsigned kLoopBodySize = 5;
+  static constexpr unsigned kMinInstructions = 3;
+  static constexpr unsigned kLoopBodySize = 5;
 
   std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<LLVMContext> Context;

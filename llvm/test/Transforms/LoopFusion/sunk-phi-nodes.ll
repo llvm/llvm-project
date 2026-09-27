@@ -23,8 +23,7 @@ define dso_local i32 @check_sunk_phi_nodes() {
 ; CHECK-NEXT:    br i1 [[CMP3]], label %[[FOR_BODY]], label %[[FOR_END8:.*]]
 ; CHECK:       [[FOR_END8]]:
 ; CHECK-NEXT:    [[SUM2_0_LCSSA:%.*]] = phi i32 [ [[ADD5]], %[[FOR_INC6]] ]
-; CHECK-NEXT:    [[SUM1_0_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_INC6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SUM1_0_LCSSA]], [[SUM2_0_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ADD]], [[SUM2_0_LCSSA]]
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

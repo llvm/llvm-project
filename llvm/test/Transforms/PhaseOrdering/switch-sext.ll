@@ -14,7 +14,7 @@ define i8 @test_switch_with_sext_phi(i8 %code) {
 ; CHECK:       sw.bb3:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[PEP_CODE:%.*]] = phi i8 [ 81, [[SW_BB3]] ], [ 113, [[SW_BB2]] ], [ [[CODE]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PEP_CODE:%.*]] = phi i8 [ 113, [[SW_BB2]] ], [ [[CODE]], [[ENTRY:%.*]] ], [ 81, [[SW_BB3]] ]
 ; CHECK-NEXT:    ret i8 [[PEP_CODE]]
 ;
 entry:

@@ -3,11 +3,11 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; The follow tests verify the mechanics of simplification. The operation is not
-; important beyond being commutative with a known identity value.
+; The following tests verify the mechanics of simplification. The operation is
+; not important beyond being commutative with a known identity value.
 
-define <vscale x 4 x i32> @commute_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @commute_constant_to_rhs(
+define <vscale x 4 x i32> @canonicalise_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @canonicalise_constant_to_rhs(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> splat (i32 303))
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
@@ -16,9 +16,8 @@ define <vscale x 4 x i32> @commute_constant_to_rhs(<vscale x 4 x i1> %pg, <vscal
   ret <vscale x 4 x i32> %r
 }
 
-; Operation is not commutative.
-define <vscale x 4 x i32> @cannot_commute_constant_to_rhs_1(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @cannot_commute_constant_to_rhs_1(
+define <vscale x 4 x i32> @cannot_canonicalise_constant_to_rhs_op_not_commutative(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @cannot_canonicalise_constant_to_rhs_op_not_commutative(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 303), <vscale x 4 x i32> [[A]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
@@ -28,8 +27,8 @@ define <vscale x 4 x i32> @cannot_commute_constant_to_rhs_1(<vscale x 4 x i1> %p
 }
 
 ; Inactive lanes are important, which make the operation non-commutative.
-define <vscale x 4 x i32> @cannot_commute_constant_to_rhs_2(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @cannot_commute_constant_to_rhs_2(
+define <vscale x 4 x i32> @cannot_canonicalise_constant_to_rhs_merging_op_not_commutative(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @cannot_canonicalise_constant_to_rhs_merging_op_not_commutative(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 303), <vscale x 4 x i32> [[A]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
@@ -78,8 +77,8 @@ define <vscale x 4 x i32> @idempotent_mul_u_ops_reverse(<vscale x 4 x i1> %pg, <
 ; Show that we only need to know the active lanes are constant.
 ; TODO: We can do better here because we can use %a directly as part of the
 ; select because we know only its inactive lanes will be used.
-define <vscale x 4 x i32> @constant_mul_after_striping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_after_striping_inactive_lanes(
+define <vscale x 4 x i32> @constant_mul_after_stripping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_after_stripping_inactive_lanes(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A_DUP:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i1> [[PG]], i32 3)
 ; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 6), <vscale x 4 x i32> [[A_DUP]]
@@ -92,8 +91,8 @@ define <vscale x 4 x i32> @constant_mul_after_striping_inactive_lanes(<vscale x 
 }
 
 ; Show that we only need to know the active lanes are constant.
-define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
-; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(
+define <vscale x 4 x i32> @constant_mul_u_after_stripping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @constant_mul_u_after_stripping_inactive_lanes(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 6)
 ;
@@ -114,7 +113,7 @@ define <vscale x 4 x i32> @dont_propagate_poison(<vscale x 4 x i1> %pg, <vscale 
   ret <vscale x 4 x i32> %r
 }
 
-; The follow tests demonstrate the operations for which hooks are in place to
+; The following tests demonstrate the operations for which hooks are in place to
 ; enable simplification. Given the simplications themselves are common code, it
 ; is assumed they are already well tested elsewhere.
 
@@ -207,7 +206,7 @@ define <vscale x 4 x float> @constant_fdiv(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x float> @constant_fdiv_u(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @constant_fdiv_u(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 0x3FF2AAAAA0000000)
+; CHECK-NEXT:    ret <vscale x 4 x float> splat (float f0x3F955555)
 ;
   %r = call <vscale x 4 x float> @llvm.aarch64.sve.fdiv.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> splat (float 7.0), <vscale x 4 x float> splat (float 6.0))
   ret <vscale x 4 x float> %r
@@ -494,40 +493,5 @@ define <vscale x 4 x i32> @constant_udivr_by_zero(<vscale x 4 x i1> %pg) #0 {
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.udivr.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 0), <vscale x 4 x i32> splat (i32 7))
   ret <vscale x 4 x i32> %r
 }
-
-declare <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-
-declare <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.mul.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.orr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.sdivr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.subr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.udiv.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.udivr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-
-declare <vscale x 4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.udiv.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-
-declare <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fdiv.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fdivr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fsub.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fsubr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-
-declare <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fdiv.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
 
 attributes #0 = { "target-features"="+sve" }

@@ -5,7 +5,7 @@ module {
     %c5 = arith.constant 5 : index
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
-    %c-1 = arith.constant -1 : index
+    %c-1 = fir.assumed_size_extent : index
     %0 = fir.undefined !fir.dscope
     %1 = fircg.ext_declare %arg0(%c5, %c-1) dummy_scope %0 {uniq_name = "_QMhelperFfnEa1"} : (!fir.ref<!fir.array<5x?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<5x?xi32>> loc(#loc1)
     %2 = fircg.ext_declare %arg1(%c-1) origin %c2 dummy_scope %0 {uniq_name = "_QMhelperFfnEa2"} : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc2)

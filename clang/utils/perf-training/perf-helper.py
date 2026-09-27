@@ -133,7 +133,7 @@ def perf2bolt(args):
         "--profile-format=yaml",
     ]
     if not opts.lbr:
-        p2b_args += ["-nl"]
+        p2b_args += ["-ba"]
     p2b_args += ["-p"]
     for filename in findFilesWithExtension(opts.path, "perf.data"):
         subprocess.check_call(p2b_args + [filename, "-o", filename + ".fdata"])
@@ -276,6 +276,9 @@ def get_cc1_command_for_args(cmd, env):
             or ln.startswith(" (in-process)")
             or ln.startswith("Configuration file:")
             or ln.startswith("Build config:")
+            or ln.startswith("clang: warning:")
+            or ln.startswith("clang: note:")
+            or ln.startswith("clang: remark:")
             or " version " in ln
         ):
             continue
@@ -722,7 +725,7 @@ def bolt_optimize(args):
             "-dyno-stats",
             "-use-gnu-stack",
             "-update-debug-sections",
-            "-nl" if opts.method == "PERF" else "",
+            "-ba" if opts.method == "PERF" else "",
         ]
         print("Running: " + " ".join(args))
         process = subprocess.run(

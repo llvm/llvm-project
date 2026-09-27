@@ -11,6 +11,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -147,15 +148,16 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("_Ptr");
+  ValueObjectSP ptr_obj_sp = valobj_sp->GetChildMemberWithName("_Ptr");
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
+  ValueObjectSP cast_ptr_sp =
+      GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
   return lldb::ChildCacheState::eRefetch;
 }
 
@@ -168,8 +170,7 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
@@ -251,11 +252,11 @@ lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   if (auto value_ptr_sp = pair_sp->GetChildMemberWithName("_Myval2"))
-    m_value_ptr_sp = value_ptr_sp->Clone(ConstString("pointer"));
+    m_value_ptr_sp = value_ptr_sp->Clone("pointer");
 
   // Only present if the deleter is non-empty
   if (auto deleter_sp = pair_sp->GetChildMemberWithName("_Myval1"))
-    m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+    m_deleter_sp = deleter_sp->Clone("deleter");
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -269,8 +270,7 @@ lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

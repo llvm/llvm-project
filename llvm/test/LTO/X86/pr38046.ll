@@ -30,5 +30,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 1, !"ThinLTO", i32 0}
-!6 = distinct !DISubprogram(unit: !0)
+!6 = distinct !DISubprogram(unit: !0, type: !9)
 !7 = !DILocalVariable(name: "get", scope: !6)
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)

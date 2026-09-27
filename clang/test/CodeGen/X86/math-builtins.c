@@ -118,36 +118,36 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_copysign(f,f); __builtin_copysignf(f,f); __builtin_copysignl(f,f); __builtin_copysignf128(f,f);
 
-// NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
-// HAS_ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC2:#[0-9]+]]
+// NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC2:#[0-9]+]]
+// HAS_ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
 
   __builtin_fabs(f);       __builtin_fabsf(f);      __builtin_fabsl(f); __builtin_fabsf128(f);
 
-// NO__ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC2]]
 
   __builtin_frexp(f,i);    __builtin_frexpf(f,i);   __builtin_frexpl(f,i); __builtin_frexpf128(f,i);
 
-// NO__ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC2]]
 
   __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall(); __builtin_huge_valf128();
 
@@ -165,10 +165,10 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_ldexp(f,f);    __builtin_ldexpf(f,f);   __builtin_ldexpl(f,f);  __builtin_ldexpf128(f,f);
 
-// NO__ERRNO: declare double @llvm.ldexp.f64.i32(double, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.ldexp.f32.i32(float, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.ldexp.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.ldexp.f128.i32(fp128, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.ldexp.f64.i32(double, i32) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.ldexp.f32.i32(float, i32) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.ldexp.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.ldexp.f128.i32(fp128, i32) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
@@ -180,7 +180,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
-// HAS_ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
@@ -209,10 +209,10 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_pow(f,f);        __builtin_powf(f,f);       __builtin_powl(f,f); __builtin_powf128(f,f);
 
-// NO__ERRNO: declare double @llvm.pow.f64(double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.pow.f32(float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.pow.f128(fp128, fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.pow.f64(double, double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.pow.f32(float, float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.pow.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @pow(double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @powf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @powl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
@@ -220,12 +220,12 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_powi(f,f);        __builtin_powif(f,f);       __builtin_powil(f,f);
 
-// NO__ERRNO: declare double @llvm.powi.f64.i32(double, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.powi.f32.i32(float, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.powi.f64.i32(double, i32) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.powi.f32.i32(float, i32) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.powi.f64.i32(double, i32) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.powi.f32.i32(float, i32) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.powi.f64.i32(double, i32) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.powi.f32.i32(float, i32) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC2]]
 
   /* math */
   __builtin_acos(f);       __builtin_acosf(f);      __builtin_acosl(f); __builtin_acosf128(f);
@@ -307,21 +307,21 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_ceil(f);       __builtin_ceilf(f);      __builtin_ceill(f); __builtin_ceilf128(f);
 
-// NO__ERRNO: declare double @llvm.ceil.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.ceil.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.ceil.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.ceil.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.ceil.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.ceil.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.ceil.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.ceil.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.ceil.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.ceil.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.ceil.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.ceil.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.ceil.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.ceil.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.ceil.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.ceil.f128(fp128) [[READNONE_INTRINSIC2]]
 
   __builtin_cos(f);        __builtin_cosf(f);       __builtin_cosl(f); __builtin_cosf128(f);
 
-// NO__ERRNO: declare double @llvm.cos.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.cos.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.cos.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.cos.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.cos.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.cos.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.cos.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.cos.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @cos(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @cosf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @cosl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -362,10 +362,10 @@ __builtin_erfc(f);       __builtin_erfcf(f);      __builtin_erfcl(f); __builtin_
 
 __builtin_exp(f);        __builtin_expf(f);       __builtin_expl(f); __builtin_expf128(f);
 
-// NO__ERRNO: declare double @llvm.exp.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.exp.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.exp.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.exp.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.exp.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.exp.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.exp.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.exp.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @exp(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @expf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @expl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -373,10 +373,10 @@ __builtin_exp(f);        __builtin_expf(f);       __builtin_expl(f); __builtin_e
 
 __builtin_exp2(f);       __builtin_exp2f(f);      __builtin_exp2l(f); __builtin_exp2f128(f);
 
-// NO__ERRNO: declare double @llvm.exp2.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.exp2.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.exp2.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.exp2.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.exp2.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.exp2.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.exp2.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.exp2.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @exp2(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @exp2f(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @exp2l(x86_fp80 noundef) [[NOT_READNONE]]
@@ -384,10 +384,10 @@ __builtin_exp2(f);       __builtin_exp2f(f);      __builtin_exp2l(f); __builtin_
 
 __builtin_exp10(f);       __builtin_exp10f(f);      __builtin_exp10l(f); __builtin_exp10f128(f);
 
-// NO__ERRNO: declare double @llvm.exp10.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.exp10.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.exp10.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.exp10.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.exp10.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.exp10.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.exp10.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.exp10.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @exp10(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @exp10f(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @exp10l(x86_fp80 noundef) [[NOT_READNONE]]
@@ -417,22 +417,22 @@ __builtin_fdim(f,f);       __builtin_fdimf(f,f);      __builtin_fdiml(f,f); __bu
 
 __builtin_floor(f);      __builtin_floorf(f);     __builtin_floorl(f); __builtin_floorf128(f);
 
-// NO__ERRNO: declare double @llvm.floor.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.floor.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.floor.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.floor.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.floor.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.floor.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.floor.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.floor.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.floor.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.floor.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.floor.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.floor.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.floor.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.floor.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.floor.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.floor.f128(fp128) [[READNONE_INTRINSIC2]]
 
 __builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f); __builtin_fmaf128(f,f,f);  __builtin_fmaf16(f,f,f);
 
-// NO__ERRNO: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.fma.f128(fp128, fp128, fp128) [[READNONE_INTRINSIC]]
-// NO__ERRONO: declare half @llvm.fma.f16(half, half, half) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.fma.f128(fp128, fp128, fp128) [[READNONE_INTRINSIC2]]
+// NO__ERRONO: declare half @llvm.fma.f16(half, half, half) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @fma(double noundef, double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @fmaf(float noundef, float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @fmal(x86_fp80 noundef, x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
@@ -454,25 +454,25 @@ __builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f);
 
 __builtin_fmax(f,f);       __builtin_fmaxf(f,f);      __builtin_fmaxl(f,f); __builtin_fmaxf128(f,f);
 
-// NO__ERRNO: declare double @llvm.maxnum.f64(double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.maxnum.f32(float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.maxnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.maxnum.f128(fp128, fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.maxnum.f64(double, double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.maxnum.f32(float, float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.maxnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.maxnum.f128(fp128, fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.maxnum.f64(double, double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.maxnum.f32(float, float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.maxnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.maxnum.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.maxnum.f64(double, double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.maxnum.f32(float, float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.maxnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.maxnum.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
 
 __builtin_fmin(f,f);       __builtin_fminf(f,f);      __builtin_fminl(f,f); __builtin_fminf128(f,f);
 
-// NO__ERRNO: declare double @llvm.minnum.f64(double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.minnum.f32(float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.minnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.minnum.f128(fp128, fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.minnum.f64(double, double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.minnum.f32(float, float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.minnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.minnum.f128(fp128, fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.minnum.f64(double, double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.minnum.f32(float, float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.minnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.minnum.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.minnum.f64(double, double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.minnum.f32(float, float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.minnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.minnum.f128(fp128, fp128) [[READNONE_INTRINSIC2]]
 
 __builtin_hypot(f,f);      __builtin_hypotf(f,f);     __builtin_hypotl(f,f); __builtin_hypotf128(f,f);
 
@@ -509,10 +509,10 @@ __builtin_lgamma(f);     __builtin_lgammaf(f);    __builtin_lgammal(f); __builti
 
 __builtin_llrint(f);     __builtin_llrintf(f);    __builtin_llrintl(f); __builtin_llrintf128(f);
 
-// NO__ERRNO: declare i64 @llvm.llrint.i64.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llrint.i64.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llrint.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llrint.i64.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.llrint.i64.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare i64 @llrint(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llrintf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llrintl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -520,10 +520,10 @@ __builtin_llrint(f);     __builtin_llrintf(f);    __builtin_llrintl(f); __builti
 
 __builtin_llround(f);    __builtin_llroundf(f);   __builtin_llroundl(f); __builtin_llroundf128(f);
 
-// NO__ERRNO: declare i64 @llvm.llround.i64.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llround.i64.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llround.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.llround.i64.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.llround.i64.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare i64 @llround(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llroundf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @llroundl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -531,10 +531,10 @@ __builtin_llround(f);    __builtin_llroundf(f);   __builtin_llroundl(f); __built
 
 __builtin_log(f);        __builtin_logf(f);       __builtin_logl(f); __builtin_logf128(f);
 
-// NO__ERRNO: declare double @llvm.log.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.log.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.log.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.log.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.log.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.log.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.log.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.log.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @log(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @logf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @logl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -542,10 +542,10 @@ __builtin_log(f);        __builtin_logf(f);       __builtin_logl(f); __builtin_l
 
 __builtin_log10(f);      __builtin_log10f(f);     __builtin_log10l(f); __builtin_log10f128(f);
 
-// NO__ERRNO: declare double @llvm.log10.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.log10.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.log10.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.log10.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.log10.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.log10.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.log10.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.log10.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @log10(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @log10f(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @log10l(x86_fp80 noundef) [[NOT_READNONE]]
@@ -564,10 +564,10 @@ __builtin_log1p(f);      __builtin_log1pf(f);     __builtin_log1pl(f); __builtin
 
 __builtin_log2(f);       __builtin_log2f(f);      __builtin_log2l(f); __builtin_log2f128(f);
 
-// NO__ERRNO: declare double @llvm.log2.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.log2.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.log2.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.log2.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.log2.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.log2.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.log2.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.log2.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @log2(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @log2f(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @log2l(x86_fp80 noundef) [[NOT_READNONE]]
@@ -586,10 +586,10 @@ __builtin_logb(f);       __builtin_logbf(f);      __builtin_logbl(f); __builtin_
 
 __builtin_lrint(f);      __builtin_lrintf(f);     __builtin_lrintl(f); __builtin_lrintf128(f);
 
-// NO__ERRNO: declare i64 @llvm.lrint.i64.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.lrint.i64.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.lrint.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.lrint.i64.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.lrint.i64.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare i64 @lrint(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @lrintf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @lrintl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -597,10 +597,10 @@ __builtin_lrint(f);      __builtin_lrintf(f);     __builtin_lrintl(f); __builtin
 
 __builtin_lround(f);     __builtin_lroundf(f);    __builtin_lroundl(f);  __builtin_lroundf128(f);
 
-// NO__ERRNO: declare i64 @llvm.lround.i64.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.lround.i64.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.lround.i64.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare i64 @llvm.lround.i64.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare i64 @llvm.lround.i64.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.lround.i64.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.lround.i64.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare i64 @llvm.lround.i64.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare i64 @lround(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @lroundf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i64 @lroundl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -608,14 +608,14 @@ __builtin_lround(f);     __builtin_lroundf(f);    __builtin_lroundl(f);  __built
 
 __builtin_nearbyint(f);  __builtin_nearbyintf(f); __builtin_nearbyintl(f); __builtin_nearbyintf128(f);
 
-// NO__ERRNO: declare double @llvm.nearbyint.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.nearbyint.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.nearbyint.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.nearbyint.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.nearbyint.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.nearbyint.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.nearbyint.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.nearbyint.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.nearbyint.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.nearbyint.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.nearbyint.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.nearbyint.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.nearbyint.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.nearbyint.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.nearbyint.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.nearbyint.f128(fp128) [[READNONE_INTRINSIC2]]
 
 __builtin_nextafter(f,f);  __builtin_nextafterf(f,f); __builtin_nextafterl(f,f); __builtin_nextafterf128(f,f);
 
@@ -663,25 +663,25 @@ __builtin_remquo(f,f,i);  __builtin_remquof(f,f,i); __builtin_remquol(f,f,i); __
 
 __builtin_rint(f);       __builtin_rintf(f);      __builtin_rintl(f); __builtin_rintf128(f);
 
-// NO__ERRNO: declare double @llvm.rint.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.rint.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.rint.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.rint.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.rint.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.rint.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.rint.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.rint.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.rint.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.rint.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.rint.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.rint.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.rint.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.rint.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.rint.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.rint.f128(fp128) [[READNONE_INTRINSIC2]]
 
 __builtin_round(f);      __builtin_roundf(f);     __builtin_roundl(f); __builtin_roundf128(f);
 
-// NO__ERRNO: declare double @llvm.round.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.round.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.round.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.round.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.round.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.round.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.round.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.round.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.round.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.round.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.round.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.round.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.round.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.round.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.round.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.round.f128(fp128) [[READNONE_INTRINSIC2]]
 
 __builtin_scalbln(f,f);    __builtin_scalblnf(f,f);   __builtin_scalblnl(f,f); __builtin_scalblnf128(f,f);
 
@@ -707,10 +707,10 @@ __builtin_scalbn(f,f);     __builtin_scalbnf(f,f);    __builtin_scalbnl(f,f); __
 
 __builtin_sin(f);        __builtin_sinf(f);       __builtin_sinl(f); __builtin_sinf128(f);
 
-// NO__ERRNO: declare double @llvm.sin.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.sin.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.sin.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.sin.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.sin.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.sin.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.sin.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.sin.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @sin(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @sinf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @sinl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -747,10 +747,10 @@ __builtin_sincospi(f,d,d); __builtin_sincospif(f,fp,fp); __builtin_sincospil(f,l
 
 __builtin_sqrt(f);       __builtin_sqrtf(f);      __builtin_sqrtl(f); __builtin_sqrtf128(f);
 
-// NO__ERRNO: declare double @llvm.sqrt.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.sqrt.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.sqrt.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.sqrt.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.sqrt.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.sqrt.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.sqrt.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.sqrt.f128(fp128) [[READNONE_INTRINSIC2]]
 // HAS_ERRNO: declare double @sqrt(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @sqrtf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @sqrtl(x86_fp80 noundef) [[NOT_READNONE]]
@@ -791,22 +791,24 @@ __builtin_tgamma(f);     __builtin_tgammaf(f);    __builtin_tgammal(f); __builti
 
 __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin_truncf128(f);
 
-// NO__ERRNO: declare double @llvm.trunc.f64(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.trunc.f32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare fp128 @llvm.trunc.f128(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.trunc.f64(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.trunc.f32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare fp128 @llvm.trunc.f128(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.trunc.f64(double) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare float @llvm.trunc.f32(float) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// NO__ERRNO: declare fp128 @llvm.trunc.f128(fp128) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare double @llvm.trunc.f64(double) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare float @llvm.trunc.f32(float) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC2]]
+// HAS_ERRNO: declare fp128 @llvm.trunc.f128(fp128) [[READNONE_INTRINSIC2]]
 };
 
 // NO__ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
+// NO__ERRNO: attributes [[READNONE_INTRINSIC2]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // NO__ERRNO: attributes [[PURE]] = { {{.*}}memory(read){{.*}} }
 // NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
+// HAS_ERRNO: attributes [[READNONE_INTRINSIC2]] = { {{.*}}memory(none){{.*}} }
 // HAS_ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
 // HAS_ERRNO: attributes [[PURE]] = { {{.*}}memory(read){{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }

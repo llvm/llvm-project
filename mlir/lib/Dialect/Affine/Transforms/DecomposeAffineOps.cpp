@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -40,10 +41,10 @@ static int64_t numEnclosingInvariantLoops(OpOperand &operand) {
 
 void mlir::affine::reorderOperandsByHoistability(RewriterBase &rewriter,
                                                  AffineApplyOp op) {
-  SmallVector<int64_t> numInvariant = llvm::to_vector(
-      llvm::map_range(op->getOpOperands(), [&](OpOperand &operand) {
+  SmallVector<int64_t> numInvariant =
+      llvm::map_to_vector(op->getOpOperands(), [&](OpOperand &operand) {
         return numEnclosingInvariantLoops(operand);
-      }));
+      });
 
   int64_t numOperands = op.getNumOperands();
   SmallVector<int64_t> operandPositions =

@@ -18,6 +18,21 @@ define i32 @shl_i32(i32 %v, i32 %x) {
   ret i32 %a
 }
 
+define i64 @shl_i64_zext(i64 %v, i32 %x) {
+; CHECK-LABEL: shl_i64_zext:
+; CHECK:         .functype shl_i64_zext (i64, i32) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.shl
+; CHECK-NEXT:    # fallthrough-return
+  %m = and i32 %x, 63
+  %z = zext i32 %m to i64
+  %a = shl i64 %v, %z
+  ret i64 %a
+}
+
 define i32 @sra_i32(i32 %v, i32 %x) {
 ; CHECK-LABEL: sra_i32:
 ; CHECK:         .functype sra_i32 (i32, i32) -> (i32)
@@ -31,6 +46,21 @@ define i32 @sra_i32(i32 %v, i32 %x) {
   ret i32 %a
 }
 
+define i64 @sra_i64_zext(i64 %v, i32 %x) {
+; CHECK-LABEL: sra_i64_zext:
+; CHECK:         .functype sra_i64_zext (i64, i32) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.shr_s
+; CHECK-NEXT:    # fallthrough-return
+  %m = and i32 %x, 63
+  %z = zext i32 %m to i64
+  %a = ashr i64 %v, %z
+  ret i64 %a
+}
+
 define i32 @srl_i32(i32 %v, i32 %x) {
 ; CHECK-LABEL: srl_i32:
 ; CHECK:         .functype srl_i32 (i32, i32) -> (i32)
@@ -42,6 +72,21 @@ define i32 @srl_i32(i32 %v, i32 %x) {
   %m = and i32 %x, 31
   %a = lshr i32 %v, %m
   ret i32 %a
+}
+
+define i64 @srl_i64_zext(i64 %v, i32 %x) {
+; CHECK-LABEL: srl_i64_zext:
+; CHECK:         .functype srl_i64_zext (i64, i32) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.shr_u
+; CHECK-NEXT:    # fallthrough-return
+  %m = and i32 %x, 63
+  %z = zext i32 %m to i64
+  %a = lshr i64 %v, %z
+  ret i64 %a
 }
 
 define i64 @shl_i64(i64 %v, i64 %x) {

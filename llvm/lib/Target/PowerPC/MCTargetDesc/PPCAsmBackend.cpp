@@ -25,7 +25,25 @@
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
-static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
+static uint64_t adjustFixupValue(MCContext &Ctx, const MCFixup &Fixup,
+                                 unsigned Kind, uint64_t Value) {
+  auto checkBrFixup = [&](unsigned Bits) {
+    int64_t SVal = int64_t(Value);
+    if ((Value & 3) != 0) {
+      Ctx.reportError(Fixup.getLoc(), "branch target not a multiple of four (" +
+                                          Twine(SVal) + ")");
+      return;
+    }
+
+    // Low two bits are not encoded.
+    if (!isIntN(Bits + 2, Value)) {
+      Ctx.reportError(Fixup.getLoc(), "branch target out of range (" +
+                                          Twine(SVal) + " not between " +
+                                          Twine(minIntN(Bits) * 4) + " and " +
+                                          Twine(maxIntN(Bits) * 4) + ")");
+    }
+  };
+
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
@@ -37,16 +55,21 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
     return Value;
   case PPC::fixup_ppc_brcond14:
   case PPC::fixup_ppc_brcond14abs:
+    checkBrFixup(14);
     return Value & 0xfffc;
   case PPC::fixup_ppc_br24:
   case PPC::fixup_ppc_br24abs:
   case PPC::fixup_ppc_br24_notoc:
+    checkBrFixup(24);
     return Value & 0x3fffffc;
   case PPC::fixup_ppc_half16:
     return Value & 0xffff;
   case PPC::fixup_ppc_half16ds:
   case PPC::fixup_ppc_half16dq:
     return Value & 0xfffc;
+  case PPC::fixup_ppc_pcrel32:
+  case PPC::fixup_ppc_imm32:
+    return Value & 0xffffffff;
   case PPC::fixup_ppc_pcrel34:
   case PPC::fixup_ppc_imm34:
     return Value & 0x3ffffffff;
@@ -71,6 +94,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case PPC::fixup_ppc_br24abs:
   case PPC::fixup_ppc_br24_notoc:
     return 4;
+  case PPC::fixup_ppc_pcrel32:
+  case PPC::fixup_ppc_imm32:
   case PPC::fixup_ppc_pcrel34:
   case PPC::fixup_ppc_imm34:
   case FK_Data_8:
@@ -154,6 +179,8 @@ MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_ppc_brcond14abs", 16, 14, 0},
       {"fixup_ppc_half16", 0, 16, 0},
       {"fixup_ppc_half16ds", 0, 14, 0},
+      {"fixup_ppc_pcrel32", 0, 32, 0},
+      {"fixup_ppc_imm32", 0, 32, 0},
       {"fixup_ppc_pcrel34", 0, 34, 0},
       {"fixup_ppc_imm34", 0, 34, 0},
       {"fixup_ppc_nofixup", 0, 0, 0}};
@@ -166,6 +193,8 @@ MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_ppc_brcond14abs", 2, 14, 0},
       {"fixup_ppc_half16", 0, 16, 0},
       {"fixup_ppc_half16ds", 2, 14, 0},
+      {"fixup_ppc_pcrel32", 0, 32, 0},
+      {"fixup_ppc_imm32", 0, 32, 0},
       {"fixup_ppc_pcrel34", 0, 34, 0},
       {"fixup_ppc_imm34", 0, 34, 0},
       {"fixup_ppc_nofixup", 0, 0, 0}};
@@ -202,7 +231,7 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  Value = adjustFixupValue(Kind, Value);
+  Value = adjustFixupValue(getContext(), Fixup, Kind, Value);
   if (!Value)
     return; // Doesn't change encoding.
 

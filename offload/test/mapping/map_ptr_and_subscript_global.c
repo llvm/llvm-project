@@ -48,8 +48,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[0],
            x0_hostaddr == &p[0]);
-    // EXPECTED: 111 1 1 0
-    // CHECK:    111 0 1 0
+    // CHECK:    111 1 1 0
     p++;
   }
 
@@ -58,8 +57,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[-1],
            x0_hostaddr == &p[-1]);
-    // EXPECTED: 222 1 1 0
-    // CHECK:    111 0 0 0
+    // CHECK:    222 1 1 0
     p++;
   }
 
@@ -68,8 +66,7 @@ void f1() {
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[-2],
            x0_hostaddr == &p[-2]);
-    // EXPECTED: 333 1 1 0
-    // CHECK:    111 1 0 0
+    // CHECK:    333 1 1 0
   }
 
   // The following map(from:p) should not bring back p, because p is an

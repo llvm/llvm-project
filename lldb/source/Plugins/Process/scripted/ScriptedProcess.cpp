@@ -21,18 +21,21 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Queue.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 
-#include <mutex>
+#include "llvm/Support/Error.h"
 
-LLDB_PLUGIN_DEFINE(ScriptedProcess)
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(ScriptedProcess)
 
 llvm::StringRef ScriptedProcess::GetPluginDescriptionStatic() {
   return "Scripted Process plug-in.";
@@ -59,11 +62,24 @@ lldb::ProcessSP ScriptedProcess::CreateInstance(lldb::TargetSP target_sp,
 
   ScriptedMetadata scripted_metadata(target_sp->GetProcessLaunchInfo());
 
+  if (!scripted_metadata)
+    return nullptr;
+
   Status error;
   auto process_sp = std::shared_ptr<ScriptedProcess>(
       new ScriptedProcess(target_sp, listener_sp, scripted_metadata, error));
 
   if (error.Fail() || !process_sp || !process_sp->m_interface_up) {
+    // CreateInstance returns nullptr on failure with no Status output
+    // parameter, so we must report the error via the diagnostic system for
+    // users to see it.
+    if (error.Fail()) {
+      Debugger::ReportError(
+          llvm::formatv("failed to create ScriptedProcess: {0}",
+                        error.AsCString())
+              .str(),
+          target_sp->GetDebugger().GetID());
+    }
     LLDB_LOGF(GetLog(LLDBLog::Process), "%s", error.AsCString());
     return nullptr;
   }
@@ -110,13 +126,13 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   // Create process script object
-  auto obj_or_err = GetInterface().CreatePluginObject(
-      m_scripted_metadata.GetClassName(), exe_ctx,
-      m_scripted_metadata.GetArgsSP());
+  auto obj_or_err =
+      GetInterface().CreatePluginObject(m_scripted_metadata, exe_ctx);
 
   if (!obj_or_err) {
-    llvm::consumeError(obj_or_err.takeError());
-    error = Status::FromErrorString("Failed to create script object.");
+    std::string error_msg = llvm::toString(obj_or_err.takeError());
+    error = Status::FromErrorStringWithFormatv(
+        "failed to create script object: {0}", error_msg);
     return;
   }
 
@@ -146,12 +162,8 @@ ScriptedProcess::~ScriptedProcess() {
 }
 
 void ScriptedProcess::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 void ScriptedProcess::Terminate() {
@@ -161,7 +173,11 @@ void ScriptedProcess::Terminate() {
 Status ScriptedProcess::DoLoadCore() {
   ProcessLaunchInfo launch_info = GetTarget().GetProcessLaunchInfo();
 
-  return DoLaunch(nullptr, launch_info);
+  Status error = DoLaunch(nullptr, launch_info);
+  // Process::LoadCore() doesn't go through DidLaunch().
+  if (error.Success())
+    DidLaunchOrAttach();
+  return error;
 }
 
 Status ScriptedProcess::DoLaunch(Module *exe_module,
@@ -177,7 +193,23 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
   return error;
 }
 
-void ScriptedProcess::DidLaunch() { m_pid = GetInterface().GetProcessID(); }
+void ScriptedProcess::DidLaunch() { DidLaunchOrAttach(); }
+
+void ScriptedProcess::DidLaunchOrAttach() {
+  m_pid = GetInterface().GetProcessID();
+
+  StructuredData::DictionarySP bits_sp = GetInterface().GetAddressableBits();
+  if (!bits_sp)
+    return;
+
+  AddressableBits addressable_bits;
+  uint64_t num_bits = 0;
+  if (bits_sp->GetValueForKeyAsInteger("lowmem", num_bits))
+    addressable_bits.SetLowmemAddressableBits(num_bits);
+  if (bits_sp->GetValueForKeyAsInteger("highmem", num_bits))
+    addressable_bits.SetHighmemAddressableBits(num_bits);
+  SetAddressableBitMasks(addressable_bits);
+}
 
 void ScriptedProcess::DidResume() {
   // Update the PID again, in case the user provided a placeholder pid at launch
@@ -196,13 +228,16 @@ Status ScriptedProcess::DoResume(RunDirection direction) {
 
 Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {
   Status error = GetInterface().Attach(attach_info);
+  if (error.Fail()) {
+    error = Status::FromErrorStringWithFormatv(
+        "failed to attach to scripted process: {0}", error.AsCString());
+    return error;
+  }
   SetPrivateState(eStateRunning);
   SetPrivateState(eStateStopped);
-  if (error.Fail())
-    return error;
   // NOTE: We need to set the PID before finishing to attach otherwise we will
   // hit an assert when calling the attach completion handler.
-  DidLaunch();
+  DidLaunchOrAttach();
 
   return {};
 }
@@ -220,19 +255,29 @@ Status ScriptedProcess::DoAttachToProcessWithName(
 
 void ScriptedProcess::DidAttach(ArchSpec &process_arch) {
   process_arch = GetArchitecture();
+  // Process::DidExec also comes through Process::CompleteAttach without
+  // resetting the address masks, so they have to be reported again here.
+  DidLaunchOrAttach();
 }
 
 Status ScriptedProcess::DoDestroy() { return Status(); }
 
 bool ScriptedProcess::IsAlive() { return GetInterface().IsAlive(); }
 
-size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ScriptedProcess::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize() || error.Fail())
+  if (!data_extractor_sp || !data_extractor_sp->HasData() || error.Fail()) {
+    if (error.Fail()) {
+      error = Status::FromErrorStringWithFormatv(
+          "Failed to read memory from scripted process at 0x{0:x-}: {1}", addr,
+          error.AsCString());
+    }
     return 0;
+  }
 
   offset_t bytes_copied = data_extractor_sp->CopyByteOrderedData(
       0, data_extractor_sp->GetByteSize(), buf, size, GetByteOrder());
@@ -252,15 +297,21 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   lldb::DataExtractorSP data_extractor_sp = std::make_shared<DataExtractor>(
       buf, size, GetByteOrder(), GetAddressByteSize());
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize())
+  if (!data_extractor_sp || !data_extractor_sp->HasData())
     return 0;
 
   lldb::offset_t bytes_written =
       GetInterface().WriteMemoryAtAddress(vm_addr, data_extractor_sp, error);
 
-  if (!bytes_written || bytes_written == LLDB_INVALID_OFFSET)
+  if (!bytes_written || bytes_written == LLDB_INVALID_OFFSET) {
+    if (error.Fail()) {
+      error = Status::FromErrorStringWithFormatv(
+          "failed to write memory to scripted process at 0x{0:x-}: {1}",
+          vm_addr, error.AsCString());
+    }
     return ScriptedInterface::ErrorWithMessage<size_t>(
         LLVM_PRETTY_FUNCTION, "Failed to copy write buffer to memory.", error);
+  }
 
   // FIXME: We should use the diagnostic system to report a warning if the
   // `bytes_written` is different from `size`.
@@ -271,7 +322,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
 Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
   assert(bp_site != nullptr);
 
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     return {};
   }
 
@@ -381,9 +432,14 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
     auto thread_or_error =
         ScriptedThread::Create(*this, object_sp->GetAsGeneric());
 
-    if (!thread_or_error)
-      return ScriptedInterface::ErrorWithMessage<bool>(
-          LLVM_PRETTY_FUNCTION, toString(thread_or_error.takeError()), error);
+    if (!thread_or_error) {
+      Debugger::ReportError(
+          llvm::formatv("failed to create scripted thread ({0}): {1}", idx,
+                        llvm::toString(thread_or_error.takeError()))
+              .str(),
+          GetTarget().GetDebugger().GetID());
+      return false;
+    }
 
     ThreadSP thread_sp = thread_or_error.get();
     lldbassert(thread_sp && "Couldn't initialize scripted thread.");
@@ -426,7 +482,8 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 }
 
 lldb_private::StructuredData::ObjectSP
-ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
+ScriptedProcess::GetLoadedDynamicLibrariesInfos(
+    BinaryInformationLevel info_level) {
   Status error;
   auto error_with_message = [&error](llvm::StringRef message) {
     return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
@@ -510,7 +567,8 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
       return error_with_message("Couldn't set the load address for module.");
 
     FileSpec objfile(path);
-    module_sp->SetFileSpecAndObjectName(objfile, objfile.GetFilename());
+    module_sp->SetFileSpecAndObjectName(objfile,
+                                        ConstString(objfile.GetFilename()));
 
     if (is_placeholder_module) {
       target.GetImages().AppendIfNeeded(module_sp, true /*notify=*/);

@@ -66,7 +66,9 @@ size_t mlir::moveLoopInvariantCode(
   size_t numMoved = 0;
 
   for (Region *region : regions) {
-    LDBG() << "Original loop:\n" << *region->getParentOp();
+    LDBG() << "Original loop:\n"
+           << OpWithFlags(region->getParentOp(),
+                          OpPrintingFlags().skipRegions());
 
     std::queue<Operation *> worklist;
     // Add top-level operations in the loop body to the worklist.
@@ -90,7 +92,8 @@ size_t mlir::moveLoopInvariantCode(
           !canBeHoisted(op, definedOutside))
         continue;
 
-      LDBG() << "Moving loop-invariant op: " << *op;
+      LDBG() << "Moving loop-invariant op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       moveOutOfRegion(op, region);
       ++numMoved;
 
@@ -111,9 +114,7 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
-      [&](Operation *op, Region *) {
-        return isMemoryEffectFree(op) && isSpeculatable(op);
-      },
+      [&](Operation *op, Region *) { return isPure(op); },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
 }
 
@@ -270,6 +271,10 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
         if (failed(populateSubsetOpsAtIterArg(nestedLoop, nestedIterArg,
                                               /*collectHoistableOps=*/false)))
           return failure();
+        // There must be a single use-def chain. Bail if there are multiple
+        // nested loops using this value.
+        if (nextValue)
+          return failure();
         nextValue = nestedLoop.getTiedLoopResult(&use);
         continue;
       }
@@ -277,7 +282,7 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
       auto subsetOp = dyn_cast<SubsetOpInterface>(use.getOwner());
       if (!subsetOp)
         return failure();
-      insert(subsetOp);
+      insert(subsetOp, collectHoistableOps);
 
       if (auto insertionOp =
               dyn_cast<SubsetInsertionOpInterface>(use.getOwner())) {

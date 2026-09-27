@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NATIVE_HALF
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
@@ -45,6 +45,12 @@ int3 test_max_int3(int3 p0, int3 p1) { return max(p0, p1); }
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z13test_max_int4
 // CHECK: call <4 x i32> @llvm.smax.v4i32
 int4 test_max_int4(int4 p0, int4 p1) { return max(p0, p1); }
+
+// CHECK-LABEL: test_max_int5
+// CHECK: call <5 x i32> @llvm.smax.v5i32
+vector<int, 5> test_max_int5(vector<int, 5> p0, vector<int, 5> p1) {
+	return max(p0, p1);
+}
 
 // CHECK-LABEL: define hidden noundef i32 @_Z13test_max_uint
 // CHECK: call i32 @llvm.umax.i32(

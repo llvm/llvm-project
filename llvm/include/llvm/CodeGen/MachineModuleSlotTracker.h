@@ -9,37 +9,38 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 #define LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class AbstractSlotTrackerStorage;
 class Function;
 class MachineModuleInfo;
 class MachineFunction;
 class Module;
 
-class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
-  const Function &TheFunction;
-  const MachineModuleInfo &TheMMI;
-  unsigned MDNStartSlot = 0, MDNEndSlot = 0;
+using MFGetterFnT = function_ref<MachineFunction *(const Function &)>;
 
-  void processMachineFunctionMetadata(AbstractSlotTrackerStorage *AST,
-                                      const MachineFunction &MF);
-  void processMachineModule(AbstractSlotTrackerStorage *AST, const Module *M,
-                            bool ShouldInitializeAllMetadata);
-  void processMachineFunction(AbstractSlotTrackerStorage *AST,
-                              const Function *F,
-                              bool ShouldInitializeAllMetadata);
+class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
+  const MachineFunction *TheMF;
+  MachineMDNodeListType MachineMDNodes;
+  SmallPtrSet<const DILocation *, 4> InlineDebugLocations;
+
+  void collectMachineFunctionMetadata(
+      SmallVectorImpl<const MDNode *> &Metadata, const MachineFunction &MF,
+      SmallVectorImpl<const MDNode *> *DebugLocations = nullptr) const;
 
 public:
-  MachineModuleSlotTracker(const MachineModuleInfo &MMI,
-                           const MachineFunction *MF,
-                           bool ShouldInitializeAllMetadata = true);
-  ~MachineModuleSlotTracker();
+  MachineModuleSlotTracker(MFGetterFnT Fn, const MachineFunction *MF);
+  ~MachineModuleSlotTracker() override;
 
+  /// Renumber module and machine metadata for canonical MIR output.
+  void renumberMetadataForAssembly();
   void collectMachineMDNodes(MachineMDNodeListType &L) const;
+  bool shouldPrintDebugLocationInline(const DILocation *DL) const override;
 };
 
 } // namespace llvm

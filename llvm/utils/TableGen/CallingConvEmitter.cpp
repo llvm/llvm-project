@@ -15,6 +15,7 @@
 #include "Common/CodeGenTarget.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
@@ -54,6 +55,21 @@ private:
 };
 } // End anonymous namespace
 
+static void emitCCHeader(raw_ostream &O, const Record *CC, StringRef Suffix) {
+  unsigned Pad = CC->getName().size();
+  if (CC->getValueAsBit("Entry")) {
+    O << "bool llvm::";
+    Pad += 12;
+  } else {
+    O << "static bool ";
+    Pad += 13;
+  }
+  O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
+    << indent(Pad) << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
+    << indent(Pad) << "ISD::ArgFlagsTy ArgFlags, Type *OrigTy, CCState &State)"
+    << Suffix;
+}
+
 void CallingConvEmitter::run(raw_ostream &O) {
   emitSourceFileHeader("Calling Convention Implementation Fragment", O);
 
@@ -63,35 +79,22 @@ void CallingConvEmitter::run(raw_ostream &O) {
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
   Records.getTimer().startTimer("Emit prototypes");
-  O << "#ifndef GET_CC_REGISTER_LISTS\n\n";
-  for (const Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom")) {
-      unsigned Pad = CC->getName().size();
-      if (CC->getValueAsBit("Entry")) {
-        O << "bool llvm::";
-        Pad += 12;
-      } else {
-        O << "static bool ";
-        Pad += 13;
-      }
-      O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
-        << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-        << std::string(Pad, ' ')
-        << "ISD::ArgFlagsTy ArgFlags, Type *OrigTy, CCState &State);\n";
+  {
+    IfDefEmitter IfGuard(O, "GET_CALLING_CONV_IMPL");
+    for (const Record *CC : CCs) {
+      if (!CC->getValueAsBit("Custom"))
+        emitCCHeader(O, CC, ";\n");
     }
-  }
 
-  // Emit each non-custom calling convention description in full.
-  Records.getTimer().startTimer("Emit full descriptions");
-  for (const Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom")) {
-      emitCallingConv(CC, O);
+    // Emit each non-custom calling convention description in full.
+    Records.getTimer().startTimer("Emit full descriptions");
+    for (const Record *CC : CCs) {
+      if (!CC->getValueAsBit("Custom"))
+        emitCallingConv(CC, O);
     }
   }
 
   emitArgRegisterLists(O);
-
-  O << "\n#endif // CC_REGISTER_LIST\n";
 }
 
 void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
@@ -105,18 +108,7 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
   AssignedRegsMap[CurrentAction] = {};
 
   O << "\n\n";
-  unsigned Pad = CurrentAction.size();
-  if (CC->getValueAsBit("Entry")) {
-    O << "bool llvm::";
-    Pad += 12;
-  } else {
-    O << "static bool ";
-    Pad += 13;
-  }
-  O << CurrentAction << "(unsigned ValNo, MVT ValVT,\n"
-    << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-    << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, Type *OrigTy, "
-    << "CCState &State) {\n";
+  emitCCHeader(O, CC, " {\n");
   // Emit all of the actions, in order.
   for (unsigned I = 0, E = CCActions->size(); I != E; ++I) {
     const Record *Action = CCActions->getElementAsRecord(I);
@@ -281,9 +273,9 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "return false;\n";
   } else if (Action->isSubClassOf("CCPromoteToType")) {
     const Record *DestTy = Action->getValueAsDef("DestTy");
-    MVT::SimpleValueType DestVT = getValueType(DestTy);
+    MVT DestVT = getValueType(DestTy);
     O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
-    if (MVT(DestVT).isFloatingPoint()) {
+    if (DestVT.isFloatingPoint()) {
       O << Indent << "LocInfo = CCValAssign::FPExt;\n";
     } else {
       O << Indent << "if (ArgFlags.isSExt())\n"
@@ -295,9 +287,9 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     }
   } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
     const Record *DestTy = Action->getValueAsDef("DestTy");
-    MVT::SimpleValueType DestVT = getValueType(DestTy);
+    MVT DestVT = getValueType(DestTy);
     O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
-    if (MVT(DestVT).isFloatingPoint()) {
+    if (DestVT.isFloatingPoint()) {
       PrintFatalError(Action->getLoc(),
                       "CCPromoteToUpperBitsInType does not handle floating "
                       "point");
@@ -375,7 +367,7 @@ void CallingConvEmitter::emitArgRegisterLists(raw_ostream &O) {
   if (AssignedRegsMap.empty())
     return;
 
-  O << "\n#else\n\n";
+  IfDefEmitter IfGuard(O, "GET_CC_REGISTER_LISTS");
 
   for (const auto &[RegName, Registers] : AssignedRegsMap) {
     if (RegName.empty())

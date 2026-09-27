@@ -6,7 +6,7 @@ define void @test(ptr %in) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[IN]], i64 64
-; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i16> @llvm.masked.load.v32i16.p0(ptr [[TMP1]], i32 2, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i16> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i16> @llvm.masked.load.v32i16.p0(ptr align 2 [[TMP1]], <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i16> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i16> [[TMP2]], <32 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i16> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP0]], align 2

@@ -951,7 +951,7 @@ def get_GPRs(frame):
         from lldbutil import get_GPRs
         regs = get_GPRs(frame)
         for reg in regs:
-            print "%s => %s" % (reg.GetName(), reg.GetValue())
+            print("%s => %s" % (reg.GetName(), reg.GetValue()))
         ...
     """
     return get_registers(frame, "general purpose")
@@ -965,7 +965,7 @@ def get_FPRs(frame):
         from lldbutil import get_FPRs
         regs = get_FPRs(frame)
         for reg in regs:
-            print "%s => %s" % (reg.GetName(), reg.GetValue())
+            print("%s => %s" % (reg.GetName(), reg.GetValue()))
         ...
     """
     return get_registers(frame, "floating point")

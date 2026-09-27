@@ -55,11 +55,19 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologueMBB) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
+  void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineFunction &MF, uint64_t Offset,
+                     uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
+                     uint64_t ProbeSize, bool DynAllocation,
+                     MachineInstr::MIFlag Flag) const;
   void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                  const DebugLoc &DL, Register DestReg, Register SrcReg,
                  int64_t Val, MachineInstr::MIFlag Flag) const;

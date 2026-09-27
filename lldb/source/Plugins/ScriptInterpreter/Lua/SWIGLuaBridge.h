@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_LUA_SWIGLUABRIDGE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_LUA_SWIGLUABRIDGE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SWIGLUABRIDGE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SWIGLUABRIDGE_H
 
 #include "lldb/lldb-forward.h"
 #include "lua.hpp"
@@ -32,4 +32,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_LUA_SWIGLUABRIDGE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SWIGLUABRIDGE_H

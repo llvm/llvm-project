@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
-#define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
+#ifndef LLDB_SYMBOL_SAVECOREOPTIONS_H
+#define LLDB_SYMBOL_SAVECOREOPTIONS_H
 
 #include "lldb/Target/CoreFileMemoryRanges.h"
 #include "lldb/Target/ThreadCollection.h"
@@ -37,7 +37,7 @@ public:
   const std::optional<lldb_private::FileSpec> GetOutputFile() const;
 
   Status SetProcess(lldb::ProcessSP process_sp);
-  lldb::ProcessSP GetProcess() { return m_process_sp; }
+  lldb::ProcessSP GetProcess() const { return m_process_sp; }
 
   Status AddThread(lldb::ThreadSP thread_sp);
   bool RemoveThread(lldb::ThreadSP thread_sp);
@@ -68,4 +68,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_SAVECOREOPTIONS_H
+#endif // LLDB_SYMBOL_SAVECOREOPTIONS_H

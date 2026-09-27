@@ -20,10 +20,8 @@ class RemoteAwarePlatform : public Platform {
 public:
   using Platform::Platform;
 
-  virtual Status
-  ResolveExecutable(const ModuleSpec &module_spec,
-                    lldb::ModuleSP &exe_module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
+  virtual Status ResolveExecutable(const ModuleSpec &module_spec,
+                                   lldb::ModuleSP &exe_module_sp) override;
 
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
@@ -73,11 +71,13 @@ public:
   Status RunShellCommand(llvm::StringRef command, const FileSpec &working_dir,
                          int *status_ptr, int *signo_ptr,
                          std::string *command_output,
+                         std::string *separated_error_output,
                          const Timeout<std::micro> &timeout) override;
 
   Status RunShellCommand(llvm::StringRef interpreter, llvm::StringRef command,
                          const FileSpec &working_dir, int *status_ptr,
                          int *signo_ptr, std::string *command_output,
+                         std::string *separated_error_output,
                          const Timeout<std::micro> &timeout) override;
 
   const char *GetHostname() override;

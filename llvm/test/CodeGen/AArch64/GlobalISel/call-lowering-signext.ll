@@ -8,11 +8,11 @@ define i8 @signext_param_i8(i8 signext %x) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[COPY]], 8
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[ASSERT_SEXT]](i32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ret i8 %x
 }
@@ -22,10 +22,10 @@ define i8 @no_signext_param(i8 %x) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ret i8 %x
 }
@@ -36,8 +36,8 @@ define i32 @signext_param_i32(i32 signext %x) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   $w0 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   $w0 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ret i32 %x
 }
@@ -48,22 +48,22 @@ define i32 @signext_param_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f,
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i64) = COPY $x5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i64) = COPY $x6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(i64) = COPY $x7
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (i64) from %fixed-stack.1, align 16)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
-  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[SEXTLOAD]], 1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (i8) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[SEXTLOAD]], 1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i1) = G_TRUNC [[ASSERT_SEXT]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i1)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
                                 i64 %g, i64 %h, i64 %i, i1 signext %j) {
   %v = zext i1 %j to i32
@@ -76,19 +76,19 @@ define i32 @dont_need_assert_zext_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i64) = COPY $x5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i64) = COPY $x6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(i64) = COPY $x7
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (i64) from %fixed-stack.1, align 16)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s32) from %fixed-stack.0, align 8)
-  ; CHECK-NEXT:   $w0 = COPY [[LOAD1]](s32)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (i32) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   $w0 = COPY [[LOAD1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
                                         i64 %f, i64 %g, i64 %h, i64 %i,
                                         i32 signext %j) {
@@ -101,22 +101,22 @@ define i8 @s8_assert_zext_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i64) = COPY $x5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i64) = COPY $x6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(i64) = COPY $x7
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (i64) from %fixed-stack.1, align 16)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
-  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[SEXTLOAD]], 8
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (i8) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[SEXTLOAD]], 8
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[ASSERT_SEXT]](i32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
                                         i64 %f, i64 %g, i64 %h, i64 %i,
                                         i8 signext %j) {
@@ -128,11 +128,11 @@ define i32 @callee_signext_i1(i1 signext %0) {
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
-  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[COPY]], 1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i1) = G_TRUNC [[ASSERT_SEXT]](i32)
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i32) = G_SEXT [[TRUNC]](i1)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %r = sext i1 %0 to i32
   ret i32 %r
@@ -141,15 +141,15 @@ define i32 @callee_signext_i1(i1 signext %0) {
 define i32 @caller_signext_i1() {
   ; CHECK-LABEL: name: caller_signext_i1
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s8) = G_SEXT [[C]](s1)
-  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[SEXT]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[SEXT1]](s32)
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i8) = G_SEXT [[C]](i1)
+  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(i32) = G_SEXT [[SEXT]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT1]](i32)
   ; CHECK-NEXT:   BL @callee_signext_i1, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   $w0 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   $w0 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %r = call i32 @callee_signext_i1(i1 signext true)
   ret i32 %r
@@ -158,9 +158,9 @@ define i32 @caller_signext_i1() {
 define signext i1 @ret_signext_i1() {
   ; CHECK-LABEL: name: ret_signext_i1
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
-  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i32) = G_SEXT [[C]](i1)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ret i1 true
 }

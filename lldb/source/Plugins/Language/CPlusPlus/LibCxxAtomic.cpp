@@ -8,6 +8,7 @@
 
 #include "LibCxxAtomic.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -126,7 +127,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0)
-    return m_real_child->GetSP()->Clone(ConstString("Value"));
+    return m_real_child->GetSP()->Clone("Value");
   return nullptr;
 }
 
@@ -135,14 +136,19 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  if (valobj_sp)
+  if (valobj_sp && IsLibCxxAtomic(*valobj_sp))
     return new LibcxxStdAtomicSyntheticFrontEnd(valobj_sp);
   return nullptr;
+}
+
+bool lldb_private::formatters::IsLibCxxAtomic(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("__a_") != nullptr;
+  return false;
 }

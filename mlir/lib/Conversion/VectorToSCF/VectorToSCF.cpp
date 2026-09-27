@@ -26,6 +26,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOSCF
@@ -271,7 +272,7 @@ template <typename OpTy>
 static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
                                 unsigned targetRank) {
   if (newXferOp.getVectorType().getRank() > targetRank)
-    newXferOp->setAttr(kPassLabel, b.getUnitAttr());
+    newXferOp->setDiscardableAttr(kPassLabel, b.getUnitAttr());
 }
 
 namespace lowering_n_d {
@@ -549,7 +550,7 @@ struct Strategy<TransferWriteOp> {
 template <typename OpTy>
 static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
                                         VectorTransferToSCFOptions options) {
-  if (xferOp->hasAttr(kPassLabel))
+  if (xferOp->hasDiscardableAttr(kPassLabel))
     return rewriter.notifyMatchFailure(
         xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
   if (xferOp.getVectorType().getRank() <= options.targetRank)
@@ -566,6 +567,10 @@ static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
       xferOp.getShapedType().getElementType())
     return rewriter.notifyMatchFailure(
         xferOp, "Mismatching source and destination element types.");
+  Operation *op = xferOp.getOperation();
+  if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+    return rewriter.notifyMatchFailure(
+        xferOp, "xferOp is not inside an automatic allocation scope");
 
   return success();
 }
@@ -605,7 +610,7 @@ struct PrepareTransferReadConversion
 
     auto buffers = allocBuffers(rewriter, xferOp);
     auto *newXfer = rewriter.clone(*xferOp.getOperation());
-    newXfer->setAttr(kPassLabel, rewriter.getUnitAttr());
+    newXfer->setDiscardableAttr(kPassLabel, rewriter.getUnitAttr());
     if (xferOp.getMask()) {
       dyn_cast<TransferReadOp>(newXfer).getMaskMutable().assign(
           buffers.maskBuffer);
@@ -614,7 +619,8 @@ struct PrepareTransferReadConversion
     Location loc = xferOp.getLoc();
     memref::StoreOp::create(rewriter, loc, newXfer->getResult(0),
                             buffers.dataBuffer);
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer,
+                                                ValueRange{});
 
     return success();
   }
@@ -657,10 +663,11 @@ struct PrepareTransferWriteConversion
     auto buffers = allocBuffers(rewriter, xferOp);
     memref::StoreOp::create(rewriter, loc, xferOp.getVector(),
                             buffers.dataBuffer);
-    auto loadedVec = memref::LoadOp::create(rewriter, loc, buffers.dataBuffer);
+    auto loadedVec =
+        memref::LoadOp::create(rewriter, loc, buffers.dataBuffer, ValueRange{});
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getValueToStoreMutable().assign(loadedVec);
-      xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
+      xferOp->setDiscardableAttr(kPassLabel, rewriter.getUnitAttr());
     });
 
     if (xferOp.getMask()) {
@@ -760,8 +767,7 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     if (vectorType.getRank() != 1) {
       // Flatten n-D vectors to 1D. This is done to allow indexing with a
       // non-constant value.
-      auto flatLength = std::accumulate(shape.begin(), shape.end(), 1,
-                                        std::multiplies<int64_t>());
+      int64_t flatLength = llvm::product_of(shape);
       auto flatVectorType =
           VectorType::get({flatLength}, vectorType.getElementType());
       value = vector::ShapeCastOp::create(rewriter, loc, flatVectorType, value);
@@ -906,7 +912,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (!xferOp->hasAttr(kPassLabel))
+    if (!xferOp->hasDiscardableAttr(kPassLabel))
       return rewriter.notifyMatchFailure(
           xferOp, "kPassLabel is present (progressing lowering in progress)");
 

@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_native_recip.h>
-#include <clc/opencl/math/native_recip.h>
+#include "clc/math/clc_native_recip.h"
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION native_recip
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

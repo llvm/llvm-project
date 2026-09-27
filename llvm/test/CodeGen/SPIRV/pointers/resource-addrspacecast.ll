@@ -26,7 +26,7 @@ entry:
 ; CHECK: %[[#c:]] = OpInBoundsAccessChain %[[#ptr_StorageBuffer_uint]] %[[#b:]] %[[#uint_0]]
   %casted = addrspacecast ptr addrspace(11) %ptr to ptr
 
-; CHECK: OpStore %[[#c]] %[[#uint_10]] Aligned 4
+; CHECK: OpStore %[[#c]] %[[#uint_10]]
   store i32 10, ptr %casted, align 4
   ret void
 }

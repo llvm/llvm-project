@@ -17,10 +17,12 @@ entry:
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", emissionKind: FullDebug)
 !1 = !DIFile(filename: "x.c", directory: "/")
-!2 = distinct !DISubprogram(name: "foo", scope: !0, isDefinition: true, unit: !0)
+!2 = distinct !DISubprogram(name: "foo", scope: !0, isDefinition: true, unit: !0, type: !10)
 !3 = !DILocalVariable(name: "a", arg: 1, scope: !2, file: !1, line: 1, type: !5)
 !4 = !DILocalVariable(name: "b", arg: 1, scope: !2, file: !1, line: 1, type: !5)
 !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !6 = !DILocation(line: 1, scope: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 1, !"Debug Info Version", i32 3}
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)

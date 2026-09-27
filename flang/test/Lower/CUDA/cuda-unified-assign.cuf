@@ -1,0 +1,189 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Unified data is host memory that the device can also access, so it takes the
+! place of host data in the CUDA Fortran Programming Guide 3.4.1 rules: an
+! assignment is a copy when the other side is device or constant data, or a whole
+! managed array, and is done on the host otherwise.
+
+module cmod
+  integer(4), constant :: ca(16)
+  integer(4), managed :: gma(16)
+end module
+
+! Assignments that are data transfers.
+
+subroutine unified_device_assign()
+  integer(4), unified :: ua(16)
+  integer(4), device :: db(16)
+  ua = db    ! whole unified = whole device
+  db = ua    ! whole device = whole unified
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_device_assign()
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
+! The host cannot access device memory, so sections are copied as well.
+subroutine unified_device_section_assign(i)
+  integer :: i
+  integer(4), unified :: ua(4,16)
+  integer(4), device :: db(4,16)
+  ua(:,i) = db(:,i)
+  db(:,i) = ua(:,i)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_device_section_assign
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
+subroutine unified_constant_assign()
+  use cmod
+  integer(4), unified :: ua(16)
+  ua = ca
+  ca = ua
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_constant_assign()
+! CHECK: cuf.data_transfer
+! CHECK: cuf.data_transfer
+
+! A whole managed array is copied whatever the other side is, and unified data on
+! the other side does not change that.
+subroutine unified_managed_assign(i)
+  integer :: i
+  integer(4), managed :: ma(4)
+  integer(4), unified :: ua(4,16), ub(4)
+  ma = ub          ! whole managed = whole unified
+  ub = ma          ! whole unified = whole managed
+  ua(:,i) = ma     ! unified section = whole managed
+  ma = ua(:,i)     ! whole managed = unified section
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_managed_assign
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
+subroutine unified_from_managed_module()
+  use cmod
+  integer(4), unified :: ua(16)
+  ua = gma
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_from_managed_module()
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
+! A device allocatable component of a unified object is still device data.
+subroutine unified_device_component()
+  type :: t
+    integer(4), device, allocatable :: m(:)
+  end type
+  type(t), unified :: x
+  integer(4) :: ha(5)
+  ha(1:5) = x%m(1:5)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_device_component()
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+
+! Assignments done on the host.
+
+subroutine unified_assign(hs)
+  integer(4) :: hs
+  integer(4), unified :: ua(16), ub(16), us
+  integer(4) :: ha(16)
+  ua = ub       ! unified = unified
+  ua = ha       ! unified = host array
+  ha = ub       ! host = unified
+  ua = 0        ! unified = constant
+  ua = hs       ! unified = host scalar
+  us = hs       ! unified scalar = host scalar
+  hs = us       ! host scalar = unified scalar
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_assign
+! CHECK-NOT: cuf.data_transfer
+
+subroutine unified_section_assign(i)
+  integer :: i
+  integer(4), unified :: ua(4,16), ub(4,16), uc(4)
+  integer(4), managed :: ma(4,16)
+  integer(4) :: ha(4,16)
+  ua(:,i) = ub(:,i)   ! unified section = unified section
+  ha(:,i) = ub(:,i)   ! host section = unified section
+  ua(:,i) = ha(:,i)   ! unified section = host section
+  ua(:,i) = uc        ! unified section = whole unified
+  uc = ub(:,i)        ! whole unified = unified section
+  ua(:,i) = ma(:,i)   ! unified section = managed section
+  ma(:,i) = ub(:,i)   ! managed section = unified section
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_section_assign
+! CHECK-NOT: cuf.data_transfer
+
+subroutine unified_element_assign(i)
+  integer :: i
+  integer(4), unified :: ua(16), ub(16)
+  ua(i) = ub(i)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_element_assign
+! CHECK-NOT: cuf.data_transfer
+
+! An expression is evaluated on the host, managed operands included.
+subroutine unified_expr_assign()
+  integer(4), unified :: ua(16), ub(16)
+  integer(4), managed :: mb(16)
+  integer(4) :: ha(16)
+  ua = ub + 1
+  ha = ub + 1
+  ua = mb + 1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_expr_assign()
+! CHECK-NOT: cuf.data_transfer
+
+subroutine unified_alloc_assign(n)
+  integer :: n
+  integer(4), allocatable, unified :: ua(:)
+  integer(4), unified :: ub(16)
+  integer(4) :: ha(16)
+  allocate(ua(n))
+  ua = ub
+  ua = ha
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_alloc_assign
+! CHECK-NOT: cuf.data_transfer
+
+! The unified attribute on a component, or on the object a component belongs to,
+! does not make the assignment a copy.
+subroutine unified_component_assign()
+  type :: t
+    integer(4), unified :: m(16)
+  end type
+  type :: t2
+    integer(4) :: m(16)
+  end type
+  type(t) :: x, y
+  type(t2), unified :: ux, uy
+  x%m = y%m
+  ux%m = uy%m
+end subroutine
+
+! CHECK-LABEL: func.func @_QPunified_component_assign()
+! CHECK-NOT: cuf.data_transfer
+
+! Pinned data is host memory on both sides here, so no copy is needed.
+subroutine pinned_unified_assign(n)
+  integer :: n
+  integer(4), allocatable, pinned :: pa(:)
+  integer(4), unified :: ub(16)
+  allocate(pa(n))
+  pa = ub
+  ub = pa
+end subroutine
+
+! CHECK-LABEL: func.func @_QPpinned_unified_assign
+! CHECK-NOT: cuf.data_transfer

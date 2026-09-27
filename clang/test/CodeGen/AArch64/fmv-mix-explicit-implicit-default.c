@@ -107,22 +107,30 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default_decl_first.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@implicit_default_decl_first.resolver
+// CHECK-SAME: () #[[ATTR3:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @implicit_default_decl_first.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default_def_first.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@explicit_default_def_first.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @explicit_default_def_first.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default_def_first.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@implicit_default_def_first.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @implicit_default_def_first.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default_decl_first.resolver() comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@explicit_default_decl_first.resolver
+// CHECK-SAME: () #[[ATTR3]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    ret ptr @explicit_default_decl_first.default
 //
@@ -203,9 +211,7 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// CHECK-NOFMV: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK-NOFMV: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK-NOFMV: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

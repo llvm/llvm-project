@@ -36,7 +36,7 @@ public:
   class IOEvent {
   public:
     IOEvent(handle_t event) : m_event(event) {}
-    virtual ~IOEvent() {}
+    virtual ~IOEvent() = default;
     virtual void WillPoll() {}
     virtual void DidPoll() {}
     virtual void Disarm() {}
@@ -50,7 +50,7 @@ public:
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
-  void Interrupt() override;
+  bool Interrupt() override;
 
 private:
   llvm::Expected<size_t> Poll();

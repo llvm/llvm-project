@@ -1,0 +1,71 @@
+#ifndef _DEQUE_
+#define _DEQUE_
+
+#include <initializer_list>
+#include <memory>
+
+namespace std {
+
+template <typename T, typename Allocator = allocator<T>>
+class deque {
+public:
+  using value_type = T;
+
+  class iterator {
+  public:
+    iterator &operator++();
+    iterator operator++(int);
+    bool operator!=(const iterator &other) const;
+    bool operator==(const iterator &other) const;
+    T &operator*();
+    T *operator->();
+  };
+  class const_iterator {
+  public:
+    const_iterator() = default;
+    const_iterator(const iterator &) {}
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    bool operator!=(const const_iterator &other) const;
+    bool operator==(const const_iterator &other) const;
+    const T &operator*() const;
+    const T *operator->() const;
+  };
+  class reverse_iterator {};
+
+  deque() = default;
+  deque(initializer_list<T>) {}
+
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
+
+  void push_back(const T &) {}
+  void push_back(T &&) {}
+
+  void push_front(const T &) {}
+  void push_front(T &&) {}
+
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args &&...args);
+  template <typename... Args>
+  void emplace_back(Args &&...args) {}
+  template <typename... Args>
+  void emplace_front(Args &&...args) {}
+
+  T &operator[](size_t);
+  const T &operator[](size_t) const;
+
+  void assign(size_t count, const T &value);
+
+  void clear();
+  bool empty() const;
+  size_t size() const;
+
+  ~deque();
+};
+
+} // namespace std
+
+#endif // _DEQUE_

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/IR/SymbolTable.h"
 
 fir::TypeInfoOp fir::lookupTypeInfoOp(fir::RecordType recordType,
                                       mlir::ModuleOp module,
@@ -51,12 +52,22 @@ std::optional<llvm::ArrayRef<int64_t>> fir::getComponentLowerBoundsIfNonDefault(
   return std::nullopt;
 }
 
+std::optional<bool>
+fir::isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                              const mlir::SymbolTable *symbolTable) {
+  fir::TypeInfoOp typeInfo =
+      fir::lookupTypeInfoOp(recordType, module, symbolTable);
+  if (!typeInfo)
+    return std::nullopt;
+  return !typeInfo.getNoFinal();
+}
+
 mlir::LLVM::ConstantOp
 fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
                       mlir::ConversionPatternRewriter &rewriter,
                       std::int64_t offset) {
-  auto cattr = rewriter.getI64IntegerAttr(offset);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+  auto cattr = rewriter.getIntegerAttr(ity, offset);
+  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
 }
 
 mlir::Value
@@ -115,9 +126,74 @@ mlir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
       return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
   } else {
     if (toSize < fromSize)
-      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+      return mlir::LLVM::TruncOp::create(rewriter, loc, ty, val);
     if (toSize > fromSize)
-      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+      return mlir::LLVM::SExtOp::create(rewriter, loc, ty, val);
   }
   return val;
+}
+
+std::optional<bool> fir::isNewAllocationResult(mlir::OpResult result) {
+  if (!result)
+    return std::nullopt;
+  auto interface =
+      llvm::dyn_cast<mlir::MemoryEffectOpInterface>(result.getOwner());
+  if (!interface)
+    return std::nullopt;
+  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
+  interface.getEffects(effects);
+  for (mlir::MemoryEffects::EffectInstance &e : effects) {
+    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
+        e.getValue() && e.getValue() == result)
+      return true;
+  }
+  return false;
+}
+
+mlir::FunctionOpInterface
+fir::getPresentedFunction(mlir::FunctionOpInterface func) {
+  if (std::optional<llvm::StringRef> original =
+          cuf::getDeviceCopyOf(func.getOperation()))
+    if (auto originalFunc = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::FunctionOpInterface>(
+            func.getOperation(),
+            mlir::StringAttr::get(func.getContext(), *original)))
+      return originalFunc;
+  return func;
+}
+
+mlir::FunctionOpInterface fir::getPresentedCallee(mlir::Operation *call,
+                                                  mlir::SymbolRefAttr callee) {
+  if (!callee)
+    return nullptr;
+  auto func =
+      mlir::SymbolTable::lookupNearestSymbolFrom<mlir::FunctionOpInterface>(
+          call, callee);
+  return func ? getPresentedFunction(func) : nullptr;
+}
+
+std::string fir::getPresentableFunctionName(mlir::FunctionOpInterface func) {
+  func = getPresentedFunction(func);
+  if (func.getName() == fir::NameUniquer::doProgramEntry()) {
+    // Main program entry is all uppercase - to avoid name conflicts. But
+    // from a reporting perspective, keep it lowercase for consistency with
+    // every other symbol.
+    if (auto bindcName =
+            func->getAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName())) {
+      llvm::StringRef name = bindcName.getValue();
+      if (!name.empty())
+        return name.lower();
+    }
+  }
+  std::string result;
+  // The internal name is the saved name after ExternalNameConversion prepares
+  // the names for external visibility. Without doing this, for many names we
+  // would get the underscore version instead of the name as user wrote it.
+  if (auto internalName = func->getAttrOfType<mlir::StringAttr>(
+          fir::getInternalFuncNameAttrName());
+      internalName && !internalName.getValue().empty())
+    result = internalName.getValue().str();
+  else
+    result = func.getName().str();
+  return fir::NameUniquer::deconstruct(result).second.name;
 }

@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-prepare,scop(print<polly-ast>)' -S < %s \
-; RUN: | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;ast>' -polly-print-ast -S < %s | FileCheck %s
 
 ; This testcase tests plugin registration. Check-lines below serve to verify
 ; that the passes actually ran.

@@ -116,32 +116,30 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:  .LBB0_22: ! %start
 ; SPARC-NEXT:    and %o4, %o3, %o2
 ; SPARC-NEXT:    cmp %l1, 0
-; SPARC-NEXT:    and %o0, %l4, %l4
+; SPARC-NEXT:    and %o0, %l4, %o0
 ; SPARC-NEXT:    bne .LBB0_24
 ; SPARC-NEXT:    mov %l3, %l1
 ; SPARC-NEXT:  ! %bb.23: ! %start
 ; SPARC-NEXT:    mov %g0, %l1
 ; SPARC-NEXT:  .LBB0_24: ! %start
-; SPARC-NEXT:    or %o2, %o1, %o0
+; SPARC-NEXT:    or %o2, %o1, %l4
 ; SPARC-NEXT:    cmp %l2, %l0
-; SPARC-NEXT:    or %l4, %l6, %l4
+; SPARC-NEXT:    or %o0, %l6, %l6
 ; SPARC-NEXT:    bcs .LBB0_26
 ; SPARC-NEXT:    mov %l3, %l0
 ; SPARC-NEXT:  ! %bb.25: ! %start
 ; SPARC-NEXT:    mov %g0, %l0
 ; SPARC-NEXT:  .LBB0_26: ! %start
-; SPARC-NEXT:    or %o0, %l7, %l2
-; SPARC-NEXT:    or %i5, %i4, %i4
-; SPARC-NEXT:    cmp %i4, 0
-; SPARC-NEXT:    or %l4, %l1, %l1
+; SPARC-NEXT:    or %l4, %l7, %l2
+; SPARC-NEXT:    orcc %i5, %i4, %g0
+; SPARC-NEXT:    or %l6, %l1, %l1
 ; SPARC-NEXT:    bne .LBB0_28
 ; SPARC-NEXT:    mov %l3, %i4
 ; SPARC-NEXT:  ! %bb.27: ! %start
 ; SPARC-NEXT:    mov %g0, %i4
 ; SPARC-NEXT:  .LBB0_28: ! %start
 ; SPARC-NEXT:    or %l2, %g4, %i5
-; SPARC-NEXT:    or %i1, %i0, %i0
-; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    orcc %i1, %i0, %g0
 ; SPARC-NEXT:    bne .LBB0_30
 ; SPARC-NEXT:    or %l1, %l0, %i0
 ; SPARC-NEXT:  ! %bb.29: ! %start

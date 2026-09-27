@@ -1,0 +1,14 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+
+// expected-error@+1 {{strong and weak ordering do not include unordered}}
+#cmpinfo_strong_ltn1eq0gt1unn127 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1, unordered = -127>
+// -----
+
+// expected-error@+1 {{strong and weak ordering do not include unordered}}
+#cmpinfo_weak_ltn1eq0gt1unn127 = #cir.cmp3way_info<weak, lt = -1, eq = 0, gt = 1, unordered = -127>
+
+// -----
+
+// expected-error@+1 {{partial ordering requires unordered value}}
+#cmp3way_info_partial_ltn1eq0gt1 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1>

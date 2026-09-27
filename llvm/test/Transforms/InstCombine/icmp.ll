@@ -2122,6 +2122,50 @@ define i1 @icmp_ule_offset_with_common_divisor(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
+; Ensure the identity icmp ult (A - B), Op1 to icmp ule A, Op1 does not occur
+; when the or disjoint is matched as an add, as nuw of add does not imply nowrap
+; of the unsigned subtraction.
+;
+; Note: by the time the first InstCombine iteration is completed, the %xor has been
+; sunk into the `if` block, and the first icmp ult has been canonicalized to an equality.
+; This exposes a constant-folding opportunity knowing that `%arg` is zero from the dominating
+; condition. However, %xor was already visited before the canonicalization, and not re-added
+; to the worklist (as it does not directly use the branch condition), thus we fail to reach a
+; fixpoint within the same iteration.
+define i1 @icmp_ult_neg_offset_or_disjoint(i16 %arg) "instcombine-no-verify-fixpoint" {
+; CHECK-LABEL: define i1 @icmp_ult_neg_offset_or_disjoint(
+; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i16 [[ARG]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ARG]], 0
+; CHECK-NEXT:    call void @use_i32(i32 [[ZEXT]])
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[ARG]], -32768
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT]], -32768
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i16 [[XOR]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = icmp ult i32 [[OR]], [[SEXT]]
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %zext = zext nneg i16 %arg to i32
+  %or = or i32 %zext, -32768
+  %xor = xor i16 %arg, -32768
+  %cmp = icmp ult i16 %arg, 1
+  call void @use_i32(i32 %zext)
+  br i1 %cmp, label %if, label %else
+
+if:
+  %sext = sext i16 %xor to i32
+  %res = icmp ult i32 %or, %sext
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
 ; TODO: Handle non-power-of-2 divisors
 define i1 @icmp_ule_offset_with_common_non_pow2_divisor(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @icmp_ule_offset_with_common_non_pow2_divisor(
@@ -3665,10 +3709,9 @@ define i1 @icmp_neg_cst_slt(i32 %a) {
 define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_and_or_lshr(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[OR2]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    [[SHF:%.*]] = lshr i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHF]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shf = lshr i32 %x, %y
@@ -3681,10 +3724,9 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
 define i1 @icmp_and_or_lshr_samesign(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_and_or_lshr_samesign(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[OR2]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    [[SHF:%.*]] = lshr i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHF]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shf = lshr i32 %x, %y
@@ -4737,7 +4779,7 @@ define i1 @PR35794(ptr %a) {
 define <2 x i1> @PR36583(<2 x ptr>)  {
 ; CHECK-LABEL: define <2 x i1> @PR36583(
 ; CHECK-SAME: <2 x ptr> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x ptr> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x ptr> [[TMP0]], splat (ptr null)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %cast = ptrtoint <2 x ptr> %0 to <2 x i64>
@@ -5217,8 +5259,7 @@ define <2 x i1> @zext_bool_and_eq0_commute(<2 x i1> %x, <2 x i8> %p) {
 define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @zext_bool_and_ne0(
 ; CHECK-SAME: i1 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], 1
-; CHECK-NEXT:    [[R1:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = trunc i8 [[Y]] to i1
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i1 [[R1]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -5838,9 +5879,10 @@ entry:
 define i1 @icmp_freeze_sext(i16 %x, i16 %y) {
 ; CHECK-LABEL: define i1 @icmp_freeze_sext(
 ; CHECK-SAME: i16 [[X:%.*]], i16 [[Y:%.*]]) {
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i16 [[Y]]
-; CHECK-NEXT:    [[X_FR:%.*]] = freeze i16 [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i16 [[X_FR]], [[Y_FR]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP1_FR:%.*]] = freeze i1 [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[Y]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = or i1 [[TMP1]], [[CMP1_FR]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp uge i16 %x, %y

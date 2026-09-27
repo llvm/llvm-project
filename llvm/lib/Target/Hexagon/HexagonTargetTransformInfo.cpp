@@ -31,6 +31,10 @@ using namespace llvm;
 static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false),
     cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
 
+cl::opt<bool> HexagonAllowScatterGatherHVX(
+    "hexagon-allow-scatter-gather-hvx", cl::init(false), cl::Hidden,
+    cl::desc("Allow auto-generation of HVX scatter-gather"));
+
 static cl::opt<bool> EnableV68FloatAutoHVX(
     "force-hvx-float", cl::Hidden,
     cl::desc("Enable auto-vectorization of floatint point types on v68."));
@@ -48,7 +52,7 @@ static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
 static const unsigned FloatFactor = 4;
 
 bool HexagonTTIImpl::useHVX() const {
-  return ST.useHVXOps() && HexagonAutoHVX;
+  return ST.useHVXOps() && HexagonAutoHVX && !IsHMX;
 }
 
 bool HexagonTTIImpl::isHVXVectorType(Type *Ty) const {
@@ -111,7 +115,9 @@ unsigned HexagonTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 32;
 }
 
-unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
   return useHVX() ? 2 : 1;
 }
 
@@ -170,6 +176,12 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   assert(Opcode == Instruction::Load || Opcode == Instruction::Store);
+
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -219,28 +231,12 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 OpInfo, I);
 }
 
-InstructionCost
-HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                      Align Alignment, unsigned AddressSpace,
-                                      TTI::TargetCostKind CostKind) const {
-  return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                      CostKind);
-}
-
-InstructionCost
-HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost HexagonTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   return 1;
-}
-
-InstructionCost HexagonTTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
-  return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                       Alignment, CostKind, I);
 }
 
 InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
@@ -273,11 +269,11 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(
 InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+                                         Op2Info, Args, CtxI);
 
   if (Ty->isVectorTy()) {
     if (!isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy())
@@ -287,7 +283,7 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
@@ -317,11 +313,9 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
   return 1;
 }
 
-InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
-                                                   const Value *Op1) const {
+InstructionCost HexagonTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
                                    : Val;
   if (Opcode == Instruction::InsertElement) {
@@ -331,7 +325,7 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return Cost;
     // If it's not a 32-bit value, there will need to be an extract.
     return Cost + getVectorInstrCost(Instruction::ExtractElement, Val, CostKind,
-                                     Index, Op0, Op1);
+                                     Index, Op0, Op1, VIC);
   }
 
   if (Opcode == Instruction::ExtractElement)
@@ -340,18 +334,83 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return 1;
 }
 
+bool HexagonTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add:
+    return false;
+  }
+  return true;
+}
+
 bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/,
-                                        unsigned /*AddressSpace*/) const {
+                                        unsigned /*AddressSpace*/,
+                                        TTI::MaskKind /*MaskKind*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
 }
 
 bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
-                                       unsigned /*AddressSpace*/) const {
+                                       unsigned /*AddressSpace*/,
+                                       TTI::MaskKind /*MaskKind*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
+}
+
+bool HexagonTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {
+  // For now assume we can not deal with all HVX datatypes.
+  if (!Ty->isVectorTy() || !ST.isTypeForHVX(Ty) ||
+      !HexagonAllowScatterGatherHVX)
+    return false;
+  // This must be in sync with HexagonVectorCombine pass.
+  switch (Ty->getScalarSizeInBits()) {
+  case 8:
+    return (getTypeNumElements(Ty) == 128);
+  case 16:
+    if (getTypeNumElements(Ty) == 64 || getTypeNumElements(Ty) == 32)
+      return (Alignment >= 2);
+    break;
+  case 32:
+    if (getTypeNumElements(Ty) == 32)
+      return (Alignment >= 4);
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
+bool HexagonTTIImpl::isLegalMaskedScatter(Type *Ty, Align Alignment) const {
+  if (!Ty->isVectorTy() || !ST.isTypeForHVX(Ty) ||
+      !HexagonAllowScatterGatherHVX)
+    return false;
+  // This must be in sync with HexagonVectorCombine pass.
+  switch (Ty->getScalarSizeInBits()) {
+  case 8:
+    return (getTypeNumElements(Ty) == 128);
+  case 16:
+    if (getTypeNumElements(Ty) == 64)
+      return (Alignment >= 2);
+    break;
+  case 32:
+    if (getTypeNumElements(Ty) == 32)
+      return (Alignment >= 4);
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
+bool HexagonTTIImpl::forceScalarizeMaskedGather(VectorType *VTy,
+                                                Align Alignment) const {
+  return !isLegalMaskedGather(VTy, Alignment);
+}
+
+bool HexagonTTIImpl::forceScalarizeMaskedScatter(VectorType *VTy,
+                                                 Align Alignment) const {
+  return !isLegalMaskedScatter(VTy, Alignment);
 }
 
 /// --- Vector TTI end ---
@@ -394,4 +453,23 @@ HexagonTTIImpl::getInstructionCost(const User *U,
 
 bool HexagonTTIImpl::shouldBuildLookupTables() const {
   return EmitLookupTables;
+}
+
+bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  // The hardware provides a fixed number of HVX contexts. Software that mixes
+  // the two engines dedicates some threads to HVX, and those threads hold the
+  // contexts for as long as they run. A thread dedicated to HMX needs no
+  // context at all, until HVX code reaches it. Then it has to wait for one
+  // that the HVX threads are still holding, and if the two groups later meet
+  // at a barrier, neither side can make progress.
+  //
+  // Inlining is one way HVX code reaches a thread that was never meant to run
+  // it, in either direction: an HVX body merged into an HMX function, or an
+  // HMX body merged into a function whose other callers are HVX threads. So
+  // the attribute has to match on both sides.
+  if (Caller->hasFnAttribute("hexagon_hmx") !=
+      Callee->hasFnAttribute("hexagon_hmx"))
+    return false;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }

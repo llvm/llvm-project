@@ -49,7 +49,7 @@ entry:
 ; CHECK-FUNC-LEVEL-ABC: Function: abc
 ; CHECK-FUNC-LEVEL-NEXT-ABC:  [ 878.00  889.00  900.00 ]
 
-; CHECK-FUNC-DEF: Error: Function 'def' not found
+; CHECK-FUNC-DEF: error: Function 'def' not found
 
 ; CHECK-BB-LEVEL: Function: abc
 ; CHECK-BB-LEVEL-NEXT: entry: [ 878.00  889.00  900.00 ]

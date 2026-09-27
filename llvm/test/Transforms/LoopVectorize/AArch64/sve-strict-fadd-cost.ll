@@ -1,11 +1,11 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE1
+; RUN:   -tail-folding-policy=dont-fold-tail -force-vector-interleave=1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE1
 ; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 \
+; RUN:   -tail-folding-policy=dont-fold-tail -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-v1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE2
 ; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 \
+; RUN:   -tail-folding-policy=dont-fold-tail -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-n2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE1
 
 target triple="aarch64-unknown-linux-gnu"
@@ -68,4 +68,4 @@ for.end:
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}

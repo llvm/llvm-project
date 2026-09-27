@@ -2,10 +2,11 @@
 // RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
 // RUN: %clang_cc1 -triple arm64_32-apple-ios13 -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 #include <stdint.h>
+#include <arm_acle.h>
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
-// CHECK: call {{.*}} @__clear_cache
+// CHECK: call {{.*}} @llvm.clear_cache.p0
 }
 
 void *tp (void) {
@@ -62,6 +63,60 @@ void prefetch(void) {
   // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 0, i32 3, i32 0, i32 1)
 }
 
+void range_prefetch(void) {
+  __builtin_arm_range_prefetch(0, 0, 0, 0); // pldkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
+
+  __builtin_arm_range_prefetch(0, 0, 1, 0); // pldstrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 0)
+
+  __builtin_arm_range_prefetch(0, 1, 0, 0); // pstkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 0, i64 0)
+
+  __builtin_arm_range_prefetch(0, 1, 1, 0); // pststrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i64 0)
+}
+
+void range_prefetch_x(void) {
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 0); // pldkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
+  __builtin_arm_range_prefetch_x(0, 0, 1, 0, 1, 0, 0); // pldstrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 0)
+  __builtin_arm_range_prefetch_x(0, 1, 0, 0, 1, 0, 0); // pstkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 0, i64 0)
+  __builtin_arm_range_prefetch_x(0, 1, 1, 0, 1, 0, 0); // pststrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i64 0)
+
+  // Lower limits (length, count & stride)
+  __builtin_arm_range_prefetch_x(0, 0, 0, -2097152, 1, -2097152, 0);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 576460752305520640)
+
+  // Upper limits (length, count & stride)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 2097151, 65536, 2097151, 0);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 576460752301326335)
+
+  // Distance less than minumum, round up to first power of two (1111)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 1);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 -1152921504606846976)
+
+  // Distance 1 over minimum, round up to next power of 2 (1110)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 32769);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 -2305843009213693952)
+
+  // Distance is a power of two in range (1010)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 1048576);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 -6917529027641081856)
+
+  // Distance is out of range, set to 0 (0000)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 536870913);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
+}
+
+void read_intent_prefetch() {
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch.ir(ptr null)
+  __builtin_arm_prefetch_ir(0);
+}
+
 __attribute__((target("v8.5a")))
 int32_t jcvt(double v) {
   //CHECK-LABEL: @jcvt(
@@ -72,7 +127,7 @@ int32_t jcvt(double v) {
 __typeof__(__builtin_arm_rsr("1:2:3:4:5")) rsr(void);
 
 uint32_t rsr(void) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   // CHECK-NEXT: trunc i64 [[V0]] to i32
   return __builtin_arm_rsr("1:2:3:4:5");
 }
@@ -80,12 +135,12 @@ uint32_t rsr(void) {
 __typeof__(__builtin_arm_rsr64("1:2:3:4:5")) rsr64(void);
 
 uint64_t rsr64(void) {
-  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   return __builtin_arm_rsr64("1:2:3:4:5");
 }
 
 void *rsrp(void) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   // CHECK-NEXT: inttoptr i64 [[V0]] to ptr
   return __builtin_arm_rsrp("1:2:3:4:5");
 }
@@ -94,20 +149,20 @@ __typeof__(__builtin_arm_wsr("1:2:3:4:5", 0)) wsr(unsigned);
 
 void wsr(unsigned v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = zext i32 %v to i64
-  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
+  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 [[V0]])
   __builtin_arm_wsr("1:2:3:4:5", v);
 }
 
 __typeof__(__builtin_arm_wsr64("1:2:3:4:5", 0)) wsr64(uint64_t);
 
 void wsr64(uint64_t v) {
-  // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %v)
+  // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 %v)
   __builtin_arm_wsr64("1:2:3:4:5", v);
 }
 
 void wsrp(void *v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = ptrtoint ptr %v to i64
-  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
+  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 [[V0]])
   __builtin_arm_wsrp("1:2:3:4:5", v);
 }
 
@@ -162,4 +217,26 @@ void trap() {
   __builtin_arm_trap(42);
 }
 
+void atomic_store_with_hint(int64_t *a, int64_t b) {
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 0); // HINT_STSHH_KEEP
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8, !mem.cache_hint ![[M1:[0-9]]]
+
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} seq_cst, align 8, !mem.cache_hint ![[M1]]
+
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, 1); // HINT_STSHH_STRM
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
+
+    __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, HINT_STSHH_STRM);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
+
+  // Invalid hint should be dropped
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 2); // Invalid Hint
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
+}
+
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}
+// CHECK: ![[M1]] = !{i32 1, ![[M2:[0-9]+]]}
+// CHECK: ![[M2]] = !{!"aarch64.mem_hint", i32 0}
+// CHECK: ![[M3]] = !{i32 1, ![[M4:[0-9]+]]}
+// CHECK: ![[M4]] = !{!"aarch64.mem_hint", i32 1}

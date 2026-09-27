@@ -34,8 +34,10 @@ struct Options {
   bool needProvenanceRangeToCharBlockMappings{false};
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
   bool prescanAndReformat{false}; // -E
+  bool preprocessingEnabled{false};
   bool expandIncludeLinesInPreprocessedOutput{true};
   bool showColors{false};
+  std::vector<std::string> compilerDirectiveSentinels;
 };
 
 } // namespace Fortran::parser

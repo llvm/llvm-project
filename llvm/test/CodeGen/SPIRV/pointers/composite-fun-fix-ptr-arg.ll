@@ -10,6 +10,7 @@
 
 ; CHECK-DAG: %[[#Int8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#Half:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#Struct:]] = OpTypeStruct %[[#Half]]
 ; CHECK-DAG: %[[#Void:]] = OpTypeVoid
 ; CHECK-DAG: %[[#PtrInt8:]] = OpTypePointer CrossWorkgroup %[[#Int8:]]
@@ -17,11 +18,19 @@
 ; CHECK-DAG: %[[#Int64:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#PtrInt64:]] = OpTypePointer CrossWorkgroup %[[#Int64]]
 ; CHECK-DAG: %[[#BarType:]] = OpTypeFunction %[[#Void]] %[[#PtrInt64]] %[[#Struct]]
+; CHECK-DAG: %[[#BazType:]] = OpTypeFunction %[[#Void]] %[[#PtrInt8]] %[[#Struct]] %[[#Int8]] %[[#Struct]] %[[#Float]] %[[#Struct]]
 ; CHECK: OpFunction %[[#Void]] None %[[#FooType]]
 ; CHECK: OpFunctionParameter %[[#PtrInt8]]
 ; CHECK: OpFunctionParameter %[[#Struct]]
 ; CHECK: OpFunction %[[#Void]] None %[[#BarType]]
 ; CHECK: OpFunctionParameter %[[#PtrInt64]]
+; CHECK: OpFunctionParameter %[[#Struct]]
+; CHECK: OpFunction %[[#Void]] None %[[#BazType]]
+; CHECK: OpFunctionParameter %[[#PtrInt8]]
+; CHECK: OpFunctionParameter %[[#Struct]]
+; CHECK: OpFunctionParameter %[[#Int8]]
+; CHECK: OpFunctionParameter %[[#Struct]]
+; CHECK: OpFunctionParameter %[[#Float]]
 ; CHECK: OpFunctionParameter %[[#Struct]]
 
 %t_half = type { half }
@@ -35,6 +44,11 @@ entry:
 define spir_kernel void @bar(ptr addrspace(1) %a, %t_half %b) {
 entry:
   %r = getelementptr inbounds i64, ptr addrspace(1) %a, i64 0
+  ret void
+}
+
+define spir_kernel void @baz(ptr addrspace(1) %a, %t_half %b, i8 %c, %t_half %d, float %e, %t_half %f) {
+entry:
   ret void
 }
 

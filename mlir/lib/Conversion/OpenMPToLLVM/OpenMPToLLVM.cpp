@@ -28,6 +28,32 @@ using namespace mlir;
 
 namespace {
 
+static LogicalResult convertTypeAttr(Attribute &attr,
+                                     const TypeConverter &typeConverter) {
+  auto typeAttr = dyn_cast<TypeAttr>(attr);
+  if (!typeAttr)
+    return success();
+  Type convertedType = typeConverter.convertType(typeAttr.getValue());
+  if (!convertedType)
+    return failure();
+  attr = TypeAttr::get(convertedType);
+  return success();
+}
+
+static bool areTypeAttrsLegal(Operation *op,
+                              const TypeConverter &typeConverter) {
+  bool inherentAttrsLegal = true;
+  op->getName().walkInherentAttrs(op, [&](StringRef, Attribute &attr) {
+    if (auto typeAttr = dyn_cast<TypeAttr>(attr))
+      inherentAttrsLegal &= typeConverter.isLegal(typeAttr.getValue());
+  });
+  return inherentAttrsLegal &&
+         llvm::all_of(op->getDiscardableAttrs(), [&](NamedAttribute attr) {
+           auto typeAttr = dyn_cast<TypeAttr>(attr.getValue());
+           return !typeAttr || typeConverter.isLegal(typeAttr.getValue());
+         });
+}
+
 /// A pattern that converts the result and operand types, attributes, and region
 /// arguments of an OpenMP operation to the LLVM dialect.
 ///
@@ -60,17 +86,26 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
     if (failed(converter->convertTypes(op->getResultTypes(), resTypes)))
       return failure();
 
-    // Translate type attributes.
+    // Translate type attributes in the properties and discardable attributes.
     // They are kept unmodified except if they are type attributes.
-    SmallVector<NamedAttribute> convertedAttrs;
-    for (NamedAttribute attr : op->getAttrs()) {
-      if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
-        Type convertedType = converter->convertType(typeAttr.getValue());
-        convertedAttrs.emplace_back(attr.getName(),
-                                    TypeAttr::get(convertedType));
-      } else {
-        convertedAttrs.push_back(attr);
-      }
+    typename T::Properties convertedProperties = op.getProperties();
+    LogicalResult attrConversionResult = success();
+    T::walkInherentAttrs(
+        op.getContext(), convertedProperties, [&](StringRef, Attribute &attr) {
+          if (succeeded(attrConversionResult))
+            attrConversionResult = convertTypeAttr(attr, *converter);
+        });
+    if (failed(attrConversionResult))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to convert type in attribute");
+
+    SmallVector<NamedAttribute> convertedDiscardableAttrs;
+    for (NamedAttribute attr : op->getDiscardableAttrs()) {
+      Attribute convertedAttr = attr.getValue();
+      if (failed(convertTypeAttr(convertedAttr, *converter)))
+        return rewriter.notifyMatchFailure(
+            op, "failed to convert type in attribute");
+      convertedDiscardableAttrs.emplace_back(attr.getName(), convertedAttr);
     }
 
     // Translate operands.
@@ -96,7 +131,7 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
 
     // Create new operation.
     auto newOp = T::create(rewriter, op.getLoc(), resTypes, convertedOperands,
-                           convertedAttrs);
+                           convertedProperties, convertedDiscardableAttrs);
 
     // Translate regions.
     for (auto [originalRegion, convertedRegion] :
@@ -128,10 +163,7 @@ void mlir::configureOpenMPToLLVMConversionLegality(
                         [&](Region &region) {
                           return typeConverter.isLegal(&region);
                         }) &&
-           llvm::all_of(op->getAttrs(), [&](NamedAttribute attr) {
-             auto typeAttr = dyn_cast<TypeAttr>(attr.getValue());
-             return !typeAttr || typeConverter.isLegal(typeAttr.getValue());
-           });
+           areTypeAttrsLegal(op, typeConverter);
   });
 }
 
@@ -151,6 +183,9 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
   // discarded on lowering to LLVM-IR from the OpenMP dialect.
   converter.addConversion(
       [&](omp::MapBoundsType type) -> Type { return type; });
+  converter.addConversion(
+      [&](omp::AffinityEntryType type) -> Type { return type; });
+  converter.addConversion([&](omp::IteratedType type) -> Type { return type; });
 
   // Add conversions for all OpenMP operations.
   addOpenMPOpConversions<
@@ -195,7 +230,9 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert OpenMP to LLVM.
 struct OpenMPToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  OpenMPToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

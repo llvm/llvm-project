@@ -63,6 +63,10 @@ namespace llvm {
   /// module is modified.
   LLVM_ABI bool UpgradeModuleFlags(Module &M);
 
+  /// Upgrade the cfi.functions metadata node by calculating and inserting
+  /// the GUID for each function entry if it's missing.
+  LLVM_ABI bool UpgradeCFIFunctionsMetadata(Module &M);
+
   /// Convert legacy nvvm.annotations metadata to appropriate function
   /// attributes.
   LLVM_ABI void UpgradeNVVMAnnotations(Module &M);
@@ -81,6 +85,11 @@ namespace llvm {
   /// Otherwise return the \p TBAANode itself.
   LLVM_ABI MDNode *UpgradeTBAANode(MDNode &TBAANode);
 
+  /// If the given !tbaa.struct node has old-style scalar field tags, return an
+  /// equivalent node with each field tag upgraded to the struct-path aware
+  /// format. Otherwise return the node itself.
+  LLVM_ABI MDNode *UpgradeTBAAStructNode(MDNode &TBAAStructNode);
+
   /// This is an auto-upgrade for bitcast between pointers with different
   /// address spaces: the instruction is replaced by a pair ptrtoint+inttoptr.
   LLVM_ABI Instruction *UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
@@ -96,9 +105,46 @@ namespace llvm {
   /// info. Return true if module is modified.
   LLVM_ABI bool UpgradeDebugInfo(Module &M);
 
+  /// Copies module attributes to the functions in the module.
+  /// Currently only effects ARM, Thumb and AArch64 targets.
+  /// Supported attributes:
+  ///  - branch-target-enforcement
+  ///  - branch-protection-pauth-lr
+  ///  - guarded-control-stack
+  ///  - sign-return-address
+  ///  - sign-return-address-with-bkey
+  LLVM_ABI void copyModuleAttrToFunctions(Module &M);
+
+  /// Single-operand tags replacing a removed two-operand form
+  /// !{!"<Enable>", i1 X}: X = true selects Enable, X = false selects Disable.
+  struct BooleanLoopTags {
+    StringLiteral Enable;
+    StringLiteral Disable;
+  };
+
+  inline constexpr BooleanLoopTags OldBooleanLoopTags[] = {
+      {"llvm.loop.distribute.enable", "llvm.loop.distribute.disable"},
+      {"llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable"},
+      {"llvm.loop.vectorize.predicate.enable",
+       "llvm.loop.vectorize.predicate.disable"},
+      {"llvm.loop.vectorize.scalable.enable",
+       "llvm.loop.vectorize.scalable.disable"}};
+
+  /// Return the replacement tags for the enable tag \p Name, or nullptr.
+  inline const BooleanLoopTags *findBooleanLoopTags(StringRef Name) {
+    for (const BooleanLoopTags &Tags : OldBooleanLoopTags)
+      if (Tags.Enable == Name)
+        return &Tags;
+    return nullptr;
+  }
+
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    return Name.starts_with("llvm.vectorizer.");
+    // The enable tags are intentionally included: the current single-operand
+    // form shares the tag with the removed two-operand form (!{!"...", i1 X}),
+    // so we can only decide by inspecting the operands, which happens in
+    // upgradeLoopArgument().
+    return Name.starts_with("llvm.vectorizer.") || findBooleanLoopTags(Name);
   }
 
   /// Upgrade the loop attachment metadata node.

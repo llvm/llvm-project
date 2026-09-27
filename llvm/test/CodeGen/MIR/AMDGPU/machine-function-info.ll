@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=si-pre-allocate-wwm-regs -o %t.mir %s
+; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d -stop-after=si-pre-allocate-wwm-regs -o %t.mir %s
 ; RUN: llc -run-pass=none -verify-machineinstrs %t.mir -o - | FileCheck %s
 
 ; Test that SIMachineFunctionInfo can be round trip serialized through
@@ -15,11 +15,11 @@
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false
-; CHECK-NEXT: noSignedZerosFPMath: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 0
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -58,7 +58,9 @@
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
+; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
   %gep = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %arg0
@@ -77,11 +79,11 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false
-; CHECK-NEXT: noSignedZerosFPMath: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 3
 ; CHECK-NEXT: numWaveDispatchVGPRs: 1
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -110,7 +112,9 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
+; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
   %gep = getelementptr inbounds [128 x i32], ptr addrspace(2) @gds, i32 0, i32 %arg0
@@ -143,11 +147,11 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: isChainFunction: false
-; CHECK-NEXT: noSignedZerosFPMath: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 16
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -186,7 +190,9 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
+; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
 define void @function() {
   ret void
@@ -201,11 +207,11 @@ define void @function() {
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: isChainFunction: false
-; CHECK-NEXT: noSignedZerosFPMath: true
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 16
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -244,7 +250,9 @@ define void @function() {
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
+; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
 define void @function_nsz() #0 {
   ret void

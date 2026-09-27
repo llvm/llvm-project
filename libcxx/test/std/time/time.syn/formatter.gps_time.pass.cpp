@@ -53,8 +53,8 @@ static void test_no_chrono_specs() {
   //   using seconds      = duration<signed integer type of at least 35 bits>;
   //   using minutes      = duration<signed integer type of at least 29 bits, ratio<  60>>;
   //   using hours        = duration<signed integer type of at least 23 bits, ratio<3600>>;
-  check(SV("1435-08-09 22:07:05"), SV("{}"), cr::gps_seconds(-17'179'869'184s)); // Minimum value for 35 bits.
-  check(SV("1911-12-18 20:46:01"), SV("{}"), cr::gps_seconds(-2'147'483'648s));
+  check(SV("1435-08-09 22:06:56"), SV("{}"), cr::gps_seconds(-17'179'869'184s)); // Minimum value for 35 bits.
+  check(SV("1911-12-18 20:45:52"), SV("{}"), cr::gps_seconds(-2'147'483'648s));
 
   check(SV("1980-01-05 00:00:00"), SV("{}"), cr::gps_seconds(-24h));
   check(SV("1980-01-05 06:00:00"), SV("{}"), cr::gps_seconds(-18h));
@@ -63,13 +63,13 @@ static void test_no_chrono_specs() {
   check(SV("1980-01-05 23:59:59"), SV("{}"), cr::gps_seconds(-1s));
 
   check(SV("1980-01-06 00:00:00"), SV("{}"), cr::gps_seconds(0s));
-  check(SV("2010-01-04 23:59:45"), SV("{}"), cr::gps_seconds(946'684'800s));
-  check(SV("2010-01-05 01:01:48"), SV("{}"), cr::gps_seconds(946'688'523s));
+  check(SV("2010-01-05 00:00:00"), SV("{}"), cr::gps_seconds(946'684'800s));
+  check(SV("2010-01-05 01:02:03"), SV("{}"), cr::gps_seconds(946'688'523s));
 
-  check(SV("2048-01-24 03:13:49"), SV("{}"), cr::gps_seconds(2'147'483'647s));
-  check(SV("2524-06-03 01:52:45"), SV("{}"), cr::gps_seconds(17'179'869'183s)); // Maximum value for 35 bits.
+  check(SV("2048-01-24 03:14:07"), SV("{}"), cr::gps_seconds(2'147'483'647s));
+  check(SV("2524-06-03 01:53:03"), SV("{}"), cr::gps_seconds(17'179'869'183s)); // Maximum value for 35 bits.
 
-  check(SV("2010-01-05 01:01:48.123"), SV("{}"), cr::gps_time<cr::milliseconds>(946'688'523'123ms));
+  check(SV("2010-01-05 01:02:03.123"), SV("{}"), cr::gps_time<cr::milliseconds>(946'688'523'123ms));
 
   std::locale::global(std::locale::classic());
 }
@@ -94,7 +94,7 @@ static void test_valid_values_year() {
 
   check(SV("%C='20'\t%EC='20'\t%y='09'\t%Oy='09'\t%Ey='09'\t%Y='2009'\t%EY='2009'\n"),
         fmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
   check(SV("%C='19'\t%EC='19'\t%y='80'\t%Oy='80'\t%Ey='80'\t%Y='1980'\t%EY='1980'\n"),
@@ -103,7 +103,7 @@ static void test_valid_values_year() {
 
   check(SV("%C='20'\t%EC='20'\t%y='09'\t%Oy='09'\t%Ey='09'\t%Y='2009'\t%EY='2009'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
 #if defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
@@ -115,7 +115,7 @@ static void test_valid_values_year() {
   check(loc,
         SV("%C='20'\t%EC='20'\t%y='09'\t%Oy='09'\t%Ey='09'\t%Y='2009'\t%EY='2009'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #else                                   // defined(_WIN32) || defined(__APPLE__) || defined(_AIX)||defined(__FreeBSD__)
   check(loc,
         SV("%C='19'\t%EC='昭和'\t%y='80'\t%Oy='八十'\t%Ey='55'\t%Y='1980'\t%EY='昭和55年'\n"),
@@ -125,7 +125,7 @@ static void test_valid_values_year() {
   check(loc,
         SV("%C='20'\t%EC='平成'\t%y='09'\t%Oy='九'\t%Ey='21'\t%Y='2009'\t%EY='平成21年'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #endif                                  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX)||defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
@@ -239,7 +239,7 @@ static void test_valid_values_day() {
 
   check(SV("%d='13'\t%Od='13'\t%e='13'\t%Oe='13'\n"),
         fmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
   check(SV("%d='06'\t%Od='06'\t%e=' 6'\t%Oe=' 6'\n"), lfmt,
@@ -247,7 +247,7 @@ static void test_valid_values_day() {
 
   check(SV("%d='13'\t%Od='13'\t%e='13'\t%Oe='13'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
   check(SV("%d='06'\t%Od='06'\t%e=' 6'\t%Oe=' 6'\n"), lfmt,
@@ -263,7 +263,7 @@ static void test_valid_values_day() {
   check(loc,
         SV("%d='13'\t%Od='13'\t%e='13'\t%Oe='13'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
 #else // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
@@ -274,7 +274,7 @@ static void test_valid_values_day() {
   check(loc,
         SV("%d='13'\t%Od='十三'\t%e='13'\t%Oe='十三'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
 #endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
 
@@ -444,7 +444,7 @@ static void test_valid_values_iso_8601_week() {
 
   check(SV("%g='09'\t%G='2009'\t%V='07'\t%OV='07'\n"),
         fmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
   check(SV("%g='80'\t%G='1980'\t%V='01'\t%OV='01'\n"),
@@ -453,7 +453,7 @@ static void test_valid_values_iso_8601_week() {
 
   check(SV("%g='09'\t%G='2009'\t%V='07'\t%OV='07'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
 #if defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
@@ -465,7 +465,7 @@ static void test_valid_values_iso_8601_week() {
   check(loc,
         SV("%g='09'\t%G='2009'\t%V='07'\t%OV='07'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #else  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%g='80'\t%G='1980'\t%V='01'\t%OV='一'\n"),
@@ -475,7 +475,7 @@ static void test_valid_values_iso_8601_week() {
   check(loc,
         SV("%g='09'\t%G='2009'\t%V='07'\t%OV='七'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
@@ -499,7 +499,7 @@ static void test_valid_values_date() {
 
   check(SV("%D='02/13/09'\t%F='2009-02-13'\t%x='02/13/09'\t%Ex='02/13/09'\n"),
         fmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -509,7 +509,7 @@ static void test_valid_values_date() {
 
   check(SV("%D='02/13/09'\t%F='2009-02-13'\t%x='13.02.2009'\t%Ex='13.02.2009'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #else
   check(SV("%D='01/06/80'\t%F='1980-01-06'\t%x='06/01/1980'\t%Ex='06/01/1980'\n"),
         lfmt,
@@ -517,7 +517,7 @@ static void test_valid_values_date() {
 
   check(SV("%D='02/13/09'\t%F='2009-02-13'\t%x='13/02/2009'\t%Ex='13/02/2009'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #endif
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
@@ -530,7 +530,7 @@ static void test_valid_values_date() {
   check(loc,
         SV("%D='02/13/09'\t%F='2009-02-13'\t%x='2009/02/13'\t%Ex='2009/02/13'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #else  // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%D='01/06/80'\t%F='1980-01-06'\t%x='1980年01月06日'\t%Ex='昭和55年01月06日'\n"),
@@ -540,7 +540,7 @@ static void test_valid_values_date() {
   check(loc,
         SV("%D='02/13/09'\t%F='2009-02-13'\t%x='2009年02月13日'\t%Ex='平成21年02月13日'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #endif // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
@@ -624,7 +624,7 @@ static void test_valid_values_time() {
            "%EX='23:31:30'\t"
            "\n"),
         fmt,
-        cr::gps_time<cr::milliseconds>(918'603'105'123ms)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_time<cr::milliseconds>(918'603'090'123ms)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
   check(SV("%H='00'\t"
@@ -685,7 +685,7 @@ static void test_valid_values_time() {
            "%EX='23:31:30'\t"
            "\n"),
         lfmt,
-        cr::gps_time<cr::milliseconds>(918'603'105'123ms)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_time<cr::milliseconds>(918'603'090'123ms)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
 #if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
@@ -799,7 +799,7 @@ static void test_valid_values_time() {
            "%EX='23時31分30秒'\t"
            "\n"),
         lfmt,
-        cr::gps_time<cr::milliseconds>(918'603'105'123ms)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_time<cr::milliseconds>(918'603'090'123ms)); // 23:31:30 GPS Friday, 13 February 2009
 #endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());
@@ -823,7 +823,7 @@ static void test_valid_values_date_time() {
 
   check(SV("%c='Fri Feb 13 23:31:30 2009'\t%Ec='Fri Feb 13 23:31:30 2009'\n"),
         fmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use the global locale (fr_FR)
   check(
@@ -864,7 +864,7 @@ static void test_valid_values_date_time() {
       SV("%c='ven. 13 févr. 2009 23:31:30'\t%Ec='ven. 13 févr. 2009 23:31:30'\n"),
 #endif
       lfmt,
-      cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+      cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 
   // Use supplied locale (ja_JP). This locale has a different alternate.a
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -875,7 +875,7 @@ static void test_valid_values_date_time() {
   check(loc,
         SV("%c='金  2/13 23:31:30 2009'\t%Ec='金  2/13 23:31:30 2009'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #elif defined(_AIX)                     // defined(__APPLE__)|| defined(__FreeBSD__)
   check(loc,
         SV("%c='1980年01月 6日 00:00:00 GPS'\t%Ec='1980年01月 6日 00:00:00 GPS'\n"),
@@ -884,7 +884,7 @@ static void test_valid_values_date_time() {
   check(loc,
         SV("%c='2009年02月13日 23:31:30 GPS'\t%Ec='2009年02月13日 23:31:30 GPS'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #elif defined(_WIN32)                   // defined(__APPLE__)|| defined(__FreeBSD__)
   check(loc,
         SV("%c='1980/01/06 0:00:00'\t%Ec='1980/01/06 0:00:00'\n"),
@@ -893,7 +893,7 @@ static void test_valid_values_date_time() {
   check(loc,
         SV("%c='2009/02/13 23:31:30'\t%Ec='2009/02/13 23:31:30'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #else                                   // defined(__APPLE__)|| defined(__FreeBSD__)
   check(loc,
         SV("%c='1980年01月06日 00時00分00秒'\t%Ec='昭和55年01月06日 00時00分00秒'\n"),
@@ -903,7 +903,7 @@ static void test_valid_values_date_time() {
   check(loc,
         SV("%c='2009年02月13日 23時31分30秒'\t%Ec='平成21年02月13日 23時31分30秒'\n"),
         lfmt,
-        cr::gps_seconds(918'603'105s)); // 23:31:30 GPS Friday, 13 February 2009
+        cr::gps_seconds(918'603'090s)); // 23:31:30 GPS Friday, 13 February 2009
 #endif                                  // defined(__APPLE__)|| defined(__FreeBSD__)
 
   std::locale::global(std::locale::classic());

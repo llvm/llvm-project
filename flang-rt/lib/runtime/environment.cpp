@@ -8,7 +8,7 @@
 
 #include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
-#include "memory.h"
+#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
 #include <cstdlib>
@@ -16,7 +16,14 @@
 #include <limits>
 
 #ifdef _WIN32
-extern char **_environ;
+#include <stdlib.h>
+#elif defined(__FreeBSD__)
+// FreeBSD has environ in crt rather than libc. Using "extern char** environ"
+// in the code of a shared library makes it fail to link with -Wl,--no-undefined
+// See https://reviews.freebsd.org/D30842#840642
+#include <dlfcn.h>
+#elif RT_GPU_TARGET
+// GPU targets do not provide environ.
 #else
 extern char **environ;
 #endif
@@ -45,6 +52,8 @@ static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
     int, const char *[], const char *[], const EnvironmentDefaultList *){
     nullptr};
 
+// No environment support on the GPU.
+#if !RT_GPU_TARGET
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
     return;
@@ -54,7 +63,7 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
     const char *name = envDefaults->item[itemIndex].name;
     const char *value = envDefaults->item[itemIndex].value;
 #ifdef _WIN32
-    if (auto *x{std::getenv(name)}) {
+    if (std::getenv(name)) {
       continue;
     }
     if (_putenv_s(name, value) != 0) {
@@ -104,6 +113,11 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
 
 #ifdef _WIN32
   envp = _environ;
+#elif defined(__FreeBSD__)
+  auto envpp{reinterpret_cast<char ***>(dlsym(RTLD_DEFAULT, "environ"))};
+  if (envpp) {
+    envp = *envpp;
+  }
 #else
   envp = environ;
 #endif
@@ -132,6 +146,17 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FORT_TRUNCATE_STREAM")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      truncateStream = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_TRUNCATE_STREAM=%s is invalid; ignored\n", x);
+    }
+  }
+
   if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
@@ -140,6 +165,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(stderr,
           "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FLANG_TIMEF_IN_MILLISECONDS")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      timefInMillisec = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_TIMEF_IN_MILLISECONDS=%s is invalid; "
+          "ignored\n",
+          x);
     }
   }
 
@@ -167,6 +205,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FLANG_RT_COPYOUT_MODIFIED_ONLY")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      copyOutModifiedOnly = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_RT_COPYOUT_MODIFIED_ONLY=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
   if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
     internalDebugging = std::strtol(x, nullptr, 10);
   }
@@ -174,7 +225,8 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
-    if (n > 0 && n < std::numeric_limits<std::size_t>::max() && *end == '\0') {
+    if (n > 0 && n != std::numeric_limits<unsigned long>::max() &&
+        *end == '\0') {
       cudaStackLimit = n;
     } else {
       std::fprintf(stderr,
@@ -192,6 +244,31 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
       std::fprintf(stderr,
           "Fortran runtime: NV_CUDAFOR_DEVICE_IS_MANAGED=%s is invalid; "
           "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("NV_CUDAFOR_CHECK_ERROR")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      cudaCheckError = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NV_CUDAFOR_CHECK_ERROR=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_NO_EMPTY_ALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noEmptyAllocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_NO_EMPTY_ALLOCATION=%s is invalid; ignored\n",
           x);
     }
   }
@@ -280,6 +357,7 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
   return status;
 }
+#endif
 
 extern "C" {
 

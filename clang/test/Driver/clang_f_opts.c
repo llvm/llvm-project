@@ -51,6 +51,16 @@
 // RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+//
+// Loop interchange matches the LLVM pipeline default: on whenever the
+// optimization pipeline runs (-O1 and above), off with an explicit
+// -fno-loop-interchange.
+// RUN: %clang -c -mllvm -print-pipeline-passes -O1 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O2 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -fno-loop-interchange -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-OFF %s
+// INTERCHANGE-ON: loop-interchange
+// INTERCHANGE-OFF-NOT: loop-interchange
 
 // RUN: %clang -### -S -fexperimental-loop-fusion %s -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
 // CHECK-FUSE-LOOPS: "-fexperimental-loop-fusion"
@@ -325,8 +335,6 @@
 // RUN: -fexpensive-optimizations                                             \
 // RUN: -fno-expensive-optimizations                                          \
 // RUN: -fno-defer-pop                                                        \
-// RUN: -fkeep-inline-functions                                               \
-// RUN: -fno-keep-inline-functions                                            \
 // RUN: -freorder-blocks                                                      \
 // RUN: -ffloat-store                                                         \
 // RUN: -fgcse                                                                \
@@ -377,7 +385,6 @@
 // RUN: -ftree-ter                                                            \
 // RUN: -ftree-vrp                                                            \
 // RUN: -fno-devirtualize                                                     \
-// RUN: -fno-devirtualize-speculatively                                       \
 // RUN: -fslp-vectorize-aggressive                                            \
 // RUN: -fno-slp-vectorize-aggressive                                         \
 // RUN: %s 2>&1 | FileCheck --check-prefix=CHECK-WARNING %s
@@ -386,8 +393,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fexpensive-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-expensive-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-defer-pop' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fkeep-inline-functions' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fno-keep-inline-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ffloat-store' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fgcse' is not supported
@@ -436,7 +441,6 @@
 // CHECK-WARNING-DAG: optimization flag '-ftree-ter' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ftree-vrp' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-devirtualize' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fno-devirtualize-speculatively' is not supported
 // CHECK-WARNING-DAG: the flag '-fslp-vectorize-aggressive' has been deprecated and will be ignored
 // CHECK-WARNING-DAG: the flag '-fno-slp-vectorize-aggressive' has been deprecated and will be ignored
 
@@ -598,6 +602,23 @@
 // RUN: %clang -### -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DISABLE_DIRECT %s
 // CHECK_DISABLE_DIRECT: -fobjc-disable-direct-methods-for-testing
 // CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing
+
+// RUN: %clang -### --target=arm64-apple-macos10 -xobjective-c -fobjc-direct-precondition-thunk %s 2>&1 | FileCheck -check-prefix=CHECK_DIRECT_PRECONDITION_THUNK %s
+// RUN: %clang -### --target=arm64-apple-macos10 -xobjective-c -fno-objc-direct-precondition-thunk %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DIRECT_PRECONDITION_THUNK %s
+// RUN: %clang -### --target=arm64-apple-macos10 -xobjective-c -fobjc-direct-precondition-thunk -fno-objc-direct-precondition-thunk %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DIRECT_PRECONDITION_THUNK %s
+// RUN: %clang -### --target=arm64-apple-macos10 -xobjective-c -fno-objc-direct-precondition-thunk -fobjc-direct-precondition-thunk %s 2>&1 | FileCheck -check-prefix=CHECK_DIRECT_PRECONDITION_THUNK %s
+// RUN: %clang -### --target=arm64-apple-macos10 -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DIRECT_PRECONDITION_THUNK %s
+// CHECK_DIRECT_PRECONDITION_THUNK: "-fobjc-direct-precondition-thunk"
+// CHECK_NO_DIRECT_PRECONDITION_THUNK-NOT: -fobjc-direct-precondition-thunk
+
+// Test that -fobjc-direct-precondition-thunk emits a warning when used with GNU runtime
+// and that the flag is not passed to cc1.
+// RUN: %clang --target=x86_64-linux-gnu -fobjc-runtime=gnustep-2.0 -fobjc-direct-precondition-thunk -### -c -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_GNUSTEP_WARN %s
+// CHECK_GNUSTEP_WARN: warning: ignoring '-fobjc-direct-precondition-thunk' option as it is not currently supported for runtime 'gnustep-2.0' [-Woption-ignored]
+// CHECK_GNUSTEP_WARN-NOT: "-fobjc-direct-precondition-thunk"
+// RUN: %clang --target=x86_64-linux-gnu -fobjc-runtime=gcc -fobjc-direct-precondition-thunk -### -c -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_GCC_WARN %s
+// CHECK_GCC_WARN: warning: ignoring '-fobjc-direct-precondition-thunk' option as it is not currently supported for runtime 'gcc' [-Woption-ignored]
+// CHECK_GCC_WARN-NOT: "-fobjc-direct-precondition-thunk"
 
 // RUN: %clang -### -S -fjmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s

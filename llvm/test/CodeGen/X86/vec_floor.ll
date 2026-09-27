@@ -821,20 +821,18 @@ define <4 x float> @const_trunc_v4f32() {
 define <4 x float> @floor_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: floor_ss:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_ss:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vroundss $9, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_ss:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vroundss $9, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <4 x float> %x, i32 0
   %call = call float @llvm.floor.f32(float %s)
@@ -846,20 +844,18 @@ declare float @llvm.floor.f32(float %s)
 define <2 x double> @floor_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: floor_sd:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    roundsd $9, %xmm0, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_sd:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vroundsd $9, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512-NEXT:    vroundsd $9, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.floor.f64(double %s)
@@ -1811,20 +1807,18 @@ define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) noun
 define <4 x float> @ceil_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: ceil_ss:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    roundss $10, %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_ss:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vroundss $10, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_ss:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vroundss $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <4 x float> %x, i32 0
   %call = call float @llvm.ceil.f32(float %s)
@@ -1836,20 +1830,18 @@ declare float @llvm.ceil.f32(float %s)
 define <2 x double> @ceil_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: ceil_sd:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    roundsd $10, %xmm0, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_sd:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.ceil.f64(double %s)

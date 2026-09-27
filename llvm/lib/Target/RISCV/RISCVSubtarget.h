@@ -18,7 +18,9 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -27,6 +29,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
+#include <memory>
 
 #define GET_RISCV_MACRO_FUSION_PRED_DECL
 #include "RISCVGenMacroFusion.inc"
@@ -40,7 +43,7 @@ class StringRef;
 namespace RISCVTuneInfoTable {
 
 struct RISCVTuneInfo {
-  const char *Name;
+  StringTable::Offset Name;
   uint8_t PrefFunctionAlignment;
   uint8_t PrefLoopAlignment;
 
@@ -68,8 +71,14 @@ struct RISCVTuneInfo {
   unsigned MaxLoadsPerMemcmpOptSize;
   unsigned MaxLoadsPerMemcmp;
 
+  // How many vector elements can be coalesced if on the
+  // same cache line
+  uint8_t MaxVectorCoalesceElts;
+
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
+
+  bool IsJumpExpensive;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -82,7 +91,6 @@ public:
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron,
     MIPSP8700,
     Andes45,
   };
@@ -96,6 +104,8 @@ private:
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
+
+  bool IsLittleEndian = true;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
@@ -112,7 +122,6 @@ private:
 
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
-  RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
@@ -140,11 +149,13 @@ public:
   }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const RISCVTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
+
+  void mirFileLoaded(MachineFunction &MF) const override;
 
   bool enableMachineScheduler() const override { return true; }
 
@@ -169,12 +180,6 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
-  bool hasStdExtCOrZca() const { return HasStdExtZca; }
-  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
-  bool hasStdExtCOrZcfOrZce() const {
-    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
-  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -186,10 +191,7 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
-           (HasVendorXCVbitmanip && !IsRV64);
-  }
+  bool hasCLZLike() const { return HasStdExtZbb || HasVendorXTHeadBb; }
   bool hasCTZLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
@@ -199,17 +201,16 @@ public:
   bool hasREV8Like() const {
     return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
+  bool hasREVLike() const {
+    return HasStdExtP || ((HasVendorXCVbitmanip || HasVendorXqcibm) && !IsRV64);
+  }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
-
-  bool hasCZEROLike() const {
-    return HasStdExtZicond || HasVendorXVentanaCondOps;
-  }
 
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchOpt();
+           hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
@@ -221,6 +222,7 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
+  bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
@@ -238,6 +240,17 @@ public:
 
     return 0;
   }
+
+  Align getZilsdAlign() const {
+    if (enableUnalignedScalarMem())
+      return Align(1);
+
+    if (allowZilsdWordAlign())
+      return Align(4);
+
+    return Align(8);
+  }
+
   unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;
@@ -280,6 +293,16 @@ public:
     return UserReservedRegister[i.id()];
   }
 
+  TargetRegisterClass const *getLargestFPRegClass() const {
+    if (HasStdExtQ)
+      return &RISCV::FPR128RegClass;
+    if (HasStdExtD)
+      return &RISCV::FPR64RegClass;
+    if (HasStdExtF)
+      return &RISCV::FPR32RegClass;
+    return nullptr;
+  };
+
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
 
@@ -288,9 +311,12 @@ public:
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
   bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16Minimal() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsBF16Minimal() const {
+    return HasStdExtZvfbfmin || HasStdExtZvfbfa;
+  }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
   bool hasVInstructionsF64() const { return HasStdExtZve64d; }
+  bool hasVInstructionsBF16() const { return HasStdExtZvfbfa; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   bool hasVInstructionsFullMultiply() const { return HasStdExtV; }
@@ -319,6 +345,9 @@ public:
     }
   }
 
+  bool isPExtPackedType(MVT VT) const;
+  bool isPExtPackedDoubleType(MVT VT) const;
+
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
   unsigned getDLenFactor() const {
@@ -336,6 +365,7 @@ protected:
   mutable std::unique_ptr<InstructionSelector> InstSelector;
   mutable std::unique_ptr<LegalizerInfo> Legalizer;
   mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular
@@ -350,6 +380,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RISCVRegisterBankInfo *getRegBankInfo() const override;
+  const InlineAsmLowering *getInlineAsmLowering() const override;
 
   bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
@@ -360,7 +391,9 @@ public:
   // pool if exceeded.
   unsigned getMaxBuildIntsCost() const;
 
-  unsigned getMaxLMULForFixedLengthVectors() const;
+  unsigned getMispredictionPenalty() const override;
+  unsigned getLoadLatency() const override;
+
   bool useRVVForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
@@ -418,9 +451,15 @@ public:
                    : TuneInfo->MaxLoadsPerMemcmp;
   }
 
+  uint8_t getMaxVectorCoalesceElts() const {
+    return TuneInfo->MaxVectorCoalesceElts;
+  }
+
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
   }
+
+  bool isJumpExpensive() const { return TuneInfo->IsJumpExpensive; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;

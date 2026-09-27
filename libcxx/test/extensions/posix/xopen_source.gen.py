@@ -12,17 +12,14 @@
 #
 # https://llvm.org/PR117630
 
-# Some parts of the code like <fstream> use non-standard functions in their implementation,
-# and these functions are not provided when _XOPEN_SOURCE is set to older values. This
-# breaks when building with modules even when we don't use the offending headers directly.
-# UNSUPPORTED: clang-modules-build
-
 # The AIX localization support uses some functions as part of their headers that require a
 # recent value of _XOPEN_SOURCE.
 # UNSUPPORTED: LIBCXX-AIX-FIXME
 
-# This test fails on FreeBSD for an unknown reason.
-# UNSUPPORTED: LIBCXX-FREEBSD-FIXME
+# FreeBSD maps _XOPEN_SOURCE=500 to __ISO_C_VISIBLE=1990 (see <sys/_visible.h>), which hides
+# everything C99 added to the C library, even in C++ mode. libc++ needs some of those
+# additions to provide a conforming library at all.
+# UNSUPPORTED: freebsd
 
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
@@ -31,7 +28,6 @@ import sys
 
 sys.path.append(sys.argv[1])
 from libcxx.header_information import (
-    lit_header_restrictions,
     lit_header_undeprecations,
     public_headers,
 )
@@ -45,10 +41,14 @@ for header in public_headers:
         print(
             f"""\
 //--- {header}.xopen_source_{version}.compile.pass.cpp
-{lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
 // ADDITIONAL_COMPILE_FLAGS: -D_XOPEN_SOURCE={version}
+
+// Some parts of the code like <fstream> use non-standard functions in their implementation,
+// and these functions are not provided when _XOPEN_SOURCE is set to older values. This
+// breaks when building with modules even when we don't use the offending headers directly.
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 #include <{header}>
 """

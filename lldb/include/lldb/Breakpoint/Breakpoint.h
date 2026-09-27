@@ -27,6 +27,8 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
 
+#include "llvm/ADT/StringSet.h"
+
 namespace lldb_private {
 
 /// \class Breakpoint Breakpoint.h "lldb/Breakpoint/Breakpoint.h" Class that
@@ -511,7 +513,7 @@ public:
   ///     size is 0 and true is returned, it means the breakpoint fully matches
   ///     the
   ///     description.
-  bool GetMatchingFileLine(ConstString filename, uint32_t line_number,
+  bool GetMatchingFileLine(llvm::StringRef filename, uint32_t line_number,
                            BreakpointLocationCollection &loc_coll);
 
   void GetFilterDescription(Stream *s);
@@ -558,8 +560,8 @@ public:
 private:
   void AddName(llvm::StringRef new_name);
 
-  void RemoveName(const char *name_to_remove) {
-    if (name_to_remove)
+  void RemoveName(llvm::StringRef name_to_remove) {
+    if (!name_to_remove.empty())
       m_name_list.erase(name_to_remove);
   }
 
@@ -577,14 +579,14 @@ private:
   bool HasFacadeLocations() { return m_facade_locations.GetSize() != 0; }
 
 public:
-  bool MatchesName(const char *name) {
+  bool MatchesName(llvm::StringRef name) {
     return m_name_list.find(name) != m_name_list.end();
   }
 
   void GetNames(std::vector<std::string> &names) {
     names.clear();
-    for (auto name : m_name_list) {
-      names.push_back(name);
+    for (auto name : m_name_list.keys()) {
+      names.push_back(name.str());
     }
   }
 
@@ -687,10 +689,9 @@ private:
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
-  std::unordered_set<std::string> m_name_list; // If not empty, this is the name
-                                               // of this breakpoint (many
-                                               // breakpoints can share the same
-                                               // name.)
+  /// If not empty, this is the name of this breakpoint (many breakpoints can
+  /// share the same name.)
+  llvm::StringSet<> m_name_list;
   lldb::SearchFilterSP
       m_filter_sp; // The filter that constrains the breakpoint's domain.
   lldb::BreakpointResolverSP

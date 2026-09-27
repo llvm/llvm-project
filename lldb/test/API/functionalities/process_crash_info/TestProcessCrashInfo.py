@@ -26,13 +26,14 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         for error in [
             "pointer being freed was not allocated",
             "not an allocated block",
+            "MTE tag mismatch",
         ]:
             if error in output:
                 return True
         return False
 
     @skipIfAsan  # The test process intentionally double-frees.
-    @skipUnlessDarwin
+    @requireDarwin
     def test_cli(self):
         """Test that `process status --verbose` fetches the extended crash
         information dictionary from the command-line properly."""
@@ -52,7 +53,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         self.assertTrue(self.containsLibmallocError(result.GetOutput()))
 
     @skipIfAsan  # The test process intentionally hits a memory bug.
-    @skipUnlessDarwin
+    @requireDarwin
     def test_api(self):
         """Test that lldb can fetch a crashed process' extended crash information
         dictionary from the api properly."""

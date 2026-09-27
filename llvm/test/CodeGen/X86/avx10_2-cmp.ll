@@ -281,14 +281,14 @@ define i1 @constrained_fcmp() {
 ; X64-LABEL: constrained_fcmp:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X64-NEXT:    vucomxsd %xmm0, %xmm0
+; X64-NEXT:    vcomisd %xmm0, %xmm0
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: constrained_fcmp:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X86-NEXT:    vucomxsd %xmm0, %xmm0
+; X86-NEXT:    vcomisd %xmm0, %xmm0
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 entry:

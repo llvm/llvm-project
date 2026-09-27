@@ -20,16 +20,13 @@
 
 namespace llvm{
 namespace exegesis {
-
-void InitializePowerPCExegesisTarget();
-
 namespace {
 
 using testing::NotNull;
 using testing::IsEmpty;
 using testing::Not;
 
-constexpr const char kTriple[] = "powerpc64le-unknown-linux";
+constexpr char kTriple[] = "powerpc64le-unknown-linux";
 
 class PowerPCTargetTest : public PPCTestBase {
 protected:

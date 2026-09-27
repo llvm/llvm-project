@@ -11,9 +11,9 @@
 ! CHECK-LABEL: @_QPdiv_test_half
 ! CHECK-SAME: %[[REF_0:.*]]: !fir.ref<complex<f16>> {{.*}}, %[[REF_1:.*]]: !fir.ref<complex<f16>> {{.*}}, %[[REF_2:.*]]: !fir.ref<complex<f16>> {{.*}})
 ! CHECK: %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_halfEa"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
-! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_halfEb"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
-! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_halfEc"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
+! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_halfEa"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
+! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_halfEb"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
+! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_halfEc"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f16>>
 ! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<complex<f16>>
 ! CHECK: %[[VAL_9:.*]] = complex.div %[[VAL_7]], %[[VAL_8]] fastmath<contract> : complex<f16>
@@ -28,9 +28,9 @@ end subroutine div_test_half
 ! CHECK-LABEL: @_QPdiv_test_bfloat
 ! CHECK-SAME: %[[REF_0:.*]]: !fir.ref<complex<bf16>> {{.*}}, %[[REF_1:.*]]: !fir.ref<complex<bf16>> {{.*}}, %[[REF_2:.*]]: !fir.ref<complex<bf16>> {{.*}})
 ! CHECK: %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_bfloatEa"} : (!fir.ref<complex<bf16>>, !fir.dscope) -> (!fir.ref<complex<bf16>>, !fir.ref<complex<bf16>>)
-! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_bfloatEb"} : (!fir.ref<complex<bf16>>, !fir.dscope) -> (!fir.ref<complex<bf16>>, !fir.ref<complex<bf16>>)
-! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_bfloatEc"} : (!fir.ref<complex<bf16>>, !fir.dscope) -> (!fir.ref<complex<bf16>>, !fir.ref<complex<bf16>>)
+! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_bfloatEa"} : (!fir.ref<complex<bf16>>, !fir.dscope) -> (!fir.ref<complex<bf16>>, !fir.ref<complex<bf16>>)
+! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_bfloatEb"} : (!fir.ref<complex<bf16>>, !fir.dscope) -> (!fir.ref<complex<bf16>>, !fir.ref<complex<bf16>>)
+! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_bfloatEc"} : (!fir.ref<complex<bf16>>, !fir.dscope) -> (!fir.ref<complex<bf16>>, !fir.ref<complex<bf16>>)
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<bf16>>
 ! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<complex<bf16>>
 ! CHECK: %[[VAL_9:.*]] = complex.div %[[VAL_7]], %[[VAL_8]] fastmath<contract> : complex<bf16>
@@ -45,9 +45,9 @@ end subroutine div_test_bfloat
 ! CHECK-LABEL: @_QPdiv_test_single
 ! CHECK-SAME: %[[REF_0:.*]]: !fir.ref<complex<f32>> {{.*}}, %[[REF_1:.*]]: !fir.ref<complex<f32>> {{.*}}, %[[REF_2:.*]]: !fir.ref<complex<f32>> {{.*}})
 ! CHECK: %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_singleEa"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_singleEb"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_singleEc"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_singleEa"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_singleEb"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_singleEc"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
 ! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<complex<f32>>
 
@@ -71,9 +71,9 @@ end subroutine div_test_single
 ! CHECK-LABEL: @_QPdiv_test_double
 ! CHECK-SAME: %[[REF_0:.*]]: !fir.ref<complex<f64>> {{.*}}, %[[REF_1:.*]]: !fir.ref<complex<f64>> {{.*}}, %[[REF_2:.*]]: !fir.ref<complex<f64>> {{.*}})
 ! CHECK: %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_doubleEa"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
-! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_doubleEb"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
-! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFdiv_test_doubleEc"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
+! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[REF_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_doubleEa"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
+! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[REF_1]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_doubleEb"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
+! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[REF_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFdiv_test_doubleEc"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f64>>
 ! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<complex<f64>>
 

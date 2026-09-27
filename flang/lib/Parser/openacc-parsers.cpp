@@ -15,6 +15,8 @@
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
+#include "flang/Parser/user-state.h"
 
 // OpenACC Directives and Clauses
 namespace Fortran::parser {
@@ -50,8 +52,8 @@ TYPE_PARSER(construct<AccObjectListWithReduction>(
 
 // 2.16 (3249) wait-argument is:
 //   [devnum : int-expr :] [queues :] int-expr-list
-TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
-    "QUEUES:" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
+TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM :" >> scalarIntExpr / ":"),
+    "QUEUES :" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
 
 // 2.9 (1984-1986) size-expr is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
@@ -75,21 +77,21 @@ TYPE_PARSER(
 // tile size is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
 //   constant-int-expr
-TYPE_PARSER(construct<AccTileExpr>(scalarIntConstantExpr) ||
+TYPE_PARSER(sourced(construct<AccTileExpr>(scalarIntConstantExpr) ||
     construct<AccTileExpr>(
-        "*" >> construct<std::optional<ScalarIntConstantExpr>>()))
+        "*" >> construct<std::optional<ScalarIntConstantExpr>>())))
 TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 
 // 2.9 (1979-1982) gang-arg is one of :
 //   [num:]int-expr
 //   dim:int-expr
 //   static:size-expr
-TYPE_PARSER(construct<AccGangArg>(construct<AccGangArg::Static>(
-                "STATIC: " >> Parser<AccSizeExpr>{})) ||
+TYPE_PARSER(sourced(construct<AccGangArg>(construct<AccGangArg::Static>(
+                        "STATIC :" >> Parser<AccSizeExpr>{})) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Dim>("DIM: " >> scalarIntExpr)) ||
+        construct<AccGangArg::Dim>("DIM :" >> scalarIntExpr)) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr)))
+        construct<AccGangArg::Num>(maybe("NUM :"_tok) >> scalarIntExpr))))
 
 // 2.9 gang-arg-list
 TYPE_PARSER(
@@ -97,12 +99,13 @@ TYPE_PARSER(
 
 // 2.9.1 collapse
 TYPE_PARSER(construct<AccCollapseArg>(
-    "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
+    "FORCE :"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
 
 // 2.5.15 Reduction, F'2023 R1131, and CUF reduction-op
 // Operator for reduction
-TYPE_PARSER(sourced(construct<ReductionOperator>(
+TYPE_PARSER(construct<ReductionOperator>(
     first("+" >> pure(ReductionOperator::Operator::Plus),
+        "-" >> pure(ReductionOperator::Operator::Minus),
         "*" >> pure(ReductionOperator::Operator::Multiply),
         "MAX" >> pure(ReductionOperator::Operator::Max),
         "MIN" >> pure(ReductionOperator::Operator::Min),
@@ -112,32 +115,32 @@ TYPE_PARSER(sourced(construct<ReductionOperator>(
         ".AND." >> pure(ReductionOperator::Operator::And),
         ".OR." >> pure(ReductionOperator::Operator::Or),
         ".EQV." >> pure(ReductionOperator::Operator::Eqv),
-        ".NEQV." >> pure(ReductionOperator::Operator::Neqv)))))
+        ".NEQV." >> pure(ReductionOperator::Operator::Neqv))))
 
 // 2.15.1 Bind clause
-TYPE_PARSER(sourced(construct<AccBindClause>(name)) ||
-    sourced(construct<AccBindClause>(scalarDefaultCharExpr)))
+TYPE_PARSER(sourced(construct<AccBindClause>(name) ||
+    construct<AccBindClause>(scalarDefaultCharExpr)))
 
 // 2.5.16 Default clause
-TYPE_PARSER(construct<AccDefaultClause>(
+TYPE_PARSER(sourced(construct<AccDefaultClause>(
     first("NONE" >> pure(llvm::acc::DefaultValue::ACC_Default_none),
-        "PRESENT" >> pure(llvm::acc::DefaultValue::ACC_Default_present))))
+        "PRESENT" >> pure(llvm::acc::DefaultValue::ACC_Default_present)))))
 
 // SELF clause is either a simple optional condition for compute construct
 // or a synonym of the HOST clause for the update directive 2.14.4 holding
 // an object list.
-TYPE_PARSER(
+TYPE_PARSER(sourced(
     construct<AccSelfClause>(Parser<AccObjectList>{}) / lookAhead(")"_tok) ||
-    construct<AccSelfClause>(scalarLogicalExpr / lookAhead(")"_tok)) ||
+    construct<AccSelfClause>(scalarLogicalExpr) / lookAhead(")"_tok) ||
     construct<AccSelfClause>(
         recovery(fail<std::optional<ScalarLogicalExpr>>(
                      "logical expression or object list expected"_err_en_US),
-            SkipTo<')'>{} >> pure<std::optional<ScalarLogicalExpr>>())))
+            SkipTo<')'>{} >> pure<std::optional<ScalarLogicalExpr>>()))))
 
 // Modifier for copyin, copyout, cache and create
-TYPE_PARSER(construct<AccDataModifier>(
-    first("ZERO:" >> pure(AccDataModifier::Modifier::Zero),
-        "READONLY:" >> pure(AccDataModifier::Modifier::ReadOnly))))
+TYPE_PARSER(sourced(construct<AccDataModifier>(
+    first("ZERO :" >> pure(AccDataModifier::Modifier::Zero),
+        "READONLY :" >> pure(AccDataModifier::Modifier::ReadOnly)))))
 
 // Combined directives
 TYPE_PARSER(sourced(construct<AccCombinedDirective>(
@@ -162,23 +165,125 @@ TYPE_PARSER(sourced(construct<AccStandaloneDirective>(
         "SET" >> pure(llvm::acc::Directive::ACCD_set),
         "UPDATE" >> pure(llvm::acc::Directive::ACCD_update)))))
 
+// A non-block DO construct, e.g.
+//   do 10 i = 1, n
+//   10 continue
+// is parsed as a flat sequence of statements and is only turned into a
+// DoConstruct later, when the DO loops are canonicalized.  The DO loop
+// associated with an OpenACC loop or combined construct has to be recognized
+// while parsing the construct, otherwise the end directive that follows the
+// loop cannot be attached to the construct.  Build the DoConstruct here, the
+// same way the canonicalization of the DO loops would have built it.
+struct AccNonBlockDoConstruct {
+  using resultType = DoConstruct;
+  using LabelDoStatement = Statement<common::Indirection<LabelDoStmt>>;
+
+  std::optional<DoConstruct> Parse(ParseState &state) const {
+    if (auto doStmt{CapturedLabelDoStmt::Parse(state)}) {
+      if (auto loop{ParseLoop(state, std::move(*doStmt))}) {
+        return std::move(loop->construct);
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  struct Loop {
+    DoConstruct construct;
+    Label label; // of the statement that terminated the loop
+  };
+
+  static LabelDoStatement *GetLabelDoStatement(ExecutionPartConstruct &epc) {
+    if (auto *executable{std::get_if<ExecutableConstruct>(&epc.u)}) {
+      return std::get_if<LabelDoStatement>(&executable->u);
+    }
+    return nullptr;
+  }
+
+  // Parse execution part constructs until the statement carrying the label of
+  // the DO statement has been seen, then build the DO construct.  Nested label
+  // DO statements are turned into DO constructs here as well; loops that share
+  // a label are all terminated by the same statement, which closes the
+  // innermost loop and, with it, all of the loops that enclose it.
+  std::optional<Loop> ParseLoop(
+      ParseState &state, LabelDoStatement &&doStmt) const {
+    const Label label{std::get<Label>(doStmt.statement.value().t)};
+    Block body;
+    bool terminated{false};
+    while (!terminated) {
+      auto epc{executionPartConstruct.Parse(state)};
+      if (!epc) {
+        return std::nullopt;
+      }
+      if (auto *nestedDoStmt{GetLabelDoStatement(*epc)}) {
+        auto nested{ParseLoop(state, std::move(*nestedDoStmt))};
+        if (!nested) {
+          return std::nullopt;
+        }
+        terminated = nested->label == label;
+        body.emplace_back(ExecutableConstruct{
+            common::Indirection<DoConstruct>{std::move(nested->construct)}});
+        continue;
+      }
+      std::optional<Label> epcLabel{GetStatementLabel(*epc)};
+      if (!epcLabel) {
+        if (auto *acc{Unwrap<OpenACCConstruct>(*epc)}) {
+          epcLabel = GetFinalLabel(*acc);
+        }
+      }
+      terminated = epcLabel && *epcLabel == label;
+      body.emplace_back(std::move(*epc));
+    }
+
+    // The terminating statement may be an END DO statement; the DO construct
+    // built below has its own synthetic one, so turn it into a CONTINUE
+    // statement to keep its label.
+    if (Unwrap<EndDoStmt>(body.back())) {
+      std::get<ExecutableConstruct>(body.back().u).u =
+          Statement<ActionStmt>{GetStatementLabel(body.back()), ContinueStmt{}};
+    }
+
+    Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt.label),
+        NonLabelDoStmt{
+            std::make_tuple(std::optional<Name>{}, std::optional<Label>{},
+                std::move(std::get<std::optional<LoopControl>>(
+                    doStmt.statement.value().t)))}};
+    nonLabelDoStmt.source = doStmt.source;
+    DoConstruct doConstruct{
+        std::make_tuple(std::move(nonLabelDoStmt), std::move(body),
+            Statement<EndDoStmt>{
+                std::optional<Label>{}, EndDoStmt{std::optional<Name>{}}})};
+    return Loop{std::move(doConstruct), label};
+  }
+};
+
+// The DO loop associated with a loop or combined construct.
+constexpr auto accAssociatedDoConstruct{
+    Parser<DoConstruct>{} || AccNonBlockDoConstruct{}};
+
 // Loop directives
 TYPE_PARSER(sourced(construct<AccLoopDirective>(
     first("LOOP" >> pure(llvm::acc::Directive::ACCD_loop)))))
 
-TYPE_PARSER(construct<AccBeginLoopDirective>(
-    sourced(Parser<AccLoopDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<AccBeginLoopDirective>(
+    Parser<AccLoopDirective>{}, Parser<AccClauseList>{})))
 
 TYPE_PARSER(construct<AccEndLoop>("END LOOP"_tok))
 
 TYPE_PARSER(construct<OpenACCLoopConstruct>(
-    sourced(Parser<AccBeginLoopDirective>{} / endAccLine),
-    maybe(Parser<DoConstruct>{}),
+    Parser<AccBeginLoopDirective>{} / endAccLine,
+    maybe(accAssociatedDoConstruct),
     maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
+// The name list is optional: empty list = unnamed/implicit form; 1+ names =
+// named form.
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),
-    maybe(parenthesized(name)), Parser<AccClauseList>{})))
+    defaulted(localRecovery(
+        "empty parentheses in ROUTINE directive; omit parentheses for the unnamed form"_err_en_US,
+        !parenthesized(ok) >> parenthesized(nonemptyList(name)),
+        parenthesized(ok))),
+    Parser<AccClauseList>{})))
 
 // 2.10 Cache directive
 TYPE_PARSER(sourced(
@@ -186,8 +291,8 @@ TYPE_PARSER(sourced(
         parenthesized(Parser<AccObjectListWithModifier>{}))))
 
 // 2.11 Combined constructs
-TYPE_PARSER(construct<AccBeginCombinedDirective>(
-    sourced(Parser<AccCombinedDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<AccBeginCombinedDirective>(
+    Parser<AccCombinedDirective>{}, Parser<AccClauseList>{})))
 
 // 2.12 Atomic constructs
 TYPE_PARSER(construct<AccEndAtomic>(startAccLine >> "END ATOMIC"_tok))
@@ -213,10 +318,10 @@ TYPE_PARSER("ATOMIC" >>
         statement(assignmentStmt), Parser<AccEndAtomic>{} / endAccLine))
 
 TYPE_PARSER(
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{})) ||
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicCapture>{})) ||
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicWrite>{})) ||
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicUpdate>{})))
+    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{}) ||
+        construct<OpenACCAtomicConstruct>(Parser<AccAtomicCapture>{}) ||
+        construct<OpenACCAtomicConstruct>(Parser<AccAtomicWrite>{}) ||
+        construct<OpenACCAtomicConstruct>(Parser<AccAtomicUpdate>{})))
 
 // 2.13 Declare constructs
 TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
@@ -250,18 +355,18 @@ TYPE_PARSER(construct<OpenACCBlockConstruct>(
             pure(llvm::acc::Directive::ACCD_data))))))
 
 // Standalone constructs
-TYPE_PARSER(construct<OpenACCStandaloneConstruct>(
-    sourced(Parser<AccStandaloneDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<OpenACCStandaloneConstruct>(
+    Parser<AccStandaloneDirective>{}, Parser<AccClauseList>{})))
 
 // Standalone declarative constructs
-TYPE_PARSER(construct<OpenACCStandaloneDeclarativeConstruct>(
-    sourced(Parser<AccDeclarativeDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<OpenACCStandaloneDeclarativeConstruct>(
+    Parser<AccDeclarativeDirective>{}, Parser<AccClauseList>{})))
 
 TYPE_PARSER(startAccLine >>
     withMessage("expected OpenACC directive"_err_en_US,
-        first(sourced(construct<OpenACCDeclarativeConstruct>(
-                  Parser<OpenACCStandaloneDeclarativeConstruct>{})),
-            sourced(construct<OpenACCDeclarativeConstruct>(
+        sourced(first(construct<OpenACCDeclarativeConstruct>(
+                          Parser<OpenACCStandaloneDeclarativeConstruct>{}),
+            construct<OpenACCDeclarativeConstruct>(
                 Parser<OpenACCRoutineConstruct>{})))))
 
 TYPE_PARSER(sourced(construct<OpenACCEndConstruct>(
@@ -293,9 +398,9 @@ TYPE_PARSER(startAccLine >>
             "SERIAL"_tok >> maybe("LOOP"_tok) >>
                 pure(llvm::acc::Directive::ACCD_serial_loop))))))
 
-TYPE_PARSER(construct<OpenACCCombinedConstruct>(
-    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine),
-    maybe(Parser<DoConstruct>{}),
-    maybe(Parser<AccEndCombinedDirective>{} / endAccLine)))
+TYPE_PARSER(sourced(construct<OpenACCCombinedConstruct>(
+    Parser<AccBeginCombinedDirective>{} / endAccLine,
+    maybe(accAssociatedDoConstruct),
+    maybe(Parser<AccEndCombinedDirective>{} / endAccLine))))
 
 } // namespace Fortran::parser

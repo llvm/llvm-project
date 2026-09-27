@@ -1,7 +1,7 @@
 # RUN: llc -O2 -o - %s -mtriple=aarch64-windows -start-before=shrink-wrap \
-# RUN:   -stop-after=prologepilog | FileCheck %s --check-prefix=WIN64
+# RUN:   -stop-after=prolog-epilog | FileCheck %s --check-prefix=WIN64
 # RUN: llc -O2 -o - %s -mtriple=aarch64-linux -start-before=shrink-wrap \
-# RUN:   -stop-after=prologepilog | FileCheck %s --check-prefix=LINUX
+# RUN:   -stop-after=prolog-epilog | FileCheck %s --check-prefix=LINUX
 
 # This tests checks that shrink wrapping bails out on Windows AMR64 due to the
 # use of Windows CFI.  We don't currently support fragments for WIndows EH on
@@ -56,9 +56,9 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #3
 
-  attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "use-soft-float"="false" }
   attributes #1 = { argmemonly nounwind }
-  attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "use-soft-float"="false" }
   attributes #3 = { nounwind }
 
   !llvm.module.flags = !{!0}

@@ -12,7 +12,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SIPostRABundlerPass : public PassInfoMixin<SIPostRABundlerPass> {
+class SIPostRABundlerPass : public OptionalPassInfoMixin<SIPostRABundlerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

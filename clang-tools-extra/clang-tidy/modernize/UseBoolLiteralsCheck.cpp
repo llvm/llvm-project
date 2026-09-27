@@ -50,19 +50,19 @@ void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
 void UseBoolLiteralsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Literal = Result.Nodes.getNodeAs<IntegerLiteral>("literal");
   const auto *Cast = Result.Nodes.getNodeAs<Expr>("cast");
-  bool LiteralBooleanValue = Literal->getValue().getBoolValue();
+  const bool LiteralBooleanValue = Literal->getValue().getBoolValue();
 
   if (Literal->isInstantiationDependent())
     return;
 
   const Expr *Expression = Cast ? Cast : Literal;
 
-  bool InMacro = Expression->getBeginLoc().isMacroID();
+  const bool InMacro = Expression->getBeginLoc().isMacroID();
 
   if (InMacro && IgnoreMacros)
     return;
 
-  auto Diag =
+  const auto Diag =
       diag(Expression->getExprLoc(),
            "converting integer literal to bool, use bool literal instead");
 

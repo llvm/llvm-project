@@ -399,6 +399,21 @@ class SchedPredicate<code pred> : SchedPredicateBase {
 // MCSchedPredicate, this is the default scheduling case used by llvm-mca.
 def NoSchedPred : MCSchedPredicate<TruePred>;
 
+// Logical combiners for schedule predicates.
+class SchedPredicateCombiner<list<SchedPredicateBase> predicates>
+    : SchedPredicateBase {
+  SchedMachineModel SchedModel = ?;
+  list<SchedPredicateBase> Predicates = predicates;
+}
+class AllOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class AnyOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class NotSchedPred<SchedPredicateBase predicate>
+    : SchedPredicateCombiner<[predicate]>;
+class NoneOfSchedPreds<list<SchedPredicateBase> predicates>
+    : NotSchedPred<AnyOfSchedPreds<predicates>>;
+
 // Associate a predicate with a list of SchedReadWrites. By default,
 // the selected SchedReadWrites are still associated with a single
 // operand and assumed to execute sequentially with additive

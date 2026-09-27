@@ -22,7 +22,7 @@ using namespace llvm;
 
 class MachineStableHashTest : public testing::Test {
 public:
-  MachineStableHashTest() {}
+  MachineStableHashTest() = default;
 
 protected:
   LLVMContext Context;
@@ -61,7 +61,7 @@ protected:
     if (!Mod)
       return nullptr;
 
-    Mod->setDataLayout(TM.createDataLayout());
+    Mod->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
     if (MIR->parseMachineFunctions(*Mod, MMI)) {
       M.reset();

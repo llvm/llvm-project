@@ -19,9 +19,6 @@ template <class T>
 void test() {
   static_assert(_LIBCPP_ALIGNOF(T) == std::alignment_of<T>::value, "");
   static_assert(_LIBCPP_ALIGNOF(T) == TEST_ALIGNOF(T), "");
-#if TEST_STD_VER >= 11
-  static_assert(_LIBCPP_ALIGNOF(T) == alignof(T), "");
-#endif
 #ifdef TEST_COMPILER_CLANG
   static_assert(_LIBCPP_ALIGNOF(T) == _Alignof(T), "");
 #endif

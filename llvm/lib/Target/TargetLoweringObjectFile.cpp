@@ -13,10 +13,12 @@
 
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -60,7 +62,7 @@ unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
   // If target does not have LEB128 directives, we would need the
   // call site encoding to be udata4 so that the alternative path
   // for not having LEB128 directives could work.
-  if (!getContext().getAsmInfo()->hasLEB128Directives())
+  if (!getContext().getAsmInfo().hasLEB128Directives())
     return dwarf::DW_EH_PE_udata4;
   return CallSiteEncoding;
 }
@@ -129,7 +131,7 @@ MCSymbol *TargetLoweringObjectFile::getSymbolWithGlobalValueBase(
   assert(!Suffix.empty());
 
   SmallString<60> NameStr;
-  NameStr += GV->getDataLayout().getPrivateGlobalPrefix();
+  NameStr += GV->getDataLayout().getInternalSymbolPrefix();
   TM.getNameWithPrefix(NameStr, GV, *Mang);
   NameStr.append(Suffix.begin(), Suffix.end());
   return getContext().getOrCreateSymbol(NameStr);
@@ -211,7 +213,8 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
     auto *Name = cast<MDString>(MD->getOperand(2));
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
-        TM->getFunctionSections() ? Name->getString() : StringRef());
+        TM->getFunctionSections() ? Name->getString() : StringRef(),
+        Hash->getZExtValue());
 
     Streamer.switchSection(S);
 
@@ -224,6 +227,20 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     Streamer.emitULEB128IntValue(Name->getString().size());
     Streamer.emitBytes(Name->getString());
   }
+}
+
+static bool containsConstantPtrAuth(const Constant *C) {
+  if (isa<ConstantPtrAuth>(C))
+    return true;
+
+  if (isa<BlockAddress>(C) || isa<GlobalValue>(C))
+    return false;
+
+  for (const Value *Op : C->operands())
+    if (containsConstantPtrAuth(cast<Constant>(Op)))
+      return true;
+
+  return false;
 }
 
 /// getKindForGlobal - This is a top-level target-independent classifier for
@@ -274,11 +291,16 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   }
 
   // Global variables with '!exclude' should get the exclude section kind if
-  // they have an explicit section and no other metadata.
-  if (GVar->hasSection())
+  // they have an explicit section and no other metadata. Similarly,
+  // '!metadata_section_kind' forces the section kind to be 'metadata'.
+  if (GVar->hasSection()) {
     if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_exclude))
       if (!MD->getNumOperands())
         return SectionKind::getExclude();
+    if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_metadata_section_kind))
+      if (!MD->getNumOperands())
+        return SectionKind::getMetadata();
+  }
 
   // If the global is marked constant, we can put it into a mergable section,
   // a mergable string section, or general .data if it contains relocations.
@@ -327,6 +349,10 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       }
 
     } else {
+      // The dynamic linker always needs to fix PtrAuth relocations up.
+      if (containsConstantPtrAuth(C))
+        return SectionKind::getReadOnlyWithRel();
+
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
       // the time the app starts up.  However, we can't put this into a
@@ -346,6 +372,29 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 
   // Okay, this isn't a constant.
   return SectionKind::getData();
+}
+
+StringRef
+TargetLoweringObjectFile::getCustomSectionName(const GlobalObject *GO,
+                                               const TargetMachine &TM) {
+  // Check if '#pragma clang section' name is applicable.
+  // Note that pragma directive overrides -ffunction-section, -fdata-section
+  // and so section name is exactly as user specified and not uniqued.
+  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
+  if (GV && GV->hasImplicitSection()) {
+    SectionKind Kind = getKindForGlobal(GO, TM);
+    auto Attrs = GV->getAttributes();
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS())
+      return Attrs.getAttribute("bss-section").getValueAsString();
+    else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())
+      return Attrs.getAttribute("rodata-section").getValueAsString();
+    else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel())
+      return Attrs.getAttribute("relro-section").getValueAsString();
+    else if (Attrs.hasAttribute("data-section") && Kind.isData())
+      return Attrs.getAttribute("data-section").getValueAsString();
+  }
+
+  return GO->getSection();
 }
 
 /// This method computes the appropriate section to emit the specified global
@@ -389,9 +438,8 @@ MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM,
     const MachineJumpTableEntry *JTE) const {
   Align Alignment(1);
-  return getSectionForConstant(F.getDataLayout(),
-                               SectionKind::getReadOnly(), /*C=*/nullptr,
-                               Alignment);
+  return getSectionForConstant(F.getDataLayout(), SectionKind::getReadOnly(),
+                               /*C=*/nullptr, Alignment, &F);
 }
 
 bool TargetLoweringObjectFile::shouldPutJumpTableInFunctionSection(
@@ -412,8 +460,8 @@ bool TargetLoweringObjectFile::shouldPutJumpTableInFunctionSection(
 /// Given a mergable constant with the specified size and relocation
 /// information, return a section that it should be placed in.
 MCSection *TargetLoweringObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   if (Kind.isReadOnly() && ReadOnlySection != nullptr)
     return ReadOnlySection;
 
@@ -422,11 +470,11 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
 
 MCSection *TargetLoweringObjectFile::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
-    StringRef SectionPrefix) const {
+    const Function *F, StringRef SectionPrefix) const {
   // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
   // is empty.
   if (SectionPrefix.empty())
-    return getSectionForConstant(DL, Kind, C, Alignment);
+    return getSectionForConstant(DL, Kind, C, Alignment, F);
   report_fatal_error(
       "TargetLoweringObjectFile::getSectionForConstant that "
       "accepts SectionPrefix is not implemented for the object file format");

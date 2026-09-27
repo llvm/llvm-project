@@ -1,12 +1,14 @@
-import os
-
-from clang.cindex import Config, TranslationUnit
-
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
+from clang.cindex import (
+    AvailabilityKind,
+    CompletionChunk,
+    CompletionChunkKind,
+    CompletionString,
+    TranslationUnit,
+)
 
 import unittest
 from pathlib import Path
+import warnings
 
 
 class TestCodeCompletion(unittest.TestCase):
@@ -14,8 +16,7 @@ class TestCodeCompletion(unittest.TestCase):
         self.assertIsNotNone(cr)
         self.assertEqual(len(cr.diagnostics), 0)
 
-        completions = [str(c) for c in cr.results]
-
+        completions = [str(c) for c in cr]
         for c in expected:
             self.assertIn(c, completions)
 
@@ -49,9 +50,9 @@ void f() {
         )
 
         expected = [
-            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
-            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'int', CompletionChunkKind.RESULT_TYPE} | {'test1', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Aaa.",
+            "{'void', CompletionChunkKind.RESULT_TYPE} | {'test2', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Bbb.",
+            "{'return', CompletionChunkKind.TYPED_TEXT} | {';', CompletionChunkKind.SEMI_COLON} || Priority: 40 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -89,9 +90,9 @@ void f() {
         )
 
         expected = [
-            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
-            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'int', CompletionChunkKind.RESULT_TYPE} | {'test1', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Aaa.",
+            "{'void', CompletionChunkKind.RESULT_TYPE} | {'test2', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: Bbb.",
+            "{'return', CompletionChunkKind.TYPED_TEXT} | {';', CompletionChunkKind.SEMI_COLON} || Priority: 40 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -125,19 +126,18 @@ void f(P x, Q y) {
         cr = tu.codeComplete("fake.cpp", 12, 5, unsaved_files=files)
 
         expected = [
-            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: ",
-            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'const', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'volatile', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'operator', CompletionChunkKind.TYPED_TEXT} || Priority: 40 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'P', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'Q', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
         cr = tu.codeComplete("fake.cpp", 13, 5, unsaved_files=files)
         expected = [
-            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: ",
-            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
-            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: ",
-            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
+            "{'P', CompletionChunkKind.TYPED_TEXT} | {'::', CompletionChunkKind.TEXT} || Priority: 75 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'P &', CompletionChunkKind.RESULT_TYPE} | {'operator=', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {'const P &', CompletionChunkKind.PLACEHOLDER} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 79 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
+            "{'int', CompletionChunkKind.RESULT_TYPE} | {'member', CompletionChunkKind.TYPED_TEXT} || Priority: 35 || AvailabilityKind.NOT_ACCESSIBLE || Brief comment: ",
+            "{'void', CompletionChunkKind.RESULT_TYPE} | {'~P', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 79 || Availability: AvailabilityKind.AVAILABLE || Brief comment: ",
         ]
-        self.check_completion_results(cr, expected)

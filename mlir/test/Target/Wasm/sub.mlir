@@ -27,25 +27,25 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func nested @func_0() -> i32 {
+// CHECK-LABEL:   wasmssa.func @func_0() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 12 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 50 : i32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.sub %[[VAL_0]] %[[VAL_1]] : i32
 // CHECK:           wasmssa.return %[[VAL_2]] : i32
 
-// CHECK-LABEL:   wasmssa.func nested @func_1() -> i64 {
+// CHECK-LABEL:   wasmssa.func @func_1() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 20 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 5 : i64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.sub %[[VAL_0]] %[[VAL_1]] : i64
 // CHECK:           wasmssa.return %[[VAL_2]] : i64
 
-// CHECK-LABEL:   wasmssa.func nested @func_2() -> f32 {
+// CHECK-LABEL:   wasmssa.func @func_2() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 5.000000e+00 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 1.400000e+01 : f32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.sub %[[VAL_0]] %[[VAL_1]] : f32
 // CHECK:           wasmssa.return %[[VAL_2]] : f32
 
-// CHECK-LABEL:   wasmssa.func nested @func_3() -> f64 {
+// CHECK-LABEL:   wasmssa.func @func_3() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.700000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 0.000000e+00 : f64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.sub %[[VAL_0]] %[[VAL_1]] : f64

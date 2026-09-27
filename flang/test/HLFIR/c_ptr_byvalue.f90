@@ -22,7 +22,7 @@ end
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"}) {
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_97:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest2Ecptr"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
+! CHECK:           %[[VAL_97:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest2Ecptr"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK:           %[[VAL_99:.*]] = fir.coordinate_of %[[VAL_97]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:           %[[VAL_100:.*]] = fir.load %[[VAL_99]] : !fir.ref<i64>
 ! CHECK:           %[[VAL_101:.*]] = fir.convert %[[VAL_100]] : (i64) -> !fir.ref<i64>

@@ -20,7 +20,7 @@ define i32 @different_array_test(i64 %A, i64 %B) {
 ; CHECK-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
 ; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
 ; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
-; CHECK-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
+; CHECK-NEXT:    [[POINTER2:%.*]] = getelementptr [4 x i8], ptr [[ARRAY22]], i64 [[B:%.*]]
 ; CHECK-NEXT:    store i32 7, ptr [[POINTER2]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -92,13 +92,13 @@ define i32 @gep_distance_test(ptr %A) {
 ; cannot alias, even if there is a variable offset between them...
 define i32 @gep_distance_test2(ptr %A, i64 %distance) {
 ; NO_ASSUME-LABEL: @gep_distance_test2(
-; NO_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
+; NO_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr [8 x i8], ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
 ; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[B_SPLIT]], i64 4
 ; NO_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test2(
-; USE_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
+; USE_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr [8 x i8], ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
 ; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[B_SPLIT]], i64 4
 ; USE_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4), "nonnull"(ptr [[A]]), "align"(ptr [[A]], i64 4) ]
@@ -161,11 +161,11 @@ define i16 @zext_sext_confusion(ptr %row2col, i5 %j) nounwind{
 ; CHECK-LABEL: @zext_sext_confusion(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUM5_CAST:%.*]] = zext i5 [[J:%.*]] to i64
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i16, ptr [[ROW2COL:%.*]], i64 [[SUM5_CAST]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr [2 x i8], ptr [[ROW2COL:%.*]], i64 [[SUM5_CAST]]
 ; CHECK-NEXT:    [[ROW2COL_LOAD_1_2:%.*]] = load i16, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[SUM13_CAST31:%.*]] = sext i5 [[J]] to i6
 ; CHECK-NEXT:    [[SUM13_CAST:%.*]] = zext i6 [[SUM13_CAST31]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i16, ptr [[ROW2COL]], i64 [[SUM13_CAST]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr [2 x i8], ptr [[ROW2COL]], i64 [[SUM13_CAST]]
 ; CHECK-NEXT:    [[ROW2COL_LOAD_1_6:%.*]] = load i16, ptr [[P2]], align 1
 ; CHECK-NEXT:    [[DOTRET:%.*]] = sub i16 [[ROW2COL_LOAD_1_6]], [[ROW2COL_LOAD_1_2]]
 ; CHECK-NEXT:    ret i16 [[DOTRET]]

@@ -429,21 +429,23 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
   if (L)
     L->onLazyReexportCalled(LandingInfo);
 
-  SymbolInstance LandingSym(LandingInfo.JD, std::move(LandingInfo.BodyName));
-  LandingSym.lookupAsync([this, JD = std::move(LandingInfo.JD),
-                          ReentryName = std::move(LandingInfo.Name),
-                          SendResult = std::move(SendResult)](
-                             Expected<ExecutorSymbolDef> Result) mutable {
-    if (Result) {
-      // FIXME: Make RedirectionManager operations async, then use the async
-      //        APIs here.
-      if (auto Err = RSMgr.redirect(*JD, ReentryName, *Result))
-        SendResult(std::move(Err));
-      else
-        SendResult(std::move(Result));
-    } else
-      SendResult(std::move(Result));
-  });
+  ES.lookup(
+      LookupKind::Static,
+      {{LandingInfo.JD.get(), JITDylibLookupFlags::MatchAllSymbols}},
+      SymbolLookupSet(std::move(LandingInfo.BodyName)), SymbolState::Ready,
+      [this, JD = std::move(LandingInfo.JD),
+       ReentryName = std::move(LandingInfo.Name),
+       SendResult = std::move(SendResult)](Expected<SymbolMap> Result) mutable {
+        if (!Result)
+          return SendResult(Result.takeError());
+
+        assert(Result->size() == 1 && "Unexpected number of results");
+        auto BodySym = Result->begin()->second;
+        if (auto Err = RSMgr.redirect(*JD, ReentryName, BodySym))
+          SendResult(std::move(Err));
+        SendResult(BodySym);
+      },
+      NoDependenciesToRegister);
 }
 
 class SimpleLazyReexportsSpeculator::SpeculateTask : public IdleTask {

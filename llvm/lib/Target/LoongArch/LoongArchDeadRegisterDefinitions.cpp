@@ -60,7 +60,6 @@ bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
     return false;
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LLVM_DEBUG(dbgs() << "***** LoongArchDeadRegisterDefinitions *****\n");
 
@@ -86,7 +85,7 @@ bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
-        const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI);
+        const TargetRegisterClass *RC = TII->getRegClass(Desc, I);
         if (!(RC && RC->contains(LoongArch::R0))) {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;

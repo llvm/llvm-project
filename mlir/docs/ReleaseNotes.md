@@ -8,6 +8,27 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 [TOC]
 
+## LLVM 24
+
+### Strict Property Assembly Formats
+
+Property-backed operations now use strict declarative assembly formats by
+default. Setting the dialect option `useStrictPropertiesInAssemblyFormat = 0`
+is deprecated and temporarily retains the legacy behavior. Dialects using
+this setting must migrate their declarative assembly formats to bind every
+inherent attribute and property directly or include `prop-dict`. Under the
+default rules, `attr-dict` contains only discardable attributes. See
+[the guide](DefiningDialects/_index.md/#strict-property-assembly-formats).
+
+## LLVM 21
+
+### GPU/NVVM Changes
+
+- The default NVVM target architecture has been changed from `sm_50` to `sm_75`.
+  `sm_75` is the oldest GPU variant compatible with the widest range of recent
+  major CUDA Toolkit versions (11/12/13). This affects the `NVVMTargetAttr`,
+  `GpuNVVMAttachTarget` pass, and the `gpu-lower-to-nvvm-pipeline`.
+
 ## LLVM 20
 
 All the MLIR runners other than `mlir-cpu-runner` have been removed, as their functionality has been merged into it, and it has been renamed to `mlir-runner`.

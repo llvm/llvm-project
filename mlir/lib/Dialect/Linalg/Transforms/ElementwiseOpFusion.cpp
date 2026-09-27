@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
@@ -26,6 +27,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 #include <utility>
 
@@ -501,6 +503,291 @@ public:
 private:
   ControlFusionFn controlFn;
 };
+
+/// Split an elementwise operation at the boundaries of its `tensor.concat`
+/// inputs. This exposes the producers of the concat inputs to the elementwise
+/// fusion patterns.
+///
+///   elementwise(concat(x0, x1), concat(y0, y1))
+///
+/// becomes
+///
+///   concat(elementwise(x0, y0), elementwise(x1, y1))
+///
+/// This pattern is intentionally expressed on `linalg.generic`: tensor
+/// elementwise operations such as `arith.addf` are converted to that form by
+/// `-convert-elementwise-to-linalg`, before this pattern runs as a preamble to
+/// Linalg elementwise fusion.
+///
+/// A partition is one input of a concat, viewed as a contiguous interval of
+/// the concat dimension. All concat inputs must have matching partitions: the
+/// same number of partitions with the same static size at each index.
+///
+/// All concat operands must partition the same iteration-space dimension into
+/// the same statically-sized pieces. Inputs that do not use that iteration
+/// dimension (for example, broadcast inputs) can be shared by all pieces.
+class SplitElementwiseOpWithConcatInputs : public OpRewritePattern<GenericOp> {
+public:
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    if (!genericOp.hasPureTensorSemantics() || !isElementwise(genericOp) ||
+        genericOp.hasIndexSemantics())
+      return failure();
+
+    SmallVector<tensor::ConcatOp> concatOps(genericOp.getNumDpsInputs());
+    SmallVector<OpOperand *> nonConcatInputs;
+    std::optional<unsigned> splitLoopDim;
+    // Now we limit the concat ops to have the same number of inputs for
+    // simplicity.
+    // TODO: technically, elementwise(concat(x0, x1), concat(y0, y1, y2)) ->
+    // concat(elementwise(...), elementwise(...), elementwise(...)) may be
+    // fine too. But that may require we create new slices, which might be
+    // more complex.
+    // The size in the concat dimension of different inputs. For example,
+    //
+    //  x0: tensor<2x3xf32>
+    //  x1: tensor<2x4xf32>
+    //  x:  tensor<2x7xf32>
+    //  %x = tensor.concat dim(1) %x0, %x1
+    //
+    // The partition sizes in this case are [3, 4]. Same as above, we limit the
+    // partition sizes to be the same for different concat ops.
+    SmallVector<SmallVector<int64_t>> partitionSizes;
+
+    for (auto [index, operand] :
+         llvm::enumerate(genericOp.getDpsInputOperands())) {
+      auto concatOp = operand->get().getDefiningOp<tensor::ConcatOp>();
+      if (!concatOp) {
+        nonConcatInputs.push_back(operand);
+        continue;
+      }
+
+      // Rewriting a concat that has other consumers could increase the amount
+      // of live computation instead of just exposing fusion opportunities.
+      if (!concatOp->hasOneUse())
+        return rewriter.notifyMatchFailure(genericOp,
+                                           "concat input has another consumer");
+
+      AffineMap inputMap = genericOp.getMatchingIndexingMap(operand);
+      auto concatDimExpr =
+          dyn_cast<AffineDimExpr>(inputMap.getResult(concatOp.getDim()));
+      if (!concatDimExpr)
+        return rewriter.notifyMatchFailure(
+            genericOp, "concat dimension does not map to a loop dimension");
+
+      unsigned currentSplitLoopDim = concatDimExpr.getPosition();
+      if (splitLoopDim && *splitLoopDim != currentSplitLoopDim)
+        return rewriter.notifyMatchFailure(
+            genericOp, "concat inputs partition different loop dimensions");
+      splitLoopDim = currentSplitLoopDim;
+
+      SmallVector<int64_t> currentPartitionSizes;
+      currentPartitionSizes.reserve(concatOp.getInputs().size());
+      for (Value input : concatOp.getInputs()) {
+        int64_t size = cast<RankedTensorType>(input.getType())
+                           .getDimSize(concatOp.getDim());
+        if (ShapedType::isDynamic(size))
+          return rewriter.notifyMatchFailure(
+              genericOp, "concat partition size is dynamic");
+        currentPartitionSizes.push_back(size);
+      }
+      partitionSizes.push_back(std::move(currentPartitionSizes));
+      concatOps[index] = concatOp;
+    }
+
+    if (!splitLoopDim)
+      return rewriter.notifyMatchFailure(genericOp, "has no concat input");
+    if (!llvm::all_equal(partitionSizes))
+      return rewriter.notifyMatchFailure(
+          genericOp, "concat inputs have different partition sizes");
+
+    // A tensor input that varies along the split dimension must itself be a
+    // compatible concat. Inputs that are invariant along that dimension can be
+    // reused by every split operation.
+    AffineExpr splitDimExpr =
+        getAffineDimExpr(*splitLoopDim, genericOp.getContext());
+    for (OpOperand *operand : nonConcatInputs) {
+      Type operandType = operand->get().getType();
+      // Scalars do not vary along an iteration-space dimension and can be
+      // reused in every partition.
+      if (isa<IntegerType, FloatType, IndexType, ComplexType>(operandType))
+        continue;
+
+      // Otherwise we want ranked tensors.
+      if (!isa<RankedTensorType>(operandType))
+        return rewriter.notifyMatchFailure(
+            genericOp, "non-concat shaped input is not a ranked tensor");
+
+      if (genericOp.getMatchingIndexingMap(operand).getResultPosition(
+              splitDimExpr))
+        return rewriter.notifyMatchFailure(
+            genericOp, "non-concat input varies along the split dimension");
+    }
+
+    // Map the iteration-space split dimension to each output's physical tensor
+    // dimension. `isElementwise` guarantees that the output maps are
+    // permutations, so every output contains this dimension.
+    SmallVector<unsigned> outputConcatDims;
+    outputConcatDims.reserve(genericOp.getNumDpsInits());
+    for (OpOperand &output : genericOp.getDpsInitsMutable()) {
+      std::optional<unsigned> outputDim =
+          genericOp.getMatchingIndexingMap(&output).getResultPosition(
+              splitDimExpr);
+      // Otherwise the generic op is not elementwise.
+      assert(outputDim &&
+             "elementwise output map must contain the split dimension");
+      outputConcatDims.push_back(*outputDim);
+    }
+
+    Location loc = genericOp.getLoc();
+    // Keep each result in a separate list because a generic can have multiple
+    // outputs.
+    SmallVector<SmallVector<Value>> splitResults(genericOp->getNumResults());
+    SmallVector<int64_t> outputOffsets(genericOp.getNumDpsInits(), 0);
+
+    // Build one generic for each aligned concat partition. For
+    // `elementwise(concat(x0, x1), concat(y0, y1))` becomes
+    // `elementwise(x0, y0)` and `elementwise(x1, y1)`.
+    for (auto [partitionIndex, partitionSize] :
+         llvm::enumerate(partitionSizes.front())) {
+      // For each partition, turn inputs `concat(x0, x1)`, `concat(y0, y1)`, and
+      // `scalar` into the inputs `x0`, `y0`, and `scalar`.
+      SmallVector<Value> inputs =
+          getPartitionInputs(genericOp, concatOps, partitionIndex);
+      // For a `tensor<7xf32>` output and partition size [3, 4], create a
+      // `tensor<3xf32>` output here; if the body reads `%init`, use
+      // `%init[0:3]` as its init instead.
+      PartitionOutputs outputs =
+          createPartitionOutputs(rewriter, loc, genericOp, outputConcatDims,
+                                 partitionSize, outputOffsets);
+      // For example, clone the body of
+      // `elementwise(concat(x0, x1), concat(y0, y1))` as
+      // `elementwise(x0, y0)`, retaining its indexing maps and iterators.
+      GenericOp splitOp =
+          cloneGenericForPartition(rewriter, loc, genericOp, inputs, outputs);
+      for (auto [resultIndex, result] : llvm::enumerate(splitOp->getResults()))
+        splitResults[resultIndex].push_back(result);
+    }
+
+    // Reassemble every original result from its partition results. The concat
+    // dimension may differ for each output due to its indexing map.
+    SmallVector<Value> replacements;
+    replacements.reserve(genericOp->getNumResults());
+    for (auto [resultIndex, result] :
+         llvm::enumerate(genericOp->getResults())) {
+      replacements.push_back(tensor::ConcatOp::create(
+          rewriter, loc, cast<RankedTensorType>(result.getType()),
+          outputConcatDims[resultIndex], splitResults[resultIndex]));
+    }
+    rewriter.replaceOp(genericOp, replacements);
+    return success();
+  }
+
+private:
+  /// Return the inputs for one concat partition.
+  /// For example, for `elementwise(concat(x0, x1), concat(y0, y1), scalar)`,
+  /// partition 0 uses `(x0, y0, scalar)` and partition 1 uses
+  /// `(x1, y1, scalar)`.
+  static SmallVector<Value>
+  getPartitionInputs(GenericOp genericOp, ArrayRef<tensor::ConcatOp> concatOps,
+                     unsigned partitionIndex) {
+    SmallVector<Value> inputs;
+    inputs.reserve(genericOp.getNumDpsInputs());
+    for (auto [index, operand] :
+         llvm::enumerate(genericOp.getDpsInputOperands())) {
+      if (!concatOps[index]) {
+        inputs.push_back(operand->get());
+        continue;
+      }
+      tensor::ConcatOp concatOp = concatOps[index];
+      inputs.push_back(concatOp.getInputs()[partitionIndex]);
+    }
+    return inputs;
+  }
+
+  struct PartitionOutputs {
+    SmallVector<Value> values;
+    SmallVector<Type> resultTypes;
+  };
+
+  /// Create the output operands and result types for one concat partition.
+  /// For an output `tensor<7xf32>` split into sizes `[3, 4]`, this creates a
+  /// `tensor<3xf32>` output for partition 0 and `tensor<4xf32>` for partition
+  /// 1. If the generic body reads its output block argument, the outputs are
+  /// slices of the original init tensor, e.g. `%init[0:3]` and `%init[3:7]`;
+  /// otherwise they are `tensor.empty` values.
+  static PartitionOutputs createPartitionOutputs(
+      PatternRewriter &rewriter, Location loc, GenericOp genericOp,
+      ArrayRef<unsigned> outputConcatDims, int64_t partitionSize,
+      MutableArrayRef<int64_t> outputOffsets) {
+    PartitionOutputs partitionOutputs;
+    partitionOutputs.values.reserve(genericOp.getNumDpsInits());
+    partitionOutputs.resultTypes.reserve(genericOp->getNumResults());
+    for (auto [outputIndex, output] :
+         llvm::enumerate(genericOp.getDpsInitsMutable())) {
+      Value outputValue = output.get();
+      auto outputType = cast<RankedTensorType>(outputValue.getType());
+      unsigned outputConcatDim = outputConcatDims[outputIndex];
+      SmallVector<int64_t> partitionShape(outputType.getShape());
+      partitionShape[outputConcatDim] = partitionSize;
+      auto partitionType =
+          RankedTensorType::get(partitionShape, outputType.getElementType(),
+                                outputType.getEncoding());
+
+      SmallVector<OpFoldResult> sizes =
+          tensor::getMixedSizes(rewriter, loc, outputValue);
+      sizes[outputConcatDim] = rewriter.getIndexAttr(partitionSize);
+
+      Value partitionOutput;
+      // A body such as `linalg.yield %in` does not read `%out`, so the init
+      // value is irrelevant and this partition can use `tensor.empty`.
+      if (!genericOp.payloadUsesValueFromOperand(&output)) {
+        partitionOutput = tensor::EmptyOp::create(rewriter, loc, sizes,
+                                                  outputType.getElementType(),
+                                                  outputType.getEncoding());
+      } else {
+        // A body such as `%sum = arith.addf %in, %out` reads the init value.
+        // For a `[3, 4]` partitioning, extract `%init[0:3]` for partition 0
+        // and `%init[3:7]` for partition 1 to preserve that value.
+        SmallVector<OpFoldResult> offsets(outputType.getRank(),
+                                          rewriter.getIndexAttr(0));
+        SmallVector<OpFoldResult> strides(outputType.getRank(),
+                                          rewriter.getIndexAttr(1));
+        offsets[outputConcatDim] =
+            rewriter.getIndexAttr(outputOffsets[outputIndex]);
+        partitionOutput = tensor::ExtractSliceOp::create(
+            rewriter, loc, partitionType, outputValue, offsets, sizes, strides);
+      }
+      partitionOutputs.values.push_back(partitionOutput);
+      partitionOutputs.resultTypes.push_back(partitionType);
+      outputOffsets[outputIndex] += partitionSize;
+    }
+    return partitionOutputs;
+  }
+
+  /// Clone `genericOp` for one partition while preserving its computation and
+  /// relevant attributes. For example, this turns the `x0, y0` inputs from
+  /// `getPartitionInputs` into an `elementwise(x0, y0)` generic with the same
+  /// body as the original `elementwise(concat(x0, x1), concat(y0, y1))`.
+  static GenericOp cloneGenericForPartition(PatternRewriter &rewriter,
+                                            Location loc, GenericOp genericOp,
+                                            ArrayRef<Value> inputs,
+                                            const PartitionOutputs &outputs) {
+    GenericOp splitOp = GenericOp::create(
+        rewriter, loc, outputs.resultTypes, inputs, outputs.values,
+        genericOp.getIndexingMapsArray(), genericOp.getIteratorTypesArray());
+    if (StringAttr doc = genericOp.getDocAttr())
+      splitOp->setAttr(splitOp.getDocAttrName(), doc);
+    if (StringAttr libraryCall = genericOp.getLibraryCallAttr())
+      splitOp->setAttr(splitOp.getLibraryCallAttrName(), libraryCall);
+    splitOp->setDiscardableAttrs(genericOp->getDiscardableAttrDictionary());
+    rewriter.cloneRegionBefore(genericOp.getRegion(), splitOp.getRegion(),
+                               splitOp.getRegion().begin());
+    return splitOp;
+  }
+};
 } // namespace
 
 //===---------------------------------------------------------------------===//
@@ -670,10 +957,10 @@ getIndexingMapInExpandedOp(OpBuilder &builder, AffineMap indexingMap,
   SmallVector<AffineExpr> newExprs;
   for (AffineExpr expr : indexingMap.getResults()) {
     unsigned pos = cast<AffineDimExpr>(expr).getPosition();
-    SmallVector<AffineExpr, 4> expandedExprs = llvm::to_vector<4>(
-        llvm::map_range(expansionInfo.getExpandedDims(pos), [&](int64_t v) {
+    SmallVector<AffineExpr, 4> expandedExprs = llvm::map_to_vector<4>(
+        expansionInfo.getExpandedDims(pos), [&](int64_t v) {
           return builder.getAffineDimExpr(static_cast<unsigned>(v));
-        }));
+        });
     newExprs.append(expandedExprs.begin(), expandedExprs.end());
   }
   return AffineMap::get(expansionInfo.getExpandedOpNumDims(),
@@ -840,7 +1127,7 @@ static Operation *createExpandedOp(PatternRewriter &rewriter, LinalgOp linalgOp,
                                    ExpansionInfo &expansionInfo) {
 
   return TypeSwitch<Operation *, Operation *>(linalgOp.getOperation())
-      .Case<TransposeOp>([&](TransposeOp transposeOp) {
+      .Case([&](TransposeOp transposeOp) {
         return createExpandedTransposeOp(rewriter, transposeOp,
                                          expandedOpOperands[0], outputs[0],
                                          expansionInfo);
@@ -899,10 +1186,10 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
                                    rewriter)))
     return std::nullopt;
 
-  SmallVector<AffineMap, 4> expandedOpIndexingMaps = llvm::to_vector<4>(
-      llvm::map_range(linalgOp.getIndexingMapsArray(), [&](AffineMap m) {
+  SmallVector<AffineMap, 4> expandedOpIndexingMaps =
+      llvm::map_to_vector<4>(linalgOp.getIndexingMapsArray(), [&](AffineMap m) {
         return getIndexingMapInExpandedOp(rewriter, m, expansionInfo);
-      }));
+      });
 
   // Set insertion point to the generic op.
   OpBuilder::InsertionGuard g(rewriter);
@@ -1038,6 +1325,62 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
+/// Carries information about a padded dimension.
+struct PadDimInfo {
+  // The resulting shape after padding each dimension.
+  SmallVector<int64_t> paddedShape;
+
+  // Low and high padding amounts for each dimension.
+  SmallVector<OpFoldResult> lowPad;
+  SmallVector<OpFoldResult> highPad;
+};
+
+/// Computes the expanded padding information for the given pad operation based
+/// on the provided expanded shape and reassociation indices. Returns a list of
+/// PadDimInfo containing the low and high padding amounts and the padded
+/// size for each dimension, or failure if the expansion is not possible.
+static FailureOr<PadDimInfo>
+computeExpandedPadding(tensor::PadOp padOp, ArrayRef<int64_t> expandedShape,
+                       ArrayRef<ReassociationIndices> reassociations,
+                       PatternRewriter &rewriter) {
+  // If the padding value depends on the index values of the pad operation,
+  // then it may not be valid to expand the dimensions, since it will change
+  // the index values on which the padding value depends. This is not currently
+  // supported by the pad expansion patterns, but it could be implemented
+  // similarly to the expansion of linalg.generic ops with linalg.index ops in
+  // the body, as is done in `updateExpandedGenericOpRegion`.
+  if (!padOp.getConstantPaddingValue())
+    return failure();
+
+  // Expanded dimensions cannot have padding because the resulting padding may
+  // not be representable by a tensor.pad op. There are some special cases where
+  // it is possible (like expanding unit dims), but supporting these cases is
+  // NYI, so disallow it for now.
+  ArrayRef<int64_t> low = padOp.getStaticLow();
+  ArrayRef<int64_t> high = padOp.getStaticHigh();
+  for (auto [reInd, l, h] : llvm::zip_equal(reassociations, low, high)) {
+    if (reInd.size() != 1 && (l != 0 || h != 0))
+      return failure();
+  }
+
+  SmallVector<OpFoldResult> mixedLowPad(padOp.getMixedLowPad());
+  SmallVector<OpFoldResult> mixedHighPad(padOp.getMixedHighPad());
+  ArrayRef<int64_t> paddedShape = padOp.getResultType().getShape();
+  PadDimInfo padDimInfo;
+  padDimInfo.paddedShape.assign(expandedShape);
+  padDimInfo.lowPad.assign(expandedShape.size(), rewriter.getIndexAttr(0));
+  padDimInfo.highPad.assign(expandedShape.size(), rewriter.getIndexAttr(0));
+  for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+    if (reInd.size() == 1) {
+      padDimInfo.paddedShape[reInd[0]] = paddedShape[idx];
+      padDimInfo.lowPad[reInd[0]] = mixedLowPad[idx];
+      padDimInfo.highPad[reInd[0]] = mixedHighPad[idx];
+    }
+  }
+
+  return padDimInfo;
+}
+
 class FoldPadWithProducerReshapeOpByExpansion
     : public OpRewritePattern<tensor::PadOp> {
 public:
@@ -1053,46 +1396,96 @@ public:
         padOp.getSource().getDefiningOp<tensor::CollapseShapeOp>();
     if (!reshapeOp)
       return failure();
-    if (!reshapeOp->hasOneUse())
-      return failure();
 
     if (!controlFoldingReshapes(&padOp.getSourceMutable())) {
       return rewriter.notifyMatchFailure(padOp,
                                          "fusion blocked by control function");
     }
 
-    ArrayRef<int64_t> low = padOp.getStaticLow();
-    ArrayRef<int64_t> high = padOp.getStaticHigh();
+    RankedTensorType expandedType = reshapeOp.getSrcType();
     SmallVector<ReassociationIndices> reassociations =
         reshapeOp.getReassociationIndices();
-
-    for (auto [reInd, l, h] : llvm::zip_equal(reassociations, low, high)) {
-      if (reInd.size() != 1 && (l != 0 || h != 0))
-        return failure();
-    }
-
-    SmallVector<OpFoldResult> newLow, newHigh;
-    RankedTensorType expandedType = reshapeOp.getSrcType();
-    RankedTensorType paddedType = padOp.getResultType();
-    SmallVector<int64_t> expandedPaddedShape(expandedType.getShape());
-    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
-      if (reInd.size() == 1) {
-        expandedPaddedShape[reInd[0]] = paddedType.getShape()[idx];
-      }
-      for (size_t i = 0; i < reInd.size(); ++i) {
-        newLow.push_back(padOp.getMixedLowPad()[idx]);
-        newHigh.push_back(padOp.getMixedHighPad()[idx]);
-      }
-    }
+    FailureOr<PadDimInfo> maybeExpandedPadding = computeExpandedPadding(
+        padOp, expandedType.getShape(), reassociations, rewriter);
+    if (failed(maybeExpandedPadding))
+      return failure();
+    PadDimInfo &expandedPadding = maybeExpandedPadding.value();
 
     Location loc = padOp->getLoc();
-    RankedTensorType expandedPaddedType = paddedType.clone(expandedPaddedShape);
+    RankedTensorType expandedPaddedType =
+        padOp.getResultType().clone(expandedPadding.paddedShape);
+
     auto newPadOp = tensor::PadOp::create(
-        rewriter, loc, expandedPaddedType, reshapeOp.getSrc(), newLow, newHigh,
+        rewriter, loc, expandedPaddedType, reshapeOp.getSrc(),
+        expandedPadding.lowPad, expandedPadding.highPad,
         padOp.getConstantPaddingValue(), padOp.getNofold());
 
     rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
         padOp, padOp.getResultType(), newPadOp.getResult(), reassociations);
+
+    return success();
+  }
+
+private:
+  ControlFusionFn controlFoldingReshapes;
+};
+
+class FoldReshapeWithProducerPadOpByExpansion
+    : public OpRewritePattern<tensor::ExpandShapeOp> {
+public:
+  FoldReshapeWithProducerPadOpByExpansion(MLIRContext *context,
+                                          ControlFusionFn foldReshapes,
+                                          PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::ExpandShapeOp>(context, benefit),
+        controlFoldingReshapes(std::move(foldReshapes)) {}
+
+  LogicalResult matchAndRewrite(tensor::ExpandShapeOp expandOp,
+                                PatternRewriter &rewriter) const override {
+    tensor::PadOp padOp = expandOp.getSrc().getDefiningOp<tensor::PadOp>();
+    if (!padOp)
+      return failure();
+
+    if (!controlFoldingReshapes(&expandOp.getSrcMutable())) {
+      return rewriter.notifyMatchFailure(expandOp,
+                                         "fusion blocked by control function");
+    }
+
+    RankedTensorType expandedType = expandOp.getResultType();
+    SmallVector<ReassociationIndices> reassociations =
+        expandOp.getReassociationIndices();
+    FailureOr<PadDimInfo> maybeExpandedPadding = computeExpandedPadding(
+        padOp, expandedType.getShape(), reassociations, rewriter);
+    if (failed(maybeExpandedPadding))
+      return failure();
+    PadDimInfo &expandedPadding = maybeExpandedPadding.value();
+
+    Location loc = expandOp->getLoc();
+    SmallVector<OpFoldResult> newExpandedSizes = expandOp.getMixedOutputShape();
+    SmallVector<int64_t> newExpandedShape(expandedType.getShape());
+    rewriter.setInsertionPointAfterValue(padOp.getSource());
+    SmallVector<OpFoldResult> padSrcSizes =
+        tensor::getMixedSizes(rewriter, loc, padOp.getSource());
+    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      // We know that any reassociation with multiple dims is not padded because
+      // of the requirements of computeExpandedPadding.
+      if (reInd.size() == 1) {
+        newExpandedShape[reInd[0]] = padOp.getSourceType().getDimSize(idx);
+        newExpandedSizes[reInd[0]] = padSrcSizes[idx];
+      }
+    }
+    RankedTensorType newExpandedType = expandedType.clone(newExpandedShape);
+    auto newExpandOp = tensor::ExpandShapeOp::create(
+        rewriter, loc, newExpandedType, padOp.getSource(), reassociations,
+        newExpandedSizes);
+    RankedTensorType expandedPaddedType =
+        padOp.getResultType().clone(expandedPadding.paddedShape);
+    rewriter.setInsertionPoint(expandOp);
+    auto newPadOp = tensor::PadOp::create(
+        rewriter, loc, expandedPaddedType, newExpandOp.getResult(),
+        expandedPadding.lowPad, expandedPadding.highPad,
+        padOp.getConstantPaddingValue(), padOp.getNofold());
+
+    rewriter.replaceOp(expandOp, newPadOp.getResult());
 
     return success();
   }
@@ -1185,10 +1578,10 @@ getDomainReassociation(AffineMap indexingMap,
   assert(indexingMap.isProjectedPermutation() &&
          "expected projected permutation");
 
-  ReassociationIndices domainReassociation = llvm::to_vector<4>(
-      llvm::map_range(rangeReassociation, [&](int64_t pos) -> int64_t {
+  ReassociationIndices domainReassociation =
+      llvm::map_to_vector<4>(rangeReassociation, [&](int64_t pos) -> int64_t {
         return cast<AffineDimExpr>(indexingMap.getResults()[pos]).getPosition();
-      }));
+      });
   // The projected permutation semantics ensures that there is no repetition of
   // the domain indices.
   return domainReassociation;
@@ -1201,8 +1594,11 @@ bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
                                           ReassociationIndicesRef dimSequence) {
   assert(!dimSequence.empty() &&
          "expected non-empty list for dimension sequence");
-  assert(indexingMap.isProjectedPermutation() &&
-         "expected indexing map to be projected permutation");
+
+  // Dimension sequences can only be preserved in projected permutation maps.
+  if (!indexingMap.isProjectedPermutation()) {
+    return false;
+  }
 
   llvm::SmallDenseSet<unsigned, 4> sequenceElements;
   sequenceElements.insert_range(dimSequence);
@@ -1699,14 +2095,34 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   return collapsedOp;
 }
 
+/// Collapse a `BroadcastOp` with a 0-D input into the single flattened
+/// dimension (`dimensions = [0]`).
+template <>
+BroadcastOp
+cloneToCollapsedOp<BroadcastOp>(RewriterBase &rewriter, BroadcastOp origOp,
+                                const CollapsingInfo &collapsingInfo) {
+  assert(origOp.getInput().getType().getRank() == 0 && "expected a 0-D input");
+
+  SmallVector<Value> inputOperands, outputOperands;
+  SmallVector<Type> resultTypes;
+  collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
+                             outputOperands, resultTypes);
+
+  SmallVector<int64_t> newDimensions = {0};
+  return BroadcastOp::create(rewriter, origOp.getLoc(), inputOperands[0],
+                             outputOperands[0], newDimensions);
+}
+
 static LinalgOp createCollapsedOp(LinalgOp op,
                                   const CollapsingInfo &collapsingInfo,
                                   RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
-  } else {
-    return cloneToCollapsedOp(rewriter, op, collapsingInfo);
   }
+  if (BroadcastOp broadcastOp = dyn_cast<BroadcastOp>(op.getOperation())) {
+    return cloneToCollapsedOp(rewriter, broadcastOp, collapsingInfo);
+  }
+  return cloneToCollapsedOp(rewriter, op, collapsingInfo);
 }
 
 /// Implementation of fusion with reshape operation by collapsing dimensions.
@@ -1795,11 +2211,9 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
           applyPermutationMap(indexingMap, ArrayRef(loopBound));
       Value result;
       if (isa<MemRefType>(collapsedOpResult.getType())) {
-        MemRefType expandShapeResultType = MemRefType::get(
-            originalResultType.getShape(), originalResultType.getElementType());
         result = memref::ExpandShapeOp::create(
-            rewriter, loc, expandShapeResultType, collapsedOpResult,
-            reassociation, resultShape);
+            rewriter, loc, originalResultType, collapsedOpResult, reassociation,
+            resultShape);
       } else {
         result = tensor::ExpandShapeOp::create(
             rewriter, loc, originalResultType, collapsedOpResult, reassociation,
@@ -1921,6 +2335,62 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
+/// Computes the collapsed padding information for the given pad operation based
+/// on the provided collapsed shape and reassociation indices. Returns a
+/// PadDimInfo containing the low and high padding amounts and the collapsed
+/// shape for each dimension, or failure if the collapse is not possible.
+static FailureOr<PadDimInfo>
+computeCollapsedPadding(tensor::PadOp padOp,
+                        ArrayRef<ReassociationIndices> reassociations,
+                        PatternRewriter &rewriter) {
+  // If the padding value depends on the index values of the pad operation,
+  // then it may not be valid to collapse the dimensions, since it will change
+  // the index values on which the padding value depends. This is not currently
+  // supported by the pad collapsing patterns, but it could be implemented
+  // similarly to the collapsing of linalg.generic ops with linalg.index ops in
+  // the body, as is done in `generateCollapsedIndexingRegion`.
+  if (!padOp.getConstantPaddingValue())
+    return failure();
+
+  // Collapsed dimensions cannot have padding because this can produce strided
+  // padding that isn't representable by a tensor.pad op. There are some special
+  // cases where it is possible (like collapsing unit dims), but supporting
+  // these cases is NYI, so disallow it for now.
+  ArrayRef<int64_t> low = padOp.getStaticLow();
+  ArrayRef<int64_t> high = padOp.getStaticHigh();
+  for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+    for (int64_t dim : reInd) {
+      if ((low[dim] != 0 || high[dim] != 0) && reInd.size() != 1)
+        return failure();
+    }
+  }
+
+  // Initialize padding values for collapsed tensors with zeros
+  ArrayRef<int64_t> expandedPaddedShape = padOp.getType().getShape();
+  PadDimInfo padDimInfo;
+  padDimInfo.lowPad.assign(reassociations.size(), rewriter.getIndexAttr(0));
+  padDimInfo.highPad.assign(reassociations.size(), rewriter.getIndexAttr(0));
+
+  // Update padding for dimensions that are not being collapsed, and compute
+  // the collapsed padded shape.
+  SmallVector<OpFoldResult> mixedLowPad(padOp.getMixedLowPad());
+  SmallVector<OpFoldResult> mixedHighPad(padOp.getMixedHighPad());
+  for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+    if (reInd.size() == 1) {
+      padDimInfo.lowPad[idx] = mixedLowPad[reInd[0]];
+      padDimInfo.highPad[idx] = mixedHighPad[reInd[0]];
+    }
+    SaturatedInteger collapsedSize = SaturatedInteger::wrap(1);
+    for (int64_t dim : reInd) {
+      collapsedSize =
+          collapsedSize * SaturatedInteger::wrap(expandedPaddedShape[dim]);
+    }
+    padDimInfo.paddedShape.push_back(collapsedSize.asInteger());
+  }
+
+  return padDimInfo;
+}
+
 class FoldPadWithProducerReshapeOpByCollapsing
     : public OpRewritePattern<tensor::PadOp> {
 public:
@@ -1936,63 +2406,92 @@ public:
         padOp.getSource().getDefiningOp<tensor::ExpandShapeOp>();
     if (!reshapeOp)
       return failure();
-    if (!reshapeOp->hasOneUse())
-      return failure();
 
     if (!controlFoldingReshapes(&padOp.getSourceMutable())) {
       return rewriter.notifyMatchFailure(padOp,
                                          "fusion blocked by control function");
     }
 
-    ArrayRef<int64_t> low = padOp.getStaticLow();
-    ArrayRef<int64_t> high = padOp.getStaticHigh();
     SmallVector<ReassociationIndices> reassociations =
         reshapeOp.getReassociationIndices();
+    FailureOr<PadDimInfo> maybeCollapsedPadding =
+        computeCollapsedPadding(padOp, reassociations, rewriter);
+    if (failed(maybeCollapsedPadding))
+      return failure();
+    PadDimInfo &collapsedPadding = maybeCollapsedPadding.value();
 
-    for (auto reInd : reassociations) {
-      if (reInd.size() == 1)
-        continue;
-      if (llvm::any_of(reInd, [&](int64_t ind) {
-            return low[ind] != 0 || high[ind] != 0;
-          })) {
-        return failure();
-      }
-    }
-
-    SmallVector<OpFoldResult> newLow, newHigh;
-    RankedTensorType collapsedType = reshapeOp.getSrcType();
-    RankedTensorType paddedType = padOp.getResultType();
-    SmallVector<int64_t> collapsedPaddedShape(collapsedType.getShape());
-    SmallVector<OpFoldResult> expandedPaddedSizes(
-        getMixedValues(reshapeOp.getStaticOutputShape(),
-                       reshapeOp.getOutputShape(), rewriter));
+    SmallVector<OpFoldResult> expandedPaddedSizes =
+        reshapeOp.getMixedOutputShape();
     AffineExpr d0, d1, d2;
     bindDims(rewriter.getContext(), d0, d1, d2);
     auto addMap = AffineMap::get(3, 0, {d0 + d1 + d2});
     Location loc = reshapeOp->getLoc();
-    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
-      OpFoldResult l = padOp.getMixedLowPad()[reInd[0]];
-      OpFoldResult h = padOp.getMixedHighPad()[reInd[0]];
+    for (auto [reInd, l, h] :
+         llvm::zip_equal(reassociations, collapsedPadding.lowPad,
+                         collapsedPadding.highPad)) {
       if (reInd.size() == 1) {
-        collapsedPaddedShape[idx] = paddedType.getShape()[reInd[0]];
-        OpFoldResult paddedSize = affine::makeComposedFoldedAffineApply(
+        expandedPaddedSizes[reInd[0]] = affine::makeComposedFoldedAffineApply(
             rewriter, loc, addMap, {l, h, expandedPaddedSizes[reInd[0]]});
-        expandedPaddedSizes[reInd[0]] = paddedSize;
       }
-      newLow.push_back(l);
-      newHigh.push_back(h);
     }
 
     RankedTensorType collapsedPaddedType =
-        paddedType.clone(collapsedPaddedShape);
+        padOp.getType().clone(collapsedPadding.paddedShape);
     auto newPadOp = tensor::PadOp::create(
-        rewriter, loc, collapsedPaddedType, reshapeOp.getSrc(), newLow, newHigh,
+        rewriter, loc, collapsedPaddedType, reshapeOp.getSrc(),
+        collapsedPadding.lowPad, collapsedPadding.highPad,
         padOp.getConstantPaddingValue(), padOp.getNofold());
 
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         padOp, padOp.getResultType(), newPadOp.getResult(), reassociations,
         expandedPaddedSizes);
 
+    return success();
+  }
+
+private:
+  ControlFusionFn controlFoldingReshapes;
+};
+
+class FoldReshapeWithProducerPadOpByCollapsing
+    : public OpRewritePattern<tensor::CollapseShapeOp> {
+public:
+  FoldReshapeWithProducerPadOpByCollapsing(MLIRContext *context,
+                                           ControlFusionFn foldReshapes,
+                                           PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::CollapseShapeOp>(context, benefit),
+        controlFoldingReshapes(std::move(foldReshapes)) {}
+
+  LogicalResult matchAndRewrite(tensor::CollapseShapeOp reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    tensor::PadOp padOp = reshapeOp.getSrc().getDefiningOp<tensor::PadOp>();
+    if (!padOp)
+      return failure();
+
+    if (!controlFoldingReshapes(&reshapeOp.getSrcMutable())) {
+      return rewriter.notifyMatchFailure(padOp,
+                                         "fusion blocked by control function");
+    }
+
+    SmallVector<ReassociationIndices> reassociations =
+        reshapeOp.getReassociationIndices();
+    RankedTensorType collapsedPaddedType = reshapeOp.getResultType();
+    FailureOr<PadDimInfo> maybeCollapsedPadding =
+        computeCollapsedPadding(padOp, reassociations, rewriter);
+    if (failed(maybeCollapsedPadding))
+      return failure();
+    PadDimInfo &collapsedPadding = maybeCollapsedPadding.value();
+
+    Location loc = reshapeOp->getLoc();
+    auto newCollapseOp = tensor::CollapseShapeOp::create(
+        rewriter, loc, padOp.getSource(), reassociations);
+
+    auto newPadOp = tensor::PadOp::create(
+        rewriter, loc, collapsedPaddedType, newCollapseOp.getResult(),
+        collapsedPadding.lowPad, collapsedPadding.highPad,
+        padOp.getConstantPaddingValue(), padOp.getNofold());
+
+    rewriter.replaceOp(reshapeOp, newPadOp.getResult());
     return success();
   }
 
@@ -2239,6 +2738,8 @@ void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
                                                     controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                         controlFoldingReshapes);
+  patterns.add<FoldReshapeWithProducerPadOpByExpansion>(patterns.getContext(),
+                                                        controlFoldingReshapes);
   patterns.add<FoldWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                      controlFoldingReshapes);
 }
@@ -2249,6 +2750,8 @@ void mlir::linalg::populateFoldReshapeOpsByCollapsingPatterns(
   patterns.add<FoldWithProducerReshapeOpByCollapsing>(patterns.getContext(),
                                                       controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByCollapsing>(
+      patterns.getContext(), controlFoldingReshapes);
+  patterns.add<FoldReshapeWithProducerPadOpByCollapsing>(
       patterns.getContext(), controlFoldingReshapes);
   patterns.add<FoldReshapeWithGenericOpByCollapsing>(patterns.getContext(),
                                                      controlFoldingReshapes);
@@ -2263,6 +2766,11 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
                RemoveOutsDependency>(context);
   // Add the patterns that clean up dead operands and results.
   populateEraseUnusedOperandsAndResultsPatterns(patterns);
+}
+
+void mlir::linalg::populateSplitElementwiseOpsWithConcatInputsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<SplitElementwiseOpWithConcatInputs>(patterns.getContext());
 }
 
 void mlir::linalg::populateCollapseDimensions(
@@ -2302,6 +2810,7 @@ struct LinalgElementwiseOpFusionPass
     };
 
     // Add elementwise op fusion patterns.
+    populateSplitElementwiseOpsWithConcatInputsPatterns(patterns);
     populateElementwiseOpsFusionPatterns(patterns, defaultControlFn);
     populateFoldReshapeOpsByExpansionPatterns(patterns, defaultControlFn);
     tensor::populateBubbleUpExpandShapePatterns(patterns);

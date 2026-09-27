@@ -147,21 +147,21 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
 //
 // This is an optimization hint for the linker which may then replace
 // an indirect call with a direct branch.
-static void emitDirectiveRelocJalr(const MachineInstr &MI,
-                                   MCContext &OutContext,
-                                   TargetMachine &TM,
-                                   MCStreamer &OutStreamer,
-                                   const MipsSubtarget &Subtarget) {
+void MipsAsmPrinter::emitDirectiveRelocJalr(const MachineInstr &MI,
+                                            MCContext &OutContext,
+                                            TargetMachine &TM,
+                                            MCStreamer &OutStreamer,
+                                            const MipsSubtarget &Subtarget) {
   for (const MachineOperand &MO :
        llvm::drop_begin(MI.operands(), MI.getDesc().getNumOperands())) {
     if (MO.isMCSymbol() && (MO.getTargetFlags() & MipsII::MO_JALR)) {
       MCSymbol *Callee = MO.getMCSymbol();
       if (Callee && !Callee->getName().empty()) {
+        MCSymbol *Sym = GetExternalSymbolSymbol(Callee->getName());
         MCSymbol *OffsetLabel = OutContext.createTempSymbol();
         const MCExpr *OffsetExpr =
             MCSymbolRefExpr::create(OffsetLabel, OutContext);
-        const MCExpr *CaleeExpr =
-            MCSymbolRefExpr::create(Callee, OutContext);
+        const MCExpr *CaleeExpr = MCSymbolRefExpr::create(Sym, OutContext);
         OutStreamer.emitRelocDirective(
             *OffsetExpr,
             Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
@@ -383,8 +383,8 @@ void MipsAsmPrinter::emitFrameDirective() {
 }
 
 /// Emit Set directives.
-const char *MipsAsmPrinter::getCurrentABIString() const {
-  switch (static_cast<MipsTargetMachine &>(TM).getABI().GetEnumValue()) {
+static const char *getABIString(const MipsABIInfo &ABI) {
+  switch (ABI.GetEnumValue()) {
   case MipsABIInfo::ABI::O32:  return "abi32";
   case MipsABIInfo::ABI::N32:  return "abiN32";
   case MipsABIInfo::ABI::N64:  return "abi64";
@@ -660,7 +660,7 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     }
 
     case MachineOperand::MO_ConstantPoolIndex:
-      O << getDataLayout().getPrivateGlobalPrefix() << "CPI"
+      O << getDataLayout().getInternalSymbolPrefix() << "CPI"
         << getFunctionNumber() << "_" << MO.getIndex();
       if (MO.getOffset())
         O << "+" << MO.getOffset();
@@ -750,7 +750,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
                             MTM, std::nullopt);
 
     bool IsABICalls = STI.isABICalls();
-    const MipsABIInfo &ABI = MTM.getABI();
+    const MipsABIInfo &ABI = STI.getABI();
     if (IsABICalls) {
       TS.emitDirectiveAbiCalls();
       // FIXME: This condition should be a lot more complicated that it is here.
@@ -762,7 +762,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     }
 
     // Tell the assembler which ABI we are using
-    std::string SectionName = std::string(".mdebug.") + getCurrentABIString();
+    std::string SectionName = std::string(".mdebug.") + getABIString(ABI);
     OutStreamer->switchSection(
         OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
 
@@ -810,7 +810,8 @@ void MipsAsmPrinter::emitInlineAsmStart() const {
 }
 
 void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                      const MCSubtargetInfo *EndInfo) const {
+                                      const MCSubtargetInfo *EndInfo,
+                                      const MachineInstr *MI) {
   OutStreamer->addBlankLine();
   getTargetStreamer().emitDirectiveSetPop();
 }
@@ -1184,7 +1185,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   //   LD       RA, 8(SP)
   //   DADDIU   SP, SP, 16
   //
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();

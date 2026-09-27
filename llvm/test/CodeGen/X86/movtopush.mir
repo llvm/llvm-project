@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=i686-windows --run-pass="x86-cf-opt" %s -o - | FileCheck %s
+# RUN: llc -mtriple=i686-windows -passes="x86-cf-opt" %s -o - | FileCheck %s
 
 # PR34903
 --- |

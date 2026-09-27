@@ -18,10 +18,12 @@
   "stp x24, x25, [sp, #-16]!\n"                                                \
   "stp x26, x27, [sp, #-16]!\n"                                                \
   "stp x28, x29, [sp, #-16]!\n"                                                \
-  "str x30, [sp,#-16]!\n"
+  "mrs x29, nzcv\n"                                                            \
+  "stp x29, x30, [sp, #-16]!\n"
 // Mirrors SAVE_ALL
 #define RESTORE_ALL                                                            \
-  "ldr x30, [sp], #16\n"                                                       \
+  "ldp x29, x30, [sp], #16\n"                                                  \
+  "msr nzcv, x29\n"                                                            \
   "ldp x28, x29, [sp], #16\n"                                                  \
   "ldp x26, x27, [sp], #16\n"                                                  \
   "ldp x24, x25, [sp], #16\n"                                                  \
@@ -41,7 +43,7 @@
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
-// Get the difference between runtime addrress of .text section and
+// Get the difference between runtime address of .text section and
 // static address in section header table. Can be extracted from arbitrary
 // pc value recorded at runtime to get the corresponding static address, which
 // in turn can be used to search for indirect call description. Needed because
@@ -296,6 +298,17 @@ uint64_t __getpid() {
   return ret;
 }
 
+uint64_t __gettid() {
+  uint64_t ret;
+  register uint32_t w8 __asm__("w8") = 178;
+  __asm__ __volatile__("svc #0\n"
+                       "mov %0, x0"
+                       : "=r"(ret)
+                       : "r"(w8)
+                       : "cc", "memory", "x0", "x1");
+  return ret;
+}
+
 uint64_t __getppid() {
   uint64_t ret;
   register uint32_t w8 __asm__("w8") = 173;
@@ -388,6 +401,50 @@ int __prctl(int option, unsigned long arg2, unsigned long arg3,
                        : "cc", "memory");
   return ret;
 }
+
+#if defined(__ANDROID__)
+// Clang does not support __builtin_setjmp/__builtin_longjmp for the aarch64
+// Android target, and this freestanding runtime cannot use libc <setjmp.h>.
+//
+// Minimal AAPCS64 setjmp/longjmp: save callee-saved x19-x28, fp(x29), lr(x30),
+// and sp. Built with -mgeneral-regs-only, so there are no callee-saved FP/SIMD
+// (d8-d15) to save. Buffer (8-byte slots): [0..9]=x19..x28, [10]=fp, [11]=lr,
+// [12]=sp - long jump buffer must hold at least 13 doublewords.
+__attribute__((naked, returns_twice)) int __bolt_setjmp(void ** /*buf in x0*/) {
+  // clang-format off
+  __asm__ __volatile__(
+      "stp x19, x20, [x0, #0]\n"
+      "stp x21, x22, [x0, #16]\n"
+      "stp x23, x24, [x0, #32]\n"
+      "stp x25, x26, [x0, #48]\n"
+      "stp x27, x28, [x0, #64]\n"
+      "stp x29, x30, [x0, #80]\n"
+      "mov x2, sp\n"
+      "str x2, [x0, #96]\n"
+      "mov x0, #0\n" // direct call returns 0
+      "ret\n" :::);
+  // clang-format on
+}
+
+__attribute__((naked, noreturn)) void __bolt_longjmp(void ** /*buf in x0*/,
+                                                     int /*val in x1*/) {
+  // clang-format off
+  __asm__ __volatile__(
+      "ldp x19, x20, [x0, #0]\n"
+      "ldp x21, x22, [x0, #16]\n"
+      "ldp x23, x24, [x0, #32]\n"
+      "ldp x25, x26, [x0, #48]\n"
+      "ldp x27, x28, [x0, #64]\n"
+      "ldp x29, x30, [x0, #80]\n"
+      "ldr x2, [x0, #96]\n"
+      "mov sp, x2\n"
+      "cmp w1, #0\n"
+      "csinc w0, w1, wzr, ne\n" // setjmp returns (val ? val : 1)
+      "ret\n"                   // ret -> saved lr == setjmp's caller
+      :::);
+  // clang-format on
+}
+#endif // defined(__ANDROID__)
 
 } // anonymous namespace
 

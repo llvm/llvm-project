@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextDBReg_h
-#define lldb_NativeRegisterContextDBReg_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_H
 
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
@@ -65,8 +65,8 @@ public:
   };
 
 protected:
-  std::array<struct DREG, 16> m_hbp_regs; // hardware breakpoints
-  std::array<struct DREG, 16> m_hwp_regs; // hardware watchpoints
+  std::array<struct DREG, 16> m_hbp_regs{}; // hardware breakpoints
+  std::array<struct DREG, 16> m_hwp_regs{}; // hardware watchpoints
 
   uint32_t m_max_hbp_supported;
   uint32_t m_max_hwp_supported;
@@ -105,4 +105,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextDBReg_h
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_H

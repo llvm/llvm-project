@@ -121,12 +121,13 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   Operation *rootOp = qs.getRootOp();
   int matchCount = 0;
   matcher::MatchFinder finder;
+
+  StringRef functionName = matcher.getFunctionName();
   auto matches = finder.collectMatches(rootOp, std::move(matcher));
 
   // An extract call is recognized by considering if the matcher has a name.
   // TODO: Consider making the extract more explicit.
-  if (matcher.hasFunctionName()) {
-    auto functionName = matcher.getFunctionName();
+  if (!functionName.empty()) {
     std::vector<Operation *> flattenedMatches =
         finder.flattenMatchedOps(matches);
     Operation *function =

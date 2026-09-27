@@ -23,10 +23,10 @@ namespace llvm {
 /// implementation.
 class LLVM_ABI CodeGenTargetMachineImpl : public TargetMachine {
 protected: // Can only create subclasses.
-  CodeGenTargetMachineImpl(const Target &T, StringRef DataLayoutString,
-                           const Triple &TT, StringRef CPU, StringRef FS,
-                           const TargetOptions &Options, Reloc::Model RM,
-                           CodeModel::Model CM, CodeGenOptLevel OL);
+  CodeGenTargetMachineImpl(const Target &T, const Triple &TT, StringRef CPU,
+                           StringRef FS, const TargetOptions &Options,
+                           Reloc::Model RM, CodeModel::Model CM,
+                           CodeGenOptLevel OL);
 
   void initAsmInfo();
 
@@ -42,7 +42,7 @@ public:
 
   /// Create a pass configuration object to be used by addPassToEmitX methods
   /// for generating a pipeline of CodeGen passes.
-  virtual TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+  TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   /// Add passes to the specified pass manager to get the specified file
   /// emitted.  Typically this will involve several steps of code generation.

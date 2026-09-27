@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++11 %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: true}}" -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffix=,CXX14 -std=c++14 %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
+// RUN: %check_clang_tidy -check-suffix=,CXX14 -std=c++14-or-later %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: true}}" -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffix=,NOSUBEXPR -std=c++11 %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: false, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: true}}" -- -fno-delayed-template-parsing
@@ -9,24 +9,7 @@
 // RUN: %check_clang_tidy -check-suffix=,NONDEDUCED -std=c++11 %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: false}}" -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
-namespace std {
-template <typename>
-struct remove_reference;
-
-template <typename _Tp> struct remove_reference { typedef _Tp type; };
-template <typename _Tp> struct remove_reference<_Tp&> { typedef _Tp type; };
-template <typename _Tp> struct remove_reference<_Tp&&> { typedef _Tp type; };
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept;
-
-template <typename _Tp>
-constexpr _Tp &&
-forward(typename remove_reference<_Tp>::type &__t) noexcept;
-
-}
-// NOLINTEND
+#include <utility>
 
 struct Obj {
   Obj();
@@ -367,3 +350,64 @@ namespace gh69412 {
       void foo(int&&) = delete;
   };
 } // namespace gh69412
+
+namespace gh187716 {
+  struct Base {
+    Obj o;
+    Base(Obj&& o) : o(std::move(o)) {}
+  };
+
+  struct Inherit : Base {
+    using Base::Base;
+  };
+
+  void test_inheriting_ctor() {
+    Inherit x(Obj{});
+  }
+
+  struct BaseFailing {
+    Obj o;
+    BaseFailing(Obj&& o) : o(o) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: rvalue reference parameter 'o' is never moved
+  };
+
+  struct InheritingFailing : BaseFailing {
+    using BaseFailing::BaseFailing;
+  };
+
+  void test_inheriting_ctor2() {
+    Inherit x(Obj{});
+  }
+
+  struct Derived : Base {
+    using Base::Base;
+  };
+
+  struct Derived2 : Derived {
+    using Derived::Derived;
+  };
+
+  void test_multi_level() {
+    Derived2 x(Obj{});
+  }
+
+  struct MixedDerived : Base {
+    using Base::Base;
+    MixedDerived(Obj&& a, Obj&& b) : Base(std::move(a)) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: rvalue reference parameter 'b' is never moved
+  };
+
+  template <class T>
+  struct TemplateBase {
+    T val;
+    TemplateBase(T&& v) : val(std::move(v)) {}
+  };
+
+  struct InheritingFromTemplate : TemplateBase<Obj> {
+    using TemplateBase::TemplateBase;
+  };
+
+  void test_template_base() {
+    InheritingFromTemplate x(Obj{});
+  }
+} // namespace gh187716

@@ -2,7 +2,6 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx -verify-machineinstrs | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx2 -verify-machineinstrs | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
-; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c,+fast-variable-perlane-shuffle -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512f -verify-machineinstrs | FileCheck %s --check-prefixes=AVX512,AVX512F
@@ -2177,6 +2176,40 @@ define <4 x i16> @cvt_4f32_to_4i16(<4 x float> %a0) nounwind {
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
   ret <4 x i16> %2
+}
+
+define <3 x half> @cvt_3f32_to_3f16(<3 x float> %a0) nounwind {
+; AVX-LABEL: cvt_3f32_to_3f16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    subq $56, %rsp
+; AVX-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-NEXT:    callq __truncsfhf2@PLT
+; AVX-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = mem[1,1,3,3]
+; AVX-NEXT:    callq __truncsfhf2@PLT
+; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; AVX-NEXT:    callq __truncsfhf2@PLT
+; AVX-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; AVX-NEXT:    vinsertps $28, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],zero,zero
+; AVX-NEXT:    addq $56, %rsp
+; AVX-NEXT:    retq
+;
+; F16C-LABEL: cvt_3f32_to_3f16:
+; F16C:       # %bb.0:
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    retq
+;
+; AVX512-LABEL: cvt_3f32_to_3f16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = fptrunc <3 x float> %a0 to <3 x half>
+  ret <3 x half> %1
 }
 
 define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {

@@ -6,20 +6,11 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-from functools import total_ordering
+from hdrgen.symbol import Symbol
 
 
-@total_ordering
-class Type:
-    def __init__(self, type_name):
-        assert type_name
-        self.type_name = type_name
-
-    def __eq__(self, other):
-        return self.type_name == other.type_name
-
-    def __lt__(self, other):
-        return self.type_name < other.type_name
-
-    def __hash__(self):
-        return self.type_name.__hash__()
+class Type(Symbol):
+    # A type carries its name and an optional guard.
+    def __init__(self, name, guard=None):
+        super().__init__(name)
+        self.guard = guard

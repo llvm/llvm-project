@@ -359,12 +359,177 @@ define float @fadd_reduct_reassoc_v4v8f32(<vscale x 4 x float> %a, <vscale x 8 x
   ret float %r
 }
 
+; No FMULV instruction so use knowledge about the architectural maximum size of
+; an SVE register to "scalarise" the reduction.
+
+define half @fmulv_nxv2f16(half %init, <vscale x 2 x half> %a) {
+; CHECK-LABEL: fmulv_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z2.h, #1.00000000
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    fmul h0, h0, h1
+; CHECK-NEXT:    ret
+  %res = call fast half @llvm.vector.reduce.fmul.nxv2f16(half %init, <vscale x 2 x half> %a)
+  ret half %res
+}
+
+define half @fmulv_nxv4f16(half %init, <vscale x 4 x half> %a) {
+; CHECK-LABEL: fmulv_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z2.h, #1.00000000
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    fmul h0, h0, h1
+; CHECK-NEXT:    ret
+  %res = call fast half @llvm.vector.reduce.fmul.nxv4f16(half %init, <vscale x 4 x half> %a)
+  ret half %res
+}
+
+define half @fmulv_nxv8f16(half %init, <vscale x 8 x half> %a) {
+; CHECK-LABEL: fmulv_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z2.h, #1.00000000
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    fmul z1.h, z1.h, z3.h
+; CHECK-NEXT:    fmul h0, h0, h1
+; CHECK-NEXT:    ret
+  %res = call fast half @llvm.vector.reduce.fmul.nxv8f16(half %init, <vscale x 8 x half> %a)
+  ret half %res
+}
+
+define float @fmulv_nxv2f32(float %init, <vscale x 2 x float> %a) {
+; CHECK-LABEL: fmulv_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z2.s, #1.00000000
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT:    fmul s0, s0, s1
+; CHECK-NEXT:    ret
+  %res = call fast float @llvm.vector.reduce.fmul.nxv2f32(float %init, <vscale x 2 x float> %a)
+  ret float %res
+}
+
+define float @fmulv_nxv4f32(float %init, <vscale x 4 x float> %a) {
+; CHECK-LABEL: fmulv_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z2.s, #1.00000000
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.s, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.s, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.s, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.s, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.s, z1.s, z3.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z2.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fmul z1.s, z1.s, z3.s
+; CHECK-NEXT:    fmul s0, s0, s1
+; CHECK-NEXT:    ret
+  %res = call fast float @llvm.vector.reduce.fmul.nxv4f32(float %init, <vscale x 4 x float> %a)
+  ret float %res
+}
+
+define double @fmulv_nxv2f64(double %init, <vscale x 2 x double> %a) {
+; CHECK-LABEL: fmulv_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z2.d, #1.00000000
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.d, z1.d, z3.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.d, z1.d, z3.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.d, z1.d, z3.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.d, z1.d, z3.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    fmul z1.d, z1.d, z3.d
+; CHECK-NEXT:    fmul d0, d0, d1
+; CHECK-NEXT:    ret
+  %res = call fast double @llvm.vector.reduce.fmul.nxv2f64(double %init, <vscale x 2 x double> %a)
+  ret double %res
+}
+
 declare half @llvm.vector.reduce.fadd.nxv2f16(half, <vscale x 2 x half>)
 declare half @llvm.vector.reduce.fadd.nxv4f16(half, <vscale x 4 x half>)
 declare half @llvm.vector.reduce.fadd.nxv8f16(half, <vscale x 8 x half>)
-declare half @llvm.vector.reduce.fadd.nxv6f16(half, <vscale x 6 x half>)
-declare half @llvm.vector.reduce.fadd.nxv10f16(half, <vscale x 10 x half>)
-declare half @llvm.vector.reduce.fadd.nxv12f16(half, <vscale x 12 x half>)
 declare float @llvm.vector.reduce.fadd.nxv2f32(float, <vscale x 2 x float>)
 declare float @llvm.vector.reduce.fadd.nxv4f32(float, <vscale x 4 x float>)
 declare float @llvm.vector.reduce.fadd.nxv8f32(float, <vscale x 8 x float>)
@@ -397,3 +562,10 @@ declare half @llvm.vector.reduce.fminimum.nxv8f16(<vscale x 8 x half>)
 declare float @llvm.vector.reduce.fminimum.nxv2f32(<vscale x 2 x float>)
 declare float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float>)
 declare double @llvm.vector.reduce.fminimum.nxv2f64(<vscale x 2 x double>)
+
+declare half @llvm.vector.reduce.fmul.nxv2f16(half, <vscale x 2 x half>)
+declare half @llvm.vector.reduce.fmul.nxv4f16(half, <vscale x 4 x half>)
+declare half @llvm.vector.reduce.fmul.nxv8f16(half, <vscale x 8 x half>)
+declare float @llvm.vector.reduce.fmul.nxv2f32(float, <vscale x 2 x float>)
+declare float @llvm.vector.reduce.fmul.nxv4f32(float, <vscale x 4 x float>)
+declare double @llvm.vector.reduce.fmul.nxv2f64(double, <vscale x 2 x double>)

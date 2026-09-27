@@ -26,6 +26,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/xxhash.h"
 
+#include <limits>
+
 #if defined(__APPLE__)
 #include <sys/mman.h>
 
@@ -298,10 +300,10 @@ void RebaseSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
-                                                     const char *name)
-    : SyntheticSection(segname, name) {
+GotSection::GotSection()
+    : SyntheticSection(segment_names::data, section_names::got) {
   align = target->wordSize;
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
@@ -334,8 +336,9 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
   }
 }
 
-void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
+void GotSection::addEntry(Symbol *sym) {
   if (entries.insert(sym)) {
+    // Every symbol has at most one non-lazy pointer slot.
     assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
 
@@ -380,7 +383,7 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
     writeChainedRebase(buf, sym->getVA() + addend);
 }
 
-void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
+void GotSection::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries))
       writeChainedFixup(&buf[i * target->wordSize], entry, 0);
@@ -389,17 +392,6 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
       if (auto *defined = dyn_cast<Defined>(entry))
         write64le(&buf[i * target->wordSize], defined->getVA());
   }
-}
-
-GotSection::GotSection()
-    : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
-  flags = S_NON_LAZY_SYMBOL_POINTERS;
-}
-
-TlvPointerSection::TlvPointerSection()
-    : NonLazyPointerSectionBase(segment_names::data,
-                                section_names::threadPtrs) {
-  flags = S_THREAD_LOCAL_VARIABLE_POINTERS;
 }
 
 BindingSection::BindingSection()
@@ -897,15 +889,19 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   return methname;
 }
 
+size_t ObjCStubsSection::getStubSize() const {
+  return config->objcStubsMode == ObjCStubsMode::fast
+             ? target->objcStubsFastSize
+             : target->objcStubsSmallSize;
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
   // We create a selref entry for each unique methname.
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
+  size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/symbols.size() * stubSize,
@@ -938,10 +934,22 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
-  return stubSize * symbols.size();
+  return getStubSize() * symbols.size();
+}
+
+void ObjCStubsSection::sortSymbols(
+    const llvm::DenseMap<const Symbol *, int> &priorities) {
+  llvm::stable_sort(symbols, [&](const Defined *a, const Defined *b) {
+    auto priority = [&](const Defined *sym) {
+      auto it = priorities.find(sym);
+      return it == priorities.end() ? std::numeric_limits<int>::max()
+                                    : it->second;
+    };
+    return priority(a) < priority(b);
+  });
+  size_t stubSize = getStubSize();
+  for (auto [idx, sym] : llvm::enumerate(symbols))
+    sym->value = idx * stubSize;
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
@@ -1221,7 +1229,6 @@ void SymtabSection::emitStabs() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       // Excluded symbols should have been filtered out in finalizeContents().
       assert(defined->includeInSymtab);
-
       if (defined->isAbsolute())
         continue;
 
@@ -1245,6 +1252,14 @@ void SymtabSection::emitStabs() {
 
   llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
+  llvm::MapVector<ObjFile *, std::string> stabFiles;
+  for (const auto &[defined, fileId] : symbolsNeedingStabs) {
+    ObjFile *file = cast<ObjFile>(defined->originalIsec->getFile());
+    stabFiles[file] = "";
+  }
+  parallelForEach(stabFiles,
+                  [&](auto &it) { it.second = it.first->sourceFile(); });
+
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
@@ -1264,7 +1279,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->sourceFile());
+      emitBeginSourceStab(stabFiles[file]);
       emitObjectFileStab(file);
     }
 
@@ -1445,6 +1460,8 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
       nList->n_desc |=
           defined->referencedDynamically ? REFERENCED_DYNAMICALLY : 0;
+      if (config->outputType == MH_OBJECT)
+        nList->n_desc |= defined->isCold() ? N_COLD_FUNC : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       int16_t ordinal = ordinalForDylibSymbol(*dysym);
@@ -1477,25 +1494,20 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  uint32_t size = in.got->getEntries().size() +
-                  in.tlvPointers->getEntries().size() +
-                  in.stubs->getEntries().size();
+  uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
-         in.stubs->isNeeded();
+  return in.got->isNeeded() || in.stubs->isNeeded();
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
-  in.tlvPointers->reserved1 = off;
-  off += in.tlvPointers->getEntries().size();
   in.stubs->reserved1 = off;
   if (in.lazyPointers) {
     off += in.stubs->getEntries().size();
@@ -1512,10 +1524,6 @@ static uint32_t indirectValue(const Symbol *sym) {
 void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   uint32_t off = 0;
   for (const Symbol *sym : in.got->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
-  }
-  for (const Symbol *sym : in.tlvPointers->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
@@ -1721,26 +1729,24 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // and don't need this alignment. They will be emitted at some arbitrary address
 // `A`, but ld64 will treat them as being 16-byte aligned with an offset of
 // `16 % A`.
-static Align getStringPieceAlignment(const CStringInputSection *isec,
+static Align getStringPieceAlignment(const CStringInputSection &isec,
                                      const StringPiece &piece) {
-  return llvm::Align(1ULL << llvm::countr_zero(isec->align | piece.inSecOff));
+  return llvm::Align(1ULL << llvm::countr_zero(isec.align | piece.inSecOff));
 }
 
 void CStringSection::finalizeContents() {
   size = 0;
-  // TODO: Call buildCStringPriorities() to support cstring ordering when
-  // deduplication is off, although this may negatively impact build
-  // performance.
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      piece.outSecOff = alignTo(size, getStringPieceAlignment(isec, piece));
-      StringRef string = isec->getStringRef(i);
-      size = piece.outSecOff + string.size() + 1; // account for null terminator
-    }
+  priorityBuilder.forEachStringPiece(
+      inputs,
+      [&](CStringInputSection &isec, StringPiece &piece, size_t pieceIdx) {
+        piece.outSecOff = alignTo(size, getStringPieceAlignment(isec, piece));
+        StringRef string = isec.getStringRef(pieceIdx);
+        size =
+            piece.outSecOff + string.size() + 1; // account for null terminator
+      },
+      /*forceInputOrder=*/false, /*computeHash=*/true);
+  for (CStringInputSection *isec : inputs)
     isec->isFinal = true;
-  }
 }
 
 void DeduplicatedCStringSection::finalizeContents() {
@@ -1748,20 +1754,19 @@ void DeduplicatedCStringSection::finalizeContents() {
   DenseMap<CachedHashStringRef, Align> strToAlignment;
   // Used for tail merging only
   std::vector<CachedHashStringRef> deduplicatedStrs;
-  for (const CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      auto s = isec->getCachedHashStringRef(i);
-      assert(isec->align != 0);
-      auto align = getStringPieceAlignment(isec, piece);
-      auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
-      if (config->tailMergeStrings && wasInserted)
-        deduplicatedStrs.push_back(s);
-      if (!wasInserted && it->second < align)
-        it->second = align;
-    }
-  }
+  priorityBuilder.forEachStringPiece(
+      inputs,
+      [&](CStringInputSection &isec, StringPiece &piece, size_t pieceIdx) {
+        auto s = isec.getCachedHashStringRef(pieceIdx);
+        assert(isec.align != 0);
+        auto align = getStringPieceAlignment(isec, piece);
+        auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
+        if (config->tailMergeStrings && wasInserted)
+          deduplicatedStrs.push_back(s);
+        if (!wasInserted && it->second < align)
+          it->second = align;
+      },
+      /*forceInputOrder=*/true);
 
   // Like lexigraphical sort, except we read strings in reverse and take the
   // longest string first
@@ -1801,9 +1806,10 @@ void DeduplicatedCStringSection::finalizeContents() {
   // Sort the strings for performance and compression size win, and then
   // assign an offset for each string and save it to the corresponding
   // StringPieces for easy access.
-  for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
-    auto &piece = isec->pieces[i];
-    auto s = isec->getCachedHashStringRef(i);
+  priorityBuilder.forEachStringPiece(inputs, [&](CStringInputSection &isec,
+                                                 StringPiece &piece,
+                                                 size_t pieceIdx) {
+    auto s = isec.getCachedHashStringRef(pieceIdx);
     // Any string can be tail merged with itself with an offset of zero
     uint64_t tailMergeOffset = 0;
     auto mergeIt =
@@ -1829,7 +1835,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       stringOffsetMap[tailMergedString] = piece.outSecOff;
       assert(isAligned(strToAlignment.at(tailMergedString), piece.outSecOff));
     }
-  }
+  });
   for (CStringInputSection *isec : inputs)
     isec->isFinal = true;
 }
@@ -1872,7 +1878,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
-        literal4Map.emplace(value, literal4Map.size());
+        literal4Map.try_emplace(value, literal4Map.size());
       }
       break;
     }
@@ -1881,7 +1887,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
-        literal8Map.emplace(value, literal8Map.size());
+        literal8Map.try_emplace(value, literal8Map.size());
       }
       break;
     }
@@ -1890,7 +1896,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
-        literal16Map.emplace(value, literal16Map.size());
+        literal16Map.try_emplace(value, literal16Map.size());
       }
       break;
     }
@@ -2012,7 +2018,7 @@ uint64_t InitOffsetsSection::getSize() const {
 void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
-    for (const Reloc &rel : isec->relocs) {
+    for (const Relocation &rel : isec->relocs) {
       const Symbol *referent = cast<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
@@ -2037,7 +2043,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
 // not known at link time, stub-indirection has to be used.
 void InitOffsetsSection::setUp() {
   for (const ConcatInputSection *isec : sections) {
-    for (const Reloc &rel : isec->relocs) {
+    for (const Relocation &rel : isec->relocs) {
       RelocAttrs attrs = target->getRelocAttrs(rel.type);
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
@@ -2078,7 +2084,7 @@ void ObjCMethListSection::setUp() {
 
     // Loop through all methods, and ensure a selref for each of them exists.
     while (methodNameOff < isec->data.size()) {
-      const Reloc *reloc = isec->getRelocAt(methodNameOff);
+      const Relocation *reloc = isec->getRelocAt(methodNameOff);
       assert(reloc && "Relocation expected at method list name slot");
 
       StringRef methname = reloc->getReferentString();
@@ -2179,7 +2185,7 @@ bool ObjCMethListSection::isMethodList(const ConcatInputSection *isec) {
 void ObjCMethListSection::writeRelativeOffsetForIsec(
     const ConcatInputSection *isec, uint8_t *buf, uint32_t &inSecOff,
     uint32_t &outSecOff, bool useSelRef) const {
-  const Reloc *reloc = isec->getRelocAt(inSecOff);
+  const Relocation *reloc = isec->getRelocAt(inSecOff);
   assert(reloc && "Relocation expected at __objc_methlist Offset");
 
   uint32_t symVA = 0;

@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_SPECIFIERS_H
 #define LLVM_CLANG_BASIC_SPECIFIERS_H
 
+#include "clang/Basic/OptionalUnsigned.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -88,7 +89,7 @@ namespace clang {
     TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype,          // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     TST_auto,            // C++11 auto
     TST_decltype_auto,   // C++1y decltype(auto)
     TST_auto_type,       // __auto_type extension
@@ -153,7 +154,7 @@ namespace clang {
     /// A bitfield object is a bitfield on a C or C++ record.
     OK_BitField,
 
-    /// A vector component is an element or range of elements on a vector.
+    /// A vector component is an element or range of elements of a vector.
     OK_VectorComponent,
 
     /// An Objective-C property is a logical field of an Objective-C
@@ -165,7 +166,7 @@ namespace clang {
     /// Objective-C method calls.
     OK_ObjCSubscript,
 
-    /// A matrix component is a single element of a matrix.
+    /// A matrix component is a single element or range of elements of a matrix.
     OK_MatrixComponent
   };
 
@@ -288,7 +289,6 @@ namespace clang {
     CC_AAPCS,              // __attribute__((pcs("aapcs")))
     CC_AAPCS_VFP,          // __attribute__((pcs("aapcs-vfp")))
     CC_IntelOclBicc,       // __attribute__((intel_ocl_bicc))
-    CC_SpirFunction,       // default for OpenCL functions on SPIR target
     CC_DeviceKernel,       // __attribute__((device_kernel))
     CC_Swift,              // __attribute__((swiftcall))
     CC_SwiftAsync,         // __attribute__((swiftasynccall))
@@ -324,7 +324,6 @@ namespace clang {
     case CC_X86RegCall:
     case CC_X86Pascal:
     case CC_X86VectorCall:
-    case CC_SpirFunction:
     case CC_DeviceKernel:
     case CC_Swift:
     case CC_SwiftAsync:
@@ -361,6 +360,8 @@ namespace clang {
     // parameters are assumed to only get null on error.
     NullableResult,
   };
+  using NullabilityKindOrNone = OptionalUnsigned<NullabilityKind>;
+
   /// Prints human-readable debug representation.
   llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 

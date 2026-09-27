@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
 
 namespace cwg1110 { // cwg1110: 3.1
 #if __cplusplus >= 201103L
@@ -81,7 +81,7 @@ struct B : A {
 } b;
 void foo() {
   b.A::operator T(); // FIXME: qualified lookup should find T in A.
-  // expected-error@-1 {{unknown type name 'T'}}
+  // expected-error@-1 {{unknown type name 'T'; did you mean 'A::T'?}}
   //   expected-note@#cwg1111-A-T {{'A::T' declared here}}
 }
 } // namespace example4
@@ -107,7 +107,7 @@ namespace cwg1113 { // cwg1113: partial
   namespace named {
     extern int a; // #cwg1113-a
     static int a;
-    // expected-error@-1 {{static declaration of 'a' follows non-static}}
+    // expected-error@-1 {{static declaration of 'a' follows non-static declaration}}
     //   expected-note@#cwg1113-a {{previous declaration is here}}
   }
   namespace {

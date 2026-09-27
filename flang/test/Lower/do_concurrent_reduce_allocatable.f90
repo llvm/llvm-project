@@ -8,7 +8,7 @@ subroutine do_concurrent_allocatable
   end do
 end subroutine
 
-! CHECK: fir.declare_reduction @[[RED_OP:.*]] : ![[RED_TYPE:.*]] alloc {
+! CHECK: fir.declare_reduction @[[RED_OP:.*]] : ![[RED_TYPE:.*]] attributes {byref_element_type = !fir.array<?x?xf32>} alloc {
 ! CHECK:   %[[ALLOC:.*]] = fir.alloca
 ! CHECK:   fir.yield(%[[ALLOC]] : ![[RED_TYPE]])
 ! CHECK: } init {

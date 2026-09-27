@@ -9,6 +9,7 @@
 #include "LLDBUtils.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStructuredData.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -62,4 +63,31 @@ TEST(LLDBUtilsTest, ToError) {
 
   std::string error_message = toString(std::move(llvm_error));
   EXPECT_EQ(error_message, "Test error message");
+}
+
+TEST(LLDBUtilsTest, UTF16Codeunits) {
+  using Expect = std::optional<size_t>;
+
+  EXPECT_EQ(UTF16CodeunitToBytes("a", 0), Expect{0});
+  EXPECT_EQ(UTF16CodeunitToBytes("some word", 4), Expect{4});
+  EXPECT_EQ(UTF16CodeunitToBytes("fake", 4), Expect{4});
+  EXPECT_EQ(UTF16CodeunitToBytes("ƒake", 4), Expect{5});
+  EXPECT_EQ(UTF16CodeunitToBytes("b", 1), Expect{1});
+  EXPECT_EQ(UTF16CodeunitToBytes("💩", 0), Expect{0});
+  EXPECT_EQ(UTF16CodeunitToBytes("ƒ", 1), Expect{2});
+  EXPECT_EQ(UTF16CodeunitToBytes("💩ƒ", 2), Expect{4});
+  EXPECT_EQ(UTF16CodeunitToBytes("√", 2), Expect{3});
+  EXPECT_EQ(UTF16CodeunitToBytes("√ƒ", 4), Expect{5});
+  EXPECT_EQ(UTF16CodeunitToBytes("√💩", 4), Expect{7});
+  EXPECT_EQ(UTF16CodeunitToBytes("√", 1), Expect{3});
+
+  // Index
+  EXPECT_EQ(UTF16CodeunitToBytes("ƒake extra", 4), Expect{5});
+  EXPECT_EQ(UTF16CodeunitToBytes("3çç ", 3), Expect{5});
+  EXPECT_EQ(UTF16CodeunitToBytes("20𒂷 ", 3), std::nullopt);
+
+  // Failures
+  EXPECT_EQ(UTF16CodeunitToBytes("💩ƒ", 1), std::nullopt);
+  EXPECT_NE(UTF16CodeunitToBytes("20𒂷 ", 3), Expect{5});
+  EXPECT_NE(UTF16CodeunitToBytes("w💩ƒ", 2), Expect{6});
 }

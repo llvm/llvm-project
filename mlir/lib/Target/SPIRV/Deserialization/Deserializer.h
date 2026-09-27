@@ -58,7 +58,9 @@ struct DebugLine {
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
-using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
+/// Use `MapVector<>` to ensure a deterministic iteration order with a pointer
+/// key.
+using BlockMergeInfoMap = llvm::MapVector<Block *, BlockMergeInfo>;
 
 /// A "deferred struct type" is a struct type with one or more member types not
 /// known when the Deserializer first encounters the struct. This happens, for
@@ -175,6 +177,11 @@ private:
   /// Processes an OpDecorate instruction.
   LogicalResult processDecoration(ArrayRef<uint32_t> words);
 
+  /// Resolves all OpDecorateId entries previously queued during
+  /// processDecoration. Called after all module ops have been deserialized so
+  /// the operand <id>s can be looked up as MLIR symbols.
+  LogicalResult resolveDeferredIdDecorations();
+
   // Processes an OpMemberDecorate instruction.
   LogicalResult processMemberDecoration(ArrayRef<uint32_t> words);
 
@@ -278,11 +285,11 @@ private:
     return opBuilder.getStringAttr(attrName);
   }
 
-  /// Move a conditional branch into a separate basic block to avoid unnecessary
-  /// sinking of defs that may be required outside a selection region. This
-  /// function also ensures that a single block cannot be a header block of one
-  /// selection construct and the merge block of another.
-  LogicalResult splitConditionalBlocks();
+  /// Move a conditional branch or a switch into a separate basic block to avoid
+  /// unnecessary sinking of defs that may be required outside a selection
+  /// region. This function also ensures that a single block cannot be a header
+  /// block of one selection construct and the merge block of another.
+  LogicalResult splitSelectionHeader();
 
   //===--------------------------------------------------------------------===//
   // Type
@@ -314,6 +321,10 @@ private:
   LogicalResult processImageType(ArrayRef<uint32_t> operands);
 
   LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processSamplerType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processNamedBarrierType(ArrayRef<uint32_t> operands);
 
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
@@ -472,6 +483,9 @@ private:
   /// Processes a SPIR-V OpPhi instruction with the given `operands`.
   LogicalResult processPhi(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpSwitch instruction with the given `operands`.
+  LogicalResult processSwitch(ArrayRef<uint32_t> operands);
+
   /// Creates block arguments on predecessors previously recorded when handling
   /// OpPhi instructions.
   LogicalResult wireUpBlockArgument();
@@ -503,6 +517,15 @@ private:
   LogicalResult
   sliceInstruction(spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
                    std::optional<spirv::Opcode> expectedOpcode = std::nullopt);
+
+  /// If `opcode` is a SPV_INTEL_long_composites splittable opcode and the
+  /// next binary instruction(s) are matching `*ContinuedINTEL` ops, consumes
+  /// them and rebinds `operands` to a buffer (held in `mergedStorage`)
+  /// containing the parent + continuation operands concatenated.
+  void
+  mergeLongCompositeContinuations(spirv::Opcode opcode,
+                                  ArrayRef<uint32_t> &operands,
+                                  SmallVectorImpl<uint32_t> &mergedStorage);
 
   /// Processes a SPIR-V instruction with the given `opcode` and `operands`.
   /// This method is the main entrance for handling SPIR-V instruction; it
@@ -539,6 +562,11 @@ private:
   /// the instruction opcode. The op deserializer is then invoked using the
   /// other entries.
   LogicalResult processExtInst(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpExtInst with given `operands` for a DebugInfo
+  /// extension instruction.
+  LogicalResult processDebugInfoExtInst(ArrayRef<uint32_t> operands,
+                                        bool deferInstructions);
 
   /// Dispatches the deserialization of extended instruction set operation based
   /// on the extended instruction set name, and instruction opcode. This is
@@ -609,6 +637,9 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
+  // Result <id> to debug location for constants materialized from constantMap.
+  DenseMap<uint32_t, LocationAttr> constantLocMap;
+
   // Result <id> to replicated constant attribute and type mapping.
   ///
   /// In the SPIR-V binary format, OpConstantCompositeReplicateEXT is placed in
@@ -674,6 +705,16 @@ private:
 
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttrList> decorations;
+
+  // Decoration entries from OpDecorateId whose operand <id>s must be resolved
+  // to MLIR symbols after all module ops have been deserialized.
+  struct DeferredIdDecoration {
+    uint32_t targetID;
+    spirv::Decoration decoration;
+    uint32_t operandID;
+    Location loc;
+  };
+  SmallVector<DeferredIdDecoration> pendingIdDecorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;

@@ -11,6 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Common" in {
+// C++11 compatibility with C++98.
+defm variadic_templates : CXX11Compat<"variadic templates are">;
+
+// C++23 compatibility with C++20 and earlier.
+defm size_t_suffix : CXX23Compat<"'size_t' suffix for literals is">;
 
 // Substitutions.
 
@@ -91,11 +96,6 @@ def warn_method_param_declaration : Warning<"redeclaration of method parameter %
 def err_invalid_storage_class_in_func_decl : Error<
   "invalid storage class specifier in function declarator">;
 def err_expected_namespace_name : Error<"expected namespace name">;
-def ext_variadic_templates : ExtWarn<
-  "variadic templates are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_variadic_templates :
-  Warning<"variadic templates are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def err_default_special_members : Error<
   "only special member functions %select{|and comparison operators }0"
   "may be defaulted">;
@@ -103,6 +103,7 @@ def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
 def err_module_not_built : Error<"could not build module '%0'">, DefaultFatal;
+def err_module_not_written : Error<"could not write module file for '%0' to '%1': %2">, DefaultFatal;
 def err_module_build_disabled: Error<
   "module '%0' is needed but has not been provided, and implicit use of module "
   "files is disabled">, DefaultFatal;
@@ -222,12 +223,6 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
-def ext_cxx23_size_t_suffix : ExtWarn<
-  "'size_t' suffix for literals is a C++23 extension">,
-  InGroup<CXX23>;
-def warn_cxx20_compat_size_t_suffix : Warning<
-  "'size_t' suffix for literals is incompatible with C++ standards before "
-  "C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_cxx23_size_t_suffix: Error<
   "'size_t' suffix for literals is a C++23 feature">;
 def err_size_t_literal_too_large: Error<
@@ -236,7 +231,7 @@ def err_size_t_literal_too_large: Error<
 def ext_cxx_bitint_suffix : Extension<
   "'_BitInt' suffix for literals is a Clang extension">,
   InGroup<BitIntExtension>;
-def ext_c23_bitint_suffix : ExtWarn<
+def ext_c23_bitint_suffix : Extension<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
 def warn_c23_compat_bitint_suffix : Warning<
@@ -286,6 +281,8 @@ def err_seh___except_filter : Error<
   "%0 only allowed in __except filter expression">;
 def err_seh___finally_block : Error<
   "%0 only allowed in __finally block">;
+def err_seh_object_unwinding : Error<
+  "'__try' is not permitted in functions that require object unwinding">;
 
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
@@ -311,6 +308,11 @@ def err_ms_asm_bitfield_unsupported : Error<
 def warn_stack_clash_protection_inline_asm : Warning<
   "unable to protect inline asm that clobbers stack pointer against stack "
   "clash">, InGroup<DiagGroup<"stack-protector">>;
+
+def warn_stack_protection_ignore_attribute : Warning<
+  "'stack_protector_ignore' attribute ignored due to "
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>,
+  SuppressInSystemMacro;
 
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
@@ -356,6 +358,8 @@ def err_opt_not_valid_without_opt : Error<
   "option '%0' cannot be specified without '%1'">;
 def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
+def err_opt_unsupported_with_suggest : Error<
+  "option '%0' is unsupported; consider using '%1'">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
 def warn_invalid_feature_combination : Warning<
@@ -372,8 +376,15 @@ def err_ppc_impossible_musttail: Error<
   "indirect calls cannot be tail called on PPC|"
   "external calls cannot be tail called on PPC}0"
   >;
+def err_mips_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "the MIPS16 ABI does not support tail calls|"
+  "calls outside the current linkage unit cannot be tail called on MIPS}0"
+  >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;
+def err_musttail_noexcept_mismatch: Error<
+  "'musttail' in a noexcept function requires a noexcept callee">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
@@ -439,6 +450,8 @@ def warn_omp_gpu_unsupported_clause: Warning<
 def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
   "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
   InGroup<OpenMPClauses>;
+def err_omp_unified_shared_memory_unsupported : Error<
+  "target architecture '%0' does not support unified addressing">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

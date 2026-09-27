@@ -27,7 +27,7 @@ module {
 #loc4 = loc("./simple.f90":11:1)
 
 // CHECK-DAG: #[[CMPX8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex(kind=8)", sizeInBits = 128, encoding = DW_ATE_complex_float>
-// CHECK-DAG: #[[CMPX4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex", sizeInBits = 64, encoding = DW_ATE_complex_float>
+// CHECK-DAG: #[[CMPX4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex(kind=4)", sizeInBits = 64, encoding = DW_ATE_complex_float>
 // CHECK-DAG: #[[CMPX16:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex(kind=16)", sizeInBits = 256, encoding = DW_ATE_complex_float>
 
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_subroutine_type<{{.*}}types = #[[CMPX8]], #[[CMPX4]]>

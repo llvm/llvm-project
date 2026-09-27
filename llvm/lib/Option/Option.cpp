@@ -18,18 +18,19 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::opt;
 
-Option::Option(const OptTable::Info *info, const OptTable *owner)
-  : Info(info), Owner(owner) {
+Option::Option(const OptTable::Info *Info, const OptTable *Owner)
+    : Info(Info), Owner(Owner) {
   // Multi-level aliases are not supported. This just simplifies option
   // tracking, it is not an inherent limitation.
   assert((!Info || !getAlias().isValid() || !getAlias().getAlias().isValid()) &&
          "Multi-level aliases are not supported.");
 
-  if (Info && getAliasArgs()) {
+  if (Info && hasAliasArgs()) {
     assert(getAlias().isValid() && "Only alias options can have alias args.");
     assert(getKind() == FlagClass && "Only Flag aliases can have alias args.");
     assert(getAlias().getKind() != FlagClass &&
@@ -110,24 +111,24 @@ bool Option::matches(OptSpecifier Opt) const {
 }
 
 std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
-                                            StringRef Spelling,
+                                            StringRef CurArg,
                                             unsigned &Index) const {
-  const size_t SpellingSize = Spelling.size();
+  const size_t SpellingSize = CurArg.size();
   const size_t ArgStringSize = StringRef(Args.getArgString(Index)).size();
   switch (getKind()) {
   case FlagClass: {
     if (SpellingSize != ArgStringSize)
       return nullptr;
-    return std::make_unique<Arg>(*this, Spelling, Index++);
+    return std::make_unique<Arg>(*this, CurArg, Index++);
   }
   case JoinedClass: {
     const char *Value = Args.getArgString(Index) + SpellingSize;
-    return std::make_unique<Arg>(*this, Spelling, Index++, Value);
+    return std::make_unique<Arg>(*this, CurArg, Index++, Value);
   }
   case CommaJoinedClass: {
     // Always matches.
     const char *Str = Args.getArgString(Index) + SpellingSize;
-    auto A = std::make_unique<Arg>(*this, Spelling, Index++);
+    auto A = std::make_unique<Arg>(*this, CurArg, Index++);
 
     // Parse out the comma separated values.
     const char *Prev = Str;
@@ -162,7 +163,7 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
         Args.getArgString(Index - 1) == nullptr)
       return nullptr;
 
-    return std::make_unique<Arg>(*this, Spelling, Index - 2,
+    return std::make_unique<Arg>(*this, CurArg, Index - 2,
                                  Args.getArgString(Index - 1));
   case MultiArgClass: {
     // Matches iff this is an exact match.
@@ -173,7 +174,7 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
     if (Index > Args.getNumInputArgStrings())
       return nullptr;
 
-    auto A = std::make_unique<Arg>(*this, Spelling, Index - 1 - getNumArgs(),
+    auto A = std::make_unique<Arg>(*this, CurArg, Index - 1 - getNumArgs(),
                                    Args.getArgString(Index - getNumArgs()));
     for (unsigned i = 1; i != getNumArgs(); ++i)
       A->getValues().push_back(Args.getArgString(Index - getNumArgs() + i));
@@ -183,7 +184,7 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
     // If this is not an exact match, it is a joined arg.
     if (SpellingSize != ArgStringSize) {
       const char *Value = Args.getArgString(Index) + SpellingSize;
-      return std::make_unique<Arg>(*this, Spelling, Index++, Value);
+      return std::make_unique<Arg>(*this, CurArg, Index++, Value);
     }
 
     // Otherwise it must be separate.
@@ -192,7 +193,7 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
         Args.getArgString(Index - 1) == nullptr)
       return nullptr;
 
-    return std::make_unique<Arg>(*this, Spelling, Index - 2,
+    return std::make_unique<Arg>(*this, CurArg, Index - 2,
                                  Args.getArgString(Index - 1));
   }
   case JoinedAndSeparateClass:
@@ -202,21 +203,21 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
         Args.getArgString(Index - 1) == nullptr)
       return nullptr;
 
-    return std::make_unique<Arg>(*this, Spelling, Index - 2,
+    return std::make_unique<Arg>(*this, CurArg, Index - 2,
                                  Args.getArgString(Index - 2) + SpellingSize,
                                  Args.getArgString(Index - 1));
   case RemainingArgsClass: {
     // Matches iff this is an exact match.
     if (SpellingSize != ArgStringSize)
       return nullptr;
-    auto A = std::make_unique<Arg>(*this, Spelling, Index++);
+    auto A = std::make_unique<Arg>(*this, CurArg, Index++);
     while (Index < Args.getNumInputArgStrings() &&
            Args.getArgString(Index) != nullptr)
       A->getValues().push_back(Args.getArgString(Index++));
     return A;
   }
   case RemainingArgsJoinedClass: {
-    auto A = std::make_unique<Arg>(*this, Spelling, Index);
+    auto A = std::make_unique<Arg>(*this, CurArg, Index);
     if (SpellingSize != ArgStringSize) {
       // An inexact match means there is a joined arg.
       A->getValues().push_back(Args.getArgString(Index) + SpellingSize);
@@ -281,15 +282,9 @@ std::unique_ptr<Arg> Option::accept(const ArgList &Args, StringRef CurArg,
   }
 
   // FlagClass aliases can have AliasArgs<>; add those to the unaliased arg.
-  if (const char *Val = getAliasArgs()) {
-    while (*Val != '\0') {
-      UnaliasedA->getValues().push_back(Val);
-
-      // Move past the '\0' to the next argument.
-      Val += strlen(Val) + 1;
-    }
-  }
-  if (UnaliasedOption.getKind() == JoinedClass && !getAliasArgs())
+  for (const char *Val = getAliasArgs(); *Val; Val += strlen(Val) + 1)
+    UnaliasedA->getValues().push_back(Val);
+  if (UnaliasedOption.getKind() == JoinedClass && !hasAliasArgs())
     // A Flag alias for a Joined option must provide an argument.
     UnaliasedA->getValues().push_back("");
   return UnaliasedA;

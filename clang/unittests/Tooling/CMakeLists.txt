@@ -13,8 +13,7 @@ add_clang_unittest(ToolingTests
   LookupTest.cpp
   QualTypeNamesTest.cpp
   RangeSelectorTest.cpp
-  DependencyScanning/DependencyScannerTest.cpp
-  DependencyScanning/DependencyScanningFilesystemTest.cpp
+  DependencyScannerTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
   RecursiveASTVisitorTests/BitfieldInitializer.cpp
   RecursiveASTVisitorTests/CallbacksLeaf.cpp
@@ -43,6 +42,7 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTests/LambdaTemplateParams.cpp
   RecursiveASTVisitorTests/MemberPointerTypeLoc.cpp
   RecursiveASTVisitorTests/NestedNameSpecifiers.cpp
+  RecursiveASTVisitorTests/OffsetOfExpr.cpp
   RecursiveASTVisitorTests/ParenExpr.cpp
   RecursiveASTVisitorTests/TemplateArgumentLocTraverser.cpp
   RecursiveASTVisitorTests/TraversalScope.cpp

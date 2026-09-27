@@ -32,7 +32,7 @@ class LLVM_ABI CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 public:
   CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
       : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
-  ~CFIFunctionFrameAnalyzer();
+  ~CFIFunctionFrameAnalyzer() override;
 
   void startFunctionFrame(bool IsEH,
                           ArrayRef<MCCFIInstruction> Prologue) override;

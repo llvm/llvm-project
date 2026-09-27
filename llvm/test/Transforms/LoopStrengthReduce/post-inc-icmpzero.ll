@@ -62,9 +62,8 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, ptr nocapture %r
 ; CHECK-NEXT:    [[INST29:%.*]] = load i16, ptr [[LSR_IV6]], align 2
 ; CHECK-NEXT:    store i16 [[INST29]], ptr [[SCEVGEP1]], align 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 2
-; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to ptr
 ; CHECK-NEXT:    [[SCEVGEP7]] = getelementptr i8, ptr [[LSR_IV6]], i64 2
-; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq ptr [[LSR_IV_NEXT2]], null
+; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP27]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

@@ -178,17 +178,25 @@ struct SparseSpaceCollapsePass
     // %space2 = extract_space %t2 ...
     // sparse_tensor.iterate(%sp1) ...
     //
+    // Collect all groups to collapse before performing any IR mutations.
+    // Mutating (erasing) ops during the walk would invalidate the walk's
+    // internal iterator and cause use-after-free crashes.
+    SmallVector<SmallVector<CollapseSpaceInfo>> groups;
     SmallVector<CollapseSpaceInfo> toCollapse;
     func->walk([&](ExtractIterSpaceOp op) {
       if (!legalToCollapse(toCollapse, op)) {
-        // if not legal to collapse one more space, collapse the existing ones
-        // and clear.
-        collapseSparseSpace(toCollapse);
+        // Save the current group and start a new one.
+        groups.push_back(std::move(toCollapse));
         toCollapse.clear();
+        // Try to start a new group with the current op.
+        legalToCollapse(toCollapse, op);
       }
     });
+    groups.push_back(std::move(toCollapse));
 
-    collapseSparseSpace(toCollapse);
+    // Apply all collapse transformations after the walk is complete.
+    for (auto &group : groups)
+      collapseSparseSpace(group);
   }
 };
 

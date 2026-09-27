@@ -230,6 +230,24 @@ entry:
   ret void
 }
 
+define void @and_cond(i32 %a, i1 %b) {
+; CHECK-LABEL: and_cond:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    notb %sil
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %al, %sil
+; CHECK-NEXT:    cfcmovnel %ecx, 0
+; CHECK-NEXT:    retq
+  %is_pos = icmp sgt i32 %a, 0
+  %not_b = xor i1 %b, true
+  %cond = and i1 %not_b, %is_pos
+  %mask = insertelement <1 x i1> zeroinitializer, i1 %cond, i64 0
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr null, i32 1, <1 x i1> %mask)
+  ret void
+}
+
 define i64 @redundant_test(i64 %num, ptr %p1, i64 %in) {
 ; CHECK-LABEL: redundant_test:
 ; CHECK:       # %bb.0:
@@ -246,4 +264,16 @@ define i64 @redundant_test(i64 %num, ptr %p1, i64 %in) {
   %add = add i64 %v, %in
   %sel = select i1 %cmp, i64 %add, i64 %num
   ret i64 %sel
+}
+
+define void @pr219637(ptr %a, ptr %b, <1 x i1> %c) {
+; CHECK-LABEL: pr219637:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cfcmovnel (%rsi), %eax
+; CHECK-NEXT:    cfcmovnel %eax, (%rdi)
+; CHECK-NEXT:    retq
+  %1 = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr %b, i32 4, <1 x i1> %c, <1 x i32> poison)
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> %1, ptr %a, i32 4, <1 x i1> %c)
+  ret void
 }

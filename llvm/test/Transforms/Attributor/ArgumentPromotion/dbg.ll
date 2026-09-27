@@ -51,12 +51,14 @@ define void @caller(ptr %Y, ptr %P) {
 }
 
 
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!3}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DILocation(line: 8, scope: !2)
-!2 = distinct !DISubprogram(name: "test", file: !5, line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !3, scopeLine: 3, scope: null)
+!2 = distinct !DISubprogram(name: "test", file: !5, line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, type: !8, unit: !3, scopeLine: 3, scope: null)
 !3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: LineTablesOnly, file: !5)
 !5 = !DIFile(filename: "test.c", directory: "")
 !6 = !DILocation(line: 9, scope: !2)
@@ -68,14 +70,14 @@ define void @caller(ptr %Y, ptr %P) {
 ; TUNIT: [[META0:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; TUNIT: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}} ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
 ; TUNIT: [[META2]] = !DIFile(filename: "test.c", directory: "")
-; TUNIT: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: [[META2]], line: 3, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META1]])
+; TUNIT: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: [[META2]], line: 3, type: [[META4:![0-9]+]], scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META1]])
 ; TUNIT: [[DBG4]] = !DILocation(line: 8, scope: [[DBG3]])
 ; TUNIT: [[DBG5]] = !DILocation(line: 9, scope: [[DBG3]])
 ;.
 ; CGSCC: [[META0:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CGSCC: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}} ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
 ; CGSCC: [[META2]] = !DIFile(filename: "test.c", directory: "")
-; CGSCC: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: [[META2]], line: 3, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META1]])
+; CGSCC: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: [[META2]], line: 3, type: [[META4:![0-9]+]], scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META1]])
 ; CGSCC: [[DBG4]] = !DILocation(line: 8, scope: [[DBG3]])
 ; CGSCC: [[DBG5]] = !DILocation(line: 9, scope: [[DBG3]])
 ;.

@@ -15,5 +15,7 @@
 
 func.func @_QPfoo() {
   %1 = fir.alloca i32
+  %0 = arith.constant 0 : i32
+  fir.store %0 to %1 : !fir.ref<i32>
   return
 }

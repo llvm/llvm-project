@@ -1,4 +1,4 @@
-REQUIRES: target-windows, lld
+REQUIRES: target-windows, lld, diasdk
 RUN: mkdir -p %t.dir
 RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t.dir/FuncSymbolsTest.exe %S/Inputs/FuncSymbolsTestMain.cpp %S/Inputs/FuncSymbols.cpp
 RUN: lldb-test symbols %t.dir/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-ONE %s
@@ -6,6 +6,10 @@ RUN: lldb-test symbols %t.dir/FuncSymbolsTest.exe | FileCheck --check-prefix=CHE
 
 ; Link multiple objects
 ; In this test, We don't check demangled name of a mangled function.
+
+; This uses the same input as SymbolFile/NativePDB/func-symbols.test. However, DIA
+; creates one named `Type` per function and uses identical UIDs for `Type` and
+; `Function`, whereas native creates one unnamed type per signature and has different UIDs.
 
 CHECK-ONE: Module [[MD:.*]]
 CHECK-ONE-DAG: SymbolFile pdb ([[MD]])

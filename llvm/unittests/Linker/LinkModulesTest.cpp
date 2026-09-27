@@ -106,10 +106,10 @@ TEST_F(LinkModuleTest, BlockAddress) {
   const GlobalVariable *LinkedGV = LinkedModule->getNamedGlobal("switch.bas");
   const Constant *Init = LinkedGV->getInitializer();
 
-  // @switch.bas = internal global [3 x i8*]
-  //   [i8* blockaddress(@ba_func, %switch.case.1),
-  //    i8* blockaddress(@ba_func, %switch.case.2),
-  //    i8* inttoptr (i32 1 to i8*)]
+  // @switch.bas = internal global [3 x ptr]
+  //   [ptr blockaddress(@ba_func, %switch.case.1),
+  //    ptr blockaddress(@ba_func, %switch.case.2),
+  //    ptr inttoptr (i32 1 to ptr)]
 
   ArrayType *AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
   EXPECT_EQ(AT, Init->getType());

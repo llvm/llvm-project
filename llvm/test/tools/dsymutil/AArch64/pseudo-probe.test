@@ -1,0 +1,354 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: mkdir -p %t
+# RUN: yaml2obj %t/a.yaml -o %t/a.o
+# RUN: yaml2obj %t/b.yaml -o %t/b.o
+
+# RUN: dsymutil --linker classic -y %t/debug.map -oso-prepend-path=%t -o %t/classic.dSYM
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
+
+# RUN: dsymutil --linker parallel -y %t/debug.map -oso-prepend-path=%t -o %t/parallel.dSYM
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs | FileCheck %s --check-prefix=DESCS-SIZE
+
+# PROBES:      0000000 0c c1 75 b9 c0 f1 b6 a8 05 00 00 20 5c 85 5e 09
+# PROBES-NEXT: 0000020 4b df 28 4e 01 80 0c 02 80 14 03 80 0c 04 80 08
+# PROBES-NEXT: 0000040 92 eb 5f fe e6 ae 2f ec 05 00 00 20 c7 16 fb 29
+# PROBES-NEXT: 0000060 29 8a d9 6a 01 80 0c 02 80 14 03 80 0c 04 80 08
+# PROBES-SIZE: 64
+
+# DESCS:      0000000 0c c1 75 b9 c0 f1 b6 a8 94 da 52 e8 10 00 00 00
+# DESCS-NEXT: 0000020 01 61 92 eb 5f fe e6 ae 2f ec 94 da 52 e8 10 00
+# DESCS-NEXT: 0000040 00 00 01 62
+# DESCS-SIZE: 36
+
+#--- debug.map
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename: a.o
+    symbols:         []
+  - filename: b.o
+    symbols:         []
+...
+
+#--- a.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      520
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          144
+    fileoff:         552
+    filesize:        144
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            60
+        offset:          0x228
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FF4300D1E00B00B9E80B40B9C800003401000014E80B40B908050011E80F00B90400001408008052E80F00B901000014E00F40B9FF430091C0035FD6
+      - sectname:        __probe_descs
+        segname:         __LLVM
+        addr:            0x3C
+        size:            18
+        offset:          0x264
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0CC175B9C0F1B6A894DA52E8100000000161
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x50
+        size:            32
+        offset:          0x278
+        align:           3
+        reloff:          0x2B8
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00000000000000003C0000000010000200000000000000000000000000000000
+        relocations:
+          - address:         0x0
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __probes
+        segname:         __LLVM
+        addr:            0x70
+        size:            32
+        offset:          0x298
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0CC175B9C0F1B6A8050000205C855E094BDF284E01800C02801403800C048008
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           1703936
+    sdk:             1704960
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          704
+    nsyms:           5
+    stroff:          784
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       4
+    iextdefsym:      4
+    nextdefsym:      1
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          22
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          16
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         60
+    - n_strx:          10
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         80
+    - n_strx:          4
+      n_type:          0xE
+      n_sect:          4
+      n_desc:          0
+      n_value:         112
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _a
+    - ltmp3
+    - ltmp2
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+...
+
+#--- b.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      520
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          144
+    fileoff:         552
+    filesize:        144
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            60
+        offset:          0x228
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FF4300D1E00B00B9E80B40B9C800003401000014E80B40B908791F53E80F00B90400001428008052E80F00B901000014E00F40B9FF430091C0035FD6
+      - sectname:        __probe_descs
+        segname:         __LLVM
+        addr:            0x3C
+        size:            18
+        offset:          0x264
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         92EB5FFEE6AE2FEC94DA52E8100000000162
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x50
+        size:            32
+        offset:          0x278
+        align:           3
+        reloff:          0x2B8
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00000000000000003C0000000010000200000000000000000000000000000000
+        relocations:
+          - address:         0x0
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __probes
+        segname:         __LLVM
+        addr:            0x70
+        size:            32
+        offset:          0x298
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         92EB5FFEE6AE2FEC05000020C716FB29298AD96A01800C02801403800C048008
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           1703936
+    sdk:             1704960
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          704
+    nsyms:           5
+    stroff:          784
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       4
+    iextdefsym:      4
+    nextdefsym:      1
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          22
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          16
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         60
+    - n_strx:          10
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         80
+    - n_strx:          4
+      n_type:          0xE
+      n_sect:          4
+      n_desc:          0
+      n_value:         112
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _b
+    - ltmp3
+    - ltmp2
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+...

@@ -14,10 +14,12 @@
 // test_memory_resource requires RTTI for dynamic_cast
 // UNSUPPORTED: no-rtti
 
+#include <cassert>
 #include <concepts>
 #include <memory>
 #include <ranges>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "common.h"
@@ -251,4 +253,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
+
+  return 0;
 }

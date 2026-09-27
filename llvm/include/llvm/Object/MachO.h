@@ -121,9 +121,7 @@ private:
   NodeList Stack;
   bool Done = false;
 
-  iterator_range<node_iterator> nodes() const {
-    return make_range(Stack.begin(), Stack.end());
-  }
+  iterator_range<node_iterator> nodes() const { return Stack; }
 };
 using export_iterator = content_iterator<ExportEntry>;
 
@@ -449,7 +447,7 @@ public:
   uint64_t getSectionAddress(DataRefImpl Sec) const override;
   uint64_t getSectionIndex(DataRefImpl Sec) const override;
   uint64_t getSectionSize(DataRefImpl Sec) const override;
-  ArrayRef<uint8_t> getSectionContents(uint32_t Offset, uint64_t Size) const;
+  ArrayRef<uint8_t> getSectionContents(uint64_t Offset, uint64_t Size) const;
   Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
@@ -670,6 +668,8 @@ public:
   getNoteLoadCommand(const LoadCommandInfo &L) const;
   MachO::build_version_command
   getBuildVersionLoadCommand(const LoadCommandInfo &L) const;
+  MachO::target_triple_command
+  getTargetTripleLoadCommand(const LoadCommandInfo &L) const;
   MachO::build_tool_version
   getBuildToolVersion(unsigned index) const;
   MachO::dylib_command

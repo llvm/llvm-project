@@ -13,10 +13,10 @@
 #ifndef DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 #define DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include <optional>
@@ -84,8 +84,6 @@ LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
 LogicalResult EqualizeRanks(ImplicitLocOpBuilder &builder, Value &input1,
                             Value &input2);
 
-namespace {
-
 // Creates a TOSA operation and performs shape inference on the individual
 // op. This allows shape inference when lowering down to TOSA.
 template <typename TosaOp, typename... Args>
@@ -100,10 +98,10 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 
   SmallVector<ShapedTypeComponents> returnedShapes;
   if (shapeInterface
-          .inferReturnTypeComponents(op.getContext(), builder.getLoc(),
-                                     op->getOperands(), op->getAttrDictionary(),
-                                     op->getPropertiesStorage(),
-                                     op->getRegions(), returnedShapes)
+          .inferReturnTypeComponents(
+              op.getContext(), builder.getLoc(), op->getOperands(),
+              op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+              op->getRegions(), returnedShapes)
           .failed())
     return op;
 
@@ -112,7 +110,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   // different bit-width types and does not have a TypeAttr to define the
   // target type.
   auto result = op->getResult(0);
-  auto predictedShape = returnedShapes[0];
+  const auto &predictedShape = returnedShapes[0];
   auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(resultTy);
 
   // Compute the knowledge based on the inferred type.
@@ -135,8 +133,6 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   result.setType(newTy);
   return op;
 }
-
-} // namespace
 
 // Creates a TOSA operation by:
 //   - first equalize ranks for ops with SameOperandsAndResultRank trait
@@ -248,6 +244,33 @@ SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
 // per batch
 bool hasUniqueConstantScatterIndices(ShapedType indicesType,
                                      DenseIntElementsAttr indicesAttr);
+
+// Try to get the values of a DenseResourceElementsAttr construct
+template <typename T>
+std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
+  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    // Check that the resource memory blob exists
+    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
+    if (!blob)
+      return std::nullopt;
+
+    // Check that the data are in a valid form
+    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
+                                             blob->getData())) {
+      return std::nullopt;
+    }
+
+    return blob->template getDataAs<T>();
+  }
+
+  return std::nullopt;
+}
+
+// returns the value of a constant scalar int tensor, or failure if
+// the value cannot be extracted
+template <typename T>
+FailureOr<T> getConstantScalarIntValue(Value val);
+
 } // namespace tosa
 } // namespace mlir
 

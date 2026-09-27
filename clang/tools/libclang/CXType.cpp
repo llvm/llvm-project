@@ -122,6 +122,7 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(Attributed);
     TKCASE(BTFTagAttributed);
     TKCASE(Atomic);
+    TKCASE(PredefinedSugar);
     default:
       return CXType_Unexposed;
   }
@@ -546,11 +547,11 @@ try_again:
     break;
   case Type::Record:
   case Type::Enum:
-    D = cast<TagType>(TP)->getOriginalDecl();
+    D = cast<TagType>(TP)->getDecl();
     break;
   case Type::TemplateSpecialization:
     if (const RecordType *Record = TP->getAs<RecordType>())
-      D = Record->getOriginalDecl();
+      D = Record->getDecl();
     else
       D = cast<TemplateSpecializationType>(TP)->getTemplateName()
                                                          .getAsTemplateDecl();
@@ -564,7 +565,7 @@ try_again:
     break;
 
   case Type::InjectedClassName:
-    D = cast<InjectedClassNameType>(TP)->getOriginalDecl();
+    D = cast<InjectedClassNameType>(TP)->getDecl();
     break;
 
     // FIXME: Template type parameters!
@@ -651,6 +652,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(BTFTagAttributed);
     TKIND(HLSLAttributedResource);
     TKIND(HLSLInlineSpirv);
+    TKIND(PredefinedSugar);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -728,7 +730,6 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(RISCVVLSCall_16384);
       TCALLINGCONV(RISCVVLSCall_32768);
       TCALLINGCONV(RISCVVLSCall_65536);
-    case CC_SpirFunction: return CXCallingConv_Unexposed;
     case CC_DeviceKernel:
       return CXCallingConv_Unexposed;
       break;
@@ -1037,7 +1038,7 @@ static long long visitRecordForValidation(const RecordDecl *RD) {
       return CXTypeLayoutError_Dependent;
     // recurse
     if (const RecordType *ChildType = I->getType()->getAs<RecordType>()) {
-      if (const RecordDecl *Child = ChildType->getOriginalDecl()) {
+      if (const RecordDecl *Child = ChildType->getDecl()) {
         long long ret = visitRecordForValidation(Child);
         if (ret < 0)
           return ret;

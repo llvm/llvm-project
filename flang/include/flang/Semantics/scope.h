@@ -55,6 +55,16 @@ struct EquivalenceObject {
 };
 using EquivalenceSet = std::vector<EquivalenceObject>;
 
+// Preserved USE statement information for debug info generation.
+struct PreservedUseStmt {
+  std::string moduleName;
+  std::vector<std::string> onlyNames; // For USE ONLY
+  std::vector<std::string> renames; // local_name (resolved via GetUltimate)
+  bool hasOnlyWithRenames{false}; // true if there are renames in an ONLY clause
+
+  PreservedUseStmt(std::string modName) : moduleName(std::move(modName)) {}
+};
+
 class Scope {
   using mapType = std::map<SourceName, MutableSymbolRef>;
 
@@ -86,6 +96,13 @@ public:
     CHECK(parent_ != this);
     return *parent_;
   }
+
+  mapType &commonBlocks() { return commonBlocks_; }
+  const mapType &commonBlocks() const { return commonBlocks_; }
+
+  mapType &commonBlockUses() { return commonBlockUses_; }
+  const mapType &commonBlockUses() const { return commonBlockUses_; }
+
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
   bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
@@ -186,10 +203,19 @@ public:
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
   void add_crayPointer(const SourceName &, Symbol &);
-  mapType &commonBlocks() { return commonBlocks_; }
-  const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(SourceName, SourceName location);
-  Symbol *FindCommonBlock(const SourceName &) const;
+  bool AddCommonBlockUse(
+      const SourceName &name, Attrs attrs, Symbol &cbUltimate);
+
+  // Find COMMON block that is declared in the current scope
+  Symbol *FindCommonBlock(const SourceName &name) const;
+
+  // Find USE-associated COMMON block in the current scope
+  Symbol *FindCommonBlockUse(const SourceName &name) const;
+
+  // Find COMMON block in current and surrounding scopes, follow USE
+  // associations
+  Symbol *FindCommonBlockInVisibleScopes(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.
   template <typename D>
@@ -253,6 +279,16 @@ public:
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(parser::CharBlock);
 
+  // Record objects that have a device mapping in this OpenACC construct.
+  // Unlike a CUDA data attribute, this does not change the storage denoted by
+  // ordinary references to the object in the construct.
+  void AddOpenACCMappedSymbol(const Symbol &symbol) {
+    openACCMappedSymbols_.insert(symbol.GetUltimate());
+  }
+  bool IsOpenACCMappedSymbol(const Symbol &symbol) const {
+    return openACCMappedSymbols_.count(symbol.GetUltimate()) != 0;
+  }
+
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,
       DeclTypeSpec::Category = DeclTypeSpec::TypeDerived) const;
@@ -283,12 +319,14 @@ private:
   std::list<Scope> children_;
   mapType symbols_;
   mapType commonBlocks_;
+  mapType commonBlockUses_; // USE-assocated COMMON blocks
   std::list<EquivalenceSet> equivalenceSets_;
   mapType crayPointers_;
   std::map<SourceName, common::Reference<Scope>> submodules_;
   std::list<DeclTypeSpec> declTypeSpecs_;
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
+  UnorderedSymbolSet openACCMappedSymbols_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
   parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement

@@ -56,7 +56,7 @@
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
 // CHECK: define internal {{.*}}void @{{[^(]+}}(ptr noalias noundef %0, ptr noalias noundef %1)
-// CHECK: [[ADD:%.+]] = fadd float 1.5
+// CHECK: [[ADD:%.+]] = fadd float 1.500000e+01
 // CHECK-NEXT: store float [[ADD]], ptr
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
@@ -66,7 +66,7 @@
 // CHECK-LOAD-NEXT: ret void
 // CHECK-LOAD-NEXT: }
 // CHECK-LOAD: define internal {{.*}}void @{{[^(]+}}(ptr noalias noundef %0, ptr noalias noundef %1)
-// CHECK-LOAD: [[ADD:%.+]] = fadd float 1.5
+// CHECK-LOAD: [[ADD:%.+]] = fadd float 1.500000e+01
 // CHECK-LOAD-NEXT: store float [[ADD]], ptr
 // CHECK-LOAD-NEXT: ret void
 // CHECK-LOAD-NEXT: }

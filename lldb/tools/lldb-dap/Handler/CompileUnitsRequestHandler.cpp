@@ -8,75 +8,60 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
 
-namespace lldb_dap {
+using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
-// "compileUnitsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Compile Unit request; value of command field is
-//                     'compileUnits'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "compileUnits" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/compileUnitRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "compileUnitsRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'compileUnits' request.",
-//   "properties": {
-//     "moduleId": {
-//       "type": "string",
-//       "description": "The ID of the module."
-//     }
-//   },
-//   "required": [ "moduleId" ]
-// },
-// "compileUnitsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'compileUnits' request.",
-//     "properties": {
-//       "body": {
-//         "description": "Response to 'compileUnits' request. Array of
-//                         paths of compile units."
-//       }
-//     }
-//   }]
-// }
-void CompileUnitsRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  llvm::json::Array units;
-  const auto *arguments = request.getObject("arguments");
-  const std::string module_id =
-      GetString(arguments, "moduleId").value_or("").str();
-  int num_modules = dap.target.GetNumModules();
-  for (int i = 0; i < num_modules; i++) {
-    auto curr_module = dap.target.GetModuleAtIndex(i);
-    if (module_id == curr_module.GetUUIDString()) {
-      int num_units = curr_module.GetNumCompileUnits();
-      for (int j = 0; j < num_units; j++) {
-        auto curr_unit = curr_module.GetCompileUnitAtIndex(j);
-        units.emplace_back(CreateCompileUnit(curr_unit));
-      }
-      body.try_emplace("compileUnits", std::move(units));
-      break;
-    }
-  }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+static std::optional<CompileUnit>
+CreateCompileUnit(const lldb::SBCompileUnit &unit) {
+  const lldb::SBFileSpec file_spec = unit.GetFileSpec();
+  if (!file_spec.IsValid())
+    return std::nullopt;
+
+  std::array<char, PATH_MAX> path_buffer{};
+  const uint32_t path_size =
+      file_spec.GetPath(path_buffer.data(), path_buffer.size());
+
+  CompileUnit result;
+  result.id = unit.GetIDInModule();
+  result.compileUnitPath = std::string(path_buffer.data(), path_size);
+  return result;
 }
 
-} // namespace lldb_dap
+/// The `compileUnits` request returns the compile units of the module named by
+/// `moduleId`, narrowed to `compileUnitIds` when specified.
+llvm::Expected<CompileUnitsResponseBody>
+CompileUnitsRequestHandler::Run(const CompileUnitsArguments &args) const {
+  std::vector<CompileUnit> units;
+
+  int num_modules = dap.target.GetNumModules();
+  for (int i = 0; i < num_modules; i++) {
+    lldb::SBModule curr_module = dap.target.GetModuleAtIndex(i);
+    if (args.moduleId != curr_module.GetUUIDString())
+      continue;
+
+    if (args.compileUnitIds.empty()) {
+      const uint32_t num_units = curr_module.GetNumCompileUnits();
+      units.reserve(num_units);
+      for (uint32_t j = 0; j < num_units; j++) {
+        if (std::optional<CompileUnit> unit =
+                CreateCompileUnit(curr_module.GetCompileUnitAtIndex(j)))
+          units.emplace_back(std::move(*unit));
+      }
+    } else {
+      units.reserve(args.compileUnitIds.size());
+      for (const uint32_t id : args.compileUnitIds) {
+        if (std::optional<CompileUnit> unit =
+                CreateCompileUnit(curr_module.GetCompileUnitAtIndex(id)))
+          units.emplace_back(std::move(*unit));
+      }
+    }
+    break;
+  }
+  return CompileUnitsResponseBody{std::move(units)};
+}

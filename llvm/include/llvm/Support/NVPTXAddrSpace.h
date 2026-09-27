@@ -27,7 +27,7 @@ enum AddressSpace : unsigned {
   ADDRESS_SPACE_TENSOR = 6,
   ADDRESS_SPACE_SHARED_CLUSTER = 7,
 
-  ADDRESS_SPACE_PARAM = 101,
+  ADDRESS_SPACE_ENTRY_PARAM = 101,
 };
 
 // According to official PTX Writer's Guide, DWARF debug information should

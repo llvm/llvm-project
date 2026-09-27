@@ -27,7 +27,7 @@ define i32 @c(i32 %N) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv  = phi i32 [ %inc, %for.body ], [ 10, %entry ]
   %for.1 = phi i32 [ %for.1.next, %for.body ], [ 20, %entry ]
   %for.2 = phi i32 [ %for.2.next, %for.body ], [ 11, %entry ]
@@ -37,7 +37,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond1.for.end_crit_edge, label %for.body
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body
+for.cond1.for.end_crit_edge:
   %add.lcssa = phi i32 [ %for.1.next, %for.body ]
   %sext.lcssa = phi i32 [ %for.2.next, %for.body ]
   %res = add i32 %add.lcssa, %sext.lcssa
@@ -144,7 +144,6 @@ exit:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
 
 define void @test_pr54227(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: @test_pr54227(
@@ -221,7 +220,7 @@ define void @test_pr54233_for_depend_on_each_other(ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -386,8 +385,8 @@ define void @hoist_previous_value_and_operand(ptr %dst, i64 %mask) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 336
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i32> [[TMP6]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i32> [[TMP6]], i64 3
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -420,6 +419,82 @@ loop:
   %icmp = icmp ult i64 %iv, 337
   %a = and i64 %iv, %mask
   %trunc = trunc i64 %a to i32
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @hoist_previous_value_and_operand_load(ptr %dst) {
+; CHECK-LABEL: @hoist_previous_value_and_operand_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[LOAD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 3
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    [[LOAD]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %add, %loop ]
+  %for.1 = phi i32 [ 1, %entry ], [ %load, %loop ]
+  %for.2 = phi i32 [ 0, %entry ], [ %or, %loop ]
+  %or = or i32 %for.1, 3
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %for.2, ptr %gep
+  %icmp = icmp ult i64 %iv, 337
+  %load = load i32, ptr %dst
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @hoist_previous_value_and_operand_assume(ptr %dst) {
+; CHECK-LABEL: @hoist_previous_value_and_operand_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i1 [[FOR_1]], true
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i1 [[FOR_2]], ptr [[GEP]], align 1
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    call void @llvm.assume(i1 [[FOR_1]])
+; CHECK-NEXT:    [[TRUNC]] = trunc i64 [[IV]] to i1
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %add, %loop ]
+  %for.1 = phi i1 [ 1, %entry ], [ %trunc, %loop ]
+  %for.2 = phi i1 [ 0, %entry ], [ %or, %loop ]
+  %or = or i1 %for.1, 3
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i1 %for.2, ptr %gep
+  %icmp = icmp ult i64 %iv, 337
+  call void @llvm.assume(i1 %for.1)
+  %trunc = trunc i64 %iv to i1
   br i1 %icmp, label %loop, label %exit
 
 exit:

@@ -24,6 +24,7 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_signed.h>
 #include <__type_traits/make_32_64_or_128_bit.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
@@ -216,16 +217,6 @@ struct _LIBCPP_HIDDEN __integral<16> {
 };
 
 } // namespace __itoa
-
-template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) >= sizeof(unsigned)), int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value) {
-  return __itoa::__integral<_Base>::__width(__value);
-}
-
-template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) < sizeof(unsigned)), int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value) {
-  return std::__to_chars_integral_width<_Base>(static_cast<unsigned>(__value));
-}
 
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) >= sizeof(unsigned)), int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result

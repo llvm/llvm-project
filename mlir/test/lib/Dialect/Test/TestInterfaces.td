@@ -91,6 +91,18 @@ def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
     StaticInterfaceMethod<"Returns the argument.",
       "unsigned", "staticGetArgument", (ins "unsigned":$arg), "",
       "return arg;">,
+    // Overloaded method (same name, different arity) used to check that an
+    // external model can override an overloaded interface method by its source
+    // name. Both overloads have a default so other models stay unaffected.
+    InterfaceMethod<"Overloaded method, single argument.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg), "",
+      "return 1000 + arg;">,
+    InterfaceMethod<"Overloaded method, two arguments.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg, "unsigned":$arg2),
+      "", "return 2000 + arg + arg2;">,
+    InterfaceMethod<"Overloaded method, three arguments.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg, "unsigned":$arg2, "unsigned":$arg3),
+      "", "return 3000 + arg + arg2 + arg3;">,
   ];
 }
 

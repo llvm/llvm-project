@@ -16,9 +16,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class T, class Iter1>
 struct Test {

@@ -43,8 +43,14 @@ public:
   ///
   /// \param LDCS Flag to indicate whether we should load the call site
   /// information from DWARF `DW_TAG_call_site` entries
-  DwarfTransformer(DWARFContext &D, GsymCreator &G, bool LDCS = false)
-      : DICtx(D), Gsym(G), LoadDwarfCallSites(LDCS) {}
+  ///
+  /// \param MachO Flag to indicate if the object file is mach-o (Apple's
+  /// executable format). Apple has some compile unit attributes that look like
+  /// split DWARF, but they aren't and they can cause warnins to be emitted
+  /// about missing DWO files.
+  DwarfTransformer(DWARFContext &D, GsymCreator &G, bool LDCS = false,
+                   bool MachO = false)
+      : DICtx(D), Gsym(G), LoadDwarfCallSites(LDCS), IsMachO(MachO) {}
 
   /// Extract the DWARF from the supplied object file and convert it into the
   /// Gsym format in the GsymCreator object that is passed in. Returns an
@@ -63,10 +69,6 @@ public:
   LLVM_ABI llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
 
 private:
-
-  /// Parse the DWARF in the object file and convert it into the GsymCreator.
-  Error parse();
-
   /// Handle any DIE (debug info entry) from the DWARF.
   ///
   /// This function will find all DW_TAG_subprogram DIEs that convert them into
@@ -97,6 +99,7 @@ private:
   DWARFContext &DICtx;
   GsymCreator &Gsym;
   bool LoadDwarfCallSites;
+  bool IsMachO;
 
   friend class DwarfTransformerTest;
 };

@@ -70,6 +70,7 @@ public:
   bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
                             unsigned ExpectedFieldNum, bool AllowName);
   bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool BuiltinARMAtomicStoreHintCall(unsigned BuiltinID, CallExpr *TheCall);
 
   bool MveAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
   bool CdeAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
@@ -92,10 +93,14 @@ public:
   /// false otherwise.
   bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
-  bool checkTargetVersionAttr(const StringRef Str, const SourceLocation Loc);
+  bool checkTargetVersionAttr(const StringRef Param, const SourceLocation Loc,
+                              SmallString<64> &NewParam);
   bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
                              SmallVectorImpl<SmallString<64>> &NewParams);
+  bool checkSVETypeSupport(QualType Ty, SourceLocation Loc,
+                           const FunctionDecl *FD,
+                           const llvm::StringMap<bool> &FeatureMap);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

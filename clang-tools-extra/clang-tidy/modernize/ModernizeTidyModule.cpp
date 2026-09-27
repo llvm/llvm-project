@@ -8,9 +8,9 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidBindCheck.h"
 #include "AvoidCArraysCheck.h"
+#include "AvoidCStyleCastCheck.h"
 #include "AvoidSetjmpLongjmpCheck.h"
 #include "AvoidVariadicFunctionsCheck.h"
 #include "ConcatNestedNamespacesCheck.h"
@@ -47,9 +47,13 @@
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
 #include "UseStartsEndsWithCheck.h"
+#include "UseStdBitCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
+#include "UseStringViewCheck.h"
+#include "UseStructuredBindingCheck.h"
+#include "UseToUnderlyingCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
@@ -59,12 +63,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace modernize {
+namespace {
 
 class ModernizeModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidBindCheck>("modernize-avoid-bind");
     CheckFactories.registerCheck<AvoidCArraysCheck>("modernize-avoid-c-arrays");
+    CheckFactories.registerCheck<AvoidCStyleCastCheck>(
+        "modernize-avoid-c-style-cast");
     CheckFactories.registerCheck<AvoidSetjmpLongjmpCheck>(
         "modernize-avoid-setjmp-longjmp");
     CheckFactories.registerCheck<AvoidVariadicFunctionsCheck>(
@@ -91,6 +98,7 @@ public:
         "modernize-use-scoped-lock");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
+    CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");
@@ -127,6 +135,12 @@ public:
     CheckFactories.registerCheck<UseNoexceptCheck>("modernize-use-noexcept");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
+    CheckFactories.registerCheck<UseStringViewCheck>(
+        "modernize-use-string-view");
+    CheckFactories.registerCheck<UseStructuredBindingCheck>(
+        "modernize-use-structured-binding");
+    CheckFactories.registerCheck<UseToUnderlyingCheck>(
+        "modernize-use-to-underlying");
     CheckFactories.registerCheck<UseTrailingReturnTypeCheck>(
         "modernize-use-trailing-return-type");
     CheckFactories.registerCheck<UseTransparentFunctorsCheck>(
@@ -136,6 +150,8 @@ public:
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
   }
 };
+
+} // namespace
 
 // Register the ModernizeTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ModernizeModule> X("modernize-module",

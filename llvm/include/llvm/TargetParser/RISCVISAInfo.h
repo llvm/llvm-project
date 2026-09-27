@@ -15,7 +15,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/RISCVISAUtils.h"
 
-#include <map>
 #include <set>
 #include <string>
 #include <vector>

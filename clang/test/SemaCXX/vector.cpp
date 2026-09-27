@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
@@ -377,6 +378,15 @@ void Init() {
   const PR15730<8, char>::type2 PR15730_2 = {};
 }
 
+template <unsigned long long N>
+struct GH165458 {
+  typedef bool __attribute__((ext_vector_type(N))) type; // #GH165458
+};
+// expected-error@#GH165458 {{vector size too large}}
+// expected-note@+1 {{in instantiation of template class 'Templates::GH165458<187553262>' requested here}}
+typedef GH165458<187553262>::type GH165458_TooLarge;
+typedef GH165458<8388608>::type GH165458_Max;
+
 } // namespace Templates
 
 typedef int inte2 __attribute__((__ext_vector_type__(2)));
@@ -531,6 +541,18 @@ void use() {
   S<int, 16> s;
 }
 } // namespace PR48540
+
+#if __cplusplus >= 201703L // C++17 or later
+namespace PR180563 {
+typedef int __attribute__((vector_size(8))) v_int;
+constexpr int f(v_int v) {
+  return v[~0UL]; // expected-note{{cannot refer to element 18446744073709551615 of array of 2 elements in a constant expression}}
+}
+
+static_assert(f(v_int{0})); // expected-error{{static assertion expression is not an integral constant expression}}
+// expected-note@-1{{in call to 'f({0, 0})'}}
+}
+#endif
 
 #if __cplusplus >= 202002L // C++20 or later
 // Don't crash due to missing integer ranks.
@@ -785,4 +807,22 @@ long d = c - (long)(*0); // expected-error {{indirection requires pointer operan
 const long long e = *0; // expected-error {{indirection requires pointer operand ('int' invalid)}}
 double f = a - e;       // expected-error {{cannot initialize a variable of type 'double' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(double)))) double' (vector of 1 'double' value)}}
 int h = c - e;          // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(long)))) long' (vector of 1 'long' value)}}
+}
+
+typedef int v_neg_size __attribute__((vector_size(-8))); // expected-error{{vector must have non-negative size}}
+typedef int v_neg_size_2 __attribute__((vector_size(-1 * 8))); // expected-error{{vector must have non-negative size}}
+typedef int v_ext_neg_size __attribute__((ext_vector_type(-8))); // expected-error{{vector must have non-negative size}}
+typedef int v_ext_neg_size2 __attribute__((ext_vector_type(-1 * 8))); // expected-error{{vector must have non-negative size}}
+
+
+#if __cplusplus >= 201103L
+
+template <int N> using templated_v_size = int  __attribute__((vector_size(N))); // expected-error{{vector must have non-negative size}}
+templated_v_size<-8> templated_v_neg_size; //expected-note{{in instantiation of template type alias 'templated_v_size' requested here}}
+
+#endif
+
+namespace GH173347 {
+typedef short __attribute__((__vector_size__(8))) V;
+template <int N> V test(V x) { return (x % 5) * N; }
 }

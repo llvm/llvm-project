@@ -13,9 +13,9 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -202,7 +202,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
@@ -328,10 +328,12 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);
 }
 
-SanitizerMask Solaris::getSupportedSanitizers() const {
+SanitizerMask
+Solaris::getSupportedSanitizers(BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsSparc = getTriple().getArch() == llvm::Triple::sparc;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   // FIXME: Omit SparcV9 and X86_64 until 64-bit support is figured out.
   if (IsSparc || IsX86) {
     Res |= SanitizerKind::Address;
@@ -346,7 +348,7 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
 const char *Solaris::getDefaultLinker() const {
   // FIXME: Only handle Solaris ld and GNU ld here.
   return llvm::StringSwitch<const char *>(getDriver().getPreferredLinker())
-      .Cases("bfd", "gld", "/usr/gnu/bin/ld")
+      .Cases({"bfd", "gld"}, "/usr/gnu/bin/ld")
       .Default("/usr/bin/ld");
 }
 
@@ -360,7 +362,7 @@ void Solaris::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc))

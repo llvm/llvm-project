@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <numeric>
 
@@ -70,8 +71,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
 
         // Calculate the product of all elements in 'newShape' except for the -1
         // placeholder, which we discard by negating the result.
-        int64_t totalSizeNoPlaceholder = -std::accumulate(
-            newShape.begin(), newShape.end(), 1, std::multiplies<int64_t>());
+        int64_t totalSizeNoPlaceholder = -llvm::product_of(newShape);
 
         // If there is a 0 component in 'newShape', resolve the placeholder as
         // 0.

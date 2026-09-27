@@ -17,9 +17,6 @@
 //     typedef T value_type;
 // };
 
-// atomic still has a difference_type in the C++03 frozen headers
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <atomic>
 #include <chrono>
 #include <cstdint>

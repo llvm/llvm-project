@@ -15,6 +15,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCRegister.h"
 
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
@@ -58,6 +63,11 @@ private:
 
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
+  /// True if assigning Reg would fit in the current occupancy VGPR budget.
+  bool isRegWithinOccupancyBudget(MCPhysReg Reg, unsigned NumVGPRs,
+                                  unsigned NumAGPRs,
+                                  unsigned MaxVGPRsForCurrentOccupancy) const;
+
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
 
@@ -79,6 +89,8 @@ public:
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
   }
+
+  bool isCFISavedRegsSpillEnabled() const;
 
   /// Return the largest available SGPR aligned to \p Align for the register
   /// class \p RC.
@@ -105,10 +117,16 @@ public:
   // lanes (not even inactive ones).
   static bool isChainScratchRegister(Register VGPR);
 
-  // Stack access is very expensive. CSRs are also the high registers, and we
-  // want to minimize the number of used registers.
-  unsigned getCSRFirstUseCost() const override {
-    return 100;
+  unsigned getCSRFirstUseCost(const MachineFunction &) const override {
+    // The cost of 27 balances multiple factors that influence CSR cost:
+    // - Saving a SGPR CSR to VGPR lanes is relatively cheap.
+    // - In cases where this is not possible, stack access is very expensive.
+    // - CSRs are also the high registers, and we want to minimize the number of
+    //   used registers as it impacts occupancy.
+    // Note: Register allocation only applies these cost to callee-save
+    // registers according to getCalleeSavedRegs, so handling of calling
+    // conventions with no CSR is handled there.
+    return 27;
   }
 
   // When building a block VGPR load, we only really transfer a subset of the
@@ -120,6 +138,13 @@ public:
   // load instruction, so liveness analysis knows they're unavailable.
   void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                       Register BlockReg) const;
+
+  // Iterate over all VGPRs in the given BlockReg and emit CFI for each VGPR
+  // as-needed depending on the (statically known) mask, relative to the given
+  // base Offset.
+  void buildCFIForBlockCSRStore(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                Register BlockReg, int64_t Offset) const;
 
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
@@ -154,9 +179,6 @@ public:
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
-
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
   /// a cross register class copy, return the specified RC. Returns NULL if it
@@ -176,8 +198,8 @@ public:
   /// free VGPR lane to spill.
   bool spillSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                  SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
-                 bool OnlyToVGPR = false,
-                 bool SpillToPhysVGPRLane = false) const;
+                 bool OnlyToVGPR = false, bool SpillToPhysVGPRLane = false,
+                 bool NeedsCFI = false) const;
 
   bool restoreSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                    SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
@@ -214,6 +236,10 @@ public:
   LLVM_READONLY
   const TargetRegisterClass *
   getVectorSuperClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
+  const TargetRegisterClass *
+  getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
@@ -285,6 +311,10 @@ public:
   const TargetRegisterClass *
   getEquivalentAGPRClass(const TargetRegisterClass *SRC) const;
 
+  /// \returns An AGPR+VGPR super reg class with the same width as \p SRC
+  const TargetRegisterClass *
+  getEquivalentAVClass(const TargetRegisterClass *SRC) const;
+
   /// \returns A SGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
   getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
@@ -338,14 +368,6 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
-                      LiveIntervals &LIS) const override;
-
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
@@ -357,7 +379,17 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+  bool shouldApplyAntiHints(const MachineFunction &MF,
+                            unsigned NumAllocatedVGPRs,
+                            unsigned &MaxVGPRsForCurrentOccupancy) const;
+
+  void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const override;
+
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
@@ -370,8 +402,8 @@ public:
   }
 
   const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                 const MachineRegisterInfo &MRI) const override;
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
     return isWave32 ? &AMDGPU::SReg_32RegClass
@@ -390,8 +422,6 @@ public:
   MCRegister getVCC() const;
 
   MCRegister getExec() const;
-
-  const TargetRegisterClass *getRegClass(unsigned RCID) const;
 
   // Find reaching register definition
   MachineInstr *findReachingDef(Register Reg, unsigned SubReg,
@@ -433,11 +463,6 @@ public:
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
 
-  // Given \p RC returns corresponding aligned register class if required
-  // by the subtarget.
-  const TargetRegisterClass *
-  getProperlyAlignedRC(const TargetRegisterClass *RC) const;
-
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;
@@ -459,8 +484,8 @@ public:
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
-                           RegScavenger *RS,
-                           LiveRegUnits *LiveUnits = nullptr) const;
+                           RegScavenger *RS, LiveRegUnits *LiveUnits = nullptr,
+                           bool NeedsCFI = false) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {
@@ -495,12 +520,18 @@ public:
 
   SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
-};
 
-namespace AMDGPU {
-/// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const TargetRegisterClass &RC);
-} // namespace AMDGPU
+  float
+  getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override {
+    // Prioritize VGPR_32_Lo256 over other classes which may occupy registers
+    // beyond v256.
+    return AMDGPUGenRegisterInfo::getSpillWeightScaleFactor(RC) *
+           ((RC == &AMDGPU::VGPR_32_Lo256RegClass ||
+             RC == &AMDGPU::VReg_64_Lo256_Align2RegClass)
+                ? 2.0
+                : 1.0);
+  }
+};
 
 } // End namespace llvm
 

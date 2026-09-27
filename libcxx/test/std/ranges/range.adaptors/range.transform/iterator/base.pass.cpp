@@ -10,6 +10,7 @@
 
 // transform_view::<iterator>::base
 
+#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

@@ -10,24 +10,27 @@
 #define _LIBCPP___ATOMIC_ATOMIC_H
 
 #include <__atomic/atomic_sync.h>
+#include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/check_memory_order.h>
 #include <__atomic/floating_point_helper.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
+#include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
-#include <__type_traits/remove_volatile.h>
 #include <__utility/forward.h>
 #include <cstring>
 
@@ -48,10 +51,10 @@ struct __atomic_base // false
   static constexpr bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
     return __cxx_atomic_is_lock_free(sizeof(__cxx_atomic_impl<_Tp>));
   }
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const _NOEXCEPT {
     return static_cast<__atomic_base const volatile*>(this)->is_lock_free();
   }
   _LIBCPP_HIDE_FROM_ABI void store(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
@@ -62,11 +65,11 @@ struct __atomic_base // false
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) {
     std::__cxx_atomic_store(std::addressof(__a_), __d, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
     return std::__cxx_atomic_load(std::addressof(__a_), __m);
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
     return std::__cxx_atomic_load(std::addressof(__a_), __m);
   }
@@ -114,16 +117,16 @@ struct __atomic_base // false
   }
 
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const volatile noexcept {
     std::__atomic_wait(*this, __v, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void wait(_Tp __v, memory_order __m = memory_order_seq_cst) const noexcept {
     std::__atomic_wait(*this, __v, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI void notify_one() volatile _NOEXCEPT { std::__atomic_notify_one(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_notify_one(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() volatile _NOEXCEPT { std::__atomic_notify_all(*this); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() volatile noexcept { std::__atomic_notify_one(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() noexcept { std::__atomic_notify_one(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() volatile noexcept { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() noexcept { std::__atomic_notify_all(*this); }
 #endif //  _LIBCPP_STD_VER >= 20
 
 #if _LIBCPP_STD_VER >= 20
@@ -179,6 +182,20 @@ struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_xor(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
     return std::__cxx_atomic_fetch_xor(std::addressof(this->__a_), __op, __m);
   }
+#if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+  }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator++(int) volatile _NOEXCEPT { return fetch_add(_Tp(1)); }
   _LIBCPP_HIDE_FROM_ABI _Tp operator++(int) _NOEXCEPT { return fetch_add(_Tp(1)); }
@@ -200,12 +217,15 @@ struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   _LIBCPP_HIDE_FROM_ABI _Tp operator^=(_Tp __op) _NOEXCEPT { return fetch_xor(__op) ^ __op; }
 };
 
+#if _LIBCPP_STD_VER >= 20
 // Here we need _IsIntegral because the default template argument is not enough
 // e.g  __atomic_base<int> is __atomic_base<int, true>, which inherits from
 // __atomic_base<int, false> and the caller of the wait function is
 // __atomic_base<int, false>. So specializing __atomic_base<_Tp> does not work
 template <class _Tp, bool _IsIntegral>
 struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
+  using __value_type _LIBCPP_NODEBUG = _Tp;
+
   static _LIBCPP_HIDE_FROM_ABI _Tp __atomic_load(const __atomic_base<_Tp, _IsIntegral>& __a, memory_order __order) {
     return __a.load(__order);
   }
@@ -226,6 +246,8 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
   }
 };
 
+#endif // _LIBCPP_STD_VER >= 20
+
 template <typename _Tp>
 struct __check_atomic_mandates {
   using type _LIBCPP_NODEBUG = _Tp;
@@ -237,7 +259,9 @@ struct atomic : public __atomic_base<typename __check_atomic_mandates<_Tp>::type
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp>;
 
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI atomic() = default;
+  _LIBCPP_HIDE_FROM_ABI atomic()
+    requires is_default_constructible_v<_Tp>
+  = default;
 #else
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 #endif
@@ -291,16 +315,38 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    // __atomic_fetch_add accepts function pointers, guard against them.
+    // __atomic_fetch_sub accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
     return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    // __atomic_fetch_add accepts function pointers, guard against them.
+    // __atomic_fetch_sub accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
     return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
   }
+
+#if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_max(_Tp* __op, memory_order __m = memory_order_seq_cst) volatile noexcept {
+    static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
+    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_max(_Tp* __op, memory_order __m = memory_order_seq_cst) noexcept {
+    static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
+    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_min(_Tp* __op, memory_order __m = memory_order_seq_cst) volatile noexcept {
+    static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
+    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_min(_Tp* __op, memory_order __m = memory_order_seq_cst) noexcept {
+    static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
+    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+  }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) volatile _NOEXCEPT { return fetch_add(1); }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) _NOEXCEPT { return fetch_add(1); }
@@ -319,10 +365,10 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   atomic& operator=(const atomic&) volatile = delete;
 };
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct __atomic_waitable_traits<atomic<_Tp> > : __atomic_waitable_traits<__atomic_base<_Tp> > {};
 
-#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
   requires is_floating_point_v<_Tp>
 struct atomic<_Tp> : __atomic_base<_Tp> {
@@ -433,12 +479,12 @@ public:
 // atomic_is_lock_free
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const volatile atomic<_Tp>* __o) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const volatile atomic<_Tp>* __o) _NOEXCEPT {
   return __o->is_lock_free();
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT {
   return __o->is_lock_free();
 }
 
@@ -487,25 +533,25 @@ atomic_store_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, me
 // atomic_load
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp atomic_load(const volatile atomic<_Tp>* __o) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp atomic_load(const volatile atomic<_Tp>* __o) _NOEXCEPT {
   return __o->load();
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp atomic_load(const atomic<_Tp>* __o) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp atomic_load(const atomic<_Tp>* __o) _NOEXCEPT {
   return __o->load();
 }
 
 // atomic_load_explicit
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp atomic_load_explicit(const volatile atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
-    _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp
+atomic_load_explicit(const volatile atomic<_Tp>* __o, memory_order __m) _NOEXCEPT _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
   return __o->load(__m);
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp atomic_load_explicit(const atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp atomic_load_explicit(const atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
     _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
   return __o->load(__m);
 }
@@ -613,13 +659,12 @@ _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_strong_explicit(
 // atomic_wait
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void
-atomic_wait(const volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_wait(const volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v) noexcept {
   return __o->wait(__v);
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void atomic_wait(const atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_wait(const atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v) noexcept {
   return __o->wait(__v);
 }
 
@@ -627,14 +672,14 @@ _LIBCPP_HIDE_FROM_ABI void atomic_wait(const atomic<_Tp>* __o, typename atomic<_
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void
-atomic_wait_explicit(const volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v, memory_order __m) _NOEXCEPT
+atomic_wait_explicit(const volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v, memory_order __m) noexcept
     _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
   return __o->wait(__v, __m);
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void
-atomic_wait_explicit(const atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v, memory_order __m) _NOEXCEPT
+atomic_wait_explicit(const atomic<_Tp>* __o, typename atomic<_Tp>::value_type __v, memory_order __m) noexcept
     _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
   return __o->wait(__v, __m);
 }
@@ -642,22 +687,22 @@ atomic_wait_explicit(const atomic<_Tp>* __o, typename atomic<_Tp>::value_type __
 // atomic_notify_one
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void atomic_notify_one(volatile atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_notify_one(volatile atomic<_Tp>* __o) noexcept {
   __o->notify_one();
 }
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void atomic_notify_one(atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_notify_one(atomic<_Tp>* __o) noexcept {
   __o->notify_one();
 }
 
 // atomic_notify_all
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void atomic_notify_all(volatile atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_notify_all(volatile atomic<_Tp>* __o) noexcept {
   __o->notify_all();
 }
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_notify_all(atomic<_Tp>* __o) noexcept {
   __o->notify_all();
 }
 
@@ -794,6 +839,68 @@ _LIBCPP_HIDE_FROM_ABI _Tp
 atomic_fetch_xor_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT {
   return __o->fetch_xor(__op, __m);
 }
+
+#if _LIBCPP_STD_VER >= 26
+// atomic_fetch_max
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_max(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) noexcept {
+  return __o->fetch_max(__op);
+}
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_max(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) noexcept {
+  return __o->fetch_max(__op);
+}
+
+// atomic_fetch_max_explicit
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp
+atomic_fetch_max_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) noexcept {
+  return __o->fetch_max(__op, __m);
+}
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp
+atomic_fetch_max_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) noexcept {
+  return __o->fetch_max(__op, __m);
+}
+
+// atomic_fetch_min
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_min(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) noexcept {
+  return __o->fetch_min(__op);
+}
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_min(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) noexcept {
+  return __o->fetch_min(__op);
+}
+
+// atomic_fetch_min_explicit
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp
+atomic_fetch_min_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) noexcept {
+  return __o->fetch_min(__op, __m);
+}
+
+template <class _Tp>
+  requires((integral<_Tp> && !same_as<_Tp, bool>) || is_pointer_v<_Tp>)
+_LIBCPP_HIDE_FROM_ABI _Tp
+atomic_fetch_min_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) noexcept {
+  return __o->fetch_min(__op, __m);
+}
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -1,0 +1,40 @@
+RUN: llvm-remarkutil filter %p/Inputs/filter.yaml %p/Inputs/filter2.yaml | FileCheck %s --strict-whitespace
+
+; CHECK: --- !Passed
+; CHECK-NEXT: Pass:            pass1
+; CHECK-NEXT: Name:            Remark1
+; CHECK-NEXT: DebugLoc:        { File: 'path/to/func1.c', Line: 1, Column: 2 }
+; CHECK-NEXT: Function:        func1
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          ' text'
+; CHECK-NEXT:   - arg1:            argval1
+; CHECK-NEXT: ...
+; CHECK-NEXT: --- !Missed
+; CHECK-NEXT: Pass:            pass2
+; CHECK-NEXT: Name:            Remark2
+; CHECK-NEXT: DebugLoc:        { File: 'path/to/func2.c', Line: 1, Column: 2 }
+; CHECK-NEXT: Function:        func2
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          ' text'
+; CHECK-NEXT:   - arg2:            argval2
+; CHECK-NEXT: ...
+; CHECK-NEXT: --- !Analysis
+; CHECK-NEXT: Pass:            pass3
+; CHECK-NEXT: Name:            Remark3
+; CHECK-NEXT: DebugLoc:        { File: 'path/to/func3.c', Line: 1, Column: 2 }
+; CHECK-NEXT: Function:        func3
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          ' text'
+; CHECK-NEXT:   - arg3:            argval3
+; CHECK-NEXT:     DebugLoc:        { File: 'path/to/func3.c', Line: 2, Column: 2 }
+; CHECK-NEXT: ...
+; CHECK-NEXT: --- !Passed
+; CHECK-NEXT: Pass:            pass4
+; CHECK-NEXT: Name:            Remark4
+; CHECK-NEXT: DebugLoc:        { File: 'path/to/func4.c', Line: 1, Column: 2 }
+; CHECK-NEXT: Function:        func4
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          ' text'
+; CHECK-NEXT:   - arg4:            argval4
+; CHECK-NEXT: ...
+; CHECK-NOT: {{.}}

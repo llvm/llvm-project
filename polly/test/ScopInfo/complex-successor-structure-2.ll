@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 
 ; We build a scop for the region for.body->B13. The CFG is of the following
 ; form and the branch conditions are build from "smax" SCEVs. However, in

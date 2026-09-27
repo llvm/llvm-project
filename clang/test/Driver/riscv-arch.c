@@ -220,12 +220,12 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=unknown -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STR %s
 // RV32-STR: error: invalid arch name 'unknown',
-// RV32-STR: string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported profile name
+// RV32-STR: string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported profile name
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32q -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-LETTER %s
 // RV32-LETTER: error: invalid arch name 'rv32q',
-// RV32-LETTER: first letter after 'rv32' should be 'e', 'i' or 'g'
+// RV32-LETTER: first letter after 'rv32' should be 'e', 'i', 'g' or 'y'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32izvl64b -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVL64B-ER %s
@@ -240,12 +240,12 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32xabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X %s
 // RV32X: error: invalid arch name 'rv32xabc',
-// RV32X: first letter after 'rv32' should be 'e', 'i' or 'g'
+// RV32X: first letter after 'rv32' should be 'e', 'i', 'g' or 'y'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32sabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32S %s
 // RV32S: error: invalid arch name 'rv32sabc',
-// RV32S: first letter after 'rv32' should be 'e', 'i' or 'g'
+// RV32S: first letter after 'rv32' should be 'e', 'i', 'g' or 'y'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ix -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X-NAME %s
@@ -371,24 +371,30 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFHMIN %s
 // RV32-ZFHMIN: "-target-feature" "+zfhmin"
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izalasr -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izibi -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-NOFLAG %s
-// RV32-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rv32izalasr'
+// RV32-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rv32izibi'
 // RV32-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions'
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izalasr -menable-experimental-extensions -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izibi -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-NOVERS %s
-// RV32-EXPERIMENTAL-NOVERS: error: invalid arch name 'rv32izalasr'
+// RV32-EXPERIMENTAL-NOVERS: error: invalid arch name 'rv32izibi'
 // RV32-EXPERIMENTAL-NOVERS: experimental extension requires explicit version number
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izalasr0p7 -menable-experimental-extensions -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izibi0p7 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-BADVERS %s
-// RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32izalasr0p7'
-// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'zalasr' (this compiler supports 0.9)
+// RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32izibi0p7'
+// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'zibi' (this compiler supports 0.1)
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr0p9 -menable-experimental-extensions -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izibi0p1 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-GOODVERS %s
-// RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-zalasr"
+// RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-zibi"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZALASR %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZALASR %s
+// RV32-ZALASR: "-target-feature" "+zalasr"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iztso1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZTSO %s

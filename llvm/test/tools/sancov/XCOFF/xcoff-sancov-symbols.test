@@ -1,0 +1,53 @@
+## Verifies sancov tools correctly identify the "." prefix for XCOFF binaries.
+
+# REQUIRES: powerpc-registered-target
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: sancov -print-coverage-pcs %t1.o 2>&1 | FileCheck --allow-empty %s
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: sancov -print-coverage-pcs %t2.o 2>&1 | FileCheck --allow-empty %s
+# CHECK-NOT: ERROR
+
+## Case1: check in XCOFF32
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Sections:
+  - Name: .text
+    Flags: [ STYP_TEXT ]
+    SectionData: "4E800020"
+Symbols:
+  - Name: .__sanitizer_cov_trace_pc_guard
+    Value: 0x0000
+    Section: .text
+    Type: 0x0
+    StorageClass: C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SectionOrLength: 4
+        SymbolAlignmentAndType: 0x02
+        StorageMappingClass: XMC_PR
+
+## Case2: check in XCOFF64
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01F7
+Sections:
+  - Name: .text
+    Flags: [ STYP_TEXT ]
+    SectionData: "4E800020"
+Symbols:
+  - Name: .__sanitizer_cov_trace_pc_guard
+    Value: 0x0000
+    Section: .text
+    Type: 0x0
+    StorageClass: C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SectionOrLengthLo: 4
+        SectionOrLengthHi: 0
+        SymbolAlignmentAndType: 0x02
+        StorageMappingClass: XMC_PR

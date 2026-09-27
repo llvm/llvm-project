@@ -11,7 +11,6 @@
 #include "polly/Options.h"
 #include "polly/ScheduleTreeTransform.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Simplify.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
@@ -133,19 +132,19 @@ static cl::opt<bool>
     PMBasedTCOpts("polly-tc-opt",
                   cl::desc("Perform optimizations of tensor contractions based "
                            "on pattern matching"),
-                  cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                  cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     PMBasedMMMOpts("polly-matmul-opt",
                    cl::desc("Perform optimizations of matrix multiplications "
                             "based on pattern matching"),
-                   cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
+                   cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<int> OptComputeOut(
     "polly-tc-dependences-computeout",
     cl::desc("Bound the dependence analysis by a maximal amount of "
              "computational steps (0 means no bound)"),
-    cl::Hidden, cl::init(500000), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(500000), cl::cat(PollyCategory));
 
 namespace {
 /// Parameters of the micro kernel.

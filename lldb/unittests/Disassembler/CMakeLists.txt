@@ -10,6 +10,7 @@ endif()
 if("X86" IN_LIST LLVM_TARGETS_TO_BUILD)
   list(APPEND disas_srcs
     x86/TestGetControlFlowKindx86.cpp
+    x86/TestGetOpcodeOversized.cpp
   )
 endif()
 

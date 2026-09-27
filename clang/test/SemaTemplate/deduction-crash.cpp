@@ -172,3 +172,33 @@ namespace PR51872_part1 {
   // expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'T1'}}
   // expected-note@-7  {{candidate template ignored: could not match 'PR51872_part1::T1<value-parameter-0-0>' against 'int'}}
 }
+
+namespace GH177545 {
+  template<decltype(auto)()() volatile throw() -> char> // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}}
+  struct T2;                                            // expected-error@* {{function cannot return function type 'auto () volatile throw() -> decltype(auto)'}}
+}
+
+namespace GH28877 {
+template <typename...> struct S;
+template <typename... Ts> auto f(Ts... args) -> S<decltype(args)...>;
+extern template auto f() -> S<>;
+}
+
+namespace GH46548 {
+template <typename... Ts> void a(Ts... args1, char... args2[][sizeof args1]);
+extern template void a();
+}
+
+namespace GH213760 {
+template <typename... Ts> void f(Ts... args, decltype(args)...); // #GH213760-f
+void g() {
+  f();
+  f<int>(1, 2);
+  f(1, 2);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  // expected-note@#GH213760-f {{candidate function [with Ts = <>] not viable: requires 0 arguments, but 2 were provided}}
+  f<int, int>(1, 2);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  // expected-note@#GH213760-f {{candidate function [with Ts = <int, int>] not viable: requires 4 arguments, but 2 were provided}}
+}
+}

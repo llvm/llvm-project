@@ -19,7 +19,7 @@ class MockJITLinkMemoryManager : public llvm::jitlink::JITLinkMemoryManager {
 public:
   class Alloc {
   public:
-    virtual ~Alloc() {}
+    virtual ~Alloc() = default;
   };
 
   class SimpleAlloc : public Alloc {
@@ -132,7 +132,7 @@ public:
       : JITLinkContext(&JD), MJMM(std::move(MJMM)),
         HandleFailed(std::move(HandleFailed)) {}
 
-  ~MockJITLinkContext() {
+  ~MockJITLinkContext() override {
     if (auto Err = MJMM->deallocate(std::move(FinalizedAllocs)))
       notifyFailed(std::move(Err));
   }

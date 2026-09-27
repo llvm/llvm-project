@@ -20,13 +20,16 @@ namespace clang::tidy::readability {
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-parentheses.html
 class RedundantParenthesesCheck : public ClangTidyCheck {
 public:
-  RedundantParenthesesCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  RedundantParenthesesCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus | LangOpts.C99;
   }
+
+private:
+  const std::vector<StringRef> AllowedDecls;
 };
 
 } // namespace clang::tidy::readability

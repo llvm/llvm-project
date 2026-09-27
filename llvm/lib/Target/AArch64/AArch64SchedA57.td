@@ -34,7 +34,7 @@ def CortexA57Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -160,8 +160,11 @@ def : InstRW<[A57Write_6cyc_1M], (instrs SMULHrr, UMULHrr)>;
 // Miscellaneous Data-Processing Instructions
 // -----------------------------------------------------------------------------
 
-def : InstRW<[A57Write_1cyc_1I],    (instrs EXTRWrri)>;
-def : InstRW<[A57Write_3cyc_1I_1M], (instrs EXTRXrri)>;
+def A57WriteExtr : SchedWriteVariant<[
+       SchedVar<IsRORImmIdiomPred, [A57Write_1cyc_1I]>,
+       SchedVar<NoSchedPred, [A57Write_3cyc_1I_1M]>]>;
+
+def : InstRW<[A57WriteExtr],    (instrs EXTRWrri, EXTRXrri)>;
 def : InstRW<[A57Write_2cyc_1M],    (instregex "BFM")>;
 
 

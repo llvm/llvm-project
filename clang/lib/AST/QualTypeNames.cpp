@@ -10,6 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -125,7 +126,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
   // which can point to a template instantiation with no sugar in any of
   // its template argument, however we still need to fully qualify them.
 
-  const auto *TD = TSTRecord->getOriginalDecl();
+  const auto *TD = TSTRecord->getDecl();
   const auto *TSTDecl = dyn_cast<ClassTemplateSpecializationDecl>(TD);
   if (!TSTDecl)
     return Ctx.getTagType(Keyword, Qualifier, TD, /*OwnsTag=*/false)
@@ -232,7 +233,7 @@ static NestedNameSpecifier getFullyQualifiedNestedNameSpecifier(
     // Find decl context.
     const TypeDecl *TD;
     if (const TagType *TagDeclType = Type->getAs<TagType>())
-      TD = TagDeclType->getOriginalDecl();
+      TD = TagDeclType->getDecl();
     else if (const auto *D = dyn_cast<TypedefType>(Type))
       TD = D->getDecl();
     else
@@ -316,7 +317,7 @@ createNestedNameSpecifierForScopeOf(const ASTContext &Ctx, const Type *TypePtr,
   if (const auto *TDT = dyn_cast<TypedefType>(TypePtr)) {
     Decl = TDT->getDecl();
   } else if (const auto *TagDeclType = dyn_cast<TagType>(TypePtr)) {
-    Decl = TagDeclType->getOriginalDecl();
+    Decl = TagDeclType->getDecl();
   } else if (const auto *TST = dyn_cast<TemplateSpecializationType>(TypePtr)) {
     Decl = TST->getTemplateName().getAsTemplateDecl();
   } else {

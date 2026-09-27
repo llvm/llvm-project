@@ -48,7 +48,7 @@ class VXRMInfo {
   } State = Uninitialized;
 
 public:
-  VXRMInfo() {}
+  VXRMInfo() = default;
 
   static VXRMInfo getUnknown() {
     VXRMInfo Info;

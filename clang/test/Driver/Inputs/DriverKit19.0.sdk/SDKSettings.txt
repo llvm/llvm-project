@@ -1,0 +1,2 @@
+The DriverKit 19.0 SDK shipped alongside the macOS 10.15 SDK in Xcode 11.0. Unlike macOS though,
+DriverKit did not have an SDKSettings.json file, only an SDKSettings.plist which the compilers don't use.

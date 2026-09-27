@@ -12,5 +12,3 @@
 // CHECK: a type specifier is required
 // CHECK: .foobar/test.cpp
 invalid;
-
-// REQUIRES: shell

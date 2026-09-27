@@ -104,6 +104,13 @@ Error PseudoProbeRewriter::postEmitFinalizer() {
     parsePseudoProbe();
   updatePseudoProbes();
 
+  // The decoder's address-to-probe maps can be very large and are no longer
+  // needed once probes have been updated. Release both our reference and the
+  // one held by BinaryContext so the memory is freed before the memory-heavy
+  // debug info rewriting phase runs.
+  BC.resetPseudoProbeDecoder();
+  ProbeDecoderPtr.reset();
+
   return Error::success();
 }
 
@@ -308,7 +315,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
     Contents.append(OSE.str().begin(), OSE.str().end());
   };
 
-  // Emit indiviual pseudo probes in a inline tree node
+  // Emit individual pseudo probes in a inline tree node
   // Probe index, type, attribute, address type and address are encoded
   // Address of the first probe is absolute.
   // Other probes' address are represented by delta

@@ -153,7 +153,7 @@ def _gentbl_rule_impl(ctx):
     args.add("-o", ctx.outputs.out)
 
     ctx.actions.run(
-        outputs = [ctx.outputs.out],
+        outputs = [ctx.outputs.out] + ctx.outputs.additional_outputs,
         inputs = trans_srcs,
         executable = ctx.executable.tblgen,
         execution_requirements = {"supports-path-mapping": "1"},
@@ -195,6 +195,9 @@ gentbl_rule = rule(
             doc = "The output file for the TableGen invocation.",
             mandatory = True,
         ),
+        "additional_outputs": attr.output_list(
+            doc = "Extra output files from the TableGen invocation. The primary 'out' is used for the -o argument.",
+        ),
         "opts": attr.string_list(
             doc = "Additional command line options to add to the TableGen" +
                   " invocation. For include arguments, prefer to use" +
@@ -226,13 +229,30 @@ def _gentbl_test_impl(ctx):
         ctx.attr.deps,
     )
 
+    # The test runs from the runfiles tree, where files live under
+    # `<repo>/<package>/...` (with external repos at `../<repo>/...`) — not
+    # under `external/<repo>/...` or `bazel-out/<cfg>/bin/<repo>/...` as at
+    # execroot. Convert execroot-relative paths to the runfiles form so tblgen
+    # can open them from the test's CWD.
+    bin_prefix = ctx.bin_dir.path + "/"
+    genfiles_prefix = ctx.genfiles_dir.path + "/"
+
+    def _runfiles_path(p):
+        if p.startswith(bin_prefix):
+            p = p[len(bin_prefix):]
+        elif p.startswith(genfiles_prefix):
+            p = p[len(genfiles_prefix):]
+        if p.startswith("external/"):
+            return "../" + p[len("external/"):]
+        return p
+
     test_args = [ctx.executable.tblgen.short_path]
     test_args.extend(ctx.attr.opts)
-    test_args.append(td_file.path)
+    test_args.append(_runfiles_path(td_file.path))
     test_args.extend([
         arg
         for include in trans_includes.to_list()
-        for arg in ["-I", include, "-I", paths.join(ctx.bin_dir.path, include)]
+        for arg in ["-I", _runfiles_path(include), "-I", _runfiles_path(paths.join(ctx.bin_dir.path, include))]
     ])
 
     test_args.extend(["-o", "/dev/null"])
@@ -313,9 +333,12 @@ def gentbl_filegroup(
       name: The name of the generated filegroup rule for use in dependencies.
       tblgen: The binary used to produce the output.
       td_file: The primary table definitions file.
-      tbl_outs: Either a dict {out: [opts]} or a list of tuples ([opts], out),
-        where each 'opts' is a list of options passed to tblgen, each option
-        being a string, and 'out' is the corresponding output file produced.
+      tbl_outs: Either a dict {out: [opts]}, a list of tuples ([opts], out),
+        or a list of tuples ([opts], [outs]). Each 'opts' is a list of options
+        passed to tblgen, each option being a string,
+        and 'out' is the corresponding output file produced. If 'outs' are used,
+        the first path in the list is passed to '-o' but tblgen is expected
+        to produce all listed outputs.
       td_srcs: See gentbl_rule.td_srcs
       includes: See gentbl_rule.includes
       deps: See gentbl_rule.deps
@@ -325,9 +348,14 @@ def gentbl_filegroup(
       **kwargs: Extra keyword arguments to pass to all generated rules.
     """
 
+    included_srcs = []
     if type(tbl_outs) == type({}):
         tbl_outs = [(v, k) for k, v in tbl_outs.items()]
-    for (opts, out) in tbl_outs:
+    for (opts, output_or_outputs) in tbl_outs:
+        outs = output_or_outputs if type(output_or_outputs) == type([]) else [output_or_outputs]
+        out = outs[0]
+        if not any([skip_opt in opts for skip_opt in skip_opts]):
+            included_srcs.extend(outs)
         first_opt = opts[0] if opts else ""
         rule_suffix = "_{}_{}".format(
             first_opt.replace("-", "_").replace("=", "_"),
@@ -343,6 +371,7 @@ def gentbl_filegroup(
             deps = deps,
             includes = includes,
             out = out,
+            additional_outputs = outs[1:],
             **kwargs
         )
 
@@ -364,7 +393,6 @@ def gentbl_filegroup(
                 **kwargs
             )
 
-    included_srcs = [f for (opts, f) in tbl_outs if not any([skip_opt in opts for skip_opt in skip_opts])]
     native.filegroup(
         name = name,
         srcs = included_srcs,
@@ -527,7 +555,6 @@ def gentbl_sharded_ops(
         gentbl_shard_rule(
             index = i,
             name = name + "__src_shard" + str(i),
-            testonly = test,
             out = out_file,
             sharder = sharder,
             src_file = src_file,

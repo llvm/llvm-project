@@ -74,6 +74,9 @@ template<class _Rp, class _Gp, class ..._Ap>
 struct __strip_signature<_Rp (_Gp::*) (_Ap...) const volatile & noexcept> { using type _LIBCPP_NODEBUG = _Rp(_Ap...); };
 // clang-format on
 
+template <class _Fp>
+using __strip_signature_t _LIBCPP_NODEBUG = typename __strip_signature<_Fp>::type;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

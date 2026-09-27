@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
   // for each of it, so the compiler can lookup their symbols.
   for (const std::string &Path : Dylibs)
     J->getMainJITDylib().addGenerator(
-        ExitOnErr(loadDylib(J->getExecutionSession(), Path)));
+        ExitOnErr(loadDylib(J->getExecutionSession(), J->getDylibMgr(), Path)));
 
   // Add the loaded IR module to the JIT. This will set up symbol tables and
   // prepare for materialization.

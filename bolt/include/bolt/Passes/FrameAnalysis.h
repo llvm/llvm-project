@@ -37,7 +37,7 @@ struct FrameIndexEntry {
   int64_t StackOffset;
   uint8_t Size;
 
-  /// If this is false, we will never atempt to remove or optimize this
+  /// If this is false, we will never attempt to remove or optimize this
   /// instruction. We just use it to keep track of stores we don't fully
   /// understand but we know it may write to a frame position.
   bool IsSimple;

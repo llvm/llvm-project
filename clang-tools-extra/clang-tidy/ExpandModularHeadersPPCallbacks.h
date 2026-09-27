@@ -1,4 +1,4 @@
-//===- ExpandModularHeadersPPCallbacks.h - clang-tidy -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
-#define LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPANDMODULARHEADERSPPCALLBACKS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPANDMODULARHEADERSPPCALLBACKS_H
 
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -41,10 +41,9 @@ namespace tooling {
 /// non-modular way.
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
-  ExpandModularHeadersPPCallbacks(
-      CompilerInstance *CI,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-  ~ExpandModularHeadersPPCallbacks();
+  ExpandModularHeadersPPCallbacks(CompilerInstance *CI,
+                                  llvm::vfs::OverlayFileSystem &OverlayFS);
+  ~ExpandModularHeadersPPCallbacks() override;
 
   /// Returns the preprocessor that provides callbacks for the whole
   /// translation unit, including the main file, textual headers, and modular
@@ -138,10 +137,10 @@ private:
   std::unique_ptr<Preprocessor> PP;
   bool EnteredMainFile = false;
   bool StartedLexing = false;
-  Token CurrentToken;
+  Token CurrentToken = Token();
 };
 
 } // namespace tooling
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPANDMODULARHEADERSPPCALLBACKS_H

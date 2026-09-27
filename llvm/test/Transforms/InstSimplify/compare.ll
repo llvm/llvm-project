@@ -2687,10 +2687,7 @@ define i1 @icmp_nsw_false_2(i32 %V) {
 
 define i1 @icmp_nsw_false_3(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_false_3(
-; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[V]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add5 = add nsw i32 %V, 5
   %add6 = add i32 %V, 5
@@ -2721,6 +2718,45 @@ define i1 @icmp_nsw_false_5(i8 %V) {
   %add = add i8 %V, 121
   %addnsw = add nsw i8 %V, -104
   %cmp = icmp slt i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_6(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_6(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], 6
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, 6
+  %addnsw = add nsw i8 %V, -1
+  %cmp = icmp sgt i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_7(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_7(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], -1
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, -1
+  %addnsw = add nsw i8 %V, 3
+  %cmp = icmp sle i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_8(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_8(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], -15
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, -15
+  %addnsw = add nsw i8 %V, 42
+  %cmp = icmp sge i8 %add, %addnsw
   ret i1 %cmp
 }
 
@@ -2766,10 +2802,7 @@ define <4 x i1> @icmp_nsw_vec(<4 x i32> %V) {
 
 define i1 @icmp_nsw_3(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_3(
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD5_2:%.*]] = add nsw i32 [[V]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD5_2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add5 = add i32 %V, 5
   %add5_2 = add nsw i32 %V, 5
@@ -2844,10 +2877,7 @@ define i1 @icmp_nsw_9(i32 %V1, i32 %V2) {
 
 define i1 @icmp_nsw_10(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_10(
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD6]], [[ADD5]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add5 = add i32 %V, 5
   %add6 = add nsw i32 %V, 6
@@ -2865,6 +2895,36 @@ define i1 @icmp_nsw_11(i32 %V) {
   %add5 = add i32 %V, -125
   %add6 = add nsw i32 %V, -99
   %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_12(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_12(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, 2
+  %add6 = add nsw i32 %V, 3
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_13(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_13(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, 7
+  %add6 = add nsw i32 %V, 10
+  %cmp = icmp sle i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_14(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_14(
+; CHECK-NEXT:    ret i1 false
+;
+  %add5 = add i32 %V, 7
+  %add6 = add nsw i32 %V, 10
+  %cmp = icmp sge i32 %add5, %add6
   ret i1 %cmp
 }
 
@@ -2887,6 +2947,36 @@ define i1 @icmp_nsw_nonpos2(i32 %V) {
   %add5 = add i32 %V, 1
   %add6 = add nsw i32 %V, 0
   %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos3(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos3(
+; CHECK-NEXT:    ret i1 false
+;
+  %add5 = add i32 %V, -2
+  %add6 = add nsw i32 %V, -5
+  %cmp = icmp sle i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos4(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos4(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, -10
+  %add6 = add nsw i32 %V, -30
+  %cmp = icmp sgt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos5(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos5(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, -15
+  %add6 = add nsw i32 %V, -100
+  %cmp = icmp sge i32 %add5, %add6
   ret i1 %cmp
 }
 
@@ -3489,5 +3579,187 @@ declare i64 @llvm.vscale.i64()
 
 ; TODO: Add coverage for global aliases, link once, etc..
 
+; Test dereferenceable(N) arguments when folding pointer equalities.
+
+define i1 @icmp_eq_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_ne_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_ne_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 true
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp ne ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_null_valid_and_alloca(ptr dereferenceable(24) %p) null_pointer_is_valid {
+; CHECK-LABEL: @icmp_eq_arg_derefable_null_valid_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 8
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_negative_offset(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_negative_offset(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 -8
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+%struct.S = type { [3 x double] }
+
+define i1 @icmp_eq_arg_derefable_and_byval_arg(ptr byval(%struct.S) %p, ptr dereferenceable(24) %q) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_byval_arg(
+; CHECK-NEXT:    ret i1 false
+;
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+; Negative tests.
+
+define i1 @icmp_eq_no_arg_derefable(ptr %p) {
+; CHECK-LABEL: @icmp_eq_no_arg_derefable(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_past_one(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_past_one(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 24
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 24
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+; %p2 = %p - 32 may equal %q if %p happens to point just past the alloca.
+define i1 @icmp_eq_gep_of_arg_derefable_negative_offset_2(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_negative_offset_2(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 -32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 -32
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_alloca_past_one(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_alloca_past_one(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [10 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i8, ptr [[Q]], i64 80
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [10 x double], align 8
+  call void @escape(ptr %q)
+  %q2 = getelementptr i8, ptr %q, i64 80
+  %c  = icmp eq ptr %p, %q2
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_alloca_negative_offset(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_alloca_negative_offset(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %q2 = getelementptr i8, ptr %q, i64 -8
+  %c  = icmp eq ptr %p, %q2
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_or_null_and_alloca(ptr dereferenceable_or_null(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_or_null_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_two_args_derefable(ptr dereferenceable(24) %p, ptr dereferenceable(24) %q) {
+; CHECK-LABEL: @icmp_eq_two_args_derefable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+@g = global [3 x double] zeroinitializer
+
+define i1 @icmp_eq_arg_derefable_and_global(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_global(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], @g
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp eq ptr %p, @g
+  ret i1 %c
+}
+
+declare void @escape(ptr)
 
 attributes #0 = { null_pointer_is_valid }

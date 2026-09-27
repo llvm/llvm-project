@@ -4,7 +4,7 @@
 
 !CHECK-LABEL: func @_QPlastprivate_iv_inc
 
-!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_incEi"}
+!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlastprivate_iv_incEi"}>
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:      %[[LB:.*]] = arith.constant 4 : i32
@@ -41,7 +41,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate_iv_dec
 
-!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_decEi"}
+!CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlastprivate_iv_decEi"}>
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      %[[LB:.*]] = arith.constant 10 : i32
 !CHECK:      %[[UB:.*]] = arith.constant 1 : i32
@@ -96,7 +96,7 @@ subroutine lastprivate_iv_i1
 end subroutine
 
 !CHECK:    omp.wsloop private(@_QFlastprivate_iv_pointerEi_private_box_ptr_i32 %{{.*}}#0 -> %[[PRIVATE_IV:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
-!CHECK:      omp.loop_nest (%[[LOOP_INDEX:.*]]) : i64 
+!CHECK:      omp.loop_nest (%[[LOOP_INDEX:.*]]) : i64
 !CHECK:        %[[PRIVATE_IV_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFlastprivate_iv_pointerEi"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:        %[[LOOP_INDEX_INCR:.*]] = arith.addi %[[LOOP_INDEX]], %{{.*}} : i64
 !CHECK:        fir.if %{{.*}} {

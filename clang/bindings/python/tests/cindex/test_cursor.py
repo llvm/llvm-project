@@ -1,9 +1,6 @@
-import os
-
 from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
-    Config,
     Cursor,
     CursorKind,
     PrintingPolicy,
@@ -13,13 +10,15 @@ from clang.cindex import (
     TranslationUnit,
     TypeKind,
     conf,
+    cursor_visit_callback,
+    fields_visit_callback,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
+import platform
 import unittest
+from ctypes import c_int, c_long
 
 from .util import get_cursor, get_cursors, get_tu
 
@@ -119,6 +118,15 @@ struct C {
 
 
 class TestCursor(unittest.TestCase):
+    def test_visitor_callback_return_type(self):
+        # On s390x the visitor callbacks must return a full register word so
+        # ctypes writes a fully extended return register; a narrow c_int leaves
+        # the high bytes uninitialized and libclang faults with SIGFPE.
+        # Works around https://github.com/python/cpython/issues/156933.
+        expected = c_long if platform.machine() == "s390x" else c_int
+        self.assertEqual(cursor_visit_callback._restype_, expected)
+        self.assertEqual(fields_visit_callback._restype_, expected)
+
     def test_get_children(self):
         tu = get_tu(CHILDREN_TEST)
 
@@ -710,6 +718,23 @@ int add(float a, float b) { return a + b; }
         self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
         self.assertEqual(ham.enum_value, 200)
 
+    def test_enum_values_bool(self):
+        tu = get_tu("enum ON : bool { NO = false, YES = true };", lang="cpp")
+        enum = get_cursor(tu, "ON")
+        self.assertIsNotNone(enum)
+
+        self.assertEqual(enum.kind, CursorKind.ENUM_DECL)
+
+        enum_constants = list(enum.get_children())
+        self.assertEqual(len(enum_constants), 2)
+
+        no, yes = enum_constants
+
+        self.assertEqual(no.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(no.enum_value, 0)
+        self.assertEqual(yes.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(yes.enum_value, 1)
+
     def test_annotation_attribute(self):
         tu = get_tu(
             'int foo (void) __attribute__ ((annotate("here be annotation attribute")));'
@@ -783,6 +808,21 @@ int count(int a, int b){
         self.assertEqual(cursor.storage_class, StorageClass.STATIC)
         cursor = get_cursor(tu, "reg")
         self.assertEqual(cursor.storage_class, StorageClass.REGISTER)
+
+    def test_function_inlined(self):
+        tu = get_tu(
+            """
+inline void f_inline(void);
+void f_noninline(void);
+int d_noninline;
+"""
+        )
+        cursor = get_cursor(tu, "f_inline")
+        self.assertEqual(cursor.is_function_inlined(), True)
+        cursor = get_cursor(tu, "f_noninline")
+        self.assertEqual(cursor.is_function_inlined(), False)
+        cursor = get_cursor(tu, "d_noninline")
+        self.assertEqual(cursor.is_function_inlined(), False)
 
     def test_availability(self):
         tu = get_tu("class A { A(A const&) = delete; };", lang="cpp")

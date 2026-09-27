@@ -77,25 +77,30 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
   if (in.empty())
     return loc->emitError("name of ") << label << " is empty";
 
-  bool allowUnderscore = false;
-  for (auto &elem : in) {
+  char prev = '_'; // treat the initial as _ to eliminate leading underscores
+  for (const auto &elem : in) {
     if (elem == '_') {
-      if (!allowUnderscore)
+      if (prev == '_')
         return loc->emitError("name of ")
                << label << " should not contain leading or double underscores";
     } else {
-      if (!isalnum(elem))
-        return loc->emitError("name of ")
-               << label
-               << " must contain only lowercase letters, digits and "
-                  "underscores";
+      if (elem == '.') {
+        if (prev == '.')
+          return loc->emitError("empty namespace not allowed");
+      } else {
+        if (!isalnum(elem))
+          return loc->emitError("name of ")
+                 << label
+                 << " must contain only lowercase letters, digits and "
+                    "underscores";
 
-      if (llvm::isUpper(elem))
-        return loc->emitError("name of ")
-               << label << " should not contain uppercase letters";
+        if (llvm::isUpper(elem))
+          return loc->emitError("name of ")
+                 << label << " should not contain uppercase letters";
+      }
     }
 
-    allowUnderscore = elem != '_';
+    prev = elem;
   }
 
   return success();
@@ -116,14 +121,14 @@ LogicalResult OperationOp::verify() {
 
 LogicalResult TypeOp::verify() {
   auto symName = getSymName();
-  if (symName.front() == '!')
+  if (!symName.empty() && symName.front() == '!')
     symName = symName.substr(1);
   return isValidName(symName, getOperation(), "type");
 }
 
 LogicalResult AttributeOp::verify() {
   auto symName = getSymName();
-  if (symName.front() == '#')
+  if (!symName.empty() && symName.front() == '#')
     symName = symName.substr(1);
   return isValidName(symName, getOperation(), "attribute");
 }
@@ -143,12 +148,9 @@ LogicalResult OperationOp::verifyRegions() {
 
   for (Operation &op : getBody().getOps()) {
     TypeSwitch<Operation *>(&op)
-        .Case<OperandsOp>(
-            [&](OperandsOp op) { insertNames("operands", op.getNames()); })
-        .Case<ResultsOp>(
-            [&](ResultsOp op) { insertNames("results", op.getNames()); })
-        .Case<RegionsOp>(
-            [&](RegionsOp op) { insertNames("regions", op.getNames()); });
+        .Case([&](OperandsOp op) { insertNames("operands", op.getNames()); })
+        .Case([&](ResultsOp op) { insertNames("results", op.getNames()); })
+        .Case([&](RegionsOp op) { insertNames("regions", op.getNames()); });
   }
 
   // Verify that no two operand, result or region share the same name.

@@ -16,6 +16,7 @@
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
+#include "kmp_device_env.h"
 #include "kmp_environment.h"
 #include "kmp_i18n.h"
 #include "kmp_io.h"
@@ -23,6 +24,7 @@
 #include "kmp_lock.h"
 #include "kmp_settings.h"
 #include "kmp_str.h"
+#include "kmp_traits.h"
 #include "kmp_wrapper_getpid.h"
 #include <ctype.h> // toupper()
 #if OMPD_SUPPORT
@@ -807,6 +809,7 @@ static void __kmp_stg_print_inherit_fp_control(kmp_str_buf_t *buffer,
 
 // Used for OMP_WAIT_POLICY
 static char const *blocktime_str = NULL;
+static char const *use_yield_str = NULL;
 
 // -----------------------------------------------------------------------------
 // KMP_LIBRARY, OMP_WAIT_POLICY
@@ -828,6 +831,10 @@ static void __kmp_stg_parse_wait_policy(char const *name, char const *value,
       if (blocktime_str == NULL) {
         // KMP_BLOCKTIME not specified, so set default to "infinite".
         __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
+      }
+      if (use_yield_str == NULL) {
+        // KMP_USE_YIELD not specified, so set default to 2.
+        __kmp_use_yield = 2;
       }
     } else if (__kmp_str_match("PASSIVE", 1, value)) {
       __kmp_library = library_throughput;
@@ -1069,10 +1076,10 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
 static void __kmp_stg_parse_nesting_mode(char const *name, char const *value,
                                          void *data) {
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_nesting_mode);
-#if KMP_AFFINITY_SUPPORTED && KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   if (__kmp_nesting_mode > 0)
     __kmp_affinity_top_method = affinity_top_method_hwloc;
-#endif
+#endif // KMP_HWLOC_ENABLED
 } // __kmp_stg_parse_nesting_mode
 
 static void __kmp_stg_print_nesting_mode(kmp_str_buf_t *buffer,
@@ -1266,7 +1273,7 @@ static void __kmp_stg_parse_num_threads(char const *name, char const *value,
   K_DIAG(1, ("__kmp_dflt_team_nth == %d\n", __kmp_dflt_team_nth));
 } // __kmp_stg_parse_num_threads
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
 static void __kmp_stg_parse_max_tdgs(char const *name, char const *value,
                                      void *data) {
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_max_tdgs);
@@ -1415,8 +1422,8 @@ static void __kmp_stg_print_max_active_levels(kmp_str_buf_t *buffer,
 // OpenMP 4.0: OMP_DEFAULT_DEVICE
 static void __kmp_stg_parse_default_device(char const *name, char const *value,
                                            void *data) {
-  __kmp_stg_parse_int(name, value, 0, KMP_MAX_DEFAULT_DEVICE_LIMIT,
-                      &__kmp_default_device);
+  __kmp_default_device = kmp_trait_context::parse_single_device(
+      value, /*device_num_min=*/0, KMP_MAX_DEFAULT_DEVICE_LIMIT, name);
 } // __kmp_stg_parse_default_device
 
 static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer,
@@ -3301,11 +3308,11 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
   if (__kmp_str_match("all", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_all;
   }
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   else if (__kmp_str_match("hwloc", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_hwloc;
   }
-#endif
+#endif // KMP_HWLOC_ENABLED
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   else if (__kmp_str_match("cpuid_leaf31", 12, value) ||
            __kmp_str_match("cpuid 1f", 8, value) ||
@@ -3409,11 +3416,11 @@ static void __kmp_stg_print_topology_method(kmp_str_buf_t *buffer,
     break;
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   case affinity_top_method_hwloc:
     value = "hwloc";
     break;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
   case affinity_top_method_cpuinfo:
     value = "cpuinfo";
@@ -5742,7 +5749,7 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"LIBOMP_NUM_HIDDEN_HELPER_THREADS",
      __kmp_stg_parse_num_hidden_helper_threads,
      __kmp_stg_print_num_hidden_helper_threads, NULL, 0, 0},
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
     {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
@@ -6083,12 +6090,32 @@ static void __kmp_print_affinity_settings(const kmp_affinity_t *affinity) {
 }
 #endif
 
+// If `base_name` is on the device-scope eligible list, return the value of
+// `<base_name>_ALL` from `block` (or NULL). Returns NULL for non-eligible
+// names.
+static char const *__kmp_aux_env_blk_all_fallback(kmp_env_blk_t *block,
+                                                  char const *base_name) {
+  for (int e = 0;; ++e) {
+    char const *base = __kmp_device_env_eligible_name(e);
+    if (base == NULL)
+      return NULL;
+    if (strcmp(base, base_name) != 0)
+      continue;
+    char *all_name = __kmp_str_format("%s_ALL", base_name);
+    char const *value = __kmp_env_blk_var(block, all_name);
+    __kmp_str_free(&all_name);
+    return value;
+  }
+}
+
 static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
 
   char const *value;
 
   /* OMP_NUM_THREADS */
   value = __kmp_env_blk_var(block, "OMP_NUM_THREADS");
+  if (value == NULL)
+    value = __kmp_aux_env_blk_all_fallback(block, "OMP_NUM_THREADS");
   if (value) {
     ompc_set_num_threads(__kmp_dflt_team_nth);
   }
@@ -6133,22 +6160,10 @@ void __kmp_env_initialize(char const *string) {
   }
   __kmp_env_blk_init(&block, string);
 
-  // update the set flag on all entries that have an env var
-  for (i = 0; i < block.count; ++i) {
-    if ((block.vars[i].name == NULL) || (*block.vars[i].name == '\0')) {
-      continue;
-    }
-    if (block.vars[i].value == NULL) {
-      continue;
-    }
-    kmp_setting_t *setting = __kmp_stg_find(block.vars[i].name);
-    if (setting != NULL) {
-      setting->set = 1;
-    }
-  }
-
-  // We need to know if blocktime was set when processing OMP_WAIT_POLICY
+  // We need to know if blocktime and use_yield were set when processing
+  // OMP_WAIT_POLICY
   blocktime_str = __kmp_env_blk_var(&block, "KMP_BLOCKTIME");
+  use_yield_str = __kmp_env_blk_var(&block, "KMP_USE_YIELD");
 
   // Special case. If we parse environment, not a string, process KMP_WARNINGS
   // first.
@@ -6215,6 +6230,25 @@ void __kmp_env_initialize(char const *string) {
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
+  // Deliberately placed AFTER the KMP_WARNINGS special case above so that any
+  // warnings the pre-pass emits (MalformedDeviceEnvVar /
+  // DeviceEnvVarOnGlobalScope) honour the user-requested warning level.
+  for (i = 0; i < block.count; ++i) {
+    if ((block.vars[i].name == NULL) || (*block.vars[i].name == '\0')) {
+      continue;
+    }
+    if (block.vars[i].value == NULL) {
+      continue;
+    }
+    if (__kmp_device_env_record(block.vars[i].name, block.vars[i].value))
+      continue;
+
+    kmp_setting_t *setting = __kmp_stg_find(block.vars[i].name);
+    if (setting != NULL) {
+      setting->set = 1;
+    }
+  }
+
   // Set up the nested proc bind type vector.
   if (__kmp_nested_proc_bind.bind_types == NULL) {
     __kmp_nested_proc_bind.bind_types =
@@ -6250,6 +6284,23 @@ void __kmp_env_initialize(char const *string) {
     __kmp_stg_parse(block.vars[i].name, block.vars[i].value);
   }
 
+  // Device-scope env-var post-pass: when the current block has `<ENV>_ALL` but
+  // no unsuffixed `<ENV>`, replay `_ALL` so the host ICV picks it up. We query
+  // the block (not the registry) so an unrelated kmp_set_defaults does not
+  // accidentally replay a stale `_ALL`.
+  for (int e = 0;; ++e) {
+    char const *base = __kmp_device_env_eligible_name(e);
+    if (base == NULL)
+      break;
+    if (__kmp_env_blk_var(&block, base) != NULL)
+      continue;
+    char *all_name = __kmp_str_format("%s_ALL", base);
+    char const *all_v = __kmp_env_blk_var(&block, all_name);
+    __kmp_str_free(&all_name);
+    if (all_v != NULL)
+      __kmp_stg_parse(base, all_v);
+  }
+
   // If user locks have been allocated yet, don't reset the lock vptr table.
   if (!__kmp_init_user_locks) {
     if (__kmp_user_lock_kind == lk_default) {
@@ -6277,7 +6328,7 @@ void __kmp_env_initialize(char const *string) {
 #if KMP_AFFINITY_SUPPORTED
 
   if (!TCR_4(__kmp_init_middle)) {
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     // Force using hwloc when either tiles or numa nodes requested within
     // KMP_HW_SUBSET or granularity setting and no other topology method
     // is requested
@@ -6292,12 +6343,12 @@ void __kmp_env_initialize(char const *string) {
     if (__kmp_affinity.gran == KMP_HW_NUMA ||
         __kmp_affinity.gran == KMP_HW_TILE)
       __kmp_affinity_top_method = affinity_top_method_hwloc;
-#endif
+#endif // KMP_HWLOC_ENABLED
     // Determine if the machine/OS is actually capable of supporting
     // affinity.
     const char *var = "KMP_AFFINITY";
     KMPAffinity::pick_api();
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     // If Hwloc topology discovery was requested but affinity was also disabled,
     // then tell user that Hwloc request is being ignored and use default
     // topology discovery method.
@@ -6306,7 +6357,7 @@ void __kmp_env_initialize(char const *string) {
       KMP_WARNING(AffIgnoringHwloc, var);
       __kmp_affinity_top_method = affinity_top_method_all;
     }
-#endif
+#endif // KMP_HWLOC_ENABLED
     if (__kmp_affinity.type == affinity_disabled) {
       KMP_AFFINITY_DISABLE();
     } else if (!KMP_AFFINITY_CAPABLE()) {

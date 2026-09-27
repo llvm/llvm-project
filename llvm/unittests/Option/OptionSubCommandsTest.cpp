@@ -31,34 +31,13 @@ enum ID {
 #include "SubCommandOpts.inc"
 #undef OPTION
 };
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SubCommandOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SubCommandOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
-#include "SubCommandOpts.inc"
-#undef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
-
-#define OPTTABLE_SUBCOMMANDS_CODE
-#include "SubCommandOpts.inc"
-#undef OPTTABLE_SUBCOMMANDS_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SubCommandOpts.inc"
-#undef OPTION
-};
-
-class TestOptSubCommandTable : public GenericOptTable {
+class TestOptSubCommandTable : public OptTable {
 public:
   TestOptSubCommandTable(bool IgnoreCase = false)
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        /*IgnoreCase=*/false, OptionSubCommands,
-                        OptionSubCommandIDsTable) {}
+      : OptTable(optionTables(), IgnoreCase) {}
 };
 
 // Test fixture
@@ -191,6 +170,19 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     EXPECT_NE(
         std::string::npos,
         ErrMsg.find("Option [lowercase] is not valid for SubCommand [bar]"));
+  }
+
+  {
+    // Test case 7: Check valid use of a valid subcommand following more
+    // positional arguments.
+    const char *Args[] = {"bar", "input"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    EXPECT_EQ(SC, "bar"); // valid subcommand
+    EXPECT_NE(std::string::npos,
+              ErrMsg.find("Unregistered positionals passed"));
+    EXPECT_NE(std::string::npos, ErrMsg.find("input"));
   }
 }
 

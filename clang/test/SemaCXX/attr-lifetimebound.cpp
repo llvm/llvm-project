@@ -75,6 +75,27 @@ namespace usage_ok {
     r = A(1); // expected-warning {{object backing the pointer 'r' will be destroyed at the end of the full-expression}}
   }
 
+  // Test that lifetimebound on implicit 'this' is propagated across redeclarations
+  struct B {
+    int *method() [[clang::lifetimebound]];
+    int i;
+  };
+  int *B::method() { return &i; }
+
+  // Test that lifetimebound on implicit 'this' is propagated across redeclarations
+  struct C {
+    int *method();
+    int i;
+  };
+  int *C::method() [[clang::lifetimebound]] { return &i; }
+
+  void test_lifetimebound_on_implicit_this() {
+    int *t = B().method();  // expected-warning {{temporary whose address is used as value of local variable 't' will be destroyed at the end of the full-expression}}
+    t = {B().method()};     // expected-warning {{object backing the pointer 't' will be destroyed at the end of the full-expression}}
+    t = C().method();       // expected-warning {{object backing the pointer 't' will be destroyed at the end of the full-expression}}
+    t = {C().method()};     // expected-warning {{object backing the pointer 't' will be destroyed at the end of the full-expression}}
+  }
+
   struct FieldCheck {
     struct Set {
       int a;

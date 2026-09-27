@@ -1,4 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: warning: Character in fixed-form label field should be a digit
 ! CHECK: res = IFLM
 ! CHECK: (666)
 ! CHECK-NOT: res = ((666)+111)

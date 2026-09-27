@@ -84,8 +84,8 @@ static void test_c() {
              cr::duration<short, std::ratio<1, 2>>{3600}}) == SV("1958-01-01 00:30:00.0"));
   assert(stream_c_locale<CharT>(cr::tai_time<cr::duration<int, std::ratio<1, 4>>>{
              cr::duration<int, std::ratio<1, 4>>{3600}}) == SV("1958-01-01 00:15:00.00"));
-  assert(stream_c_locale<CharT>(cr::tai_time<cr::duration<long, std::ratio<1, 10>>>{
-             cr::duration<long, std::ratio<1, 10>>{36611}}) == SV("1958-01-01 01:01:01.1"));
+  assert(stream_c_locale<CharT>(cr::tai_time<cr::duration<long long, std::ratio<1, 10>>>{
+             cr::duration<long long, std::ratio<1, 10>>{36611}}) == SV("1958-01-01 01:01:01.1"));
   assert(stream_c_locale<CharT>(cr::tai_time<cr::duration<long long, std::ratio<1, 100>>>{
              cr::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("1997-02-13 23:31:30.10"));
 }
@@ -112,8 +112,8 @@ static void test_fr_FR() {
              cr::duration<short, std::ratio<1, 2>>{3600}}) == SV("1958-01-01 00:30:00,0"));
   assert(stream_fr_FR_locale<CharT>(cr::tai_time<cr::duration<int, std::ratio<1, 4>>>{
              cr::duration<int, std::ratio<1, 4>>{3600}}) == SV("1958-01-01 00:15:00,00"));
-  assert(stream_fr_FR_locale<CharT>(cr::tai_time<cr::duration<long, std::ratio<1, 10>>>{
-             cr::duration<long, std::ratio<1, 10>>{36611}}) == SV("1958-01-01 01:01:01,1"));
+  assert(stream_fr_FR_locale<CharT>(cr::tai_time<cr::duration<long long, std::ratio<1, 10>>>{
+             cr::duration<long long, std::ratio<1, 10>>{36611}}) == SV("1958-01-01 01:01:01,1"));
   assert(stream_fr_FR_locale<CharT>(cr::tai_time<cr::duration<long long, std::ratio<1, 100>>>{
              cr::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("1997-02-13 23:31:30,10"));
 }
@@ -140,8 +140,8 @@ static void test_ja_JP() {
              cr::duration<short, std::ratio<1, 2>>{3600}}) == SV("1958-01-01 00:30:00.0"));
   assert(stream_ja_JP_locale<CharT>(cr::tai_time<cr::duration<int, std::ratio<1, 4>>>{
              cr::duration<int, std::ratio<1, 4>>{3600}}) == SV("1958-01-01 00:15:00.00"));
-  assert(stream_ja_JP_locale<CharT>(cr::tai_time<cr::duration<long, std::ratio<1, 10>>>{
-             cr::duration<long, std::ratio<1, 10>>{36611}}) == SV("1958-01-01 01:01:01.1"));
+  assert(stream_ja_JP_locale<CharT>(cr::tai_time<cr::duration<long long, std::ratio<1, 10>>>{
+             cr::duration<long long, std::ratio<1, 10>>{36611}}) == SV("1958-01-01 01:01:01.1"));
   assert(stream_ja_JP_locale<CharT>(cr::tai_time<cr::duration<long long, std::ratio<1, 100>>>{
              cr::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("1997-02-13 23:31:30.10"));
 }

@@ -10,10 +10,9 @@
 #define _LIBCPP___ALGORITHM_UNWRAP_RANGE_H
 
 #include <__algorithm/unwrap_iter.h>
-#include <__concepts/constructible.h>
 #include <__config>
 #include <__iterator/concepts.h>
-#include <__iterator/next.h>
+#include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -33,52 +32,24 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Iter, class _Sent>
-struct __unwrap_range_impl {
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __unwrap(_Iter __first, _Sent __sent)
-    requires random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>
-  {
-    auto __last = ranges::next(__first, __sent);
-    return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last))};
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __unwrap(_Iter __first, _Sent __last) {
-    return pair{std::move(__first), std::move(__last)};
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  __rewrap(_Iter __orig_iter, decltype(std::__unwrap_iter(std::move(__orig_iter))) __iter)
-    requires random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>
-  {
-    return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __rewrap(const _Iter&, _Iter __iter)
-    requires(!(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>))
-  {
-    return __iter;
-  }
-};
-
-template <class _Iter>
-struct __unwrap_range_impl<_Iter, _Iter> {
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __unwrap(_Iter __first, _Iter __last) {
-    return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last))};
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  __rewrap(_Iter __orig_iter, decltype(std::__unwrap_iter(__orig_iter)) __iter) {
-    return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
-  }
-};
-
-template <class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __unwrap_range(_Iter __first, _Sent __last) {
-  return __unwrap_range_impl<_Iter, _Sent>::__unwrap(std::move(__first), std::move(__last));
+  if constexpr (is_same_v<_Iter, _Sent>)
+    return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last))};
+  else if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
+    auto __iter_last = __first + (__last - __first);
+    return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__iter_last))};
+  } else
+    return pair{std::move(__first), std::move(__last)};
 }
 
 template < class _Sent, class _Iter, class _Unwrapped>
 _LIBCPP_HIDE_FROM_ABI constexpr _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
-  return __unwrap_range_impl<_Iter, _Sent>::__rewrap(std::move(__orig_iter), std::move(__iter));
+  if constexpr (is_same_v<_Iter, _Sent>)
+    return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
+  else if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>)
+    return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
+  else
+    return __iter;
 }
 #else  // _LIBCPP_STD_VER >= 20
 template <class _Iter, class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>()))>

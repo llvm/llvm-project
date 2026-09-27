@@ -1580,10 +1580,10 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        smaxp	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     1.00                        smaxp	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      3     1.00                        smin	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      4     1.00                        smin	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     1.00                        smin	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     1.00                        smin	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        sminp	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      4     1.00                        sminp	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     1.00                        sminp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     1.00                        sminp	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     1.00                        smlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        smlal	v0.4s, v0.4h, v0.4h
@@ -1939,10 +1939,10 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        uhadd	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        uhsub	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     1.00                        umax	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      4     1.00                        umax	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     1.00                        umax	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     1.00                        umax	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        umaxp	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      4     1.00                        umaxp	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     1.00                        umaxp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     1.00                        umaxp	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     1.00                        umin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     1.00                        umin	v0.4h, v0.4h, v0.4h

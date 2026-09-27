@@ -16,42 +16,26 @@
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
 ; RUN:     -passes='loop(no-op-loop,loop-deletion),invalidate<scalar-evolution>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SCEV-INV-AFTER-DELETE
-;
-; Test that BFI is invalidated after the loop adapter if any of the loop passes
-; invalidated it.
-; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
-; RUN:     -O1 | FileCheck %s --check-prefix=CHECK-BFI-INV
 
+; The loop pass manager only needs LoopAnalysis for a function without loops;
+; it skips the loop canonicalization passes entirely.
 define void @no_loops() {
-; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
-; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Running analysis: DominatorTreeAnalysis
-; CHECK-LOOP-INV-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-LOOP-INV-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-LOOP-INV-NEXT: Running pass: LCSSAPass
+; CHECK-LOOP-INV: Running analysis: LoopAnalysis on no_loops
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Running pass: LCSSAPass
+; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ;
-; CHECK-SCEV-INV: Running pass: LoopSimplifyPass
-; CHECK-SCEV-INV-NEXT: Running analysis: LoopAnalysis
-; CHECK-SCEV-INV-NEXT: Running analysis: DominatorTreeAnalysis
-; CHECK-SCEV-INV-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-SCEV-INV-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-SCEV-INV-NEXT: Running pass: LCSSAPass
+; CHECK-SCEV-INV: Running analysis: LoopAnalysis on no_loops
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
-; CHECK-SCEV-INV-NEXT: Running pass: LoopSimplifyPass
-; CHECK-SCEV-INV-NEXT: Running pass: LCSSAPass
 
 entry:
   ret void
 }
 
 define void @one_loop(ptr %ptr) {
-; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
-; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-LOOP-INV: Running analysis: LoopAnalysis on one_loop
+; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: TargetIRAnalysis
@@ -66,15 +50,15 @@ define void @one_loop(ptr %ptr) {
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
-; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running pass: LCSSAPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ;
+; CHECK-SCEV-INV-NEXT: Running analysis: LoopAnalysis on one_loop
 ; CHECK-SCEV-INV-NEXT: Running pass: LoopSimplifyPass
-; CHECK-SCEV-INV-NEXT: Running analysis: LoopAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: TargetIRAnalysis
@@ -106,8 +90,8 @@ exit:
 }
 
 define void @nested_loops(ptr %ptr) {
-; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
-; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-LOOP-INV: Running analysis: LoopAnalysis on nested_loops
+; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: TargetIRAnalysis
@@ -124,16 +108,16 @@ define void @nested_loops(ptr %ptr) {
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
-; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running pass: LCSSAPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ;
-; CHECK-SCEV-INV: Running pass: LoopSimplifyPass
-; CHECK-SCEV-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-SCEV-INV: Running analysis: LoopAnalysis on nested_loops
+; CHECK-SCEV-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-SCEV-INV-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: TargetIRAnalysis
@@ -175,8 +159,8 @@ exit:
 }
 
 define void @dead_loop() {
-; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
-; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-LOOP-INV: Running analysis: LoopAnalysis on dead_loop
+; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: TargetIRAnalysis
@@ -191,15 +175,15 @@ define void @dead_loop() {
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
-; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running pass: LCSSAPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ;
-; CHECK-SCEV-INV: Running pass: LoopSimplifyPass
-; CHECK-SCEV-INV-NEXT: Running analysis: LoopAnalysis
+; CHECK-SCEV-INV: Running analysis: LoopAnalysis on dead_loop
+; CHECK-SCEV-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-SCEV-INV-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-SCEV-INV-NEXT: Running analysis: TargetIRAnalysis
@@ -220,7 +204,6 @@ define void @dead_loop() {
 ; CHECK-SCEV-INV-NEXT: Running pass: NoOpLoopPass
 ;
 ; CHECK-SCEV-INV-AFTER-DELETE-LABEL: Running pass: LoopSimplifyPass on dead_loop
-; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running analysis: LoopAnalysis
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running analysis: TargetIRAnalysis
@@ -235,8 +218,9 @@ define void @dead_loop() {
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
-; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running pass: LoopSimplifyPass
-; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running pass: LCSSAPass
+; The loop has been deleted, so the second loop pass manager sees a loop-free
+; function and skips the canonicalization passes.
+; CHECK-SCEV-INV-AFTER-DELETE-NOT: Running pass:
 
 entry:
   br label %l0.header
@@ -247,28 +231,3 @@ l0.header:
 exit:
   ret void
 }
-
-; CHECK-BFI-INV-LABEL: Running analysis: OuterAnalysisManagerProxy<{{.*}}> on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LoopInstSimplifyPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LoopSimplifyCFGPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LICMPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LoopRotatePass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LICMPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: SimpleLoopUnswitchPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on simplifiable_loop
-; CHECK-BFI-INV-NEXT: Invalidating analysis: BranchProbabilityAnalysis on simplifiable_loop
-; CHECK-BFI-INV-NEXT: Invalidating analysis: BlockFrequencyAnalysis on simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: SimplifyCFGPass on simplifiable_loop (5 instructions)
-
-define void @simplifiable_loop(i1 %c) !prof !0 {
-entry:
-  br label %l0.header
-
-l0.header:
-  br label %l0.latch
-
-l0.latch:
-  br i1 %c, label %l0.header, label %l0.latch
-}
-
-!0 = !{!"function_entry_count", i64 1}

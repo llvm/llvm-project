@@ -23,8 +23,8 @@ struct EAttr {
   unsigned EA;
 };
 typedef Graph<VAttr, EAttr, unsigned> GraphT;
-typedef typename GraphT::VertexIdentifier VI;
-typedef typename GraphT::EdgeIdentifier EI;
+typedef GraphT::VertexIdentifier VI;
+typedef GraphT::EdgeIdentifier EI;
 
 // Test Fixture
 template <typename T> class GraphTest : public testing::Test {
@@ -56,8 +56,8 @@ private:
 
 typedef ::testing::Types<GraphT, const GraphT> GraphTestTypes;
 
-using VVT = typename GraphT::VertexValueType;
-using EVT = typename GraphT::EdgeValueType;
+using VVT = GraphT::VertexValueType;
+using EVT = GraphT::EdgeValueType;
 
 TYPED_TEST_SUITE(GraphTest, GraphTestTypes, );
 

@@ -47,11 +47,6 @@ public:
     Primary->EndSourceFile();
   }
 
-  void finish() override {
-    Secondary->finish();
-    Primary->finish();
-  }
-
   bool IncludeInDiagnosticCounts() const override {
     return Primary->IncludeInDiagnosticCounts();
   }
@@ -66,6 +61,6 @@ public:
   }
 };
 
-} // end namspace clang
+} // namespace clang
 
 #endif

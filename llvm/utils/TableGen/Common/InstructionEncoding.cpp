@@ -35,9 +35,6 @@ InstructionEncoding::findOperandDecoderMethod(const Record *Record) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
   } else if (Record->isSubClassOf("RegClassByHwMode")) {
     Decoder = "Decode" + Record->getName().str() + "RegClassByHwMode";
-  } else if (Record->isSubClassOf("PointerLikeRegClass")) {
-    Decoder = "DecodePointerLikeRegClass" +
-              utostr(Record->getValueAsInt("RegClassKind"));
   }
 
   return {Decoder, true};
@@ -208,7 +205,8 @@ void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
     if (!OpName.empty()) {
       auto OpSubOpPair = Inst->Operands.parseOperandName(OpName);
       unsigned OpIdx = Inst->Operands.getFlattenedOperandNumber(OpSubOpPair);
-      Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
+      Operands[OpIdx].Fields.emplace_back(CurrBitPos, EncodingSegment.BitWidth,
+                                          Offset);
       if (!EncodingSegment.CustomDecoder.empty())
         Operands[OpIdx].Decoder = EncodingSegment.CustomDecoder.str();
 
@@ -216,7 +214,8 @@ void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
       if (TiedReg != -1) {
         unsigned OpIdx = Inst->Operands.getFlattenedOperandNumber(
             {TiedReg, OpSubOpPair.second});
-        Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
+        Operands[OpIdx].Fields.emplace_back(CurrBitPos,
+                                            EncodingSegment.BitWidth, Offset);
       }
     }
 
@@ -314,10 +313,10 @@ static void addOneOperandFields(const Record *EncodingDef,
     if (I == J)
       ++J;
     else
-      OpInfo.addField(I, J - I, Offset);
+      OpInfo.Fields.emplace_back(I, J - I, Offset);
   }
 
-  if (!OpInfo.InitValue && OpInfo.fields().empty()) {
+  if (!OpInfo.InitValue && OpInfo.Fields.empty()) {
     // We found a field in InstructionEncoding record that corresponds to the
     // named operand, but that field has no constant bits and doesn't contribute
     // to the Inst field. For now, treat that field as if it didn't exist.

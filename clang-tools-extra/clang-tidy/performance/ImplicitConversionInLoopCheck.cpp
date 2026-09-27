@@ -87,8 +87,8 @@ void ImplicitConversionInLoopCheck::reportAndFix(const ASTContext *Context,
                                                  const Expr *OperatorCall) {
   // We only match on const ref, so we should print a const ref version of the
   // type.
-  QualType ConstType = OperatorCall->getType().withConst();
-  QualType ConstRefType = Context->getLValueReferenceType(ConstType);
+  const QualType ConstType = OperatorCall->getType().withConst();
+  const QualType ConstRefType = Context->getLValueReferenceType(ConstType);
   const char Message[] =
       "the type of the loop variable %0 is different from the one returned "
       "by the iterator and generates an implicit conversion; you can either "

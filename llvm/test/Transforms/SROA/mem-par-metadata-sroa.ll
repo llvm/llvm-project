@@ -33,7 +33,6 @@
 ;     }
 ; }
 
-
 ; ModuleID = '<stdin>'
 source_filename = "mem-par-metadata-sroa1.cpp"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -42,7 +41,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.Complex = type { float, float }
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @_Z4testP7Complexl(ptr nocapture %out, i64 %size) local_unnamed_addr #0 {
+define void @_Z4testP7Complexl(ptr nocapture %out, i64 %size) local_unnamed_addr {
 ; CHECK-LABEL: @_Z4testP7Complexl(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -108,16 +107,13 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
-
-attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 4.0.0 (cfe/trunk 277751)"}
 !1 = distinct !{!1, !2, !{!"llvm.loop.parallel_accesses", !11}}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}
 !3 = !{!4}
 !4 = distinct !{!4, !5, !"_ZNK7ComplexplERKS_: %agg.result"}
 !5 = distinct !{!5, !"_ZNK7ComplexplERKS_"}

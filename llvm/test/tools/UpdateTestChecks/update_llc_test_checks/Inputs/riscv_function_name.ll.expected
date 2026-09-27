@@ -2,12 +2,18 @@
 ; Check that we accept functions with '$' in the name.
 
 ; RUN: llc -mtriple=riscv32-unknown-linux < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32-apple-none-macho < %s | FileCheck %s --check-prefix=MACHO
 
 define hidden i32 @"_Z54bar$ompvariant$bar"() {
 ; CHECK-LABEL: _Z54bar$ompvariant$bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    ret
+;
+; MACHO-LABEL: _Z54bar$ompvariant$bar:
+; MACHO:       ; %bb.0: ; %entry
+; MACHO-NEXT:    li a0, 2
+; MACHO-NEXT:    ret
 entry:
   ret i32 2
 }

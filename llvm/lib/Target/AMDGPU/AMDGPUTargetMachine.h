@@ -27,6 +27,10 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
+namespace AMDGPU {
+StringRef getSchedStrategy(const Function &F);
+}
+
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -36,6 +40,7 @@ protected:
 
 public:
   static bool EnableFunctionCalls;
+  static bool EnableObjectLinking;
   static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -44,7 +49,6 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~AMDGPUTargetMachine() override;
 
-  const TargetSubtargetInfo *getSubtargetImpl() const;
   const TargetSubtargetInfo *
   getSubtargetImpl(const Function &) const override = 0;
 
@@ -54,9 +58,6 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
-
-  /// Get the integer value of a null pointer in the given address space.
-  static int64_t getNullPointerValue(unsigned AddrSpace);
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
@@ -97,13 +98,18 @@ public:
 
   bool useIPRA() const override { return true; }
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
+                             const CGPassBuilderOption &Opts, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
+
+  /// Get xnack/sramecc setting from module flag or cl::opt (for testing).
+  /// Returns Any if not specified.
+  static AMDGPU::TargetIDSetting
+  getTargetIDSettingFromModuleFlag(const Module &M, StringRef FlagName);
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,

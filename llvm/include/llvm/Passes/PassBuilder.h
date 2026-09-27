@@ -99,6 +99,10 @@ public:
   // analyses after various module->function or cgscc->function adaptors in the
   // default pipelines.
   bool EagerlyInvalidateAnalyses;
+
+  // Tuning option to enable/disable speculative devirtualization.
+  // Its default value is false.
+  bool DevirtualizeSpeculatively;
 };
 
 /// This class provides access to building LLVM's passes.
@@ -262,7 +266,8 @@ public:
   /// generated in non-LTO compilation.
   LLVM_ABI ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
                                                         bool ThinLTO,
-                                                        bool EmitSummary);
+                                                        bool EmitSummary,
+                                                        bool Verify = true);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
@@ -546,6 +551,24 @@ public:
     FullLinkTimeOptimizationLastEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for ThinLTO default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the start of the
+  /// thin LTO pipeline.
+  void registerThinLinkTimeOptimizationEarlyEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    ThinLinkTimeOptimizationEarlyEPCallbacks.push_back(C);
+  }
+
+  /// Register a callback for ThinLTO default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the end of the thin
+  /// LTO pipeline.
+  void registerThinLinkTimeOptimizationLastEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    ThinLinkTimeOptimizationLastEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -673,6 +696,12 @@ public:
   LLVM_ABI void
   invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
                                                 OptimizationLevel Level);
+  LLVM_ABI void
+  invokeThinLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
+                                                 OptimizationLevel Level);
+  LLVM_ABI void
+  invokeThinLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
+                                                OptimizationLevel Level);
   LLVM_ABI void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                                OptimizationLevel Level);
   LLVM_ABI void
@@ -742,7 +771,7 @@ private:
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
   void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
-                       bool IsFullLTO);
+                       ThinOrFullLTOPhase LTOPhase);
 
   static std::optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -808,6 +837,10 @@ private:
       FullLinkTimeOptimizationEarlyEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       FullLinkTimeOptimizationLastEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      ThinLinkTimeOptimizationEarlyEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      ThinLinkTimeOptimizationLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
@@ -906,7 +939,7 @@ bool parseAnalysisUtilityPasses(
 // These are special since they are only for testing purposes.
 
 /// No-op module pass which does nothing.
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
+struct NoOpModulePass : OptionalPassInfoMixin<NoOpModulePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -923,7 +956,7 @@ public:
 };
 
 /// No-op CGSCC pass which does nothing.
-struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
+struct NoOpCGSCCPass : OptionalPassInfoMixin<NoOpCGSCCPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
                         LazyCallGraph &, CGSCCUpdateResult &UR) {
     return PreservedAnalyses::all();
@@ -943,7 +976,7 @@ public:
 };
 
 /// No-op function pass which does nothing.
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
+struct NoOpFunctionPass : OptionalPassInfoMixin<NoOpFunctionPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -960,7 +993,7 @@ public:
 };
 
 /// No-op loop nest pass which does nothing.
-struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
+struct NoOpLoopNestPass : OptionalPassInfoMixin<NoOpLoopNestPass> {
   PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -968,7 +1001,7 @@ struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
 };
 
 /// No-op loop pass which does nothing.
-struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
+struct NoOpLoopPass : OptionalPassInfoMixin<NoOpLoopPass> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -976,7 +1009,8 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass
+    : public OptionalPassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -994,8 +1028,26 @@ public:
   }
 };
 
+enum class PrintPipelinePassesFormat {
+  Text,
+  Tree,
+};
+
+struct PrintPipelinePassesFormatParser
+    : public cl::parser<std::optional<PrintPipelinePassesFormat>> {
+  using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
+  LLVM_ABI bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
+                      std::optional<PrintPipelinePassesFormat> &Val);
+};
+
 /// Common option used by multiple tools to print pipeline passes
-LLVM_ABI extern cl::opt<bool> PrintPipelinePasses;
+LLVM_ABI extern cl::opt<std::optional<PrintPipelinePassesFormat>, false,
+                        PrintPipelinePassesFormatParser>
+    PrintPipelinePasses;
+
+LLVM_ABI void printFormattedPipelinePasses(
+    raw_ostream &OS, StringRef Pipeline,
+    PrintPipelinePassesFormat Format = PrintPipelinePassesFormat::Text);
 }
 
 #endif

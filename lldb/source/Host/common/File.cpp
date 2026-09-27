@@ -1,4 +1,4 @@
-//===-- File.cpp ----------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,21 +14,14 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <optional>
-
-#ifdef _WIN32
-#include "lldb/Host/windows/windows.h"
-#else
-#include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <termios.h>
-#include <unistd.h>
-#endif
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "llvm/ADT/StringExtras.h"
@@ -81,18 +74,17 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
 Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
   OpenOptions opts =
       llvm::StringSwitch<OpenOptions>(mode)
-          .Cases("r", "rb", eOpenOptionReadOnly)
-          .Cases("w", "wb", eOpenOptionWriteOnly)
-          .Cases("a", "ab",
-                 eOpenOptionWriteOnly | eOpenOptionAppend |
-                 eOpenOptionCanCreate)
-          .Cases("r+", "rb+", "r+b", eOpenOptionReadWrite)
-          .Cases("w+", "wb+", "w+b",
-                 eOpenOptionReadWrite | eOpenOptionCanCreate |
-                 eOpenOptionTruncate)
-          .Cases("a+", "ab+", "a+b",
-                 eOpenOptionReadWrite | eOpenOptionAppend |
-                     eOpenOptionCanCreate)
+          .Cases({"r", "rb"}, eOpenOptionReadOnly)
+          .Cases({"w", "wb"}, eOpenOptionWriteOnly)
+          .Cases({"a", "ab"}, eOpenOptionWriteOnly | eOpenOptionAppend |
+                                  eOpenOptionCanCreate)
+          .Cases({"r+", "rb+", "r+b"}, eOpenOptionReadWrite)
+          .Cases({"w+", "wb+", "w+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionCanCreate |
+                                           eOpenOptionTruncate)
+          .Cases({"a+", "ab+", "a+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionAppend |
+                                           eOpenOptionCanCreate)
           .Default(eOpenOptionInvalid);
   if (opts != eOpenOptionInvalid)
     return opts;
@@ -159,36 +151,12 @@ Status File::Flush() { return Status(); }
 Status File::Sync() { return Flush(); }
 
 void File::CalculateInteractiveAndTerminal() {
-  const int fd = GetDescriptor();
-  if (!DescriptorIsValid(fd)) {
-    m_is_interactive = eLazyBoolNo;
-    m_is_real_terminal = eLazyBoolNo;
-    m_supports_colors = eLazyBoolNo;
-    return;
-  }
+  // The base class has no descriptor of its own; concrete subclasses probe
+  // the platform.  Default to "not a terminal" so callers see consistent
+  // values when they didn't override.
   m_is_interactive = eLazyBoolNo;
   m_is_real_terminal = eLazyBoolNo;
-#if defined(_WIN32)
-  if (_isatty(fd)) {
-    m_is_interactive = eLazyBoolYes;
-    m_is_real_terminal = eLazyBoolYes;
-#if defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
-    m_supports_colors = eLazyBoolYes;
-#endif
-  }
-#else
-  if (isatty(fd)) {
-    m_is_interactive = eLazyBoolYes;
-    struct winsize window_size;
-    if (::ioctl(fd, TIOCGWINSZ, &window_size) == 0) {
-      if (window_size.ws_col > 0) {
-        m_is_real_terminal = eLazyBoolYes;
-        if (llvm::sys::Process::FileDescriptorHasColors(fd))
-          m_supports_colors = eLazyBoolYes;
-      }
-    }
-  }
-#endif
+  m_supports_colors = eLazyBoolNo;
 }
 
 bool File::GetIsInteractive() {
@@ -248,40 +216,32 @@ uint32_t File::GetPermissions(Status &error) const {
   return file_stats.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
 }
 
-NativeFile::NativeFile() = default;
+NativeFileBase::NativeFileBase() = default;
 
-NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
-    : m_stream(fh), m_own_stream(transfer_ownership) {
-#ifdef _WIN32
-  // In order to properly display non ASCII characters in Windows, we need to
-  // use Windows APIs to print to the console. This is only required if the
-  // stream outputs to a console.
-  int fd = _fileno(fh);
-  is_windows_console =
-      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
-#endif
-}
+NativeFileBase::NativeFileBase(FILE *fh, OpenOptions options,
+                               bool transfer_ownership)
+    : m_stream(fh), m_options(options), m_own_stream(transfer_ownership) {}
 
-NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
+NativeFileBase::NativeFileBase(int fd, OpenOptions options,
+                               bool transfer_ownership)
     : m_descriptor(fd), m_own_descriptor(transfer_ownership),
-      m_options(options) {
-#ifdef _WIN32
-  // In order to properly display non ASCII characters in Windows, we need to
-  // use Windows APIs to print to the console. This is only required if the
-  // file outputs to a console.
-  is_windows_console =
-      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
-#endif
-}
+      m_options(options) {}
 
-bool NativeFile::IsValid() const {
-  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex, m_stream_mutex);
+bool NativeFileBase::IsValid() const {
+  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex,
+                                                m_stream_mutex);
   return DescriptorIsValidUnlocked() || StreamIsValidUnlocked();
 }
 
-Expected<File::OpenOptions> NativeFile::GetOptions() const { return m_options; }
+Expected<File::OpenOptions> NativeFileBase::GetOptions() const {
+  return m_options;
+}
 
-int NativeFile::GetDescriptor() const {
+int NativeFileBase::Fileno(FILE *fh) const { return ::fileno(fh); }
+
+int NativeFileBase::Dup(int fd) const { return ::dup(fd); }
+
+int NativeFileBase::GetDescriptor() const {
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
     return m_descriptor;
   }
@@ -289,62 +249,60 @@ int NativeFile::GetDescriptor() const {
   // Don't open the file descriptor if we don't need to, just get it from the
   // stream if we have one.
   if (ValueGuard stream_guard = StreamIsValid()) {
-#if defined(_WIN32)
-    return _fileno(m_stream);
-#else
-    return fileno(m_stream);
-#endif
+    return Fileno(m_stream);
   }
 
   // Invalid descriptor and invalid stream, return invalid descriptor.
   return kInvalidDescriptor;
 }
 
-IOObject::WaitableHandle NativeFile::GetWaitableHandle() {
-#ifdef _WIN32
-  return (HANDLE)_get_osfhandle(GetDescriptor());
-#else
-  return GetDescriptor();
-#endif
+IOObject::WaitableHandle NativeFileBase::GetWaitableHandle() {
+  // The mapping from descriptor/stream to a poll-able WaitableHandle is
+  // platform-specific (an int on POSIX, a HANDLE on Windows).  Subclasses
+  // override; the base returns the portable invalid sentinel.
+  return IOObject::kInvalidHandleValue;
 }
 
-FILE *NativeFile::GetStream() {
+FILE *NativeFileBase::GetStream() {
   ValueGuard stream_guard = StreamIsValid();
-  if (!stream_guard) {
-    if (ValueGuard descriptor_guard = DescriptorIsValid()) {
-      auto mode = GetStreamOpenModeFromOptions(m_options);
-      if (!mode)
-        llvm::consumeError(mode.takeError());
-      else {
-        if (!m_own_descriptor) {
-// We must duplicate the file descriptor if we don't own it because when you
-// call fdopen, the stream will own the fd
-#ifdef _WIN32
-          m_descriptor = ::_dup(m_descriptor);
-#else
-          m_descriptor = dup(m_descriptor);
-#endif
-          m_own_descriptor = true;
-        }
+  if (stream_guard)
+    return m_stream;
 
-        m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor,
-                                               mode.get());
+  ValueGuard descriptor_guard = DescriptorIsValid();
+  if (!descriptor_guard)
+    return m_stream;
 
-        // If we got a stream, then we own the stream and should no longer own
-        // the descriptor because fclose() will close it for us
-
-        if (m_stream) {
-          m_own_stream = true;
-          m_own_descriptor = false;
-        }
-      }
-    }
+  auto mode_or_err = GetStreamOpenModeFromOptions(m_options);
+  if (!mode_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), mode_or_err.takeError(),
+                   "Failed to get stream options: {0}");
+    return m_stream;
   }
+  const char *mode = *mode_or_err;
+
+  if (!m_own_descriptor) {
+    // We must duplicate the file descriptor if we don't own it because
+    // when you call fdopen, the stream will own the fd.
+    m_descriptor = Dup(m_descriptor);
+    m_own_descriptor = true;
+  }
+
+  m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode);
+
+  // If we got a stream, then we own the stream and should no longer own
+  // the descriptor because fclose() will close it for us.
+  if (m_stream) {
+    m_own_stream = true;
+    m_own_descriptor = false;
+    OnStreamOpened();
+  }
+
   return m_stream;
 }
 
-Status NativeFile::Close() {
-  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex, m_stream_mutex);
+Status NativeFileBase::Close() {
+  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex,
+                                                m_stream_mutex);
 
   Status error;
 
@@ -379,43 +337,16 @@ Status NativeFile::Close() {
   return error;
 }
 
-Status NativeFile::GetFileSpec(FileSpec &file_spec) const {
-  Status error;
-#ifdef F_GETPATH
-  if (IsValid()) {
-    char path[PATH_MAX];
-    if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)
-      error = Status::FromErrno();
-    else
-      file_spec.SetFile(path, FileSpec::Style::native);
-  } else {
-    error = Status::FromErrorString("invalid file handle");
-  }
-#elif defined(__linux__)
-  char proc[64];
-  char path[PATH_MAX];
-  if (::snprintf(proc, sizeof(proc), "/proc/self/fd/%d", GetDescriptor()) < 0)
-    error = Status::FromErrorString("cannot resolve file descriptor");
-  else {
-    ssize_t len;
-    if ((len = ::readlink(proc, path, sizeof(path) - 1)) == -1)
-      error = Status::FromErrno();
-    else {
-      path[len] = '\0';
-      file_spec.SetFile(path, FileSpec::Style::native);
-    }
-  }
-#else
-  error = Status::FromErrorString(
+Status NativeFileBase::GetFileSpec(FileSpec &file_spec) const {
+  // Default: not supported.  POSIX subclass overrides with F_GETPATH /
+  // /proc/self/fd lookups; the Windows subclass currently has no equivalent
+  // and inherits this behaviour.
+  file_spec.Clear();
+  return Status::FromErrorString(
       "NativeFile::GetFileSpec is not supported on this platform");
-#endif
-
-  if (error.Fail())
-    file_spec.Clear();
-  return error;
 }
 
-off_t NativeFile::SeekFromStart(off_t offset, Status *error_ptr) {
+off_t NativeFileBase::SeekFromStart(off_t offset, Status *error_ptr) {
   off_t result = 0;
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
     result = ::lseek(m_descriptor, offset, SEEK_SET);
@@ -446,7 +377,7 @@ off_t NativeFile::SeekFromStart(off_t offset, Status *error_ptr) {
   return result;
 }
 
-off_t NativeFile::SeekFromCurrent(off_t offset, Status *error_ptr) {
+off_t NativeFileBase::SeekFromCurrent(off_t offset, Status *error_ptr) {
   off_t result = -1;
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
     result = ::lseek(m_descriptor, offset, SEEK_CUR);
@@ -477,7 +408,7 @@ off_t NativeFile::SeekFromCurrent(off_t offset, Status *error_ptr) {
   return result;
 }
 
-off_t NativeFile::SeekFromEnd(off_t offset, Status *error_ptr) {
+off_t NativeFileBase::SeekFromEnd(off_t offset, Status *error_ptr) {
   off_t result = -1;
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
     result = ::lseek(m_descriptor, offset, SEEK_END);
@@ -500,6 +431,7 @@ off_t NativeFile::SeekFromEnd(off_t offset, Status *error_ptr) {
       else
         error_ptr->Clear();
     }
+    return result;
   }
 
   if (error_ptr)
@@ -507,7 +439,7 @@ off_t NativeFile::SeekFromEnd(off_t offset, Status *error_ptr) {
   return result;
 }
 
-Status NativeFile::Flush() {
+Status NativeFileBase::Flush() {
   Status error;
   if (ValueGuard stream_guard = StreamIsValid()) {
     if (llvm::sys::RetryAfterSignal(EOF, ::fflush, m_stream) == EOF)
@@ -523,31 +455,18 @@ Status NativeFile::Flush() {
   return error;
 }
 
-Status NativeFile::Sync() {
-  Status error;
-  if (ValueGuard descriptor_guard = DescriptorIsValid()) {
-#ifdef _WIN32
-    int err = FlushFileBuffers((HANDLE)_get_osfhandle(m_descriptor));
-    if (err == 0)
-      error = Status::FromErrorString("unknown error");
-#else
-    if (llvm::sys::RetryAfterSignal(-1, ::fsync, m_descriptor) == -1)
-      error = Status::FromErrno();
-#endif
-  } else {
-    error = Status::FromErrorString("invalid file handle");
-  }
-  return error;
-}
-
 #if defined(__APPLE__)
 // Darwin kernels only can read/write <= INT_MAX bytes
 #define MAX_READ_SIZE INT_MAX
 #define MAX_WRITE_SIZE INT_MAX
 #endif
 
-Status NativeFile::Read(void *buf, size_t &num_bytes) {
+Status NativeFileBase::Read(void *buf, size_t &num_bytes) {
   Status error;
+
+  // Ensure the file is open for reading.
+  if ((m_options & File::OpenOptionsModeMask) == eOpenOptionWriteOnly)
+    return Status(std::make_error_code(std::errc::bad_file_descriptor));
 
 #if defined(MAX_READ_SIZE)
   if (num_bytes > MAX_READ_SIZE) {
@@ -610,8 +529,12 @@ Status NativeFile::Read(void *buf, size_t &num_bytes) {
   return error;
 }
 
-Status NativeFile::Write(const void *buf, size_t &num_bytes) {
+Status NativeFileBase::Write(const void *buf, size_t &num_bytes) {
   Status error;
+
+  // Ensure the file is open for writing.
+  if ((m_options & File::OpenOptionsModeMask) == File::eOpenOptionReadOnly)
+    return Status(std::make_error_code(std::errc::bad_file_descriptor));
 
 #if defined(MAX_WRITE_SIZE)
   if (num_bytes > MAX_WRITE_SIZE) {
@@ -656,13 +579,8 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   }
 
   if (ValueGuard stream_guard = StreamIsValid()) {
-#ifdef _WIN32
-    if (is_windows_console) {
-      llvm::raw_fd_ostream(_fileno(m_stream), false)
-          .write((const char *)buf, num_bytes);
+    if (TryWriteStreamUnlocked(buf, num_bytes, error))
       return error;
-    }
-#endif
     bytes_written = ::fwrite(buf, 1, num_bytes, m_stream);
 
     if (bytes_written == 0) {
@@ -681,131 +599,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   return error;
 }
 
-Status NativeFile::Read(void *buf, size_t &num_bytes, off_t &offset) {
-  Status error;
-
-#if defined(MAX_READ_SIZE)
-  if (num_bytes > MAX_READ_SIZE) {
-    uint8_t *p = (uint8_t *)buf;
-    size_t bytes_left = num_bytes;
-    // Init the num_bytes read to zero
-    num_bytes = 0;
-
-    while (bytes_left > 0) {
-      size_t curr_num_bytes;
-      if (bytes_left > MAX_READ_SIZE)
-        curr_num_bytes = MAX_READ_SIZE;
-      else
-        curr_num_bytes = bytes_left;
-
-      error = Read(p + num_bytes, curr_num_bytes, offset);
-
-      // Update how many bytes were read
-      num_bytes += curr_num_bytes;
-      if (bytes_left < curr_num_bytes)
-        bytes_left = 0;
-      else
-        bytes_left -= curr_num_bytes;
-
-      if (error.Fail())
-        break;
-    }
-    return error;
-  }
-#endif
-
-#ifndef _WIN32
-  int fd = GetDescriptor();
-  if (fd != kInvalidDescriptor) {
-    ssize_t bytes_read =
-        llvm::sys::RetryAfterSignal(-1, ::pread, fd, buf, num_bytes, offset);
-    if (bytes_read < 0) {
-      num_bytes = 0;
-      error = Status::FromErrno();
-    } else {
-      offset += bytes_read;
-      num_bytes = bytes_read;
-    }
-  } else {
-    num_bytes = 0;
-    error = Status::FromErrorString("invalid file handle");
-  }
-#else
-  std::lock_guard<std::mutex> guard(offset_access_mutex);
-  long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
-  SeekFromStart(offset);
-  error = Read(buf, num_bytes);
-  if (!error.Fail())
-    SeekFromStart(cur);
-#endif
-  return error;
-}
-
-Status NativeFile::Write(const void *buf, size_t &num_bytes, off_t &offset) {
-  Status error;
-
-#if defined(MAX_WRITE_SIZE)
-  if (num_bytes > MAX_WRITE_SIZE) {
-    const uint8_t *p = (const uint8_t *)buf;
-    size_t bytes_left = num_bytes;
-    // Init the num_bytes written to zero
-    num_bytes = 0;
-
-    while (bytes_left > 0) {
-      size_t curr_num_bytes;
-      if (bytes_left > MAX_WRITE_SIZE)
-        curr_num_bytes = MAX_WRITE_SIZE;
-      else
-        curr_num_bytes = bytes_left;
-
-      error = Write(p + num_bytes, curr_num_bytes, offset);
-
-      // Update how many bytes were read
-      num_bytes += curr_num_bytes;
-      if (bytes_left < curr_num_bytes)
-        bytes_left = 0;
-      else
-        bytes_left -= curr_num_bytes;
-
-      if (error.Fail())
-        break;
-    }
-    return error;
-  }
-#endif
-
-  int fd = GetDescriptor();
-  if (fd != kInvalidDescriptor) {
-#ifndef _WIN32
-    ssize_t bytes_written =
-        llvm::sys::RetryAfterSignal(-1, ::pwrite, m_descriptor, buf, num_bytes, offset);
-    if (bytes_written < 0) {
-      num_bytes = 0;
-      error = Status::FromErrno();
-    } else {
-      offset += bytes_written;
-      num_bytes = bytes_written;
-    }
-#else
-    std::lock_guard<std::mutex> guard(offset_access_mutex);
-    long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
-    SeekFromStart(offset);
-    error = Write(buf, num_bytes);
-    long after = ::lseek(m_descriptor, 0, SEEK_CUR);
-
-    if (!error.Fail())
-      SeekFromStart(cur);
-
-    offset = after;
-#endif
-  } else {
-    num_bytes = 0;
-    error = Status::FromErrorString("invalid file handle");
-  }
-  return error;
-}
-
-size_t NativeFile::PrintfVarArg(const char *format, va_list args) {
+size_t NativeFileBase::PrintfVarArg(const char *format, va_list args) {
   if (StreamIsValid()) {
     return ::vfprintf(m_stream, format, args);
   } else {
@@ -941,5 +735,5 @@ Status SerialPort::Close() {
 }
 
 char File::ID = 0;
-char NativeFile::ID = 0;
+char NativeFileBase::ID = 0;
 char SerialPort::ID = 0;

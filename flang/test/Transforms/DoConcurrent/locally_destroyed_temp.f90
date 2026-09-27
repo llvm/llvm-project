@@ -52,12 +52,13 @@ end program main
 ! DEVICE: omp.target {{.*}} {
 ! DEVICE: omp.teams {
 ! COMMON: omp.parallel {
-! COMMON:   %[[LOCAL_TEMP:.*]] = fir.alloca !fir.type<_QMstruct_modTtest_struct{x_:!fir.box<!fir.heap<i32>>}> {bindc_name = ".result"}
+! COMMON:   %[[LOCAL_TEMP:.*]] = fir.alloca !fir.type<_QMstruct_modTtest_struct{x_:!fir.box<!fir.heap<i32>>}> <{bindc_name = ".result"}>
 ! DEVICE:   omp.distribute {
 ! COMMON:   omp.wsloop {
 ! COMMON:     omp.loop_nest {{.*}} {
+! COMMON:       %[[DECLARE:.*]]:2 = hlfir.declare %[[LOCAL_TEMP]]
 ! COMMON:       %[[TEMP_VAL:.*]] = fir.call @_QMstruct_modPconstruct_from_components
-! COMMON:       fir.save_result %[[TEMP_VAL]] to %[[LOCAL_TEMP]]
+! COMMON:       fir.save_result %[[TEMP_VAL]] to %[[DECLARE]]#0
 ! COMMON:       %[[EMBOXED_LOCAL:.*]] = fir.embox %[[LOCAL_TEMP]]
 ! COMMON:       %[[CONVERTED_LOCAL:.*]] = fir.convert %[[EMBOXED_LOCAL]]
 ! COMMON:       fir.call @_FortranADestroy(%[[CONVERTED_LOCAL]])

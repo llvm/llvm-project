@@ -303,8 +303,7 @@ bool TypeSpecTypeLoc::isKind(const TypeLoc &TL) {
 }
 
 bool TagTypeLoc::isDefinition() const {
-  return getTypePtr()->isTagOwned() &&
-         getOriginalDecl()->isCompleteDefinition();
+  return getTypePtr()->isTagOwned() && getDecl()->isCompleteDefinition();
 }
 
 // Reimplemented to account for GNU/C++ extension
@@ -422,6 +421,8 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::BuiltinFn:
   case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::ArraySection:
@@ -491,39 +492,6 @@ NestedNameSpecifierLoc TypeLoc::getPrefix() const {
     return castAs<UsingTypeLoc>().getQualifierLoc();
   default:
     return NestedNameSpecifierLoc();
-  }
-}
-
-SourceLocation TypeLoc::getNonPrefixBeginLoc() const {
-  switch (getTypeLocClass()) {
-  case TypeLoc::TemplateSpecialization: {
-    auto TL = castAs<TemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DeducedTemplateSpecialization: {
-    auto TL = castAs<DeducedTemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DependentName:
-    return castAs<DependentNameTypeLoc>().getNameLoc();
-  case TypeLoc::Enum:
-  case TypeLoc::Record:
-  case TypeLoc::InjectedClassName:
-    return castAs<TagTypeLoc>().getNameLoc();
-  case TypeLoc::Typedef:
-    return castAs<TypedefTypeLoc>().getNameLoc();
-  case TypeLoc::UnresolvedUsing:
-    return castAs<UnresolvedUsingTypeLoc>().getNameLoc();
-  case TypeLoc::Using:
-    return castAs<UsingTypeLoc>().getNameLoc();
-  default:
-    return getBeginLoc();
   }
 }
 
@@ -630,6 +598,10 @@ SourceRange CountAttributedTypeLoc::getLocalSourceRange() const {
 
 SourceRange BTFTagAttributedTypeLoc::getLocalSourceRange() const {
   return getAttr() ? getAttr()->getRange() : SourceRange();
+}
+
+SourceRange OverflowBehaviorTypeLoc::getLocalSourceRange() const {
+  return SourceRange();
 }
 
 void TypeOfTypeLoc::initializeLocal(ASTContext &Context,
@@ -753,11 +725,12 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
     case TemplateArgument::Null:
       llvm_unreachable("Impossible TemplateArgument");
 
+    case TemplateArgument::Pack:
     case TemplateArgument::Integral:
     case TemplateArgument::Declaration:
     case TemplateArgument::NullPtr:
     case TemplateArgument::StructuralValue:
-      ArgInfos[i] = TemplateArgumentLocInfo();
+      ArgInfos[i] = TemplateArgumentLocInfo(Context, Loc);
       break;
 
     case TemplateArgument::Expression:
@@ -785,10 +758,6 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
                                                           : Loc);
       break;
     }
-
-    case TemplateArgument::Pack:
-      ArgInfos[i] = TemplateArgumentLocInfo();
-      break;
     }
   }
 }
@@ -798,9 +767,9 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
 static ConceptReference *createTrivialConceptReference(ASTContext &Context,
                                                        SourceLocation Loc,
                                                        const AutoType *AT) {
-  DeclarationNameInfo DNI =
-      DeclarationNameInfo(AT->getTypeConstraintConcept()->getDeclName(), Loc,
-                          AT->getTypeConstraintConcept()->getDeclName());
+  DeclarationName ConceptName =
+      Context.getNameForTemplate(AT->getTypeConstraintConcept(), Loc).getName();
+  DeclarationNameInfo DNI = DeclarationNameInfo(ConceptName, Loc, ConceptName);
   unsigned size = AT->getTypeConstraintArguments().size();
   llvm::SmallVector<TemplateArgumentLocInfo, 8> TALI(size);
   TemplateSpecializationTypeLoc::initializeArgLocs(
@@ -850,6 +819,10 @@ namespace {
 
     // Only these types can contain the desired 'auto' type.
 
+    TypeLoc VisitAtomicTypeLoc(AtomicTypeLoc T) {
+      return Visit(T.getValueLoc());
+    }
+
     TypeLoc VisitQualifiedTypeLoc(QualifiedTypeLoc T) {
       return Visit(T.getUnqualifiedLoc());
     }
@@ -887,6 +860,10 @@ namespace {
     }
 
     TypeLoc VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc T) {
+      return Visit(T.getWrappedLoc());
+    }
+
+    TypeLoc VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc T) {
       return Visit(T.getWrappedLoc());
     }
 

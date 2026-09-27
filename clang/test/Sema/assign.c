@@ -6,7 +6,7 @@ void test2 (const struct {int a;} *x) {
   // expected-note@-1 {{variable 'x' declared const here}}
 
   x->a = 10;
-  // expected-error-re@-1 {{cannot assign to variable 'x' with const-qualified type 'const struct (unnamed struct at {{.*}}assign.c:5:19) *'}}
+  // expected-error-re@-1 {{cannot assign to variable 'x' with const-qualified type 'const struct (unnamed at {{.*}}assign.c:5:19) *'}}
 }
 
 typedef int arr[10];
@@ -92,4 +92,11 @@ struct N1 {
 
 void testN(struct N1 *l) {
   *l = 0; // expected-error {{assigning to 'struct N1' from incompatible type 'int'}}
+}
+
+void gh50193(void) {
+  // Would previously cause an assertion due to typo correction; demonstrates
+  // that we no longer assert in ClassifyImpl.
+  *a = (a_struct); // expected-error {{use of undeclared identifier 'a'}} \
+                      expected-error {{use of undeclared identifier 'a_struct'; did you mean 'struct'?}}
 }

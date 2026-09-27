@@ -50,7 +50,7 @@ void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(argumentCountAtLeast(1),
                hasArgument(0, stringLiteral(isOrdinary())),
-               callee(functionDecl(matchers::matchesAnyListedName(
+               callee(functionDecl(matchers::matchesAnyListedRegexName(
                                        StrFormatLikeFunctions))
                           .bind("func_decl")))
           .bind("strformat"),
@@ -99,8 +99,8 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (MaybeHeaderToInclude)
     Diag << IncludeInserter.createIncludeInsertion(
-        Result.Context->getSourceManager().getFileID(
-            StrFormatCall->getBeginLoc()),
+        Result.SourceManager->getFileID(Result.SourceManager->getExpansionLoc(
+            StrFormatCall->getBeginLoc())),
         *MaybeHeaderToInclude);
 }
 

@@ -3,7 +3,7 @@
 func.func @test_static_memref_alloc() {
   %0 = memref.alloca() {test.ptr} : memref<10x20xf32>
   // CHECK: Successfully generated alloc for operation: %[[ORIG:.*]] = memref.alloca() {test.ptr} : memref<10x20xf32>
-  // CHECK: Generated: %{{.*}} = memref.alloca() : memref<10x20xf32>
+  // CHECK: Generated: %{{.*}} = memref.alloca() {acc.var_name = #acc.var_name<"test_alloc">} : memref<10x20xf32>
   return
 }
 
@@ -19,6 +19,6 @@ func.func @test_dynamic_memref_alloc() {
   // CHECK: Generated: %[[DIM0:.*]] = memref.dim %[[ORIG]], %[[C0]] : memref<?x?xf32>
   // CHECK: Generated: %[[C1:.*]] = arith.constant 1 : index
   // CHECK: Generated: %[[DIM1:.*]] = memref.dim %[[ORIG]], %[[C1]] : memref<?x?xf32>
-  // CHECK: Generated: %{{.*}} = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK: Generated: %{{.*}} = memref.alloc(%[[DIM0]], %[[DIM1]]) {acc.var_name = #acc.var_name<"test_alloc">} : memref<?x?xf32>
   return
 }

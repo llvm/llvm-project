@@ -2,21 +2,30 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! --- Check that with shared(i) the variable outside the parallel section
-! --- is updated. 
+! --- is updated.
 ! CHECK-LABEL:  func.func @_QPomploop()
-! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploopEi"}
+! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploopEi"}>
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploopEi"} :
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
-! CHECK:            fir.store %[[ARG1]] to %[[DECL_I]]#0
+! CHECK:          fir.do_loop %[[ARG0:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+! CHECK:            fir.store %[[ARG0]] to %[[DECL_I]]#0
 ! CHECK:            hlfir.assign
-! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_I]]#0
-! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]] to %[[DECL_I]]#0
+! CHECK:          %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+! CHECK:          %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+! CHECK:          %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+! CHECK:          %[[C0:.*]] = arith.constant 0 : index
+! CHECK:          %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+! CHECK:          %[[ADDT:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+! CHECK:          %[[TRIP:.*]] = arith.divsi %[[ADDT]], %[[STEPIDX]] : index
+! CHECK:          %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK:          %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK:          %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+! CHECK:          %[[IDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
+! CHECK:          %[[LAST:.*]] = fir.convert %[[IDX]] : (index) -> i32
+! CHECK:          fir.store %[[LAST]] to %[[DECL_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -40,22 +49,31 @@ end subroutine
 ! --- Check that with default(shared) the variable outside the parallel section
 ! --- is NOT updated (i is private to the omp.parallel code)
 ! CHECK-LABEL:  func.func @_QPomploop2()
-! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploop2Ei"}
+! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploop2Ei"}>
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop2Ei"} :
 ! CHECK:    omp.parallel {
-! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned}
+! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
-! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
-! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
+! CHECK:          fir.do_loop %[[ARG0:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+! CHECK-NOT:            fir.store %{{.*}} to %[[DECL_I]]#1
+! CHECK:            fir.store %[[ARG0]] to %[[DECL_PRIV_I]]#0
 ! CHECK:            hlfir.assign
-! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_PRIV_I]]#0
-! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]] to %[[DECL_PRIV_I]]#0
+! CHECK:          %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+! CHECK:          %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+! CHECK:          %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+! CHECK:          %[[C0:.*]] = arith.constant 0 : index
+! CHECK:          %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+! CHECK:          %[[ADDT:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+! CHECK:          %[[TRIP:.*]] = arith.divsi %[[ADDT]], %[[STEPIDX]] : index
+! CHECK:          %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK:          %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK:          %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+! CHECK:          %[[IDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
+! CHECK:          %[[LAST:.*]] = fir.convert %[[IDX]] : (index) -> i32
+! CHECK:          fir.store %[[LAST]] to %[[DECL_PRIV_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -80,22 +98,31 @@ end subroutine
 ! --- Check that with no data-sharing the variable outside the parallel section
 ! --- is NOT updated (i is private to the omp.parallel code)
 ! CHECK-LABEL:  func.func @_QPomploop3()
-! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomploop3Ei"}
+! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploop3Ei"}>
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop3Ei"} :
 ! CHECK:    omp.parallel {
-! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned}
+! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
-! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
-! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
+! CHECK:          fir.do_loop %[[ARG0:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+! CHECK-NOT:            fir.store %{{.*}} to %[[DECL_I]]#1
+! CHECK:            fir.store %[[ARG0]] to %[[DECL_PRIV_I]]#0
 ! CHECK:            hlfir.assign
-! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_PRIV_I]]#0
-! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]] to %[[DECL_PRIV_I]]#0
+! CHECK:          %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+! CHECK:          %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+! CHECK:          %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+! CHECK:          %[[C0:.*]] = arith.constant 0 : index
+! CHECK:          %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+! CHECK:          %[[ADDT:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+! CHECK:          %[[TRIP:.*]] = arith.divsi %[[ADDT]], %[[STEPIDX]] : index
+! CHECK:          %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK:          %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK:          %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+! CHECK:          %[[IDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
+! CHECK:          %[[LAST:.*]] = fir.convert %[[IDX]] : (index) -> i32
+! CHECK:          fir.store %[[LAST]] to %[[DECL_PRIV_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -115,6 +142,3 @@ subroutine omploop3
     !$omp end sections
   !$omp end parallel
 end subroutine
-
-
- 

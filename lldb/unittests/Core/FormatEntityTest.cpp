@@ -27,8 +27,8 @@ static Expected<std::string> Format(StringRef format_str) {
   if (status.Fail())
     return status.ToError();
 
-  FormatEntity::Format(format, stream, nullptr, nullptr, nullptr, nullptr,
-                       false, false);
+  FormatEntity::Formatter(nullptr, nullptr, nullptr, false, false)
+      .Format(format, stream);
   return stream.GetString().str();
 }
 

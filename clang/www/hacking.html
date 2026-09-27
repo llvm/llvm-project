@@ -184,13 +184,11 @@
   <a href="https://www.python.org/downloads/">https://www.python.org/downloads/</a>.
   Download the latest stable version.</p>
 
-  <p>The GnuWin32 tools are also necessary for running the tests.
-  Get them from <a href="http://getgnuwin32.sourceforge.net/">
-  http://getgnuwin32.sourceforge.net/</a>.
-  If the environment variable <tt>%PATH%</tt> does not have GnuWin32,
-  or if other grep(s) supercedes GnuWin32 on <tt>%PATH%,</tt>
-  you should specify <tt>LLVM_LIT_TOOLS_DIR</tt>
-  to CMake explicitly.</p>
+  <p>The GNU core utilities included in <b>Git For Windows</b>
+  are also required to run the tests.  This is available from
+  <a href="https://git-scm.com/download"> https://git-scm.com/download</a>.
+  You can specify the <tt>LLVM_LIT_TOOLS_DIR</tt> to CMake explicitly
+  to override the location of the GNU core utilities used for testing.</p>
 
   <p>The cmake build tool is set up to create Visual Studio project files
   for running the tests, "check-clang" being the root.  Therefore, to
@@ -209,55 +207,48 @@
   <!--=====================================================================-->
 
   <p>If you want more control over how the tests are run, it may
-  be convenient to run the test harness on the command-line directly. Before
-  running tests from the command line, you will need to ensure that
-  <tt>lit.site.cfg</tt> files have been created for your build.  You can do
-  this by running the tests as described in the previous sections. Once the
-  tests have started running, you can stop them with control+C, as the
-  files are generated before running any tests.</p>
+  be convenient to run the test harness on the command-line directly. Running
+  the <tt>check-clang</tt> build target will generate a script to start the
+  <a href="https://llvm.org/docs/CommandGuide/lit.html">LLVM Integrated
+  Tester</a> (<tt>lit</tt>) that can be used to run tests for your
+  current configuration. Once the tests have started running, you can stop
+  them with <tt>control+C</tt>, as the files are generated before running any
+  tests.</p>
 
-  <p>Once that is done, to run all the tests from the command line,
-  execute a command like the following:</p>
-
-  <pre>
-  python (path to llvm)\llvm\utils\lit\lit.py -sv
-  --param=build_mode=Win32 --param=build_config=Debug
-  --param=clang_site_config=(build dir)\tools\clang\test\lit.site.cfg
- (path to llvm)\llvm\tools\clang\test
-</pre>
-
-  <p>For CMake builds e.g. on Windows with Visual Studio, you will need
-  to specify your build configuration (Debug, Release, etc.) via
-  <tt>--param=build_config=(build config)</tt>.  You may also need to specify
-  the build mode (Win32, etc) via <tt>--param=build_mode=(build mode)</tt>.</p>
-
-  <p>Additionally, you will need to specify the lit site configuration which
-  lives in (build dir)\tools\clang\test, via
-  <tt>--param=clang_site_config=(build dir)\tools\clang\test\lit.site.cfg</tt>.
-  </p>
-
-  <p>To run a single test:</p>
+  <p>Once that is done, all the tests can be executed from the command line
+  by running the generated <tt>llvm-lit</tt> script as follows:</p>
 
   <pre>
-  python (path to llvm)\llvm\utils\lit\lit.py -sv
-  --param=build_mode=Win32 --param=build_config=Debug
-  --param=clang_site_config=(build dir)\tools\clang\test\lit.site.cfg
-  (path to llvm)\llvm\tools\clang\test\(dir)\(test)
-</pre>
+  (build dir)\bin\llvm-lit (path to llvm)\clang\test
+  </pre>
 
-  <p>For example:</p>
-
+  For example; if you have a Ninja build in the
+  <tt>llvm-project\build_ninja</tt> directory, the command to execute from the
+  <tt>llvm-project</tt> directory would be:
   <pre>
-  python C:\Tools\llvm\utils\lit\lit.py -sv
-  --param=build_mode=Win32 --param=build_config=Debug
-  --param=clang_site_config=C:\Tools\build\tools\clang\test\lit.site.cfg
-  C:\Tools\llvm\tools\clang\test\Sema\wchar.c
-</pre>
+  build_ninja\bin\llvm-lit clang\test 
+  </pre>
 
-  <p>The -sv option above tells the runner to show the test output if
-  any tests failed, to help you determine the cause of failure.</p>
 
-  <p>You can also pass in the --no-progress-bar option if you wish to disable
+  Or, for a Visual Studio Debug build in the <tt>llvm-project\build</tt>
+  directory, the lit start command to execute from the <tt>llvm-project</tt>
+  directory would be:
+  <pre>
+  build\Debug\bin\llvm-lit clang\test
+  </pre>
+
+  <p>You can run a single test or all tests in a specific folder by providing
+  the target test or folder to <tt>lit</tt>. For example, we can run the
+  <tt>wchar.c</tt> test:</p>
+  <pre>
+    build_ninja\bin\llvm-lit clang\test\Sema\wchar.c
+  </pre>
+  <p>or all tests in the <tt>Sema</tt> folder:</p>
+  <pre>
+    build_ninja\bin\llvm-lit clang\test\Sema
+  </pre>
+
+  <p>Pass in the <tt>--no-progress-bar</tt> option if you wish to disable
   progress indications while the tests are running.</p>
 
   <p>Your output might look something like this:</p>
