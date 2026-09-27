@@ -520,10 +520,19 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   const PointerInfo *Src = &Pointers[CGI.Members[0]];
   const PointerInfo *Sink = &Pointers[CGJ.Members[0]];
 
-  // If either pointer is read and written, multiple checks may be needed. Bail
-  // out.
-  if (!DC.getOrderForAccess(Src->PointerValue, !Src->IsWritePtr).empty() ||
-      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty())
+  bool SrcHasOppositeAccess =
+      !DC.getOrderForAccess(Src->PointerValue, !Src->IsWritePtr).empty();
+  bool SinkHasOppositeAccess =
+      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty();
+  bool HasReadModifyWritePointer =
+      SrcHasOppositeAccess || SinkHasOppositeAccess;
+  // A read-modify-write pointer against a read-only pointer only needs the
+  // write/read check. Other combinations may need multiple checks.
+  if (SrcHasOppositeAccess &&
+      !(Src->IsWritePtr && !Sink->IsWritePtr && !SinkHasOppositeAccess))
+    return false;
+  if (SinkHasOppositeAccess &&
+      !(Sink->IsWritePtr && !Src->IsWritePtr && !SrcHasOppositeAccess))
     return false;
 
   ArrayRef<unsigned> AccSrc =
@@ -578,6 +587,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   const SCEV *SrcStartInt = SE->getPtrToAddrExpr(SrcStart);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
       isa<SCEVCouldNotCompute>(SrcStartInt))
+    return false;
+
+  // Do not trade a hoistable full-range check for an RMW difference check
+  // that varies in the parent loop.
+  if (HasReadModifyWritePointer && HoistRuntimeChecks &&
+      InnerLoop->getParentLoop() &&
+      !SE->isLoopInvariant(SE->getMinusSCEV(SinkStartInt, SrcStartInt),
+                           InnerLoop->getParentLoop()))
     return false;
 
   // If the start values for both Src and Sink also vary according to an outer
