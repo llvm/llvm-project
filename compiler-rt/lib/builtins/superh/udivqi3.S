@@ -20,5 +20,24 @@
 
 
 FUNCTION_BEGIN __sh_udivqi3
-	
+	extu.b 	r4, r4
+	extu.b  r5, r5
+	tst 	r5, r5
+	bt 		.Ldbz
+	cmp/hs  r4, r5
+	bt      .Ldbz
+	div0u
+	.rept 8
+	div1 	r5, r4
+	.endr
+	rotcl 	r4
+	extu.w  r4, r0
+	mov 	#0, r1
+	rts
+	nop
+.Ldbz:
+	mov 	#0, r0
+	mov 	r0, r1
+	rts
+	nop
 FUNCTION_END __sh_udivqi3

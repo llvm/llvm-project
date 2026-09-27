@@ -20,5 +20,30 @@
 
 
 FUNCTION_BEGIN __sh_divqi3
-	
+	shll16	r5
+	shll8	r5
+	exts.b  r4, r4
+	tst 	r5, r5
+	bt 		.Ldbz
+	mov 	r4, r3
+	rotcl 	r3
+	subc 	r1, r1
+	mov 	#0, r3
+	subc 	r3, r4
+	div0s 	r5, r1
+	.rept 8
+	rotcl   r4        
+	div1    r5,r1
+	.endr
+	rotcl   r4
+	addc    r3, r4
+	exts.b  r4, r0
+	mov 	#0, r1
+	rts
+	nop
+.Ldbz:
+	mov 	#0, r0
+	mov 	r0, r1
+	rts
+	nop
 FUNCTION_END __sh_divqi3
