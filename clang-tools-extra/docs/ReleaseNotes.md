@@ -322,6 +322,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
 
+- Improved {doc}`noexcept-move-constructors
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false positives for implicitly declared noexcept(false).
+
 #### Removed checks
 
 - Removed the deprecated `zircon-temporary-objects` check. Users should migrate to

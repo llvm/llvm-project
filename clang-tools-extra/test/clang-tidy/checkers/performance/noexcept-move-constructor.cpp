@@ -199,7 +199,7 @@ struct P {
 void p() {
   P P1{};
   P P2{std::move(P1)};
-  P P3 = std::move(P2);
+  P1 = std::move(P2);
 }
 
 class OK {};
