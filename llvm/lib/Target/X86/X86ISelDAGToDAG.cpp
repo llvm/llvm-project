@@ -614,6 +614,7 @@ namespace {
                                 SDValue &InGlue);
 
     bool tryOptimizeRem8Extend(SDNode *N);
+    bool tryRemoveRedundantZExtMove(SDNode *N);
 
     bool onlyUsesZeroFlag(SDValue Flags) const;
     bool hasNoSignFlagUses(SDValue Flags) const;
@@ -1628,6 +1629,23 @@ bool X86DAGToDAGISel::tryOptimizeRem8Extend(SDNode *N) {
   return true;
 }
 
+// The one-operand 32-bit multiplies and divides always write EAX and EDX.
+static bool isMulDiv32(unsigned Opc) {
+  switch (Opc) {
+  case X86::DIV32r:
+  case X86::DIV32m:
+  case X86::IDIV32r:
+  case X86::IDIV32m:
+  case X86::MUL32r:
+  case X86::MUL32m:
+  case X86::IMUL32r:
+  case X86::IMUL32m:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Any x86-64 instruction writing a 32-bit register zeroes the upper 32 bits of
 // the 64-bit register. This is only decided after selection, on the final
 // machine node: isel selects users before operands, so a predicate on the
@@ -1636,7 +1654,23 @@ bool X86DAGToDAGISel::tryOptimizeRem8Extend(SDNode *N) {
 // 'and' with its truncate operand).
 bool X86DAGToDAGISel::isDef32(SDValue V) const {
   const X86RegisterInfo *TRI = Subtarget->getRegisterInfo();
-  while (V.getValueType() == MVT::i32 && V.isMachineOpcode()) {
+  while (V.getValueType() == MVT::i32) {
+    // A copy out of EAX/EDX glued, possibly through other such copies, to the
+    // mul/div that wrote it. Other writers (e.g. cmpxchg) may leave it as is.
+    if (V.getOpcode() == ISD::CopyFromReg) {
+      Register Reg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
+      if (V.getResNo() != 0 || (Reg != X86::EAX && Reg != X86::EDX))
+        return false;
+      SDValue Glue = V;
+      while (Glue.getOpcode() == ISD::CopyFromReg) {
+        if (Glue.getNumOperands() != 3)
+          return false;
+        Glue = Glue.getOperand(2);
+      }
+      return Glue.isMachineOpcode() && isMulDiv32(Glue.getMachineOpcode());
+    }
+    if (!V.isMachineOpcode())
+      return false;
     unsigned Opc = V.getMachineOpcode();
     switch (Opc) {
     case TargetOpcode::COPY:
@@ -1672,6 +1706,8 @@ bool X86DAGToDAGISel::isDef32(SDValue V) const {
     case X86::SETB_C32r:
     case X86::ADD32rr_DB:
     case X86::ADD32ri_DB:
+    case X86::MULX32Hrr:
+    case X86::MULX32Hrm:
       return true;
     default:
       break;
@@ -1687,8 +1723,13 @@ bool X86DAGToDAGISel::isDef32(SDValue V) const {
 
     // A real instruction writes all 32 bits of an explicit GR32 definition.
     unsigned ResNo = V.getResNo();
-    if (ResNo >= Desc.getNumDefs())
-      return false;
+    if (ResNo >= Desc.getNumDefs()) {
+      // An implicit EAX/EDX result, e.g. of the MUL32r for X86ISD::UMUL.
+      unsigned Idx = ResNo - Desc.getNumDefs();
+      ArrayRef<MCPhysReg> ImpDefs = Desc.implicit_defs();
+      return isMulDiv32(Opc) && Idx < ImpDefs.size() &&
+             (ImpDefs[Idx] == X86::EAX || ImpDefs[Idx] == X86::EDX);
+    }
     const MCOperandInfo &OpInfo = Desc.operands()[ResNo];
     if (OpInfo.OperandType != MCOI::OPERAND_REGISTER ||
         OpInfo.isLookupRegClassByHwMode())
@@ -1698,10 +1739,27 @@ bool X86DAGToDAGISel::isDef32(SDValue V) const {
   return false;
 }
 
+// The i32->i64 zero_extend patterns always emit (SUBREG_TO_REG (MOV32rr X)).
+// Drop the MOV32rr if X already zeroes the upper 32 bits.
+bool X86DAGToDAGISel::tryRemoveRedundantZExtMove(SDNode *N) {
+  if (N->getMachineOpcode() != TargetOpcode::SUBREG_TO_REG ||
+      N->getConstantOperandVal(1) != X86::sub_32bit)
+    return false;
+  SDValue Move = N->getOperand(0);
+  if (!Move.isMachineOpcode() || Move.getMachineOpcode() != X86::MOV32rr ||
+      !isDef32(Move.getOperand(0)))
+    return false;
+  SDNode *Res =
+      CurDAG->UpdateNodeOperands(N, Move.getOperand(0), N->getOperand(1));
+  if (Res != N)
+    ReplaceUses(N, Res);
+  return true;
+}
+
 void X86DAGToDAGISel::PostprocessISelDAG() {
-  // Skip peepholes at -O0.
-  if (TM.getOptLevel() == CodeGenOptLevel::None)
-    return;
+  // The zero_extend patterns rely on the MOV32rr removal at every opt level.
+  // Skip the other peepholes at -O0.
+  bool OptNone = TM.getOptLevel() == CodeGenOptLevel::None;
 
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
@@ -1710,6 +1768,14 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     SDNode *N = &*--Position;
     // Skip dead nodes and any non-machine opcodes.
     if (N->use_empty() || !N->isMachineOpcode())
+      continue;
+
+    if (tryRemoveRedundantZExtMove(N)) {
+      MadeChange = true;
+      continue;
+    }
+
+    if (OptNone)
       continue;
 
     if (tryOptimizeRem8Extend(N)) {
@@ -1847,28 +1913,14 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       MadeChange = true;
       continue;
     }
-    // Attempt to remove moves that were inserted to zero upper bits.
+    // Attempt to remove vectors moves that were inserted to zero upper bits.
     case TargetOpcode::SUBREG_TO_REG: {
       unsigned SubRegIdx = N->getConstantOperandVal(1);
+      if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
+        continue;
+
       SDValue Move = N->getOperand(0);
       if (!Move.isMachineOpcode())
-        continue;
-
-      // (SUBREG_TO_REG (MOV32rr X)) from the i32->i64 zero_extend patterns:
-      // drop the MOV32rr if X already zeroes the upper 32 bits.
-      if (SubRegIdx == X86::sub_32bit) {
-        if (Move.getMachineOpcode() != X86::MOV32rr ||
-            !isDef32(Move.getOperand(0)))
-          continue;
-        SDNode *Res = CurDAG->UpdateNodeOperands(N, Move.getOperand(0),
-                                                 N->getOperand(1));
-        if (Res != N)
-          ReplaceUses(N, Res);
-        MadeChange = true;
-        continue;
-      }
-
-      if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
         continue;
 
       // Make sure its one of the move opcodes we recognize.

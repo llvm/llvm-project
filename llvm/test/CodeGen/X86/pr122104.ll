@@ -38,6 +38,20 @@ define i64 @zext_trunc(i64 %x) {
   ret i64 %z
 }
 
+; cmpxchg only writes EAX when the comparison fails.
+define i64 @zext_cmpxchg(ptr %p, i32 %cmp, i32 %new) {
+; CHECK-LABEL: zext_cmpxchg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    lock cmpxchgl %edx, (%rdi)
+; CHECK-NEXT:    movl %eax, %eax
+; CHECK-NEXT:    retq
+  %r = cmpxchg ptr %p, i32 %cmp, i32 %new seq_cst seq_cst
+  %v = extractvalue { i32, i1 } %r, 0
+  %z = zext i32 %v to i64
+  ret i64 %z
+}
+
 ; 32-bit instructions zero the upper bits: no movl below.
 
 define i64 @zext_add(i32 %a, i32 %b) {
@@ -69,6 +83,19 @@ define i64 @zext_popcnt(i32 %a) "target-features"="+popcnt" {
 ; CHECK-NEXT:    retq
   %c = call i32 @llvm.ctpop.i32(i32 %a)
   %z = zext i32 %c to i64
+  ret i64 %z
+}
+
+define i64 @zext_udiv(i32 %a, i32 %b) {
+; CHECK-LABEL: zext_udiv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %esi
+; CHECK-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-NEXT:    retq
+  %d = udiv i32 %a, %b
+  %z = zext i32 %d to i64
   ret i64 %z
 }
 
