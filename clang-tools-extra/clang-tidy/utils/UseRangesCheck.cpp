@@ -275,7 +275,7 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
         const bool NeedsDereference =
             ArgExpr->getType()->isPointerType() &&
             isa<CXXMemberCallExpr>(RangeArg->IgnoreParenImpCasts());
-        std::string ReplaceText =
+        const std::string ReplaceText =
             NeedsDereference
                 ? fixit::formatDereference(*ArgExpr, *Result.Context)
                 : tooling::fixit::getText(*ArgExpr, *Result.Context).str();
