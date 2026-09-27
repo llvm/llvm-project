@@ -39,26 +39,6 @@ inline bool isBTFRecordElement(const DINode *Element) {
   }
 }
 
-/// Whether a record element is a field that a CO-RE access index counts.
-/// Clang does not count bases or its vtable pointer member ("_vptr$<class>").
-inline bool isDIRecordField(const DINode *Element) {
-  if (Element->getTag() == dwarf::DW_TAG_inheritance ||
-      !isBTFRecordElement(Element))
-    return false;
-  const auto *DTy = dyn_cast<DIDerivedType>(Element);
-  return !DTy || !(DTy->isArtificial() && DTy->getName().starts_with("_vptr$"));
-}
-
-/// Return the field a CO-RE access index refers to, or null if the debug info
-/// does not describe the record's fields.
-inline DINode *getDIRecordField(const DICompositeType *CTy,
-                                uint64_t AccessIndex) {
-  for (DINode *Element : CTy->getElements())
-    if (isDIRecordField(Element) && AccessIndex-- == 0)
-      return Element;
-  return nullptr;
-}
-
 /// Return the bit offset used to order an element of a BTF structure record.
 inline uint64_t getBTFRecordElementOffset(const DINode *Element) {
   switch (Element->getTag()) {

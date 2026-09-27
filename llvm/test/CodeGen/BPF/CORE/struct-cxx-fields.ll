@@ -1,13 +1,12 @@
 ; RUN: opt -O2 %s -S | FileCheck %s
 ; RUN: opt -O2 %s | llc -mtriple=bpfel -filetype=asm -o - | FileCheck %s --check-prefix=BTF
 
-; Clang numbers the fields of a record for a CO-RE access, while the debug
-; info of a C++ record also lists base classes, static data members, methods
-; and the vtable pointer among its elements. The access index is mapped to the
-; field it counts, and the access string index is the position of that field
-; among the BTF members, where non-virtual bases come first as anonymous
-; members and the vtable pointer is a member too. The name of each relocation
-; global encodes <kind>:<patched value>$<access string>.
+; The debug info of a C++ record also lists base classes, static data members,
+; methods and the vtable pointer among its elements. The DI index of a CO-RE
+; access is the position of the field among these elements, while the access
+; string index is its position among the BTF members, where non-virtual bases
+; come first as anonymous members and the vtable pointer is a member too. The
+; name of each relocation global encodes <kind>:<patched value>$<access string>.
 ;
 ; struct Base { int b; };
 ; struct Base2 { int c; };
@@ -53,56 +52,56 @@ target triple = "bpf"
 %struct.BF = type { %struct.Base, i8, i32 }
 
 define ptr @s_x(ptr %p) {
-  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.S) %p, i32 2, i32 0), !llvm.preserve.access.index !10
+  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.S) %p, i32 2, i32 3), !llvm.preserve.access.index !10
   ret ptr %r
 }
 
 define ptr @s_y(ptr %p) !dbg !61 {
-  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.S) %p, i32 3, i32 1), !dbg !64, !llvm.preserve.access.index !10
+  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.S) %p, i32 3, i32 5), !dbg !64, !llvm.preserve.access.index !10
   ret ptr %r
 }
 
 define ptr @v_v(ptr %p) {
-  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.V) %p, i32 1, i32 0), !llvm.preserve.access.index !20
+  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.V) %p, i32 1, i32 2), !llvm.preserve.access.index !20
   ret ptr %r
 }
 
 define ptr @e_e(ptr %p) {
-  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.E) %p, i32 0, i32 0), !llvm.preserve.access.index !30
+  %r = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.E) %p, i32 0, i32 1), !llvm.preserve.access.index !30
   ret ptr %r
 }
 
 define ptr @u_b(ptr %p) {
-  %r = call ptr @llvm.preserve.union.access.index.p0.p0(ptr %p, i32 1), !llvm.preserve.access.index !40
+  %r = call ptr @llvm.preserve.union.access.index.p0.p0(ptr %p, i32 2), !llvm.preserve.access.index !40
   ret ptr %r
 }
 
 define i32 @bf_y_size(ptr %p) {
-  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 1), !llvm.preserve.access.index !50
+  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 3), !llvm.preserve.access.index !50
   %r = call i32 @llvm.bpf.preserve.field.info.p0(ptr %f, i64 1)
   ret i32 %r
 }
 
 define i32 @bf_y_signed(ptr %p) {
-  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 1), !llvm.preserve.access.index !50
+  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 3), !llvm.preserve.access.index !50
   %r = call i32 @llvm.bpf.preserve.field.info.p0(ptr %f, i64 3)
   ret i32 %r
 }
 
 define i32 @bf_x_signed(ptr %p) {
-  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 0), !llvm.preserve.access.index !50
+  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 2), !llvm.preserve.access.index !50
   %r = call i32 @llvm.bpf.preserve.field.info.p0(ptr %f, i64 3)
   ret i32 %r
 }
 
 define i32 @bf_y_lshift(ptr %p) {
-  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 1), !llvm.preserve.access.index !50
+  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 1, i32 3), !llvm.preserve.access.index !50
   %r = call i32 @llvm.bpf.preserve.field.info.p0(ptr %f, i64 4)
   ret i32 %r
 }
 
 define i32 @bf_z_offset(ptr %p) {
-  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 2, i32 2), !llvm.preserve.access.index !50
+  %f = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.BF) %p, i32 2, i32 5), !llvm.preserve.access.index !50
   %r = call i32 @llvm.bpf.preserve.field.info.p0(ptr %f, i64 0)
   ret i32 %r
 }
