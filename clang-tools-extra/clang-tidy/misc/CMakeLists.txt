@@ -20,6 +20,7 @@ set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourceg
 add_clang_library(clangTidyMiscModule STATIC
   AnonymousNamespaceInHeaderCheck.cpp
   ConfusableIdentifierCheck.cpp
+  UseBulkInsertCheck.cpp
   ConstCorrectnessCheck.cpp
   CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp

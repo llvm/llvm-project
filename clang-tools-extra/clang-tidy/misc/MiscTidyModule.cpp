@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../ClangTidy.h"
+#include "UseBulkInsertCheck.h"
 #include "../ClangTidyModule.h"
 #include "AnonymousNamespaceInHeaderCheck.h"
 #include "ConfusableIdentifierCheck.h"
@@ -49,6 +50,8 @@ public:
         "misc-anonymous-namespace-in-header");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");
+    CheckFactories.registerCheck<UseBulkInsertCheck>(
+        "misc-use-bulk-insert");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(
         "misc-const-correctness");
     CheckFactories.registerCheck<CoroutineHostileRAIICheck>(
