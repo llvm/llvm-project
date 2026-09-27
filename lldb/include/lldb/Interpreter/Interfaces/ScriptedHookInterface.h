@@ -36,10 +36,14 @@ public:
   virtual SupportedHookMethods GetSupportedMethods() { return {}; }
 
   /// Called when modules are loaded into the target.
-  virtual void HandleModuleLoaded(lldb::StreamSP &output_sp) {}
+  virtual llvm::Error HandleModuleLoaded(lldb::StreamSP &output_sp) {
+    return llvm::Error::success();
+  }
 
   /// Called when modules are unloaded from the target. Optional.
-  virtual void HandleModuleUnloaded(lldb::StreamSP &output_sp) {}
+  virtual llvm::Error HandleModuleUnloaded(lldb::StreamSP &output_sp) {
+    return llvm::Error::success();
+  }
 
   /// Called when the process stops. Returns "should_stop" if false, the
   /// process will continue. Defaults to true (stop on unimplemented).

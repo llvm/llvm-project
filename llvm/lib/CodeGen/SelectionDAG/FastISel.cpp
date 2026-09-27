@@ -1414,7 +1414,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   }
 
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::expect:
   case Intrinsic::expect_with_probability: {
     Register ResultReg = getRegForValue(II->getArgOperand(0));

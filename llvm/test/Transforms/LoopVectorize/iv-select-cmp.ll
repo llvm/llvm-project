@@ -1892,14 +1892,13 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC1-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC1-NEXT:    [[TMP12:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP9]], <4 x i1> [[TMP8]], float [[TMP11]])
+; CHECK-VF4IC1-NEXT:    [[TMP14:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP9]], <4 x i1> [[TMP8]], float [[RDX_START]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-VF4IC1:       [[SCALAR_PH]]:
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi float [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
+; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK-VF4IC1:       [[FOR_BODY1]]:
 ; CHECK-VF4IC1-NEXT:    [[IV1:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY1]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -1916,7 +1915,7 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY1]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT]]:
-; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi float [ [[COND]], %[[FOR_BODY1]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi float [ [[COND]], %[[FOR_BODY1]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    ret float [[COND_LCSSA]]
 ;
 ; CHECK-VF4IC4-LABEL: define float @not_vectorized_select_float_induction_icmp(
@@ -1969,10 +1968,10 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD6]], [[WIDE_LOAD10]]
 ; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = freeze <4 x i1> [[TMP15]]
-; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = or <4 x i1> [[TMP6]], [[TMP19]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21:%.*]] = freeze <4 x i1> [[TMP16]]
-; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP20]], [[TMP21]]
 ; CHECK-VF4IC4-NEXT:    [[TMP23:%.*]] = freeze <4 x i1> [[TMP17]]
+; CHECK-VF4IC4-NEXT:    [[TMP41:%.*]] = or <4 x i1> [[TMP6]], [[TMP19]]
+; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP41]], [[TMP21]]
 ; CHECK-VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP22]], [[TMP23]]
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
 ; CHECK-VF4IC4-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
@@ -1988,8 +1987,7 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC4-NEXT:    [[TMP12:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP9]], <4 x i1> [[TMP8]], float [[TMP11]])
+; CHECK-VF4IC4-NEXT:    [[TMP12:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP9]], <4 x i1> [[TMP8]], float [[RDX_START]])
 ; CHECK-VF4IC4-NEXT:    [[TMP37:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP31]], <4 x i1> [[TMP27]], float [[TMP12]])
 ; CHECK-VF4IC4-NEXT:    [[TMP38:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP32]], <4 x i1> [[TMP28]], float [[TMP37]])
 ; CHECK-VF4IC4-NEXT:    [[TMP39:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[TMP33]], <4 x i1> [[TMP29]], float [[TMP38]])

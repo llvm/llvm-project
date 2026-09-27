@@ -443,7 +443,8 @@ bool fir::NameUniquer::isSpecialSymbol(llvm::StringRef name) {
 }
 
 bool fir::NameUniquer::isCompilerGenerated(llvm::StringRef name,
-                                           bool excludeStringLiterals) {
+                                           bool excludeStringLiterals,
+                                           bool excludeArrayLiterals) {
   auto [nameKind, deconstructed] = fir::NameUniquer::deconstruct(name);
 
   // Names that are not mangled by flang belong to the user (e.g. BIND(C)
@@ -455,6 +456,8 @@ bool fir::NameUniquer::isCompilerGenerated(llvm::StringRef name,
   // constants, runtime tables, etc.
   if (nameKind == fir::NameUniquer::NameKind::GENERATED) {
     if (excludeStringLiterals && name.starts_with("_QQcl"))
+      return false;
+    if (excludeArrayLiterals && name.starts_with("_QQro"))
       return false;
     return true;
   }
