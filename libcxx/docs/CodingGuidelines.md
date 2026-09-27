@@ -1,4 +1,4 @@
-(codingguidelines)=
+(CodingGuidelines)=
 
 # libc++ Coding Guidelines
 

@@ -1,4 +1,4 @@
-(releaseprocedure)=
+(ReleaseProcedure)=
 
 # Release procedure
 

@@ -1,4 +1,4 @@
-(addingnewcijobs)=
+(AddingNewCIJobs)=
 
 # Adding New CI Jobs
 

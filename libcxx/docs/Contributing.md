@@ -1,4 +1,4 @@
-(contributingtolibcxx)=
+(ContributingToLibcxx)=
 
 # Contributing to libc++
 

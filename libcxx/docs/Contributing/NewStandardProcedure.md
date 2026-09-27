@@ -1,4 +1,4 @@
-(newstandardprocedure)=
+(NewStandardProcedure)=
 
 # New standard procedure
 
