@@ -33,7 +33,7 @@ FUNCTION_BEGIN __sh_divsi3
 	.endr
 	rotcl   r4
 	addc    r3, r4
-	mov 	r2, r0
+	mov 	r4, r0
 	mov 	#0, r1
 	rts
 	nop
