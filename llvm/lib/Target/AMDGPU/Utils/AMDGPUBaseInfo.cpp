@@ -1298,28 +1298,6 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo &STI, unsigned NumSGPRs) {
          1;
 }
 
-unsigned getVGPRAllocGranule(const MCSubtargetInfo &STI,
-                             unsigned DynamicVGPRBlockSize,
-                             std::optional<bool> EnableWavefrontSize32) {
-  if (STI.getFeatureBits().test(FeatureGFX90AInsts))
-    return 8;
-
-  if (DynamicVGPRBlockSize != 0)
-    return DynamicVGPRBlockSize;
-
-  bool IsWave32 = EnableWavefrontSize32
-                      ? *EnableWavefrontSize32
-                      : STI.getFeatureBits().test(FeatureWavefrontSize32);
-
-  if (STI.getFeatureBits().test(Feature1536VGPRs))
-    return IsWave32 ? 24 : 12;
-
-  if (hasGFX10_3Insts(STI))
-    return IsWave32 ? 16 : 8;
-
-  return IsWave32 ? 8 : 4;
-}
-
 unsigned getArchVGPRAllocGranule() { return 4; }
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
@@ -1337,8 +1315,7 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
 
   if (DynamicVGPRBlockSize != 0) {
     // On GFX12 we can allocate at most MaxDynamicVGPRBlocks blocks of VGPRs.
-    return MaxDynamicVGPRBlocks *
-           getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+    return MaxDynamicVGPRBlocks * DynamicVGPRBlockSize;
   }
   return getAddressableNumArchVGPRs(STI);
 }
@@ -1349,7 +1326,8 @@ unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
   GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
   return getNumWavesPerEUWithNumVGPRs(
-      NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
+      NumVGPRs,
+      AMDGPU::getVGPRAllocGranule(Kind, IsWave32, DynamicVGPRBlockSize),
       getMaxWavesPerEU(Kind), AMDGPU::getTotalNumVGPRs(Kind, IsWave32));
 }
 
@@ -1401,11 +1379,12 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 
-  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(
-      Kind, STI.getFeatureBits().test(FeatureWavefrontSize32));
+  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
+  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(Kind, IsWave32);
   unsigned AddrsableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
-  unsigned Granule = getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  unsigned Granule =
+      AMDGPU::getVGPRAllocGranule(Kind, IsWave32, DynamicVGPRBlockSize);
   unsigned MaxNumVGPRs = alignDown(TotNumVGPRs / WavesPerEU, Granule);
 
   if (MaxNumVGPRs == alignDown(TotNumVGPRs / MaxWavesPerEU, Granule))
@@ -1425,17 +1404,17 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
-  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(
-      parseArchAMDGCN(STI.getCPU()),
-      STI.getFeatureBits().test(FeatureWavefrontSize32));
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
+  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(Kind, IsWave32);
 
   // In dynamic VGPR mode, WavesPerEU does not imply a VGPR limit.
   bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
   unsigned MaxNumVGPRs =
-      DynamicVGPREnabled
-          ? TotNumVGPRs
-          : alignDown(TotNumVGPRs / WavesPerEU,
-                      getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
+      DynamicVGPREnabled ? TotNumVGPRs
+                         : alignDown(TotNumVGPRs / WavesPerEU,
+                                     AMDGPU::getVGPRAllocGranule(
+                                         Kind, IsWave32, DynamicVGPRBlockSize));
   unsigned AddressableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
@@ -1455,9 +1434,11 @@ unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo &STI,
                                    unsigned NumVGPRs,
                                    unsigned DynamicVGPRBlockSize,
                                    std::optional<bool> EnableWavefrontSize32) {
+  bool IsWave32 = EnableWavefrontSize32.value_or(
+      STI.getFeatureBits().test(FeatureWavefrontSize32));
   return getGranulatedNumRegisterBlocks(
-      NumVGPRs,
-      getVGPRAllocGranule(STI, DynamicVGPRBlockSize, EnableWavefrontSize32));
+      NumVGPRs, AMDGPU::getVGPRAllocGranule(parseArchAMDGCN(STI.getCPU()),
+                                            IsWave32, DynamicVGPRBlockSize));
 }
 } // end namespace IsaInfo
 

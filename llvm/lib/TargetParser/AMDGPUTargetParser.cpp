@@ -422,10 +422,13 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
-unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32) {
+unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32,
+                                     unsigned DynamicVGPRBlockSize) {
   const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
   if (Features.test(FEAT_GFX90A_INSTS))
     return 8;
+  if (DynamicVGPRBlockSize != 0)
+    return DynamicVGPRBlockSize;
   if (Features.test(FEAT_1536_PHYSICAL_VGPRS))
     return IsWave32 ? 24 : 12;
   if (Features.test(FEAT_GFX10_3_INSTS))
@@ -433,9 +436,10 @@ unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32) {
   return IsWave32 ? 8 : 4;
 }
 
-unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch,
-                                     bool IsWave32) {
-  return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32);
+unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch, bool IsWave32,
+                                     unsigned DynamicVGPRBlockSize) {
+  return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32,
+                             DynamicVGPRBlockSize);
 }
 
 unsigned AMDGPU::getVGPREncodingGranule(GPUKind AK, bool IsWave32) {
