@@ -436,7 +436,7 @@ define i32 @sum4_i32_reused(i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[X]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP3]], <i32 3, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
@@ -467,7 +467,7 @@ define i16 @xor8_i64_reused(i64 %x) {
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> zeroinitializer, <8 x i32> <i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> [[TMP3]])
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
