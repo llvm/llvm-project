@@ -2053,6 +2053,20 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
         I2->eraseFromParent();
       }
+      // I1 now executes before the instructions we skipped.
+      unsigned SkippedFlags = 0;
+      for (const SuccIterPair &P : SuccIterPairs)
+        SkippedFlags |= P.second;
+      if (SkippedFlags & SkipImplicitControlFlow) {
+        // One of them may throw or not return, so I1 is speculated.
+        I1->dropUBImplyingAttrsAndMetadata();
+      } else if (SkippedFlags & SkipSideEffect) {
+        // One of them may write memory, for example allocate or free it, so
+        // metadata that only holds at I1's old position may not hold here.
+        I1->setMetadata(LLVMContext::MD_dereferenceable, nullptr);
+        I1->setMetadata(LLVMContext::MD_dereferenceable_or_null, nullptr);
+        I1->setMetadata(LLVMContext::MD_nofreeobj, nullptr);
+      }
       if (!Changed)
         NumHoistCommonCode += SuccIterPairs.size();
       Changed = true;

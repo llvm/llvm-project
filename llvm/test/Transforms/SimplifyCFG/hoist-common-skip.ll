@@ -1158,7 +1158,7 @@ declare void @map(i64) nounwind willreturn
 define ptr @hoist_deref_past_call(i1 %c, i64 %i) {
 ; CHECK-LABEL: @hoist_deref_past_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I:%.*]] to ptr, !dereferenceable [[META0:![0-9]+]], !dereferenceable_or_null [[META0]]
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I:%.*]] to ptr
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @map(i64 [[I]])
@@ -1188,7 +1188,7 @@ end:
 define ptr @hoist_deref_past_load(i1 %c, i64 %i, ptr %x, ptr %y, ptr %out) {
 ; CHECK-LABEL: @hoist_deref_past_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I:%.*]] to ptr, !dereferenceable [[META0]]
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I:%.*]] to ptr, !dereferenceable [[META0:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[X:%.*]], align 4
@@ -1257,7 +1257,7 @@ end:
 define i32 @hoist_noundef_past_throwing_call(i1 %c, i32 %x) {
 ; CHECK-LABEL: @hoist_noundef_past_throwing_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = call noundef i32 @pure_speculatable(i32 noundef [[X:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = call i32 @pure_speculatable(i32 [[X:%.*]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @side_effects0()
