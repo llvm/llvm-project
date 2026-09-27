@@ -45,6 +45,8 @@ const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
     {LangAS::sycl_global_host, llvm::AMDGPUAS::GLOBAL_ADDRESS},
     {LangAS::sycl_local, llvm::AMDGPUAS::LOCAL_ADDRESS},
     {LangAS::sycl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::sycl_generic, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::sycl_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
     {LangAS::ptr32_sptr, llvm::AMDGPUAS::FLAT_ADDRESS},
     {LangAS::ptr32_uptr, llvm::AMDGPUAS::FLAT_ADDRESS},
     {LangAS::ptr64, llvm::AMDGPUAS::FLAT_ADDRESS},

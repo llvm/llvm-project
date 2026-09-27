@@ -210,9 +210,10 @@ struct VPTransformState {
     DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
-  /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
-  /// is false, otherwise return the generated scalar. \See set.
-  Value *get(const VPValue *Def, bool IsScalar = false);
+  /// Get the generated vector Value for a given VPValue \p Def if
+  /// \p NeedsSingleScalar is false, otherwise return the generated scalar.
+  /// \See set.
+  Value *get(const VPValue *Def, bool NeedsSingleScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(const VPValue *Def, const VPLane &Lane);
@@ -241,12 +242,6 @@ struct VPTransformState {
     Data.VPV2Vector[Def] = V;
   }
 
-  /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(const VPValue *Def, Value *V) {
-    assert(Data.VPV2Vector.contains(Def) && "need to overwrite existing value");
-    Data.VPV2Vector[Def] = V;
-  }
-
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
   void set(const VPValue *Def, Value *V, const VPLane &Lane) {
     auto &Scalars = Data.VPV2Scalars[Def];
@@ -255,17 +250,6 @@ struct VPTransformState {
       Scalars.resize(CacheIdx + 1);
     assert(!Scalars[CacheIdx] && "should overwrite existing value");
     Scalars[CacheIdx] = V;
-  }
-
-  /// Reset an existing scalar value for \p Def and a given \p Lane.
-  void reset(const VPValue *Def, Value *V, const VPLane &Lane) {
-    auto Iter = Data.VPV2Scalars.find(Def);
-    assert(Iter != Data.VPV2Scalars.end() &&
-           "need to overwrite existing value");
-    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
-    assert(CacheIdx < Iter->second.size() &&
-           "need to overwrite existing value");
-    Iter->second[CacheIdx] = V;
   }
 
   /// Set the debug location in the builder using the debug location \p DL.
@@ -352,9 +336,9 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of the block predicated by replicate region
-  /// \p Region should be divided by.
-  uint64_t getReplicateRegionCostDivisor(const VPRegionBlock *Region) const;
+  /// \returns how much the cost of a block executing with recorded frequency
+  /// \p Freq should be divided by.
+  uint64_t getCostDivisor(std::optional<VPExecutionFrequency> Freq) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;

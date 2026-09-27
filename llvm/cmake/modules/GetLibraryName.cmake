@@ -5,7 +5,9 @@ function(get_library_name path name)
   set(suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
   list(FILTER prefixes EXCLUDE REGEX "^\\s*$")
   list(FILTER suffixes EXCLUDE REGEX "^\\s*$")
-  if(prefixes)
+  # Do not strip the "lib" prefix for Windows because MSVC-style linkers don't
+  # implicitly add the "lib" prefix.
+  if(prefixes AND NOT Win32)
     string(REPLACE ";" "|" prefixes "${prefixes}")
     string(REGEX REPLACE "^(${prefixes})" "" path ${path})
   endif()

@@ -18,6 +18,7 @@ class ScriptedProcess(metaclass=ABCMeta):
     loaded_images: Optional[list[dict]] = None
     threads: Optional[dict[int, "lldb.plugins.scripted_process.ScriptedThread"]] = None
     metadata: Optional[dict[str, Any]] = None
+    addressable_bits: Optional[dict[str, int]] = None
 
     target: lldb.SBTarget
     args: lldb.SBStructuredData
@@ -50,6 +51,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         self.loaded_images = []
         self.metadata = {}
         self.capabilities = {}
+        self.addressable_bits = {}
         self.pid = 42
 
     def get_capabilities(self) -> dict[str, bool]:
@@ -61,6 +63,24 @@ class ScriptedProcess(metaclass=ABCMeta):
             The dictionary can be empty.
         """
         return self.capabilities
+
+    def get_addressable_bits(self) -> dict[str, int]:
+        """Get the number of bits this process uses for addressing.
+
+        LLDB strips the remaining bits off every code and data address, the
+        way the `LC_NOTE "addrable bits"` corefile note and the `qHostInfo`
+        `addressing_bits` key do for corefiles and live processes.
+
+        This is queried before the first stop is reported, so the threads and
+        backtraces built from that stop already have the mask applied.
+
+        Returns:
+            Dict[str:int]: A dictionary with optional "lowmem" and "highmem"
+            keys, holding the number of bits used for addressing in low and
+            high memory. "highmem" defaults to "lowmem" when it is missing.
+            The dictionary can be empty, in which case no bits are stripped.
+        """
+        return self.addressable_bits
 
     def get_memory_region_containing_address(
         self, addr: int

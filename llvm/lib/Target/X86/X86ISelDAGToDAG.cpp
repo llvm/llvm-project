@@ -535,6 +535,23 @@ namespace {
       return Mask.countr_one() >= Width;
     }
 
+    // Any instruction that defines a 32-bit result zeroes the upper 32 bits of
+    // the 64-bit register. Truncate can be lowered to EXTRACT_SUBREG.
+    // CopyFromReg may be copying from a truncate. AssertSext/AssertZext/
+    // AssertAlign aren't saying anything about the upper 32 bits. FREEZE may
+    // be coming from a truncate. BitScan fall through values may not zero the
+    // upper bits correctly. Called from the def32 PatLeaf in tablegen.
+    bool isDef32(SDNode *N) const {
+      unsigned Opc = N->getOpcode();
+      return Opc != ISD::TRUNCATE && Opc != TargetOpcode::EXTRACT_SUBREG &&
+             Opc != ISD::CopyFromReg && Opc != ISD::AssertSext &&
+             Opc != ISD::AssertZext && Opc != ISD::AssertAlign &&
+             Opc != ISD::FREEZE &&
+             !((Opc == X86ISD::BSF || Opc == X86ISD::BSR) &&
+               !N->getOperand(0).isUndef() &&
+               !isa<ConstantSDNode>(N->getOperand(0)));
+    }
+
     /// Return an SDNode that returns the value of the global base register.
     /// Output instructions required to initialize the global base register,
     /// if necessary.
@@ -5195,6 +5212,10 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
   // Check if the mask is -1. In that case, this is an unnecessary instruction
   // that escaped earlier analysis.
   if (NegMaskVal.isAllOnes()) {
+    // The already-selected users of a 32-bit 'and' may rely on it zeroing the
+    // upper 32 bits (def32), which a truncate operand doesn't guarantee.
+    if (VT == MVT::i32 && !isDef32(And0.getNode()))
+      return false;
     ReplaceNode(And, And0.getNode());
     return true;
   }
