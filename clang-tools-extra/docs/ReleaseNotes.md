@@ -240,6 +240,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
 
+- Improved {doc}`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by correctly dereferencing
+  raw pointers to containers in fix-its.
+
 - Extend {doc}`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
