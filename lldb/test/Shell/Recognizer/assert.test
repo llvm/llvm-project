@@ -6,6 +6,10 @@
 # debug a Linux target from another host.
 # UNSUPPORTED: system-linux, remote-linux
 #
+# https://github.com/llvm/llvm-project/issues/224600
+# ObjectFilePECOFF does not support ARM64 .pdata/.xdata.
+# UNSUPPORTED: target-windows && target-aarch64
+#
 # RUN: %clang_host -g -O0 %S/Inputs/assert.c -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 run

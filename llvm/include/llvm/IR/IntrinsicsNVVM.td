@@ -481,7 +481,7 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = fals
       !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
 
-      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
+      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64, s8.s4 -> s32 @ m8n16
       !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
       !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
@@ -834,7 +834,7 @@ class NVVM_MMA_OPS {
     ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
 
   list<WMMA_REGS> ldmatrix_geom_m8n16_ops = LDMATRIX_OPS<
-    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
+    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"]>.ret;
 
   list<WMMA_REGS> stmatrix_b16_ops = STMATRIX_OPS<
     ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
@@ -1033,6 +1033,7 @@ class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
     !and(!eq(g, "m8n16"), !eq(t, "b8"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b6x16_p32"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b4x16_p64"), !eq(trans, 0)): true,
+    !and(!eq(g, "m8n16"), !eq(t, "s8.s4"), !eq(trans, 0)): true,
     true: false
   );
 }
@@ -2064,10 +2065,10 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
     }
   }
 
@@ -3849,10 +3850,7 @@ foreach shape = ["32x32b", "16x32bx2"] in {
 let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
                       NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>] in {
   def int_nvvm_st_bulk :
-      DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
-
-  def int_nvvm_st_bulk_shared_cta :
-      DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
+      DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_anyint_ty, llvm_i64_ty]>;
 }
 
 //

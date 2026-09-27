@@ -73,6 +73,7 @@ def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
 def ArgDeclOrExpr : ArgType { let Name = "DeclOrExpr"; }
+def ArgCtorDecl : ArgType { let Name = "const CXXConstructorDecl *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -189,6 +190,9 @@ def PushIgnoreDiags : SuccessOpcode;
 def PopIgnoreDiags : SuccessOpcode;
 
 def StartInit : SuccessOpcode;
+def StartFieldInit : SuccessOpcode {
+  let Args = [ArgUint32];
+}
 def EndInit : SuccessOpcode;
 
 def StartSpeculation : SuccessOpcode;
@@ -321,6 +325,10 @@ def Null : SuccessOpcode {
   let Types = [PtrTypeClass];
   let Args = [ArgUint64, ArgTypePtr];
   let HasGroup = 1;
+}
+
+def CastAddressSpace : Opcode {
+  let Args = [ArgUint64, ArgTypePtr];
 }
 
 //===----------------------------------------------------------------------===//
@@ -477,6 +485,10 @@ def StartThisLifetime : Opcode {
 }
 def StartThisLifetime1 : Opcode {
   let NeedsOpPC = 0;
+}
+
+def DefaultInit : Opcode {
+  let Args = [ArgCtorDecl];
 }
 
 def CheckDecl : Opcode {
