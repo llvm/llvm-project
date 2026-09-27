@@ -35,7 +35,7 @@ subroutine matmul2(c)
 endsubroutine
 ! CHECK-LABEL: func.func @_QPmatmul2
 ! CHECK:           %[[C_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-! CHECK:         %[[B_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "b"
+! CHECK:         %[[B_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> <{bindc_name = "b"
 ! CHECK:         %[[B_BOX_DECL:.*]]:2 = hlfir.declare %[[B_BOX_ALLOC]] {{.*}} uniq_name = "_QFmatmul2Eb"
 
 

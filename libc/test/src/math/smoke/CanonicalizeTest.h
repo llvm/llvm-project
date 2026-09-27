@@ -266,18 +266,14 @@ public:
   }
 };
 
-#define LIST_CANONICALIZE_TESTS(T, func)                                       \
-  using LlvmLibcCanonicalizeTest = CanonicalizeTest<T>;                        \
-  TEST_F(LlvmLibcCanonicalizeTest, SpecialNumbers) {                           \
-    testSpecialNumbers(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcCanonicalizeTest, RegularNubmers) {                           \
-    testRegularNumbers(&func);                                                 \
-  }
+#define LIST_CANONICALIZE_TESTS(Name, T, func)                                 \
+  using LlvmLibc##Name##Test = CanonicalizeTest<T>;                            \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RegularNumbers) { testRegularNumbers(&func); }
 
-#define X86_80_SPECIAL_CANONICALIZE_TEST(T, func)                              \
-  using LlvmLibcCanonicalizeTest = CanonicalizeTest<T>;                        \
-  TEST_F(LlvmLibcCanonicalizeTest, X64_80SpecialNumbers) {                     \
+#define X86_80_SPECIAL_CANONICALIZE_TEST(Name, T, func)                        \
+  using LlvmLibc##Name##Test = CanonicalizeTest<T>;                            \
+  TEST_F(LlvmLibc##Name##Test, X64_80SpecialNumbers) {                         \
     testX64_80SpecialNumbers(&func);                                           \
   }
 

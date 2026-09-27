@@ -383,8 +383,8 @@ void MipsAsmPrinter::emitFrameDirective() {
 }
 
 /// Emit Set directives.
-const char *MipsAsmPrinter::getCurrentABIString() const {
-  switch (static_cast<MipsTargetMachine &>(TM).getABI().GetEnumValue()) {
+static const char *getABIString(const MipsABIInfo &ABI) {
+  switch (ABI.GetEnumValue()) {
   case MipsABIInfo::ABI::O32:  return "abi32";
   case MipsABIInfo::ABI::N32:  return "abiN32";
   case MipsABIInfo::ABI::N64:  return "abi64";
@@ -750,7 +750,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
                             MTM, std::nullopt);
 
     bool IsABICalls = STI.isABICalls();
-    const MipsABIInfo &ABI = MTM.getABI();
+    const MipsABIInfo &ABI = STI.getABI();
     if (IsABICalls) {
       TS.emitDirectiveAbiCalls();
       // FIXME: This condition should be a lot more complicated that it is here.
@@ -762,7 +762,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     }
 
     // Tell the assembler which ABI we are using
-    std::string SectionName = std::string(".mdebug.") + getCurrentABIString();
+    std::string SectionName = std::string(".mdebug.") + getABIString(ABI);
     OutStreamer->switchSection(
         OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
 
