@@ -649,6 +649,11 @@ features cannot lower the translation-unit ABI level;
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
 
+- Fixed a bogus "deduced type depends on itself" error when a variable template
+  specialization with a deduced type was first named in a context that did not
+  require its definition (such as `decltype`) and then referenced again;
+  Clang now instantiates the definition to deduce the type instead. (#GH214477)
+
 - A defaulted copy or move assignment operator for a union was left with an
   empty body and copied nothing when the operator was actually called, for
   example through a pointer to member. Clang now synthesizes a whole-object
@@ -723,11 +728,6 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
-
-- Fixed a bogus "deduced type depends on itself" error when a variable template
-  specialization with a deduced type was first named in a context that did not
-  require its definition (such as `decltype`) and then referenced again;
-  Clang now instantiates the definition to deduce the type instead. (#GH214477)
 
 #### Bug Fixes to AST Handling
 
