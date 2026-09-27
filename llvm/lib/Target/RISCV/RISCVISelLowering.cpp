@@ -13176,8 +13176,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           (VT == MVT::v2i32 && SrcVT == MVT::v2i16)))
       reportFatalUsageError("unsupported packed widening shift intrinsic");
 
-    SDValue ShAmt =
-        DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
+    SDValue ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
     bool IsSigned = IntNo == Intrinsic::riscv_pwsla;
     if (!Subtarget.is64Bit()) {
       unsigned Opc = IsSigned ? RISCVISD::PWSLA : RISCVISD::PWSLL;
