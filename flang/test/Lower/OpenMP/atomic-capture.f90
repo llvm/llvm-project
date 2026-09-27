@@ -9,9 +9,9 @@
 program OmpAtomicCapture
     use omp_lib
 
-!CHECK: %[[VAL_X_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+!CHECK: %[[VAL_X_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFEx"}>
 !CHECK: %[[VAL_X_DECLARE:.*]]:2 = hlfir.declare %[[VAL_X_ALLOCA]] {{.*}}
-!CHECK: %[[VAL_Y_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+!CHECK: %[[VAL_Y_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFEy"}>
 !CHECK: %[[VAL_Y_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Y_ALLOCA]] {{.*}}
     integer :: x, y
 
@@ -51,19 +51,19 @@ end program
 !CHECK: func.func @_QPpointers_in_atomic_capture() {
 subroutine pointers_in_atomic_capture()
 
-!CHECK: %[[VAL_A_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFpointers_in_atomic_captureEa"}
+!CHECK: %[[VAL_A_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "a", uniq_name = "_QFpointers_in_atomic_captureEa"}>
 !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<i32>
 !CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 !CHECK: fir.store %[[EMBOX]] to %[[VAL_A_ALLOCA]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_A_DECLARE:.*]]:2 = hlfir.declare %[[VAL_A_ALLOCA]] {{.*}}
-!CHECK: %[[VAL_B_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "b", uniq_name = "_QFpointers_in_atomic_captureEb"}
+!CHECK: %[[VAL_B_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "b", uniq_name = "_QFpointers_in_atomic_captureEb"}>
 !CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<i32>
 !CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 !CHECK: fir.store %[[EMBOX]] to %[[VAL_B_ALLOCA]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_B_DECLARE:.*]]:2 = hlfir.declare %[[VAL_B_ALLOCA]] {{.*}}
-!CHECK: %[[VAL_C_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "c", fir.target, uniq_name = "_QFpointers_in_atomic_captureEc"}
+!CHECK: %[[VAL_C_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "c", uniq_name = "_QFpointers_in_atomic_captureEc"}> {fir.target}
 !CHECK: %[[VAL_C_DECLARE:.*]]:2 = hlfir.declare %[[VAL_C_ALLOCA]] {{.*}}
-!CHECK: %[[VAL_D_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "d", fir.target, uniq_name = "_QFpointers_in_atomic_captureEd"}
+!CHECK: %[[VAL_D_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "d", uniq_name = "_QFpointers_in_atomic_captureEd"}> {fir.target}
 !CHECK: %[[VAL_D_DECLARE:.*]]:2 = hlfir.declare %[[VAL_D_ALLOCA]] {{.*}}
     integer, pointer :: a, b
     integer, target :: c, d
