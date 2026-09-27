@@ -303,23 +303,6 @@ struct BufferizationOptions {
   /// Return `true` if the given op should be bufferized.
   bool isOpAllowed(Operation *op) const;
 
-  /// Helper functions for allocation and memory copying.
-  std::optional<AllocationFn> allocationFn;
-  std::optional<MemCpyFn> memCpyFn;
-  std::optional<CastFn> castFn;
-
-  /// Create a memref allocation with the given type and dynamic extents.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                               ValueRange dynShape) const;
-
-  /// Creates a memcpy between two given buffers.
-  LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from,
-                             Value to) const;
-
-  /// Creates a cast function from a buffer value to a new type.
-  FailureOr<Value> createCast(OpBuilder &b, Location loc, Type dest,
-                              Value value) const;
-
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
   /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
   /// the boundaries.
@@ -352,6 +335,15 @@ struct BufferizationOptions {
   /// external functions, because the generated function signatures will be less
   /// predictable.
   void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
+
+  /// Create a memref allocation with the given type and dynamic extents.
+  AllocationFn allocationFn = nullptr;
+
+  /// Creates a memcpy between two given buffers.
+  MemCpyFn memCpyFn = nullptr;
+
+  /// Creates a cast function from a buffer value to a new type.
+  CastFn castFn = nullptr;
 
   /// Type conversion from tensors to buffers. This type conversion is used to
   /// determine bufferized function argument and result types.

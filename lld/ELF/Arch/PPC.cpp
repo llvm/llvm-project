@@ -44,8 +44,8 @@ public:
                  uint64_t pltEntryAddr) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   bool needsThunk(RelExpr expr, RelType relocType, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -91,7 +91,7 @@ void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   if (!ctx.arg.isPic) {
     for (const Symbol *sym :
          cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
-      writePPC32PltCallStub(ctx, buf, sym->getGotPltVA(ctx), nullptr, 0);
+      writePPC32PltCallStub(ctx, buf, glink, sym->getGotPltVA(ctx), nullptr, 0);
       buf += 16;
       glink += 16;
     }
@@ -179,7 +179,7 @@ PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 0;
   pltEntrySize = 4;
-  ipltEntrySize = 16;
+  ipltEntrySize = ctx.arg.isPic ? 32 : 16;
 
   needsThunks = true;
 
@@ -199,10 +199,11 @@ void PPC::initTargetSpecificSections() {
 }
 
 void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
-                    uint64_t /*pltEntryAddr*/) const {
-  // In -pie or -shared mode, assume r30 points to .got2+0x8000, and use a
-  // .got2.plt_pic32. thunk.
-  writePPC32PltCallStub(ctx, buf, sym.getGotPltVA(ctx), sym.file, 0x8000);
+                    uint64_t pltEntryAddr) const {
+  // In -pie or -shared mode we can't rely on r30 for indirect calls, nor for
+  // direct calls with a different TOC base to the resolver.
+  writePPC32PltCallStub(ctx, buf, pltEntryAddr, sym.getGotPltVA(ctx), sym.file,
+                        std::nullopt);
 }
 
 void PPC::writeGotHeader(uint8_t *buf) const {
@@ -285,8 +286,9 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                          unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
@@ -405,11 +407,11 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void PPC::scanSection(InputSectionBase &sec) {
+void PPC::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC, ELF32LE>(*this, sec);
+    elf::scanSection1<PPC, ELF32LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC, ELF32BE>(*this, sec);
+    elf::scanSection1<PPC, ELF32BE>(*this, sec, shard);
 }
 
 static std::pair<RelType, uint64_t> fromDTPREL(RelType type, uint64_t val) {

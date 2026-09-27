@@ -275,10 +275,31 @@ join:
   ret ptr %phi
 }
 
+; !nofpclass is safe to speculate, but !noundef is not, as the latter causes
+; immediate undefined behavior.
+define float @speculate_nofpclass(i1 %c, ptr dereferenceable(8) align 8 %p) {
+; CHECK-LABEL: @speculate_nofpclass(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[P:%.*]], align 4, !nofpclass [[META6:![0-9]+]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], float [[V]], float 0.000000e+00
+; CHECK-NEXT:    ret float [[SPEC_SELECT]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  %v = load float, ptr %p, !nofpclass !{i32 3}, !noundef !{}
+  br label %join
+
+join:
+  %phi = phi float [ %v, %if ], [ 0.000000e+00, %entry ]
+  ret float %phi
+}
+
 define void @hoist_fpmath(i1 %c, double %x) {
 ; CHECK-LABEL: @hoist_fpmath(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath [[META6:![0-9]+]]
+; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath [[META7:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -296,7 +317,7 @@ out:
 define void @hoist_fpmath_switch(i64 %i, double %x) {
 ; CHECK-LABEL: @hoist_fpmath_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath [[META6]]
+; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -319,7 +340,7 @@ out:
 define void @hoist_noalias_addrspace_both(i1 %c, ptr %p, i64 %val) {
 ; CHECK-LABEL: @hoist_noalias_addrspace_both(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META7:![0-9]+]]
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META8:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -361,7 +382,7 @@ out:
 define void @hoist_noalias_addrspace_switch(i64 %i, ptr %p, i64 %val) {
 ; CHECK-LABEL: @hoist_noalias_addrspace_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META7]]
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META8]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -384,7 +405,7 @@ out:
 define void @hoist_noalias_addrspace_switch_multiple(i64 %i, ptr %p, i64 %val) {
 ; CHECK-LABEL: @hoist_noalias_addrspace_switch_multiple(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META8:![0-9]+]]
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META9:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -427,7 +448,7 @@ join:
 define void @hoist_captures_same(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_same(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9:![0-9]+]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -448,7 +469,7 @@ out:
 define void @hoist_captures_different(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_different(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10:![0-9]+]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -469,7 +490,7 @@ out:
 define void @hoist_captures_overlap(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_overlap(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -490,7 +511,7 @@ out:
 define void @hoist_captures_subsume1(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_subsume1(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -511,7 +532,7 @@ out:
 define void @hoist_captures_subsume2(i1 %c, ptr %x, ptr %y) {
 ; CHECK-LABEL: @hoist_captures_subsume2(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11:![0-9]+]]
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META12:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -595,7 +616,7 @@ out:
 define void @hoist_nofpclass_intersect(i1 %c, ptr %p) {
 ; CHECK-LABEL: @hoist_nofpclass_intersect(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[P:%.*]], align 4, !nofpclass [[META12:![0-9]+]]
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[P:%.*]], align 4, !nofpclass [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -711,13 +732,13 @@ out:
 ; CHECK: [[META3]] = !{i64 10}
 ; CHECK: [[RNG4]] = !{i32 0, i32 10}
 ; CHECK: [[META5]] = !{i64 4}
-; CHECK: [[META6]] = !{float 2.500000e+00}
-; CHECK: [[META7]] = !{i32 5, i32 6}
-; CHECK: [[META8]] = !{i32 4, i32 5}
-; CHECK: [[META9]] = !{!"address"}
-; CHECK: [[META10]] = !{!"address", !"read_provenance"}
-; CHECK: [[META11]] = !{!"provenance"}
-; CHECK: [[META12]] = !{i32 3}
+; CHECK: [[META6]] = !{i32 3}
+; CHECK: [[META7]] = !{float 2.500000e+00}
+; CHECK: [[META8]] = !{i32 5, i32 6}
+; CHECK: [[META9]] = !{i32 4, i32 5}
+; CHECK: [[META10]] = !{!"address"}
+; CHECK: [[META11]] = !{!"address", !"read_provenance"}
+; CHECK: [[META12]] = !{!"provenance"}
 ; CHECK: [[META13]] = !{i32 1, [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"first"}
 ;.

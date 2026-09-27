@@ -396,7 +396,7 @@ relocation_iterator COFFObjectFile::section_rel_begin(DataRefImpl Ref) const {
   const coff_section *Sec = toSec(Ref);
   const coff_relocation *begin = getFirstReloc(Sec, Data, base());
   if (begin && Sec->VirtualAddress != 0)
-    report_fatal_error("Sections with relocations should have an address of 0");
+    report_fatal_error("sections with relocations should have an address of 0");
   DataRefImpl Ret;
   Ret.p = reinterpret_cast<uintptr_t>(begin);
   return relocation_iterator(RelocationRef(Ret, this));

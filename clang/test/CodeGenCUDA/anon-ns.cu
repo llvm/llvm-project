@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.dev
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
-// RUN:   -aux-triple amdgcn-amd-amdhsa -std=c++17 -fgpu-rdc \
+// RUN:   -aux-triple amdgpu-amd-amdhsa -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.host
 
 // RUN: cat %t.dev %t.host | FileCheck -check-prefixes=HIP,COMMON %s
@@ -50,12 +50,13 @@
 // COMMON-DAG: @[[VCSTR:.*]] = {{.*}} c"[[VC]]\00"
 // COMMON-DAG: @[[VTSTR:.*]] = {{.*}} c"[[VT]]\00"
 
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KERNSTR]]
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTXSTR]]
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTLSTR]]
-// HIP-DAG: call void @__{{.*}}RegisterManagedVar({{.*}}@[[VMSTR]]
-// COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VCSTR]]
-// COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VTSTR]]
+// The host exports symbols via offloading entries referencing the name strings.
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KERNSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KTXSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KTLSTR]]
+// HIP-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VMSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VCSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VTSTR]]
 
 template <typename T>
 __global__ void kt(T x) {}

@@ -46,10 +46,10 @@
 #include <cstdint>
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -231,20 +231,6 @@ inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
 
 /// Match an arbitrary basic block value and ignore it.
 inline auto m_BasicBlock() { return m_Isa<BasicBlock>(); }
-
-/// Inverting matcher
-template <typename Ty> struct match_unless {
-  Ty M;
-
-  match_unless(const Ty &Matcher) : M(Matcher) {}
-
-  template <typename ITy> bool match(ITy *V) const { return !M.match(V); }
-};
-
-/// Match if the inner matcher does *NOT* match.
-template <typename Ty> inline match_unless<Ty> m_Unless(const Ty &M) {
-  return match_unless<Ty>(M);
-}
 
 template <typename APTy> struct ap_match {
   static_assert(std::is_same_v<APTy, APInt> || std::is_same_v<APTy, APFloat>);
@@ -702,6 +688,17 @@ m_SpecificInt_ICMP(ICmpInst::Predicate Predicate, const APInt &Threshold) {
   return P;
 }
 
+/// Match an integer or vector with every element comparing 'pred' (eg/ne/...)
+/// to Threshold. For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<icmp_pred_with_threshold, false>
+m_SpecificInt_ICMP_ForbidPoison(ICmpInst::Predicate Predicate,
+                                const APInt &Threshold) {
+  cst_pred_ty<icmp_pred_with_threshold, false> P;
+  P.Pred = Predicate;
+  P.Thr = &Threshold;
+  return P;
+}
+
 struct is_nan {
   bool isValue(const APFloat &C) const { return C.isNaN(); }
 };
@@ -878,6 +875,9 @@ inline match_bind<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
+
+/// Match a PHI node, capturing it if we match.
+inline match_bind<PHINode> m_Phi(PHINode *&PN) { return PN; }
 
 /// Match an UndefValue, capturing the value if we match.
 inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
@@ -1089,6 +1089,39 @@ inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
 inline match_deferred<const BasicBlock>
 m_Deferred(const BasicBlock *const &BB) {
   return BB;
+}
+
+template <typename Pattern> struct SpecificType_match {
+  Type *RefTy;
+  Pattern P;
+
+  SpecificType_match(Type *RefTy, const Pattern &P) : RefTy(RefTy), P(P) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return V->getType() == RefTy && P.match(V);
+  }
+};
+
+// Explicit deduction guide.
+template <typename Pattern>
+SpecificType_match(const Type *, const Pattern &)
+    -> SpecificType_match<Pattern>;
+
+/// Match a value of a specific type.
+template <typename Pattern>
+inline auto m_SpecificType(Type *RefTy, const Pattern &P) {
+  return SpecificType_match<Pattern>(RefTy, P);
+}
+inline auto m_SpecificType(Type *RefTy) {
+  return m_SpecificType(RefTy, m_Value());
+}
+
+/// Match a value of a specific type, capturing it if we match.
+inline auto m_SpecificType(Type *RefTy, Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
+}
+inline auto m_SpecificType(Type *RefTy, const Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2043,6 +2076,22 @@ m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
 template <typename OpTy>
 inline OneOps_match<OpTy, Instruction::Load> m_Load(const OpTy &Op) {
   return OneOps_match<OpTy, Instruction::Load>(Op);
+}
+
+/// Matches a simple (non-volatile, non-atomic) LoadInst.
+template <typename OpTy> struct LoadSimple_match {
+  OneOps_match<OpTy, Instruction::Load> Base;
+
+  LoadSimple_match(const OpTy &Op) : Base(Op) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return Base.match(V) && cast<LoadInst>(V)->isSimple();
+  }
+};
+
+template <typename OpTy>
+inline LoadSimple_match<OpTy> m_LoadSimple(const OpTy &Op) {
+  return LoadSimple_match<OpTy>(Op);
 }
 
 /// Matches StoreInst.

@@ -1466,10 +1466,3 @@ constexpr bool missingCase() {
     1u: return false; // expected-error {{expected 'case' keyword before expression}}
   }
 }
-
-namespace GH202106 {
-  template <typename T> constexpr int foo(T);
-  template int foo<int>(int);
-  template <typename T> constexpr int foo(T) {}
-  // cxx14_20-error@-1 {{no return statement in constexpr function}}
-} // namespace GH202106

@@ -18,16 +18,13 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <cmath>
 #include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "lower-mem-intrinsics"
 
 using namespace llvm;
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
 
 /// \returns \p Len urem \p OpSize, checking for optimization opportunities.
 /// \p OpSizeVal must be the integer value of the \c ConstantInt \p OpSize.
@@ -70,8 +67,6 @@ struct LoopExpansionInfo {
 };
 
 std::optional<uint64_t> getAverageMemOpLoopTripCount(const MemIntrinsic &I) {
-  if (ProfcheckDisableMetadataFixes)
-    return std::nullopt;
   if (std::optional<uint64_t> EC = I.getFunction()->getEntryCount();
       !EC || *EC == 0)
     return std::nullopt;

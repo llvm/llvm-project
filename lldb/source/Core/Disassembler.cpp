@@ -9,6 +9,7 @@
 #include "lldb/Core/Disassembler.h"
 
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Mangled.h"
@@ -1085,7 +1086,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream &out_stream) {
 
 bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
   if (!file_name) {
-    out_stream.Printf("Instruction::TestEmulation:  Missing file_name.");
+    out_stream.PutCString("Instruction::TestEmulation:  Missing file_name.");
     return false;
   }
   FILE *test_file = FileSystem::Instance().Fopen(file_name, "r");
@@ -1157,9 +1158,9 @@ bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
         insn_emulator_up->TestEmulation(out_stream, arch, data_dictionary);
 
   if (success)
-    out_stream.Printf("Emulation test succeeded.");
+    out_stream.PutCString("Emulation test succeeded.");
   else
-    out_stream.Printf("Emulation test failed.");
+    out_stream.PutCString("Emulation test failed.");
 
   return success;
 }
@@ -1355,34 +1356,15 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   start = ResolveAddress(target, start);
 
-  // WebAssembly functions begin with local variable declarations that are part
-  // of the binary format but are not executable instructions. Skip past them
-  // so the disassembler doesn't try to decode non-instruction bytes.
-  if (m_arch.GetTriple().getArch() == llvm::Triple::wasm32 ||
-      m_arch.GetTriple().getArch() == llvm::Triple::wasm64) {
-    if (ModuleSP module_sp = start.GetModule()) {
-      SymbolContext sc;
-      module_sp->ResolveSymbolContextForAddress(start, eSymbolContextSymbol,
-                                                sc);
-      if (sc.symbol) {
-        if (uint32_t prologue_size = sc.symbol->GetPrologueByteSize()) {
-          const Address symbol_addr = sc.symbol->GetAddress();
-          const AddressRange prologue_range(symbol_addr, prologue_size);
-          if (prologue_range.Contains(start)) {
-            const addr_t prologue_offset = start.GetLoadAddress(&target) -
-                                           symbol_addr.GetLoadAddress(&target);
-            const addr_t skip = prologue_size - prologue_offset;
-
-            // Skip disassembling the prologue.
-            start.Slide(skip);
-
-            // If there is a limit in bytes, we need to update it so we don't
-            // disassemble past what would have been the end.
-            if (limit.kind == Limit::Bytes && limit.value > skip)
-              limit.value -= skip;
-          }
-        }
-      }
+  // Don't decode a non-instruction function header.
+  if (Architecture *arch = target.GetArchitecturePlugin()) {
+    const Address first_insn = arch->SkipFunctionHeader(start);
+    if (first_insn.GetFileAddress() != start.GetFileAddress()) {
+      const addr_t skip = first_insn.GetFileAddress() - start.GetFileAddress();
+      start = first_insn;
+      // The skipped header bytes still count against a byte limit.
+      if (limit.kind == Limit::Bytes && limit.value > skip)
+        limit.value -= skip;
     }
   }
 

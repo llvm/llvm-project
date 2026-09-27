@@ -51,8 +51,14 @@ jobs:
     outputs:
       ref: ${{ steps.inputs.outputs.ref }}
       export-args: ${{ steps.inputs.outputs.export-args }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/validate-release-version
+          sparse-checkout-cone-mode: false
       - name: Validate Input
         if: inputs.release-version != ''
         uses: ./.github/workflows/validate-release-version
@@ -74,7 +80,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
@@ -82,7 +88,7 @@ jobs:
       - inputs
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           ref: ${{ needs.inputs.outputs.ref }}
@@ -112,7 +118,7 @@ jobs:
 
   attest-release-sources:
     name: Attest Release Sources
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       deployment: false
       name: release
@@ -124,19 +130,10 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - name: Checkout Release Scripts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          sparse-checkout: |
-            .github/workflows/upload-release-artifact
-            llvm/utils/release/github-upload-release.py
-            llvm/utils/git/requirements.txt
-          sparse-checkout-cone-mode: false
-
       - name: Upload Artifacts
-        uses: ./.github/workflows/upload-release-artifact
+        uses: $/.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ inputs.release-version }}
           artifact-id: ${{ needs.release-sources.outputs.artifact-id }}
           attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
           digest: ${{ needs.release-sources.outputs.digest }}

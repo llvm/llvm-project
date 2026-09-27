@@ -68,7 +68,7 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
-def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
+def cuf_FreeOp : cuf_Op<"free", []> {
   let summary = "Free a device allocated object";
 
   let description = [{
@@ -334,6 +334,27 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
   }];
 }
 
+def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
+  let summary = "Register global variables in unified mode";
+
+  let description = [{
+    Emitted under -gpu=mem:unified for globals.
+    Registers the global with the runtime as unified variable or device-resident
+    if the `deviceResident` attribute is present.
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$global,
+    StrAttr:$varName,
+    I64Attr:$size,
+    UnitAttr:$deviceResident
+  );
+
+  let assemblyFormat = [{
+    $global `(` $varName `,` $size `)` attr-dict
+  }];
+}
+
 def cuf_DeviceAddressOp : cuf_Op<"device_address", []> {
   let summary = "Get the device address from a host symbol";
 
@@ -373,6 +394,23 @@ def cuf_SharedMemoryOp
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active", []> {
+  let summary = "Query whether the CUDA device context is still active";
+
+  let description = [{
+    Returns true if the CUDA device's primary context is alive. Used to
+    guard host-side scope-exit deallocation against a user cudaDeviceReset().
+
+    Converted to a `_FortranACUFDeviceIsActive` runtime call on the host and
+    to `false` in device code, so host-only cleanup is DCE'd from GPU
+    functions.
+  }];
+
+  let results = (outs I1:$res);
+
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {

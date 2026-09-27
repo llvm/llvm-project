@@ -276,6 +276,17 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &type) {
   }
 }
 
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(
+    const DynamicType &type) {
+  const semantics::DerivedTypeSpec *derived{GetDerivedTypeSpec(type)};
+  return derived && derived->IsEnumerationType() ? derived : nullptr;
+}
+
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(
+    const std::optional<DynamicType> &type) {
+  return type ? GetEnumerationTypeSpec(*type) : nullptr;
+}
+
 static const semantics::Symbol *FindParentComponent(
     const semantics::DerivedTypeSpec &derived) {
   const semantics::Symbol &typeSymbol{derived.typeSymbol()};
@@ -561,6 +572,12 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
   return AreSameDerivedType(x, y, true, true, false, inProgress);
+}
+
+bool AreSameDerivedTypeIgnoringLengthParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, false, true, false, inProgress);
 }
 
 bool AreSameDerivedTypeIgnoringSequence(

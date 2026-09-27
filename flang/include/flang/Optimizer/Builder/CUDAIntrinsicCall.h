@@ -108,7 +108,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genVoteSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
 };
 
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name);
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall = false);
 
 } // namespace fir
 

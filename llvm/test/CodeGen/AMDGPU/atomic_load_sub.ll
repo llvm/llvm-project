@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=R600,FUNC %s
 
 ; FUNC-LABEL: {{^}}atomic_sub_local:

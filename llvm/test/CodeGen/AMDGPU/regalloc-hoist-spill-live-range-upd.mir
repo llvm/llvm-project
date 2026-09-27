@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes='greedy<wwm>' -verify-regalloc -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes='greedy<wwm>' -verify-regalloc -o - %s | FileCheck %s
 #
 # The gist of this test is we want something that triggers the
 # hoistSpillInsideBB spilling optimization placement, while spilling a value

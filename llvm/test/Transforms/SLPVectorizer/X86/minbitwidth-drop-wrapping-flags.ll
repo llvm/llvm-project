@@ -6,7 +6,7 @@ define i32 @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i8, ptr null, align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i8 [[A_PROMOTED]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[A_PROMOTED]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[A_PROMOTED]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>

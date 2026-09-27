@@ -98,7 +98,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "u"})
 // CHECK-LABEL:   func.func @_QPtest4() {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x100x100xi32> {bindc_name = "u", uniq_name = "_QFtest4Eu"}
+// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x100x100xi32> <{bindc_name = "u", uniq_name = "_QFtest4Eu"}>
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_3]], %[[VAL_3]] : (index, index, index) -> !fir.shape<3>
 // CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = "_QFtest4Eu"} : (!fir.ref<!fir.array<100x100x100xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<100x100x100xi32>>
 // CHECK:           %[[VAL_8:.*]] = fir.slice
@@ -1058,4 +1058,19 @@ func.func @test37_merge_no_fold_inner_rank_too_large(%base: !fir.ref<!fir.array<
   %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3x4xf64>>
   %inner = fir.array_coor %view(%inner_shape) %i, %j : (!fir.ref<!fir.array<3x4xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
   return %inner : !fir.ref<f64>
+}
+
+// No fold: a fir.array_coor on a descriptor built by fir.create_box must not be
+// rewritten into an array_coor on the base pointer. create_box carries
+// arbitrary byte strides that an array_coor on a ref+shape cannot express, so
+// keeping the array_coor on the box is what preserves those strides.
+// CHECK-LABEL:   func.func @test38_no_fold_array_coor_create_box(
+// CHECK:           %[[BOX:.*]] = fir.create_box
+// CHECK:           fir.array_coor %[[BOX]]
+func.func @test38_no_fold_array_coor_create_box(%arg0: !fir.ref<!fir.array<?xf32>>,
+                                                %lb: index, %ext: index,
+                                                %sm: index, %idx: index) -> !fir.ref<f32> {
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.array_coor %0 %idx : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  return %1 : !fir.ref<f32>
 }

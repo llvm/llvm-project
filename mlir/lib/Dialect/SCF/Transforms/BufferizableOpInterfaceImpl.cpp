@@ -37,7 +37,7 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type,
   if (buffer.getType() == type)
     return buffer;
 
-  return *options.createCast(b, buffer.getLoc(), type, buffer);
+  return *options.castFn(b, buffer.getLoc(), type, buffer);
 }
 
 /// Helper function for loop bufferization. Return "true" if the given value
@@ -763,7 +763,8 @@ struct ForOpInterface
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), castedInitArgs, /*bodyBuilder=*/nullptr,
         forOp.getUnsignedCmp());
-    newForOp->setAttrs(forOp->getAttrs());
+    newForOp->setDiscardableAttrs(
+        forOp->getDiscardableAttrDictionary().getValue());
     Block *loopBody = newForOp.getBody();
 
     // Set up new iter_args. The loop body uses tensors, so wrap the (memref)

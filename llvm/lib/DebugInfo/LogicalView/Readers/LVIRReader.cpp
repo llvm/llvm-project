@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1447,13 +1446,15 @@ LVScope *LVIRReader::getOrCreateSubprogram(LVScope *Function,
   }
 
   // Check for additional retained nodes.
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *IE = dyn_cast<DIImportedEntity>(DN))
       constructImportedEntity(Function, IE);
     else if (const auto *TTP = dyn_cast<DITemplateTypeParameter>(DN))
       constructTemplateTypeParameter(Function, TTP);
     else if (const auto *TVP = dyn_cast<DITemplateValueParameter>(DN))
       constructTemplateValueParameter(Function, TVP);
+    else if (const auto *GVE = dyn_cast<DIGlobalVariableExpression>(DN))
+      getOrCreateVariable(GVE);
   }
 
   applySubprogramAttributes(Function, SP);
@@ -2121,9 +2122,8 @@ void LVIRReader::processBasicBlocks(Function &F) {
           DIExpression::convertToVariadicExpression(DV.Expression));
       RawLocationWrapper Locations(DV.Locations);
       for (DIExpression::ExprOperand ExprOp : CanonicalExpr->expr_ops()) {
-        if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg) {
-          AddLocationOp(Locations.getVariableLocationOp(ExprOp.getArg(0)),
-                        IsMem);
+        if (auto Arg = dyn_cast<DIExpression::ArgOp>(ExprOp)) {
+          AddLocationOp(Locations.getVariableLocationOp(Arg.getIndex()), IsMem);
         } else {
           if (ExprOp.getOp() > std::numeric_limits<uint8_t>::max())
             LLVM_DEBUG(dbgs() << "Bad DWARF op: " << ExprOp.getOp() << "\n");

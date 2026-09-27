@@ -271,13 +271,11 @@ protected:
       Log::DisableAllLogChannels();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      std::string error;
-      llvm::raw_string_ostream error_stream(error);
-      if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
-                                 error_stream))
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      if (llvm::Error err =
+              Log::DisableLogChannel(channel, args.GetArgumentArrayRef()))
+        result.AppendError(toString(std::move(err)));
       else
-        result.AppendError(error);
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
 };
@@ -311,9 +309,14 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       bool success = true;
-      for (const auto &entry : args.entries())
-        success =
-            success && Log::ListChannelCategories(entry.ref(), output_stream);
+      for (const auto &entry : args.entries()) {
+        auto err_or_list = Log::ListChannelCategories(entry.ref());
+        if (!err_or_list) {
+          success = false;
+          output_stream << toString(err_or_list.takeError());
+        } else
+          output_stream << *err_or_list;
+      }
       if (success)
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }

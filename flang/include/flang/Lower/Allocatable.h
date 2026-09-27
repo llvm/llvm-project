@@ -16,7 +16,6 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Runtime/allocator-registry-consts.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 class Value;

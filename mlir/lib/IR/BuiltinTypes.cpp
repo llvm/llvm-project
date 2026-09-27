@@ -192,6 +192,7 @@ FLOAT_TYPE_SEMANTICS(Float8E4M3FNUZType, Float8E4M3FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E4M3B11FNUZType, Float8E4M3B11FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E3M4Type, Float8E3M4)
 FLOAT_TYPE_SEMANTICS(Float8E8M0FNUType, Float8E8M0FNU)
+FLOAT_TYPE_SEMANTICS(Float8E5M3FNUType, Float8E5M3FNU)
 FLOAT_TYPE_SEMANTICS(BFloat16Type, BFloat)
 FLOAT_TYPE_SEMANTICS(Float16Type, IEEEhalf)
 FLOAT_TYPE_SEMANTICS(FloatTF32Type, FloatTF32)
@@ -607,22 +608,6 @@ mlir::isRankReducedType(ShapedType originalType,
   return SliceVerificationResult::Success;
 }
 
-bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
-  // Empty attribute is allowed as default memory space.
-  if (!memorySpace)
-    return true;
-
-  // Supported built-in attributes.
-  if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
-    return true;
-
-  // Allow custom dialect attributes.
-  if (!isa<BuiltinDialect>(memorySpace.getDialect()))
-    return true;
-
-  return false;
-}
-
 Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
                                                MLIRContext *ctx) {
   if (memorySpace == 0)
@@ -778,9 +763,6 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (failed(layout.verifyLayout(shape, emitError)))
     return failure();
 
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
-
   return success();
 }
 
@@ -906,9 +888,6 @@ UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType, Attribute memorySpace) {
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
-
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
 
   return success();
 }

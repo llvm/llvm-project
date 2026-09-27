@@ -63,7 +63,7 @@ def testMemRefMultiBufferOpCompact():
         transform.YieldOp()
     # CHECK-LABEL: TEST: testMemRefMultiBufferOpCompact
     # CHECK: = transform.memref.multibuffer
-    # CHECK-SAME: factor = 4 : i64
+    # CHECK-SAME: factor = 4
     # CHECK-SAME: (!transform.op<"memref.alloc">) -> !transform.any_op
 
 
@@ -81,7 +81,7 @@ def testMemRefMultiBufferOpTyped():
         transform.YieldOp()
     # CHECK-LABEL: TEST: testMemRefMultiBufferOpTyped
     # CHECK: = transform.memref.multibuffer
-    # CHECK-SAME: factor = 4 : i64
+    # CHECK-SAME: factor = 4
     # CHECK-SAME: (!transform.op<"memref.alloc">) -> !transform.op<"memref.alloc">
 
 
@@ -97,6 +97,6 @@ def testMemRefMultiBufferOpAttributes():
         transform.YieldOp()
     # CHECK-LABEL: TEST: testMemRefMultiBufferOpAttributes
     # CHECK: = transform.memref.multibuffer
-    # CHECK-SAME: factor = 4 : i64
+    # CHECK-SAME: factor = 4
     # CHECK-SAME: skip_analysis
     # CHECK-SAME: (!transform.op<"memref.alloc">) -> !transform.any_op

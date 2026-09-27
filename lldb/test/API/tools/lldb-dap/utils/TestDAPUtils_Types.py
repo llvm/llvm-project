@@ -3,7 +3,7 @@ import unittest
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union, cast
 
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     EmptyBodyResponse,
     Event,
     EventName,
@@ -81,6 +81,7 @@ class TestDAPUtils_Types(unittest.TestCase):
                         "line": 23,
                         "moduleId": "2833EAD0-0FDC-66C8-88B1-8C6E1D82736C-AE103AE6",
                         "name": "main",
+                        "compileUnitId": 4,
                         "source": {
                             "name": "convert.cpp",
                             "path": "/path/to/where/convert.cpp",

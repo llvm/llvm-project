@@ -24,7 +24,10 @@
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 #include "mlir/Support/Complex.h"
 
+#include <cctype>
+#include <cerrno>
 #include <fstream>
+#include <limits>
 
 namespace mlir {
 namespace sparse_tensor {
@@ -236,7 +239,35 @@ private:
     char *linePtr = line;
     for (uint64_t dimRank = getRank(), d = 0; d < dimRank; ++d) {
       // Parse the 1-based coordinate.
-      uint64_t c = strtoul(linePtr, &linePtr, 10);
+      while (std::isspace(static_cast<unsigned char>(*linePtr)))
+        ++linePtr;
+      errno = 0;
+      char *coordinateEnd = nullptr;
+      unsigned long long coordinate = strtoull(linePtr, &coordinateEnd, 10);
+      if (*linePtr == '-' || coordinateEnd == linePtr || errno == ERANGE ||
+          coordinate > std::numeric_limits<uint64_t>::max()) {
+        fprintf(stderr,
+                "Cannot parse coordinate for dimension %" PRIu64 " in %s\n", d,
+                filename);
+        exit(1);
+      }
+      linePtr = coordinateEnd;
+      uint64_t c = coordinate;
+      if (c == 0 || c > getDimSizes()[d]) {
+        fprintf(stderr,
+                "Coordinate %" PRIu64 " is out of bounds for dimension %" PRIu64
+                " with size %" PRIu64 " in %s\n",
+                c, d, getDimSizes()[d], filename);
+        exit(1);
+      }
+      if (c - 1 > std::numeric_limits<C>::max()) {
+        fprintf(stderr,
+                "Coordinate %" PRIu64
+                " cannot be represented by the requested coordinate type in "
+                "%s\n",
+                c, filename);
+        exit(1);
+      }
       // Store the 0-based coordinate.
       dimCoords[d] = static_cast<C>(c - 1);
     }
@@ -267,12 +298,13 @@ private:
   /// nonzeros, and the dimensions sizes (one per rank) of the sparse tensor.
   void readExtFROSTTHeader();
 
+  static constexpr uint64_t kMaxRank = 510;
   static constexpr int kColWidth = 1025;
   const char *const filename;
   FILE *file = nullptr;
   ValueKind valueKind_ = ValueKind::kInvalid;
   bool isSymmetric_ = false;
-  uint64_t idata[512];
+  uint64_t idata[kMaxRank + 2];
   char line[kColWidth];
 };
 

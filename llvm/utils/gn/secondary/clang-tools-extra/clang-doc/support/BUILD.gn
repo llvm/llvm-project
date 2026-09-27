@@ -4,7 +4,6 @@ static_library("support") {
   deps = [ "//llvm/lib/Support" ]
   sources = [
     "File.cpp",
-    "Markdown.cpp",
     "Utils.cpp",
   ]
 }

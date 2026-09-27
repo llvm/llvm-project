@@ -14,16 +14,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %width:_(s64) = COPY $x1
+    ; CHECK-NEXT: %width:_(i64) = COPY $x1
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY %ptr(p0)
-    ; CHECK-NEXT: $x1 = COPY %width(s64)
+    ; CHECK-NEXT: $x1 = COPY %width(i64)
     ; CHECK-NEXT: BL &bzero, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
-    %width:_(s64) = COPY $x1
-    G_BZERO %ptr(p0), %width(s64), 0 :: (store (s32))
+    %width:_(i64) = COPY $x1
+    G_BZERO %ptr(p0), %width(i64), 0 :: (store (i32))
     RET_ReallyLR
 
 ...
@@ -37,11 +37,11 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %width:_(s64) = COPY $x1
+    ; CHECK-NEXT: %width:_(i64) = COPY $x1
     ; CHECK-NEXT: $x0 = COPY %ptr(p0)
-    ; CHECK-NEXT: $x1 = COPY %width(s64)
+    ; CHECK-NEXT: $x1 = COPY %width(i64)
     ; CHECK-NEXT: TCRETURNdi &bzero, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1
     %ptr:_(p0) = COPY $x0
-    %width:_(s64) = COPY $x1
-    G_BZERO %ptr(p0), %width(s64), 1 :: (store (s32))
+    %width:_(i64) = COPY $x1
+    G_BZERO %ptr(p0), %width(i64), 1 :: (store (i32))
     RET_ReallyLR

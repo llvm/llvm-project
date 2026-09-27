@@ -13,8 +13,8 @@
 /// data model.
 ///
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_UTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_UTILS_H
 
 #include "../Representation.h"
 #include "llvm/ADT/SmallString.h"
@@ -33,4 +33,4 @@ void getHtmlFiles(llvm::StringRef AssetsPath,
 
 void getMdFiles(llvm::StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx);
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_UTILS_H

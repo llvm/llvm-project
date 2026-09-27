@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -o /dev/null %s 2>&1 | FileCheck %s
 
 ; CHECK: warning: {{.*}}: unknown amdgcn-av metadata 'bogus'
 

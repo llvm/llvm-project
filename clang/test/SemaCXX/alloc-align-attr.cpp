@@ -59,3 +59,11 @@ void foo() {
   f<int>(0); // expected-note {{in instantiation of function template specialization 'GH26612::f<int>' requested here}}
 }
 } // namespace GH26612
+
+void test_function_pointer(
+    char *(*member)(char *) __attribute__((alloc_align(1)))); // expected-error {{'alloc_align' attribute argument may only refer to a function parameter of integer type}}
+    char *(*another_member)(int) __attribute__((alloc_align(1))); // ok
+
+struct Test;
+void test_member_function_pointer(
+    char *(Test::*member)(char *) __attribute__((alloc_align(1)))); // expected-error {{'alloc_align' attribute argument may only refer to a function parameter of integer type}}

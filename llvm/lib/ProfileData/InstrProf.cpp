@@ -101,6 +101,10 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::bad_header:
     OS << "invalid instrumentation profile data (file header is corrupt)";
     break;
+  case instrprof_error::header_size_mismatch:
+    OS << "invalid instrumentation profile data (file is incomplete or header "
+          "is corrupt)";
+    break;
   case instrprof_error::unsupported_version:
     OS << "unsupported instrumentation profile format version";
     break;
@@ -166,6 +170,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
     break;
   case instrprof_error::counter_value_too_large:
     OS << "excessively large counter value suggests corrupted profile data";
+    break;
+  case instrprof_error::coverage_count_mismatch:
+    OS << "cannot merge single-byte and incrementing counter profiles";
     break;
   }
 
@@ -564,7 +571,7 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
     return E;
 
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
-  if (CanonicalName != VTablePGOName)
+  if (!CanonicalName.empty() && CanonicalName != VTablePGOName)
     return NameToGUIDMap(CanonicalName);
 
   return Error::success();
@@ -673,7 +680,7 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
     return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName != PGOFuncName)
+  if (!CanonicalFuncName.empty() && CanonicalFuncName != PGOFuncName)
     return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();

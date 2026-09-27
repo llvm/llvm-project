@@ -10,7 +10,6 @@
 #include "llvm/Support/Errno.h"
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #if __x86_64__ || _M_X64
 #include <xmmintrin.h>
 #endif

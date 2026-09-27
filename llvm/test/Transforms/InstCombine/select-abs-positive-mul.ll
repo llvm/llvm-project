@@ -8,9 +8,7 @@ define i32 @sel_mul_pos_x_lt_zero(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_x_lt_zero(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -24,9 +22,7 @@ define i32 @sel_shl_pos_x_lt_zero(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_shl_pos_x_lt_zero(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = shl nsw i32 [[X]], 2
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = shl nsw i32 %x, 2
@@ -40,9 +36,7 @@ define i32 @sel_shl_pos_x_lt_zero_value(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @sel_shl_pos_x_lt_zero_value(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = shl nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = shl nsw i32 %x, %y
@@ -57,9 +51,7 @@ define i32 @sel_mul_pos_x_ge_zero(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_x_ge_zero(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -74,9 +66,7 @@ define i32 @sel_mul_pos_x_sgt_zero(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_x_sgt_zero(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[M]], i32 [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -90,9 +80,7 @@ define i32 @sel_mul_pos_x_sgt_minus_one(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_x_sgt_minus_one(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -106,9 +94,7 @@ define i32 @sel_mul_pos_x_lt_zero_lhs_const(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_x_lt_zero_lhs_const(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 5, %x
@@ -122,9 +108,7 @@ define <4 x i32> @sel_mul_pos_x_lt_zero_vec(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @sel_mul_pos_x_lt_zero_vec(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = shl nsw <4 x i32> [[X]], splat (i32 2)
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <4 x i32> zeroinitializer, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <4 x i32> [[X]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[NEG]], <4 x i32> [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[M]], i1 true)
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %m = mul nsw <4 x i32> %x, splat (i32 4)
@@ -138,9 +122,7 @@ define <4 x i32> @sel_mul_pos_vec_nonsplat(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @sel_mul_pos_vec_nonsplat(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw <4 x i32> [[X]], <i32 3, i32 5, i32 7, i32 11>
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw <4 x i32> zeroinitializer, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <4 x i32> [[X]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[NEG]], <4 x i32> [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[M]], i1 true)
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %m = mul nsw <4 x i32> %x, <i32 3, i32 5, i32 7, i32 11>
@@ -155,9 +137,8 @@ define i32 @sel_mul_pos_nabs(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_nabs(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[M]], i32 [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 false)
+; CHECK-NEXT:    [[SEL:%.*]] = sub i32 0, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -171,9 +152,7 @@ define i32 @sel_mul_pos_neg_no_nsw(i32 %x) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_neg_no_nsw(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 false)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -234,6 +213,7 @@ define i32 @sel_shl_pos_no_nsw(i32 %x) {
   ret i32 %sel
 }
 
+; Negative test: cmp operand is unrelated to the scaled value.
 define i32 @sel_unrelated_cmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @sel_unrelated_cmp(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
@@ -254,10 +234,9 @@ define i32 @sel_mul_pos_multi_use_cmp(i32 %x, ptr %p) {
 ; CHECK-LABEL: define i32 @sel_mul_pos_multi_use_cmp(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    store i1 [[CMP]], ptr [[P]], align 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -274,8 +253,7 @@ define i32 @sel_mul_pos_multi_use_neg(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X]], 5
 ; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
 ; CHECK-NEXT:    store i32 [[NEG]], ptr [[P]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = mul nsw i32 %x, 5
@@ -311,9 +289,7 @@ define i16 @sel_mul_pos_sext_x_lt_zero(i8 %x) {
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[XW:%.*]] = sext i8 [[X]] to i16
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i16 [[XW]], 3
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i16 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[NEG]], i16 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i16 @llvm.abs.i16(i16 [[M]], i1 true)
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %xw = sext i8 %x to i16
@@ -329,9 +305,7 @@ define i16 @sel_shl_pos_sext_x_lt_zero(i8 %x) {
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[XW:%.*]] = sext i8 [[X]] to i16
 ; CHECK-NEXT:    [[M:%.*]] = shl nsw i16 [[XW]], 2
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i16 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[NEG]], i16 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i16 @llvm.abs.i16(i16 [[M]], i1 true)
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %xw = sext i8 %x to i16
@@ -347,9 +321,7 @@ define i32 @sel_mul_pos_sext_i8_i32(i8 %x) {
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[XW:%.*]] = sext i8 [[X]] to i32
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[XW]], 5
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %xw = sext i8 %x to i32

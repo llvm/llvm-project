@@ -1024,6 +1024,7 @@ define void @fpowi_var(i32 %var) {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(__powisf2)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1055,6 +1056,7 @@ define void @fpowi_var(i32 %var) {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(__powisf2)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1097,6 +1099,7 @@ define void @fpow(float %var) {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(powf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1127,6 +1130,7 @@ define void @fpow(float %var) {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(powf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1158,6 +1162,7 @@ define void @fpow(float %var) {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(powf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1200,6 +1205,7 @@ define void @flog2() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(log2f)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1229,6 +1235,7 @@ define void @flog2() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(log2f)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1259,6 +1266,7 @@ define void @flog2() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(log2f)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1300,6 +1308,7 @@ define void @flog10() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(log10f)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1329,6 +1338,7 @@ define void @flog10() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(log10f)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1359,6 +1369,7 @@ define void @flog10() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(log10f)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1461,6 +1472,7 @@ define void @fsin() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(sinf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1490,6 +1502,7 @@ define void @fsin() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(sinf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1520,6 +1533,7 @@ define void @fsin() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(sinf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1561,6 +1575,7 @@ define void @fcos() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(cosf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1590,6 +1605,7 @@ define void @fcos() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(cosf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1620,6 +1636,7 @@ define void @fcos() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(cosf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1661,6 +1678,7 @@ define void @fexp() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(expf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1690,6 +1708,7 @@ define void @fexp() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(expf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1720,6 +1739,7 @@ define void @fexp() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(expf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1761,6 +1781,7 @@ define void @fexp2() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(exp2f)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1790,6 +1811,7 @@ define void @fexp2() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(exp2f)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1820,6 +1842,7 @@ define void @fexp2() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(exp2f)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1896,6 +1919,7 @@ define void @ffma(float %b, float %c) {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(fmaf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -1928,6 +1952,7 @@ define void @ffma(float %b, float %c) {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(fmaf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2143,6 +2168,7 @@ define void @fminnum(float %b) {
 ; MIPS32-O32-NEXT:    lhu $1, 0($16)
 ; MIPS32-O32-NEXT:    fill.h $w0, $1
 ; MIPS32-O32-NEXT:    lw $25, %call16(fminf)($gp)
+; MIPS32-O32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-O32-NEXT:    jalr $25
 ; MIPS32-O32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-O32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2173,6 +2199,7 @@ define void @fminnum(float %b) {
 ; MIPS64R5-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64R5-N32-NEXT:    fill.h $w0, $1
 ; MIPS64R5-N32-NEXT:    lw $25, %call16(fminf)($gp)
+; MIPS64R5-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64R5-N32-NEXT:    jalr $25
 ; MIPS64R5-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64R5-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2204,6 +2231,7 @@ define void @fminnum(float %b) {
 ; MIPS64R5-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64R5-N64-NEXT:    fill.h $w0, $1
 ; MIPS64R5-N64-NEXT:    ld $25, %call16(fminf)($gp)
+; MIPS64R5-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64R5-N64-NEXT:    jalr $25
 ; MIPS64R5-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64R5-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2294,6 +2322,7 @@ define void @fmaxnum(float %b) {
 ; MIPS32-O32-NEXT:    lhu $1, 0($16)
 ; MIPS32-O32-NEXT:    fill.h $w0, $1
 ; MIPS32-O32-NEXT:    lw $25, %call16(fmaxf)($gp)
+; MIPS32-O32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-O32-NEXT:    jalr $25
 ; MIPS32-O32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-O32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2324,6 +2353,7 @@ define void @fmaxnum(float %b) {
 ; MIPS64R5-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64R5-N32-NEXT:    fill.h $w0, $1
 ; MIPS64R5-N32-NEXT:    lw $25, %call16(fmaxf)($gp)
+; MIPS64R5-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64R5-N32-NEXT:    jalr $25
 ; MIPS64R5-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64R5-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2355,6 +2385,7 @@ define void @fmaxnum(float %b) {
 ; MIPS64R5-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64R5-N64-NEXT:    fill.h $w0, $1
 ; MIPS64R5-N64-NEXT:    ld $25, %call16(fmaxf)($gp)
+; MIPS64R5-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64R5-N64-NEXT:    jalr $25
 ; MIPS64R5-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64R5-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2505,6 +2536,7 @@ define void @ffloor() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(floorf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2534,6 +2566,7 @@ define void @ffloor() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(floorf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2564,6 +2597,7 @@ define void @ffloor() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(floorf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2605,6 +2639,7 @@ define void @fceil() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(ceilf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2634,6 +2669,7 @@ define void @fceil() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(ceilf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2664,6 +2700,7 @@ define void @fceil() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(ceilf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2705,6 +2742,7 @@ define void @ftrunc() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(truncf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2734,6 +2772,7 @@ define void @ftrunc() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(truncf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2764,6 +2803,7 @@ define void @ftrunc() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(truncf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2805,6 +2845,7 @@ define void @frint() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(rintf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2834,6 +2875,7 @@ define void @frint() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(rintf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2864,6 +2906,7 @@ define void @frint() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(rintf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2905,6 +2948,7 @@ define void @fnearbyint() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(nearbyintf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2934,6 +2978,7 @@ define void @fnearbyint() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(nearbyintf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -2964,6 +3009,7 @@ define void @fnearbyint() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(nearbyintf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -3005,6 +3051,7 @@ define void @fround() {
 ; MIPS32-NEXT:    lhu $1, 0($16)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(roundf)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -3034,6 +3081,7 @@ define void @fround() {
 ; MIPS64-N32-NEXT:    lhu $1, 0($16)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(roundf)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -3064,6 +3112,7 @@ define void @fround() {
 ; MIPS64-N64-NEXT:    lhu $1, 0($16)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(roundf)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    # kill: def $f0 killed $f0 def $w0
@@ -3758,6 +3807,7 @@ define i64 @fptosi_f16_i64(ptr %p) {
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(__fixsfdi)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -3801,6 +3851,7 @@ define i64 @fptoui_f16_i64(ptr %p) {
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(__fixunssfdi)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -3844,6 +3895,7 @@ define i128 @fptosi_f16_i128(ptr %p) {
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(__fixsfti)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -3865,6 +3917,7 @@ define i128 @fptosi_f16_i128(ptr %p) {
 ; MIPS64-N32-NEXT:    lhu $1, 0($1)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(__fixsfti)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
@@ -3886,6 +3939,7 @@ define i128 @fptosi_f16_i128(ptr %p) {
 ; MIPS64-N64-NEXT:    lhu $1, 0($4)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(__fixsfti)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
@@ -3911,6 +3965,7 @@ define i128 @fptoui_f16_i128(ptr %p) {
 ; MIPS32-NEXT:    lhu $1, 0($4)
 ; MIPS32-NEXT:    fill.h $w0, $1
 ; MIPS32-NEXT:    lw $25, %call16(__fixunssfti)($gp)
+; MIPS32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS32-NEXT:    jalr $25
 ; MIPS32-NEXT:    fexupr.w $w12, $w0
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -3932,6 +3987,7 @@ define i128 @fptoui_f16_i128(ptr %p) {
 ; MIPS64-N32-NEXT:    lhu $1, 0($1)
 ; MIPS64-N32-NEXT:    fill.h $w0, $1
 ; MIPS64-N32-NEXT:    lw $25, %call16(__fixunssfti)($gp)
+; MIPS64-N32-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N32-NEXT:    jalr $25
 ; MIPS64-N32-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N32-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
@@ -3953,6 +4009,7 @@ define i128 @fptoui_f16_i128(ptr %p) {
 ; MIPS64-N64-NEXT:    lhu $1, 0($4)
 ; MIPS64-N64-NEXT:    fill.h $w0, $1
 ; MIPS64-N64-NEXT:    ld $25, %call16(__fixunssfti)($gp)
+; MIPS64-N64-NEXT:    # kill: def $f12 killed $f12 killed $w12
 ; MIPS64-N64-NEXT:    jalr $25
 ; MIPS64-N64-NEXT:    fexupr.w $w12, $w0
 ; MIPS64-N64-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload

@@ -16,4 +16,58 @@
 /* Define to 1 if exceptions are enabled */
 #cmakedefine01 ORC_RT_ENABLE_EXCEPTIONS
 
+/* Logging: available levels, and the minimum level compiled in. */
+#define ORC_RT_LOG_LEVEL_DEBUG   0
+#define ORC_RT_LOG_LEVEL_INFO    1
+#define ORC_RT_LOG_LEVEL_WARNING 2
+#define ORC_RT_LOG_LEVEL_ERROR   3
+#define ORC_RT_LOG_LEVEL_OFF     4
+#define ORC_RT_LOG_LEVEL_COUNT   (ORC_RT_LOG_LEVEL_OFF + 1)
+/* Fail loudly if CMake derived a symbol that isn't defined above. */
+#ifndef @ORC_RT_LOG_LEVEL_VALUE@
+#error "Invalid ORC_RT_LOG_LEVEL"
+#endif
+#define ORC_RT_LOG_LEVEL @ORC_RT_LOG_LEVEL_VALUE@
+
+/* Logging: available backends, and the backend compiled in. */
+#define ORC_RT_LOG_BACKEND_NONE   0
+#define ORC_RT_LOG_BACKEND_PRINTF 1
+#define ORC_RT_LOG_BACKEND_OS_LOG 2
+#ifndef @ORC_RT_LOG_BACKEND_VALUE@
+#error "Invalid ORC_RT_LOG_BACKEND"
+#endif
+#define ORC_RT_LOG_BACKEND @ORC_RT_LOG_BACKEND_VALUE@
+
+/*
+ * ORC_RT_LOG_ENABLED(Level) is true (1) if log sites at the given level are
+ * compiled in, and false (0) if they're compiled out, either because the
+ * backend is none or because the level is below the ORC_RT_LOG_LEVEL floor. It
+ * takes the same level token as ORC_RT_LOG (see orc-rt-c/support/Logging.h),
+ * and can be used in preprocessor conditionals:
+ *
+ *   #if ORC_RT_LOG_ENABLED(Error)
+ *   ...
+ *   #endif
+ *
+ * It's defined here, rather than in Logging.h, so that it can be used without
+ * pulling in the logging backend's headers (e.g. <os/log.h>).
+ *
+ * Code that relies on logging to surface something important (e.g. an error
+ * reporter that logs) can use this to pick an alternative when logging is
+ * compiled out. Note that a compiled-in level may still be suppressed at
+ * runtime (e.g. by the printf backend's runtime threshold).
+ *
+ * The ORC_RT_LOG_LEVEL_VALUE_<Level> aliases map ORC_RT_LOG's level tokens to
+ * the ORC_RT_LOG_LEVEL_<LEVEL> values above. An unrecognized level token
+ * pastes to an undefined identifier, which evaluates to 0 in #if.
+ */
+#define ORC_RT_LOG_LEVEL_VALUE_Debug ORC_RT_LOG_LEVEL_DEBUG
+#define ORC_RT_LOG_LEVEL_VALUE_Info ORC_RT_LOG_LEVEL_INFO
+#define ORC_RT_LOG_LEVEL_VALUE_Warning ORC_RT_LOG_LEVEL_WARNING
+#define ORC_RT_LOG_LEVEL_VALUE_Error ORC_RT_LOG_LEVEL_ERROR
+
+#define ORC_RT_LOG_ENABLED(Level)                                              \
+  (ORC_RT_LOG_BACKEND != ORC_RT_LOG_BACKEND_NONE &&                            \
+   ORC_RT_LOG_LEVEL_VALUE_##Level >= ORC_RT_LOG_LEVEL)
+
 #endif /* ORC_RT_C_CONFIG_H */

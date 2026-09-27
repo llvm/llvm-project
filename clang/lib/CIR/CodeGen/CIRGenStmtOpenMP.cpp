@@ -38,12 +38,13 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
 
   mlir::omp::ParallelOperands clauseOps;
   OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
+  ce.emitIf(clauseOps, llvm::omp::Directive::OMPD_parallel);
   ce.emitProcBind(clauseOps);
-  ce.emitNYI</*supported=*/OMPProcBindClause>(
-      /*nyi=*/OpenMPNYIClauseList<
-          OMPAllocateClause, OMPCopyinClause, OMPDefaultClause,
-          OMPFirstprivateClause, OMPIfClause, OMPNumThreadsClause,
-          OMPPrivateClause, OMPReductionClause, OMPSharedClause>{},
+  ce.emitNYI</*supported=*/OMPIfClause, OMPProcBindClause>(
+      /*nyi=*/OpenMPNYIClauseList<OMPAllocateClause, OMPCopyinClause,
+                                  OMPDefaultClause, OMPFirstprivateClause,
+                                  OMPNumThreadsClause, OMPPrivateClause,
+                                  OMPReductionClause, OMPSharedClause>{},
       llvm::omp::Directive::OMPD_parallel);
 
   auto parallelOp = mlir::omp::ParallelOp::create(builder, begin, clauseOps);
@@ -205,9 +206,16 @@ CIRGenFunction::emitOMPScanDirective(const OMPScanDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPScanDirective");
   return mlir::failure();
 }
-mlir::LogicalResult
-CIRGenFunction::emitOMPOrderedDirective(const OMPOrderedDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPOrderedDirective");
+mlir::LogicalResult CIRGenFunction::emitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(),
+                             "OpenMP OMPOrderedStandaloneDirective");
+  return mlir::failure();
+}
+mlir::LogicalResult CIRGenFunction::emitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(),
+                             "OpenMP OMPOrderedBlockAssocDirective");
   return mlir::failure();
 }
 mlir::LogicalResult
@@ -584,6 +592,11 @@ mlir::LogicalResult
 CIRGenFunction::emitOMPInterchangeDirective(const OMPInterchangeDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(),
                              "OpenMP OMPInterchangeDirective");
+  return mlir::failure();
+}
+mlir::LogicalResult
+CIRGenFunction::emitOMPFlattenDirective(const OMPFlattenDirective &s) {
+  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPFlattenDirective");
   return mlir::failure();
 }
 mlir::LogicalResult

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
 
 ; --------------------------------------------------------------------------------
 ; Don't fold if fneg can fold into the source

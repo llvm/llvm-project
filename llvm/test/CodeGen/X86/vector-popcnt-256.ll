@@ -90,8 +90,8 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ;
 ; BITALG-LABEL: testv4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
   %out = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %in)
@@ -205,8 +205,8 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ;
 ; BITALG-LABEL: testv8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]

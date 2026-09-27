@@ -31,6 +31,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstdio>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -355,6 +356,82 @@ TEST_F(MCPPluginTest, DebuggerListTool) {
 }
 
 //===----------------------------------------------------------------------===//
+// DebuggerCreateTool / DebuggerDeleteTool
+//===----------------------------------------------------------------------===//
+
+TEST_F(MCPPluginTest, DebuggerCreateTool) {
+  const size_t before = Debugger::GetNumDebuggers();
+
+  DebuggerCreateTool tool("debugger_create", "Create a debugger.");
+  ToolArguments args;
+  Expected<CallToolResult> result = tool.Call(args);
+  ASSERT_THAT_EXPECTED(result, Succeeded());
+  EXPECT_FALSE(result->isError);
+  ASSERT_EQ(result->content.size(), 1u);
+
+  StringRef uri = result->content[0].text;
+  EXPECT_TRUE(uri.consume_front("lldb-mcp://debugger/"));
+  uint32_t id = 0;
+  ASSERT_FALSE(uri.consumeInteger(10, id));
+  EXPECT_EQ(Debugger::GetNumDebuggers(), before + 1);
+
+  DebuggerSP created = Debugger::FindDebuggerWithID(id);
+  ASSERT_TRUE(created);
+
+  // The new debugger's stdio was detached from the host process's real streams
+  // so its output can't corrupt an MCP stream sharing that stdout.
+  ASSERT_TRUE(created->GetInputFileSP());
+  ASSERT_TRUE(created->GetOutputFileSP());
+  ASSERT_TRUE(created->GetErrorFileSP());
+  EXPECT_NE(created->GetInputFileSP()->GetDescriptor(), fileno(stdin));
+  EXPECT_NE(created->GetOutputFileSP()->GetDescriptor(), fileno(stdout));
+  EXPECT_NE(created->GetErrorFileSP()->GetDescriptor(), fileno(stderr));
+
+  // stdout and stderr are backed by the same write-only null file.
+  EXPECT_EQ(created->GetOutputFileSP()->GetDescriptor(),
+            created->GetErrorFileSP()->GetDescriptor());
+
+  Debugger::Destroy(created); // Don't leak into other tests.
+}
+
+TEST_F(MCPPluginTest, DebuggerDeleteTool) {
+  DebuggerSP victim = Debugger::CreateInstance();
+  ASSERT_TRUE(victim);
+  const user_id_t id = victim->GetID();
+  victim.reset(); // The debugger list keeps it alive.
+
+  DebuggerDeleteTool tool("debugger_delete", "Destroy a debugger.");
+  ToolArguments args = json::Value(
+      json::Object{{"debugger", formatv("lldb-mcp://debugger/{0}", id).str()}});
+  Expected<CallToolResult> result = tool.Call(args);
+  ASSERT_THAT_EXPECTED(result, Succeeded());
+  EXPECT_FALSE(result->isError);
+  EXPECT_FALSE(Debugger::FindDebuggerWithID(id));
+}
+
+TEST_F(MCPPluginTest, DebuggerDeleteToolRequiresDebugger) {
+  DebuggerDeleteTool tool("debugger_delete", "Destroy a debugger.");
+  ToolArguments args = json::Value(json::Object{});
+  EXPECT_THAT_EXPECTED(
+      tool.Call(args),
+      FailedWithMessage("DebuggerDeleteTool requires a debugger"));
+}
+
+TEST_F(MCPPluginTest, DebuggerDeleteToolUnknownDebugger) {
+  DebuggerDeleteTool tool("debugger_delete", "Destroy a debugger.");
+  ToolArguments args = json::Value(json::Object{{"debugger", "999999"}});
+  EXPECT_THAT_EXPECTED(tool.Call(args), FailedWithMessage("no debugger found"));
+}
+
+TEST_F(MCPPluginTest, DebuggerDeleteToolMalformedDebugger) {
+  DebuggerDeleteTool tool("debugger_delete", "Destroy a debugger.");
+  ToolArguments args = json::Value(json::Object{{"debugger", "notanumber"}});
+  EXPECT_THAT_EXPECTED(
+      tool.Call(args),
+      FailedWithMessage("malformed debugger specifier notanumber"));
+}
+
+//===----------------------------------------------------------------------===//
 // ProtocolServerMCP
 //===----------------------------------------------------------------------===//
 
@@ -369,8 +446,7 @@ public:
 TEST_F(MCPPluginTest, ProtocolServerExtend) {
   ExtendableProtocolServerMCP server;
   lldb_protocol::mcp::Server mcp_server("lldb-mcp", "0.1.0");
-  // Extend registers the "command" and "debugger_list" tools and the debugger
-  // resource provider on the server.
+  // Extend registers the MCP tools and resource providers on the server.
   server.Extend(mcp_server);
 }
 

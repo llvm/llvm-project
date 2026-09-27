@@ -5,7 +5,7 @@
 ;; array and whose second is a GEP into the matching uniform-counter array.
 ;; Sampling is disabled so the increment lowers to a direct call.
 
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -offload-pgo-sampling=0 -passes=instrprof < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -offload-pgo-sampling=0 -passes=instrprof < %s | FileCheck %s
 
 @__profn_kernel1 = private constant [7 x i8] c"kernel1"
 @__profn_kernel2 = private constant [7 x i8] c"kernel2"

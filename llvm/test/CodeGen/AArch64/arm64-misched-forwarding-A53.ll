@@ -4,7 +4,7 @@
 ; For Cortex-A53, shiftable operands that are not actually shifted
 ; are not needed for an additional two cycles.
 ;
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: shiftable
 ; CHECK: SU(2):   %2:gpr64common = SUBXri %1:gpr64common, 20, 0
 ; CHECK:   Successors:

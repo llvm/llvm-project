@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "../range_adaptor_types.h"
 #include "test_iterators.h"
 
 struct CommonView : std::ranges::view_interface<CommonView> {
@@ -27,26 +28,6 @@ struct CommonView : std::ranges::view_interface<CommonView> {
 static_assert(std::ranges::common_range<CommonView>);
 static_assert(std::same_as<std::ranges::iterator_t<CommonView>, std::ranges::iterator_t<const CommonView>>);
 static_assert(std::same_as<std::ranges::sentinel_t<CommonView>, std::ranges::sentinel_t<const CommonView>>);
-
-struct ForwardSizedNonCommon {
-  int* buffer_      = nullptr;
-  std::size_t size_ = 0;
-
-  template <std::size_t N>
-  constexpr ForwardSizedNonCommon(int (&b)[N]) : buffer_(b), size_(N) {}
-
-  constexpr ForwardSizedNonCommon(int* b, std::size_t s) : buffer_(b), size_(s) {}
-
-  using iterator = forward_sized_iterator<int*>;
-  using sentinel = sized_sentinel<iterator>;
-
-  constexpr iterator begin() const { return iterator(buffer_); }
-  constexpr sentinel end() const { return sentinel(iterator(buffer_ + size_)); }
-};
-static_assert(std::ranges::forward_range<ForwardSizedNonCommon>);
-static_assert(std::ranges::sized_range<ForwardSizedNonCommon>);
-static_assert(!std::ranges::common_range<ForwardSizedNonCommon>);
-static_assert(!std::ranges::random_access_range<ForwardSizedNonCommon>);
 
 template <class... Args>
 struct Invocable {

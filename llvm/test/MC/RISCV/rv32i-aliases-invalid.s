@@ -142,35 +142,35 @@ zext.w x3, x4
 
 sll x2, x3, 32
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
 srl x2, x3, 32
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
 sra x2, x3, 32
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
 sll x2, x3, -1
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
 srl x2, x3, -2
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
 sra x2, x3, -3
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 31]
 
-addi x1, .      # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+addi x1, .      # CHECK: :[[@LINE]]:10: error: register must be a GPR
 
 foo:
   .space 4

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s -global-isel | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 < %s -global-isel | FileCheck %s
 
 ; CHECK-LABEL: {{^}}unknown_wgs:
 ; CHECK: s_barrier

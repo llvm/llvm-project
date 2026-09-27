@@ -10,8 +10,8 @@ define void @test(i1 %arg, i32 %a, ptr %p) {
 ; CHECK:       if.then22.i:
 ; CHECK-NEXT:    [[SUB_I:%.*]] = add nsw i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV31_I:%.*]] = and i32 [[A]], [[SUB_I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[SUB_I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[CONV31_I]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[SUB_I]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[CONV31_I]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> poison, <16 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <16 x i32> [[TMP2]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <16 x i32> [[TMP3]] to <16 x i8>

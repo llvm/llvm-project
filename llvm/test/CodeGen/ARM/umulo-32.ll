@@ -34,7 +34,7 @@ define i32 @test2(ptr %m_degree) ssp {
 ; CHECK-NEXT:    ldr r1, [r0]
 ; CHECK-NEXT:    lsls r0, r1, #3
 ; CHECK-NEXT:    lsrs r2, r0, #3
-; CHECK-NEXT:    subs r1, r1, r2
+; CHECK-NEXT:    subs r1, r2, r1
 ; CHECK-NEXT:    subs r2, r1, #1
 ; CHECK-NEXT:    sbcs r1, r2
 ; CHECK-NEXT:    movs r4, #0

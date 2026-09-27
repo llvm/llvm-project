@@ -66,7 +66,7 @@ bool GlobList::contains(StringRef S) const {
 }
 
 bool CachedGlobList::contains(StringRef S) const {
-  auto Entry = Cache.try_emplace(S);
+  const auto Entry = Cache.try_emplace(S);
   bool &Value = Entry.first->getValue();
   // If the entry was just inserted, determine its required value.
   if (Entry.second)

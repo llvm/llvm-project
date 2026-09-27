@@ -199,9 +199,6 @@ public:
   /// concrete subclass.
   Type *getScalarType() const;
 
-  /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
-
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
@@ -246,7 +243,9 @@ public:
   }
 };
 
-/// VPValues defined by a VPRegionBlock, like the canonical IV.
+/// VPValues are defined by a VPRegionBlock, like the canonical IV. They must
+/// be materialized when the containing region is dissolved, before VPlan
+/// execution.
 class VPRegionValue : public VPSymbolicValue {
   VPRegionBlock *DefiningRegion;
   DebugLoc DL;
@@ -290,13 +289,27 @@ struct VPIRValue : public VPValue {
   }
 };
 
-/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
-/// convenient accessors for the underlying constant.
-struct VPConstantInt : public VPIRValue {
-  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+/// An overlay on VPIRValue for VPValues that wrap a Constant. May be an
+/// integer, floating-point, or a vector constant.
+struct VPConstant : public VPIRValue {
+  VPConstant(Constant *C) : VPIRValue(C) {}
 
   static bool classof(const VPValue *V) {
-    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+    auto *IRV = dyn_cast<VPIRValue>(V);
+    return IRV && isa<Constant>(IRV->getValue());
+  }
+
+  const Constant *getConstant() const { return cast<Constant>(getValue()); }
+};
+
+/// An overlay on VPConstant for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying APInt.
+struct VPConstantInt : public VPConstant {
+  VPConstantInt(ConstantInt *CI) : VPConstant(CI) {}
+
+  static bool classof(const VPValue *V) {
+    auto *VPC = dyn_cast<VPConstant>(V);
+    return VPC && isa<ConstantInt>(VPC->getConstant());
   }
 
   bool isOne() const { return getAPInt().isOne(); }
@@ -344,7 +357,7 @@ public:
 };
 
 /// A VPRecipeValue defined by a VPSingleDefRecipe.
-class VPSingleDefValue : public VPRecipeValue {
+class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
   friend class VPDef;
   friend class VPSingleDefRecipe;
 
@@ -459,6 +472,7 @@ public:
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
   }
+  bool operands_empty() const { return Operands.empty(); } // NOLINT
 
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.

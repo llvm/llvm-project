@@ -38,6 +38,11 @@ class LLVM_ABI TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
 
 protected:
   uint16_t PLTRelativeSpecifier = 0;
+  bool isLargeConstant(const DataLayout &DL, SectionKind Kind,
+                       const Constant *C) const;
+  MCSection *getSectionForConstantImpl(const DataLayout &DL, SectionKind Kind,
+                                       const Constant *C,
+                                       StringRef SectionSuffix) const;
 
 public:
   ~TargetLoweringObjectFileELF() override = default;
@@ -328,6 +333,9 @@ public:
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,

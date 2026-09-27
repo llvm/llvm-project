@@ -2822,6 +2822,11 @@ TEST_F(ConstantRangeTest, Ctpop) {
       [](const APInt &N) { return APInt(N.getBitWidth(), N.popcount()); });
 }
 
+TEST_F(ConstantRangeTest, SqrtFloor) {
+  TestUnaryOpExhaustive([](const ConstantRange &CR) { return CR.sqrtFloor(); },
+                        [](const APInt &N) { return N.sqrtFloor(); });
+}
+
 TEST_F(ConstantRangeTest, castOps) {
   ConstantRange A(APInt(16, 66), APInt(16, 128));
   ConstantRange FpToI8 = A.castOp(Instruction::FPToSI, 8);
@@ -2962,6 +2967,38 @@ TEST_F(ConstantRangeTest, binaryOr) {
       },
       [](const APInt &N1, const APInt &N2) { return N1 | N2; }, PreferSmallest,
       CheckSingleElementsOnly);
+}
+
+TEST_F(ConstantRangeTest, binaryOrDisjoint) {
+  auto Range = [](uint64_t Lo, uint64_t Hi) {
+    return ConstantRange(APInt(8, Lo), APInt(8, Hi));
+  };
+  auto DisjointOr = [](const ConstantRange &CR1, const ConstantRange &CR2) {
+    return CR1.binaryOr(CR2, /*IsDisjoint=*/true);
+  };
+
+  // The addition gives the tighter bound, [32, 45), vs [32, 48) from the 'or'.
+  EXPECT_EQ(DisjointOr(Range(0, 13), Range(32, 33)), Range(32, 45));
+  // The 'or' gives the tighter bound, [0, 4), vs [0, 7) from the addition.
+  EXPECT_EQ(DisjointOr(Range(0, 4), Range(0, 4)), Range(0, 4));
+  // Lower bound from the addition ([3, 7)), upper bound from the 'or' ([2, 6)).
+  EXPECT_EQ(DisjointOr(Range(1, 2), Range(2, 6)), Range(3, 6));
+  // The lower bound requires 'nsw': 1 + 127 sign-wraps, so 128 is excluded.
+  EXPECT_EQ(DisjointOr(Range(1, 4), Range(127, 129)), Range(129, 132));
+  // The lower bound requires 'nuw': 1 + 255 would unsigned wrap.
+  EXPECT_EQ(DisjointOr(Range(1, 3), Range(1, 255)), Range(2, 0));
+  // Operands that always overlap produce poison.
+  EXPECT_EQ(DisjointOr(Range(128, 200), Range(128, 200)),
+            ConstantRange::getEmpty(8));
+
+  TestBinaryOpExhaustive(
+      DisjointOr,
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N1.intersects(N2))
+          return std::nullopt;
+        return N1 | N2;
+      },
+      PreferSmallest, CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, binaryXor) {

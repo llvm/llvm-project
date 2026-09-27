@@ -28,10 +28,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
-
 #define DEBUG_TYPE "partially-inline-libcalls"
 
 DEBUG_COUNTER(PILCounter, "partially-inline-libcalls-transform",
@@ -99,8 +95,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                     : Builder.CreateFCmpOGE(Call->getOperand(0),
                                             ConstantFP::get(Ty, 0.0));
   CurrBBTerm->setCondition(FCmp);
-  if (!ProfcheckDisableMetadataFixes &&
-      CurrBBTerm->getFunction()->getEntryCount()) {
+  if (CurrBBTerm->getFunction()->getEntryCount()) {
     // Presume the quick path - where we don't call the library call - is the
     // frequent one
     MDBuilder MDB(CurrBBTerm->getContext());
@@ -145,9 +140,11 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
 
       // Skip if function either has local linkage or is not a known library
       // function.
-      LibFunc LF;
-      if (CalledFunc->hasLocalLinkage() ||
-          !TLI->getLibFunc(*CalledFunc, LF) || !TLI->has(LF))
+      if (CalledFunc->hasLocalLinkage())
+        continue;
+
+      LibFunc LF = TLI->getLibFunc(*CalledFunc);
+      if (!TLI->has(LF))
         continue;
 
       switch (LF) {

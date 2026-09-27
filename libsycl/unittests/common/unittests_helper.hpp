@@ -19,7 +19,6 @@
 #include <mock/helpers.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
-
 namespace unittests {
 
 // This helper is not included to LiboffloadMock to keep LiboffloadMock isolated
@@ -32,13 +31,15 @@ namespace unittests {
 struct UnittestsHelper {
   UnittestsHelper() { detail::PlatformImpl::rediscoverIfEmpty = true; }
 
-  ~UnittestsHelper() {
-    if (!detail::getPlatformCache().empty()) {
-      detail::getPlatformCache().clear();
-      detail::getOffloadTopologies() = {};
-    }
+  ~UnittestsHelper() { resetPlatformState(); }
+
+private:
+  static void resetPlatformState() {
+    detail::getPlatformCache().clear();
+    detail::getOffloadTopologies() = {};
   }
 
+public:
   mock::MockWrapper Mock;
 };
 

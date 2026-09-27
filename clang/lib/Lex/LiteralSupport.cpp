@@ -388,7 +388,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   if (!HadError && EvalMethod != StringLiteralEvalMethod::Unevaluated &&
       Transcode && Converter) {
     // Invalid escapes are written as '?' and then translated.
-    assert(ResultChar <= std::numeric_limits<char>::max());
+    assert(ResultChar <=
+           static_cast<unsigned>(std::numeric_limits<char>::max()));
     char ByteChar = Invalid ? '?' : ResultChar;
     auto ErrorOrChar = convertCharacter(StringRef(&ByteChar, 1), *Converter);
     if (ErrorOrChar)
@@ -1438,10 +1439,10 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
 
       if (!LangOpts.HexFloats)
         Diags.Report(TokLoc, LangOpts.CPlusPlus
-                                 ? diag::ext_hex_literal_invalid
+                                 ? diag::compat_pre_cxx17_hex_literal
                                  : diag::ext_hex_constant_invalid);
       else if (LangOpts.CPlusPlus17)
-        Diags.Report(TokLoc, diag::warn_cxx17_hex_literal);
+        Diags.Report(TokLoc, diag::compat_cxx17_hex_literal);
     } else if (saw_period) {
       Diags.Report(Lexer::AdvanceToTokenCharacter(TokLoc, s - ThisTokBegin, SM,
                                                   LangOpts),

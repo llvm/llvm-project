@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/PerThreadBumpPtrAllocator.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <atomic>
 
 namespace llvm {
 
@@ -32,5 +35,12 @@ void PrintRecyclerStats(size_t Size,
          << "Recycler element alignment: " << Align << '\n'
          << "Number of elements free for recycling: " << FreeListSize << '\n';
 }
+
+namespace parallel::detail {
+unsigned claimPerThreadAllocatorId() {
+  static std::atomic<unsigned> Counter;
+  return Counter.fetch_add(1, std::memory_order_relaxed);
+}
+} // namespace parallel::detail
 
 } // namespace llvm

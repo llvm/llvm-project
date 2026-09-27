@@ -413,6 +413,7 @@ enum class instrprof_error {
   unrecognized_format,
   bad_magic,
   bad_header,
+  header_size_mismatch,
   unsupported_version,
   unsupported_hash_type,
   too_large,
@@ -434,6 +435,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  coverage_count_mismatch,
 };
 
 /// An ordered list of functions identified by their NameRef found in

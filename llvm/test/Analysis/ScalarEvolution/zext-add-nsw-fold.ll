@@ -283,3 +283,121 @@ define i64 @mul_zext_fold_positive_c(i8 %x) {
   %ext = zext i32 %add to i64
   ret i64 %ext
 }
+
+; Push the negative constant out of the ZExt so it cancels with a matching
+; positive constant on the outer add.
+;   3 + zext i32 (-3 + zy + (3 umax zx)) to i64
+;     -> zext(zy to i64) + (3 umax zext(zx to i64))
+define i64 @add_umax_zext_fold_outer_add(i8 %x, i8 %y) {
+; CHECK-LABEL: 'add_umax_zext_fold_outer_add'
+; CHECK-NEXT:  Classifying expressions for: @add_umax_zext_fold_outer_add
+; CHECK-NEXT:    %zx = zext i8 %x to i32
+; CHECK-NEXT:    --> (zext i8 %x to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %zy = zext i8 %y to i32
+; CHECK-NEXT:    --> (zext i8 %y to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
+; CHECK-NEXT:    --> (3 umax (zext i8 %x to i32)) U: [3,256) S: [3,256)
+; CHECK-NEXT:    %t = add nsw i32 %umax, %zy
+; CHECK-NEXT:    --> ((zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) U: [3,511) S: [3,511)
+; CHECK-NEXT:    %add = add nsw i32 -3, %t
+; CHECK-NEXT:    --> (-3 + (zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) U: [0,508) S: [0,508)
+; CHECK-NEXT:    %ext = zext i32 %add to i64
+; CHECK-NEXT:    --> (zext i32 (-3 + (zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) to i64) U: [0,508) S: [0,508)
+; CHECK-NEXT:    %res = add i64 3, %ext
+; CHECK-NEXT:    --> (zext i32 ((zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) to i64) U: [3,511) S: [3,511)
+; CHECK-NEXT:  Determining loop execution counts for: @add_umax_zext_fold_outer_add
+;
+  %zx = zext i8 %x to i32
+  %zy = zext i8 %y to i32
+  %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
+  %t = add nsw i32 %umax, %zy
+  %add = add nsw i32 -3, %t
+  %ext = zext i32 %add to i64
+  %res = add i64 3, %ext
+  ret i64 %res
+}
+
+; Push the negative constant out of the ZExt into the wider type
+; TODO:
+;   3 + zext i32 (-8 + 4*(3 umax zx))<nsw> to i64
+;     -> -5 + 4*(3 umax zext(zx to i64))
+define i64 @mul_umax_fold_negative_a_non_cancelling(i8 %x) {
+; CHECK-LABEL: 'mul_umax_fold_negative_a_non_cancelling'
+; CHECK-NEXT:  Classifying expressions for: @mul_umax_fold_negative_a_non_cancelling
+; CHECK-NEXT:    %zx = zext i8 %x to i32
+; CHECK-NEXT:    --> (zext i8 %x to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
+; CHECK-NEXT:    --> (3 umax (zext i8 %x to i32)) U: [3,256) S: [3,256)
+; CHECK-NEXT:    %mul = mul nuw nsw i32 4, %umax
+; CHECK-NEXT:    --> (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw> U: [12,1021) S: [12,1021)
+; CHECK-NEXT:    %add = add nsw i32 -5, %mul
+; CHECK-NEXT:    --> (-5 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [7,1016) S: [7,1016)
+; CHECK-NEXT:    %ext = zext i32 %add to i64
+; CHECK-NEXT:    --> (3 + (zext i32 (-8 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64))<nuw><nsw> U: [7,1016) S: [7,1016)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_umax_fold_negative_a_non_cancelling
+;
+  %zx = zext i8 %x to i32
+  %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
+  %mul = mul nuw nsw i32 4, %umax
+  %add = add nsw i32 -5, %mul
+  %ext = zext i32 %add to i64
+  ret i64 %ext
+}
+
+; Two chained zexts (i32 -> i64 -> i128): the fold should compose and push the
+; constant all the way out to the widest type.
+; TODO:
+;   2 + zext i32 (-12 + 4*(3 umax zx))<nsw> to i128
+;     -> -10 + 4*(3 umax zext(zx to i128))
+define i128 @cascading_zext_fold(i8 %x) {
+; CHECK-LABEL: 'cascading_zext_fold'
+; CHECK-NEXT:  Classifying expressions for: @cascading_zext_fold
+; CHECK-NEXT:    %zx = zext i8 %x to i32
+; CHECK-NEXT:    --> (zext i8 %x to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
+; CHECK-NEXT:    --> (3 umax (zext i8 %x to i32)) U: [3,256) S: [3,256)
+; CHECK-NEXT:    %mul = mul nuw nsw i32 4, %umax
+; CHECK-NEXT:    --> (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw> U: [12,1021) S: [12,1021)
+; CHECK-NEXT:    %add32 = add nsw i32 -10, %mul
+; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:    %ext64 = zext i32 %add32 to i64
+; CHECK-NEXT:    --> (2 + (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64))<nuw><nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:    %ext128 = zext i64 %ext64 to i128
+; CHECK-NEXT:    --> (2 + (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i128))<nuw><nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:  Determining loop execution counts for: @cascading_zext_fold
+;
+  %zx = zext i8 %x to i32
+  %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
+  %mul = mul nuw nsw i32 4, %umax
+  %add32 = add nsw i32 -10, %mul
+  %ext64 = zext i32 %add32 to i64
+  %ext128 = zext i64 %ext64 to i128
+  ret i128 %ext128
+}
+
+; The narrow sum can be negative, so pushing the constant out of the ZExt is
+; unsound and the fold must not fire.
+;   zext i32 (-900 + 4*(200 umax zx))<nsw> to i64
+;     -> (unchanged)
+define i64 @mul_umax_no_fold_underflow_possible(i8 %x) {
+; CHECK-LABEL: 'mul_umax_no_fold_underflow_possible'
+; CHECK-NEXT:  Classifying expressions for: @mul_umax_no_fold_underflow_possible
+; CHECK-NEXT:    %zx = zext i8 %x to i32
+; CHECK-NEXT:    --> (zext i8 %x to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %zx, i32 200)
+; CHECK-NEXT:    --> (200 umax (zext i8 %x to i32)) U: [200,256) S: [200,256)
+; CHECK-NEXT:    %mul = mul nuw nsw i32 4, %umax
+; CHECK-NEXT:    --> (4 * (200 umax (zext i8 %x to i32)))<nuw><nsw> U: [800,1021) S: [800,1021)
+; CHECK-NEXT:    %add = add nsw i32 -900, %mul
+; CHECK-NEXT:    --> (-900 + (4 * (200 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [0,-3) S: [-100,121)
+; CHECK-NEXT:    %ext = zext i32 %add to i64
+; CHECK-NEXT:    --> (zext i32 (-900 + (4 * (200 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64) U: [0,4294967293) S: [0,4294967296)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_umax_no_fold_underflow_possible
+;
+  %zx = zext i8 %x to i32
+  %umax = call i32 @llvm.umax.i32(i32 %zx, i32 200)
+  %mul = mul nuw nsw i32 4, %umax
+  %add = add nsw i32 -900, %mul
+  %ext = zext i32 %add to i64
+  ret i64 %ext
+}

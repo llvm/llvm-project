@@ -12,10 +12,7 @@ define void @xor_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vxor.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 35
-; LA32-NEXT:    vextrins.w $vr0, $vr0, 33
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
@@ -173,10 +170,7 @@ define void @or_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 35
-; LA32-NEXT:    vextrins.w $vr0, $vr0, 33
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
@@ -331,10 +325,7 @@ define void @and_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vand.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 35
-; LA32-NEXT:    vextrins.w $vr0, $vr0, 33
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0

@@ -100,7 +100,7 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
 
   uint32_t properties = 0;
   if (target_arch.IsValid()) {
-    strm.Printf(" ( arch=");
+    strm.PutCString(" ( arch=");
     target_arch.DumpTriple(strm.AsRawOstream());
     properties++;
   }
@@ -1460,7 +1460,7 @@ static void DumpDwoFilesTable(Stream &strm,
     if (dict->GetValueForKeyAsInteger("dwo_id", dwo_id))
       strm.Printf("0x%16.16" PRIx64 " ", dwo_id);
     else
-      strm.Printf("0x???????????????? ");
+      strm.PutCString("0x???????????????? ");
 
     llvm::StringRef error;
     if (dict->GetValueForKeyAsString("error", error))
@@ -6175,6 +6175,7 @@ protected:
     result.AppendMessageWithFormatv(
         "successfully registered scripted frame provider '{0}' for target",
         m_class_options.GetName().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupPythonClassWithDict m_class_options;

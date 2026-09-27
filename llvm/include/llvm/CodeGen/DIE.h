@@ -194,7 +194,6 @@ public:
   }
 
   uint64_t getValue() const { return Integer; }
-  void setValue(uint64_t Val) { Integer = Val; }
 
   LLVM_ABI void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
@@ -211,9 +210,6 @@ class DIEExpr {
 public:
   explicit DIEExpr(const MCExpr *E) : Expr(E) {}
 
-  /// Get MCExpr.
-  const MCExpr *getValue() const { return Expr; }
-
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
                            dwarf::Form Form) const;
@@ -228,9 +224,6 @@ class DIELabel {
 
 public:
   explicit DIELabel(const MCSymbol *L) : Label(L) {}
-
-  /// Get MCSymbol.
-  const MCSymbol *getValue() const { return Label; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
@@ -547,7 +540,8 @@ struct IntrusiveBackListBase {
 
   void push_back(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
-    assert(N.Next.getInt() == true && "Expected unlinked node");
+    assert(static_cast<bool>(N.Next.getInt()) == true &&
+           "Expected unlinked node");
 
     if (Last) {
       N.Next = Last->Next;
@@ -558,7 +552,8 @@ struct IntrusiveBackListBase {
 
   void push_front(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
-    assert(N.Next.getInt() == true && "Expected unlinked node");
+    assert(static_cast<bool>(N.Next.getInt()) == true &&
+           "Expected unlinked node");
 
     if (Last) {
       N.Next.setPointerAndInt(Last->Next.getPointer(), false);
@@ -566,6 +561,34 @@ struct IntrusiveBackListBase {
     } else {
       Last = &N;
     }
+  }
+
+  /// Delete node \p N by walking through the list until \p N's predecessor is
+  /// found. Remove \p N from the list by updating the predecessor's next
+  /// pointer and reset \p N's next pointer to itself.
+  bool deleteNode(Node &N) {
+    if (!Last)
+      return false;
+
+    Node *Cur = Last;
+    while (Cur->Next.getPointer() != &N) {
+      Cur = Cur->Next.getPointer();
+      if (Cur->Next.getInt())
+        return false;
+    }
+
+    Node *Target = Cur->Next.getPointer();
+    if (Target == Cur) {
+      Last = nullptr;
+    } else if (Target == Last) {
+      Cur->Next.setPointerAndInt(Target->Next.getPointer(), true);
+      Last = Cur;
+    } else {
+      Cur->Next.setPointer(Target->Next.getPointer());
+    }
+
+    Target->Next.setPointerAndInt(Target, true);
+    return true;
   }
 };
 
@@ -604,24 +627,8 @@ public:
     Other.Last = nullptr;
   }
 
-  bool deleteNode(T &N) {
-    if (Last == &N) {
-      Last = Last->Next.getPointer();
-      Last->Next.setInt(true);
-      return true;
-    }
-
-    Node *cur = Last;
-    while (cur && cur->Next.getPointer()) {
-      if (cur->Next.getPointer() == &N) {
-        cur->Next.setPointer(cur->Next.getPointer()->Next.getPointer());
-        return true;
-      }
-      cur = cur->Next.getPointer();
-    }
-
-    return false;
-  }
+  /// Deletes node \p N from the list. Note this runs in O(N).
+  bool deleteNode(Node &N) { return IntrusiveBackListBase::deleteNode(N); }
 
   class const_iterator;
   class iterator

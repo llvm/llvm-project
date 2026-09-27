@@ -87,6 +87,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::DELETED_NODE:               return "<<Deleted Node!>>";
 #endif
   case ISD::PREFETCH:                   return "Prefetch";
+  case ISD::ARITH_FENCE:                return "ArithFence";
   case ISD::MEMBARRIER:                 return "MemBarrier";
   case ISD::ATOMIC_FENCE:               return "AtomicFence";
   case ISD::ATOMIC_CMP_SWAP:            return "AtomicCmpSwap";
@@ -220,6 +221,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
   case ISD::FMINIMUMNUM:                return "fminimumnum";
   case ISD::FMAXIMUMNUM:                return "fmaximumnum";
+  case ISD::PSEUDO_FMIN:                return "pseudo_fmin";
+  case ISD::PSEUDO_FMAX:                return "pseudo_fmax";
+  case ISD::STRICT_PSEUDO_FMIN:         return "strict_pseudo_fmin";
+  case ISD::STRICT_PSEUDO_FMAX:         return "strict_pseudo_fmax";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
@@ -356,6 +361,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXTRACT_SUBVECTOR:          return "extract_subvector";
   case ISD::VECTOR_DEINTERLEAVE:        return "vector_deinterleave";
   case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
+  case ISD::VECTOR_REPEAT:              return "vector_repeat";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
   case ISD::VECTOR_SPLICE_LEFT:         return "vector_splice_left";
@@ -584,6 +590,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_FMAX:             return "vecreduce_fmax";
   case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
   case ISD::VECREDUCE_FMAXIMUM:         return "vecreduce_fmaximum";
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return "vecreduce_fminimumnum";
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return "vecreduce_fmaximumnum";
   case ISD::VECREDUCE_FMINIMUM:         return "vecreduce_fminimum";
   case ISD::STACKMAP:
     return "stackmap";
@@ -605,6 +615,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::GET_ACTIVE_LANE_MASK:
     return "get_active_lane_mask";
+
+  case ISD::VECTOR_MATCH:
+    return "vector_match";
 
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
@@ -728,6 +741,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
   if (getFlags().hasNonNeg())
     OS << " nneg";
+
+  if (getFlags().hasNonNull())
+    OS << " nonnull";
 
   if (getFlags().hasNoNaNs())
     OS << " nnan";
