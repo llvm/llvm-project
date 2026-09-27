@@ -763,6 +763,13 @@ features cannot lower the translation-unit ABI level;
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
+- Fixed template argument deduction incorrectly selecting a class or variable
+  template partial specialization whose non-type template argument has a
+  different type from the argument it is matched against, when the corresponding
+  parameter of the primary template has a placeholder type. For example, given
+  `template <class T, auto V> struct S`, the partial specialization `S<T, 0>` is
+  no longer selected for `S<void, 0L>`. (#GH124186), (#GH42421), (#GH53982)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
