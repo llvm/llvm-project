@@ -3007,7 +3007,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
     LazyBool is_stack = region_info.IsStackMemory();
     if (is_stack != eLazyBoolDontKnow)
-      response.Printf("type: %s", is_stack ? "stack" : "heap");
+      response.Printf("type:%s;", is_stack ? "stack" : "heap");
   }
 
   return SendPacketNoLock(response.GetString());
