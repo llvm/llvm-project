@@ -6175,7 +6175,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 
     if (Features.test(FeatureSGPRInitBug))
       NumSGPRs =
-          MCConstantExpr::create(IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG, Ctx);
+          MCConstantExpr::create(AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG, Ctx);
   }
 
   // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
@@ -6998,7 +6998,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
   if (getParser().parseComma())
     return true;
 
-  unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(getSTI());
+  unsigned LocalMemorySize =
+      AMDGPU::getLocalMemorySize(AMDGPU::parseArchAMDGCN(getSTI().getCPU()),
+                                 AMDGPU::isFullSIMDMode(getSTI()));
 
   int64_t Size;
   SMLoc SizeLoc = getLoc();
