@@ -4926,7 +4926,7 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
@@ -4945,7 +4945,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CxtI);
+                                           Op2Info, Args, CtxI);
 
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {
@@ -5284,10 +5284,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
     if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
          (Ty->isHalfTy() && ST->hasFullFP16())) &&
-        CxtI &&
-        ((CxtI->hasOneUse() &&
-          match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
-         match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
+        CtxI &&
+        ((CtxI->hasOneUse() &&
+          match(*CtxI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
+         match(CtxI->getOperand(0), m_FMul(m_Value(), m_Value()))))
       return 0;
     [[fallthrough]];
   case ISD::FADD:
@@ -6978,7 +6978,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 InstructionCost AArch64TTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
@@ -7006,7 +7006,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     // store(interleaving-shuffle). The shuffle cost could potentially be free,
     // but we model it with a cost of LT.first so that ST3/ST4 have a higher
     // cost than just the store.
-    if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+    if (CtxI && CtxI->hasOneUse() && isa<StoreInst>(*CtxI->user_begin()) &&
         (ShuffleVectorInst::isInterleaveMask(
              Mask, 4, SrcTy->getElementCount().getKnownMinValue() * 2) ||
          ShuffleVectorInst::isInterleaveMask(
@@ -7074,7 +7074,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
               ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NTp, CostKind, NMask, 0, nullptr, Args,
-                               CxtI)
+                               CtxI)
               : LTNumElts;
       Result.first->second = NCost;
       Cost += NCost;
@@ -7337,7 +7337,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
-                               Args, CxtI);
+                               Args, CtxI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,

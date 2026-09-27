@@ -1887,7 +1887,7 @@ class Base(unittest.TestCase):
         yaml2obj_bin = configuration.get_yaml2obj_path()
         if not yaml2obj_bin:
             self.assertTrue(False, "No valid yaml2obj executable specified")
-        command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
+        command = [yaml2obj_bin, "-o", obj_path, yaml_path]
         if max_size is not None:
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)

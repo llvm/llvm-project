@@ -20,7 +20,6 @@
 #include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -240,9 +239,7 @@ private:
                        unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
 
-  const MipsABIInfo &getABI() const {
-    return static_cast<const MipsTargetMachine &>(TM).getABI();
-  }
+  const MipsABIInfo &getABI() const { return Subtarget->getABI(); }
 
 public:
   // Backend specific FastISel code.
