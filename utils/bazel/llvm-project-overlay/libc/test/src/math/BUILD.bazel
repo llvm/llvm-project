@@ -823,8 +823,8 @@ math_mpfr_test(
 math_mpfr_test(
     name = "scalbn",
     hdrs = [
-    "LdExpTest.h",
-    "ScalbnTest.h",
+        "LdExpTest.h",
+        "ScalbnTest.h",
     ],
 )
 
