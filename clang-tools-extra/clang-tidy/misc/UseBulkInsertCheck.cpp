@@ -21,35 +21,27 @@ void UseBulkInsertCheck::registerMatchers(MatchFinder *Finder) {
           hasRangeInit(expr().bind("range")),
           hasBody(compoundStmt(
               statementCountIs(1),
-              hasAnySubstatement(cxxMemberCallExpr(
-                  callee(memberExpr(
-                      ofClass(cxxRecordDecl(hasAnyName(
-                          "::std::set", "::std::map", "::std::multiset",
-                          "::std::multimap", "::std::unordered_set",
-                          "::std::unordered_map",
-                          "::std::unordered_multiset",
-                          "::std::unordered_multimap"))))),
-                  argumentCountIs(1),
-                  hasArgument(
-                      0, ignoringParenImpCasts(
-                             declRefExpr(to(varDecl().bind("insert_arg"))))))
-                  .bind("insert_call")))))
+              hasAnySubstatement(
+                cxxMemberCallExpr(
+                    callee(memberExpr(ofClass(cxxRecordDecl(hasAnyName(
+                        "::std::set", "::std::map", "::std::multiset",
+                        "::std::multimap", "::std::unordered_set",
+                        "::std::unordered_map", "::std::unordered_multiset",
+                        "::std::unordered_multimap"))))),
+                    argumentCountIs(1),
+                    hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                    to(varDecl().bind("insert_arg"))))))
+                        .bind("insert_call")))
           .bind("for_range"),
       this);
 }
 
-void UseBulkInsertCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *Loop =
-      Result.Nodes.getNodeAs<CXXForRangeStmt>("for_range");
-  const auto *LoopVar =
-      Result.Nodes.getNodeAs<VarDecl>("loop_var");
-  const auto *InsertArg =
-      Result.Nodes.getNodeAs<VarDecl>("insert_arg");
-  const auto *Range =
-      Result.Nodes.getNodeAs<Expr>("range");
-  const auto *InsertCall =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>("insert_call");
+void UseBulkInsertCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *Loop = Result.Nodes.getNodeAs<CXXForRangeStmt>("for_range");
+  const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>("loop_var");
+  const auto *InsertArg = Result.Nodes.getNodeAs<VarDecl>("insert_arg");
+  const auto *Range = Result.Nodes.getNodeAs<Expr>("range");
+  const auto *InsertCall = Result.Nodes.getNodeAs<CXXMemberCallExpr>("insert_call");
 
   if (!Loop || !LoopVar || !InsertArg || !Range || !InsertCall)
     return;
@@ -69,12 +61,11 @@ void UseBulkInsertCheck::check(
   const LangOptions &LangOpts = Result.Context->getLangOpts();
 
   StringRef ObjectText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(Object->getSourceRange()), SM,
-      LangOpts);
+    CharSourceRange::getTokenRange(Object->getSourceRange()), SM, LangOpts);
 
   StringRef RangeText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(Range->getSourceRange()), SM,
-      LangOpts);
+    CharSourceRange::getTokenRange(Loop->getBeginLoc(),
+                              Loop->getEndLoc()),
 
   if (ObjectText.empty() || RangeText.empty())
     return;
