@@ -43,6 +43,20 @@ set(CLANG_CONFIG_INCLUDE_DIRS
   "${CLANG_SOURCE_DIR}/include"
   "${CLANG_BINARY_DIR}/include"
   )
+set(clang_config_needs_mlir OFF)
+if(CLANG_ENABLE_CIR AND NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  set(clang_config_needs_mlir ON)
+endif()
+function(clang_config_find_mlir out_var mlir_cmake_dir)
+  if(clang_config_needs_mlir)
+    set(${out_var}
+      "find_package(MLIR \${LLVM_VERSION_MAJOR}.\${LLVM_VERSION_MINOR}.\${LLVM_VERSION_PATCH} EXACT REQUIRED CONFIG
+             HINTS \"${mlir_cmake_dir}\")" PARENT_SCOPE)
+  else()
+    set(${out_var} "" PARENT_SCOPE)
+  endif()
+endfunction()
+clang_config_find_mlir(CLANG_CONFIG_FIND_MLIR "${llvm_builddir}/cmake/mlir")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${clang_cmake_builddir}/ClangConfig.cmake
@@ -69,6 +83,11 @@ file(COPY .
 find_prefix_from_config(CLANG_CONFIG_CODE CLANG_INSTALL_PREFIX "${CLANG_INSTALL_PACKAGE_DIR}")
 extend_path(CLANG_CONFIG_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}" "${CLANG_INSTALL_PACKAGE_DIR}")
 extend_path(CLANG_CONFIG_LLVM_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}" "${LLVM_INSTALL_PACKAGE_DIR}")
+# Keep this in sync with mlir/cmake/modules/CMakeLists.txt!
+set(MLIR_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/mlir" CACHE STRING
+  "Path for CMake subdirectory for MLIR (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/mlir')")
+extend_path(clang_config_mlir_cmake_dir "\${CLANG_INSTALL_PREFIX}" "${MLIR_INSTALL_PACKAGE_DIR}")
+clang_config_find_mlir(CLANG_CONFIG_FIND_MLIR "${clang_config_mlir_cmake_dir}")
 get_config_exports_includes(Clang CLANG_CONFIG_INCLUDE_EXPORTS)
 extend_path(base_includedir "\${CLANG_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(CLANG_CONFIG_INCLUDE_DIRS
