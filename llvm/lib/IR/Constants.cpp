@@ -343,7 +343,7 @@ containsUndefinedElement(const Constant *C,
 
   if (HasFn(C))
     return true;
-  if (isa<ConstantAggregateZero>(C))
+  if (isa<ConstantAggregateZero>(C) || isa<ConstantDataSequential>(C))
     return false;
 
   return containsMatchingElement(C, HasFn);
