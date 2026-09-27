@@ -55,7 +55,7 @@ Google has measured performance improvements of up to 1.6% on some large server 
 
 This also affects null pointer optimization
 
-Clang's optimizer can now figure out when a {title-reference}`std::unique_ptr` is known to contain *non*-null.
+Clang's optimizer can now figure out when a `std::unique_ptr` is known to contain *non*-null.
 (Actually, this has been a *missed* optimization all along.)
 
 ```cpp
@@ -82,50 +82,50 @@ The following breakages were discovered by enabling this change and fixing the r
 
 - Compilation failures
 
-> - Function definitions now require complete type `T` for parameters with type `std::unique_ptr<T>`. The following code will no longer compile.
->
->   ```cpp
->   class Foo;
->   void func(std::unique_ptr<Foo> arg) { /* never use `arg` directly */ }
->   ```
->
-> - Fix: Remove forward-declaration of `Foo` and include its proper header.
+  - Function definitions now require complete type `T` for parameters with type `std::unique_ptr<T>`. The following code will no longer compile.
+
+    ```cpp
+    class Foo;
+    void func(std::unique_ptr<Foo> arg) { /* never use `arg` directly */ }
+    ```
+
+  - Fix: Remove forward-declaration of `Foo` and include its proper header.
 
 - Runtime Failures
 
-> - Lifetime of `std::unique_ptr<>` arguments end earlier (at the end of the callee's body, rather than at the end of the full expression containing the call).
->
->   ```cpp
->   util::Status run_worker(std::unique_ptr<Foo>);
->   void func() {
->      std::unique_ptr<Foo> smart_foo = ...;
->      Foo* owned_foo = smart_foo.get();
->      // Currently, the following would "work" because the argument to run_worker() is deleted at the end of func()
->      // With the new calling convention, it will be deleted at the end of run_worker(),
->      // making this an access to freed memory.
->      owned_foo->Bar(run_worker(std::move(smart_foo)));
->                ^
->               // <<<Crash expected here
->   }
->   ```
->
-> - Lifetime of local *returned* `std::unique_ptr<>` ends earlier.
->
->   Spot the bug:
->
->   > ```cpp
->   > std::unique_ptr<Foo> create_and_subscribe(Bar* subscriber) {
->   >   auto foo = std::make_unique<Foo>();
->   >   subscriber->sub([&foo] { foo->do_thing();} );
->   >   return foo;
->   > }
->   > ```
->
->   One could point out this is an obvious stack-use-after return bug.
->   With the current calling convention, running this code with ASAN enabled, however, would not yield any "issue".
->   So is this a bug in ASAN? (Spoiler: No)
->
->   This currently would "work" only because the storage for `foo` is in the caller's stackframe.
->   In other words, `&foo` in callee and `&foo` in the caller are the same address.
+  - Lifetime of `std::unique_ptr<>` arguments end earlier (at the end of the callee's body, rather than at the end of the full expression containing the call).
+
+    ```cpp
+    util::Status run_worker(std::unique_ptr<Foo>);
+    void func() {
+       std::unique_ptr<Foo> smart_foo = ...;
+       Foo* owned_foo = smart_foo.get();
+       // Currently, the following would "work" because the argument to run_worker() is deleted at the end of func()
+       // With the new calling convention, it will be deleted at the end of run_worker(),
+       // making this an access to freed memory.
+       owned_foo->Bar(run_worker(std::move(smart_foo)));
+                 ^
+                // <<<Crash expected here
+    }
+    ```
+
+  - Lifetime of local *returned* `std::unique_ptr<>` ends earlier.
+
+    Spot the bug:
+
+    ```cpp
+    std::unique_ptr<Foo> create_and_subscribe(Bar* subscriber) {
+      auto foo = std::make_unique<Foo>();
+      subscriber->sub([&foo] { foo->do_thing();} );
+      return foo;
+    }
+    ```
+
+    One could point out this is an obvious stack-use-after return bug.
+    With the current calling convention, running this code with ASAN enabled, however, would not yield any "issue".
+    So is this a bug in ASAN? (Spoiler: No)
+
+    This currently would "work" only because the storage for `foo` is in the caller's stackframe.
+    In other words, `&foo` in callee and `&foo` in the caller are the same address.
 
 ASAN can be used to detect both of these.

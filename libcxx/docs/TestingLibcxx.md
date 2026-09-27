@@ -234,10 +234,10 @@ failure can be found without resorting to a debugger.
 
 Several of these macros are documented to take an `ARG`. This `ARG`:
 
-> - if it is a `const char*` or `std::string` its contents are written to
->   the `stderr`,
-> - otherwise it must be a callable that is invoked without any additional
->   arguments and is expected to produce useful output to e.g. `stderr`.
+- if it is a `const char*` or `std::string` its contents are written to
+  the `stderr`,
+- otherwise it must be a callable that is invoked without any additional
+  arguments and is expected to produce useful output to e.g. `stderr`.
 
 This makes it possible to write additional information when a test fails,
 either by supplying a hard-coded string or generate it at runtime.

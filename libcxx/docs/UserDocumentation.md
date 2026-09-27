@@ -98,8 +98,8 @@ in your toolchain can lead to unexpected behavior.
 **\_LIBCPP_DISABLE_DEPRECATION_WARNINGS**\:
 
 : This macro disables warnings when using deprecated components. For example,
-  using {title-reference}`std::auto_ptr` when compiling in C++11 mode will normally trigger a
-  warning saying that {title-reference}`std::auto_ptr` is deprecated. If the macro is defined,
+  using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
+  warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
   no warning will be emitted. By default, this macro is not defined.
 
 **\_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**\:
@@ -123,23 +123,23 @@ in your toolchain can lead to unexpected behavior.
 **\_LIBCPP_NO_VCRUNTIME**\:
 
 : Microsoft's C and C++ headers are fairly entangled, and some of their C++
-  headers are fairly hard to avoid. In particular, {title-reference}`vcruntime_new.h` gets pulled
+  headers are fairly hard to avoid. In particular, `vcruntime_new.h` gets pulled
   in from a lot of other headers and provides definitions which clash with
-  libc++ headers, such as {title-reference}`nothrow_t` (note that {title-reference}`nothrow_t` is a struct, so
+  libc++ headers, such as `nothrow_t` (note that `nothrow_t` is a struct, so
   there's no way for libc++ to provide a compatible definition, since you can't
   have multiple definitions).
 
   By default, libc++ solves this problem by deferring to Microsoft's vcruntime
   headers where needed. However, it may be undesirable to depend on vcruntime
   headers, since they may not always be available in cross-compilation setups,
-  or they may clash with other headers. The {title-reference}`_LIBCPP_NO_VCRUNTIME` macro
+  or they may clash with other headers. The `_LIBCPP_NO_VCRUNTIME` macro
   prevents libc++ from depending on vcruntime headers. Consequently, it also
   prevents libc++ headers from being interoperable with vcruntime headers (from
   the aforementioned clashes), so users of this macro are promising to not
   attempt to combine libc++ headers with the problematic vcruntime headers. This
-  macro also currently prevents certain {title-reference}`operator new`/{title-reference}`operator delete`
-  replacement scenarios from working, e.g. replacing {title-reference}`operator new` and
-  expecting a non-replaced {title-reference}`operator new[]` to call the replaced {title-reference}`operator new`.
+  macro also currently prevents certain `operator new`/`operator delete`
+  replacement scenarios from working, e.g. replacing `operator new` and
+  expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
 **\_LIBCPP_REMOVE_TRANSITIVE_INCLUDES**\:
 
@@ -168,46 +168,46 @@ in your toolchain can lead to unexpected behavior.
 
 **\_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**\:
 
-: This macro is used to re-enable {title-reference}`auto_ptr`.
+: This macro is used to re-enable `auto_ptr`.
 
 **\_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS**\:
 
-: This macro is used to re-enable the {title-reference}`binder1st`, {title-reference}`binder2nd`,
-  {title-reference}`pointer_to_unary_function`, {title-reference}`pointer_to_binary_function`, {title-reference}`mem_fun_t`,
-  {title-reference}`mem_fun1_t`, {title-reference}`mem_fun_ref_t`, {title-reference}`mem_fun1_ref_t`, {title-reference}`const_mem_fun_t`,
-  {title-reference}`const_mem_fun1_t`, {title-reference}`const_mem_fun_ref_t`, and {title-reference}`const_mem_fun1_ref_t`
-  class templates, and the {title-reference}`bind1st`, {title-reference}`bind2nd`, {title-reference}`mem_fun`, {title-reference}`mem_fun_ref`,
-  and {title-reference}`ptr_fun` functions.
+: This macro is used to re-enable the `binder1st`, `binder2nd`,
+  `pointer_to_unary_function`, `pointer_to_binary_function`, `mem_fun_t`,
+  `mem_fun1_t`, `mem_fun_ref_t`, `mem_fun1_ref_t`, `const_mem_fun_t`,
+  `const_mem_fun1_t`, `const_mem_fun_ref_t`, and `const_mem_fun1_ref_t`
+  class templates, and the `bind1st`, `bind2nd`, `mem_fun`, `mem_fun_ref`,
+  and `ptr_fun` functions.
 
 **\_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE**\:
 
-: This macro is used to re-enable the {title-reference}`random_shuffle` algorithm.
+: This macro is used to re-enable the `random_shuffle` algorithm.
 
 **\_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION**\:
 
-: This macro is used to re-enable {title-reference}`unary_function` and {title-reference}`binary_function`.
+: This macro is used to re-enable `unary_function` and `binary_function`.
 
 **\_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**\:
 
-: This macro is used to re-enable {title-reference}`set_unexpected`, {title-reference}`get_unexpected`, and
-  {title-reference}`unexpected`.
+: This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
+  `unexpected`.
 
 ### C++20 Specific Configuration Macros
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**\:
 
-: This macro is used to re-enable the {title-reference}`argument_type`, {title-reference}`result_type`,
-  {title-reference}`first_argument_type`, and {title-reference}`second_argument_type` members of class
-  templates such as {title-reference}`plus`, {title-reference}`logical_not`, {title-reference}`hash`, and {title-reference}`owner_less`.
+: This macro is used to re-enable the `argument_type`, `result_type`,
+  `first_argument_type`, and `second_argument_type` members of class
+  templates such as `plus`, `logical_not`, `hash`, and `owner_less`.
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS**\:
 
-: This macro is used to re-enable {title-reference}`not1`, {title-reference}`not2`, {title-reference}`unary_negate`,
-  and {title-reference}`binary_negate`.
+: This macro is used to re-enable `not1`, `not2`, `unary_negate`,
+  and `binary_negate`.
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR**\:
 
-: This macro is used to re-enable {title-reference}`raw_storage_iterator`.
+: This macro is used to re-enable `raw_storage_iterator`.
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**\:
 
@@ -216,16 +216,16 @@ in your toolchain can lead to unexpected behavior.
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER**\:
 
-: This macro is used to re-enable {title-reference}`get_temporary_buffer` and {title-reference}`return_temporary_buffer`.
+: This macro is used to re-enable `get_temporary_buffer` and `return_temporary_buffer`.
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS**\:
 
-: This macro is used to re-enable {title-reference}`is_literal_type`, {title-reference}`is_literal_type_v`,
-  {title-reference}`result_of` and {title-reference}`result_of_t`.
+: This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
+  `result_of` and `result_of_t`.
 
 **\_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION**\:
 
-: This macro is used to re-enable {title-reference}`uncaught_exception`.
+: This macro is used to re-enable `uncaught_exception`.
 
 ### C++26 Specific Configuration Macros
 

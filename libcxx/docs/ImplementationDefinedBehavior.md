@@ -15,10 +15,10 @@ The C++ standard mandates that implementation-defined behavior is documented.
 The C++ standard allows implementations to automatically update the
 *remote time zone database*. Libc++ opts not to do that. Instead calling
 
-> - `std::chrono::remote_version()` will update the version information of the
->   *remote time zone database*,
-> - `std::chrono::reload_tzdb()`, if needed, will update the entire
->   *remote time zone database*.
+- `std::chrono::remote_version()` will update the version information of the
+  *remote time zone database*,
+- `std::chrono::reload_tzdb()`, if needed, will update the entire
+  *remote time zone database*.
 
 This offers a way for users to update the *remote time zone database* and
 give them full control over the process.
@@ -66,4 +66,3 @@ to its capacity and uses that size. This means the SSO buffer of
 
 The order of the entries matches the entries in the
 [draft of the Standard](http://eel.is/c++draft/impldefindex).
-
