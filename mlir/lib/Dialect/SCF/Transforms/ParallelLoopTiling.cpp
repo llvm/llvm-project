@@ -80,6 +80,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
   }
   auto outerLoop = ParallelOp::create(b, op.getLoc(), op.getLowerBound(),
                                       op.getUpperBound(), newSteps);
+  outerLoop.setUnsignedCmp(op.getUnsignedCmp());
   b.setInsertionPointToStart(outerLoop.getBody());
 
   // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
@@ -135,12 +136,16 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
   auto innerLoop = ParallelOp::create(
       b, op.getLoc(), SmallVector<Value, 2>(newBounds.size(), zero), newBounds,
       op.getStep());
+  innerLoop.setUnsignedCmp(op.getUnsignedCmp());
 
   if (noMinMaxBounds && needInboundCheck) {
     b.setInsertionPointToStart(innerLoop.getBody());
     // Insert in-bound check
     Value inbound =
         arith::ConstantIntOp::create(b, op.getLoc(), b.getIntegerType(1), 1);
+    arith::CmpIPredicate predicate = op.getUnsignedCmp()
+                                         ? arith::CmpIPredicate::ult
+                                         : arith::CmpIPredicate::slt;
     for (auto [outerUpperBound, outerIV, innerIV, innerStep] :
          llvm::zip(outerLoop.getUpperBound(), outerLoop.getInductionVars(),
                    innerLoop.getInductionVars(), innerLoop.getStep())) {
@@ -149,8 +154,8 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
       Value index = arith::AddIOp::create(
           b, op.getLoc(),
           arith::MulIOp::create(b, op.getLoc(), innerIV, innerStep), outerIV);
-      Value dimInbound = arith::CmpIOp::create(
-          b, op.getLoc(), arith::CmpIPredicate::slt, index, outerUpperBound);
+      Value dimInbound = arith::CmpIOp::create(b, op.getLoc(), predicate, index,
+                                               outerUpperBound);
       inbound = arith::AndIOp::create(b, op.getLoc(), inbound, dimInbound);
     }
     auto ifInbound = IfOp::create(b, op.getLoc(),

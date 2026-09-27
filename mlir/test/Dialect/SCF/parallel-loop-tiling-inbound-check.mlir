@@ -167,3 +167,25 @@ func.func @parallel_loop_negative_lower_bound(%arg0 : index, %arg1 : index,
 // CHECK-NOT:       arith.cmpi ult
 // CHECK:           arith.cmpi slt
 // CHECK-NOT:       arith.cmpi ult
+
+// -----
+
+func.func @parallel_loop_unsigned(%arg0 : index, %arg1 : index,
+                                  %result: memref<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.0 : f32
+  scf.parallel unsigned (%i0, %i1) = (%c0, %c0) to (%arg0, %arg1) step (%c1, %c1) {
+    memref.store %cst, %result[%i0, %i1] : memref<?x?xf32>
+  }
+  return
+}
+
+// Unsigned bounds keep the unsigned compare and the attribute is propagated to
+// both generated loops.
+// CHECK-LABEL:   func @parallel_loop_unsigned(
+// CHECK:           scf.parallel unsigned (
+// CHECK:             scf.parallel unsigned (
+// CHECK-NOT:         arith.cmpi slt
+// CHECK:             arith.cmpi ult
+// CHECK-NOT:         arith.cmpi slt
