@@ -445,8 +445,7 @@ struct OpaquePointer {
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
   bool hasDeclBase() const { return Base.isDecl(); }
-  const ValueDecl *getBaseDecl() const { return Base.asValueDecl(); }
-  const VarDecl *getBaseVarDecl() const { return Base.asVarDecl(); }
+  const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
   bool hasValidBase() const;
 
@@ -743,7 +742,6 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
-  const ValueDecl *getRootValueDecl() const;
   const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -923,7 +921,7 @@ public:
     }
 
     if (isOpaquePointer()) {
-      if (const VarDecl *BaseDecl = Opaque.getBaseVarDecl())
+      if (const VarDecl *BaseDecl = Opaque.getBaseDecl())
         return BaseDecl->isWeak();
       return false;
     }
@@ -1000,10 +998,7 @@ public:
     return view().getNumElems();
   }
 
-  const Block *block() const {
-    assert(isBlockPointer());
-    return BS.Pointee;
-  }
+  const Block *block() const { return BS.Pointee; }
 
   /// If backed by actual data (i.e. a block or string pointer), return
   /// an address to that data.

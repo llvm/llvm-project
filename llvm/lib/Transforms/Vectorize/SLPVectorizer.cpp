@@ -3813,9 +3813,9 @@ private:
   /// uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
 
-  /// Replacements emitted for the external uses without users, consumed after
-  /// the tree vectorization; must not be collected as dead operands of the
-  /// erased scalars.
+  /// Externally used values and replacements emitted for the external uses
+  /// without users, consumed after the tree vectorization; must not be
+  /// collected as dead operands of the erased scalars.
   SmallPtrSet<Value *, 4> ExternalUseReplacements;
 
   /// Values used only by @llvm.assume calls.
@@ -14249,6 +14249,22 @@ void BoUpSLP::transformNodes() {
     });
   };
 
+  // The reduction root gather feeds only the commutative reduction, which
+  // maps the reduced values to the lanes by the root scalars. Put the distinct
+  // sub-fields of the same wider scalar in the natural order to emit them
+  // without a permutation.
+  if (UserIgnoreList && getRootNode().isGather() &&
+      getRootNode().ReuseShuffleIndices.empty())
+    if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+            matchGatheredExtractedFields(getRootNode().Scalars, *DL)) {
+      auto &[Src, FieldWidth, Mask] = *Fields;
+      SmallVector<int> SortedMask(Mask);
+      sort(SortedMask);
+      if (equal(SortedMask,
+                seq<int>(Src->getType()->getIntegerBitWidth() / FieldWidth)))
+        reorderScalars(getRootNode().Scalars, Mask);
+    }
+
   // Try to reorder gather nodes for better vectorization opportunities.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
@@ -21026,6 +21042,15 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         GatherNodes.push_back(E);
       }
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
+               E && !TEUserNeedsEmitFirst &&
+               TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
+               !E->UserTreeIndex.UserTE->isGather()) {
+      // Regular gathers reuse only perfectly matched transformed nodes of the
+      // same user. Gathers, emitted before their user, cannot reuse transformed
+      // nodes, which are emitted with the user.
+      GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
       if (TEPtr == TE || TEPtr->Idx == 0 || DeletedNodes.contains(TEPtr))
@@ -22783,20 +22808,6 @@ std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
   Value *Src = std::get<0>(*ExtractedFields);
   unsigned FieldWidth = std::get<1>(*ExtractedFields);
   SmallVector<int> &Mask = std::get<2>(*ExtractedFields);
-  unsigned NumFields = Src->getType()->getIntegerBitWidth() / FieldWidth;
-  // The vector of the reduction root gather feeds only the commutative
-  // reduction; other users of the gathered scalars keep using the scalars,
-  // so the lane order is unobservable. Emit the fields in the natural order
-  // and skip the permutation when each lane holds a distinct field.
-  if (!E->UserTreeIndex && UserIgnoreList && Mask.size() == NumFields) {
-    SmallVector<int> SortedMask(Mask);
-    sort(SortedMask);
-    // Each field is held at most once; poison lanes are ignored.
-    if (adjacent_find(SortedMask, [](int A, int B) {
-          return A != PoisonMaskElem && A == B;
-        }) == SortedMask.end())
-      std::iota(Mask.begin(), Mask.end(), 0);
-  }
   return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask, *E);
 }
 
@@ -26599,6 +26610,16 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
     }
   }
+  // Externally used values, which are not operands of the reduction ops (e.g.
+  // gathered narrowed reduction leaves), may lose all users once the tree
+  // scalars are erased; keep them alive for the reduction epilogue. Too many
+  // users - keep conservatively.
+  if (UserIgnoreList)
+    for (Instruction *I : make_isa_range<Instruction>(ExternallyUsedValues))
+      if (I->hasNUsesOrMore(UsesLimit) || none_of(I->users(), [&](User *U) {
+            return UserIgnoreList->contains(U);
+          }))
+        ExternalUseReplacements.insert(I);
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
   // cache correctness.
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
@@ -32679,9 +32700,9 @@ public:
             RdxVal = It->second;
           if (!Visited.insert(RdxVal).second)
             continue;
-          // Check if the scalar was vectorized as part of the vectorization
-          // tree but not the top node.
-          if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
+          // Scalars not reduced by the top node may be used by the reduction
+          // epilogue, even if not vectorized as part of the tree.
+          if (!VLScalars.contains(RdxVal)) {
             LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }

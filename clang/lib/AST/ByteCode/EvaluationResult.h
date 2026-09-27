@@ -18,7 +18,6 @@ namespace clang {
 namespace interp {
 class EvalEmitter;
 class Context;
-class MemberPointer;
 class Pointer;
 class SourceInfo;
 class InterpState;
@@ -39,7 +38,9 @@ public:
   };
 
 private:
-  const Context &Ctx;
+#ifndef NDEBUG
+  const Context *Ctx = nullptr;
+#endif
   APValue Value;
   ResultKind Kind = Empty;
   DeclOrExpr Source = nullptr;
@@ -62,14 +63,17 @@ private:
     Kind = Valid;
   }
 
-  QualType getStorageType() const;
-
 public:
-  EvaluationResult(const Context &Ctx) : Ctx(Ctx) {}
+#ifndef NDEBUG
+  EvaluationResult(const Context *Ctx) : Ctx(Ctx) {}
+#else
+  EvaluationResult(const Context *Ctx) {}
+#endif
 
   bool empty() const { return Kind == Empty; }
   bool isInvalid() const { return Kind == Invalid; }
 
+  /// Moves the APValue containing the evaluation result to the caller.
   APValue stealAPValue() { return std::move(Value); }
 
   /// Check that all subobjects of the given pointer have been initialized.
@@ -77,23 +81,7 @@ public:
   /// Check that none of the blocks the given pointer (transitively) points
   /// to are dynamically allocated.
   bool checkDynamicAllocations(InterpState &S, const Pointer &Ptr,
-                               SourceInfo Info) const;
-
-  /// Check the given pointer as an lvalue, i.e. make sure it's a global
-  /// lvalue and diagnose if it's not.
-  bool checkLValue(InterpState &S, const Pointer &Ptr, SourceInfo Info,
-                   ConstantExprKind ConstexprKind) const;
-  /// Check all fields of the given pointer.
-  bool checkLValueFields(InterpState &S, const Pointer &Ptr, SourceInfo Info,
-                         ConstantExprKind ConstexprKind) const;
-
-  /// Check if the given member pointer can be returned from an evaluation.
-  static bool checkMemberPointer(InterpState &S, const MemberPointer &MemberPtr,
-                                 SourceInfo Info,
-                                 ConstantExprKind ConstexprKind);
-  /// Check if the given function pointer can be returned from an evaluation.
-  bool checkFunctionPointer(InterpState &S, const Pointer &Ptr, SourceInfo Info,
-                            ConstantExprKind ConstexprKind) const;
+                               SourceInfo Info);
 
   QualType getSourceType() const {
     if (const auto *D = Source.asValueDecl())

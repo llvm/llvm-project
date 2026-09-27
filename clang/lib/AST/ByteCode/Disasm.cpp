@@ -643,6 +643,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
     OS << "Invalid\n";
   } else {
     OS << "Value: ";
-    Value.dump(OS, Ctx.getASTContext());
+#ifndef NDEBUG
+    assert(Ctx);
+    Value.dump(OS, Ctx->getASTContext());
+#endif
   }
 }
