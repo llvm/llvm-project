@@ -16,9 +16,9 @@
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/Error.h"
-#include "orc-rt/support/ExecutorAddress.h"
 #include "orc-rt/support/WrapperFunction.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
@@ -57,6 +57,36 @@ protected:
     Value,
     OutOfBandError,
     LastResultKind = OutOfBandError
+  };
+
+  /// How a message header goes onto a byte stream: four little-endian uint64
+  /// fields, followed by the payload.
+  ///
+  /// The sole authority for that layout, so that an encoder and a reader cannot
+  /// disagree about it. Shared by the stream transports rather than owned by
+  /// one of them -- a socket, a pipe and a Windows socket all frame this way,
+  /// and the layout matches LLVM's FDMsgHeader.
+  ///
+  /// Not universal, though. MsgSize is here only because a stream has no
+  /// message boundaries of its own, so a message-oriented transport -- XPC,
+  /// say, where these would be dictionary keys -- carries the same opcode,
+  /// sequence number and tag with neither this encoding nor a length.
+  struct MsgHeader {
+    static constexpr size_t Size = 4 * sizeof(uint64_t);
+
+    /// A decoded header. MsgSize counts the header as well as the payload.
+    /// Tag is the raw wire value: a handler tag for a call, a ResultKind for a
+    /// result, zero otherwise.
+    struct Fields {
+      uint64_t MsgSize = 0;
+      uint64_t OpC = 0;
+      uint64_t SeqNo = 0;
+      uint64_t Tag = 0;
+    };
+
+    static void encode(char *Buf, Opcode Op, uint64_t SeqNo, uint64_t Tag,
+                       size_t PayloadSize);
+    static Fields decode(const char *Buf);
   };
 
   /// The name of Op, for logging.
@@ -121,9 +151,9 @@ protected:
   /// group is still open, or the handlers are dropped rather than dispatched.
   PendingCallsMap takeAllCalls();
 
-  /// Acts on one de-framed message. OpC is the raw wire opcode: this validates
-  /// it along with the header semantics each opcode requires, so a transport
-  /// need only deliver the fields and payload intact.
+  /// Acts on one de-framed message. OpC and Tag are raw wire values: this
+  /// validates them along with the header semantics each opcode requires, so a
+  /// transport need only deliver the fields and payload intact.
   ///
   /// Every error returned is terminal: stop reading and end the session with
   /// it. Action::End means the controller hung up cleanly.
@@ -134,7 +164,7 @@ protected:
   ///
   /// Calls must be serialized with one another, and must all complete before
   /// the Session is notified, since a Result completes a pending call.
-  Expected<Action> handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
+  Expected<Action> handleMessage(uint64_t OpC, uint64_t SeqNo, uint64_t Tag,
                                  WrapperFunctionBuffer Payload);
 
   /// Removes the handler for SeqNo, or returns a null handler if there is none.
