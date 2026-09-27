@@ -22,6 +22,7 @@ class Sema;
 class HLSLExternalSemaSource : public ExternalSemaSource {
   Sema *SemaPtr = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
+  NamespaceDecl *HLSLDetailNamespace = nullptr;
 
   using CompletionFunction = std::function<void(CXXRecordDecl *)>;
   llvm::DenseMap<CXXRecordDecl *, CompletionFunction> Completions;
@@ -43,8 +44,10 @@ public:
 
 private:
   void defineTrivialHLSLTypes();
+  void defineInternalHLSLTypes();
   void defineHLSLVectorAlias();
   void defineHLSLMatrixAlias();
+  void defineHeapResourceInfoTypes();
   void defineHLSLTypesWithForwardDeclarations();
   void defineHLSLAtomicIntrinsics();
   void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);

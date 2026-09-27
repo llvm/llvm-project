@@ -903,6 +903,9 @@ class Base(unittest.TestCase):
             # LLDB-internal utility expressions can take very long when the
             # host is under heavy load.
             "settings set target.process.utility-expression-timeout 600",
+            # Same for the shell expansion of launch arguments: disable the
+            # timeout so a loaded host doesn't cause flaky failures.
+            "settings set platform.shell-expand-timeout 0",
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
@@ -1769,18 +1772,20 @@ class Base(unittest.TestCase):
                 % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
+            crt = "dll_dbg" if configuration.cmake_build_type == "debug" else "dll"
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
+                "CFLAGS_EXTRAS": "%s %s -fms-runtime-lib=%s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
+                    crt,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
                     defines,
                 ),
-                "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
+                "LD_EXTRAS": "-L%s -lliblldb -Xlinker -nodefaultlib:libcmt" % lib_dir,
             }
         else:
             d = {
@@ -1882,7 +1887,7 @@ class Base(unittest.TestCase):
         yaml2obj_bin = configuration.get_yaml2obj_path()
         if not yaml2obj_bin:
             self.assertTrue(False, "No valid yaml2obj executable specified")
-        command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
+        command = [yaml2obj_bin, "-o", obj_path, yaml_path]
         if max_size is not None:
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)

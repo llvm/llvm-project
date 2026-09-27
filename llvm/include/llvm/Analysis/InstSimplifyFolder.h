@@ -115,6 +115,16 @@ public:
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     return simplifyCastInst(Op, V, DestTy, SQ);
@@ -123,7 +133,7 @@ public:
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
                        FastMathFlags FMF = {},
                        Function *CtxF = nullptr) const override {
-    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF);
+    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ.getWithFunction(CtxF));
   }
 
   //===--------------------------------------------------------------------===//

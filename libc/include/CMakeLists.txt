@@ -584,6 +584,7 @@ add_header_macro(
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
+    .llvm-libc-types.struct___pthread_cleanup_frame
     .llvm-libc-types.clockid_t
     .llvm-libc-types.pthread_attr_t
     .llvm-libc-types.pthread_cond_t
@@ -1097,6 +1098,17 @@ add_header_macro(
     .llvm-libc-types.siginfo_t
 )
 
+add_header_macro(
+  sys_xattr
+  ../libc/include/sys/xattr.yaml
+  sys/xattr.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_xattr_macros
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
+)
+
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
 
 add_header_macro(
@@ -1246,6 +1258,8 @@ add_header_macro(
   DEPENDS
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
+    .llvm-libc-types.struct_timespec
+    .llvm-libc-types.sigset_t
     .llvm-libc-macros.poll-macros
 )
 
