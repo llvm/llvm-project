@@ -719,7 +719,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // It is always safe to copy over the NoWrap and FastMath flags. In
   // particular, when folding tail by masking, the masked-off lanes are never
   // used, so it is safe.
-  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
+  VPIRFlags Flags = vputils::getFlagsForInduction(IndDesc, PhiR);
 
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);

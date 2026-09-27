@@ -15,7 +15,7 @@ jobs:
     name: libc-fullbuild on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     container:
-      image: ${{ (startsWith(matrix.os, 'ubuntu-24.04-arm') && 
+      image: ${{ (startsWith(matrix.os, 'ubuntu-26.04-arm') && 
         'ghcr.io/llvm/arm64v8/libc-ubuntu-26.04:latest@sha256:8597b484c4041a6f61374ad12820d7786e3279111a94dc13ccba0b57a3c508da') ||
         'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'}}
       # We need to enable privileged containers so that certain libc tests
@@ -54,70 +54,70 @@ jobs:
             include_scudo: ON
             testing: BUILD
           - name: linux-aarch64-clang
-            os: ubuntu-24.04-arm
+            os: ubuntu-26.04-arm
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
           - name: uefi-x86_64-clang
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: x86_64-unknown-uefi-llvm
             testing: SKIP
           - name: baremetal-armv6m
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv6m-none-eabi
             testing: SKIP
           - name: baremetal-armv7m
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv7m-none-eabi
             testing: SKIP
           - name: baremetal-armv7em
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv7em-none-eabi
             testing: SKIP
           - name: baremetal-armv8m-softfp
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
             testing: SKIP
           - name: baremetal-armv8m-hard
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabihf
             testing: SKIP
           - name: baremetal-armv8.1m
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8.1m.main-none-eabi
             testing: SKIP
           - name: baremetal-riscv32
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: riscv32-unknown-elf
             testing: SKIP
           - name: amd-gpu
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23

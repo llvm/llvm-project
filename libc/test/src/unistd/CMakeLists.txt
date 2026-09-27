@@ -205,6 +205,25 @@ add_libc_test(
 )
 
 add_libc_test(
+  fdatasync_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fdatasync_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.fdatasync
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   ftruncate_test
   SUITE
     libc_unistd_unittests

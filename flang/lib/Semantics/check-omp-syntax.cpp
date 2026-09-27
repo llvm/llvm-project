@@ -38,20 +38,30 @@ template <typename T> struct SetTypeFor {
       llvm::to_underlying(T::Last_) - llvm::to_underlying(T::First_) + 1>;
 };
 
-static llvm::omp::Modifiers getElements(
-    const llvm::omp::descriptor::Clause &cdesc, llvm::omp::Version version) {
-  return cdesc.getModifiers(version);
+static llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
+  return desc.getModifiers(version);
 }
 
-static llvm::omp::Modifiers getElements(
-    const llvm::omp::descriptor::ModifierSet &sdesc,
+static llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::ModifierSet &desc,
     llvm::omp::Version version) {
-  return sdesc.getModifiers(version);
+  return desc.getModifiers(version);
 }
 
-static llvm::omp::ModifierSets getSets(
-    const llvm::omp::descriptor::Clause &cdesc, llvm::omp::Version version) {
-  return cdesc.getModifierSets(version);
+static llvm::omp::ModifierSets GetSets(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
+  return desc.getModifierSets(version);
+}
+
+template <typename DescriptorTy>
+static auto GetAllowedElements(
+    const DescriptorTy &desc, llvm::omp::Version version) {
+  auto allowed{GetElements(desc, version)};
+  for (auto s : GetSets(desc, version)) {
+    allowed |= GetElements(GetDescriptor(s), version);
+  }
+  return allowed;
 }
 
 template < //
@@ -65,7 +75,7 @@ static ResultTy VerifyVersions(
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto elements{getElements(odesc, version)};
+  auto elements{GetElements(odesc, version)};
 
   for (const AppliedElementTy &elem : info.elements) {
     if (elements.test(elem.id.value)) {
@@ -73,7 +83,7 @@ static ResultTy VerifyVersions(
     }
     llvm::omp::Version since{~0u}, until{0u};
     for (llvm::omp::Version v : odesc.getVersions()) {
-      if (getElements(odesc, v).test(elem.id.value)) {
+      if (GetElements(odesc, v).test(elem.id.value)) {
         if (v < version) {
           until = std::max(until, v);
         } else if (v > version) {
@@ -100,13 +110,13 @@ static ResultTy VerifyRequired(
   ResultTy required;
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
 
-  for (auto e : getElements(odesc, version)) {
+  for (auto e : GetElements(odesc, version)) {
     auto &edesc{llvm::omp::getDescriptor(e)};
     if (edesc.getProperties(version).test(llvm::omp::Property::Required)) {
       required.first.set(e);
     }
   }
-  for (auto s : getSets(odesc, version)) {
+  for (auto s : GetSets(odesc, version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
     if (sdesc.getProperties(version).test(llvm::omp::Property::Required)) {
       required.second.set(s);
@@ -132,19 +142,19 @@ static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy, SetsSetTy> &info,
   ElemSetTy unique;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto elements{getElements(odesc, version)};
+  auto elements{GetElements(odesc, version)};
 
   for (auto e : elements) {
     auto &edesc{llvm::omp::getDescriptor(e)};
-    // Exclusive modifiers should have the "unique" property present as well.
+    // Ultimate modifiers should have the "unique" property present as well.
     if (edesc.getProperties(version).test(llvm::omp::Property::Unique)) {
       unique.set(e);
     }
   }
-  for (auto s : getSets(odesc, version)) {
+  for (auto s : GetSets(odesc, version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
     if (sdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
-      unique |= getElements(sdesc, version);
+      unique |= GetElements(sdesc, version);
     }
   }
 
@@ -177,7 +187,7 @@ static ResultTy VerifyExclusive(
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto elements{getElements(odesc, version)};
+  auto elements{GetElements(odesc, version)};
 
   llvm::DenseMap<ElemTy, parser::CharBlock> present;
   for (const AppliedElementTy &elem : info.elements) {
@@ -218,7 +228,7 @@ static ResultTy VerifyMutuallyExclusive(
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto elements{getElements(odesc, version)};
+  auto elements{GetElements(odesc, version)};
 
   llvm::DenseMap<SetTy, const AppliedElementTy *> exclusive;
   for (const AppliedElementTy &elem : info.elements) {
@@ -261,7 +271,7 @@ static ResultTy VerifyUltimate(
   ElemSetTy ultimate;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto elements{getElements(odesc, version)};
+  auto elements{GetElements(odesc, version)};
 
   for (auto e : elements) {
     auto &edesc{llvm::omp::getDescriptor(e)};
@@ -269,10 +279,10 @@ static ResultTy VerifyUltimate(
       ultimate.set(e);
     }
   }
-  for (auto s : getSets(odesc, version)) {
+  for (auto s : GetSets(odesc, version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
     if (sdesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
-      ultimate |= getElements(sdesc, version);
+      ultimate |= GetElements(sdesc, version);
     }
   }
 
@@ -497,7 +507,7 @@ AppliedModifierInfo GetAppliedModifiers(
       clause.u);
 }
 
-bool OmpStructureChecker::VerifyModifiers(
+bool OmpStructureChecker::VerifyModifierSyntax(
     WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
   // Run all checks without short-circuiting, return 'true' if all succeed.
   bool valid[]{
@@ -511,7 +521,7 @@ bool OmpStructureChecker::VerifyModifiers(
   return llvm::all_of(valid, [](bool x) { return x; });
 }
 
-void OmpStructureChecker::VerifyModifiers(const parser::OmpClause &x) {
+void OmpStructureChecker::VerifyModifierSyntax(const parser::OmpClause &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Clause id{x.Id()};
   auto clauseId{WithSource(id, x.source)};
@@ -531,14 +541,14 @@ void OmpStructureChecker::VerifyModifiers(const parser::OmpClause &x) {
     for (auto &&as : uac.v) {
       bool legacy{std::get<bool>(as.t)};
       if (!legacy) {
-        VerifyModifiers(
+        VerifyModifierSyntax(
             clauseId, GetAppliedModifiers(id, version, OmpGetModifiers(as)));
       }
     }
     break;
   }
   default:
-    VerifyModifiers(clauseId, GetAppliedModifiers(x, version));
+    VerifyModifierSyntax(clauseId, GetAppliedModifiers(x, version));
     break;
   }
 }
