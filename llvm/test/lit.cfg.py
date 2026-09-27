@@ -536,7 +536,6 @@ if config.include_examples:
 if config.linked_bye_extension:
     config.substitutions.append(("%llvmcheckext", "CHECK-EXT"))
     config.substitutions.append(("%loadbye", ""))
-    config.substitutions.append(("%loadnewpmbye", ""))
 else:
     config.substitutions.append(("%llvmcheckext", "CHECK-NOEXT"))
     config.substitutions.append(
@@ -545,26 +544,24 @@ else:
             "-load={}/Bye{}".format(config.llvm_shlib_dir, config.llvm_shlib_ext),
         )
     )
-    config.substitutions.append(
-        (
-            "%loadnewpmbye",
-            "-load-pass-plugin={}/Bye{}".format(
-                config.llvm_shlib_dir, config.llvm_shlib_ext
-            ),
-        )
-    )
 
-if config.linked_exampleirtransforms_extension:
-    config.substitutions.append(("%loadexampleirtransforms", ""))
-else:
-    config.substitutions.append(
-        (
-            "%loadexampleirtransforms",
-            "-load-pass-plugin={}/ExampleIRTransforms{}".format(
-                config.llvm_shlib_dir, config.llvm_shlib_ext
-            ),
+# %{loadX,} is followed by one option of the extension, e.g.
+# %{loadnewpmbye,}-wave-goodbye.
+for name, lib, linked in [
+    ("loadnewpmbye", "Bye", config.linked_bye_extension),
+    (
+        "loadexampleirtransforms",
+        "ExampleIRTransforms",
+        config.linked_exampleirtransforms_extension,
+    ),
+]:
+    load = ""
+    if not linked:
+        load = "-load-pass-plugin={}/{}{}".format(
+            config.llvm_shlib_dir, lib, config.llvm_shlib_ext
         )
-    )
+    config.substitutions.append(("%{" + name + ",}", load and load + ","))
+    config.substitutions.append(("%" + name, load))
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:

@@ -40,8 +40,11 @@ if config.llvm_polly_link_into_tools == '' or \
    config.llvm_polly_link_into_tools.lower() == 'false' or \
    config.llvm_polly_link_into_tools.lower() == 'notfound' or \
    config.llvm_polly_link_into_tools.lower() == 'llvm_polly_link_into_tools-notfound':
-    config.substitutions.append(('%loadNPMPolly', '-load-pass-plugin '
-                                 + config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
+    # -load registers Polly's options while opt parses the -polly-* options
+    # that follow; -load-pass-plugin registers its passes after parsing.
+    pollyLib = config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
+    config.substitutions.append(('%loadNPMPolly', '-load=' + pollyLib
+                                 + ' -load-pass-plugin=' + pollyLib
                                  + commonOpts ))
 else:
     config.substitutions.append(('%loadNPMPolly', commonOpts ))

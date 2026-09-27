@@ -330,6 +330,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* `opt`, `llc`, and `clang-linker-wrapper` accept
+  `-load-pass-plugin=plugin.so,-opt1,-opt2`, which passes options to the pass
+  plugin after it is loaded. A plugin's options elsewhere on the command line
+  are no longer accepted. `PassPlugin::Load` is renamed to `PassPlugin::load`,
+  which accepts the same specification.
+
 * llvm-mca no longer defaults -mcpu to "native"
 
 * llvm-rc now supports `/showIncludes` to report header and resource-file

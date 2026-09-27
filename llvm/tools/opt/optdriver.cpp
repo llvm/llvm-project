@@ -281,9 +281,11 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
+static cl::list<std::string> PassPlugins(
+    "load-pass-plugin",
+    cl::desc("Load passes from plugin library. The plugin's options follow "
+             "its file name, separated by commas"),
+    cl::value_desc("file[,option...]"));
 
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
@@ -443,19 +445,19 @@ optMain(int argc, char **argv,
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
   cl::ParseCommandLineOptions(
       argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
+
+  SmallVector<PassPlugin, 1> PluginList;
+  for (const std::string &Spec : PassPlugins) {
+    auto Plugin = PassPlugin::load(Spec);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    PluginList.emplace_back(Plugin.get());
+  }
 
   LLVMContext Context;
 

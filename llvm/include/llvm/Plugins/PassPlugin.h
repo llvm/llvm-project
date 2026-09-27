@@ -70,12 +70,13 @@ struct PassPluginLibraryInfo {
 /// its interface defined by the \c PassPluginLibraryInfo it exposes.
 class PassPlugin {
 public:
-  /// Attempts to load a pass plugin from a given file.
+  /// Attempts to load a pass plugin specified as "<file>[,<option>...]", then
+  /// parses the options, which the plugin defines as cl::opt.
   ///
   /// \returns Returns an error if either the library cannot be found or loaded,
-  /// there is no public entry point, or the plugin implements the wrong API
-  /// version.
-  LLVM_ABI static Expected<PassPlugin> Load(const std::string &Filename);
+  /// there is no public entry point, the plugin implements the wrong API
+  /// version, or an option is invalid.
+  LLVM_ABI static Expected<PassPlugin> load(StringRef Spec);
 
   /// Get the filename of the loaded plugin.
   StringRef getFilename() const { return Filename; }

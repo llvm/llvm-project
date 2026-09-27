@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Plugins/PassPlugin.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
 
 using namespace llvm;
 
-Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
+Expected<PassPlugin> PassPlugin::load(StringRef Spec) {
+  SmallVector<StringRef, 0> Parts;
+  Spec.split(Parts, ',');
+  std::string Filename = Parts[0].str();
   std::string Error;
   auto Library =
       sys::DynamicLibrary::getPermanentLibrary(Filename.c_str(), &Error);
@@ -45,5 +51,16 @@ Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
             Twine(LLVM_PLUGIN_API_VERSION) + ".",
         inconvertibleErrorCode());
 
+  if (Parts.size() == 1)
+    return P;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+  SmallVector<const char *, 0> Argv = {Filename.c_str()};
+  for (StringRef Option : drop_begin(Parts))
+    Argv.push_back(Saver.save(Option).data());
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
   return P;
 }
