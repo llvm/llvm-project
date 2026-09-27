@@ -280,7 +280,16 @@ PerfSupportPlugin::PerfSupportPlugin(ExecutorProcessControl &EPC,
   cantFail(RegisterPerfStart(EPC.getExecutionSession()));
 }
 PerfSupportPlugin::~PerfSupportPlugin() {
-  cantFail(RegisterPerfEnd(EPC.getExecutionSession()));
+  // FIXME: End message from destructor is unreliable. Executor-side perf
+  //        support (currently JITLoaderPerf.cpp in OrcTargetProcess) should be
+  //        reimplemented as a service in the new ORC runtime, where cleanup
+  //        can be run as an on-shutdown event.
+  //
+  // For now, switch to async dispatch here so that a message failure doesn't
+  // load to a crash when we try to read from a std::future whose std::promise
+  // has been destoryed.
+  RegisterPerfEnd([](Error Err) { consumeError(std::move(Err)); },
+                  EPC.getExecutionSession());
 }
 
 void PerfSupportPlugin::modifyPassConfig(MaterializationResponsibility &MR,
