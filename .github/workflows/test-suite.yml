@@ -16,7 +16,7 @@ permissions:
 jobs:
   permission-check:
     if: github.event.issue.pull_request && startswith(github.event.comment.body, '/test-suite')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: main-branch-only
       deployment: false
@@ -37,7 +37,7 @@ jobs:
   react-to-comment:
     needs:
       - permission-check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       pull-requests: write
     steps:
@@ -54,7 +54,7 @@ jobs:
 
   test-suite:
     name: Build test-suite and diff
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     needs:

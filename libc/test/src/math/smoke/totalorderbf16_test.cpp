@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/totalorderbf16.h"
 
-LIST_TOTALORDER_TESTS(bfloat16, LIBC_NAMESPACE::totalorderbf16)
+LIST_TOTALORDER_TESTS(Totalorderbf16, bfloat16, LIBC_NAMESPACE::totalorderbf16)

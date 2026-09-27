@@ -174,24 +174,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "LinkerWrapperOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LinkerWrapperOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "LinkerWrapperOpts.inc"
-#undef OPTION
-};
-
-class WrapperOptTable : public opt::GenericOptTable {
+class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -435,28 +423,6 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 
 namespace amdgcn {
 
-// Constructs a triple string for clang offload bundler.
-// NOTE: copied from HIPUtility.cpp.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
-  // FIXME: Short-term hack, mirrors HIPUtility.cpp. The HIP runtime (CLR)
-  // hardcodes the legacy "amdgcn-amd-amdhsa" spelling when parsing the target
-  // IDs embedded in the fatbin bundle. The new amdgpu subarch triples (e.g.
-  // "amdgpu9.00-amd-amdhsa"), and the plain canonical "amdgpu" arch name, do
-  // not match, producing hipErrorInvalidImage at load time. Force the legacy
-  // "amdgcn-amd-amdhsa" spelling in the bundle entry until CLR stops
-  // hardcoding this.
-  if (HasTargetID && T.isAMDGCN())
-    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
-            T.getEnvironmentName())
-        .str();
-
-  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
-                        T.getOSName() + "-" + T.getEnvironmentName())
-                           .str()
-                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-}
-
 Expected<StringRef>
 fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
           const ArgList &Args) {
@@ -493,7 +459,7 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
       Saver.save("-targets=host-" + HostTriple.normalize())};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
-        normalizeForBundler(Triple(TripleRef), !Arch.empty());
+        clang::normalizeForBundler(Triple(TripleRef), Arch);
     Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
