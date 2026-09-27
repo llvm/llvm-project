@@ -2915,6 +2915,8 @@ public:
   /// This is useful when doing custom type-checking.  Returns true on error.
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
 
+  bool convertArgumentToType(Expr *&Value, QualType Ty);
+
   /// Returns true if the argument consists of one contiguous run of 1s with any
   /// number of 0s on either side. The 1s are allowed to wrap from LSB to MSB,
   /// so 0x000FFF0, 0x0000FFFF, 0xFF0000FF, 0x0 are all runs. 0x0F0F0000 is not,
@@ -9254,7 +9256,8 @@ public:
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
-  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture);
+  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                               bool IsOpenMP = false);
 
   /// Initialize the given capture with a suitable expression.
   ExprResult BuildCaptureInit(const sema::Capture &Capture,

@@ -29,7 +29,7 @@ namespace lld::macho {
 class DylibFile;
 class InputFile;
 
-class MachOOptTable : public llvm::opt::GenericOptTable {
+class MachOOptTable : public llvm::opt::OptTable {
 public:
   MachOOptTable();
   llvm::opt::InputArgList parse(CommonLinkerContext &ctx,

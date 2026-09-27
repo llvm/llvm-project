@@ -711,7 +711,7 @@ func.func @_QPeoshift1c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_12]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift1cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_11]] : (index) -> i64
-// CHECK:           %[[VAL_16:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_16:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_17:.*]] = fir.emboxchar %[[VAL_16]], %[[VAL_2]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_18:.*]] = hlfir.elemental %[[VAL_12]] typeparams %[[VAL_3]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,10>> {
 // CHECK:           ^bb0(%[[VAL_19:.*]]: index):
@@ -785,7 +785,7 @@ func.func @_QPeoshift2c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_15]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift2cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_19:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_19:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_20:.*]] = fir.emboxchar %[[VAL_19]], %[[VAL_2]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_15]] typeparams %[[VAL_10]] unordered : (!fir.shape<1>, i32) -> !hlfir.expr<?x!fir.char<1,?>> {
 // CHECK:           ^bb0(%[[VAL_22:.*]]: index):
@@ -850,7 +850,7 @@ func.func @_QPeoshift3c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_11]]) typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_3]] {uniq_name = "_QFeoshift3cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
-// CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_15]], %[[VAL_2]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_17:.*]] = hlfir.elemental %[[VAL_11]] typeparams %[[VAL_5]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>> {
 // CHECK:           ^bb0(%[[VAL_18:.*]]: index):
@@ -1233,7 +1233,7 @@ func.func @_QPeoshift8c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             %[[VAL_26:.*]] = fir.emboxchar %[[VAL_25]], %[[VAL_3]] : (!fir.ref<!fir.char<2,10>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_26]] : !fir.boxchar<2>
 // CHECK:           } else {
-// CHECK:             %[[VAL_27:.*]] = fir.alloca !fir.char<2,0> {bindc_name = ".chrtmp"}
+// CHECK:             %[[VAL_27:.*]] = fir.alloca !fir.char<2,0> <{bindc_name = ".chrtmp"}>
 // CHECK:             %[[VAL_28:.*]] = fir.emboxchar %[[VAL_27]], %[[VAL_2]] : (!fir.ref<!fir.char<2,0>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_28]] : !fir.boxchar<2>
 // CHECK:           }
@@ -1338,7 +1338,7 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             %[[VAL_34:.*]] = fir.emboxchar %[[VAL_31]], %[[VAL_33]] : (!fir.ref<!fir.char<2,?>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_34]] : !fir.boxchar<2>
 // CHECK:           } else {
-// CHECK:             %[[VAL_35:.*]] = fir.alloca !fir.char<2,0> {bindc_name = ".chrtmp"}
+// CHECK:             %[[VAL_35:.*]] = fir.alloca !fir.char<2,0> <{bindc_name = ".chrtmp"}>
 // CHECK:             %[[VAL_36:.*]] = fir.emboxchar %[[VAL_35]], %[[VAL_3]] : (!fir.ref<!fir.char<2,0>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_36]] : !fir.boxchar<2>
 // CHECK:           }
@@ -1428,7 +1428,7 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             %[[VAL_27:.*]] = fir.emboxchar %[[VAL_24]], %[[VAL_26]] : (!fir.ref<!fir.char<2,?>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_27]] : !fir.boxchar<2>
 // CHECK:           } else {
-// CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<2,0> {bindc_name = ".chrtmp"}
+// CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<2,0> <{bindc_name = ".chrtmp"}>
 // CHECK:             %[[VAL_29:.*]] = fir.emboxchar %[[VAL_28]], %[[VAL_3]] : (!fir.ref<!fir.char<2,0>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_29]] : !fir.boxchar<2>
 // CHECK:           }
@@ -1782,7 +1782,7 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_32:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_33:.*]] = arith.select %[[VAL_29]], %[[VAL_31]], %[[VAL_32]] : !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_36:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_36:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_37:.*]] = fir.emboxchar %[[VAL_36]], %[[VAL_5]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_38:.*]] = fir.is_present %[[VAL_33]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> i1
 // CHECK:           %[[VAL_39:.*]] = arith.select %[[VAL_38]], %[[VAL_2]], %[[VAL_3]] : i1
@@ -1913,7 +1913,7 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_38:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_39:.*]] = arith.select %[[VAL_35]], %[[VAL_37]], %[[VAL_38]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
-// CHECK:           %[[VAL_42:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_42:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_43:.*]] = fir.emboxchar %[[VAL_42]], %[[VAL_5]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_44:.*]] = fir.is_present %[[VAL_39]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 // CHECK:           %[[VAL_45:.*]] = arith.select %[[VAL_44]], %[[VAL_2]], %[[VAL_3]] : i1
@@ -2029,7 +2029,7 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_31:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_32:.*]] = arith.select %[[VAL_28]], %[[VAL_30]], %[[VAL_31]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
-// CHECK:           %[[VAL_35:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_35:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_36:.*]] = fir.emboxchar %[[VAL_35]], %[[VAL_5]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_37:.*]] = fir.is_present %[[VAL_32]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 // CHECK:           %[[VAL_38:.*]] = arith.select %[[VAL_37]], %[[VAL_2]], %[[VAL_3]] : i1

@@ -465,9 +465,7 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA64-NEXT:    add.d $a1, $sp, $a1
 ; LA64-NEXT:    ori $a2, $zero, 1
 ; LA64-NEXT:    stx.w $a2, $a0, $a1
-; LA64-NEXT:    ori $a0, $zero, 2048
-; LA64-NEXT:    add.d $a0, $sp, $a0
-; LA64-NEXT:    ld.w $a0, $a0, 0
+; LA64-NEXT:    ldptr.w $a0, $sp, 2048
 ; LA64-NEXT:    lu12i.w $a1, 2
 ; LA64-NEXT:    ori $a1, $a1, 2048
 ; LA64-NEXT:    sub.d $sp, $fp, $a1
@@ -502,9 +500,9 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    ori $a0, $zero, 2048
+; LA32-NEXT:    lu12i.w $a0, 1
 ; LA32-NEXT:    add.w $a0, $sp, $a0
-; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a0, -2048
 ; LA32-NEXT:    lu12i.w $a1, 2
 ; LA32-NEXT:    ori $a1, $a1, 2048
 ; LA32-NEXT:    sub.w $sp, $fp, $a1

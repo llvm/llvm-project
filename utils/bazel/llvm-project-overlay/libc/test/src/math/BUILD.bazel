@@ -164,15 +164,34 @@ math_mpfr_test(name = "erfcf16")
 
 math_mpfr_test(name = "exp")
 
-math_mpfr_test(name = "expf")
+math_mpfr_test(
+    name = "expf",
+    deps = [
+        "//libc:__support_math_expf_double_eval",
+        "//libc:__support_math_expf_float_eval",
+        "//libc:__support_math_expf_integer_eval",
+    ],
+)
 
 math_mpfr_test(name = "exp10")
 
-math_mpfr_test(name = "exp10f")
+math_mpfr_test(
+    name = "exp10f",
+    deps = [
+        "//libc:__support_math_exp10f_double_eval",
+        "//libc:__support_math_exp10f_float_eval",
+    ],
+)
 
 math_mpfr_test(name = "exp2")
 
-math_mpfr_test(name = "exp2f")
+math_mpfr_test(
+    name = "exp2f",
+    deps = [
+        "//libc:__support_math_exp2f_double_eval",
+        "//libc:__support_math_exp2f_float_eval",
+    ],
+)
 
 math_mpfr_test(
     name = "exp2m1f",
