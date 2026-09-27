@@ -1,4 +1,4 @@
-# misc-use-bulk-insert
+```{title} clang-tidy - misc-use-bulk-insert
 
 Detects range-based `for` loops that insert elements into associative containers one at a time and suggests replacing them with a bulk `insert()` call.
 
