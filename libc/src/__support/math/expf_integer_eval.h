@@ -15,6 +15,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_INTEGER_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_INTEGER_EVAL_H
 
+#include "exp_integer_constants.h" // LUTs
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -31,30 +32,6 @@ namespace shared {
 namespace math {
 
 namespace static_rounding {
-
-// print(2+round(1/log(2), 64, RN));
-// LSB(INV_LN2) = 2^-63
-LIBC_INLINE_VAR constexpr Frac64 INV_LN2 = Frac64(0xb8aa'3b29'5c17'f0bc);
-
-// 64-bit polynomial approximation of 2^x coefficients generated with Sollya:
-// > P = fpminimax(2^x, 11, [|1, 64...|], [0, 1], absolute, fixed);
-// Store the fractional part of the coefficients below
-// > dirtyinfnorm(2^x - P(x), [0, 1]);
-// 0x1.6238...p-58
-// LSB(EXPF_COEFFS[i]) = 2^-64
-LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
-    Frac64(0xb172'17f7'd1cf'b7cf), // x
-    Frac64(0x3d7f'7bff'057d'4a5e), // x^2
-    Frac64(0x0e35'846b'8363'9484), // x^3
-    Frac64(0x0276'556d'ec97'dcd4), // x^4
-    Frac64(0x0057'61ff'dc04'c7ff), // x^5
-    Frac64(0x000a'1847'b6e7'92ec), // x^6
-    Frac64(0x0000'ffe8'14e5'7033), // x^7
-    Frac64(0x0000'1628'b6e9'70c8), // x^8
-    Frac64(0x0000'01b8'8ce7'4088), // x^9
-    Frac64(0x0000'001c'18d5'cb29), // x^10
-    Frac64(0x0000'0002'b43f'4490), // x^11
-};
 
 // Statically rounded, no except implementation of expf using integer-only
 // arithmetic.
@@ -159,7 +136,7 @@ LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
   Frac64 x_u_frac(x_u);
 
   // LSB(x_ln2) = 2^-54
-  Frac64 x_ln2 = x_u_frac * INV_LN2;
+  Frac64 x_ln2 = x_u_frac * INV_LN2_F64;
 
   constexpr uint64_t FRAC_MASK = (uint64_t(1) << 54) - 1;
   uint64_t x_ln2_bit = x_ln2.val[0];
@@ -174,7 +151,7 @@ LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
   // - For positive x, we round down (just clear) the last 54 bits.
   //
   // Then, l2y_r is the remainder of x * log2(e) after removing the integer
-  // part, which is used to compute 2^l2y_r_frac - 1.
+  // part, which is used to compute 2^l2y_r_frac.
   //
   // e_y_unbiased is biased exponent field, but already bit-positioned to the
   // exponent field of the float representation.
@@ -202,7 +179,7 @@ LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
   // LSB(l2y_r_frac) = LSB(l2y_r) * 2^-10 = 2^-64
   Frac64 l2y_r_frac(l2y_r << 10);
 
-  // p = 2^l2y_r_frac - 1
+  // p = 2^l2y_r_frac
   Frac64 p = l2y_r_frac *
              fputil::polyeval(l2y_r_frac, EXPF_COEFFS[0], EXPF_COEFFS[1],
                               EXPF_COEFFS[2], EXPF_COEFFS[3], EXPF_COEFFS[4],
@@ -212,7 +189,7 @@ LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
   uint32_t shift_length = 40;
   uint32_t leading_one = 0;
 
-  // We're computing with errors < worst-cast errors, so tie-rounding never
+  // We're computing with errors < worst-case errors, so tie-rounding never
   // happens. Hence, round-to-nearest, tie-to-even is equivalent to
   // round-to-nearest, tie-to-away. Which is what we're implementing below
   // in the following order:
