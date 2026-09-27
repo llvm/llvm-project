@@ -117,8 +117,8 @@ public:
   ///
   /// \param propList is a list of properties for queue construction.
   explicit queue(const property_list &propList = {})
-      : queue(detail::SelectDevice(default_selector_v),
-              detail::defaultAsyncHandler, propList) {}
+      : queue(detail::SelectDevice(default_selector_v), async_handler{},
+              propList) {}
 
   /// Constructs a SYCL queue instance with an async_handler using the device
   /// returned by an instance of default_selector.
@@ -140,8 +140,8 @@ public:
       typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
   explicit queue(const DeviceSelector &deviceSelector,
                  const property_list &propList = {})
-      : queue(detail::SelectDevice(deviceSelector), detail::defaultAsyncHandler,
-              propList) {}
+      : queue(detail::SelectDevice(deviceSelector), async_handler{}, propList) {
+  }
 
   /// Constructs a SYCL queue instance using the device identified by the
   /// device selector provided.
@@ -162,7 +162,7 @@ public:
   /// \param syclDevice is an instance of SYCL device.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const property_list &propList = {})
-      : queue(syclDevice, detail::defaultAsyncHandler, propList) {}
+      : queue(syclDevice, async_handler{}, propList) {}
 
   /// Constructs a SYCL queue instance with an async_handler using the device
   /// provided.
@@ -190,8 +190,7 @@ public:
   explicit queue(const context &syclContext,
                  const DeviceSelector &deviceSelector,
                  const property_list &propList = {})
-      : queue(syclContext, detail::SelectDevice(deviceSelector),
-              detail::defaultAsyncHandler, propList) {}
+      : queue(syclContext, detail::SelectDevice(deviceSelector), propList) {}
 
   /// Constructs a SYCL queue instance with an async_handler that is associated
   /// with syclContext, using the device identified by the device selector
@@ -223,8 +222,7 @@ public:
   /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
   /// contain syclDevice.
   explicit queue(const context &syclContext, const device &syclDevice,
-                 const property_list &propList = {})
-      : queue(syclContext, syclDevice, detail::defaultAsyncHandler, propList) {}
+                 const property_list &propList = {});
 
   /// Constructs a SYCL queue instance with an async_handler that is associated
   /// with syclContext, using the device provided.

@@ -79,6 +79,9 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
       InsertedExpressions;
 
   // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  // The key is a tuple containing the trip count for the loop, the absolute
+  // value of the recurrence step, and the insert point. The stored pair values
+  // are the multiply result and a boolean value indicating overflow.
   DenseMap<std::tuple<Value *, Value *, Instruction *>,
            std::pair<TrackingVH<Value>, TrackingVH<Value>>>
       InsertedOverflowChecks;
@@ -487,7 +490,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
+  Value *expandAddToGEP(SCEVUse Op, Value *V, SCEV::NoWrapFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which

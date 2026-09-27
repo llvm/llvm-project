@@ -8,11 +8,6 @@
 
 # Flang Fortran Standards Support
 
-```{contents}
----
-local:
----
-```
 
 This document summarizes Fortran standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.

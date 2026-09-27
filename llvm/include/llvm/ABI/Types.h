@@ -72,6 +72,12 @@ protected:
 public:
   TypeKind getKind() const { return Kind; }
   TypeSize getSizeInBits() const { return SizeInBits; }
+
+  /// Returns the size in bits if it is fixed, otherwise 0.
+  uint64_t getFixedSizeInBitsOrZero() const {
+    return SizeInBits.isFixed() ? SizeInBits.getFixedValue() : 0;
+  }
+
   Align getAlignment() const { return ABIAlignment; }
 
   /// Alignment before record-level adjustments such as aligned attributes.
@@ -97,6 +103,9 @@ public:
   bool isZeroSize() const { return getSizeInBits().isZero(); }
 
   LLVM_ABI bool isSVESizelessType() const;
+
+  /// True if this type is a record that is empty for ABI purposes.
+  LLVM_ABI bool isEmptyRecord() const;
 };
 
 class VoidType : public Type {

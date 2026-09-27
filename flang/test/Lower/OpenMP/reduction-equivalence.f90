@@ -26,7 +26,7 @@ end subroutine reduction_equivalence
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPreduction_equivalence() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.array<4xi8> {uniq_name = "_QFreduction_equivalenceEva"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.array<4xi8> <{uniq_name = "_QFreduction_equivalenceEva"}>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i8>) -> !fir.ptr<i32>

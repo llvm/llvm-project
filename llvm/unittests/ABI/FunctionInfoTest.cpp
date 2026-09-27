@@ -95,6 +95,43 @@ TEST_F(FunctionInfoTest, CanBeFlattenedSurvivesFunctionInfo) {
   EXPECT_FALSE(Copy.Info.getCanBeFlattened());
 }
 
+TEST_F(FunctionInfoTest, IndirectAliasedCarriesAddrSpaceAndAlign) {
+  ArgInfo Info = ArgInfo::getIndirectAliased(llvm::Align(8), /*AddrSpace=*/5,
+                                             /*Realign=*/true);
+  EXPECT_TRUE(Info.isIndirectAliased());
+  // Aliased is its own kind, distinct from a plain indirect.
+  EXPECT_FALSE(Info.isIndirect());
+  EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 5u);
+  EXPECT_TRUE(Info.getIndirectRealign());
+}
+
+TEST_F(FunctionInfoTest, IndirectAliasedDefaultsToNoRealign) {
+  ArgInfo Info = ArgInfo::getIndirectAliased(llvm::Align(4), /*AddrSpace=*/0);
+  EXPECT_TRUE(Info.isIndirectAliased());
+  EXPECT_FALSE(Info.getIndirectRealign());
+}
+
+TEST_F(FunctionInfoTest, PlainIndirectIsNotAliased) {
+  ArgInfo Info = ArgInfo::getIndirect(llvm::Align(8), /*ByVal=*/true);
+  EXPECT_TRUE(Info.isIndirect());
+  EXPECT_FALSE(Info.isIndirectAliased());
+  EXPECT_TRUE(Info.getIndirectByVal());
+}
+
+TEST_F(FunctionInfoTest, IndirectAliasedSurvivesFunctionInfo) {
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, TwoI64, {TwoI64});
+  FI->getArgInfo(0).Info =
+      ArgInfo::getIndirectAliased(llvm::Align(8), /*AddrSpace=*/5);
+
+  const ArgInfo &Info =
+      static_cast<const FunctionInfo &>(*FI).getArgInfo(0).Info;
+  EXPECT_TRUE(Info.isIndirectAliased());
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 5u);
+  EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+}
+
 #if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
 TEST_F(FunctionInfoTest, CanBeFlattenedIsDirectOnly) {
   EXPECT_DEATH((void)ArgInfo::getIgnore().getCanBeFlattened(), "Invalid Kind");
@@ -105,6 +142,13 @@ TEST_F(FunctionInfoTest, CanBeFlattenedIsDirectOnly) {
                "Invalid Kind");
   EXPECT_DEATH((void)ArgInfo::getIgnore().setCanBeFlattened(false),
                "Invalid Kind");
+}
+
+TEST_F(FunctionInfoTest, IndirectAliasedHasNoByVal) {
+  EXPECT_DEATH(
+      (void)ArgInfo::getIndirectAliased(llvm::Align(8), /*AddrSpace=*/0)
+          .getIndirectByVal(),
+      "Invalid Kind");
 }
 #endif
 
