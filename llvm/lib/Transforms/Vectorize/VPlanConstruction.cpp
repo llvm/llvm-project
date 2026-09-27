@@ -1617,14 +1617,14 @@ void VPlanTransforms::addIterationCountCheckBlock(
 
 void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
     VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
-    ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
-    unsigned EpilogueLoopStep, ScalarEvolution &SE) {
+    ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
+    ScalarEvolution &SE) {
   // Add the minimum iteration check for the epilogue vector loop.
   VPValue *TC = Plan.getTripCount();
   Value *TripCount = TC->getLiveInIRValue();
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
-  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
-      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
+  VPValue *VFxUF = Builder.createExpandSCEV(
+      SE.getElementCount(TripCount->getType(), EpilogueVF, SCEV::FlagNUW));
   VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
                                      DebugLoc::getUnknown(), "n.vec.remaining");
 
