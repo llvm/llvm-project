@@ -5505,7 +5505,8 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
           DeducedFromInitRange = Init->getSourceRange();
       }
     } else {
-      if (!getLangOpts().CPlusPlus && Init->refersToBitField()) {
+      if (!getLangOpts().CPlusPlus && Init->refersToBitField() &&
+          AT->getKeyword() == AutoTypeKeyword::GNUAutoType) {
         Diag(Loc, diag::err_auto_bitfield);
         return TemplateDeductionResult::AlreadyDiagnosed;
       }
