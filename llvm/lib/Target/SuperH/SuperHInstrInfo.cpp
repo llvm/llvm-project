@@ -372,7 +372,7 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (BranchCode == SHCC::COND_INVALID)
       return true; 
 
-    if (I->getOperand(1).isUndef())
+    if (I->getNumOperands() >= 2 && I->getOperand(1).isUndef())
       return true;
 
     // Working from the bottom, handle the first conditional branch.
@@ -449,7 +449,8 @@ unsigned SuperHInstrInfo::insertBranch(
 
   if (Cond.empty()) {
     assert(!FBB && "Unconditional branch with multiple successors!");
-    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA)).addMBB(TBB);
+    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA))
+      .addMBB(TBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
     return 1;
@@ -458,7 +459,8 @@ unsigned SuperHInstrInfo::insertBranch(
   // Conditional branch.
   unsigned Count = 0;
   SHCC::CondCode CC = (SHCC::CondCode)Cond[0].getImm();
-  auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, false)).addMBB(TBB);
+  auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, false))
+    .addMBB(TBB);
   LLVM_DEBUG(dbgs() << "Created cc branch for " << getCondName(CC) << "...\n");
 
   if (BytesAdded)
@@ -467,7 +469,8 @@ unsigned SuperHInstrInfo::insertBranch(
 
   if (FBB) {
     // Two-way Conditional branch. Insert the second branch.
-    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA)).addMBB(FBB);
+    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA))
+      .addMBB(FBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
     ++Count;
