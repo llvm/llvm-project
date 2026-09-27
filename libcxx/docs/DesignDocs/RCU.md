@@ -190,11 +190,11 @@ This is the main class that implements the `rcu` logic. It contains
 - `std::atomic<reader_states::state_type> global_reader_phase_` : the global state that flips between two phases. The readers will record the phase when they enter the critical section, and the collector will flip the global state when it calls `rcu_synchronize` to start a new grace period.
 
 - `std::mutex grace_period_mutex_` : If we have multiple collector threads calling `rcu_synchronize` concurrenly, we need to make sure only one of them is performing the phase flipping and deleter queue draining.
-  TODO: `mutex` can throw, we need to consider how to replace it.
+  Note that `std::mutex`` can throw, in which case we terminate the program. This doesn't seem ideal, but it is what other RCU implementations are doing and we are not aware of a non-mutex based approach to solve this problem.
 
 - `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the collector thread that is waiting for the grace period to end.
 
-- `using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>` : All the retired objects are directly pushed to this queue first. This is not a member but static thread_local objects.
+- `using retired_queue_stage0_threadlocal_cache = thread_local_container<rcu_atomic_list_view>` : All the retired objects are directly pushed to this queue first. This is not a member but static thread_local objects.
 
 - `rcu_singly_list_view retired_queue_stage1_` and `rcu_singly_list_view retired_queue_stage2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector thread is holding the `grace_period_mutex_`.
   Note that `_retired_queue_stage2_` queue holds the callbacks that are ready to be called.
