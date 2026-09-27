@@ -707,6 +707,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
+- Fixed an assertion when the body of an invalid function template definition,
+  such as `template <class T, int N> void T::f() {}`, used an OpenMP loop
+  directive. Such bodies are now skipped instead of being analyzed as
+  non-template code. (#GH219354)
+
 - Fixed a crash when a non-type template parameter of reference type is bound
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)

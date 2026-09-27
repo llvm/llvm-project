@@ -1405,6 +1405,17 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
+  // The template parameters are in scope but there is no dependent context.
+  if (TemplateInfo.Kind == ParsedTemplateKind::Template &&
+      (!Res ||
+       (Res->isInvalidDecl() && !Res->getAsFunction()->isDependentContext()))) {
+    CachedTokens Toks;
+    LexTemplateFunctionForLateParsing(Toks);
+    BodyScope.Exit();
+    Actions.ActOnSkippedFunctionBody(Res);
+    return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
+  }
+
   return ParseFunctionBody(Res, BodyScope);
 }
 
