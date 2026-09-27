@@ -386,7 +386,7 @@ Cons:
 - `last_write_time` has to report an error when the time reported by the filesystem
   is unrepresentable.
 
-#### \_\_int128_t
+#### `__int128_t`
 
 Pros:
 
