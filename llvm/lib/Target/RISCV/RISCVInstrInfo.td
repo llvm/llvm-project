@@ -251,6 +251,11 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
+class UImmLsbZeroAsmOperand<int width, int zeros, string suffix>
+    : UImmAsmOperand<width, suffix> {
+  let PredicateMethod = "isUImmShifted<" # !sub(width, zeros) # ", " # zeros # ">";
+}
+
 class BareSImmNLsb0AsmOperand<int width>
     : ImmAsmOperand<"BareS", width, "Lsb0"> {
   let PredicateMethod = "isBareSimmNLsb0<" # width # ">";
@@ -302,7 +307,7 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
   // Create suffix with the appropriate number of 0s to append to all names
   string Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
 
-  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
+  let ParserMatchClass = UImmLsbZeroAsmOperand<width, zeros, "Lsb" # Suffix>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<" # width # ">";
   let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
@@ -320,7 +325,7 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
 class OptionalUImmLsbZeroOp<int width, int zeros>
     : RISCVUImmLsbZeroOp<width, zeros> {
   let ParserMatchClass =
-      OptionalMemOffsetAsmOperand<UImmAsmOperand<width, "Lsb" # Suffix>>;
+      OptionalMemOffsetAsmOperand<UImmLsbZeroAsmOperand<width, zeros, "Lsb" # Suffix>>;
 }
 
 class RISCVSImmOp<int bitsNum> : RISCVOp {
@@ -2522,6 +2527,7 @@ include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmi.td"
 include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXqccmt.td"
 include "RISCVInstrInfoXMips.td"
