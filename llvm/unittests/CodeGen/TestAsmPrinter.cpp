@@ -59,7 +59,8 @@ llvm::Error TestAsmPrinter::init(const Target *TheTarget, StringRef TripleName,
 
   MC.reset(new MCContext(TheTriple, TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
                          TM->getMCSubtargetInfo()));
-  TM->getObjFileLowering()->Initialize(*MC, *TM);
+  M = std::make_unique<Module>("TestAsmPrinter", Context);
+  TM->getObjFileLowering()->initialize(*MC, *TM, *M);
   MC->setObjectFileInfo(TM->getObjFileLowering());
 
   MS = new StrictMock<MockMCStreamer>(MC.get());
