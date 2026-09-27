@@ -77,6 +77,7 @@ struct PRAttr {
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
   uint32_t SortKey = 0;
+  GOFF::ESDBindingStrength BindingStrength = GOFF::ESD_BST_Strong;
 };
 
 // Attributes for ER symbols.

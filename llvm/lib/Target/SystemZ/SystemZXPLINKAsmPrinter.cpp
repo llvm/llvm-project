@@ -341,6 +341,10 @@ void SystemZXPLINKAsmPrinter::emitADASection() {
       OutStreamer->emitSymbolAttribute(Alias, MCSA_Extern);
       MCSymbolGOFF *GOFFSym =
           static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
+      // A weak reference (extern_weak) stays weak through the indirect
+      // symbol, otherwise the binder fails on the unresolved reference.
+      if (GOFFSym->isWeak())
+        OutStreamer->emitSymbolAttribute(Alias, MCSA_WeakReference);
       ZOS->emitExternalName(Alias, GOFFSym->getExternalName());
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
