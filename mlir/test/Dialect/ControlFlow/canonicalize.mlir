@@ -787,7 +787,7 @@ func.func @skip_unused_block_arg(%flag: i32, %a: i32, %b: i32) -> i32 {
 
 // -----
 
-// The two i128 cases differ above bit 64. Select each after parsing.
+// These distinct i128 cases exceed 64 bits. Select each after parsing.
 // CHECK-LABEL: func @switch_i128_large_cases
 // CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
 // CHECK-DAG: %[[TWO:.*]] = arith.constant 2 : i32
