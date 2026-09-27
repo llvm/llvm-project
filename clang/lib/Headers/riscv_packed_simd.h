@@ -41,15 +41,6 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return splat(ty, __x);                                                     \
   }
 
-#define __packed_shift(name, ty, op, mask)                                     \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,             \
-                                                         unsigned __rs2) {     \
-    return __rs1 op(__rs2 & (mask));                                           \
-  }
-#define __packed_shift8(name, ty, op) __packed_shift(name, ty, op, 0x7)
-#define __packed_shift16(name, ty, op) __packed_shift(name, ty, op, 0xf)
-#define __packed_shift32(name, ty, op) __packed_shift(name, ty, op, 0x1f)
-
 #define __packed_scalar_binary_op(name, ty, scalar_ty, op, splat)              \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,             \
                                                          scalar_ty __rs2) {    \
@@ -616,29 +607,29 @@ __packed_cmp(pmsgeu_u32x2, uint32x2_t, uint32x2_t, >=)
 __packed_cmp(pmsle_u32x2, int32x2_t, uint32x2_t, <=)
 __packed_cmp(pmsleu_u32x2, uint32x2_t, uint32x2_t, <=)
 
-/* Packed Shifts (32-bit) */
-__packed_shift8(psll_s_u8x4, uint8x4_t, <<)
-__packed_shift8(psll_s_i8x4, int8x4_t, <<)
-__packed_shift16(psll_s_u16x2, uint16x2_t, <<)
-__packed_shift16(psll_s_i16x2, int16x2_t, <<)
-__packed_shift8(psrl_s_u8x4, uint8x4_t, >>)
-__packed_shift16(psrl_s_u16x2, uint16x2_t, >>)
-__packed_shift8(psra_s_i8x4, int8x4_t, >>)
-__packed_shift16(psra_s_i16x2, int16x2_t, >>)
+/* Packed Shift (32-bit) */
+__packed_binary_builtin_mixed(psll_s_u8x4, uint8x4_t, uint8x4_t, unsigned int, __builtin_riscv_psll_s_u8x4)
+__packed_binary_builtin_mixed(psll_s_i8x4, int8x4_t, int8x4_t, unsigned int, __builtin_riscv_psll_s_u8x4)
+__packed_binary_builtin_mixed(psll_s_u16x2, uint16x2_t, uint16x2_t, unsigned int, __builtin_riscv_psll_s_u16x2)
+__packed_binary_builtin_mixed(psll_s_i16x2, int16x2_t, int16x2_t, unsigned int, __builtin_riscv_psll_s_u16x2)
+__packed_binary_builtin_mixed(psrl_s_u8x4, uint8x4_t, uint8x4_t, unsigned int, __builtin_riscv_psrl_s_u8x4)
+__packed_binary_builtin_mixed(psrl_s_u16x2, uint16x2_t, uint16x2_t, unsigned int, __builtin_riscv_psrl_s_u16x2)
+__packed_binary_builtin_mixed(psra_s_i8x4, int8x4_t, int8x4_t, unsigned int, __builtin_riscv_psra_s_i8x4)
+__packed_binary_builtin_mixed(psra_s_i16x2, int16x2_t, int16x2_t, unsigned int, __builtin_riscv_psra_s_i16x2)
 
-/* Packed Shifts (64-bit) */
-__packed_shift8(psll_s_u8x8, uint8x8_t, <<)
-__packed_shift8(psll_s_i8x8, int8x8_t, <<)
-__packed_shift16(psll_s_u16x4, uint16x4_t, <<)
-__packed_shift16(psll_s_i16x4, int16x4_t, <<)
-__packed_shift32(psll_s_u32x2, uint32x2_t, <<)
-__packed_shift32(psll_s_i32x2, int32x2_t, <<)
-__packed_shift8(psrl_s_u8x8, uint8x8_t, >>)
-__packed_shift16(psrl_s_u16x4, uint16x4_t, >>)
-__packed_shift32(psrl_s_u32x2, uint32x2_t, >>)
-__packed_shift8(psra_s_i8x8, int8x8_t, >>)
-__packed_shift16(psra_s_i16x4, int16x4_t, >>)
-__packed_shift32(psra_s_i32x2, int32x2_t, >>)
+/* Packed Shift (64-bit) */
+__packed_binary_builtin_mixed(psll_s_u8x8, uint8x8_t, uint8x8_t, unsigned int, __builtin_riscv_psll_s_u8x8)
+__packed_binary_builtin_mixed(psll_s_i8x8, int8x8_t, int8x8_t, unsigned int, __builtin_riscv_psll_s_u8x8)
+__packed_binary_builtin_mixed(psll_s_u16x4, uint16x4_t, uint16x4_t, unsigned int, __builtin_riscv_psll_s_u16x4)
+__packed_binary_builtin_mixed(psll_s_i16x4, int16x4_t, int16x4_t, unsigned int, __builtin_riscv_psll_s_u16x4)
+__packed_binary_builtin_mixed(psll_s_u32x2, uint32x2_t, uint32x2_t, unsigned int, __builtin_riscv_psll_s_u32x2)
+__packed_binary_builtin_mixed(psll_s_i32x2, int32x2_t, int32x2_t, unsigned int, __builtin_riscv_psll_s_u32x2)
+__packed_binary_builtin_mixed(psrl_s_u8x8, uint8x8_t, uint8x8_t, unsigned int, __builtin_riscv_psrl_s_u8x8)
+__packed_binary_builtin_mixed(psrl_s_u16x4, uint16x4_t, uint16x4_t, unsigned int, __builtin_riscv_psrl_s_u16x4)
+__packed_binary_builtin_mixed(psrl_s_u32x2, uint32x2_t, uint32x2_t, unsigned int, __builtin_riscv_psrl_s_u32x2)
+__packed_binary_builtin_mixed(psra_s_i8x8, int8x8_t, int8x8_t, unsigned int, __builtin_riscv_psra_s_i8x8)
+__packed_binary_builtin_mixed(psra_s_i16x4, int16x4_t, int16x4_t, unsigned int, __builtin_riscv_psra_s_i16x4)
+__packed_binary_builtin_mixed(psra_s_i32x2, int32x2_t, int32x2_t, unsigned int, __builtin_riscv_psra_s_i32x2)
 
 /* Packed Saturating and Rounding Shifts (32-bit) */
 __packed_binary_builtin_mixed(pssha_s_i16x2, int16x2_t, int16x2_t, int, __builtin_riscv_pssha_s_i16x2)
@@ -1376,10 +1367,6 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_splat4
 #undef __packed_splat8
 #undef __packed_splat
-#undef __packed_shift
-#undef __packed_shift8
-#undef __packed_shift16
-#undef __packed_shift32
 #undef __packed_scalar_binary_op
 #undef __packed_binary_op
 #undef __packed_unary_op

@@ -20828,9 +20828,8 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!hlslElementwiseCastHelper(Info, SubExpr, E->getType(), SrcVals,
                                    SrcTypes))
       return false;
-    APValue Val;
 
-    // cast our single element
+    // Cast our single element.
     const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
     APValue ResultVal;
     if (!handleScalarCast(Info, FPO, E, SrcTypes[0], E->getType(), SrcVals[0],

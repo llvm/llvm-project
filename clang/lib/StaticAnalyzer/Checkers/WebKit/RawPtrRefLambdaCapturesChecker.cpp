@@ -120,6 +120,9 @@ public:
       }
 
       bool shouldCheckThis() {
+        // A pointer to the object itself is not a loan on its interior.
+        if (Checker->Model->checksForInteriorDestruction())
+          return false;
         auto result =
             !ClsType.isNull() ? Checker->isUnsafePtr(ClsType) : std::nullopt;
         return result && *result;
@@ -551,9 +554,13 @@ public:
                        bool ignoreParamVarDecl = false) const {
     if (BR->getSourceManager().isInSystemHeader(L->getBeginLoc()))
       return;
+    // FIXME: This check is unsound. Destruction can happen in three places,
+    // and a capture is only safe when all three are trivial: the lambda's
+    // body, the callee that receives it, and the scope that creates it.
     if (TFA.isTrivial(L->getBody()))
       return;
-    for (const LambdaCapture &C : L->captures()) {
+    for (auto [C, CaptureInit] :
+         llvm::zip_equal(L->captures(), L->capture_inits())) {
       if (C.capturesVariable()) {
         ValueDecl *CapturedVar = C.getCapturedVar();
         if (ignoreParamVarDecl && isa<ParmVarDecl>(CapturedVar))
@@ -566,22 +573,68 @@ public:
             continue;
         }
         QualType CapturedVarQualType = CapturedVar->getType();
-        auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        auto IsUncountedPtr = isUnsafePtr(CapturedVarQualType);
         if (C.getCaptureKind() == LCK_ByCopy &&
             CapturedVarQualType->isReferenceType())
           continue;
-        if (IsUncountedPtr && *IsUncountedPtr)
-          reportBug(C, CapturedVar, CapturedVarQualType, L);
+        if (!IsUncountedPtr || !*IsUncountedPtr)
+          continue;
+        const Expr *Origin = nullptr;
+        if (Model->checksForInteriorDestruction()) {
+          if (!CaptureInit)
+            continue;
+          if (isCaptureOriginSafeForInteriorDestruction(CaptureInit, Origin))
+            continue;
+        }
+        reportBug(C, CapturedVar, CapturedVarQualType, L, Origin);
       } else if (C.capturesThis() && shouldCheckThis) {
-        if (ignoreParamVarDecl) // this is always a parameter to this function.
+        if (ignoreParamVarDecl)
           continue;
         reportBugOnThisPtr(C, T);
       }
     }
   }
 
+  bool isCaptureOriginSafeForInteriorDestruction(const Expr *CaptureInit,
+                                                 const Expr *&Origin) const {
+    return tryToFindPtrOrigin(
+        CaptureInit, /*StopAtFirstRefCountedObj=*/false,
+        Model->checksForInteriorDestruction(),
+        [&](const clang::CXXRecordDecl *Record) {
+          return Model->isSafePtr(Record);
+        },
+        [&](const clang::QualType Type) { return Model->isSafePtrType(Type); },
+        [&](const clang::Decl *D) {
+          return Model->isSafeDecl(D, BR->getSourceManager());
+        },
+        [&](const clang::Expr *CaptureOrigin, bool IsSafe,
+            bool /*OriginDependsOnFullExpressionTemporary*/,
+            bool PtrIsLifetimeBoundToOrigin) {
+          if (!CaptureOrigin)
+            return true;
+          if (isa<CXXThisExpr>(CaptureOrigin))
+            return true;
+          // A Borrow in the enclosing scope does not travel with the lambda,
+          // so a loan taken through it is unguarded once the lambda escapes.
+          QualType OriginType = pointeeType(CaptureOrigin->getType());
+          if (!OriginType.isNull() && isBorrowType(OriginType)) {
+            if (!Origin)
+              Origin = CaptureOrigin;
+            return false;
+          }
+          if (IsSafe)
+            return true;
+          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin))
+            return true;
+          if (!Origin)
+            Origin = CaptureOrigin;
+          return false;
+        });
+  }
+
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
-                 const QualType T, const LambdaExpr *L) const {
+                 const QualType T, const LambdaExpr *L,
+                 const Expr *Origin) const {
     assert(CapturedVar);
 
     auto Location = Capture.getLocation();
@@ -603,8 +656,10 @@ public:
       Os << " is a ";
     else
       Os << " contains a ";
-    auto *CapturedType = T.getTypePtrOrNull();
-    printPointer(Os, CapturedType);
+    if (Model->checksForInteriorDestruction())
+      Model->describeHazard(Os, Origin, T);
+    else
+      printPointer(Os, T.getTypePtrOrNull());
 
     PathDiagnosticLocation BSLoc(Location, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -696,6 +751,14 @@ public:
                                        makeRetainPtrSafetyModel()) {}
 };
 
+class UnborrowedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
+public:
+  UnborrowedLambdaCapturesChecker()
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of a loan on a "
+                                       "CanBorrow object",
+                                       makeBorrowSafetyModel()) {}
+};
+
 } // namespace
 
 void ento::registerUncountedLambdaCapturesChecker(CheckerManager &Mgr) {
@@ -721,6 +784,15 @@ void ento::registerUnretainedLambdaCapturesChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUnretainedLambdaCapturesChecker(
+    const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerUnborrowedLambdaCapturesChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnborrowedLambdaCapturesChecker>();
+}
+
+bool ento::shouldRegisterUnborrowedLambdaCapturesChecker(
     const CheckerManager &mgr) {
   return true;
 }

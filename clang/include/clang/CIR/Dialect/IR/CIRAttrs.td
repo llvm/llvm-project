@@ -948,6 +948,40 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FastMathFlagsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FMFnone     : I32BitEnumAttrCaseNone<"none">;
+def CIR_FMFnnan     : I32BitEnumAttrCaseBit<"nnan", 0>;
+def CIR_FMFninf     : I32BitEnumAttrCaseBit<"ninf", 1>;
+def CIR_FMFnsz      : I32BitEnumAttrCaseBit<"nsz", 2>;
+def CIR_FMFarcp     : I32BitEnumAttrCaseBit<"arcp", 3>;
+def CIR_FMFcontract : I32BitEnumAttrCaseBit<"contract", 4>;
+def CIR_FMFafn      : I32BitEnumAttrCaseBit<"afn", 5>;
+def CIR_FMFreassoc  : I32BitEnumAttrCaseBit<"reassoc", 6>;
+def CIR_FMFfast     : I32BitEnumAttrCaseGroup<"fast", [
+  CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp, CIR_FMFcontract,
+  CIR_FMFafn, CIR_FMFreassoc
+]>;
+
+def CIR_FastMathFlags : CIR_I32BitEnum<
+    "FastMathFlags", "fast-math flags", [
+  CIR_FMFnone, CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp,
+  CIR_FMFcontract, CIR_FMFafn, CIR_FMFreassoc, CIR_FMFfast
+]> {
+  let description = [{
+    Describes fast-math flags for CIR operations. This attribute is shared by
+    operations with floating-point semantics and is not specific to LLVM intrinsic
+    calls.
+  }];
+
+  let separator = ", ";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 

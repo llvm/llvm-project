@@ -80,7 +80,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       DisableMadd4(false), HasMT(false), HasCRC(false), HasVirt(false),
       HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
       UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
-      StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
+      StackAlignOverride(StackAlignOverride), TM(TM),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),

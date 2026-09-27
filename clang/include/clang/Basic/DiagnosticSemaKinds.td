@@ -9970,8 +9970,9 @@ def err_typecheck_expect_scalar_or_vector : Error<
 def err_typecheck_expect_scalar_or_vector_or_matrix : Error<
   "invalid operand of type %0 where %1 or "
   "a vector or matrix of such type is required">;
-def err_typecheck_expect_any_scalar_or_vector : Error<
-  "invalid operand of type %0%select{| where a scalar or vector is required}1">;
+def err_typecheck_expect_any_scalar_or_vector_or_matrix : Error<
+  "invalid operand of type %0%select{| where a scalar or vector is required|"
+  " where a scalar, vector, or matrix is required}1">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -13430,7 +13431,7 @@ def err_builtin_invalid_arg_type: Error<
   // An 'or' if non-empty second and third components are combined
   "%plural{0:|:%plural{0:|:or }2}3"
   // Third component: floating-point types
-  "%select{|floating-point|16 or 32 bit floating-point}3"
+  "%select{|floating-point|16 or 32 bit floating-point|32 bit floating-point}3"
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;

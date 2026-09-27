@@ -382,6 +382,9 @@ features cannot lower the translation-unit ABI level;
   };
   ```
 
+- Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
+  flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
+
 - Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
 
 - Fixed a false negative in `-Warray-bounds` where the warning was suppressed
@@ -533,13 +536,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
-- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a string literal that is not of `char` type, such as a wide string literal. Such literals are now diagnosed and ignored. (#GH140338)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 - Fixed an assertion caused by Microsoft integer literals exceeding the maximum value. (#GH212504)
 - Fixed an assertion failure when a value of a Unicode character type (`char8_t`, `char16_t`, `char32_t`) was implicitly splatted to a vector of the same element type, e.g. when comparing an `ext_vector_type` of `char32_t` with one of its elements. (#GH202317)
 - Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
+- Fixed an assertion failure when a global variable in a non-default address space, such as one declared with `__seg_gs`, is mapped into an OpenMP `target` region. (#GH140069)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
@@ -578,6 +581,10 @@ features cannot lower the translation-unit ABI level;
 #### Bug Fixes to Attribute Support
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
+
+- Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than
+  2^23 elements; `ext_vector_type` and `vector_size` now both reject vectors
+  with more than 2^23 elements or larger than 2^28 bytes. (#GH165458)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -872,8 +879,7 @@ features cannot lower the translation-unit ABI level;
 - Added a new warning when the same interrupt type is specified more than
   once in a RISC-V `interrupt` attribute.
 
-- SiFive CLIC preemptible interrupt handlers now diagnose unsupported frame
-  pointers instead of producing a backend fatal error.
+- SiFive CLIC preemptible interrupt handlers now support frame pointers.
 
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If
@@ -1011,6 +1017,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
+- Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
+  `_BitInt` type wider than any standard integer type. (#GH140074)
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings
