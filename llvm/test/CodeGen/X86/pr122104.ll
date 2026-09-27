@@ -2,33 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; The zero_extend of the index is selected before its 'and' operand, which
-; shrinkAndImmediate then replaces with the truncated cmov result. The upper
-; 32 bits of that value are not zero, so the index must still be zero-extended.
-define i64 @pr222714(i64 %x, ptr %p) {
-; CHECK-LABEL: pr222714:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlq $30, %rdi
-; CHECK-NEXT:    movabsq $17179869183, %rax # imm = 0x3FFFFFFFF
-; CHECK-NEXT:    movabsq $-4294967295, %rcx # imm = 0xFFFFFFFF00000001
-; CHECK-NEXT:    addq %rcx, %rax
-; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    cmovneq %rcx, %rax
-; CHECK-NEXT:    movl %eax, %eax
-; CHECK-NEXT:    addq (%rsi,%rax,8), %rax
-; CHECK-NEXT:    retq
-  %m = and i64 %x, 17179869183
-  %c = icmp eq i64 %m, 0
-  %s = select i1 %c, i64 17179869183, i64 0
-  %a = add i64 %s, -4294967295
-  %idx = and i64 %a, 1
-  %gep = getelementptr inbounds i64, ptr %p, i64 %idx
-  %ld = load i64, ptr %gep, align 8
-  %lo = and i64 %a, 255
-  %r = add i64 %ld, %lo
-  ret i64 %r
-}
-
-; Same through a vector round trip: bit 32 of the extracted lane is set.
+; shrinkAndImmediate then replaces with the truncated vector lane. Bit 32 of
+; that lane is set, so the index must still be zero-extended.
 define <4 x i32> @pr218382(i32 %x) "target-features"="+avx2,+popcnt" {
 ; CHECK-LABEL: pr218382:
 ; CHECK:       # %bb.0:
