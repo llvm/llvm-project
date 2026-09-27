@@ -253,8 +253,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.sqrtl
     #libc.src.math.tanf
     #libc.src.math.tanhf
+    #libc.src.math.totalorderf128
     #libc.src.math.totalordermag
     #libc.src.math.totalordermagf
+    #libc.src.math.totalordermagf128
     #libc.src.math.totalordermagl
     #libc.src.math.trunc
     #libc.src.math.truncf
