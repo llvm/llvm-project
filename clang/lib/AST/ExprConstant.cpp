@@ -11030,8 +11030,11 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     // (which should presumably be valid only if N is a multiple of
     // alignof(int), and in any case can't be deallocated unless N is
     // alignof(X) and X has new-extended alignment).
-    LValue Nothrow;
-    if (!EvaluateLValue(E->getPlacementArg(0), Nothrow, Info))
+    //
+    // The argument is usually an lvalue (the standard signature takes a
+    // 'const std::nothrow_t &'), but a user-declared allocation function may
+    // take 'std::nothrow_t' by value, in which case it is a prvalue.
+    if (!EvaluateIgnoredValue(Info, E->getPlacementArg(0)))
       return false;
     IsNothrow = true;
   } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
