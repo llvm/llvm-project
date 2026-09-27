@@ -12876,6 +12876,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   };
 
+  auto EvalX86CmpImm = [&](bool IsScalar) -> bool {
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+    return EvalX86Cmp(Imm.getZExtValue(), IsScalar);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
@@ -15378,136 +15385,109 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmpsd:
+    return EvalX86CmpImm(/*IsScalar=*/true);
+
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmppd:
   case X86::BI__builtin_ia32_cmpps256:
-  case X86::BI__builtin_ia32_cmppd256: {
-    APSInt ImmVal;
-    if (!EvaluateInteger(E->getArg(2), ImmVal, Info))
-      return false;
-    uint32_t Predicate = ImmVal.getZExtValue();
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpsd);
-    return EvalX86Cmp(Predicate, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmppd256:
+    return EvalX86CmpImm(/*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpeqss:
   case X86::BI__builtin_ia32_cmpeqsd:
-  case X86::BI__builtin_ia32_cmpeqps:
-  case X86::BI__builtin_ia32_cmpeqpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpeqss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpeqsd);
+    return EvalX86Cmp(X86CmpImm::CMP_EQ_OQ, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_EQ_OQ, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpeqps:
+  case X86::BI__builtin_ia32_cmpeqpd:
+    return EvalX86Cmp(X86CmpImm::CMP_EQ_OQ, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpgess:
   case X86::BI__builtin_ia32_cmpgesd:
-  case X86::BI__builtin_ia32_cmpgeps:
-  case X86::BI__builtin_ia32_cmpgepd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpgess ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpgesd);
+    return EvalX86Cmp(X86CmpImm::CMP_GE_OS, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_GE_OS, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpgeps:
+  case X86::BI__builtin_ia32_cmpgepd:
+    return EvalX86Cmp(X86CmpImm::CMP_GE_OS, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpgtss:
   case X86::BI__builtin_ia32_cmpgtsd:
-  case X86::BI__builtin_ia32_cmpgtps:
-  case X86::BI__builtin_ia32_cmpgtpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpgtss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpgtsd);
+    return EvalX86Cmp(X86CmpImm::CMP_GT_OS, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_GT_OS, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpgtps:
+  case X86::BI__builtin_ia32_cmpgtpd:
+    return EvalX86Cmp(X86CmpImm::CMP_GT_OS, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpltss:
   case X86::BI__builtin_ia32_cmpltsd:
-  case X86::BI__builtin_ia32_cmpltps:
-  case X86::BI__builtin_ia32_cmpltpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpltss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpltsd);
+    return EvalX86Cmp(X86CmpImm::CMP_LT_OS, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_LT_OS, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpltps:
+  case X86::BI__builtin_ia32_cmpltpd:
+    return EvalX86Cmp(X86CmpImm::CMP_LT_OS, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpless:
   case X86::BI__builtin_ia32_cmplesd:
-  case X86::BI__builtin_ia32_cmpleps:
-  case X86::BI__builtin_ia32_cmplepd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpless ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmplesd);
+    return EvalX86Cmp(X86CmpImm::CMP_LE_OS, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_LE_OS, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpleps:
+  case X86::BI__builtin_ia32_cmplepd:
+    return EvalX86Cmp(X86CmpImm::CMP_LE_OS, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpneqss:
   case X86::BI__builtin_ia32_cmpneqsd:
-  case X86::BI__builtin_ia32_cmpneqps:
-  case X86::BI__builtin_ia32_cmpneqpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpneqss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpneqsd);
+    return EvalX86Cmp(X86CmpImm::CMP_NEQ_UQ, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_NEQ_UQ, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpneqps:
+  case X86::BI__builtin_ia32_cmpneqpd:
+    return EvalX86Cmp(X86CmpImm::CMP_NEQ_UQ, /*IsScalar=*/false);
+
   case X86::BI__builtin_ia32_cmpngess:
   case X86::BI__builtin_ia32_cmpngesd:
-  case X86::BI__builtin_ia32_cmpngeps:
-  case X86::BI__builtin_ia32_cmpngepd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpngess ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpngesd);
+    return EvalX86Cmp(X86CmpImm::CMP_NGE_US, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_NGE_US, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpngeps:
+  case X86::BI__builtin_ia32_cmpngepd:
+    return EvalX86Cmp(X86CmpImm::CMP_NGE_US, /*IsScalar=*/false);
+
   case X86::BI__builtin_ia32_cmpngtss:
   case X86::BI__builtin_ia32_cmpngtsd:
-  case X86::BI__builtin_ia32_cmpngtps:
-  case X86::BI__builtin_ia32_cmpngtpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpngtss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpngtsd);
+    return EvalX86Cmp(X86CmpImm::CMP_NGT_US, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_NGT_US, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpngtps:
+  case X86::BI__builtin_ia32_cmpngtpd:
+    return EvalX86Cmp(X86CmpImm::CMP_NGT_US, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpnless:
   case X86::BI__builtin_ia32_cmpnlesd:
-  case X86::BI__builtin_ia32_cmpnleps:
-  case X86::BI__builtin_ia32_cmpnlepd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpnless ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpnlesd);
+    return EvalX86Cmp(X86CmpImm::CMP_NLE_US, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_NLE_US, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpnleps:
+  case X86::BI__builtin_ia32_cmpnlepd:
+    return EvalX86Cmp(X86CmpImm::CMP_NLE_US, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpnltss:
   case X86::BI__builtin_ia32_cmpnltsd:
-  case X86::BI__builtin_ia32_cmpnltps:
-  case X86::BI__builtin_ia32_cmpnltpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpnltss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpnltsd);
+    return EvalX86Cmp(X86CmpImm::CMP_NLT_US, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_NLT_US, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpnltps:
+  case X86::BI__builtin_ia32_cmpnltpd:
+    return EvalX86Cmp(X86CmpImm::CMP_NLT_US, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpordss:
   case X86::BI__builtin_ia32_cmpordsd:
-  case X86::BI__builtin_ia32_cmpordps:
-  case X86::BI__builtin_ia32_cmpordpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpordss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpordsd);
+    return EvalX86Cmp(X86CmpImm::CMP_ORD_Q, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_ORD_Q, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpordps:
+  case X86::BI__builtin_ia32_cmpordpd:
+    return EvalX86Cmp(X86CmpImm::CMP_ORD_Q, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_cmpunordss:
   case X86::BI__builtin_ia32_cmpunordsd:
-  case X86::BI__builtin_ia32_cmpunordps:
-  case X86::BI__builtin_ia32_cmpunordpd: {
-    bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpunordss ||
-                     BuiltinOp == X86::BI__builtin_ia32_cmpunordsd);
+    return EvalX86Cmp(X86CmpImm::CMP_UNORD_Q, /*IsScalar=*/true);
 
-    return EvalX86Cmp(X86CmpImm::CMP_UNORD_Q, IsScalar);
-  }
+  case X86::BI__builtin_ia32_cmpunordps:
+  case X86::BI__builtin_ia32_cmpunordpd:
+    return EvalX86Cmp(X86CmpImm::CMP_UNORD_Q, /*IsScalar=*/false);
 
   case X86::BI__builtin_ia32_vpdpwssd128:
   case X86::BI__builtin_ia32_vpdpwssd256:
@@ -17255,6 +17235,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Result, E);
   };
 
+  // COMI and UCOMI produce the same boolean result, but keep their signaling
+  // and quiet predicates distinct to reflect their different floating-point
+  // exception behavior, even though constant evaluation does not expose it.
   auto EvalX86Comi = [&](uint32_t Predicate) -> bool {
     APValue AV, BV;
     if (!EvaluateVector(E->getArg(0), AV, Info) ||
@@ -17271,6 +17254,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     auto V = APValue(Info.Ctx.MakeIntValue(Matches, E->getType()));
     return Success(V, E);
+  };
+
+  auto EvalX86ComiImm = [&]() -> bool {
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+    return EvalX86Comi(Imm.getZExtValue());
   };
 
   switch (BuiltinOp) {
@@ -18775,9 +18765,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     });
   }
 
-  // COMI and UCOMI produce the same boolean result, but keep their signaling
-  // and quiet predicates distinct to reflect their different floating-point
-  // exception behavior, even though constant evaluation does not expose it.
   case X86::BI__builtin_ia32_comieq:
   case X86::BI__builtin_ia32_comisdeq:
     return EvalX86Comi(X86CmpImm::CMP_EQ_OS);
@@ -18826,14 +18813,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case X86::BI__builtin_ia32_ucomisdneq:
     return EvalX86Comi(X86CmpImm::CMP_NEQ_UQ);
 
-  case X86::BI__builtin_ia32_vcomish: {
-    APSInt Imm;
-    if (!EvaluateInteger(E->getArg(2), Imm, Info))
-      return false;
-
-    uint32_t Predicate = Imm.getZExtValue();
-    return EvalX86Comi(Predicate);
-  }
+  case X86::BI__builtin_ia32_vcomish:
+    return EvalX86ComiImm();
 
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
