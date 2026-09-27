@@ -734,7 +734,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
+  LLVM_DEBUG(dbgs() << "Scheduling " << SU->printNum() << " "
                     << *SU->getInstr());
   return SU;
 }

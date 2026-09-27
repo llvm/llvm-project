@@ -67,7 +67,7 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
       dbgs() << "Fusion conflict: cannot fuse SU(" << FirstSU.NodeNum
              << ") and SU(" << SecondSU.NodeNum << ")\n";
       if (FirstSU.isClustered())
-        dbgs() << "  SU(" << FirstSU.NodeNum << ") already clustered\n";
+        dbgs() << "  " << FirstSU.printNum() << " already clustered\n";
       if (SecondSU.isClustered())
         dbgs() << "  SU(" << SecondSU.NodeNum << ") already clustered\n";
     });

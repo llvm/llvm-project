@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Printable.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -485,6 +486,8 @@ class TargetRegisterInfo;
     bool isClustered() const { return ParentClusterIdx != InvalidClusterId; }
 
     LLVM_ABI void dumpAttributes() const;
+
+    LLVM_ABI Printable printNum() const;
 
   private:
     LLVM_ABI void ComputeDepth();

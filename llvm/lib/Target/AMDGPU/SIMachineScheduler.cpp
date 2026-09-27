@@ -180,7 +180,7 @@ void SIScheduleBlock::addUnit(SUnit *SU) {
 #ifndef NDEBUG
 void SIScheduleBlock::traceCandidate(const SISchedCandidate &Cand) {
 
-  dbgs() << "  SU(" << Cand.SU->NodeNum << ") " << getReasonStr(Cand.Reason);
+  dbgs() << "  " << Cand.SU->printNum() << " " << getReasonStr(Cand.Reason);
   dbgs() << '\n';
 }
 #endif
@@ -1975,7 +1975,7 @@ void SIScheduleDAGMI::schedule()
 
     scheduleMI(SU, true);
 
-    LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
+    LLVM_DEBUG(dbgs() << "Scheduling " << SU->printNum() << " "
                       << *SU->getInstr());
   }
 

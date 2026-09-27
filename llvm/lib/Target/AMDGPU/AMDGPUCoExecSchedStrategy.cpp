@@ -875,7 +875,7 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
+  LLVM_DEBUG(dbgs() << "Scheduling " << SU->printNum() << " "
                     << *SU->getInstr());
 
   assert(IsTopNode && "coexec scheduler must only schedule from top boundary");
@@ -942,7 +942,7 @@ void AMDGPUCoExecSchedStrategy::dumpPickSummary(SUnit *SU, bool IsTopNode,
   dbgs() << "=== Pick @ Cycle " << Cycle << " ===\n";
 
   const InstructionFlavor Flavor = classifyFlavor(*SU->getInstr(), *SII);
-  dbgs() << "Picked: SU(" << SU->NodeNum << ") ";
+  dbgs() << "Picked: " << SU->printNum() << " ";
   SU->getInstr()->print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
                         /*SkipDebugLoc=*/true);
   dbgs() << " [" << getFlavorName(Flavor) << "]\n";

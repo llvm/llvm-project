@@ -2513,7 +2513,7 @@ void SwingSchedulerDAG::registerPressureFilter(NodeSetType &NodeSets) {
                                              RecRegPressure.MaxSetPressure);
       if (RPDelta.Excess.isValid()) {
         LLVM_DEBUG(
-            dbgs() << "Excess register pressure: SU(" << SU->NodeNum << ") "
+            dbgs() << "Excess register pressure: " << SU->printNum() << " "
                    << TRI->getRegPressureSetName(RPDelta.Excess.getPSet())
                    << ":" << RPDelta.Excess.getUnitInc() << "\n");
         NS.setExceedPressure(SU);
@@ -3681,8 +3681,8 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
       auto &OldS = getInstructions(OldCycle);
       llvm::erase(OldS, &SU);
       getInstructions(NewCycle).emplace_back(&SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU.NodeNum
-                        << ") is not pipelined; moving from cycle " << OldCycle
+      LLVM_DEBUG(dbgs() << SU.printNum()
+                        << " is not pipelined; moving from cycle " << OldCycle
                         << " to " << NewCycle << " Instr:" << *SU.getInstr());
     }
 
@@ -3951,7 +3951,7 @@ void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
   for (const auto &I : Nodes)
-    os << "   SU(" << I->NodeNum << ") " << *(I->getInstr());
+    os << "   " << I->printNum() << " " << *(I->getInstr());
   os << "\n";
 }
 
@@ -4480,9 +4480,10 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
     return;
 
   const auto DumpSU = [](const SUnit *SU) {
-    std::ostringstream OSS;
-    OSS << "SU(" << SU->NodeNum << ")";
-    return OSS.str();
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << SU->printNum();
+    return S;
   };
 
   dbgs() << "  Loop carried edges from " << DumpSU(SU) << "\n"

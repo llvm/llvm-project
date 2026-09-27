@@ -392,7 +392,7 @@ operator<(const Candidate &other) {
 }
 
 void SystemZPostRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
-  LLVM_DEBUG(dbgs() << "** Scheduling SU(" << SU->NodeNum << ") ";
+  LLVM_DEBUG(dbgs() << "** Scheduling " << SU->printNum() << " ";
              if (Available.size() == 1) dbgs() << "(only one) ";
              Candidate c(SU, *HazardRec); c.dumpCosts(); dbgs() << "\n";);
 

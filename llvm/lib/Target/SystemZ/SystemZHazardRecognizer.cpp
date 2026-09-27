@@ -163,7 +163,7 @@ void SystemZHazardRecognizer::nextGroup() {
 
 #ifndef NDEBUG // Debug output
 void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
-  OS << "SU(" << SU->NodeNum << "):";
+  OS << SU->printNum() << ":";
   OS << TII->getName(SU->getInstr()->getOpcode());
 
   const MCSchedClassDesc *SC = getSchedClass(SU);

@@ -335,6 +335,12 @@ void SUnit::biasCriticalPath() {
     std::swap(*Preds.begin(), *BestI);
 }
 
+Printable SUnit::printNum() const {
+  assert(!isBoundaryNode() &&
+         "use ScheduleDAG::dumpNodeName for boundary nodes");
+  return Printable([this](raw_ostream &OS) { OS << "SU(" << NodeNum << ")"; });
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
   dbgs() << "  # preds left       : " << NumPredsLeft << "\n";
@@ -355,7 +361,7 @@ LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeName(const SUnit &SU) const {
   else if (&SU == &ExitSU)
     dbgs() << "ExitSU";
   else
-    dbgs() << "SU(" << SU.NodeNum << ")";
+    dbgs() << SU.printNum();
 }
 
 LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeAll(const SUnit &SU) const {
