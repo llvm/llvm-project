@@ -1438,19 +1438,19 @@ def BRCC       : SHPseudo<(outs), (ins brtarget:$disp, i8imm:$cc),
 
 def Select8     : SHSelectPseudo<(outs GPR:$dst),
                                 (ins GPR:$src, GPR:$src2, i8imm:$cc),
-                                "; Select8 PSEUDO",
+                                "! Select8 PSEUDO",
                                 [(set i8:$dst,
                                  (SHselectcc i8:$src, i8:$src2, timm:$cc))]>;
 
 def Select16    : SHSelectPseudo<(outs GPR:$dst),
                                 (ins GPR:$src, GPR:$src2, i8imm:$cc),
-                                "; Select16 PSEUDO",
+                                "! Select16 PSEUDO",
                                 [(set i16:$dst,
                                  (SHselectcc i16:$src, i16:$src2, timm:$cc))]>;
 
 def Select32    : SHSelectPseudo<(outs GPR:$dst),
                                 (ins GPR:$src, GPR:$src2, i8imm:$cc),
-                                "; Select32 PSEUDO",
+                                "! Select32 PSEUDO",
                                 [(set i32:$dst,
                                  (SHselectcc i32:$src, i32:$src2, timm:$cc))]>;
 
@@ -1591,7 +1591,8 @@ def SRArr       : SHPseudo<(outs GPR:$dst), (ins GPR:$src1, GPR:$src2),
 // Helper instruction for mapping frame indices to relative frame pointer
 // offsets.
 let Defs = [SR], hasSideEffects = 0 in
-def SHFrmIdx : SHPseudo<(outs GPR:$dst), (ins GPR:$src, disp12:$src2)>;
+def SHFrmIdx : SHPseudo<(outs GPR:$dst), (ins GPR:$src, disp12:$src2),
+                        "! frame index">;
 
 /// CONSTPOOL_ENTRY - This instruction represents a floating constant pool in
 /// the function.  The first operand is the ID# for this instruction, the second

@@ -110,7 +110,7 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
 
   // The stack grows down, so the offset needs to be adjusted so that
   // we index correctly into the negative stack with a positive index.
-  int64_t RealOffset = (StackSize-Offset)-Scale;
+  int64_t RealOffset = (StackSize-Offset);
 
   // On big endian systems, adjust the pointer for
   // < 32-bit offsets.
@@ -209,29 +209,47 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
     }
   } else if (MI.getOperand(1).isReg()) {
     DstReg = MI.getOperand(1).getReg();
-  }
+  }  
+
+  auto Offset = MI.getOperand(2).getImm();
+  unsigned Opc;
 
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*SPtr opcode.");
   case SH::MOVBSP: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(DstReg);
+    if (Offset == 0)
+      Opc = SH::MOVBS;
+    else
+      Opc = SH::MOVBS4;
     break;
   }
   case SH::MOVWSP: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(DstReg);
+    if (Offset == 0)
+      Opc = SH::MOVWS;
+    else
+      Opc = SH::MOVWS4;
     break;
   }
   case SH::MOVLSP: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(DstReg);
+    if (Offset == 0)
+      Opc = SH::MOVLS;
+    else
+      Opc = SH::MOVLS4;
     break;
   }
+  }
+
+  // TODO: Allow bigger accesses.
+  if (Offset == 0) {
+    BuildMI(MBB, MBBI, DL, TII->get(Opc))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addReg(DstReg);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(Opc))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addReg(DstReg)
+      .addImm(Offset);
   }
 
   return eraseMI(MI);
@@ -358,21 +376,45 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
     SrcReg = MI.getOperand(1).getReg();
   }
 
+  auto Offset = MI.getOperand(2).getImm();
+  unsigned Opc;
+
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*LPtr opcode.");
   case SH::MOVBLP: {
+    if (Offset == 0)
+      Opc = SH::MOVBL;
+    else
+      Opc = SH::MOVBL4;
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL), DstReg).addReg(SrcReg);
     break;
   }
   case SH::MOVWLP: {
+    if (Offset == 0)
+      Opc = SH::MOVWL;
+    else
+      Opc = SH::MOVWL4;
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL), DstReg).addReg(SrcReg);
     break;
   }
   case SH::MOVLLP: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL), DstReg).addReg(SrcReg);
+    if (Offset == 0)
+      Opc = SH::MOVLL;
+    else
+      Opc = SH::MOVLL4;
     break;
   }
+  }
+
+  // TODO: Allow bigger accesses.
+  if (Offset == 0) {
+    BuildMI(MBB, MBBI, DL, TII->get(Opc), DstReg)
+      .addReg(SrcReg);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(Opc), DstReg)
+      .addReg(SrcReg)
+      .addImm(Offset);
   }
 
   return eraseMI(MI);
@@ -469,8 +511,6 @@ template <>
 bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
-  const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto DstReg = MI.getOperand(0).getReg();
   auto SrcReg = MI.getOperand(1).getReg();
@@ -511,8 +551,6 @@ template <>
 bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
-  const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto DstReg = MI.getOperand(0).getReg();
   auto SrcReg = MI.getOperand(1).getReg();
@@ -553,8 +591,6 @@ template <>
 bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
-  const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto DstReg = MI.getOperand(0).getReg();
   auto SrcReg = MI.getOperand(1).getReg();

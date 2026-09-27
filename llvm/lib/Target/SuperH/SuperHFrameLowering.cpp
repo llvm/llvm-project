@@ -147,14 +147,14 @@ SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   if (HasFP) {
 
     // Adjust down to remove FP.
-    FrameOffset += 4;
+    FrameOffset -= 4;
     FrameReg = RegInfo->getFrameRegister();
-    return StackOffset::getFixed(-FrameOffset);
+    return StackOffset::getFixed(FrameOffset);
   }
 
   // R15 base
   FrameReg = RegInfo->getStackRegister(); // r15
-  return StackOffset::getFixed(-FrameOffset);
+  return StackOffset::getFixed(FrameOffset);
 }
 
 
