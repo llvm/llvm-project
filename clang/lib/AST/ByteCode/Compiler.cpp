@@ -4275,7 +4275,11 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     // alignof(X) and X has new-extended alignment).
     if (PlacementArgs == 1) {
       const Expr *Arg1 = E->getPlacementArg(0);
-      if (Arg1->getType()->isNothrowT()) {
+      // A user-declared allocation function taking std::nothrow_t (for
+      // instance by value) is not usable in a constant expression.
+      if (Arg1->getType()->isNothrowT() &&
+          OperatorNew
+              ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
         if (!this->discard(Arg1))
           return false;
         IsNoThrow = true;

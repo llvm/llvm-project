@@ -2935,6 +2935,16 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
 
     if (NewExpr->getNumPlacementArgs() > 0) {
+      if (NewExpr->getNumPlacementArgs() == 1 &&
+          NewExpr->getPlacementArg(0)->getType()->isNothrowT() &&
+          !OperatorNew
+               ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_new_non_replaceable)
+            << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+        return false;
+      }
+
       // This is allowed pre-C++26, but only an std function or if
       // [[msvc::constexpr]] was used.
       if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction() ||
