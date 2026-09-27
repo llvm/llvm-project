@@ -28,18 +28,6 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   setFlagsFromFeatures(STI);
-
-  // Compute the initial ISA string.  This serves two purposes:
-  //   1. Deduplication: subsequent .option arch/rvc/norvc directives compare
-  //      against ArchString to avoid propagating redundant ISA updates.
-  //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
-  //      mapping symbol is emitted before the first instruction, recording
-  //      the full ISA in the object even when no .option directive is present.
-  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
-    InitialArchString = (*ParseResult)->toString();
-    ArchString = InitialArchString;
-    getStreamer().setMappingSymbolArch(ArchString);
-  }
 }
 
 RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
@@ -50,6 +38,23 @@ RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
+}
+
+void RISCVTargetELFStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
+  RISCVTargetStreamer::setFlagsFromFeatures(STI);
+
+  // Compute the initial ISA string.  This serves two purposes:
+  //   1. Deduplication: subsequent .option arch/rvc/norvc directives compare
+  //      against ArchString to avoid propagating redundant ISA updates.
+  //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
+  //      mapping symbol is emitted before the first instruction, recording
+  //      the full ISA in the object even when no .option directive is present.
+  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
+    InitialArchString = (*ParseResult)->toString();
+    setArchString(InitialArchString);
+  } else {
+    consumeError(ParseResult.takeError());
+  }
 }
 
 void RISCVTargetELFStreamer::setArchString(StringRef Arch) {
