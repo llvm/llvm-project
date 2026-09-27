@@ -54,6 +54,26 @@ in a future version of Clang.
   mode, as it was removed from the standard by
   [P3475R2](https://wg21.link/P3475R2).
 
+- Because specializations of templated functions can now be instantiated during
+  constant evaluation, certain expressions that could not previously be
+  evaluated as constant expressions can now be evaluated as such. This can
+  affect overload resolution, which can in some cases change the semantics of a
+  program. For example:
+
+  ```cpp
+  // Construct a function `g` for which `g()` is only a constant expression if
+  // `f<int>` can be instantiated during constant evaluation.
+  template <typename T> constexpr T f();
+  constexpr int g() { return f<int>(); }
+  template <typename T> constexpr T f() { return T{1}; }
+
+  // Construct a family of overloads named `h` such that the result of `h()` is
+  // 1 if `g()` is a constant expression; otherwise 2.
+  template <auto = g()>     consteval int h()      { return 1; }
+  template <typename... Ts> consteval int h(Ts...) { return 2; }
+
+  int main() { return h(); }  // Previously returned 1; now returns 2.
+  ```
 
 ### Objective-C Specific Potentially Breaking Changes
 
