@@ -1221,6 +1221,42 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     invalidateAndEraseMI(GR, MI);
 }
 
+// Returns the value of the switch case operand in Reg. The case value stays a
+// G_CONSTANT until the module emits a SPIR-V constant for the same value, at
+// which point the case register is replaced with the one defining that
+// constant, which keeps its value in literal operands rather than in a CImm.
+static const ConstantInt *getSwitchCaseValue(Register Reg,
+                                             const MachineRegisterInfo &MRI,
+                                             LLVMContext &Ctx) {
+  APInt Val;
+  if (mi_match(Reg, MRI, m_ICst(Val)))
+    return ConstantInt::get(Ctx, Val);
+
+  const MachineInstr *Def = nullptr;
+  if (!mi_match(Reg, MRI, m_MInstr(Def)))
+    llvm_unreachable("Switch case operand has no definition");
+
+  LLT Ty = MRI.getType(Reg);
+  assert(Ty.isValid() && "Expected a typed switch case value");
+  Val = APInt(Ty.getScalarSizeInBits(), 0);
+
+  switch (Def->getOpcode()) {
+  case SPIRV::OpConstantNull:
+  case SPIRV::OpConstantI:
+    // The operands after the type are 32-bit literal words, least significant
+    // first, as written by addNumImm(). OpConstantNull carries none, so it
+    // decodes to zero without a case of its own.
+    for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
+      uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
+      Val |= APInt(Val.getBitWidth(), Word).shl((I - 2) * 32);
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected definition of a switch case value");
+  }
+  return ConstantInt::get(Ctx, Val);
+}
+
 // LLVM allows the switches to use registers as cases, while SPIR-V required
 // those to be immediate values. This function replaces such operands with the
 // equivalent immediate constant.
@@ -1228,6 +1264,7 @@ static void processSwitchesConstants(MachineFunction &MF,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLVMContext &Ctx = MF.getFunction().getContext();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_switch))
@@ -1239,9 +1276,8 @@ static void processSwitchesConstants(MachineFunction &MF,
       NewOperands.push_back(MI.getOperand(2)); // Default
       for (unsigned i = 3; i < MI.getNumOperands(); i += 2) {
         Register Reg = MI.getOperand(i).getReg();
-        MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
         NewOperands.push_back(
-            MachineOperand::CreateCImm(ConstInstr->getOperand(1).getCImm()));
+            MachineOperand::CreateCImm(getSwitchCaseValue(Reg, MRI, Ctx)));
 
         NewOperands.push_back(MI.getOperand(i + 1));
       }
