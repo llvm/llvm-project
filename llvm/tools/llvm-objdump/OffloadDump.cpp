@@ -22,8 +22,6 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::objdump;
 
-void disassembleObject(llvm::object::ObjectFile *, bool InlineRelocs);
-
 /// Get the printable name of the image kind.
 static StringRef getImageName(const OffloadBinary &OB) {
   switch (OB.getImageKind()) {
