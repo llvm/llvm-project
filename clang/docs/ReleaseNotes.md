@@ -776,7 +776,7 @@ features cannot lower the translation-unit ABI level;
   when calling a explicit object member function. (#GH218829)
 
 - Fixed a crash when encountering C2y labeled `break`/`continue` statements
-  in a statement expression within a `switch` conditon.
+  in a statement expression within a `switch` condition.
 
 #### Miscellaneous Bug Fixes
 
