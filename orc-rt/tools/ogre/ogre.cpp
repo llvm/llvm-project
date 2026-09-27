@@ -21,6 +21,8 @@
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "orc-rt/bedrock/sps/AllSPSCI.h"
 
+#include "orc-rt-c/support/Logging.h"
+
 #include <cstdio>
 #include <cstring>
 #include <future>
@@ -76,20 +78,24 @@ static std::variant<Options, int> parseArgs(int argc, char *argv[]) noexcept {
   return O;
 }
 
-void reportError(Error Err) noexcept {
-  fprintf(stderr, "reported error: %s\n", toString(std::move(Err)).c_str());
+static void reportError(Session &S, Error Err) noexcept {
+#if ORC_RT_LOG_ENABLED(Error)
+  Session::logErrors(S, std::move(Err));
+#else
+  fprintf(stderr, "Session %p error: %s\n", &S,
+          toString(std::move(Err)).c_str());
+#endif // ORC_RT_LOG_ENABLED(Error)
 }
 
-void printExecutorProcessInfo(const ExecutorProcessInfo &EPI) noexcept {
-  fprintf(stderr,
-          "executor info: triple = \"%s\", page-size = %zu, "
-          "cpu-features = \"%s\"\n",
-          EPI.targetTriple().c_str(), EPI.pageSize(),
-          EPI.targetCPUFeatures().c_str());
+static Expected<Session::DispatchFn> makeDispatcher() noexcept {
+  return [R = std::make_unique<ThreadPoolRunner>(4)](Session::Task T) {
+    (*R)(std::move(T));
+  };
 }
 
-Error setupSession(Session &S, const Options &Opts,
-                   BootstrapInfo &BI) noexcept {
+/// Adds the services a host executor provides, publishing their entry points
+/// in BI for the controller.
+static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
   if (auto Err = sps_ci::addAll(BI.symbols()))
     return Err;
 
@@ -104,53 +110,59 @@ Error setupSession(Session &S, const Options &Opts,
   return Error::success();
 }
 
-Error trySetupAndConnect(Session &S, const Options &Opts) noexcept {
-  ConnectorRegistry ConnRegistry;
-  if (auto Err = registerSocketConnector(ConnRegistry))
-    return Err;
-  // registerTCPConnect(ConnRegistry);
-
-  auto BI = BootstrapInfo::CreateDefault(S);
-  if (!BI)
-    return BI.takeError();
-
-  if (auto Err = setupSession(S, Opts, *BI))
-    return Err;
-
-  return ConnRegistry.connect(
-      [&]() noexcept -> Expected<ConnectorRegistry::AttachInfo> {
-        return ConnectorRegistry::AttachInfo{S, std::move(*BI)};
-      },
-      Opts.ConnSpec);
-}
-
-Expected<int> runOgre(const Options &Opts) noexcept {
-  // Get the process info.
+static Expected<std::unique_ptr<Session>>
+makeSession(const Options &Opts) noexcept {
   auto EPI = ExecutorProcessInfo::Detect();
   if (!EPI)
     return EPI.takeError();
-  if (Opts.Verbose)
-    printExecutorProcessInfo(*EPI);
 
-  // Build the session.
-  ThreadPoolRunner Run(4);
-  Session S(
-      std::move(*EPI), [&Run](Session::Task T) { Run(std::move(T)); },
-      reportError);
+  if (Opts.Verbose) {
+    fprintf(stderr,
+            "executor info: triple = \"%s\", page-size = %zu, "
+            "cpu-features = \"%s\"\n",
+            EPI->targetTriple().c_str(), EPI->pageSize(),
+            EPI->targetCPUFeatures().c_str());
+  }
 
-  std::promise<void> StopP;
-  auto StopF = StopP.get_future();
-  S.setOnDisconnect([StopP = std::move(StopP)](Error Err) mutable noexcept {
-    if (Err)
-      reportError(std::move(Err));
-    StopP.set_value();
-  });
+  auto D = makeDispatcher();
+  if (!D)
+    return D.takeError();
 
-  if (auto Err = trySetupAndConnect(S, Opts))
+  auto S =
+      std::make_unique<Session>(std::move(*EPI), std::move(*D), reportError);
+
+  auto BI = BootstrapInfo::CreateDefault(*S);
+  if (!BI)
+    return BI.takeError();
+
+  if (auto Err = addHostServices(*S, *BI))
     return Err;
 
-  StopF.get();
+  ConnectorRegistry Connectors;
+  if (auto Err = registerSocketConnector(Connectors))
+    return Err;
 
+  if (auto Err = Connectors.connect(Opts.ConnSpec, *S, std::move(*BI)))
+    return Err;
+
+  return S;
+}
+
+static Expected<int> runOgre(const Options &Opts) noexcept {
+  auto S = makeSession(Opts);
+  if (!S)
+    return S.takeError();
+
+  // makeSession has already connected, so the Session may have detached by
+  // now. That's fine: addOnDetach runs the callback immediately if so, so the
+  // wait below cannot miss the detach.
+  std::promise<void> StopP;
+  std::future<void> StopF = StopP.get_future();
+  (*S)->addOnDetach(
+      [StopP = std::move(StopP)]() mutable noexcept { StopP.set_value(); });
+
+  // Wait for detach.
+  StopF.get();
   return 0;
 }
 
