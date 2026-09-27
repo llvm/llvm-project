@@ -31,10 +31,14 @@ coro_t aggregate_coawait_expr() {
   // CIR: cir.await(user, ready : {
   // CIR: }, suspend : {
   // CIR: }, resume : {
-  // CIR:   cir.call @_ZN1B12await_resumeEv(%{{.*}})
-  // CIR:   cir.store align(4) %{{.*}}, %[[VAL]] : !rec_B, !cir.ptr<!rec_B>
+  // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
+  // CIR:   cir.store %[[RES]], %[[TMP:.*]] : !u64i, !cir.ptr<!u64i>
+  // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_B>
+  // CIR:   %[[LOAD:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_B>, !rec_B
+  // CIR:   cir.store align(4) %[[LOAD]], %[[VAL]] : !rec_B, !cir.ptr<!rec_B>
   // CIR:   cir.yield
   // CIR: },)
+
   // OGCG: %[[VAL:.*]] = alloca %struct.B, align 4
   // OGCG: await.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
@@ -48,9 +52,10 @@ coro_t aggregate_coawait_expr_unused() {
   // CIR: cir.await(user, ready : {
   // CIR: }, suspend : {
   // CIR: }, resume : {
-  // CIR:   cir.call @_ZN1B12await_resumeEv(%{{.*}})
+  // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
   // CIR:   cir.yield
   // CIR: },)
+
   // OGCG: await.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
   // OGCG:   store i64 %[[RES]], ptr %{{.*}}, align 4
@@ -64,10 +69,14 @@ coro_t aggregate_coyield_expr() {
   // CIR: cir.await(yield, ready : {
   // CIR: }, suspend : {
   // CIR: }, resume : {
-  // CIR:   cir.call @_ZN1B12await_resumeEv(%{{.*}})
-  // CIR:   cir.store align(4) %{{.*}}, %[[VAL]] : !rec_B, !cir.ptr<!rec_B>
+  // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
+  // CIR:   cir.store %[[RES]], %[[TMP:.*]] : !u64i, !cir.ptr<!u64i>
+  // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_B>
+  // CIR:   %[[LOAD:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_B>, !rec_B
+  // CIR:   cir.store align(4) %[[LOAD]], %[[VAL]] : !rec_B, !cir.ptr<!rec_B>
   // CIR:   cir.yield
   // CIR: },)
+
   // OGCG: %[[VAL:.*]] = alloca %struct.B, align 4
   // OGCG: yield.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
@@ -81,9 +90,10 @@ coro_t aggregate_coyield_expr_unused() {
   // CIR: cir.await(yield, ready : {
   // CIR: }, suspend : {
   // CIR: }, resume : {
-  // CIR:   cir.call @_ZN1B12await_resumeEv(%{{.*}})
+  // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
   // CIR:   cir.yield
   // CIR: },)
+
   // OGCG: yield.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
   // OGCG:   store i64 %[[RES]], ptr %{{.*}}, align 4
