@@ -33,11 +33,11 @@ subroutine sub1(n)
 !CHECK: %[[UB3_CVT:.*]] = fir.convert %[[UB3]] : (i32) -> index
 
 !CHECK: fir.do_concurrent
-!CHECK:   %[[I:.*]] = fir.alloca i32 {bindc_name = "i"}
+!CHECK:   %[[I:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 !CHECK:   %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
-!CHECK:   %[[J:.*]] = fir.alloca i32 {bindc_name = "j"}
+!CHECK:   %[[J:.*]] = fir.alloca i32 <{bindc_name = "j"}>
 !CHECK:   %[[J_DECL:.*]]:2 = hlfir.declare %[[J]]
-!CHECK:   %[[K:.*]] = fir.alloca i32 {bindc_name = "k"}
+!CHECK:   %[[K:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 !CHECK:   %[[K_DECL:.*]]:2 = hlfir.declare %[[K]]
 
 !CHECK:   fir.do_concurrent.loop (%[[I_IV:.*]], %[[J_IV:.*]], %[[K_IV:.*]]) =
