@@ -23229,6 +23229,12 @@ static SDValue lowerFTRUNC_FROUND_SSE2(SDValue Op, SelectionDAG &DAG) {
 
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
       DAG.getDataLayout(), *DAG.getContext(), VT);
+  // Return the input unchanged when |x| >= Threshold: such values are already
+  // integers and could overflow the FP_TO_SINT below. Inf takes this path too,
+  // and since the comparison is unordered, so does every NaN regardless of its
+  // sign bit. We therefore don't rely on FABS clearing the sign bit of a NaN
+  // (though it does: FABS is a bitwise operation defined on the bit
+  // representation, not on the abstract float value).
   SDValue IsLarge = DAG.getSetCC(DL, CCVT, Abs, Threshold, ISD::SETUGE);
 
   SDValue TruncInt = DAG.getNode(ISD::FP_TO_SINT, DL, IntVT, AbsBiased);
