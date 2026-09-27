@@ -185,6 +185,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
   the pointer points to an incomplete (forward-declared) type.
 
+- Improved {doc}`bugprone-redundant-branch-condition
+  <clang-tidy/checks/bugprone/redundant-branch-condition>` check by fixing
+  false positives when the condition variable is changed later in a loop that
+  encloses the inner `if`.
+
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
@@ -212,6 +217,10 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
+    
+- Fixed an infinite loop in {doc}`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
+  inherits from itself or has a circular inheritance graph.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
@@ -265,6 +274,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Fixed a crash when a class inherits from a forward-declared base class.
 
   - Fixed a crash when checking forward-declared classes with
     {option}`DefaultHungarianPrefix` enabled.
@@ -324,7 +335,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`noexcept-move-constructors
   <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
-  false positives for implicitly declared noexcept(false).
+  false positives for implicitly declared `noexcept(false)`.
 
 #### Removed checks
 

@@ -8,11 +8,6 @@
 
 # Array Composition
 
-```{contents}
----
-local:
----
-```
 
 This note attempts to describe the motivation for and design of an
 implementation of Fortran 90 (and later) array expression evaluation that
