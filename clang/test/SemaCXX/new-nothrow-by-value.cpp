@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
+// expected-no-diagnostics
 
 // The constant evaluator used to assume the (std::nothrow) placement argument
 // is always an lvalue and crashed when a user-declared allocation function
