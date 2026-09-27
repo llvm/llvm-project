@@ -617,12 +617,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  // Only allow masked ld/st to pass through to getMemIntrinsicInstrCost().
   auto *RetTy = ICA.getReturnType();
   if (auto *VTy = dyn_cast<ScalableVectorType>(RetTy))
-    if (VTy->getElementCount() == ElementCount::getScalable(1) &&
-        !is_contained({Intrinsic::masked_load, Intrinsic::masked_store},
-                      ICA.getID()))
+    if (VTy->getElementCount() == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
 
   switch (ICA.getID()) {
@@ -4933,15 +4930,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it until all instructions are vetted.
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
     if (VTy->getElementCount() == ElementCount::getScalable(1))
-      if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
-        return InstructionCost::getInvalid();
+      return InstructionCost::getInvalid();
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // TODO: Handle more cost kinds for floating point operations.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
@@ -5553,13 +5550,12 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
-  // <vscale x 1 x eltty> operations require mask adaptation.
-  // Allow it for normal masked ld/st
+  // The code-generator is currently not able to handle scalable vectors
+  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
   if (VT->getElementCount() == ElementCount::getScalable(1))
-    return is_contained({Intrinsic::masked_load, Intrinsic::masked_store},
-                        MICA.getID())
-               ? LT.first + 1
-               : InstructionCost::getInvalid();
+    return InstructionCost::getInvalid();
 
   InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
@@ -5681,24 +5677,17 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
-  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty)) {
-
-    // We only support full register predicate loads and stores.
-    if (VTy->getElementType()->isIntegerTy(1) &&
-        !VTy->getElementCount().isKnownMultipleOf(
-            ElementCount::getScalable(16)))
+  // The code-generator is currently not able to handle scalable vectors
+  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
+  // We also only support full register predicate loads and stores.
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
+        (VTy->getElementType()->isIntegerTy(1) &&
+         !VTy->getElementCount().isKnownMultipleOf(
+             ElementCount::getScalable(16))))
       return InstructionCost::getInvalid();
-
-    // <vscale x 1 x eltty> operations require crafting a new mask.
-    if (VTy->getElementCount() == ElementCount::getScalable(1)) {
-      Intrinsic::ID IID = Opcode == Instruction::Load ? Intrinsic::masked_load
-                                                      : Intrinsic::masked_store;
-      return getMaskedMemoryOpCost(
-                 MemIntrinsicCostAttributes(IID, Ty, Alignment, AddressSpace),
-                 CostKind) +
-             1;
-    }
-  }
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
