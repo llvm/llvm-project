@@ -40,6 +40,16 @@ static raw_ostream &emitCPPType(StringRef type, raw_ostream &os) {
   return os;
 }
 
+/// Share an operation interface method body when it only needs the raw op.
+static bool hasSharedOpBody(const Interface &interface,
+                            const InterfaceMethod &method) {
+  if (!isa<OpInterface>(interface) || method.isStatic())
+    return false;
+  std::optional<StringRef> body = method.getBody();
+  return body && body->contains("$_raw_op") && !body->contains("ConcreteOp") &&
+         !body->contains("$_op") && !body->contains("$_self");
+}
+
 /// Emit the method name and argument list for the given method. If 'addThisArg'
 /// is true, then an argument is added to the beginning of the argument list for
 /// the concrete value.
@@ -115,6 +125,8 @@ protected:
   StringRef substVar;
   /// The format context to use for methods.
   tblgen::FmtContext nonStaticMethodFmt;
+  /// Refer to the raw operation in model methods shared by all concrete ops.
+  tblgen::FmtContext sharedOpMethodFmt;
   tblgen::FmtContext traitMethodFmt;
   tblgen::FmtContext extraDeclsFmt;
 };
@@ -144,8 +156,11 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
     substVar = "_op";
     StringRef castCode = "(llvm::cast<ConcreteOp>(tablegen_opaque_val))";
     nonStaticMethodFmt.addSubst("_this", "impl")
+        .addSubst("_raw_op", "tablegen_opaque_val")
         .addSubst(substVar, castCode)
         .withSelf(castCode);
+    sharedOpMethodFmt.addSubst("_this", "impl")
+        .addSubst("_raw_op", "tablegen_opaque_val");
     traitMethodFmt.addSubst(substVar, "(*static_cast<ConcreteOp *>(this))");
     extraDeclsFmt.addSubst(substVar, "(*this)");
   }
@@ -253,6 +268,18 @@ void InterfaceGenerator::emitConceptDecl(const Interface &interface) {
     os << ");\n";
   }
 
+  // A shared body has no dependence on the concrete operation type.
+  for (auto &method : interface.getMethods()) {
+    if (!hasSharedOpBody(interface, method))
+      continue;
+    os << "    static ";
+    emitCPPType(method.getReturnType(), os);
+    emitMethodNameAndArgs(method, ("shared_" + method.getUniqueName()).str(),
+                          os, valueType, /*addThisArg=*/true,
+                          /*addConst=*/false);
+    os << ";\n";
+  }
+
   // Insert a field containing a concept for each of the base interfaces.
   auto baseInterfaces = interface.getBaseInterfaces();
   if (!baseInterfaces.empty()) {
@@ -295,12 +322,20 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     // shared source name. Do not collapse these to getName().
     os << "    " << modelClass << "() : Concept{";
     llvm::interleaveComma(
-        interface.getMethods(), os,
-        [&](const InterfaceMethod &method) { os << method.getUniqueName(); });
+        interface.getMethods(), os, [&](const InterfaceMethod &method) {
+          if (StringRef(modelClass) == "Model" &&
+              hasSharedOpBody(interface, method))
+            os << "Concept::shared_" << method.getUniqueName();
+          else
+            os << method.getUniqueName();
+        });
     os << "} {}\n\n";
 
     // Insert each of the virtual method overrides.
     for (auto &method : interface.getMethods()) {
+      if (StringRef(modelClass) == "Model" &&
+          hasSharedOpBody(interface, method))
+        continue;
       emitCPPType(method.getReturnType(), os << "    static inline ");
       emitMethodNameAndArgs(method, method.getUniqueName(), os, valueType,
                             /*addThisArg=*/!method.isStatic(),
@@ -351,6 +386,18 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
 void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
   llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
   for (auto &method : interface.getMethods()) {
+    if (hasSharedOpBody(interface, method)) {
+      StringRef body = *method.getBody();
+      os << "inline ";
+      emitCPPType(method.getReturnType(), os);
+      os << "detail::" << interface.getName() << "InterfaceTraits::Concept::";
+      emitMethodNameAndArgs(method, ("shared_" + method.getUniqueName()).str(),
+                            os, valueType, /*addThisArg=*/true,
+                            /*addConst=*/false);
+      os << " {\n  " << tblgen::tgfmt(body.trim(), &sharedOpMethodFmt)
+         << "\n}\n";
+      continue;
+    }
     os << "template<typename " << valueTemplate << ">\n";
     emitCPPType(method.getReturnType(), os);
     os << "detail::" << interface.getName() << "InterfaceTraits::Model<"

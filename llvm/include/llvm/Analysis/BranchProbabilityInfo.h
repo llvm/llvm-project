@@ -168,6 +168,12 @@ public:
   /// Swap outgoing edges probabilities for \p Src with branch terminator
   LLVM_ABI void swapSuccEdgesProbabilities(const BasicBlock *Src);
 
+  /// Returns the probabilities of edges with branch weights \p Weights.
+  /// Weights whose sum does not fit in 32 bits are scaled down, and if all
+  /// weights are zero, all edges are equally likely.
+  LLVM_ABI static SmallVector<BranchProbability>
+  getEdgeProbabilitiesFromWeights(ArrayRef<uint32_t> Weights);
+
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();

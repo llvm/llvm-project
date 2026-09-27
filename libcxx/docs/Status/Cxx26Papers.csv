@@ -198,7 +198,7 @@
 "[P3981R2](https://wg21.link/P3981R2)","Better return types in `std::inplace_vector` and `std::exception_ptr_cast`","2026-03 (Croydon)","","","[#189607](https://github.com/llvm/llvm-project/issues/189607)",""
 "[P4022R0](https://wg21.link/P4022R0)","Remove `try_append_range` from `inplace_vector` for now","2026-03 (Croydon)","","","[#189608](https://github.com/llvm/llvm-project/issues/189608)",""
 "[P4037R1](https://wg21.link/P4037R1)","Supporting `signed char` and `unsigned char` in random number generation","2026-03 (Croydon)","","","[#189609](https://github.com/llvm/llvm-project/issues/189609)",""
-"[P3450R1](https://wg21.link/P3450R1)","Extend `std::is_within_lifetime`","2026-03 (Croydon)","","","[#189610](https://github.com/llvm/llvm-project/issues/189610)",""
+"[P3450R1](https://wg21.link/P3450R1)","Extend `std::is_within_lifetime`","2026-03 (Croydon)","{{Complete}}","24","[#189610](https://github.com/llvm/llvm-project/issues/189610)",""
 "[P3982R2](https://wg21.link/P3982R2)","Split `strided_slice` into `extent_slice` and `range_slice` for C++26","2026-03 (Croydon)","","","[#189611](https://github.com/llvm/llvm-project/issues/189611)",""
 "[P4144R1](https://wg21.link/P4144R1)","Remove `span`'s `initializer_list` constructor for C++26","2026-03 (Croydon)","{{Complete}}","23","[#189612](https://github.com/llvm/llvm-project/issues/189612)",""
 "[P3804R2](https://wg21.link/P3804R2)","Iterating on `parallel_scheduler`","2026-03 (Croydon)","","","[#189616](https://github.com/llvm/llvm-project/issues/189616)",""

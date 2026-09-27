@@ -197,6 +197,9 @@ func.func @test_pinned_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?
 // CHECK-NOT: fir.allocmem
 // CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr = #cuf.cuda<pinned>
 // CHECK: cuf.free %{{.*}} {data_attr = #cuf.cuda<pinned>}
+// The descriptor must keep the pinned allocator, otherwise the runtime frees
+// the new storage with the default allocator.
+// CHECK: fir.embox {{.*}} {allocator_idx = 1 : i32}
 // CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK: hlfir.assign %{{.*}} to %[[BOX]] : !fir.ref<!fir.array<10xf64>>, !fir.box<!fir.heap<!fir.array<?xf64>>>
 
@@ -214,6 +217,21 @@ func.func @test_managed_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<
 // CHECK-NOT: fir.allocmem
 // CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr = #cuf.cuda<managed>
 // CHECK: cuf.free %{{.*}} {data_attr = #cuf.cuda<managed>}
+// CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+
+// Test: same for a unified allocatable.
+func.func @test_unified_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  return
+}
+// CHECK-LABEL: func.func @test_unified_allocator
+// CHECK: cuf.alloc !fir.array<?xf64>{{.*}}data_attr = #cuf.cuda<unified>
+// CHECK: cuf.free %{{.*}} {data_attr = #cuf.cuda<unified>}
+// CHECK: fir.embox {{.*}} {allocator_idx = 4 : i32}
 
 // Test: an allocatable in device memory must NOT be separated: the plain
 // hlfir.assign left behind would copy the elements on the host.
