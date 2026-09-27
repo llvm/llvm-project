@@ -299,6 +299,20 @@ static const DIType * stripQualifiers(const DIType *Ty) {
   return Ty;
 }
 
+/// Return the field that a CO-RE access index, an index into the record's DI
+/// elements, refers to, or null if that element is not a data member.
+static DIDerivedType *getDIRecordField(const DICompositeType *CTy,
+                                       uint64_t AccessIndex) {
+  DINodeArray Elements = CTy->getElements();
+  if (AccessIndex >= Elements.size())
+    return nullptr;
+  auto *Field = dyn_cast<DIDerivedType>(Elements[AccessIndex]);
+  if (!Field || Field->getTag() != dwarf::DW_TAG_member ||
+      Field->isStaticMember())
+    return nullptr;
+  return Field;
+}
+
 /// Return the position of Field among the BTF members of record CTy.
 static uint64_t getBTFMemberIndex(const DICompositeType *CTy,
                                   const DINode *Field) {
@@ -536,7 +550,7 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
   if (PTyTag == dwarf::DW_TAG_array_type)
     Ty = PTy->getBaseType();
   else
-    Ty = dyn_cast_or_null<DIType>(getDIRecordField(PTy, ParentAI));
+    Ty = getDIRecordField(PTy, ParentAI);
   if (!Ty)
     return false;
 
@@ -695,7 +709,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       PatchImm += AccessIndex * calcArraySize(CTy, 1) *
                   (EltTy->getSizeInBits() >> 3);
     } else if (Tag == dwarf::DW_TAG_structure_type) {
-      auto *MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
+      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       if (!MemberTy->isBitField()) {
         PatchImm += MemberTy->getOffsetInBits() >> 3;
       } else {
@@ -713,7 +727,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       return calcArraySize(CTy, 1) * (EltTy->getSizeInBits() >> 3);
     } else {
-      auto *MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
+      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       uint32_t SizeInBits = MemberTy->getSizeInBits();
       if (!MemberTy->isBitField())
         return SizeInBits >> 3;
@@ -736,7 +750,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
         report_fatal_error("Invalid array expression for llvm.bpf.preserve.field.info");
       BaseTy = stripQualifiers(CTy->getBaseType());
     } else {
-      auto *MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
+      auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       BaseTy = stripQualifiers(MemberTy->getBaseType());
     }
 
@@ -768,7 +782,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       SizeInBits = calcArraySize(CTy, 1) * EltTy->getSizeInBits();
     } else {
-      MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
+      MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       SizeInBits = MemberTy->getSizeInBits();
       IsBitField = MemberTy->isBitField();
     }
@@ -799,7 +813,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       SizeInBits = calcArraySize(CTy, 1) * EltTy->getSizeInBits();
     } else {
-      MemberTy = cast<DIDerivedType>(getDIRecordField(CTy, AccessIndex));
+      MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       SizeInBits = MemberTy->getSizeInBits();
       IsBitField = MemberTy->isBitField();
     }
@@ -984,10 +998,9 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
       if (!Field) {
         Call->getContext().diagnose(DiagnosticInfoUnsupported(
             *Call->getFunction(),
-            "CO-RE access to a field of '" + CTy->getName() +
-                "', which the debug info does not describe; the type may only "
-                "be declared there (e.g. clang's -fstandalone-debug emits it "
-                "in full)",
+            "CO-RE access index " + Twine(AccessIndex) +
+                " does not refer to a field of '" + CTy->getName() +
+                "' in the debug info",
             Call->getDebugLoc()));
         return nullptr;
       }
