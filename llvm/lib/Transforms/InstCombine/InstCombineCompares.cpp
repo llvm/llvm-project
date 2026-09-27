@@ -4562,7 +4562,7 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
     CmpPredicate CondPred;
     const APInt *C1, *C2, *P;
     if (match(SI,
-              m_OneUse(m_Select(m_c_ICmp(CondPred, m_Specific(RHS), m_APInt(P)),
+              m_OneUse(m_Select(m_ICmp(CondPred, m_Specific(RHS), m_APInt(P)),
                                 m_APInt(C1), m_APInt(C2))))) {
       bool C1SatisfiesCond = ICmpInst::compare(*C1, *P, CondPred);
       bool C2SatisfiesCond = ICmpInst::compare(*C2, *P, CondPred);
