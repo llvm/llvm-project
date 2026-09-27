@@ -20885,6 +20885,42 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
                       DAG.getConstant(0, DL, XLenVT), CC);
 }
 
+static SDValue combineFPBoundarySetCC(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  SDValue X = N->getOperand(0);
+  SDValue Bound = N->getOperand(1);
+  EVT FPVT = X.getValueType();
+  if ((FPVT != MVT::f32 && FPVT != MVT::f64) ||
+      (FPVT == MVT::f32 && !Subtarget.hasStdExtFOrZfinx()) ||
+      (FPVT == MVT::f64 && !Subtarget.hasStdExtDOrZdinx()) ||
+      !isa<ConstantFPSDNode>(Bound))
+    return SDValue();
+
+  const APFloat &C = cast<ConstantFPSDNode>(Bound)->getValueAPF();
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  FPClassTest Mask = fcNone;
+  FPClassTest NaNs = fcSNan | fcQNan;
+  if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics(), true))) {
+    if (CC == ISD::SETOLT || CC == ISD::SETULT)
+      Mask = fcNegInf;
+    else if (CC == ISD::SETOGE || CC == ISD::SETUGE)
+      Mask = fcAllFlags & ~(fcNegInf | NaNs);
+  } else if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics()))) {
+    if (CC == ISD::SETOGT || CC == ISD::SETUGT)
+      Mask = fcPosInf;
+    else if (CC == ISD::SETOLE || CC == ISD::SETULE)
+      Mask = fcAllFlags & ~(fcPosInf | NaNs);
+  }
+  if (Mask == fcNone)
+    return SDValue();
+  if (CC == ISD::SETULT || CC == ISD::SETUGE || CC == ISD::SETUGT ||
+      CC == ISD::SETULE)
+    Mask |= NaNs;
+  SDLoc DL(N);
+  return DAG.getNode(ISD::IS_FPCLASS, DL, N->getValueType(0), X,
+                     DAG.getTargetConstant(Mask, DL, MVT::i32));
+}
+
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const RISCVSubtarget &Subtarget) {
@@ -20894,6 +20930,10 @@ static SDValue performSETCCCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+
+  if (DCI.isBeforeLegalizeOps() && OpVT.isFloatingPoint())
+    if (SDValue V = combineFPBoundarySetCC(N, DAG, Subtarget))
+      return V;
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (SDValue V =
