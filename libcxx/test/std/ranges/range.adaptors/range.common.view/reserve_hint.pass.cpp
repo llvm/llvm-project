@@ -20,17 +20,15 @@
 #include "test_range.h"
 #include "types.h"
 
+static_assert(HasReserveHint<std::ranges::common_view<ApproximatelySizedView>&>);
+static_assert(HasReserveHint<std::ranges::common_view<ApproximatelySizedView> const&>);
+static_assert(!HasReserveHint<std::ranges::common_view<CopyableView>&>);
+static_assert(!HasReserveHint<std::ranges::common_view<CopyableView> const&>);
+static_assert(HasReserveHint<std::ranges::common_view<NonConstApproximatelySizedView>&>);
+static_assert(!HasReserveHint<std::ranges::common_view<NonConstApproximatelySizedView> const&>);
+
 constexpr bool test() {
   int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-
-  {
-    static_assert(HasReserveHint<std::ranges::common_view<ApproximatelySizedView>&>);
-    static_assert(HasReserveHint<std::ranges::common_view<ApproximatelySizedView> const&>);
-    static_assert(!HasReserveHint<std::ranges::common_view<CopyableView>&>);
-    static_assert(!HasReserveHint<std::ranges::common_view<CopyableView> const&>);
-    static_assert(HasReserveHint<std::ranges::common_view<NonConstApproximatelySizedView>&>);
-    static_assert(!HasReserveHint<std::ranges::common_view<NonConstApproximatelySizedView> const&>);
-  }
 
   {
     ApproximatelySizedView view(buf, buf + 8, 5);
