@@ -53,7 +53,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -847,8 +846,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       }
     }
 
-    Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
-                                             *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
