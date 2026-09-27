@@ -124,15 +124,40 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
   MachineFunction &MF = CurDAG->getMachineFunction();
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
 
+
   switch(N.getOpcode()) {
   case SHISD::WRAPPER:
-  case ISD::LOAD:
+
     // Address is a wrapper, get the underlying data.
     Base = N;
     Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
     return true;
   default:
     break;
+  }
+
+  // Handle address + offset
+  if (N.getOpcode() == ISD::ADD) {
+    auto LHS = N.getOperand(0);
+    auto RHS = N.getOperand(1);
+
+    // Frame should not lower to Addr
+    if (isa<FrameIndexSDNode>(LHS))
+      return false;
+
+    if (isa<ConstantSDNode>(RHS)) {
+      auto *C = dyn_cast<ConstantSDNode>(RHS);
+      Base = LHS;
+      Disp = CurDAG->getTargetConstant(*C->getConstantIntValue(), SDLoc(Op), C->getValueType(0));
+      return true;
+    }
+  }
+
+  // Handle indirect address.
+  if (N.getOpcode() == ISD::CopyFromReg) {
+    Base = N;
+    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
+    return true;
   }
 
   // Address is a constant pointer, lower to constpool.
@@ -145,7 +170,6 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
       Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
       return true;
     }
-
   }
   return false;
 }
@@ -161,6 +185,26 @@ bool SuperHDAGToDAGISel::SelectFrAddr(SDNode *Op, SDValue N, SDValue &Base,
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
     Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
     return true;
+  }
+
+  // Handle frame indexing with offset.
+  if (N.getOpcode() == ISD::ADD) {
+    auto LHS = N.getOperand(0);
+    auto RHS = N.getOperand(1);
+    if (isa<FrameIndexSDNode>(LHS) && isa<ConstantSDNode>(RHS)) {
+      auto *F = dyn_cast<FrameIndexSDNode>(LHS);
+      auto *C = dyn_cast<ConstantSDNode>(RHS);
+      Base = CurDAG->getTargetFrameIndex(F->getIndex(), PtrVT);
+      Disp = CurDAG->getTargetConstant(*C->getConstantIntValue(), SDLoc(Op), C->getValueType(0));
+      return true;
+    }
+
+    if (isa<RegisterSDNode>(LHS) && isa<ConstantSDNode>(RHS)) {
+      auto *C = dyn_cast<ConstantSDNode>(RHS);
+      Base = LHS;
+      Disp = CurDAG->getTargetConstant(*C->getConstantIntValue(), SDLoc(Op), C->getValueType(0));
+      return true;
+    }
   }
   return false;
 }

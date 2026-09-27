@@ -110,7 +110,7 @@ static void replaceFI(const MachineFunction &MF, MachineBasicBlock::iterator II,
                       unsigned FIOperandNum, int Offset, Register FramePtr) {
 
   MI.getOperand(FIOperandNum).ChangeToRegister(FramePtr, false);
-  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(-Offset);
 }
 
 bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -126,17 +126,45 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
   const TargetInstrInfo &TII =
       *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
-  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  // Get the register offset to fetch.
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  int64_t FrameOffset = MI.getOperand(FIOperandNum+1).getImm();
   Register FrameReg;
-  int64_t Offset =
-      TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
+
+  int64_t Offset = 
+      TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed() + 
+      FrameOffset;
+
+  // Load effective address of stack slot.
+  if (MI.getOpcode() == SH::SHFrmIdx) {
+    Register DstReg = MI.getOperand(0).getReg();
+    if (DstReg != FrameReg) {
+      TII.copyPhysReg(MBB, MI, DL, DstReg, FrameReg, false, false, false);
+    }
+
+    if (Offset > 0) {
+
+      // Skip over the SHFrmIdx instruction.
+      II++;
+
+      while(Offset != 0) {
+        int64_t NextOff = Offset % 255;
+
+        // Add offset to register.
+        BuildMI(MBB, II, DL, TII.get(SH::ADDI), DstReg)
+            .addReg(DstReg, RegState::Kill)
+            .addImm(NextOff);
+
+        Offset -= NextOff;
+      }
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
 
   LLVM_DEBUG({
-    int64_t Fo =
-        TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
-    dbgs() << "Eliminiate FI " << FrameIndex << " @ SP[" << -Fo << "]...\n";
+    dbgs() << "Eliminiate FI " << FrameIndex << " @ SP[" << -Offset << "]...\n";
   });
 
   replaceFI(MF, II, MI, DL, FIOperandNum, Offset, FrameReg);
