@@ -23,7 +23,6 @@
 
 #include "test_iterators.h"
 #include "test_range.h"
-#include "types.h"
 
 static constexpr int globalBuff[8] = {};
 
