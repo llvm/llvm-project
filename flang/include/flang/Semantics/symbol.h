@@ -467,6 +467,10 @@ public:
   void set_cudaDataAttr(std::optional<common::CUDADataAttr> attr) {
     cudaDataAttr_ = attr;
   }
+  bool cudaDataAttrIsImplicit() const { return cudaDataAttrIsImplicit_; }
+  void set_cudaDataAttrIsImplicit(bool yes = true) {
+    cudaDataAttrIsImplicit_ = yes;
+  }
   // Specification expressions from the bounds of a zero-size explicit-shape
   // bounds array (F2023).  The entity is scalar, so these bounds are not
   // part of shape(), but they are still specification expressions that must be
@@ -487,6 +491,8 @@ private:
   common::IgnoreTKRSet ignoreTKR_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   std::optional<common::CUDADataAttr> cudaDataAttr_;
+  bool cudaDataAttrIsImplicit_{false}; // Tracks whether cudaDataAttr_ was
+                                       // applied implicitly by the compiler
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ObjectEntityDetails &);
 };
@@ -568,6 +574,10 @@ public:
   bool isDECStructure() const { return isDECStructure_; }
   bool isEnumerationType() const { return isEnumerationType_; }
   void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  std::optional<Attr> enumeratorDefaultAccess() const {
+    return enumeratorDefaultAccess_;
+  }
+  void set_enumeratorDefaultAccess(Attr a) { enumeratorDefaultAccess_ = a; }
   // Name of the hidden component created for an enumeration type to hold
   // the 1-based enumerator ordinal.
   static constexpr char ordinalComponentName[]{"__ordinal"};
@@ -627,6 +637,7 @@ private:
   // These fields are only used if the derived type is an enumeration type.
   bool isEnumerationType_{false};
   int enumeratorCount_{0};
+  std::optional<Attr> enumeratorDefaultAccess_;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);
@@ -925,6 +936,11 @@ public:
       // For compiler created symbols that are constant but cannot legally have
       // the PARAMETER attribute.
       ReadOnly,
+      // A named constant created by an ENUMERATOR statement within an
+      // ENUMERATION TYPE definition (F2023 R768).  Distinguishes the intrinsic
+      // enumerators of an enumeration type from user-declared PARAMETERs of
+      // that type.
+      EnumeratorParameter,
       // OpenACC data-sharing attribute
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute

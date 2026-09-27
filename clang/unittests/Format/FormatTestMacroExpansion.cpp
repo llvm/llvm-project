@@ -77,8 +77,7 @@ int f;
 ID(
     namespace foo {
     int a;
-    }
-) // namespace k
+    }) // namespace k
 )",
             format(R"(
 int a;
@@ -313,6 +312,37 @@ TEST_F(FormatTestMacroExpansion, ObjectLikeMacroCalledWithArgsDoesNotHang) {
                 "}",
                 Style);
   verifyNoCrash("CASE(1, \"1\");", Style);
+}
+
+TEST_F(FormatTestMacroExpansion, ExpandsAdjacentMacroCallsInOrder) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ID(x)=x");
+
+  verifyFormat("ID(a;)\n"
+               "ID(\n"
+               "    // c\n"
+               "    b;)",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TokensAfterMacroCallAreNotPartOfCall) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ID(x)=x");
+
+  verifyFormat("ID(a;) // c\n"
+               "ID(b;)",
+               "ID(\n"
+               "    a;) // c\n"
+               "ID(b;)",
+               Style);
+  verifyFormat("int x = ID(1) // c\n"
+               "        + 2;",
+               Style);
+  verifyFormat("ID(a;)\n"
+               "#if X\n"
+               "int b;\n"
+               "#endif",
+               Style);
 }
 
 } // namespace

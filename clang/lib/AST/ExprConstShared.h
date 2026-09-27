@@ -77,6 +77,7 @@ enum Predicate : uint32_t {
 // Return true if immediate and the comparison flags are matching
 bool MatchesPredicate(uint32_t Imm, llvm::APFloatBase::cmpResult CompareResult);
 class CallExpr;
+class CXXRecordDecl;
 } // namespace clang
 
 using namespace clang;
@@ -159,5 +160,8 @@ EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
 
 const Expr *ignorePointerCastsAndParens(const Expr *E);
+
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
+bool isReadByLvalueToRvalueConversion(QualType T);
 
 #endif
