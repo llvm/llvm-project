@@ -63,15 +63,13 @@ public:
   }
 };
 
-struct alignas(2 * sizeof(void*)) rcu_atomic_list_view_entry {
+struct rcu_atomic_list_view_entry {
   __rcu_node* head_ = nullptr;
   __rcu_node* tail_ = nullptr;
 };
 
 class rcu_atomic_list_view {
-  using entry = rcu_atomic_list_view_entry;
-
-  std::atomic<entry> entry_{};
+  std::atomic<rcu_atomic_list_view_entry> entry_{};
 
   friend class rcu_singly_list_view;
 
@@ -82,10 +80,10 @@ public:
     while (true) {
       auto new_entry = [&] {
         if (expected_entry.head_ == nullptr) {
-          return entry{node, node};
+          return rcu_atomic_list_view_entry{node, node};
         } else {
           node->__next_ = expected_entry.head_;
-          return entry{node, expected_entry.tail_};
+          return rcu_atomic_list_view_entry{node, expected_entry.tail_};
         }
       }();
       if (entry_.compare_exchange_weak(
@@ -102,7 +100,7 @@ inline void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexc
   if (other.entry_.load(std::memory_order_relaxed).head_ == nullptr) {
     return;
   }
-  auto entry = other.entry_.exchange(rcu_atomic_list_view::entry{nullptr, nullptr}, std::memory_order_acq_rel);
+  auto entry = other.entry_.exchange(rcu_atomic_list_view_entry{nullptr, nullptr}, std::memory_order_acq_rel);
   rcu_singly_list_view tmp;
   tmp.head_ = entry.head_;
   tmp.tail_ = entry.tail_;
