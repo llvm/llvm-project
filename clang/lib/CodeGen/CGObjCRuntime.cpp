@@ -245,7 +245,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       HasCatchAll |= Handler.TypeInfo == nullptr;
       CGF.EmitBlock(Handler.Block);
 
-      CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
+      CodeGenFunction::LexicalScope Cleanups(CGF,
+                                             Handler.Body->getSourceRange());
       SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
       if (IsMSVC) {
         llvm::BasicBlock::iterator CPICandidate =
@@ -275,9 +276,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
         // Add a cleanup to leave the catch.
         bool EndCatchMightThrow = (Handler.Variable == nullptr);
 
-        CGF.EHStack.pushCleanup<CallObjCEndCatch>(NormalAndEHCleanup,
-                                                  EndCatchMightThrow,
-                                                  endCatchFn);
+        CGF.EHStack.pushCleanup<CallObjCEndCatch>(
+            NormalAndEHCleanup, EndCatchMightThrow, endCatchFn);
       }
 
       // Bind the catch parameter if it exists.
