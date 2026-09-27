@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -272,11 +273,7 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
         const Expr *RangeArg =
             Call->getArg(Replace == Indexes::Second ? Second : First);
         std::string ReplaceText =
-            Lexer::getSourceText(
-                CharSourceRange::getTokenRange(ArgExpr->getSourceRange()),
-                Result.Context->getSourceManager(),
-                Result.Context->getLangOpts())
-                .str();
+            tooling::fixit::getText(*ArgExpr, *Result.Context).str();
         if (ArgExpr->getType()->isPointerType() &&
             isa<CXXMemberCallExpr>(RangeArg->IgnoreParenImpCasts()))
           ReplaceText = fixit::formatDereference(*ArgExpr, *Result.Context);
