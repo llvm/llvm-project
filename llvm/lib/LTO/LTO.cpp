@@ -1128,7 +1128,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
       NewIA += " " + llvm::join(NonPrevailingAsmSymbols, ", ");
     }
     NewIA += "\n";
-    M.prependModuleInlineAsm(NewIA);
+    M.prependModuleInlineAsm({NewIA, M.getModuleInlineAsm().front().Props});
   }
 
   assert(MsymI == MsymE);

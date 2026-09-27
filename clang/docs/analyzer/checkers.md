@@ -4284,6 +4284,26 @@ The cost is that an identity function is reported even though its result really 
 > }
 > ```
 
+Includes built-in recognition for std view types. For example:
+
+> ```cpp
+> void foo8(Vector<char>& buffer) {
+>   for (char& c : buffer | std::views::reverse) // warn
+>     someFunction();
+> }
+>
+> void foo9(Vector<char>& buffer) {
+>   // ok, C++23 extends the borrow() temporary across the loop
+>   for (char& c : borrow(buffer).get() | std::views::reverse)
+>     someFunction();
+> }
+>
+> void foo10(Vector<char>& buffer) {
+>   char* p = std::data(buffer); // warn
+>   someFunction();
+> }
+> ```
+
 #### alpha.webkit.UnborrowedCallArgsChecker
 
 The same rule as alpha.webkit.UnborrowedLocalVarsChecker, applied to function arguments.
