@@ -313,7 +313,8 @@ def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
 def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
 
 def MipsAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltNameWithIndex = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def MipsAsmParserVariant : AsmParserVariant {
