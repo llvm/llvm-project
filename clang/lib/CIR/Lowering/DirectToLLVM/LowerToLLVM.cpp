@@ -324,9 +324,25 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
     cir::MemCpyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ArrayAttr argAttrs;
+  if (op.getDstAlignment() || op.getSrcAlignment()) {
+    mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
+        mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        rewriter.getI64IntegerAttr(op.getDstAlignment().value_or(1)));
+    mlir::NamedAttribute srcAlignAttr = rewriter.getNamedAttr(
+        mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        rewriter.getI64IntegerAttr(op.getSrcAlignment().value_or(1)));
+    argAttrs = rewriter.getArrayAttr({
+        /*dst_attrs=*/rewriter.getDictionaryAttr({dstAlignAttr}),
+        /*src_attrs=*/rewriter.getDictionaryAttr({srcAlignAttr}),
+    });
+  }
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false);
+      /*isVolatile=*/false,
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
+      /*res_attrs=*/nullptr);
   return mlir::success();
 }
 
@@ -582,6 +598,27 @@ mlir::LogicalResult lowerConstrainableFPOp(
                                        constrainedMnemonic, hasRoundingMode);
 }
 
+static mlir::LLVM::FastmathFlags
+convertFastMathFlags(cir::FastMathFlags cirFlags) {
+  mlir::LLVM::FastmathFlags llvmFlags{};
+  const std::pair<cir::FastMathFlags, mlir::LLVM::FastmathFlags> flags[] = {
+      {cir::FastMathFlags::nnan, mlir::LLVM::FastmathFlags::nnan},
+      {cir::FastMathFlags::ninf, mlir::LLVM::FastmathFlags::ninf},
+      {cir::FastMathFlags::nsz, mlir::LLVM::FastmathFlags::nsz},
+      {cir::FastMathFlags::arcp, mlir::LLVM::FastmathFlags::arcp},
+      {cir::FastMathFlags::contract, mlir::LLVM::FastmathFlags::contract},
+      {cir::FastMathFlags::afn, mlir::LLVM::FastmathFlags::afn},
+      {cir::FastMathFlags::reassoc, mlir::LLVM::FastmathFlags::reassoc},
+  };
+
+  for (auto [cirFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(cirFlags, cirFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+
+  return llvmFlags;
+}
+
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
     cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -594,6 +631,9 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
       return op.emitError("expected LLVM result type");
   }
   StringRef name = op.getIntrinsicName();
+  mlir::LLVM::FastmathFlags fastmathFlags = {};
+  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
+    fastmathFlags = convertFastMathFlags(*fastmath);
 
   // Some LLVM intrinsics require ElementType attribute to be attached to
   // the argument of pointer type. That prevents us from generating LLVM IR
@@ -606,7 +646,7 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   // to set LLVM IR attribute.
   assert(!cir::MissingFeatures::intrinsicElementTypeSupport());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
-                                   adaptor.getOperands());
+                                   adaptor.getOperands(), fastmathFlags);
   return mlir::success();
 }
 

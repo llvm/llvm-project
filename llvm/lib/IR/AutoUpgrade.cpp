@@ -6670,6 +6670,28 @@ MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
   return MDNode::get(Context, Elts);
 }
 
+MDNode *llvm::UpgradeTBAAStructNode(MDNode &MD) {
+  // !tbaa.struct is a list of (offset, size, tag) triples. Upgrade any
+  // old-style scalar field tag to struct-path form via UpgradeTBAANode.
+  unsigned NumOperands = MD.getNumOperands();
+  if (NumOperands == 0 || NumOperands % 3 != 0)
+    return &MD; // Malformed; leave it for the verifier to reject.
+
+  SmallVector<Metadata *, 12> Elts(MD.op_begin(), MD.op_end());
+  bool Changed = false;
+  for (unsigned I = 2; I < NumOperands; I += 3) {
+    auto *Tag = dyn_cast_or_null<MDNode>(Elts[I]);
+    if (!Tag)
+      continue;
+    MDNode *Upgraded = UpgradeTBAANode(*Tag);
+    if (Upgraded == Tag)
+      continue;
+    Elts[I] = Upgraded;
+    Changed = true;
+  }
+  return Changed ? MDNode::get(MD.getContext(), Elts) : &MD;
+}
+
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
                                       Instruction *&Temp) {
   if (Opc != Instruction::BitCast)

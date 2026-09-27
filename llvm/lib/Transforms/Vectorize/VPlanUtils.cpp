@@ -717,6 +717,29 @@ VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
   return cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
 }
 
+VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
+                                        const VPPhi *PhiR) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  // The flags only bound the induction values if the increment directly
+  // updates PhiR.
+  VPValue *Inc = PhiR->getOperand(1);
+  if (match(Inc, m_c_Add(m_Specific(PhiR), m_VPValue())))
+    return cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone();
+
+  if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
+    // The step of a sub induction is negated, so NUW cannot be preserved. NSW
+    // can, if the step is not the signed minimum.
+    ConstantInt *Step = ID.getConstIntStepValue();
+    bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
+               Step && !Step->isMinValue(/*IsSigned=*/true);
+    return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
+  }
+
+  return VPIRFlags::WrapFlagsTy(false, false);
+}
+
 std::optional<MemoryLocation>
 vputils::getMemoryLocation(const VPRecipeBase &R) {
   auto *M = dyn_cast<VPIRMetadata>(&R);
