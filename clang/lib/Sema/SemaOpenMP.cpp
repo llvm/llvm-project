@@ -2488,9 +2488,7 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
             break;
           }
       }
-      // A lambda or block at namespace scope has no enclosing function scope,
-      // so the walk can run out of scopes once all captured regions of the
-      // directive have been left.
+      // Lambdas and blocks at namespace scope have no enclosing function scope.
       if (!CSI)
         return nullptr;
       SmallVector<OpenMPDirectiveKind, 4> Regions;
