@@ -8158,7 +8158,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy() || C->getType()->isStructTy()) {
+    if (C->getType()->isVectorTy() || C->getType()->isAggregateType()) {
       if (isa<ConstantExpr>(C)) {
         // Scalable vectors can use a ConstantExpr to build a splat.
         if (Constant *SplatC = C->getSplatValue())
