@@ -260,6 +260,8 @@ public:
   bool
   visitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *S);
 
+  bool registerRedecl(const VarDecl *VD, const APValue &V);
+
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;

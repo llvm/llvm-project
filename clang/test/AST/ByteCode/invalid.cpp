@@ -282,3 +282,34 @@ namespace NonRecordNonArrayDesc {
 
   F foo(42);
 }
+
+namespace CompositeFieldInit {
+  struct S {
+    static consteval int decrement(int &x) {
+      return --x;
+    }
+
+    int a = 10;
+    int b = decrement(a); // both-error {{is not a constant expression}} \
+                          // both-note {{declared here}} \
+                          // both-note {{implicit use of 'this'}}
+  };
+
+  struct S2 {
+     const S s{10}; // both-note {{in the default initializer of 'b'}}
+  };
+
+  constexpr S2 s2{};
+}
+
+namespace UnsizedArrayAndNonEmptyPath {
+  void foo() {
+    struct S {
+      int m[];
+    } s;
+    constexpr auto p = s.m; // both-error {{must be initialized by a constant expression}} \
+                            // both-note {{array-to-pointer decay of array member without known bound is not supported}}
+  }
+
+  void bar() { foo(); }
+}

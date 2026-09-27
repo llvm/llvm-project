@@ -134,6 +134,11 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_FORMAT_PRINTF(1, 2);
   ((void)sizeof("" __VA_ARGS__, 0),                                            \
    ORC_RT_LOG_##Level(orc_rt_log_Category_##Category, __VA_ARGS__))
 
+/*
+ * To check whether a level is compiled in, use ORC_RT_LOG_ENABLED(Level),
+ * defined in orc-rt-c/config.h.
+ */
+
 /**
  * \def ORC_RT_LOG_PUB_S
  * Conversion specifier for publishing a runtime (non-literal) C string.
