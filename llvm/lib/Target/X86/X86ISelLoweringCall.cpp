@@ -2687,7 +2687,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // RegMask, including superregisters. Clearing only subregs_inclusive is
     // insufficient: an i32 argument in R14D must also remove R14 from the
     // preserved set, otherwise a live 64-bit value in R14 can be incorrectly
-    // kept across the call (see llvm/llvm-project#225057).
+    // kept across the call.
     if (ShouldDisableArgRegs) {
       for (auto const &RegPair : RegsToPass)
         for (MCRegAliasIterator Alias(RegPair.first, TRI, true);
