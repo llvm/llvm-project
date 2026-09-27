@@ -115,6 +115,34 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_const_cmp8();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_switch();
+// Argument and return value tracing: observe the IR arguments of a function on
+// entry and its return values. What is observed is decided by the LLVM IR
+// alone; debug information never changes it.
+//   __sanitizer_cov_trace_args(u32 arg_idx, u32 size, u64 val,
+//                              u64 *offsets, u32 num_fields)
+//   __sanitizer_cov_trace_ret (u32 size, u64 val,
+//                              u64 *offsets, u32 num_fields)
+// `arg_idx` is the position of the argument in the IR parameter list, not the
+// source-language parameter number: one source parameter may be several IR
+// arguments, a hidden struct-return pointer takes a position, and the elements
+// of a first-class aggregate are reported one call each under the same index.
+// `val` is the reported value itself - a pointer as the address it holds - or,
+// when num_fields is non-zero, the address of `size` bytes to read the
+// num_fields {byte offset, byte size} pairs in `offsets` out of, none wider
+// than 8 bytes: an object the ABI passed or returned in memory, described by
+// its IR-type elements, or the bytes behind a pointer the IR says are
+// dereferenceable, as many as that says and
+// -sanitizer-coverage-trace-pointee-bytes allows. Such a pointer may be null
+// if the IR said dereferenceable_or_null. A size of zero means nothing was
+// reported: a void return, a value with no fixed-size bit pattern, or an
+// object the function does not use, whose address may be poison.
+// Neither callback is passed the function it speaks for. A runtime that needs
+// it takes its own return address, less one so that the address lies within the
+// call, which identifies the observation.
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_cov_trace_args();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_cov_trace_ret();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_div4();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
