@@ -5740,9 +5740,7 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
     Diag(DRE->getBeginLoc(), diag::err_arc_atomic_ownership)
         << ValType << FirstArg->getSourceRange();
 
-    return CreateRecoveryExpr(TheCall->getBeginLoc(), TheCall->getEndLoc(),
-                              llvm::to_vector(TheCall->arguments()),
-                              TheCall->getType());
+    return ExprError();
   }
 
   // Strip any qualifiers off ValType.
