@@ -11,8 +11,8 @@ inline constexpr struct nothrow_t {
 } nothrow;
 } // namespace std
 
-void *operator new[](unsigned long, std::nothrow_t) noexcept;
-void *operator new(unsigned long, std::nothrow_t) noexcept;
+void *operator new[](__SIZE_TYPE__, std::nothrow_t) noexcept;
+void *operator new(__SIZE_TYPE__, std::nothrow_t) noexcept;
 
 void set(int *p) {
   p = (1 ? new (std::nothrow) int[1] : nullptr);
