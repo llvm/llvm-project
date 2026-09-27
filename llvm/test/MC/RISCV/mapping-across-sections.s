@@ -35,10 +35,7 @@
 # CHECK: [[#WIBBLE:]]] .wibble
 # CHECK: [[#STARTS_DATA:]]] .starts_data
 
-## TODO: RISCVELFStreamer::changeSection saves mapping symbol state to
-## getPreviousSection() instead of getCurrentSection() on popSection(), causing
-## a duplicate $x mapping symbol at offset 8 in .text.
-# CHECK:           Symbol table '.symtab' contains 5 entries:
+# CHECK:           Symbol table '.symtab' contains 4 entries:
 # CHECK-NEXT:         Num:    Value  Size Type    Bind   Vis     Ndx Name
 # CHECK-NEXT:           0: {{0+}}       0 NOTYPE  LOCAL  DEFAULT   UND {{$}}
 # CHECK-RV32-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]]        $xrv32i2p1{{$}}
@@ -46,6 +43,4 @@
 # CHECK-RV32-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#WIBBLE]]      $xrv32i2p1{{$}}
 # CHECK-RV64-NEXT:      2: {{0+}}       0 NOTYPE  LOCAL  DEFAULT [[#WIBBLE]]      $xrv64i2p1{{$}}
 # CHECK-NEXT:           3: {{0+}}       0 NOTYPE  LOCAL  DEFAULT [[#STARTS_DATA]] $d{{$}}
-# CHECK-RV32-NEXT:      4: 00000008     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]]        $xrv32i2p1{{$}}
-# CHECK-RV64-NEXT:      4: {{0+}}8      0 NOTYPE  LOCAL  DEFAULT [[#TEXT]]        $xrv64i2p1{{$}}
 # CHECK-NOT:       {{.}}
