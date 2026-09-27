@@ -915,9 +915,9 @@ namespace {
     /// initialization.
     uint64_t ArrayInitIndex = -1;
 
-    EvalInfo(const ASTContext &C, SemaProxy *Sema, Expr::EvalStatus &S,
+    EvalInfo(const ASTContext &C, SemaProxy *SProxy, Expr::EvalStatus &S,
              EvaluationMode Mode)
-        : State(const_cast<ASTContext &>(C), Sema, S), CurrentCall(nullptr),
+        : State(const_cast<ASTContext &>(C), SProxy, S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
@@ -22014,7 +22014,7 @@ bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsRValue");
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Result,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result,
                 EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsRValue(this, Result, Ctx, Info);
@@ -22047,7 +22047,7 @@ bool Expr::EvaluateAsInt(EvalResult &Result, const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsInt");
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Result,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result,
                 EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsInt(this, Result, Ctx, AllowSideEffects, Info);
@@ -22059,7 +22059,7 @@ bool Expr::EvaluateAsFixedPoint(EvalResult &Result, const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsFixedPoint");
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Result,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result,
                 EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsFixedPoint(this, Result, Ctx, AllowSideEffects, Info);
@@ -22091,7 +22091,7 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsLValue");
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Result, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result, EvaluationMode::ConstantFold);
   Info.InConstantContext = InConstantContext;
   LValue LV;
   CheckedTemporaries CheckedTemps;
@@ -22212,14 +22212,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
   EvaluationMode EM = EvaluationMode::ConstantExpression;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Result, EM);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result, EM);
 
   return ::EvaluateConstantExpr(Result, Ctx, Info, this, Kind);
 }
 
 bool Expr::EvaluateAsMandatedConstantExpr(EvalResult &Result,
                                           const ASTContext &Ctx,
-                                          SemaProxy &Sema,
+                                          SemaProxy &SProxy,
                                           ConstantExprKind Kind) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
@@ -22230,7 +22230,7 @@ bool Expr::EvaluateAsMandatedConstantExpr(EvalResult &Result,
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsMandatedConstantExpr");
   EvaluationMode EM = EvaluationMode::ConstantExpression;
-  EvalInfo Info(Ctx, &Sema, Result, EM);
+  EvalInfo Info(Ctx, &SProxy, Result, EM);
 
   return ::EvaluateConstantExpr(Result, Ctx, Info, this, Kind);
 }
@@ -22297,7 +22297,7 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
     return Name;
   });
 
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, EStatus,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EStatus,
                 (IsConstantInitialization &&
                  (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvaluationMode::ConstantExpression
@@ -22311,7 +22311,7 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
 bool Expr::EvaluateAsMandatedConstantInitializer(EvalResult &EStatus,
                                                  const ASTContext &Ctx,
-                                                 SemaProxy &Sema,
+                                                 SemaProxy &SProxy,
                                                  const VarDecl *VD) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
@@ -22324,7 +22324,7 @@ bool Expr::EvaluateAsMandatedConstantInitializer(EvalResult &EStatus,
     return Name;
   });
 
-  EvalInfo Info(Ctx, &Sema, EStatus, EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, &SProxy, EStatus, EvaluationMode::ConstantExpression);
   Info.setEvaluatingDecl(VD, EStatus.Val);
   Info.InConstantContext = true;
 
@@ -22385,7 +22385,7 @@ bool VarDecl::evaluateDestruction(
 
   bool IsConstantDestruction = hasConstantInitialization();
 
-  EvalInfo Info(getASTContext(), /*Sema=*/nullptr, EStatus,
+  EvalInfo Info(getASTContext(), /*SProxy=*/nullptr, EStatus,
                 IsConstantDestruction ? EvaluationMode::ConstantExpression
                                       : EvaluationMode::ConstantFold);
   return ::evaluateDestruction(EStatus, Info, this, IsConstantDestruction);
@@ -22420,7 +22420,7 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, EVResult,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EVResult,
                 EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 
@@ -22440,7 +22440,7 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstIntCheckOverflow");
   EvalResult EVResult;
   EVResult.Diag = Diag;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, EVResult,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EVResult,
                 EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
   Info.CheckingForUndefinedBehavior = true;
@@ -22461,7 +22461,7 @@ void Expr::EvaluateForOverflow(const ASTContext &Ctx) const {
   bool IsConst;
   EvalResult EVResult;
   if (!FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
-    EvalInfo Info(Ctx, /*Sema=*/nullptr, EVResult,
+    EvalInfo Info(Ctx, /*SProxy=*/nullptr, EVResult,
                   EvaluationMode::IgnoreSideEffects);
     Info.CheckingForUndefinedBehavior = true;
     (void)::EvaluateAsRValue(Info, this, EVResult.Val);
@@ -22516,7 +22516,7 @@ static ICEDiag Worst(ICEDiag A, ICEDiag B) { return A.Kind >= B.Kind ? A : B; }
 static ICEDiag CheckEvalInICE(const Expr* E, const ASTContext &Ctx) {
   Expr::EvalResult EVResult;
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
                 EvaluationMode::ConstantExpression);
 
   Info.InConstantContext = true;
@@ -23026,7 +23026,7 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx,
   // value.
   EvalResult ExprResult;
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
                 EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 
@@ -23062,7 +23062,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
 
   // Build evaluation settings.
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
                 EvaluationMode::ConstantExpression);
   SmallVector<PartialDiagnosticAt> MSRelaxedDiag;
   Status.ExtendedDiag = AllowRelaxedEval ? &MSRelaxedDiag : nullptr;
@@ -23092,7 +23092,7 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   });
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status,
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
                 EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
 
@@ -23179,7 +23179,7 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
-  EvalInfo Info(FD->getASTContext(), /*Sema=*/nullptr, Status,
+  EvalInfo Info(FD->getASTContext(), /*SProxy=*/nullptr, Status,
                 EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
   Info.CheckingPotentialConstantExpression = true;
@@ -23229,7 +23229,7 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
-  EvalInfo Info(FD->getASTContext(), /*Sema=*/nullptr, Status,
+  EvalInfo Info(FD->getASTContext(), /*SProxy=*/nullptr, Status,
                 EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
   Info.CheckingPotentialConstantExpression = true;
@@ -23254,7 +23254,7 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
     return std::nullopt;
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status, EvaluationMode::ConstantFold);
   if (Info.EnableNewConstInterp)
     return Info.Ctx.getInterpContext().tryEvaluateObjectSize(
         Info, this, Type,
@@ -23310,7 +23310,7 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status, EvaluationMode::ConstantFold);
   std::string StringResult;
 
   if (Info.EnableNewConstInterp) {
@@ -23400,7 +23400,7 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
 
 std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status, EvaluationMode::ConstantFold);
 
   if (Info.EnableNewConstInterp)
     return Info.Ctx.getInterpContext().evaluateStrlen(Info, this);

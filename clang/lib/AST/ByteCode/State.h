@@ -80,8 +80,8 @@ class SourceInfo;
 /// Interface for the VM to interact with the AST walker's context.
 class State {
 public:
-  State(ASTContext &ASTCtx, SemaProxy *Sema, Expr::EvalStatus &EvalStatus)
-      : Ctx(ASTCtx), Sema(Sema), EvalStatus(EvalStatus) {}
+  State(ASTContext &ASTCtx, SemaProxy *SProxy, Expr::EvalStatus &EvalStatus)
+      : Ctx(ASTCtx), SProxy(SProxy), EvalStatus(EvalStatus) {}
   virtual ~State();
 
   virtual const Frame *getCurrentFrame() = 0;
@@ -90,7 +90,7 @@ public:
 
   Expr::EvalStatus &getEvalStatus() const { return EvalStatus; }
   ASTContext &getASTContext() const { return Ctx; }
-  SemaProxy *getSemaProxy() const { return Sema; }
+  SemaProxy *getSemaProxy() const { return SProxy; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
   /// If \c DiagId should be relaxed as per the current evaluation settings,
@@ -192,7 +192,7 @@ public:
 
   EvaluationMode EvalMode;
   ASTContext &Ctx;
-  SemaProxy *Sema;
+  SemaProxy *SProxy;
   Expr::EvalStatus &EvalStatus;
 
 private:

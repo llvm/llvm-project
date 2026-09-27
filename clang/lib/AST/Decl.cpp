@@ -2554,7 +2554,7 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
 }
 
 const APValue *VarDecl::evaluateValue() const {
-  return evaluateValueImpl(/*Notes=*/nullptr, /*Sema=*/nullptr,
+  return evaluateValueImpl(/*Notes=*/nullptr, /*SProxy=*/nullptr,
                            hasConstantInitialization());
 }
 

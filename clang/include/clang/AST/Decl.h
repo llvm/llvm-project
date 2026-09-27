@@ -1464,7 +1464,7 @@ public:
   /// \return \c true if this variable has constant destruction, \c false if
   ///         not.
   bool evaluateConstantDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                   SemaProxy &SP) const;
+                                   SemaProxy &SProxy) const;
 
   /// Determine whether this variable has constant initialization.
   ///
@@ -1484,7 +1484,7 @@ public:
   /// definition of the variable.
   bool
   checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                 SemaProxy &SP) const;
+                                 SemaProxy &SProxy) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;

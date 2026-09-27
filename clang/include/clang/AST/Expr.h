@@ -687,7 +687,7 @@ public:
   /// expression is a glvalue, an lvalue-to-rvalue conversion will be applied.
   bool EvaluateAsMandatedConstantRValue(EvalResult &Result,
                                         const ASTContext &Ctx,
-                                        SemaProxy &SP) const;
+                                        SemaProxy &SProxy) const;
 
   /// EvaluateAsBooleanCondition - Return true if this is a constant
   /// which we can fold and convert to a boolean condition using
