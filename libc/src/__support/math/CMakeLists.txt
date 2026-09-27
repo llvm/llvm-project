@@ -4941,6 +4941,7 @@ add_header_library(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(

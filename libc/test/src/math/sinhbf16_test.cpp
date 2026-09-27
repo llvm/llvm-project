@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/bfloat16.h"
-#include "src/math/expbf16.h"
 #include "src/math/sinhbf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
