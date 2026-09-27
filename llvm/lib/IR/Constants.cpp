@@ -309,19 +309,44 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
+static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return FVTy->getNumElements();
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return STy->getNumElements();
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return ATy->getNumElements();
+  return std::nullopt;
+}
+
+static bool
+containsMatchingElement(const Constant *C,
+                        function_ref<bool(const Constant *)> PredFn) {
+  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
+  if (!NumElts)
+    return false;
+
+  for (unsigned I = 0; I != *NumElts; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
+      return true;
+  }
+  return false;
+}
+
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (C->getType()->isVectorTy()) {
-    if (HasFn(C))
-      return true;
-    if (isa<ConstantAggregateZero>(C))
-      return false;
+  Type *Ty = C->getType();
+  if (!Ty->isVectorTy() && !Ty->isStructTy())
+    return false;
 
-    return C->containsMatchingVectorElement(HasFn);
-  }
+  if (HasFn(C))
+    return true;
+  if (isa<ConstantAggregateZero>(C))
+    return false;
 
-  return false;
+  return containsMatchingElement(C, HasFn);
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
@@ -344,7 +369,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
+  return containsMatchingElement(this, IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
