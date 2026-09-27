@@ -83,7 +83,9 @@ private:
 };
 
 class rcu_domain_impl {
-  using per_thread_states = thread_local_container<reader_states>;
+  struct default_rcu_domain_tag;
+
+  using per_thread_states = thread_local_container<reader_states, default_rcu_domain_tag>;
 
   // only the highest bit is used for the phase.
   std::atomic<reader_states::state_type> global_reader_phase_{};
@@ -96,10 +98,10 @@ class rcu_domain_impl {
 
   // stage 0 queue is thread local. In case a thread dies with non-empty list in stage 0,
   // those nodes will be move into the orphaned_stage0_ on destruction
-  rcu_singly_list_view retired_queue_orphaned_stage0_;
+  rcu_singly_list_view retired_queue_stage0_;
   std::mutex retired_queue_orphaned_stage0_mutex_;
 
-  using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>;
+  using retired_queue_stage0_threadlocal_cache = thread_local_container<rcu_atomic_list_view, default_rcu_domain_tag>;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
@@ -110,11 +112,11 @@ class rcu_domain_impl {
 
   void update_phase_and_wait() noexcept {
     rcu_singly_list_view working_queue;
-    per_thread_retired_queue_stage0::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
+    retired_queue_stage0_threadlocal_cache::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
       working_queue.splice_back(stage0_list);
     });
     std::unique_lock lk(retired_queue_orphaned_stage0_mutex_);
-    working_queue.splice_back(retired_queue_orphaned_stage0_);
+    working_queue.splice_back(retired_queue_stage0_);
     lk.unlock();
 
     // Flip the global phase
@@ -125,8 +127,8 @@ class rcu_domain_impl {
     std::atomic_signal_fence(std::memory_order_seq_cst);
 
     // Wait for all threads to quiesce in the old phase
+    grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
     while (any_reader_in_ongoing_grace_period(old_phase)) {
-      grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
       grace_period_waiting_flag_.wait(true, std::memory_order_relaxed);
     }
     grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
@@ -147,7 +149,7 @@ class rcu_domain_impl {
 
   void move_to_orphan_list_on_destruction(rcu_atomic_list_view& stage0_to_be_destroyed) noexcept {
     std::lock_guard g(retired_queue_orphaned_stage0_mutex_);
-    retired_queue_orphaned_stage0_.splice_back(stage0_to_be_destroyed);
+    retired_queue_stage0_.splice_back(stage0_to_be_destroyed);
   }
 
 public:
@@ -178,7 +180,7 @@ public:
   }
 
   void retire(__rcu_node* node) noexcept {
-    rcu_atomic_list_view& stage0_queue = per_thread_retired_queue_stage0::get_current_thread_instance(
+    rcu_atomic_list_view& stage0_queue = retired_queue_stage0_threadlocal_cache::get_current_thread_instance(
         function_ref(std::cw<&rcu_domain_impl::move_to_orphan_list_on_destruction>, this));
     stage0_queue.push_front(node);
   }
@@ -189,21 +191,20 @@ public:
 
     update_phase_and_wait();
 
+    rcu_singly_list_view ready_callbacks;
     if (invoke_callback) {
-      rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
-      ready_callbacks.for_each([](auto* node) { node->__callback_(node); });
     }
 
     std::atomic_signal_fence(memory_order_seq_cst);
     update_phase_and_wait();
 
+    std::atomic_thread_fence(memory_order_seq_cst);
+
     if (invoke_callback) {
-      rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
       ready_callbacks.for_each([](auto* node) { node->__callback_(node); });
     }
-    std::atomic_thread_fence(memory_order_seq_cst);
   }
 
   void __debug_print_all_reader_states_in_hex() {
