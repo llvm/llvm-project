@@ -170,8 +170,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                          "VGPRCriticalLimit calculation method.\n");
     unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
     unsigned Granule = ST.getVGPRAllocGranule(DynamicVGPRBlockSize);
-    unsigned Addressable =
-        AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
+    unsigned Addressable = ST.getAddressableNumVGPRs(DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);

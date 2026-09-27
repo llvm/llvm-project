@@ -471,19 +471,24 @@ unsigned AMDGPU::getTotalNumVGPRs(Triple::SubArchType SubArch, bool IsWave32) {
   return getTotalNumVGPRs(getGPUKindFromSubArch(SubArch), IsWave32);
 }
 
-unsigned AMDGPU::getAddressableNumVGPRs(GPUKind AK, bool IsWave32) {
+unsigned AMDGPU::getAddressableNumVGPRs(GPUKind AK, bool IsWave32,
+                                        unsigned DynamicVGPRBlockSize) {
   const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
   // The unified register file makes the AGPRs addressable as VGPRs.
   if (Features.test(FEAT_GFX90A_INSTS))
     return 512;
+  if (DynamicVGPRBlockSize != 0)
+    return MaxDynamicVGPRBlocks * DynamicVGPRBlockSize;
   if (Features.test(FEAT_1024_ADDRESSABLE_VGPRS))
     return IsWave32 ? 1024 : 512;
   return 256;
 }
 
 unsigned AMDGPU::getAddressableNumVGPRs(Triple::SubArchType SubArch,
-                                        bool IsWave32) {
-  return getAddressableNumVGPRs(getGPUKindFromSubArch(SubArch), IsWave32);
+                                        bool IsWave32,
+                                        unsigned DynamicVGPRBlockSize) {
+  return getAddressableNumVGPRs(getGPUKindFromSubArch(SubArch), IsWave32,
+                                DynamicVGPRBlockSize);
 }
 
 unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {

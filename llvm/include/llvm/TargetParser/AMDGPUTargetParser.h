@@ -196,12 +196,19 @@ LLVM_ABI unsigned getVGPREncodingGranule(Triple::SubArchType SubArch,
 LLVM_ABI unsigned getTotalNumVGPRs(GPUKind AK, bool IsWave32);
 LLVM_ABI unsigned getTotalNumVGPRs(Triple::SubArchType SubArch, bool IsWave32);
 
+/// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
+constexpr unsigned MaxDynamicVGPRBlocks = 8;
+
 /// \returns Number of VGPRs a single wave can address. On a target with a
-/// unified register file this covers the AGPRs as well. This does not account
-/// for dynamic VGPR mode, which caps allocation at a fixed number of blocks.
-LLVM_ABI unsigned getAddressableNumVGPRs(GPUKind AK, bool IsWave32);
+/// unified register file this covers the AGPRs as well. A nonzero
+/// \p DynamicVGPRBlockSize selects dynamic VGPR mode, which caps allocation at
+/// \c MaxDynamicVGPRBlocks blocks. On gfx90a-family targets, the unified
+/// register file size is returned regardless of \p DynamicVGPRBlockSize.
+LLVM_ABI unsigned getAddressableNumVGPRs(GPUKind AK, bool IsWave32,
+                                         unsigned DynamicVGPRBlockSize = 0);
 LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
-                                         bool IsWave32);
+                                         bool IsWave32,
+                                         unsigned DynamicVGPRBlockSize = 0);
 
 /// LDS size queries.
 ///
