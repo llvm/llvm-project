@@ -1492,6 +1492,13 @@ unsigned TargetTransformInfo::getLoadStoreVecRegBitWidth(unsigned AS) const {
   return TTIImpl->getLoadStoreVecRegBitWidth(AS);
 }
 
+bool TargetTransformInfo::consecutiveLoadsCoalesce(Type *ElemTy,
+                                                   unsigned NumElts,
+                                                   Align Alignment,
+                                                   unsigned AS) const {
+  return TTIImpl->consecutiveLoadsCoalesce(ElemTy, NumElts, Alignment, AS);
+}
+
 bool TargetTransformInfo::isLegalToVectorizeLoad(LoadInst *LI) const {
   return TTIImpl->isLegalToVectorizeLoad(LI);
 }

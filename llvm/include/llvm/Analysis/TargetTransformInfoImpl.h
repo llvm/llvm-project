@@ -1136,6 +1136,12 @@ public:
     return 128;
   }
 
+  virtual bool consecutiveLoadsCoalesce(Type *ElemTy, unsigned NumElts,
+                                        Align Alignment,
+                                        unsigned AddrSpace) const {
+    return false;
+  }
+
   virtual bool isLegalToVectorizeLoad(LoadInst *LI) const { return true; }
 
   virtual bool isLegalToVectorizeStore(StoreInst *SI) const { return true; }

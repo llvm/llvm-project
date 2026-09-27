@@ -390,6 +390,28 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   return 128;
 }
 
+bool GCNTTIImpl::consecutiveLoadsCoalesce(Type *ElemTy, unsigned NumElts,
+                                          Align Alignment,
+                                          unsigned AddrSpace) const {
+  unsigned MaxBits = getLoadStoreVecRegBitWidth(AddrSpace);
+  unsigned ElemBits = DL.getTypeSizeInBits(ElemTy);
+  if (MaxBits < 64 || ElemBits % 8 != 0)
+    return false;
+  unsigned Bits = std::min(ElemBits * NumElts, MaxBits);
+  if (!isLegalToVectorizeLoadChain(Bits / 8, Alignment, AddrSpace))
+    return false;
+  if (Alignment.value() % (Bits / 8) == 0)
+    return true;
+  LLVMContext &Ctx = ElemTy->getContext();
+  unsigned VecSpeed = 0, ElemSpeed = 0;
+  if (!allowsMisalignedMemoryAccesses(Ctx, Bits, AddrSpace, Alignment,
+                                      &VecSpeed))
+    return false;
+  allowsMisalignedMemoryAccesses(Ctx, ElemBits, AddrSpace, Alignment,
+                                 &ElemSpeed);
+  return VecSpeed >= ElemSpeed;
+}
+
 bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
                                             Align Alignment,
                                             unsigned AddrSpace) const {
