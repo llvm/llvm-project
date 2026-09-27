@@ -775,6 +775,9 @@ features cannot lower the translation-unit ABI level;
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
 
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` conditon.
+
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
