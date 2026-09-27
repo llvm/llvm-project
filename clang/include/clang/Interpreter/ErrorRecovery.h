@@ -17,6 +17,7 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "llvm/ADT/BitVector.h"
 #include <variant>
 
 namespace clang {
@@ -265,96 +266,24 @@ private:
   }
 
 protected:
-  // These all return by value now, not an ASTContext-arena-allocated
-  // pointer: footprints live inside FootprintStore's own SmallVector, which
-  // owns them with ordinary C++ lifetime (ctor/dtor/copy), so there's
-  // nothing left for arena allocation to buy -- the arena's job was only
-  // ever to make these survive without anyone having to free them, and a
-  // normally-owned value does that for free too.
   static DefinitionDataFootprint
   createDefinitionDataFootprint(const CXXRecordDecl &RD);
-
-  static bool compareDefinitionDataFootprint(const DefinitionDataFootprint &FP,
-                                             const CXXRecordDecl &RD);
 
   static void restoreDefinitionDataFootprint(const DefinitionDataFootprint &FP,
                                              CXXRecordDecl &RD);
 
-  static SpecializationFootprint
-  createSpecializationFootprint(const ClassTemplateSpecializationDecl &Spec) {
-    SpecializationFootprint FP;
-    FP.update(Spec);
+  // Generic across every other footprint type -- SpecializationFootprint,
+  // VarSpecializationFootprint, FunctionSpecializationFootprint,
+  // MemberSpecializationFootprint.
+  template <typename FootprintT, typename OwnerT>
+  static FootprintT createFootprint(const OwnerT &Owner) {
+    FootprintT FP;
+    FP.update(Owner);
     return FP;
   }
-  static bool
-  compareSpecializationFootprint(const SpecializationFootprint &FP,
-                                 const ClassTemplateSpecializationDecl &Spec) {
-    SpecializationFootprint Live;
-    Live.update(Spec);
-    return FP == Live;
-  }
-  static void
-  restoreSpecializationFootprint(const SpecializationFootprint &FP,
-                                 ClassTemplateSpecializationDecl &Spec) {
-    FP.restore(Spec);
-  }
-
-  static VarSpecializationFootprint
-  createVarSpecializationFootprint(const VarTemplateSpecializationDecl &Spec) {
-    VarSpecializationFootprint FP;
-    FP.update(Spec);
-    return FP;
-  }
-  static bool
-  compareVarSpecializationFootprint(const VarSpecializationFootprint &FP,
-                                    const VarTemplateSpecializationDecl &Spec) {
-    VarSpecializationFootprint Live;
-    Live.update(Spec);
-    return FP == Live;
-  }
-  static void
-  restoreVarSpecializationFootprint(const VarSpecializationFootprint &FP,
-                                    VarTemplateSpecializationDecl &Spec) {
-    FP.restore(Spec);
-  }
-
-  static FunctionSpecializationFootprint
-  createFunctionSpecializationFootprint(const FunctionDecl &FD) {
-    FunctionSpecializationFootprint FP;
-    FP.update(FD);
-    return FP;
-  }
-  static bool compareFunctionSpecializationFootprint(
-      const FunctionSpecializationFootprint &FP, const FunctionDecl &FD) {
-    FunctionSpecializationFootprint Live;
-    Live.update(FD);
-    return FP == Live;
-  }
-  static void restoreFunctionSpecializationFootprint(
-      const FunctionSpecializationFootprint &FP, FunctionDecl &FD) {
-    FP.restore(FD);
-  }
-
-  template <typename OwnerT>
-  static MemberSpecializationFootprint
-  createMemberSpecializationFootprint(const OwnerT &D) {
-    MemberSpecializationFootprint FP;
-    FP.update(D);
-    return FP;
-  }
-  template <typename OwnerT>
-  static bool
-  compareMemberSpecializationFootprint(const MemberSpecializationFootprint &FP,
-                                       const OwnerT &D) {
-    MemberSpecializationFootprint Live;
-    Live.update(D);
-    return FP == Live;
-  }
-  template <typename OwnerT>
-  static void
-  restoreMemberSpecializationFootprint(const MemberSpecializationFootprint &FP,
-                                       OwnerT &D) {
-    FP.restore(D);
+  template <typename FootprintT, typename OwnerT>
+  static void restoreFootprint(const FootprintT &FP, OwnerT &Owner) {
+    FP.restore(Owner);
   }
 
   static void restoreDefinitionAndRevertDC(CXXRecordDecl &RD);
@@ -389,10 +318,6 @@ protected:
   // specializations added by a given PTU form a trailing run at the back of
   // the FoldingSetVector. Popping entries while the back entry belongs to
   // this PTU is therefore sufficient.
-  //
-  // FoldingSetVector also has no arbitrary-position erase – only
-  // pop_back()/clear() – which is another reason to walk from the back
-  // rather than filter the entries in place.
   static void removeSpecializations(PTUCheckpointLedger &Ledger,
                                     const RedeclarableTemplateDecl *TD,
                                     PTUID ID);
@@ -429,12 +354,11 @@ public:
 
   static void detachCommonBase(const RedeclarableTemplateDecl *RT);
 
-  /// Remove D from its semantic context's lookup map, reinstating the
-  /// previous declaration if D had replaced one in-place (which is what
-  /// StoredDeclsList::HandleRedeclaration does on a redeclaration --
-  /// erasing the slot outright would lose the older decl entirely; that
-  /// is the ReopenNs failure).
   void detachFromDCLookup(Decl *D, PTUID ID);
+
+  void detachFromExternCLookup(Decl *D, DeclContext *ExternCCtx, PTUID ID);
+
+  static void removeFromIdResolver(Sema &S, NamedDecl *D);
 
   // Walk D's redecl chain looking for the newest decl that predates this
   // PTU. Returns nullptr if the entire chain was created this PTU.
@@ -453,18 +377,16 @@ public:
 
 private:
   NamedDecl *tryDetachRedeclChain(Decl *D, PTUID ID);
+
+  void removeFromLookupMap(NamedDecl *ND, DeclContext *DC, PTUID ID);
 };
 
 /// Maps addresses to the PTU that allocated them, by keeping the slab
 /// checkpoint taken before each PTU began.
-///
-/// PTU IDs are the vector index, which is what makes the lookup a binary
-/// search: checkpoints are monotonically increasing, so "is this address
-/// after checkpoint N" is true for all N up to the allocating PTU and
-/// false after.
 class PTUCheckpointLedger {
   const ASTContext &Ctx;
   llvm::SmallVector<llvm::SlabCheckPoint, 16> CheckpointBeforePTU;
+  llvm::BitVector Dead;
 
   bool isAfter(const void *Ptr, PTUID ID) const {
     return Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]);
@@ -478,11 +400,14 @@ public:
     assert(ID == CheckpointBeforePTU.size() &&
            "PTUs must be recorded in order");
     CheckpointBeforePTU.push_back(CP);
+    Dead.push_back(false);
   }
 
   /// Was \p Ptr allocated during PTU \p ID or later?
   bool isFromThisPTU(const void *Ptr, PTUID ID) const {
     assert(ID < CheckpointBeforePTU.size());
+    assert(!Dead[ID] &&
+           "querying provenance against a PTU that no longer exists");
     return isAfter(Ptr, ID);
   }
 
@@ -500,13 +425,16 @@ public:
         Hi = Mid;
       }
     }
+    assert((!Result || !Dead[*Result]) &&
+           "Ptr belongs to a PTU that was already rolled back");
     return Result;
   }
 
-  /// Drop checkpoints from \p ID onward, after rolling those PTUs back.
-  void undoFrom(PTUID ID) {
-    if (ID < CheckpointBeforePTU.size())
-      CheckpointBeforePTU.resize(ID);
+  /// FIXME: Pop back CheckpointBeforePTU once memory restoration is supported.
+  /// For now, there is no memory restoration, so mark it dead.
+  void markDead(PTUID ID) {
+    assert(ID < Dead.size());
+    Dead[ID] = true;
   }
 };
 
@@ -569,8 +497,7 @@ class FootprintStore {
       Store;
 
 public:
-  // Same dedup StateAwareChain::commit() always had: re-committing the
-  // same value for the same owner+kind is a no-op, not a new history entry.
+  // commit decl state owner+mutation_kind -> Footprint.
   template <typename T>
   void commit(const Decl *Owner, MutationType K, PTUID ID, const T &Fresh) {
     auto &History = Store[{Owner, K}];
@@ -580,9 +507,7 @@ public:
   }
 
   // nullptr means either "no history at all" or "history exists but the
-  // most recent entry isn't a T" -- the latter never legitimately happens
-  // for a given (Owner, K) pair, since K determines which alternative was
-  // ever committed there.
+  // most recent entry isn't a T".
   template <typename T>
   const T *mostRecent(const Decl *Owner, MutationType K) const {
     auto It = Store.find({Owner, K});
@@ -613,15 +538,21 @@ struct PTUStateInfo {
 
   llvm::SmallPtrSet<const Decl *, 4> ImplicitDecls;
 
+  /// Set exactly when AddedCXXImplicitMember fires this PTU -- narrower
+  /// than ImplicitDecls above, which is a shared superset populated by
+  /// many unrelated listener paths too (template instantiation, etc.).
+  /// This is the one listener whose firing can leave a stale
+  /// Sema::SpecialMemberCache entry behind, so it's what
+  /// purgeStaleSpecialMemberCache actually needs to gate on -- gating on
+  /// ImplicitDecls instead would trigger that scan on almost every PTU,
+  /// defeating the point of the gate.
+  bool HadImplicitCXXMember = false;
+
   /// here touched info mean other this belongs to other PTUs;
   llvm::SmallPtrSet<const DeclContext *, 4> TouchedDC;
 
   /// Every (Owner, Kind) key this PTU's own commit() wrote a FootprintStore
-  /// entry for -- replaces the old TouchedFootprintDecls/
-  /// TouchedFunctionTypeOwners/TouchedTagdeclOwners trio (one set per
-  /// container that used to exist) with one list, since there's now only
-  /// one container. Duplicates are harmless: FootprintStore::removeFrom is
-  /// idempotent.
+  /// entry for.
   llvm::SmallVector<std::pair<const Decl *, MutationType>, 8> TouchedFootprints;
 
   explicit PTUStateInfo(PTUID ID) : ID(ID) {}
@@ -738,8 +669,7 @@ public:
   // Writes a new value and records that this PTU touched (Owner, K), so
   // undoLastEntries() knows what to remove if the PTU is rolled back
   // without committing. mostRecent() doesn't need any bookkeeping, so it
-  // reads directly from Footprints via Tracker.Footprints.mostRecent<T>(...)
-  // instead of having its own wrapper.
+  // reads directly from Footprints via Tracker.Footprints.mostRecent<T>(...).
   template <typename T>
   void commitFootprint(const Decl *Owner, MutationType K, PTUID ID,
                        const T &Fresh) {
@@ -773,6 +703,7 @@ public:
   SweepTracker &getHiddenMutationTracker() { return HiddenMutationTracker; }
   PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
   Sema &getSema() const { return SemaRef; }
+  ASTContext &getASTContext() const { return Ctx; }
 
   void undoLastEntries();
 
@@ -780,8 +711,7 @@ private:
   void popCurrentPTU() {
     PTUID ID = currentID();
     PTUStack.pop_back();
-    PTUSlabCheckpoints.undoFrom(ID);
-    NextID = ID;
+    PTUSlabCheckpoints.markDead(ID);
   }
 };
 
@@ -802,7 +732,11 @@ public:
 
   uint32_t DeclNeedingTracking(DeclShape S, const Decl *D);
 
-  uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
+  uint32_t confirmMutation(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
+
+  void registerLiveVerification(const Decl *D, uint32_t Kinds);
+
+  void settleIfClosed(const Decl *D, DeclShape S, uint32_t Confirmed);
 
 private:
   void commitMembers(PTUID ID, const DeclContext *Members);
@@ -837,12 +771,23 @@ public:
   void restoreDecl(PTUID ID, const Decl *D, MutationRecord &Rec);
   void commitDecl(PTUID ID, const Decl *D, MutationRecord &Rec,
                   bool IsNew = false);
-  // respect the LIFO so only current inside map not commited can be commited
-  // not randon PTUID
-  // global map info shouldn't be commited before only added here. not note*
-  // time.
+  // Actual commit action: updates IncrementalStateTracker tracking info for
+  // decls from the previous PTU after a successful PTU. And add tracking info
+  // for newly created Decls
+  //
   void commit(TranslationUnitDecl *MostRecentTU);
+
+  // Restore action: restores decls from the previous PTU using
+  // IncrementalStateTracker tracking info and unlinks decls created by this
+  // PTU.
   void restore(TranslationUnitDecl *MostRecentTU);
+
+private:
+  // Sema::SpecialMemberCache, per (RD,
+  // kind+qualifiers), the CXXMethodDecl* a prior LookupSpecialMember()
+  // call resolved to, with no re-validation on a cache hit. remove every
+  // entry whose cached method belongs to the PTU being rolled back.
+  void restoreSpecialMemberCache(PTUID ID);
 };
 
 class PTUMutationRecorder : public ASTMutationListener {
