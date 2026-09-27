@@ -5817,12 +5817,13 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       return;
 
     [[fallthrough]];
-  case ISD::OR:
   case ISD::XOR:
     // A standalone ~(-1 << n) mask is (-1 & lowmask(n)): mov -1; bzhi beats
-    // mov -1; shlx; not.
+    // mov -1; shlx; not. AND falls through to here and has already tried.
     if (Opcode == ISD::XOR && Subtarget->hasBMI2() && matchBitExtract(Node))
       return;
+    [[fallthrough]];
+  case ISD::OR:
     if (tryShrinkShlLogicImm(Node))
       return;
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))
