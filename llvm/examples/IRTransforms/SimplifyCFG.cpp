@@ -405,7 +405,9 @@ static Error parseArguments(ArrayRef<const char *> Args) {
 
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "SimplifyCFG", LLVM_VERSION_STRING,
+  return {LLVM_PLUGIN_API_VERSION,
+          "SimplifyCFG",
+          LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
             PB.registerPipelineParsingCallback(
                 [](StringRef Name, llvm::FunctionPassManager &PM,
@@ -417,7 +419,8 @@ llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
                   return false;
                 });
           },
-          nullptr, parseArguments};
+          nullptr,
+          parseArguments};
 }
 
 #ifndef LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS
