@@ -21,6 +21,7 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/frac128.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
@@ -184,8 +185,10 @@ LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
   auto frac_bits = [&]() -> uint64_t {
     if constexpr (IS_FAST_PATH)
       return result_frac.val[0];
-    else
-      return result_frac.val[1];
+    else {
+      // Discarding the leading bit
+      return (result_frac.val[1] << 1) | (result_frac.val[0] >> 63);
+    }
   };
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -276,7 +279,7 @@ LIBC_INLINE double exp_accurate_path(uint64_t x_s_shifted, int x_e_unbiased,
                                    EXP_COEFFS[11]);
 
   Frac128 mid_val = EXP_MID[x_mid];
-  Frac128 result = mid_val * p + mid_val;
+  Frac128 result = fputil::multiply_add(mid_val, p, mid_val);
 
   return exp_handle_rounding(result, is_neg, d, e_y, rounding);
 }
@@ -452,7 +455,7 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
   // The same applies for both of the 64-bit and 128-bit paths
   // (Workaround because we're dealing with fractional representation of things)
   Frac64 mid_val = EXP_MID[x_mid].to_frac64();
-  Frac64 result = mid_val * p + mid_val;
+  Frac64 result = fputil::multiply_add(mid_val, p, mid_val);
 
   uint64_t result_bits = result.val[0];
 
