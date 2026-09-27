@@ -175,8 +175,8 @@ func.func @batch_matmul_to_vecmat(%arg0: memref<1x1x?xf32>, %arg1: memref<1x?x?x
 
 // -----
 
-// linalg.vecmat has no cast attribute (it always uses signed casts), so a
-// matmul with an unsigned cast must not be rank-reduced into it.
+// linalg.vecmat currently has no cast attribute (it always uses signed casts),
+// so a matmul with an unsigned cast must not be rank-reduced into it.
 func.func @negative_matmul_to_vecmat_unsigned_cast(
     %arg0: tensor<1x8xi16>, %arg1: tensor<8x6xi64>,
     %arg2: tensor<1x6xi32>) -> tensor<1x6xi32> {
