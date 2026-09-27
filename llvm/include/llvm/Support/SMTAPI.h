@@ -159,7 +159,7 @@ public:
   virtual ~SMTSolver() = default;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
 #endif
 
   // Returns an appropriate floating-point sort for the given bitwidth.

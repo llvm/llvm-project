@@ -655,7 +655,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   // The infrastructure for normal calling convention lowering is essentially
   // useless for kernels. We want to avoid any kind of legalization or argument
   // splitting.
-  if (CC == CallingConv::AMDGPU_KERNEL)
+  if (AMDGPU::isKernel(CC))
     return lowerFormalArgumentsKernel(B, F, VRegs);
 
   const bool IsGraphics = AMDGPU::isGraphics(CC);
