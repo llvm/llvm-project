@@ -55,7 +55,7 @@ protected:
     MC.reset(new MCContext(TM->getTargetTriple(), TM->getMCAsmInfo(),
                            TM->getMCRegisterInfo(), TM->getMCSubtargetInfo()));
     MC->setObjectFileInfo(TM->getObjFileLowering());
-    TM->getObjFileLowering()->Initialize(*MC, *TM);
+    TM->getObjFileLowering()->Initialize(*MC, *TM, *M);
     MC->setObjectFileInfo(TM->getObjFileLowering());
 
     // Use a new MCContext for AsmPrinter for testing.
@@ -131,7 +131,7 @@ protected:
                               TM->getMCRegisterInfo(),
                               TM->getMCSubtargetInfo()));
     MCFoo->setObjectFileInfo(TM->getObjFileLowering());
-    TM->getObjFileLowering()->Initialize(*MCFoo, *TM);
+    TM->getObjFileLowering()->Initialize(*MCFoo, *TM, *M);
     MCFoo->setObjectFileInfo(TM->getObjFileLowering());
   }
 

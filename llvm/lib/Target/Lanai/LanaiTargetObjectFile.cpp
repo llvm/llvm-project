@@ -22,9 +22,9 @@ static cl::opt<unsigned> SSThreshold(
     cl::desc("Small data and bss section threshold size (default=0)"),
     cl::init(0));
 
-void LanaiTargetObjectFile::Initialize(MCContext &Ctx,
-                                       const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void LanaiTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM,
+                                       const Module &M) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM, M);
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);

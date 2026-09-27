@@ -28,8 +28,9 @@ static cl::opt<bool> EmitAArch64DebugTLSLocation(
     cl::Hidden);
 
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                             const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+                                             const TargetMachine &TM,
+                                             const Module &M) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM, M);
   PLTPCRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
   SupportDebugThreadLocalLocation = EmitAArch64DebugTLSLocation;

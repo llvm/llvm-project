@@ -220,7 +220,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
       });
   MMI.getTarget().verifyOptionsConsistency(M);
   MMI.getTarget().getObjFileLowering()->Initialize(MMI.getContext(),
-                                                   MMI.getTarget());
+                                                   MMI.getTarget(), M);
   return false;
 }
 
@@ -247,6 +247,6 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
       });
   MMI.getTarget().verifyOptionsConsistency(M);
   MMI.getTarget().getObjFileLowering()->Initialize(MMI.getContext(),
-                                                   MMI.getTarget());
+                                                   MMI.getTarget(), M);
   return Result(MMI);
 }

@@ -40,7 +40,8 @@ using namespace llvm;
 /// done.  This specifies the current context for codegen, and gives the
 /// lowering implementations a chance to set up their default sections.
 void TargetLoweringObjectFile::Initialize(MCContext &ctx,
-                                          const TargetMachine &TM) {
+                                          const TargetMachine &TM,
+                                          const Module &M) {
   // `Initialize` can be called more than once.
   delete Mang;
   Mang = new Mangler();
@@ -148,7 +149,7 @@ void TargetLoweringObjectFile::emitPersonalityValue(
     const MachineModuleInfo *MMI) const {}
 
 void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
-                                                     Module &M) const {
+                                                     const Module &M) const {
   MCContext &C = getContext();
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
@@ -194,7 +195,7 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
 }
 
 void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
-    MCStreamer &Streamer, Module &M,
+    MCStreamer &Streamer, const Module &M,
     std::function<void(MCStreamer &Streamer)> COMDATSymEmitter) const {
   NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
   if (!FuncInfo)

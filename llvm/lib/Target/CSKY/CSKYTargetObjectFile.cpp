@@ -14,8 +14,9 @@
 using namespace llvm;
 
 void CSKYELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                         const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+                                         const TargetMachine &TM,
+                                         const Module &M) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM, M);
 
   LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
   PersonalityEncoding =

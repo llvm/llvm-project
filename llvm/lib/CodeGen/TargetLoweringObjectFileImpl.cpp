@@ -82,8 +82,8 @@ static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
 
-static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
-                             StringRef &Section) {
+static void GetObjCImageInfo(const Module &M, unsigned &Version,
+                             unsigned &Flags, StringRef &Section) {
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
 
@@ -121,8 +121,9 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //===----------------------------------------------------------------------===//
 
 void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
-                                             const TargetMachine &TgtM) {
-  TargetLoweringObjectFile::Initialize(Ctx, TgtM);
+                                             const TargetMachine &TgtM,
+                                             const Module &M) {
+  TargetLoweringObjectFile::Initialize(Ctx, TgtM, M);
 
   const CodeModel::Model CM = TgtM.getCodeModel();
   InitializeELF(TgtM.Options.UseInitArray);
@@ -306,9 +307,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
   default:
     break;
   }
-}
 
-void TargetLoweringObjectFileELF::getModuleMetadata(Module &M) {
   SmallVector<GlobalValue *, 4> Vec;
   collectUsedGlobalVariables(M, Vec, false);
   for (GlobalValue *GV : Vec)
@@ -317,7 +316,7 @@ void TargetLoweringObjectFileELF::getModuleMetadata(Module &M) {
 }
 
 void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
-                                                     Module &M) const {
+                                                     const Module &M) const {
   auto &C = getContext();
 
   emitLinkerDirectives(Streamer, M);
@@ -380,7 +379,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
 }
 
 void TargetLoweringObjectFileELF::emitLinkerDirectives(MCStreamer &Streamer,
-                                                       Module &M) const {
+                                                       const Module &M) const {
   auto &C = getContext();
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     auto *S = C.getELFSection(".linker-options", ELF::SHT_LLVM_LINKER_OPTIONS,
@@ -1314,8 +1313,9 @@ TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO() {
 }
 
 void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
-                                               const TargetMachine &TM) {
-  TargetLoweringObjectFile::Initialize(Ctx, TM);
+                                               const TargetMachine &TM,
+                                               const Module &M) {
+  TargetLoweringObjectFile::Initialize(Ctx, TM, M);
   if (TM.getRelocationModel() == Reloc::Static) {
     StaticCtorSection = Ctx.getMachOSection("__TEXT", "__constructor", 0,
                                             SectionKind::getData());
@@ -1348,7 +1348,7 @@ MCSection *TargetLoweringObjectFileMachO::getStaticDtorSection(
 }
 
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
-                                                       Module &M) const {
+                                                       const Module &M) const {
   // Emit the linker options if present.
   emitLinkerDirectives(Streamer, M);
 
@@ -1386,8 +1386,8 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   Streamer.addBlankLine();
 }
 
-void TargetLoweringObjectFileMachO::emitLinkerDirectives(MCStreamer &Streamer,
-                                                         Module &M) const {
+void TargetLoweringObjectFileMachO::emitLinkerDirectives(
+    MCStreamer &Streamer, const Module &M) const {
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     for (const auto *Option : LinkerOptions->operands()) {
       SmallVector<std::string, 4> StrOptions;
@@ -1948,7 +1948,7 @@ bool TargetLoweringObjectFileCOFF::shouldPutJumpTableInFunctionSection(
 }
 
 void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
-                                                      Module &M) const {
+                                                      const Module &M) const {
   emitLinkerDirectives(Streamer, M);
 
   unsigned Version = 0;
@@ -1980,8 +1980,8 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   });
 }
 
-void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
-    MCStreamer &Streamer, Module &M) const {
+void TargetLoweringObjectFileCOFF::emitLinkerDirectives(MCStreamer &Streamer,
+                                                        const Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     // Emit the linker options to the linker .drectve section.  According to the
     // spec, this section is a space-separated string containing flags for
@@ -2040,8 +2040,9 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
 }
 
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
-                                              const TargetMachine &TM) {
-  TargetLoweringObjectFile::Initialize(Ctx, TM);
+                                              const TargetMachine &TM,
+                                              const Module &M) {
+  TargetLoweringObjectFile::Initialize(Ctx, TM, M);
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
@@ -2298,7 +2299,11 @@ static unsigned getWasmSectionFlags(SectionKind K, bool Retain) {
   return Flags;
 }
 
-void TargetLoweringObjectFileWasm::getModuleMetadata(Module &M) {
+void TargetLoweringObjectFileWasm::Initialize(MCContext &Ctx,
+                                              const TargetMachine &TM,
+                                              const Module &M) {
+  TargetLoweringObjectFile::Initialize(Ctx, TM, M);
+
   SmallVector<GlobalValue *, 4> Vec;
   collectUsedGlobalVariables(M, Vec, false);
   for (GlobalValue *GV : Vec)
@@ -2711,8 +2716,9 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForConstant(
 }
 
 void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
-                                               const TargetMachine &TgtM) {
-  TargetLoweringObjectFile::Initialize(Ctx, TgtM);
+                                               const TargetMachine &TgtM,
+                                               const Module &M) {
+  TargetLoweringObjectFile::Initialize(Ctx, TgtM, M);
   TTypeEncoding =
       dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_datarel |
       (TgtM.getTargetTriple().isArch32Bit() ? dwarf::DW_EH_PE_sdata4
@@ -2858,7 +2864,11 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
 //===----------------------------------------------------------------------===//
 TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 
-void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
+void TargetLoweringObjectFileGOFF::Initialize(MCContext &Ctx,
+                                              const TargetMachine &TM,
+                                              const Module &M) {
+  TargetLoweringObjectFile::Initialize(Ctx, TM, M);
+
   // Construct the default names for the root SD and the ADA PR symbol.
   StringRef FileName = sys::path::stem(M.getSourceFileName());
   if (FileName.size() > 1 && FileName.starts_with('<') &&
