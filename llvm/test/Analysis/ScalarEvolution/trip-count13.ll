@@ -106,7 +106,7 @@ define void @s_2(i8 %start) {
 ; CHECK-LABEL: 's_2'
 ; CHECK-NEXT:  Determining loop execution counts for: @s_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 100
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -120,6 +120,33 @@ loop:
   %iv.cmp = icmp sgt i8 %iv, %rhs
   br i1 %iv.cmp, label %loop, label %leave
 
+
+leave:
+  ret void
+}
+
+; %start is in [-1, 127], which bounds the backedge-taken count by 128. The
+; backedge-taken count if the backedge is taken at all is 241, so the backedge
+; is never taken.
+define void @s_3(i8 %n) {
+; CHECK-LABEL: 's_3'
+; CHECK-NEXT:  Determining loop execution counts for: @s_3
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %start = add nsw i8 %n, 127
+  %rhs = add i8 %n, 112
+  %g = icmp sgt i8 %start, %rhs
+  br i1 %g, label %loop, label %leave
+
+loop:
+  %iv = phi i8 [ %start, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add i8 %iv, 1
+  %iv.cmp = icmp slt i8 %iv, %rhs
+  br i1 %iv.cmp, label %loop, label %leave
 
 leave:
   ret void

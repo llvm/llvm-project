@@ -15,7 +15,7 @@ from datetime import date
 
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
-globals().update(common_conf(tags, markdown=Markdown.ALWAYS))
+globals().update(common_conf(tags))
 
 # -- General configuration -----------------------------------------------------
 

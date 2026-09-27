@@ -2,14 +2,16 @@
 
 // DEFINE: %{optimize} = opt -passes=mem2reg,instcombine,tailcallelim -S
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=ALL,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=C,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o -        %s | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o -        %s | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
-// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o -        %s | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o -        %s | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - -x c++ %s | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM
 
 //=============================================================================
 // NOTES
@@ -36,7 +38,8 @@
 // 1. UNPREDICTED SVDUP
 //===------------------------------------------------------===//
 
-// ALL-LABEL: @test_svdup_n_s8
+// C-LABEL: @test_svdup_n_s8
+// CPP-LABEL: @_Z15test_svdup_n_s8a(
 svint8_t test_svdup_n_s8(int8_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s8i) -> !cir.vector<[16] x !s8i>
@@ -48,7 +51,8 @@ svint8_t test_svdup_n_s8(int8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s8,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_s16
+// C-LABEL: @test_svdup_n_s16
+// CPP-LABEL: @_Z16test_svdup_n_s16s(
 svint16_t test_svdup_n_s16(int16_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s16i) -> !cir.vector<[8] x !s16i>
@@ -60,7 +64,8 @@ svint16_t test_svdup_n_s16(int16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s16,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_s32
+// C-LABEL: @test_svdup_n_s32
+// CPP-LABEL: @_Z16test_svdup_n_s32i(
 svint32_t test_svdup_n_s32(int32_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s32i) -> !cir.vector<[4] x !s32i>
@@ -72,7 +77,8 @@ svint32_t test_svdup_n_s32(int32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s32,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_s64
+// C-LABEL: @test_svdup_n_s64
+// CPP-LABEL: @_Z16test_svdup_n_s64l(
 svint64_t test_svdup_n_s64(int64_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s64i) -> !cir.vector<[2] x !s64i>
@@ -84,7 +90,8 @@ svint64_t test_svdup_n_s64(int64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s64,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_u8
+// C-LABEL: @test_svdup_n_u8
+// CPP-LABEL: @_Z15test_svdup_n_u8h(
 svuint8_t test_svdup_n_u8(uint8_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u8i) -> !cir.vector<[16] x !u8i>
@@ -96,7 +103,8 @@ svuint8_t test_svdup_n_u8(uint8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u8,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_u16
+// C-LABEL: @test_svdup_n_u16
+// CPP-LABEL: @_Z16test_svdup_n_u16t(
 svuint16_t test_svdup_n_u16(uint16_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u16i) -> !cir.vector<[8] x !u16i>
@@ -108,7 +116,8 @@ svuint16_t test_svdup_n_u16(uint16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u16,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_u32
+// C-LABEL: @test_svdup_n_u32
+// CPP-LABEL: @_Z16test_svdup_n_u32j(
 svuint32_t test_svdup_n_u32(uint32_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u32i) -> !cir.vector<[4] x !u32i>
@@ -120,7 +129,8 @@ svuint32_t test_svdup_n_u32(uint32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u32,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_u64
+// C-LABEL: @test_svdup_n_u64
+// CPP-LABEL: @_Z16test_svdup_n_u64m(
 svuint64_t test_svdup_n_u64(uint64_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u64i) -> !cir.vector<[2] x !u64i>
@@ -132,7 +142,8 @@ svuint64_t test_svdup_n_u64(uint64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u64,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_f16
+// C-LABEL: @test_svdup_n_f16
+// CPP-LABEL: @_Z16test_svdup_n_f16Dh(
 svfloat16_t test_svdup_n_f16(float16_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.f16) -> !cir.vector<[8] x !cir.f16>
@@ -144,7 +155,8 @@ svfloat16_t test_svdup_n_f16(float16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f16,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_f32
+// C-LABEL: @test_svdup_n_f32
+// CPP-LABEL: @_Z16test_svdup_n_f32f(
 svfloat32_t test_svdup_n_f32(float32_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.float) -> !cir.vector<[4] x !cir.float>
@@ -156,7 +168,8 @@ svfloat32_t test_svdup_n_f32(float32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f32,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_f64
+// C-LABEL: @test_svdup_n_f64
+// CPP-LABEL: @_Z16test_svdup_n_f64d(
 svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.double) -> !cir.vector<[2] x !cir.double>
@@ -168,7 +181,8 @@ svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f64,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_b8(
+// C-LABEL: @test_svdup_n_b8(
+// CPP-LABEL: @_Z15test_svdup_n_b8b(
 svbool_t test_svdup_n_b8(bool op) MODE_ATTR
 {
 // LLVM-SAME: i1{{.*}} [[OP:%.*]])
@@ -178,7 +192,8 @@ svbool_t test_svdup_n_b8(bool op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_b8,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_b16(
+// C-LABEL: @test_svdup_n_b16(
+// CPP-LABEL: @_Z16test_svdup_n_b16b(
 svbool_t test_svdup_n_b16(bool op) MODE_ATTR
 {
 // LLVM-SAME: i1{{.*}} [[OP:%.*]])
@@ -189,7 +204,8 @@ svbool_t test_svdup_n_b16(bool op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_b16,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_b32(
+// C-LABEL: @test_svdup_n_b32(
+// CPP-LABEL: @_Z16test_svdup_n_b32b(
 svbool_t test_svdup_n_b32(bool op) MODE_ATTR
 {
 // LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[OP:%.*]], i64 0
@@ -199,7 +215,8 @@ svbool_t test_svdup_n_b32(bool op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_b32,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_b64(
+// C-LABEL: @test_svdup_n_b64(
+// CPP-LABEL: @_Z16test_svdup_n_b64b(
 svbool_t test_svdup_n_b64(bool op) MODE_ATTR
 {
 // LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[OP:%.*]], i64 0
@@ -209,7 +226,8 @@ svbool_t test_svdup_n_b64(bool op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_b64,)(op);
 }
 
-// ALL-LABEL: @test_svdup_n_bf16(
+// C-LABEL: @test_svdup_n_bf16(
+// CPP-LABEL: @_Z17test_svdup_n_bf16u6__bf16(
 svbfloat16_t test_svdup_n_bf16(bfloat16_t op) MODE_ATTR {
 // CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.bf16) -> !cir.vector<[8] x !cir.bf16>
 
@@ -224,11 +242,12 @@ svbfloat16_t test_svdup_n_bf16(bfloat16_t op) MODE_ATTR {
 // 2. PREDICATED ZERO-ING SVDUP
 //===------------------------------------------------------===//
 
-// ALL-LABEL: @test_svdup_n_s8_z
+// C-LABEL: @test_svdup_n_s8_z
+// CPP-LABEL: @_Z17test_svdup_n_s8_zu10__SVBool_ta(
 svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[16] x !s8i>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %{{.*}}, %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %{{.*}}, %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !s8i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
@@ -237,13 +256,14 @@ svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s8_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s16_z(
+// C-LABEL: @test_svdup_n_s16_z(
+// CPP-LABEL: @_Z18test_svdup_n_s16_zu10__SVBool_ts(
 svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !s16i>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !s16i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
@@ -253,13 +273,14 @@ svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s16_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s32_z(
+// C-LABEL: @test_svdup_n_s32_z(
+// CPP-LABEL: @_Z18test_svdup_n_s32_zu10__SVBool_ti(
 svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !s32i>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !s32i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
@@ -269,13 +290,14 @@ svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s32_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s64_z(
+// C-LABEL: @test_svdup_n_s64_z(
+// CPP-LABEL: @_Z18test_svdup_n_s64_zu10__SVBool_tl(
 svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !s64i>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !s64i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
@@ -285,7 +307,8 @@ svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s64_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u8_z(
+// C-LABEL: @test_svdup_n_u8_z(
+// CPP-LABEL: @_Z17test_svdup_n_u8_zu10__SVBool_th(
 svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[16] x !u8i>
@@ -298,13 +321,14 @@ svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u8_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u16_z(
+// C-LABEL: @test_svdup_n_u16_z(
+// CPP-LABEL: @_Z18test_svdup_n_u16_zu10__SVBool_tt(
 svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !u16i>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !u16i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
@@ -314,13 +338,14 @@ svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u16_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u32_z(
+// C-LABEL: @test_svdup_n_u32_z(
+// CPP-LABEL: @_Z18test_svdup_n_u32_zu10__SVBool_tj(
 svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !u32i>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !u32i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
@@ -330,13 +355,14 @@ svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u32_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u64_z(
+// C-LABEL: @test_svdup_n_u64_z(
+// CPP-LABEL: @_Z18test_svdup_n_u64_zu10__SVBool_tm(
 svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !u64i>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !u64i>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
@@ -346,13 +372,14 @@ svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u64_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f16_z(
+// C-LABEL: @test_svdup_n_f16_z(
+// CPP-LABEL: @_Z18test_svdup_n_f16_zu10__SVBool_tDh(
 svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !cir.f16>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.f16>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
@@ -362,13 +389,14 @@ svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f16_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f32_z(
+// C-LABEL: @test_svdup_n_f32_z(
+// CPP-LABEL: @_Z18test_svdup_n_f32_zu10__SVBool_tf(
 svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !cir.float>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.float>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
@@ -378,13 +406,14 @@ svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f32_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f64_z(
+// C-LABEL: @test_svdup_n_f64_z(
+// CPP-LABEL: @_Z18test_svdup_n_f64_zu10__SVBool_td(
 svfloat64_t test_svdup_n_f64_z(svbool_t pg, float64_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !cir.double>
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
+// CIR:           %[[CC_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.double>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
@@ -394,7 +423,8 @@ svfloat64_t test_svdup_n_f64_z(svbool_t pg, float64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f64_z,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_bf16_z(
+// C-LABEL: @test_svdup_n_bf16_z(
+// CPP-LABEL: @_Z19test_svdup_n_bf16_zu10__SVBool_tu6__bf16(
 svbfloat16_t test_svdup_n_bf16_z(svbool_t pg, bfloat16_t op) MODE_ATTR {
 // CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}} %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.bf16) -> !cir.vector<[8] x !cir.bf16>
 
@@ -408,7 +438,8 @@ svbfloat16_t test_svdup_n_bf16_z(svbool_t pg, bfloat16_t op) MODE_ATTR {
 //===------------------------------------------------------===//
 // 3. PREDICATED MERGING-ING SVDUP (Op1)
 //===------------------------------------------------------===//
-// ALL-LABEL: @test_svdup_n_s8_m(
+// C-LABEL: @test_svdup_n_s8_m(
+// CPP-LABEL: @_Z17test_svdup_n_s8_mu10__SVInt8_tu10__SVBool_ta(
 svint8_t test_svdup_n_s8_m(svint8_t inactive, svbool_t pg, int8_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %{{.*}}, %{{.*}} :
@@ -420,7 +451,8 @@ svint8_t test_svdup_n_s8_m(svint8_t inactive, svbool_t pg, int8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s8_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s16_m(
+// C-LABEL: @test_svdup_n_s16_m(
+// CPP-LABEL: @_Z18test_svdup_n_s16_mu11__SVInt16_tu10__SVBool_ts(
 svint16_t test_svdup_n_s16_m(svint16_t inactive, svbool_t pg, int16_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -435,7 +467,8 @@ svint16_t test_svdup_n_s16_m(svint16_t inactive, svbool_t pg, int16_t op) MODE_A
   return SVE_ACLE_FUNC(svdup,_n,_s16_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s32_m(
+// C-LABEL: @test_svdup_n_s32_m(
+// CPP-LABEL: @_Z18test_svdup_n_s32_mu11__SVInt32_tu10__SVBool_ti(
 svint32_t test_svdup_n_s32_m(svint32_t inactive, svbool_t pg, int32_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -450,7 +483,8 @@ svint32_t test_svdup_n_s32_m(svint32_t inactive, svbool_t pg, int32_t op) MODE_A
   return SVE_ACLE_FUNC(svdup,_n,_s32_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s64_m(
+// C-LABEL: @test_svdup_n_s64_m(
+// CPP-LABEL: @_Z18test_svdup_n_s64_mu11__SVInt64_tu10__SVBool_tl(
 svint64_t test_svdup_n_s64_m(svint64_t inactive, svbool_t pg, int64_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -465,7 +499,8 @@ svint64_t test_svdup_n_s64_m(svint64_t inactive, svbool_t pg, int64_t op) MODE_A
   return SVE_ACLE_FUNC(svdup,_n,_s64_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u8_m(
+// C-LABEL: @test_svdup_n_u8_m(
+// CPP-LABEL: @_Z17test_svdup_n_u8_mu11__SVUint8_tu10__SVBool_th(
 svuint8_t test_svdup_n_u8_m(svuint8_t inactive, svbool_t pg, uint8_t op) MODE_ATTR
 {
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %{{.*}}, %{{.*}} :
@@ -477,7 +512,8 @@ svuint8_t test_svdup_n_u8_m(svuint8_t inactive, svbool_t pg, uint8_t op) MODE_AT
   return SVE_ACLE_FUNC(svdup,_n,_u8_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u16_m(
+// C-LABEL: @test_svdup_n_u16_m(
+// CPP-LABEL: @_Z18test_svdup_n_u16_mu12__SVUint16_tu10__SVBool_tt(
 svuint16_t test_svdup_n_u16_m(svuint16_t inactive, svbool_t pg, uint16_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -492,7 +528,8 @@ svuint16_t test_svdup_n_u16_m(svuint16_t inactive, svbool_t pg, uint16_t op) MOD
   return SVE_ACLE_FUNC(svdup,_n,_u16_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u32_m(
+// C-LABEL: @test_svdup_n_u32_m(
+// CPP-LABEL: @_Z18test_svdup_n_u32_mu12__SVUint32_tu10__SVBool_tj(
 svuint32_t test_svdup_n_u32_m(svuint32_t inactive, svbool_t pg, uint32_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -507,7 +544,8 @@ svuint32_t test_svdup_n_u32_m(svuint32_t inactive, svbool_t pg, uint32_t op) MOD
   return SVE_ACLE_FUNC(svdup,_n,_u32_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u64_m(
+// C-LABEL: @test_svdup_n_u64_m(
+// CPP-LABEL: @_Z18test_svdup_n_u64_mu12__SVUint64_tu10__SVBool_tm(
 svuint64_t test_svdup_n_u64_m(svuint64_t inactive, svbool_t pg, uint64_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -521,7 +559,8 @@ svuint64_t test_svdup_n_u64_m(svuint64_t inactive, svbool_t pg, uint64_t op) MOD
   return SVE_ACLE_FUNC(svdup,_n,_u64_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f16_m(
+// C-LABEL: @test_svdup_n_f16_m(
+// CPP-LABEL: @_Z18test_svdup_n_f16_mu13__SVFloat16_tu10__SVBool_tDh(
 svfloat16_t test_svdup_n_f16_m(svfloat16_t inactive, svbool_t pg, float16_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -536,7 +575,8 @@ svfloat16_t test_svdup_n_f16_m(svfloat16_t inactive, svbool_t pg, float16_t op) 
   return SVE_ACLE_FUNC(svdup,_n,_f16_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f32_m(
+// C-LABEL: @test_svdup_n_f32_m(
+// CPP-LABEL: @_Z18test_svdup_n_f32_mu13__SVFloat32_tu10__SVBool_tf(
 svfloat32_t test_svdup_n_f32_m(svfloat32_t inactive, svbool_t pg, float32_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -551,7 +591,8 @@ svfloat32_t test_svdup_n_f32_m(svfloat32_t inactive, svbool_t pg, float32_t op) 
   return SVE_ACLE_FUNC(svdup,_n,_f32_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f64_m(
+// C-LABEL: @test_svdup_n_f64_m(
+// CPP-LABEL: @_Z18test_svdup_n_f64_mu13__SVFloat64_tu10__SVBool_td(
 svfloat64_t test_svdup_n_f64_m(svfloat64_t inactive, svbool_t pg, float64_t op) MODE_ATTR
 {
 // CIR:       %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
@@ -566,7 +607,8 @@ svfloat64_t test_svdup_n_f64_m(svfloat64_t inactive, svbool_t pg, float64_t op) 
   return SVE_ACLE_FUNC(svdup,_n,_f64_m,)(inactive, pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_bf16_m(
+// C-LABEL: @test_svdup_n_bf16_m(
+// CPP-LABEL: @_Z19test_svdup_n_bf16_mu14__SVBfloat16_tu10__SVBool_tu6__bf16(
 svbfloat16_t test_svdup_n_bf16_m(svbfloat16_t inactive, svbool_t pg, bfloat16_t op) MODE_ATTR {
 // CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}} %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.bf16) -> !cir.vector<[8] x !cir.bf16>
 
@@ -580,7 +622,8 @@ svbfloat16_t test_svdup_n_bf16_m(svbfloat16_t inactive, svbool_t pg, bfloat16_t 
 //===------------------------------------------------------===//
 // 4. PREDICATED MERGING-ING SVDUP (MergeAnyExp)
 //===------------------------------------------------------===//
-// ALL-LABEL: @test_svdup_n_s8_x(
+// C-LABEL: @test_svdup_n_s8_x(
+// CPP-LABEL: @_Z17test_svdup_n_s8_xu10__SVBool_ta(
 svint8_t test_svdup_n_s8_x(svbool_t pg, int8_t op) MODE_ATTR
 {
 // CIR:           [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[16] x !s8i>
@@ -593,7 +636,8 @@ svint8_t test_svdup_n_s8_x(svbool_t pg, int8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s8_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s16_x(
+// C-LABEL: @test_svdup_n_s16_x(
+// CPP-LABEL: @_Z18test_svdup_n_s16_xu10__SVBool_ts(
 svint16_t test_svdup_n_s16_x(svbool_t pg, int16_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[8] x !s16i>
@@ -609,7 +653,8 @@ svint16_t test_svdup_n_s16_x(svbool_t pg, int16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s16_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s32_x(
+// C-LABEL: @test_svdup_n_s32_x(
+// CPP-LABEL: @_Z18test_svdup_n_s32_xu10__SVBool_ti(
 svint32_t test_svdup_n_s32_x(svbool_t pg, int32_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[4] x !s32i>
@@ -626,7 +671,8 @@ svint32_t test_svdup_n_s32_x(svbool_t pg, int32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s32_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_s64_x(
+// C-LABEL: @test_svdup_n_s64_x(
+// CPP-LABEL: @_Z18test_svdup_n_s64_xu10__SVBool_tl(
 svint64_t test_svdup_n_s64_x(svbool_t pg, int64_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[2] x !s64i>
@@ -642,7 +688,8 @@ svint64_t test_svdup_n_s64_x(svbool_t pg, int64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_s64_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u8_x(
+// C-LABEL: @test_svdup_n_u8_x(
+// CPP-LABEL: @_Z17test_svdup_n_u8_xu10__SVBool_th(
 svuint8_t test_svdup_n_u8_x(svbool_t pg, uint8_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[16] x !u8i>
@@ -655,7 +702,8 @@ svuint8_t test_svdup_n_u8_x(svbool_t pg, uint8_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u8_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u16_x(
+// C-LABEL: @test_svdup_n_u16_x(
+// CPP-LABEL: @_Z18test_svdup_n_u16_xu10__SVBool_tt(
 svuint16_t test_svdup_n_u16_x(svbool_t pg, uint16_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[8] x !u16i>
@@ -671,7 +719,8 @@ svuint16_t test_svdup_n_u16_x(svbool_t pg, uint16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u16_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u32_x(
+// C-LABEL: @test_svdup_n_u32_x(
+// CPP-LABEL: @_Z18test_svdup_n_u32_xu10__SVBool_tj(
 svuint32_t test_svdup_n_u32_x(svbool_t pg, uint32_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[4] x !u32i>
@@ -687,7 +736,8 @@ svuint32_t test_svdup_n_u32_x(svbool_t pg, uint32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u32_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_u64_x(
+// C-LABEL: @test_svdup_n_u64_x(
+// CPP-LABEL: @_Z18test_svdup_n_u64_xu10__SVBool_tm(
 svuint64_t test_svdup_n_u64_x(svbool_t pg, uint64_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[2] x !u64i>
@@ -703,7 +753,8 @@ svuint64_t test_svdup_n_u64_x(svbool_t pg, uint64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_u64_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f16_x(
+// C-LABEL: @test_svdup_n_f16_x(
+// CPP-LABEL: @_Z18test_svdup_n_f16_xu10__SVBool_tDh(
 svfloat16_t test_svdup_n_f16_x(svbool_t pg, float16_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[8] x !cir.f16>
@@ -719,7 +770,8 @@ svfloat16_t test_svdup_n_f16_x(svbool_t pg, float16_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f16_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f32_x(
+// C-LABEL: @test_svdup_n_f32_x(
+// CPP-LABEL: @_Z18test_svdup_n_f32_xu10__SVBool_tf(
 svfloat32_t test_svdup_n_f32_x(svbool_t pg, float32_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[4] x !cir.float>
@@ -735,7 +787,8 @@ svfloat32_t test_svdup_n_f32_x(svbool_t pg, float32_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f32_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_f64_x(
+// C-LABEL: @test_svdup_n_f64_x(
+// CPP-LABEL: @_Z18test_svdup_n_f64_xu10__SVBool_td(
 svfloat64_t test_svdup_n_f64_x(svbool_t pg, float64_t op) MODE_ATTR
 {
 // CIR:       [[UNDEF:%.*]] = cir.const #cir.undef : !cir.vector<[2] x !cir.double>
@@ -751,7 +804,8 @@ svfloat64_t test_svdup_n_f64_x(svbool_t pg, float64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f64_x,)(pg, op);
 }
 
-// ALL-LABEL: @test_svdup_n_bf16_x(
+// C-LABEL: @test_svdup_n_bf16_x(
+// CPP-LABEL: @_Z19test_svdup_n_bf16_xu10__SVBool_tu6__bf16(
 svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) MODE_ATTR {
 // CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}} %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.bf16) -> !cir.vector<[8] x !cir.bf16>
 
@@ -765,7 +819,8 @@ svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) MODE_ATTR {
 //===------------------------------------------------------===//
 // 5. SVDUP_LANE
 //===------------------------------------------------------===//
-// ALL-LABEL: @test_svdup_lane_s8(
+// C-LABEL: @test_svdup_lane_s8(
+// CPP-LABEL: @_Z18test_svdup_lane_s8u10__SVInt8_th(
 svint8_t test_svdup_lane_s8(svint8_t data, uint8_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u8i, !cir.vector<[16] x !u8i>
@@ -779,7 +834,8 @@ svint8_t test_svdup_lane_s8(svint8_t data, uint8_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_s8,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_s16(
+// C-LABEL: @test_svdup_lane_s16(
+// CPP-LABEL: @_Z19test_svdup_lane_s16u11__SVInt16_tt(
 svint16_t test_svdup_lane_s16(svint16_t data, uint16_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
@@ -793,7 +849,8 @@ svint16_t test_svdup_lane_s16(svint16_t data, uint16_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_s16,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_s32(
+// C-LABEL: @test_svdup_lane_s32(
+// CPP-LABEL: @_Z19test_svdup_lane_s32u11__SVInt32_tj(
 svint32_t test_svdup_lane_s32(svint32_t data, uint32_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
@@ -807,7 +864,8 @@ svint32_t test_svdup_lane_s32(svint32_t data, uint32_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_s32,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_s64(
+// C-LABEL: @test_svdup_lane_s64(
+// CPP-LABEL: @_Z19test_svdup_lane_s64u11__SVInt64_tm(
 svint64_t test_svdup_lane_s64(svint64_t data, uint64_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
@@ -821,7 +879,8 @@ svint64_t test_svdup_lane_s64(svint64_t data, uint64_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_s64,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_u8(
+// C-LABEL: @test_svdup_lane_u8(
+// CPP-LABEL: @_Z18test_svdup_lane_u8u11__SVUint8_th(
 svuint8_t test_svdup_lane_u8(svuint8_t data, uint8_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u8i, !cir.vector<[16] x !u8i>
@@ -835,7 +894,8 @@ svuint8_t test_svdup_lane_u8(svuint8_t data, uint8_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_u8,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_u16(
+// C-LABEL: @test_svdup_lane_u16(
+// CPP-LABEL: @_Z19test_svdup_lane_u16u12__SVUint16_tt(
 svuint16_t test_svdup_lane_u16(svuint16_t data, uint16_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
@@ -849,7 +909,8 @@ svuint16_t test_svdup_lane_u16(svuint16_t data, uint16_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_u16,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_u32(
+// C-LABEL: @test_svdup_lane_u32(
+// CPP-LABEL: @_Z19test_svdup_lane_u32u12__SVUint32_tj(
 svuint32_t test_svdup_lane_u32(svuint32_t data, uint32_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
@@ -863,7 +924,8 @@ svuint32_t test_svdup_lane_u32(svuint32_t data, uint32_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_u32,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_u64(
+// C-LABEL: @test_svdup_lane_u64(
+// CPP-LABEL: @_Z19test_svdup_lane_u64u12__SVUint64_tm(
 svuint64_t test_svdup_lane_u64(svuint64_t data, uint64_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
@@ -877,7 +939,8 @@ svuint64_t test_svdup_lane_u64(svuint64_t data, uint64_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_u64,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_f16(
+// C-LABEL: @test_svdup_lane_f16(
+// CPP-LABEL: @_Z19test_svdup_lane_f16u13__SVFloat16_tt(
 svfloat16_t test_svdup_lane_f16(svfloat16_t data, uint16_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
@@ -891,7 +954,8 @@ svfloat16_t test_svdup_lane_f16(svfloat16_t data, uint16_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_f16,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_f32(
+// C-LABEL: @test_svdup_lane_f32(
+// CPP-LABEL: @_Z19test_svdup_lane_f32u13__SVFloat32_tj(
 svfloat32_t test_svdup_lane_f32(svfloat32_t data, uint32_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
@@ -905,7 +969,8 @@ svfloat32_t test_svdup_lane_f32(svfloat32_t data, uint32_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_f32,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_f64(
+// C-LABEL: @test_svdup_lane_f64(
+// CPP-LABEL: @_Z19test_svdup_lane_f64u13__SVFloat64_tm(
 svfloat64_t test_svdup_lane_f64(svfloat64_t data, uint64_t index) MODE_ATTR
 {
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
@@ -919,7 +984,8 @@ svfloat64_t test_svdup_lane_f64(svfloat64_t data, uint64_t index) MODE_ATTR
   return SVE_ACLE_FUNC(svdup_lane,_f64,,)(data, index);
 }
 
-// ALL-LABEL: @test_svdup_lane_bf16(
+// C-LABEL: @test_svdup_lane_bf16(
+// CPP-LABEL: @_Z20test_svdup_lane_bf16u14__SVBfloat16_tt(
 svbfloat16_t test_svdup_lane_bf16(svbfloat16_t data, uint16_t index) MODE_ATTR
 {
 // CIR:  cir.call_llvm_intrinsic "aarch64.sve.tbl" %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !cir.bf16>
