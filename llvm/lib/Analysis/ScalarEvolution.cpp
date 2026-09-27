@@ -5361,26 +5361,26 @@ static const Loop *isIntegerLoopHeaderPHI(const PHINode *PN, LoopInfo &LI) {
 //
 // Example usage scenario:
 //    Say the Rewriter is called for the following SCEV:
-//         8 * ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
+//        8 * ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
 //    where:
-//         %X = phi i64 (%Start, %BEValue)
+//        %X = phi i64 (%Start, %BEValue)
 //    It will visitMul->visitAdd->visitSExt->visitTrunc->visitUnknown(%X),
 //    and call this function with %SymbolicPHI = %X.
 //
 //    The analysis will find that the value coming around the backedge has
 //    the following SCEV:
-//         BEValue = ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
+//        BEValue = ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
 //    Upon concluding that this matches the desired pattern, the function
 //    will return the pair {NewAddRec, SmallPredsVec} where:
-//         NewAddRec = {%Start,+,%Step}
-//         SmallPredsVec = {P1, P2, P3} as follows:
-//           P1(WrapPred): AR: {trunc(%Start),+,(trunc %Step)}<nsw> Flags: <nssw>
-//           P2(EqualPred): %Start == (sext i32 (trunc i64 %Start to i32) to i64)
-//           P3(EqualPred): %Step == (sext i32 (trunc i64 %Step to i32) to i64)
+//        NewAddRec = {%Start,+,%Step}
+//        SmallPredsVec = {P1, P2, P3} as follows:
+//          P1(WrapPred): AR: {trunc(%Start),+,(trunc %Step)}<nsw> Flags: <nssw>
+//          P2(EqualPred): %Start == (sext i32 (trunc i64 %Start to i32) to i64)
+//          P3(EqualPred): %Step == (sext i32 (trunc i64 %Step to i32) to i64)
 //    The returned pair means that SymbolicPHI can be rewritten into NewAddRec
 //    under the predicates {P1,P2,P3}.
 //    This predicated rewrite will be cached in PredicatedSCEVRewrites:
-//         PredicatedSCEVRewrites[{%X,L}] = {NewAddRec, {P1,P2,P3)}
+//        PredicatedSCEVRewrites[{%X,L}] = {NewAddRec, {P1,P2,P3)}
 //
 // TODO's:
 //
