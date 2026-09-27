@@ -336,7 +336,7 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
 ; SSE2-NEXT:    andps %xmm3, %xmm4
 ; SSE2-NEXT:    andnps %xmm0, %xmm3
 ; SSE2-NEXT:    orps %xmm3, %xmm5
-; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [8.388608E+6,8.388608E+6,8.388608E+6,8.388608E+6]
+; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; SSE2-NEXT:    cmpnltps %xmm3, %xmm2
 ; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    andnps %xmm5, %xmm2
@@ -411,7 +411,7 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
 ; SSE2-NEXT:    movapd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm0, %xmm5
 ; SSE2-NEXT:    orpd %xmm6, %xmm5
-; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [9.2233720368547758E+18,9.2233720368547758E+18]
 ; SSE2-NEXT:    cmpnltpd %xmm6, %xmm4
 ; SSE2-NEXT:    andpd %xmm4, %xmm0
 ; SSE2-NEXT:    andnpd %xmm5, %xmm4
@@ -515,7 +515,7 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; SSE2-NEXT:    andps %xmm5, %xmm7
 ; SSE2-NEXT:    andnps %xmm0, %xmm5
 ; SSE2-NEXT:    orps %xmm5, %xmm6
-; SSE2-NEXT:    movaps {{.*#+}} xmm5 = [8.388608E+6,8.388608E+6,8.388608E+6,8.388608E+6]
+; SSE2-NEXT:    movaps {{.*#+}} xmm5 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; SSE2-NEXT:    cmpnltps %xmm5, %xmm4
 ; SSE2-NEXT:    andps %xmm4, %xmm0
 ; SSE2-NEXT:    andnps %xmm6, %xmm4
@@ -618,7 +618,7 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
 ; SSE2-NEXT:    movapd %xmm4, %xmm9
 ; SSE2-NEXT:    andnpd %xmm0, %xmm9
 ; SSE2-NEXT:    orpd %xmm8, %xmm9
-; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [9.2233720368547758E+18,9.2233720368547758E+18]
 ; SSE2-NEXT:    cmpnltpd %xmm6, %xmm7
 ; SSE2-NEXT:    andpd %xmm7, %xmm0
 ; SSE2-NEXT:    andnpd %xmm9, %xmm7

@@ -177,7 +177,7 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; SSE2-NEXT:    movapd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm0, %xmm5
 ; SSE2-NEXT:    orpd %xmm4, %xmm5
-; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [9.2233720368547758E+18,9.2233720368547758E+18]
 ; SSE2-NEXT:    cmpnltpd %xmm4, %xmm3
 ; SSE2-NEXT:    andpd %xmm3, %xmm0
 ; SSE2-NEXT:    andnpd %xmm5, %xmm3
@@ -650,7 +650,7 @@ define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
 ; SSE2-NEXT:    movapd %xmm2, %xmm5
 ; SSE2-NEXT:    andnpd %xmm0, %xmm5
 ; SSE2-NEXT:    orpd %xmm4, %xmm5
-; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [9.2233720368547758E+18,9.2233720368547758E+18]
 ; SSE2-NEXT:    cmpnltpd %xmm4, %xmm3
 ; SSE2-NEXT:    andpd %xmm3, %xmm0
 ; SSE2-NEXT:    andnpd %xmm5, %xmm3
