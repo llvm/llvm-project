@@ -5,30 +5,23 @@
 ; The shift of the top field folds into the reduction add, so the scalar cost
 ; credited back for it is 0.
 
-; YAML:      --- !Missed
+; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            slp-vectorizer
-; YAML-NEXT: Name:            HorSLPNotBeneficial
+; YAML-NEXT: Name:            VectorizedHorizontalReduction
 ; YAML-NEXT: Function:        sum4_bytes_i32
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'Vectorizing horizontal reduction is possible '
-; YAML-NEXT:   - String:          'but not beneficial with cost '
-; YAML-NEXT:   - Cost:            '6'
-; YAML-NEXT:   - String:          ' and threshold '
-; YAML-NEXT:   - Threshold:       '0'
+; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
+; YAML-NEXT:   - Cost:            '-3'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '1'
 define i32 @sum4_bytes_i32(ptr %p) {
 ; CHECK-LABEL: define i32 @sum4_bytes_i32(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = and i32 [[L]], 255
-; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[L]], 8
-; CHECK-NEXT:    [[B1:%.*]] = and i32 [[S1]], 255
-; CHECK-NEXT:    [[S2:%.*]] = lshr i32 [[L]], 16
-; CHECK-NEXT:    [[B2:%.*]] = and i32 [[S2]], 255
-; CHECK-NEXT:    [[B3:%.*]] = lshr i32 [[L]], 24
-; CHECK-NEXT:    [[A1:%.*]] = add i32 [[B0]], [[B1]]
-; CHECK-NEXT:    [[A2:%.*]] = add i32 [[A1]], [[B2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[A2]], [[B3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[L]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -48,35 +41,23 @@ entry:
 ; The extensions of the extracted fields are not extending loads, so their
 ; scalar cost is credited back in full.
 
-; YAML: sum4_zext_fields
-; YAML:      --- !Missed
+; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            slp-vectorizer
-; YAML-NEXT: Name:            NotBeneficial
+; YAML-NEXT: Name:            VectorizedHorizontalReduction
 ; YAML-NEXT: Function:        sum4_zext_fields
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'List vectorization was possible but not beneficial with cost '
-; YAML-NEXT:   - Cost:            '0'
-; YAML-NEXT:  - String:          ' >= '
-; YAML-NEXT:  - Treshold:        '0'
+; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
+; YAML-NEXT:   - Cost:            '-2'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '1'
 define i16 @sum4_zext_fields(ptr %p) {
 ; CHECK-LABEL: define i16 @sum4_zext_fields(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[T0:%.*]] = trunc i32 [[L]] to i8
-; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[L]], 8
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[S1]] to i8
-; CHECK-NEXT:    [[S2:%.*]] = lshr i32 [[L]], 16
-; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[S2]] to i8
-; CHECK-NEXT:    [[S3:%.*]] = lshr i32 [[L]], 24
-; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[S3]] to i8
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[T0]] to i16
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[T1]] to i16
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[T2]] to i16
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[T3]] to i16
-; CHECK-NEXT:    [[A1:%.*]] = add i16 [[Z0]], [[Z1]]
-; CHECK-NEXT:    [[A2:%.*]] = add i16 [[A1]], [[Z2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[A2]], [[Z3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[L]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
 entry:
