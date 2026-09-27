@@ -8105,6 +8105,69 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  // Fold icmp eq/ne X, select(icmp pred X, P, C1, C2)
+  // When the select condition is based on X and C1/C2 are constants,
+  // we can fold this to a simple set membership test.
+  // Example: X == select(X >s 0, 2, 0) -> (X == 2) | (X == 0)
+  // This is valid when C1 satisfies the select condition (C1 >s 0) and
+  // C2 does not satisfy it (C2 <=s 0).
+  if (I.isEquality()) {
+    // Try both operand orderings for the commutative icmp eq/ne
+    for (int Swap = 0; Swap < 2; ++Swap) {
+      Value *X = Swap ? Op1 : Op0;
+      Value *Sel = Swap ? Op0 : Op1;
+
+      Value *SelCond, *TrueVal, *FalseVal;
+      if (!match(Sel, m_Select(m_Value(SelCond), m_Value(TrueVal),
+                               m_Value(FalseVal))))
+        continue;
+
+      Value *CondLHS, *CondRHS;
+      CmpPredicate CondPred;
+      if (!match(SelCond, m_ICmp(CondPred, m_Value(CondLHS), m_Value(CondRHS))))
+        continue;
+
+      // Check if the select condition compares X with something
+      const APInt *C1, *C2, *P;
+      if (CondLHS == X && match(CondRHS, m_APInt(P))) {
+        // icmp pred X, P
+      } else if (CondRHS == X && match(CondLHS, m_APInt(P))) {
+        // icmp pred P, X -> swap to icmp swapped_pred X, P
+        CondPred = ICmpInst::getSwappedPredicate(CondPred);
+      } else {
+        continue;
+      }
+
+      if (!match(TrueVal, m_APInt(C1)) || !match(FalseVal, m_APInt(C2)) ||
+          !Sel->hasOneUse())
+        continue;
+
+      // Check: C1 must satisfy (C1 pred P) - true branch is taken when
+      // condition holds
+      // Check: C2 must NOT satisfy (C2 pred P) - false branch is taken
+      // when condition doesn't hold
+      bool C1SatisfiesCond = ICmpInst::compare(*C1, *P, CondPred);
+      bool C2SatisfiesCond = ICmpInst::compare(*C2, *P, CondPred);
+
+      if (C1SatisfiesCond && !C2SatisfiesCond) {
+        // Valid: X == select(cond, C1, C2) -> (X == C1) | (X == C2)
+        //        X != select(cond, C1, C2) -> (X != C1) & (X != C2)
+        Type *Ty = X->getType();
+        Constant *ConstC1 = ConstantInt::get(Ty, *C1);
+        Constant *ConstC2 = ConstantInt::get(Ty, *C2);
+        if (Pred == ICmpInst::ICMP_EQ) {
+          Value *Cmp1 = Builder.CreateICmpEQ(X, ConstC1);
+          Value *Cmp2 = Builder.CreateICmpEQ(X, ConstC2);
+          return replaceInstUsesWith(I, Builder.CreateOr(Cmp1, Cmp2));
+        }
+        // ICMP_NE
+        Value *Cmp1 = Builder.CreateICmpNE(X, ConstC1);
+        Value *Cmp2 = Builder.CreateICmpNE(X, ConstC2);
+        return replaceInstUsesWith(I, Builder.CreateAnd(Cmp1, Cmp2));
+      }
+    }
+  }
+
   // Fold icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
   // when all select arms are constants, via truth table.
   if (Instruction *R = foldCmpSelectOfConstants(I))
