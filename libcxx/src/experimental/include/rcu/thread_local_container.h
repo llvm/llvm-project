@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // - the operation that is done by the object from get_current_thread_instance calls
 // - and the operation that for_each
 // since there is no mutex guarding between them
-template <class Tp>
+template <class Tp, class Tag>
 class thread_local_container {
   static void empty_callback(Tp&) noexcept {}
 
