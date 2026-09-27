@@ -2690,8 +2690,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // kept across the call (see llvm/llvm-project#225057).
     if (ShouldDisableArgRegs) {
       for (auto const &RegPair : RegsToPass)
-        for (MCRegAliasIterator Alias(RegPair.first, TRI, true); Alias.isValid();
-             ++Alias)
+          for (MCRegAliasIterator Alias(RegPair.first, TRI, true);
+             Alias.isValid(); ++Alias)
           RegMask[*Alias / 32] &= ~(1u << (*Alias % 32));
     }
 
