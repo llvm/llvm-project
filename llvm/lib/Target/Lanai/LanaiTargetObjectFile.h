@@ -22,7 +22,8 @@ class LanaiTargetObjectFile : public TargetLoweringObjectFileELF {
                                   const TargetMachine &TM) const;
 
 public:
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void Initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   /// Return true if this global address should be placed into small data/bss
   /// section.

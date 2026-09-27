@@ -22,7 +22,8 @@ class M68kELFTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallBSSSection;
 
 public:
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void Initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 };
 } // end namespace llvm
 

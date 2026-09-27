@@ -32,8 +32,9 @@ static cl::opt<unsigned> SSThreshold(
     cl::init(8));
 
 void M68kELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                         const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+                                         const TargetMachine &TM,
+                                         const Module &M) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM, M);
   InitializeELF(TM.Options.UseInitArray);
 
   // FIXME do we need `.sdata` and `.sbss` explicitly?

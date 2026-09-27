@@ -18,8 +18,9 @@
 #include "AVR.h"
 
 namespace llvm {
-void AVRTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
-  Base::Initialize(Ctx, TM);
+void AVRTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM,
+                                     const Module &M) {
+  Base::Initialize(Ctx, TM, M);
   ProgmemDataSection =
       Ctx.getELFSection(".progmem.data", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
   Progmem1DataSection =

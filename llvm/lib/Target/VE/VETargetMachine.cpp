@@ -41,8 +41,9 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 
 namespace {
 class VEELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override {
-    TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  void Initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override {
+    TargetLoweringObjectFileELF::Initialize(Ctx, TM, M);
     InitializeELF(TM.Options.UseInitArray);
   }
 };
