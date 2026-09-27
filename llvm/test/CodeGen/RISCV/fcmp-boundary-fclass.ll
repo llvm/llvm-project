@@ -352,11 +352,299 @@ define i1 @at_most_positive_max_unordered(double %x) {
   ret i1 %r
 }
 
+define i1 @below_min_normal(double %x) {
+; RV64D-LABEL: below_min_normal:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 63
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: below_min_normal:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    flt.d a0, fa0, fa5
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: below_min_normal:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 63
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: below_min_normal:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 63
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp olt double %x, 0x0010000000000000
+  ret i1 %r
+}
+
+define i1 @at_least_min_normal(double %x) {
+; RV64D-LABEL: at_least_min_normal:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 192
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: at_least_min_normal:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    fle.d a0, fa5, fa0
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: at_least_min_normal:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 192
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: at_least_min_normal:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 192
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp oge double %x, 0x0010000000000000
+  ret i1 %r
+}
+
+define i1 @above_negative_min_normal(double %x) {
+; RV64D-LABEL: above_negative_min_normal:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 252
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: above_negative_min_normal:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    fneg.d fa5, fa5
+; RV64ZFA-NEXT:    flt.d a0, fa5, fa0
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: above_negative_min_normal:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 252
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: above_negative_min_normal:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 252
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp ogt double %x, 0x8010000000000000
+  ret i1 %r
+}
+
+define i1 @at_most_negative_min_normal(double %x) {
+; RV64D-LABEL: at_most_negative_min_normal:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 3
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: at_most_negative_min_normal:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    fneg.d fa5, fa5
+; RV64ZFA-NEXT:    fle.d a0, fa0, fa5
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: at_most_negative_min_normal:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 3
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: at_most_negative_min_normal:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 3
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp ole double %x, 0x8010000000000000
+  ret i1 %r
+}
+
+define i1 @below_min_normal_unordered(double %x) {
+; RV64D-LABEL: below_min_normal_unordered:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 831
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: below_min_normal_unordered:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    fle.d a0, fa5, fa0
+; RV64ZFA-NEXT:    xori a0, a0, 1
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: below_min_normal_unordered:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 831
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: below_min_normal_unordered:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 831
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp ult double %x, 0x0010000000000000
+  ret i1 %r
+}
+
+define i1 @at_least_min_normal_unordered(double %x) {
+; RV64D-LABEL: at_least_min_normal_unordered:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 960
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: at_least_min_normal_unordered:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    flt.d a0, fa0, fa5
+; RV64ZFA-NEXT:    xori a0, a0, 1
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: at_least_min_normal_unordered:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 960
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: at_least_min_normal_unordered:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 960
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp uge double %x, 0x0010000000000000
+  ret i1 %r
+}
+
+define i1 @above_negative_min_normal_unordered(double %x) {
+; RV64D-LABEL: above_negative_min_normal_unordered:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 1020
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: above_negative_min_normal_unordered:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    fneg.d fa5, fa5
+; RV64ZFA-NEXT:    fle.d a0, fa0, fa5
+; RV64ZFA-NEXT:    xori a0, a0, 1
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: above_negative_min_normal_unordered:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 1020
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: above_negative_min_normal_unordered:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 1020
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp ugt double %x, 0x8010000000000000
+  ret i1 %r
+}
+
+define i1 @at_most_negative_min_normal_unordered(double %x) {
+; RV64D-LABEL: at_most_negative_min_normal_unordered:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    fclass.d a0, fa0
+; RV64D-NEXT:    andi a0, a0, 771
+; RV64D-NEXT:    snez a0, a0
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: at_most_negative_min_normal_unordered:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    fneg.d fa5, fa5
+; RV64ZFA-NEXT:    flt.d a0, fa5, fa0
+; RV64ZFA-NEXT:    xori a0, a0, 1
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: at_most_negative_min_normal_unordered:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    fclass.d a0, fa0
+; RV32D-NEXT:    andi a0, a0, 771
+; RV32D-NEXT:    snez a0, a0
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: at_most_negative_min_normal_unordered:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fclass.d a0, a0
+; RV64ZDINX-NEXT:    andi a0, a0, 771
+; RV64ZDINX-NEXT:    snez a0, a0
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp ule double %x, 0x8010000000000000
+  ret i1 %r
+}
+
+define i1 @below_min_normal_daz(double %x) #0 {
+; RV64D-LABEL: below_min_normal_daz:
+; RV64D:       # %bb.0:
+; RV64D-NEXT:    li a0, 1
+; RV64D-NEXT:    slli a0, a0, 52
+; RV64D-NEXT:    fmv.d.x fa5, a0
+; RV64D-NEXT:    flt.d a0, fa0, fa5
+; RV64D-NEXT:    ret
+;
+; RV64ZFA-LABEL: below_min_normal_daz:
+; RV64ZFA:       # %bb.0:
+; RV64ZFA-NEXT:    fli.d fa5, min
+; RV64ZFA-NEXT:    flt.d a0, fa0, fa5
+; RV64ZFA-NEXT:    ret
+;
+; RV32D-LABEL: below_min_normal_daz:
+; RV32D:       # %bb.0:
+; RV32D-NEXT:    lui a0, %hi(.LCPI19_0)
+; RV32D-NEXT:    fld fa5, %lo(.LCPI19_0)(a0)
+; RV32D-NEXT:    flt.d a0, fa0, fa5
+; RV32D-NEXT:    ret
+;
+; RV64ZDINX-LABEL: below_min_normal_daz:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    li a1, 1
+; RV64ZDINX-NEXT:    slli a1, a1, 52
+; RV64ZDINX-NEXT:    flt.d a0, a0, a1
+; RV64ZDINX-NEXT:    ret
+  %r = fcmp olt double %x, 0x0010000000000000
+  ret i1 %r
+}
+
 define i1 @strict_below_negative_max(double %x) strictfp {
 ; RV64D-LABEL: strict_below_negative_max:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV64D-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV64D-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV64D-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV64D-NEXT:    frflags a1
 ; RV64D-NEXT:    flt.d a0, fa0, fa5
 ; RV64D-NEXT:    fsflags a1
@@ -365,15 +653,15 @@ define i1 @strict_below_negative_max(double %x) strictfp {
 ;
 ; RV64ZFA-LABEL: strict_below_negative_max:
 ; RV64ZFA:       # %bb.0:
-; RV64ZFA-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV64ZFA-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV64ZFA-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV64ZFA-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV64ZFA-NEXT:    fltq.d a0, fa0, fa5
 ; RV64ZFA-NEXT:    ret
 ;
 ; RV32D-LABEL: strict_below_negative_max:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV32D-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV32D-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV32D-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
 ; RV32D-NEXT:    frflags a1
 ; RV32D-NEXT:    flt.d a0, fa0, fa5
 ; RV32D-NEXT:    fsflags a1
@@ -398,3 +686,5 @@ define i1 @strict_below_negative_max(double %x) strictfp {
 }
 
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
+
+attributes #0 = { denormal_fpenv(positivezero) }
