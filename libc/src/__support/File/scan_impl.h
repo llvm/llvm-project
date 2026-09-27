@@ -70,13 +70,16 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
       continue;
     }
 
+    // Scandir must return the number of entries as int, anything
+    // above that is non-representable.
+    if (count == cpp::numeric_limits<int>::max()) {
+      saved_errno = EOVERFLOW;
+      break;
+    }
+
     if (count >= buffer_capacity) {
       size_t new_capacity = (buffer_capacity == 0) ? 8 : buffer_capacity * 2;
-      // Cap to MAX_INT since we must return the number of entreis as int
-      // anyway.
-      if (new_capacity > cpp::numeric_limits<int>::max()) {
-        new_capacity = cpp::numeric_limits<int>::max();
-      }
+
       // Overflow check
       if (new_capacity >
           cpp::numeric_limits<size_t>::max() / sizeof(struct dirent *)) {
