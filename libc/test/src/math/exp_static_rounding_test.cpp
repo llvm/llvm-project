@@ -76,8 +76,6 @@ TEST_F(LlvmLibcExpStaticRoundingTest, TrickyInputs) {
   }
 }
 
-// TODO: double has a very big range. Define test functions that allows for
-// finding max ULPs over a range. EXPECT_* just isn't enough for this.
 TEST_F(LlvmLibcExpStaticRoundingTest, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
   constexpr uint64_t START = FPBits(0.25).uintval();
@@ -85,47 +83,44 @@ TEST_F(LlvmLibcExpStaticRoundingTest, InDoubleRange) {
   constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](RoundingMode rounding) {
+    ForceRoundingMode __r(rounding);
+    if (!__r.success)
+      return;
     const int fenv_rounding = get_fe_rounding(rounding);
 
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
-    double mx, mr = 0.0;
-    double tol = 0.5;
+    uint64_t max_ulp = 0;
+    double me = 0.0, mr = 0.0;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
       if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      double result = math::exp(x);
+      double expected = math::exp(x);
+      double result = static_rounding::exp(x, fenv_rounding);
       ++cc;
-      if (FPBits(result).is_nan() || FPBits(result).is_inf())
+      if (FPBits(expected).is_nan() || FPBits(expected).is_inf() ||
+          FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;
-      // ASSERT_MPFR_MATCH(mpfr::Operation::Log, x, result, 0.5);
-      // if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp, x, result,
-      //                                        TOLERANCE + 0.5, rounding_mode))
-      //                                        {
-      //   ++fails;
-      //   while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp, x,
-      //                                             result, tol,
-      //                                             rounding_mode)) {
-      //     mx = x;
-      //     mr = result;
-
-      //     if (tol > 1000.0)
-      //       break;
-
-      //     tol *= 2.0;
-      //   }
-      // }
+      uint64_t ulp = LIBC_NAMESPACE::testing::ulp_distance(expected, result);
+      if (ulp != 0) {
+        ++fails;
+        if (ulp > max_ulp) {
+          max_ulp = ulp;
+          me = expected;
+          mr = result;
+        }
+      }
     }
     if (fails) {
       tlog << " Statically rounded exp failed: " << fails << "/" << count << "/"
            << cc << " tests.\n";
-      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
-      // EXPECT_MPFR_MATCH(mpfr::Operation::Exp, mx, mr, 0.5, rounding_mode);
+      tlog << "   Max ULPs is: " << max_ulp << ".\n";
+      EXPECT_FP_EQ(me, mr);
     }
   };
 

@@ -80,6 +80,7 @@
 //   std::cout << "===== DEBUG =====\n";
 //   size_t i = 0;
 //   (debug_value(parts[i++], values), ...);
+//   std::cout << "=================\n\n";
 // }
 //
 // #define DEBUG(...) debug_all(#__VA_ARGS__, __VA_ARGS__)
@@ -96,6 +97,7 @@ namespace static_rounding {
 // truncating to all-0 in all rounding modes.
 // TODO: test against CORE-MATH
 // TODO: refactor to follow the new structure; dedupe codes
+// TODO: LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // print(2+round(1/log(2), 128, RN));
 // LSB(INV_LN2) = 2^-127
@@ -148,25 +150,26 @@ LIBC_INLINE_VAR constexpr Frac128 EXP_COEFFS[] = {
     Frac128({0x219f'9904'1f29'5f13ULL, 0x0000'0000'1cd9'af73ULL}),
 };
 
-// Handle the final roundings of the result. Depends on whether Frac64 or
-// Frac128 being used.
+// Round the fractional result and combine it with its exponent.
 template <typename TFrac, typename TUInt,
           cpp::enable_if_t<cpp::is_same<TFrac, Frac64>::value ||
                                cpp::is_same<TFrac, Frac128>::value,
                            int> = 0>
 LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
-                                       TUInt e_y_unbiased,
+                                       TUInt e_y,
                                        [[maybe_unused]] int rounding) {
   constexpr bool IS_FAST_PATH = cpp::is_same<TFrac, Frac64>::value;
 
-  uint32_t shift_length = IS_FAST_PATH ? 11 : 72;
+  uint32_t shift_length = 11;
   uint64_t leading_one = 0;
 
   // subnormal
   if (LIBC_UNLIKELY(is_neg && d >= 0)) {
-    e_y_unbiased = 0;
+    e_y = 0;
     leading_one = uint64_t(1) << (52 - d);
 
+    // Truncate the last 2 bits to avoid undefined behavior when shifting by 64
+    // bits
     if (d >= 51) {
       d -= 2;
       if constexpr (IS_FAST_PATH)
@@ -189,7 +192,7 @@ LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
   TUInt result =
       (static_cast<TUInt>(frac_bits() >> shift_length) + (leading_one + 1));
   result >>= 1;
-  result += static_cast<TUInt>(e_y_unbiased) << 32;
+  result += static_cast<TUInt>(e_y) << 32;
 
   return cpp::bit_cast<double>(result);
 #else  // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -197,7 +200,7 @@ LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
     TUInt result =
         (static_cast<TUInt>(frac_bits() >> shift_length) + (leading_one + 1));
     result >>= 1;
-    result += static_cast<TUInt>(e_y_unbiased) << 32;
+    result += static_cast<TUInt>(e_y) << 32;
 
     return cpp::bit_cast<double>(result);
   }
@@ -206,15 +209,76 @@ LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
 
   if (LIBC_UNLIKELY(rounding == FE_UPWARD)) {
     uint64_t round_up_mask = (uint64_t(1) << (shift_length + 1)) - 1;
-    should_round_up = static_cast<TUInt>((frac_bits() & round_up_mask) != 0);
+    bool has_remainder = (frac_bits() & round_up_mask) != 0;
+    if constexpr (!IS_FAST_PATH) {
+      has_remainder = has_remainder || (result_frac.val[0] != 0);
+    }
+    should_round_up = static_cast<TUInt>(has_remainder);
   }
 
   TUInt result = (static_cast<TUInt>(frac_bits() >> (shift_length + 1)) +
                   should_round_up + (leading_one >> 1));
-  result += static_cast<TUInt>(e_y_unbiased) << 32;
+  result += static_cast<TUInt>(e_y) << 32;
 
   return cpp::bit_cast<double>(result);
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+}
+
+LIBC_INLINE double exp_accurate_path(uint64_t x_s_shifted, int x_e_unbiased,
+                                     bool is_neg, int rounding) {
+  using FPBits = typename fputil::FPBits<double>;
+
+  // Recalculate everything in 128-bit precision, with the same idea as the
+  // 64-bit path.
+
+  Frac128 x_s_frac({0, x_s_shifted});
+  Frac128 x_ln2 = x_s_frac * INV_LN2_F128;
+
+  uint64_t k = 0;
+  Frac128 l2y_r;
+  if (x_e_unbiased >= -1) {
+    int shift = 62 - x_e_unbiased;
+    k = (x_ln2 >> (64 + shift)).val[0];
+    l2y_r = x_ln2 << (64 - shift);
+  } else {
+    int shift = -x_e_unbiased - 2;
+    l2y_r = (shift < 128) ? (x_ln2 >> shift) : Frac128{};
+  }
+
+  if (LIBC_UNLIKELY(is_neg)) {
+    if (l2y_r.val[0] != 0 || l2y_r.val[1] != 0) {
+      ++k;
+      l2y_r = ~l2y_r + Frac128(1);
+    }
+  }
+
+  uint64_t e_y;
+  if (is_neg)
+    e_y = (FPBits::EXP_BIAS << 20) - static_cast<uint32_t>(k << 20);
+  else
+    e_y = (FPBits::EXP_BIAS << 20) + static_cast<uint32_t>(k << 20);
+
+  int d = static_cast<int>(k) - FPBits::EXP_BIAS;
+
+  if (LIBC_UNLIKELY(is_neg && d >= 53))
+    return 0.0;
+
+  uint16_t x_mid = static_cast<uint16_t>((l2y_r.val[1] >> 60) & 0xf);
+
+  Frac128 x_lo_frac = l2y_r;
+  x_lo_frac.val[1] &= 0x0fff'ffff'ffff'ffffULL;
+
+  Frac128 p =
+      x_lo_frac * fputil::polyeval(x_lo_frac, EXP_COEFFS[0], EXP_COEFFS[1],
+                                   EXP_COEFFS[2], EXP_COEFFS[3], EXP_COEFFS[4],
+                                   EXP_COEFFS[5], EXP_COEFFS[6], EXP_COEFFS[7],
+                                   EXP_COEFFS[8], EXP_COEFFS[9], EXP_COEFFS[10],
+                                   EXP_COEFFS[11]);
+
+  Frac128 mid_val = EXP_MID[x_mid];
+  Frac128 result = mid_val * p + mid_val;
+
+  return exp_handle_rounding(result, is_neg, d, e_y, rounding);
 }
 
 LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
@@ -311,29 +375,29 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
   int shift = 0;
 
   int x_e_unbiased = static_cast<int>(x_e) - FPBits::EXP_BIAS;
-  if (x_e_unbiased >= 0) {
+  if (x_e_unbiased >= -1) {
     shift = 62 - x_e_unbiased;
     k = x_ln2_bits >> shift;
     frac_bits = x_ln2_bits << (64 - shift);
   } else {
     k = 0;
-    shift = -x_e_unbiased;
+    shift = -x_e_unbiased - 2;
     frac_bits = (shift < 64) ? (x_ln2_bits >> shift) : 0;
   }
 
-  // As Frac128 can't store the sign, we need to handle the sign separately:
+  // As Frac64/Frac128 can't store the sign, we need to handle the sign
+  // separately:
   // - Both branches are computing floor(x * log2(e)).
   // - For negative x, we round up to the next multiple of 2^52, then clear
   // the last 52 bits.
   // - For positive x, we round down (just clear) the last 52 bits.
   //
   // Then, l2y_r_hi is the remainder of x * log2(e) after removing the
-  // integer part, which is used to look up EXP_MID4 and compute exp(lo) - 1.
+  // integer part, which is used to look up EXP_MID and compute 2^lo.
   //
-  // e_y_unbiased is biased exponent field, but already bit-positioned to the
-  // exponent field of the double representation.
+  // e_y is the biased exponent field, positioned for the final bit assembly.
   uint64_t l2y_r_hi;
-  uint64_t e_y_unbiased;
+  uint64_t e_y;
 
   if (LIBC_UNLIKELY(is_neg)) {
     if (frac_bits != 0) {
@@ -342,10 +406,10 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
     } else {
       l2y_r_hi = 0;
     }
-    e_y_unbiased = (FPBits::EXP_BIAS << 20) - static_cast<uint32_t>(k << 20);
+    e_y = (FPBits::EXP_BIAS << 20) - static_cast<uint32_t>(k << 20);
   } else {
     l2y_r_hi = frac_bits;
-    e_y_unbiased = (FPBits::EXP_BIAS << 20) + static_cast<uint32_t>(k << 20);
+    e_y = (FPBits::EXP_BIAS << 20) + static_cast<uint32_t>(k << 20);
   }
 
   int d = static_cast<int>(k) - FPBits::EXP_BIAS;
@@ -358,20 +422,22 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
     return 0.0;
   }
 
-  // Extract the 4 mid bits (bits [51:48] of l2y_r_hi) for LUT index
+  // Extract the top 4 fractional bits for the LUT index.
   uint16_t x_mid = static_cast<uint16_t>((l2y_r_hi >> 60) & 0xf);
 
-  // Extract the low 48 bits for the polynomial approximation of exp(lo).
-  // LSB(x_lo) = 2^-48
+  // The remaining 60 bits are the polynomial input.
   uint64_t x_lo = l2y_r_hi & ((uint64_t(1) << 60) - 1);
 
   // Fast path: 64-bit calculations first
 
-  Frac64 x_lo_frac64(x_lo << 4); // aligning LSB to Frac64
+  // Don't << 4, as the polynomial approximation is correct in range [0, 1/16],
+  // and x_lo is already in that range.
+  // LSB(x_lo_frac) = 2^-64
+  Frac64 x_lo_frac(x_lo);
 
-  Frac64 p64 =
-      x_lo_frac64 *
-      fputil::polyeval(x_lo_frac64, EXP_COEFFS[0].to_frac64(),
+  Frac64 p =
+      x_lo_frac *
+      fputil::polyeval(x_lo_frac, EXP_COEFFS[0].to_frac64(),
                        EXP_COEFFS[1].to_frac64(), EXP_COEFFS[2].to_frac64(),
                        EXP_COEFFS[3].to_frac64(), EXP_COEFFS[4].to_frac64(),
                        EXP_COEFFS[5].to_frac64(), EXP_COEFFS[6].to_frac64(),
@@ -379,49 +445,46 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
                        EXP_COEFFS[9].to_frac64(), EXP_COEFFS[10].to_frac64());
 
   // With:
-  //  - p = 2^lo - 1 --> exp(lo) = p + 1
+  //  - p = 2^lo - 1 --> 2^lo = p + 1
   //  - mid_val = 2^mid = EXP_MID[x_mid]
   // We have:
   //  2^mid * 2^lo = mid_val * (p + 1)
   // The same applies for both of the 64-bit and 128-bit paths
   // (Workaround because we're dealing with fractional representation of things)
-  Frac64 mid_val64 = EXP_MID[x_mid].to_frac64();
-  Frac64 result64 = mid_val64 * p64 + mid_val64;
+  Frac64 mid_val = EXP_MID[x_mid].to_frac64();
+  Frac64 result = mid_val * p + mid_val;
 
-  // Testing
-  uint64_t result64_bits = result64.val[0];
-  constexpr uint64_t LAST_BITS_MASK = ((1u << 13) - 1);
-  uint32_t result64_last_bits =
-      static_cast<uint32_t>(result64_bits & LAST_BITS_MASK);
-  bool is_hard = (result64_last_bits + 4) &
-                 LAST_BITS_MASK; // will be != 0 if hard-to-round
+  uint64_t result_bits = result.val[0];
 
-  // DEBUG(x, is_neg, rounding, x_e_unbiased, x_s, x_ln2_bits, k, l2y_r_hi,
-  //       e_y_unbiased, d, x_mid, x_lo, result64_bits, result64_last_bits,
-  //       is_hard);
-
-  // Execute the fast path if possible
-  if (LIBC_LIKELY(!is_hard)) {
-    return exp_handle_rounding(result64, is_neg, d, e_y_unbiased, rounding);
+  // Rounding test
+  constexpr uint32_t LAST_BITS = 12;
+  constexpr uint32_t ROUNDING_ERROR = 4;
+  uint32_t result_last_bits =
+      static_cast<uint32_t>(result_bits & ((1u << LAST_BITS) - 1));
+  bool is_hard;
+  if (rounding == FE_TONEAREST) {
+    uint32_t rounded_lo =
+        (result_last_bits + (1u << (LAST_BITS - 1)) - ROUNDING_ERROR) >>
+        LAST_BITS;
+    uint32_t rounded_hi =
+        (result_last_bits + (1u << (LAST_BITS - 1)) + ROUNDING_ERROR) >>
+        LAST_BITS;
+    is_hard = rounded_lo != rounded_hi;
+  } else {
+    is_hard = result_last_bits <= ROUNDING_ERROR ||
+              result_last_bits >= (1u << LAST_BITS) - ROUNDING_ERROR;
   }
 
-  // Else, dial to the 128-bit path
+  // DEBUG(x, is_neg, rounding, x_e_unbiased, x_s, x_ln2_bits, k, l2y_r_hi,
+  //       e_y, d, x_mid, x_lo, result64_bits, result_last_bits,
+  //       is_hard);
 
-  // Shift left to move all bits to the high part
-  // LSB(x_lo_frac) = 2^-128
-  Frac128 x_lo_frac(static_cast<UInt128>(x_lo) << 80);
+  if (false && LIBC_LIKELY(!is_hard)) {
+    return exp_handle_rounding(result, is_neg, d, e_y, rounding);
+  }
 
-  Frac128 p =
-      x_lo_frac * fputil::polyeval(x_lo_frac, EXP_COEFFS[0], EXP_COEFFS[1],
-                                   EXP_COEFFS[2], EXP_COEFFS[3], EXP_COEFFS[4],
-                                   EXP_COEFFS[5], EXP_COEFFS[6], EXP_COEFFS[7],
-                                   EXP_COEFFS[8], EXP_COEFFS[9], EXP_COEFFS[10],
-                                   EXP_COEFFS[11]);
-
-  Frac128 mid_val = EXP_MID[x_mid];
-  Frac128 result128 = mid_val * p + mid_val;
-
-  return exp_handle_rounding(result128, is_neg, d, e_y_unbiased, rounding);
+  // Dial back to 128-bit path for hard-to-round cases
+  return exp_accurate_path(x_s_shifted, x_e_unbiased, is_neg, rounding);
 }
 
 } // namespace static_rounding

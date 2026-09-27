@@ -170,6 +170,16 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
+template <typename T>
+typename fputil::FPBits<T>::StorageType ulp_distance(T x, T y) {
+  using FPBits = fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+
+  StorageType x_bits = FPBits(x).uintval();
+  StorageType y_bits = FPBits(y).uintval();
+  return x_bits > y_bits ? x_bits - y_bits : y_bits - x_bits;
+}
+
 template <TestCond C, typename T>
 CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
