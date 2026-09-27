@@ -362,10 +362,6 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
 
-- Improved {doc}`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by correctly dereferencing
-  raw pointers to containers in fix-its.
-
 - Extend {doc}`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
@@ -385,6 +381,10 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Kept diagnostics but suppressed unsafe fix-its when no safe
     result-preserving rewrite is available.
+
+- Fixed a bug in {doc}`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` that produced incorrect fix-its
+  for raw pointers to containers.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
