@@ -736,13 +736,13 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PositionMap;
-  for (unsigned Index = 0; Index < Pointers.size(); ++Index)
-    PositionMap[Pointers[Index].PointerValue].push_back(Index);
+  DenseMap<Value *, SmallVector<unsigned>> PointerToIndices;
+  for (unsigned I = 0; I < Pointers.size(); ++I)
+    PointerToIndices[Pointers[I].PointerValue].push_back(I);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
-  SmallSet<unsigned, 2> Seen;
+  SmallSet<unsigned, 2> SeenIndices;
 
   // Go through all equivalence classes, get the "pointer check groups"
   // and add them to the overall solution. We use the order in which accesses
@@ -750,7 +750,7 @@ void RuntimePointerChecking::groupChecks(
   for (unsigned I = 0; I < Pointers.size(); ++I) {
     // We've seen this pointer before, and therefore already processed
     // its equivalence class.
-    if (Seen.contains(I))
+    if (SeenIndices.contains(I))
       continue;
 
     MemoryDepChecker::MemAccessInfo Access(Pointers[I].PointerValue,
@@ -764,6 +764,7 @@ void RuntimePointerChecking::groupChecks(
     }
 
     SmallVector<RuntimeCheckingPtrGroup, 2> Groups;
+    SmallPtrSet<Value *, 2> SeenPointers;
 
     // Because DepCands is constructed by visiting accesses in the order in
     // which they appear in alias sets (which is deterministic) and the
@@ -771,15 +772,16 @@ void RuntimePointerChecking::groupChecks(
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
-      // If we can't find the pointer in PositionMap that means we can't
-      // generate a memcheck for it.
-      if (PointerI == PositionMap.end())
+      Value *Pointer = M.getPointer();
+      // A read-modify-write access appears in DepCands in both access modes.
+      if (!SeenPointers.insert(Pointer).second)
         continue;
-      for (unsigned Pointer : PointerI->second) {
+
+      for (unsigned PointerIndex : PointerToIndices.lookup(Pointer)) {
         bool Merged = false;
+
         // Mark this pointer as seen.
-        Seen.insert(Pointer);
+        SeenIndices.insert(PointerIndex);
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
@@ -793,7 +795,7 @@ void RuntimePointerChecking::groupChecks(
 
           TotalComparisons++;
 
-          if (Group.addPointer(Pointer, *this)) {
+          if (Group.addPointer(PointerIndex, *this)) {
             Merged = true;
             break;
           }
@@ -803,7 +805,7 @@ void RuntimePointerChecking::groupChecks(
           // We couldn't add this pointer to any existing set or the threshold
           // for the number of comparisons has been reached. Create a new group
           // to hold the current pointer.
-          Groups.emplace_back(Pointer, *this);
+          Groups.emplace_back(PointerIndex, *this);
       }
     }
 
