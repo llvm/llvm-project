@@ -1918,7 +1918,7 @@ void ClauseProcessor::processMapObjects(
 
     mlir::FlatSymbolRefAttr mapperId =
         resolveMapperId(converter, clauseLocation, object, mapperIdNameRef,
-                        mapTypeBits, directive, parentObj.has_value());
+                        mapTypeBits, directive);
 
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
