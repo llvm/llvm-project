@@ -1,3 +1,8 @@
+if(MINGW)
+  # CoCreateInstance and the BSTR functions of the Setup API lookup.
+  set(imported_libs ole32 oleaut32)
+endif()
+
 add_llvm_component_library(LLVMWindowsDriver
   MSVCPaths.cpp
 
