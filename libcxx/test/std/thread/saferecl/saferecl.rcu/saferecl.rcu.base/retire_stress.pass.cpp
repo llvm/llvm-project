@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
+// XFAIL: libcpp-has-no-experimental-rcu
 // REQUIRES: std-at-least-c++26
 
 // void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept;
