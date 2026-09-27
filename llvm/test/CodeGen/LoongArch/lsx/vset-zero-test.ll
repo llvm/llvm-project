@@ -9,9 +9,8 @@ define void @any_lane_set(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
 ; CHECK-NEXT:    vseq.d $vr0, $vr0, $vr1
-; CHECK-NEXT:    vmskltz.d $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    sltu $a0, $zero, $a0
+; CHECK-NEXT:    vsetnez.v $fcc0, $vr0
+; CHECK-NEXT:    movcf2gr $a0, $fcc0
 ; CHECK-NEXT:    st.b $a0, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %src
@@ -29,9 +28,8 @@ define void @no_lane_set(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
 ; CHECK-NEXT:    vseq.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    vmskltz.w $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    vseteqz.v $fcc0, $vr0
+; CHECK-NEXT:    movcf2gr $a0, $fcc0
 ; CHECK-NEXT:    st.b $a0, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %src
@@ -49,9 +47,8 @@ define void @branch_any_lane_set(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
 ; CHECK-NEXT:    vseq.d $vr0, $vr0, $vr1
-; CHECK-NEXT:    vmskltz.d $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    beqz $a0, .LBB2_2
+; CHECK-NEXT:    vseteqz.v $fcc0, $vr0
+; CHECK-NEXT:    bcnez $fcc0, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %hit
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
