@@ -209,7 +209,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test()
+  test();
   static_assert(test());
 
   return 0;
@@ -252,7 +252,7 @@ use-case is to fail when code is reached that should be unreachable.
 This macro requires its `CONDITION` to evaluate to `true`. If that fails it
 will fail the test with a log message `ARG`.
 
-##### TEST_LIBCPP_REQUIRE((CONDITION, ARG)
+##### TEST_LIBCPP_REQUIRE(CONDITION, ARG)
 
 If the library under test is libc++ it behaves like `TEST_REQUIRE`, else it
 is a no-op. This makes it possible to test libc++ specific behaviour. For
@@ -380,7 +380,7 @@ Test Filenames <lit-meaning-of-libc-test-filenames>` when determining the names 
 
 #### Custom Directives
 
-Lit has many directives built in (e.g., `DEFINE`, `UNSUPPORTED`). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
+Lit has many directives built in (e.g., `DEFINE`, `UNSUPPORTED`). In addition to those directives, libc++ adds three additional libc++-specific directives that makes
 writing tests easier. See {ref}`libc++-specific Lit Directives <libc-specific-lit-directives>` for more information about the `FILE_DEPENDENCIES`, `ADDITIONAL_COMPILE_FLAGS`, and `MODULE_DEPENDENCIES` libc++-specific directives.
 
 (libc-specific-lit-directives)=

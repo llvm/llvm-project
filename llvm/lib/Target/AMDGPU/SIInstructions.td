@@ -4254,6 +4254,11 @@ def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
 >;
+
+def : GCNPat <
+  (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_32:$src0))),
+  (COPY VGPR_32:$src0)
+>;
 }
 
 let True16Predicate = UseRealTrue16Insts in {
@@ -4276,7 +4281,19 @@ def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
+
+def : GCNPat <
+  (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
+  (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
+>;
 }
+
+// A bf16 value can only be in the low 16 bits of an SGPR, regardless of
+// Real-True16 or Fake-True16.
+def : GCNPat <
+  (v2bf16 (UniformUnaryFrag<scalar_to_vector> (bf16 SReg_32:$src0))),
+  (COPY SReg_32:$src0)
+>;
 
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,
