@@ -6554,7 +6554,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1(
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
   if (IsInnerLoop) {
     RUN_VPLAN_PASS(VPlanTransforms::recordExecutionFrequencies, *VPlan0);
-    assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
+    assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, EnabledCM) &&
            "execution frequencies do not match the loop's block frequencies");
   }
 

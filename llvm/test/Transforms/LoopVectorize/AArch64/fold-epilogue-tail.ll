@@ -49,7 +49,7 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i32 %val) {
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
@@ -111,7 +111,7 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i32 %val) {
 ; CHECK-VS:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-VS-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-VS:       [[VEC_EPILOG_PH]]:
-; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-VS-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 3
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
@@ -185,7 +185,7 @@ define i32 @live-out(ptr %src, i64 %n) {
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -251,7 +251,7 @@ define i32 @live-out(ptr %src, i64 %n) {
 ; CHECK-VS:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-VS-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]]
 ; CHECK-VS:       [[VEC_EPILOG_PH]]:
-; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-VS-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 3
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
@@ -477,7 +477,7 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @reversed-loop(ptr %A, i32 %n, i32 %val) {
 ; CHECK-LABEL: define void @reversed-loop(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; CHECK-NEXT:    [[ST:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -2
@@ -491,10 +491,10 @@ define void @reversed-loop(ptr %A, i32 %n, i32 %val) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[ST]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP5]], [[ST]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK2:%.*]] = icmp ult i32 [[TMP2]], 32
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label %[[VEC_EPILOG_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP2]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP7]]
@@ -555,7 +555,7 @@ define void @reversed-loop(ptr %A, i32 %n, i32 %val) {
 ;
 ; CHECK-VS-LABEL: define void @reversed-loop(
 ; CHECK-VS-SAME: ptr [[A:%.*]], i32 [[N:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-VS-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-VS-NEXT:  [[ITER_CHECK:.*:]]
 ; CHECK-VS-NEXT:    [[ST:%.*]] = sub i32 [[N]], 1
 ; CHECK-VS-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-VS-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -2
@@ -571,11 +571,11 @@ define void @reversed-loop(ptr %A, i32 %n, i32 %val) {
 ; CHECK-VS-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[SMIN]]
 ; CHECK-VS-NEXT:    [[TMP7:%.*]] = sub i32 [[ST]], [[TMP6]]
 ; CHECK-VS-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP7]], [[ST]]
-; CHECK-VS-NEXT:    br i1 [[TMP8]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-VS-NEXT:    br i1 [[TMP8]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-VS:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-VS-NEXT:    [[TMP9:%.*]] = shl nuw i32 [[TMP3]], 5
 ; CHECK-VS-NEXT:    [[MIN_ITERS_CHECK2:%.*]] = icmp ult i32 [[TMP2]], [[TMP9]]
-; CHECK-VS-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label %[[VEC_EPILOG_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-VS-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VS:       [[VECTOR_PH]]:
 ; CHECK-VS-NEXT:    [[TMP10:%.*]] = shl nuw i32 [[TMP3]], 4
 ; CHECK-VS-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], [[TMP9]]
