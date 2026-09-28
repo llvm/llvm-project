@@ -2084,6 +2084,27 @@ bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
   return false;
 }
 
+bool Sema::checkArrayTooLarge(QualType ElementType,
+                              const llvm::APSInt &NumElements,
+                              SourceLocation Loc, SourceRange Range) {
+  unsigned ActiveSizeBits = NumElements.getActiveBits();
+  if (!ElementType->isDependentType() &&
+      !ElementType->isVariablyModifiedType() &&
+      !ElementType->isIncompleteType() && !ElementType->isUndeducedType())
+    ActiveSizeBits =
+        std::max(ActiveSizeBits, ConstantArrayType::getNumAddressingBits(
+                                     Context, ElementType, NumElements));
+  if (ActiveSizeBits <= ConstantArrayType::getMaxSizeBits(Context))
+    return false;
+
+  Diag(Loc, diag::err_array_too_large)
+      << toString(NumElements, 10, NumElements.isSigned(),
+                  /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                  /*InsertSeparators=*/true)
+      << Range;
+  return true;
+}
+
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
@@ -2307,20 +2328,9 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
           return QualType();
       }
 
-      // Is the array too large?
-      unsigned ActiveSizeBits =
-          (!T->isDependentType() && !T->isVariablyModifiedType() &&
-           !T->isIncompleteType() && !T->isUndeducedType())
-              ? ConstantArrayType::getNumAddressingBits(Context, T, ConstVal)
-              : ConstVal.getActiveBits();
-      if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-        Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10, ConstVal.isSigned(),
-                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                        /*InsertSeparators=*/true)
-            << ArraySize->getSourceRange();
+      if (checkArrayTooLarge(T, ConstVal, ArraySize->getBeginLoc(),
+                             ArraySize->getSourceRange()))
         return QualType();
-      }
 
       T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM, Quals);
     }
