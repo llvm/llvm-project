@@ -154,8 +154,12 @@ def getPlatform():
         dot = platform.find(".")
         if dot != -1:
             platform = platform[:dot]
+        # Normalize SDK-style names to the canonical lldb platform names
+        # used elsewhere in the test infra (lldbplatform.__name_lookup, etc.).
         if platform == "iphoneos":
             platform = "ios"
+        elif platform == "appletvos":
+            platform = "tvos"
         return platform
 
     return _get_platform_os(lldb.selected_platform)
