@@ -354,9 +354,9 @@ int main(int argc, char **argv) {
 
     llvm::lto::Config Config;
     SplitModuleCG SplitModuleCG(*M, NumOutputs);
-    SplitModuleCG.splitModule(
-        HandleModulePartCG,
-        [&] { return std::make_unique<llvm::lto::LTOLLVMContext>(Config); });
+    SplitModuleCG.splitModule(HandleModulePartCG, [&] {
+      return std::make_unique<llvm::lto::LTOLLVMContext>(Config);
+    });
     return 0;
   }
 

@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
 #include <map>
@@ -53,7 +54,7 @@ class SimplifiedCallGraph {
   FunctionMapTy FunctionMap;
 
 public:
-  explicit SimplifiedCallGraph(CallGraph &CG);
+  LLVM_ABI explicit SimplifiedCallGraph(CallGraph &CG);
   ~SimplifiedCallGraph() = default;
 
   using iterator = FunctionMapTy::iterator;
@@ -82,8 +83,8 @@ public:
         static_cast<const SimplifiedCallGraph &>(*this).at(F));
   }
 
-  void print();
-  SimplifiedCallGraphNode *getOrInsertFunction(const Function *F);
+  LLVM_ABI void print();
+  LLVM_ABI SimplifiedCallGraphNode *getOrInsertFunction(const Function *F);
 };
 
 /// A node in SimplifiedCallGraph representing a single function, plus the set
@@ -141,6 +142,7 @@ struct FunctionWithDependencies {
   /// Collects \p F and all non-declaration functions transitively called by
   /// \p F into Dependencies, and computes TotalCost as the sum of the costs
   /// of all collected functions per \p FnCosts.
+  LLVM_ABI
   FunctionWithDependencies(SimplifiedCallGraph &SCG,
                            const DenseMap<const Function *, CostType> &FnCosts,
                            const Function *F);
@@ -190,13 +192,13 @@ public:
   ///          from the number of call-graph roots discovered in
   ///          createWorkList, capped to the available hardware parallelism.
   ///          The actual partition count is finalized in the constructor.
-  SplitModuleCG(Module &M, unsigned LimitPartition = 0);
+  LLVM_ABI SplitModuleCG(Module &M, unsigned LimitPartition = 0);
 
   /// Splits the module and invokes \p ModuleCallback once per partition from
   /// the worker threads, using a fresh context per partition (see
   /// ContextCreationCallback).
-  void splitModule(ModuleCreationCallback ModuleCallback,
-                   ContextCreationCallback MakeCtx);
+  LLVM_ABI void splitModule(ModuleCreationCallback ModuleCallback,
+                            ContextCreationCallback MakeCtx);
 
 private:
   using CostType = InstructionCost::CostType;
