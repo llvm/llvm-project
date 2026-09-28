@@ -13,6 +13,8 @@
 //   search_n(ForwardIterator first, ForwardIterator last, Size count,
 //            const T& value);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <algorithm>
 #include <array>
 #include <cassert>
