@@ -27,7 +27,7 @@ program omp_depend
 
   !ERROR: 'a' in DEPEND clause is a zero size array section
   !ERROR: 'a' in DEPEND clause must not specify a stride
-  !$omp task shared(x) depend(in: a(1:5:10))
+  !$omp task shared(x) depend(in: a(5:1:10))
   print *, a(5:10), b
   !$omp end task
 
