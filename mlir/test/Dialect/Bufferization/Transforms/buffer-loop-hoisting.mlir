@@ -877,7 +877,7 @@ func.func @no_hoist_while_dynamic_size(%n: index) -> index {
 // CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
 // CHECK-NEXT: memref.store %[[VALUE]]
 func.func @hoist_with_unrelated_loop_effect(%out: memref<f32>, %value: f32) {
-  test.store_with_a_loop_region %out attributes {store_before_region = true} {
+  test.store_with_a_loop_region %out <store_before_region = true> {
     %buffer = memref.alloc() : memref<f32>
     memref.store %value, %buffer[] : memref<f32>
     %loaded = memref.load %buffer[] : memref<f32>
