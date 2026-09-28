@@ -17,7 +17,7 @@
 # RUN: ld.lld -e _start %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-## The three short-range sites in .text.a are always relaxed.
+## The two short-range sites in .text.a are always relaxed.
 # CHECK-LABEL: <_start>:
 # CHECK-NEXT:    pcaddi $t0,
 # CHECK-NEXT:    pcaddi $t1,
