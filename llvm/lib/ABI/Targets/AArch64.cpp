@@ -307,7 +307,7 @@ ArgInfo AArch64TargetInfo::coerceIllegalVector(const VectorType *VT,
         TB.getVectorType(I32, ElementCount::getFixed(4), llvm::Align(16)));
   }
 
-  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
+  return getNaturalAlignIndirect(VT, getAllocaAddrSpace(), /*ByVal=*/false);
 }
 
 bool AArch64TargetInfo::isIllegalVectorType(const Type *Ty) const {
