@@ -305,6 +305,9 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
                           ->getZExtValue();
   SDLoc DL(N);
 
+  // Comparison order is reverse in SuperH
+  std::swap(LHS, RHS);
+
   // NOTE:  The comparisons just set the T bit, it's up to later instructions
   //        to interpret the T bit as positive or negative.
   SDNode *Res = nullptr;
