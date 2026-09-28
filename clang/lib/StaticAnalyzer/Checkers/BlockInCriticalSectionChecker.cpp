@@ -103,7 +103,6 @@ using FilterFn = bool (*)(const CallEvent &);
 struct ThreadingCallDescription {
   RoleKind Role;
   GetRegionFn GetRegion = getFirstArgRegion;
-  // Keep every call by default.
   FilterFn Filter = [](const CallEvent &) { return true; };
 };
 
