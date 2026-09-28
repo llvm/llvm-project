@@ -524,12 +524,14 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 // Signed-vs-unsigned G_ICMP is distinguished by its predicate operand.
 //
 // TODO: follow-up PRs will add the remaining sign-sensitive opcodes
-// (e.g. G_SMIN/G_SMAX, G_SADDSAT/G_SSUBSAT, signed overflow ops).
+// (e.g. G_SADDSAT/G_SSUBSAT, signed overflow ops).
 static bool isSignSensitiveOp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
     return true;
   case TargetOpcode::G_ICMP:
     return CmpInst::isSigned(
@@ -595,8 +597,11 @@ recordNarrowOperandWidths(MachineFunction &MF, const MachineRegisterInfo &MRI) {
       assert(LHS.isReg() && RHS.isReg());
       bool NeedsRewrite = RecordIfNarrow(LHS.getReg());
       NeedsRewrite = RecordIfNarrow(RHS.getReg()) || NeedsRewrite;
-      if (NeedsRewrite)
+      if (NeedsRewrite) {
         Info.SignSensitiveWorklist.push_back(&MI);
+        // Record the result too so it gets masked.
+        RecordIfNarrow(MI.getOperand(0).getReg());
+      }
     }
   }
   return Info;
@@ -631,6 +636,20 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     return SExted;
   };
 
+  // The wide op yields a sign-extended value, mask it back to OldW bits because
+  // later users assume the upper bits are zero.
+  auto MaskResult = [&](MachineInstr &MI, unsigned OldW) {
+    Register DstReg = MI.getOperand(0).getReg();
+    widenScalarType(DstReg, MRI);
+    MIB.setInstrAndDebugLoc(MI);
+    SPIRVTypeInst SpvTy =
+        GR->getOrCreateSPIRVIntegerType(widenBitWidthToNextPow2(OldW), MIB);
+    Register Result = createVirtualRegister(SpvTy, GR, MIB);
+    MI.getOperand(0).setReg(Result);
+    setInsertPtAfterDef(MIB, &MI);
+    MIB.buildZExtInReg(DstReg, Result, OldW);
+  };
+
   // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
   // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
   // per use.
@@ -644,12 +663,13 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       LHS.setReg(SignExtendReg(LHSReg, It->second, *MI));
     // Same vreg on both sides (e.g. G_ICMP slt %x, %x): reuse the sext just
     // emitted for LHS instead of emitting a second one.
-    if (RHSReg == LHSReg) {
+    if (RHSReg == LHSReg)
       RHS.setReg(LHS.getReg());
-      continue;
-    }
-    if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
+    else if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
       RHS.setReg(SignExtendReg(RHSReg, It->second, *MI));
+    Register Dst = MI->getOperand(0).getReg();
+    if (auto It = Info.OrigWidth.find(Dst); It != Info.OrigWidth.end())
+      MaskResult(*MI, It->second);
   }
 }
 
