@@ -629,15 +629,11 @@ struct EpilogueLoopVectorizationInfo {
   ElementCount MainLoopVF = ElementCount::getFixed(0);
   unsigned MainLoopUF = 0;
   ElementCount EpilogueVF = ElementCount::getFixed(0);
-  unsigned EpilogueUF = 0;
   Value *VectorTripCount = nullptr;
 
   EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
-                                ElementCount EVF, unsigned EUF)
-      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF), EpilogueUF(EUF) {
-    assert(EUF == 1 &&
-           "A high UF for the epilogue loop is likely not beneficial.");
-  }
+                                ElementCount EVF)
+      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
 };
 
 /// An extension of the inner loop vectorizer that creates a skeleton for a
@@ -707,7 +703,7 @@ public:
                                  VPlan &MainPlan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
                                        Checks, Plan, EPI.EpilogueVF,
-                                       EPI.EpilogueUF),
+                                       /*UnrollFactor=*/1),
         MainPlan(MainPlan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
@@ -6090,7 +6086,7 @@ void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
            << "Main Loop VF:" << EPI.MainLoopVF
            << ", Main Loop UF:" << EPI.MainLoopUF
            << ", Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
+           << ", Epilogue Loop UF:1\n";
   });
 }
 
@@ -6136,8 +6132,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
 void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
   LLVM_DEBUG({
     dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-           << "Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
+           << "Epilogue Loop VF:" << EPI.EpilogueVF << ", Epilogue Loop UF:1\n";
   });
 }
 
@@ -7722,12 +7717,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   auto VScale = Config.getVScaleForTuning();
   unsigned MainLoopStep =
       estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-  unsigned EpilogueLoopStep =
-      estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
+  unsigned EpilogueLoopStep = estimateElementCount(EPI.EpilogueVF, VScale);
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
                  EPI.VectorTripCount, Plan.requiresScalarEpilogue(),
-                 EPI.EpilogueVF, EPI.EpilogueUF, MainLoopStep, EpilogueLoopStep,
-                 SE);
+                 EPI.EpilogueVF, MainLoopStep, EpilogueLoopStep, SE);
 
   return InstsToMove;
 }
@@ -8248,11 +8241,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
     SmallVector<VPInstruction *> ResumeValues =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
-    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF, 1);
+    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
+    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0),
                                  BestEpiPlan.hasTailFolded());
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
@@ -8282,7 +8275,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         *PSE.getSE(), ResumeValues);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LVP.executePlan(
-        EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV, DT,
+        EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
     connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,
