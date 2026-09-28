@@ -89,14 +89,16 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
 
   CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
 
+  // hasCancel() reports a nested cancel/cancellation point directive in the
+  // body, not a clause on `parallel`, so it can't be an emitParallelClauses()
+  // NYI check.
   if (s.hasCancel()) {
     cgm.errorNYI(s.getBeginLoc(), "OpenMP Parallel with Cancel");
     return mlir::failure();
   }
-  if (s.getTaskReductionRefExpr()) {
-    cgm.errorNYI(s.getBeginLoc(), "OpenMP Parallel with Task Reduction");
-    return mlir::failure();
-  }
+  // Only set for reduction(task: ...), already rejected as NYI above.
+  assert(!s.getTaskReductionRefExpr() &&
+         "reduction(task: ...) should already be rejected as NYI");
 
   mlir::LogicalResult res = emitBody();
   mlir::omp::TerminatorOp::create(builder, end);
@@ -123,10 +125,8 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   return emitParallelOp(
       *this, s, queue, item, begin, end, clauseOps,
       [&]() -> mlir::LogicalResult {
-        // Don't lower the captured statement directly since this will be
-        // special-cased depending on the kind of OpenMP directive that is the
-        // parent, also the non-OpenMP context captured statements lowering does
-        // not apply directly.
+        // emitStmt() rejects CapturedStmt directly; the parent construct
+        // must unwrap it, so emit the inner statement instead.
         const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
         return emitStmt(cs->getCapturedStmt(), /*useCurrentScope=*/true);
       });
