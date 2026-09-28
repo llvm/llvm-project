@@ -1419,6 +1419,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
         using TypeS = llvm::remove_cvref_t<decltype(s)>;
         if constexpr ( //
             std::is_base_of_v<parser::OmpBlockConstruct, TypeS> ||
+            std::is_same_v<parser::OpenMPLoopConstruct, TypeS> ||
             std::is_same_v<parser::OpenMPSectionsConstruct, TypeS>) {
           if (auto &endSpec{s.EndDir()}) {
             CheckCompoundDirective(&s.BeginDir(), &*endSpec);
@@ -4443,6 +4444,13 @@ void OmpStructureChecker::CheckReductionModifier(
     return;
   }
   if (modifier.v == ReductionModifier::Value::Task) {
+    // NOWAIT on a paired end directive belongs to the same construct and is
+    // included in the directive context along with the opening clauses.
+    if (FindClause(llvm::omp::Clause::OMPC_nowait)) {
+      context_.Say(GetContext().clauseSource,
+          "Modifier 'TASK' on REDUCTION clause may not be used with "
+          "NOWAIT"_err_en_US);
+    }
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
         llvm::omp::Directive::OMPD_do, //
