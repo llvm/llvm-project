@@ -375,7 +375,7 @@ else:
 
 ; A null check of a GEP does not capture the provenance of the result.
 define ptr @return_malloc_gep_null_checked(i64 %size) {
-; CHECK-LABEL: define ptr @return_malloc_gep_null_checked(
+; CHECK-LABEL: define noalias ptr @return_malloc_gep_null_checked(
 ; CHECK-SAME: i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
@@ -400,7 +400,7 @@ else:
 
 ; Comparing the result against another pointer only captures its address.
 define ptr @return_malloc_compared(i64 %size, ptr %p) {
-; CHECK-LABEL: define ptr @return_malloc_compared(
+; CHECK-LABEL: define noalias ptr @return_malloc_compared(
 ; CHECK-SAME: i64 [[SIZE:%.*]], ptr nofree readnone captures(address) [[P:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], [[P]]
@@ -425,7 +425,7 @@ declare void @capture_address(ptr captures(address))
 
 ; Only the address of the result is captured.
 define ptr @return_malloc_capture_address(i64 %size) {
-; CHECK-LABEL: define ptr @return_malloc_capture_address(
+; CHECK-LABEL: define noalias ptr @return_malloc_capture_address(
 ; CHECK-SAME: i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    call void @capture_address(ptr [[A]])
