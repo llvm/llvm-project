@@ -281,6 +281,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %clmul = llvm.intr.clmul(%arg0, %arg0) : (i32, i32) -> i32
 
+// CHECK: llvm.intr.smulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %smulh = llvm.intr.smulh(%arg0, %arg0) : (i32, i32) -> i32
+
+// CHECK: llvm.intr.umulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %umulh = llvm.intr.umulh(%arg0, %arg0) : (i32, i32) -> i32
+
 // CHECK: llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %33 = llvm.intr.ctpop(%arg0) : (i32) -> i32
 

@@ -132,7 +132,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM, STI), Subtarget(STI) {
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = Subtarget.isTarget64BitLP64() ? MVT::i64 : MVT::i32;
 
   // Set up the TargetLowering object.
 
