@@ -631,7 +631,7 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 !3 = !{!7, !7, i64 0, i64 0}
 !4 = !{!5}
 !5 = distinct !{!5, !6, !"g1"}
-!6 = distinct !{!6, i11 false, !"t2"}
+!6 = distinct !{!6, i1 false, !"t2"}
 !7 = !{!"omnipotent char", !2}
 
 ;.
