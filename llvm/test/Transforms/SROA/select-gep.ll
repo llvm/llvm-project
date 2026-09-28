@@ -522,6 +522,33 @@ define i32 @test_select_fold_split_volatile(i1 %cond) {
   ret i32 %val3
 }
 
+; A volatile load behind a secondary GEP should also block the
+; address-space-crossing unfold (the volatile user is not a direct user of gep0).
+define i32 @test_select_fold_split_volatile_thru_gep(i1 %cond) {
+; CHECK-LABEL: @test_select_fold_split_volatile_thru_gep(
+; CHECK-NEXT:    [[ALLOC0_SROA_0:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    [[ALLOC1_SROA_0:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    store i32 0, ptr [[ALLOC0_SROA_0]], align 8
+; CHECK-NEXT:    store i32 2, ptr [[ALLOC1_SROA_0]], align 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC0_SROA_0]], ptr [[ALLOC1_SROA_0]]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [[STRUCT_T:%.*]], ptr addrspace(5) [[CAST]], i32 0, i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[GEP0]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = load volatile i32, ptr addrspace(5) [[GEP1]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc0 = alloca %struct.T, align 8
+  %alloc1 = alloca %struct.T, align 8
+  store %struct.T { i32 0, i32 1 }, ptr %alloc0
+  store %struct.T { i32 2, i32 3 }, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %gep0 = getelementptr inbounds %struct.T, ptr addrspace(5) %cast, i32 0, i32 0
+  %gep1 = getelementptr inbounds i32, ptr addrspace(5) %gep0, i32 0
+  %val = load volatile i32, ptr addrspace(5) %gep1
+  ret i32 %val
+}
+
 !0 = !{!"function_entry_count", i32 10}
 ;.
 ; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

@@ -4464,6 +4464,22 @@ private:
     return false;
   }
 
+  // Return true if any instruction reachable from V through pointer-forwarding
+  // uses (GEPs, casts, selects) is volatile.
+  static bool hasVolatileUser(const Value &V) {
+    SmallVector<const Value *, 4> Worklist(V.users());
+    while (!Worklist.empty()) {
+      if (const auto *I = dyn_cast<Instruction>(Worklist.pop_back_val())) {
+        if (I->isVolatile())
+          return true;
+        if (isa<GetElementPtrInst, BitCastInst, AddrSpaceCastInst, SelectInst>(
+                I))
+          append_range(Worklist, I->users());
+      }
+    }
+    return false;
+  }
+
   // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
@@ -4509,10 +4525,7 @@ private:
 
     // Do not duplicate address-space casts for volatile accesses. Unfolding the
     // GEP can increase code size and register pressure.
-    if (CrossesAddressSpace && any_of(GEPI.users(), [](User *U) {
-          auto *I = dyn_cast<Instruction>(U);
-          return I && I->isVolatile();
-        }))
+    if (CrossesAddressSpace && hasVolatileUser(GEPI))
       return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):\n";
