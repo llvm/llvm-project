@@ -1093,6 +1093,10 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, IRUnitRef IR) {
   StringRef FuncName;
   if (const auto *F = dyn_cast<Function>(IR))
     FuncName = F->getName();
+  else if (const auto *L = dyn_cast<Loop>(IR))
+    FuncName = L->getHeader()->getParent()->getName();
+  else if (const auto *MF = dyn_cast<MachineFunction>(IR))
+    FuncName = MF->getName();
 
   bool ShouldRun =
       Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR), FuncName);
