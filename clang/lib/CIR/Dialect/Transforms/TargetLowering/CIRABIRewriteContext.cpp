@@ -10,7 +10,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -38,9 +37,9 @@ using namespace mlir::abi;
 // caller's own object rather than a copy.
 //
 // At the call site both forward the caller's storage, since byval is copied
-// at the call boundary.  byval falls back to a slot of its own when the
-// operand's storage cannot be handed on.  At the callee, byval fills the
-// CIRGen param slot with a copy of the incoming object, while non-byval
+// on the caller's side of the call.  byval falls back to a slot of its own
+// when the operand's storage cannot be handed on.  At the callee, byval fills
+// the CIRGen param slot with a copy of the incoming object, while non-byval
 // rewires that slot to the incoming pointer so the body mutates the caller's
 // storage in place.
 //
@@ -222,16 +221,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       attrs.set(attrName, builder.getUnitAttr());
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
-      // Both kinds hand the callee a pointer, and state llvm.align and
-      // llvm.noundef on it, which constrains the pointer operand rather than
-      // the pointee's contents.  With byval the backend copies the pointee at
-      // the call boundary, so the callee works on an object of its own even
-      // when the pointer names the caller's.
-      //
-      // llvm.byval(T) records the pre-rewrite arg type because the opaque
-      // LLVM pointer cannot carry it.  llvm.nofreeobj says the object cannot
-      // be freed while the callee runs, which holds because the caller owns it
-      // across the call.
+      // Indirect lowering hands the callee a pointer.  llvm.align and
+      // llvm.noundef describe that pointer, not the bytes it points to.
+      // Without byval the pointer points to the caller's own object.  With
+      // byval the backend copies the pointee on the caller's side of the call,
+      // so the callee gets an object of its own even when the pointer points
+      // to the caller's own object.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       mlir::NamedAttrList attrs(existing);
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
@@ -239,12 +234,15 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                 builder.getUnitAttr());
       if (ac.byVal) {
-        // Classic adds llvm.noalias under -fpass-by-value-is-noalias, which
-        // CIR does not plumb through.
+        // llvm.byval(T) records the pre-rewrite arg type because the opaque
+        // LLVM pointer cannot carry it.  Classic adds llvm.noalias under
+        // -fpass-by-value-is-noalias, which CIR does not plumb through.
         assert(!cir::MissingFeatures::noaliasOnByvalAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
                   mlir::TypeAttr::get(pointeeTy));
       } else {
+        // llvm.nofreeobj says the object cannot be freed while the callee
+        // runs, which holds because the caller owns it across the call.
         // Classic adds llvm.dead_on_return when the object's lifetime ends in
         // the callee, which needs the destructor's triviality from
         // cir.record_layout's has_trivial_dtor.
@@ -500,10 +498,11 @@ static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
   return load;
 }
 
-/// \p load when an indirect argument told to be \p minAlign aligned may be
-/// passed as the address it read from rather than as the value it loaded.
-/// Null otherwise, including for a null \p load, leaving the caller to
-/// report a non-byval argument or to fill a byval slot of its own.
+/// Returns \p load if the address it read from can be passed in place of the
+/// loaded value for an indirect argument that needs \p minAlign alignment,
+/// and null otherwise, including when \p load is null.  A byval argument
+/// also needs storageUnwrittenBetween.  On null the caller reports a
+/// non-byval argument or fills a byval slot of its own.
 ///
 /// The address has to be a pointer to the loaded type in the default address
 /// space, since that is what the rewritten parameter is, and a cir.load pins
@@ -516,9 +515,9 @@ static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
 /// for a local copy.  A byval parameter's slot keeps CIRGen's alignment, so
 /// it qualifies only where that already covers \p minAlign.
 ///
-/// The slot must already state that alignment.  A slot standing in for a
-/// parameter is replaced by the incoming pointer in finalizeParameterSlots,
-/// which promises only what the caller gave it.
+/// Raising a slot's alignment here would not hold for one that stands in
+/// for a parameter, since finalizeParameterSlots replaces it with the
+/// incoming pointer, which promises only what the caller gave it.
 static cir::LoadOp forwardableIndirectLoad(cir::LoadOp load,
                                            uint64_t minAlign) {
   if (!load || load.getAddr().getType() !=
@@ -528,62 +527,25 @@ static cir::LoadOp forwardableIndirectLoad(cir::LoadOp load,
   return slot && slot.getAlignment() >= minAlign ? load : cir::LoadOp();
 }
 
-/// True when \p op, or anything nested in it, may write the storage \p slot
-/// allocates.  An op whose every write names some other local allocation
-/// cannot, which is what lets the coercion slot an earlier argument fills
-/// sit between a load and its call.  Anything this cannot account for, an op
-/// with no effect interface or a write naming storage that is not a local
-/// allocation, is taken to write \p slot.
-static bool mayWriteSlot(mlir::Operation *op, cir::AllocaOp slot) {
-  // This accounts for the regions of an op that only carries the effects of
-  // what it holds, which is most of them.
-  if (mlir::isMemoryEffectFree(op))
-    return false;
-
-  auto effects = mlir::dyn_cast<mlir::MemoryEffectOpInterface>(op);
-  if (!effects)
-    return true;
-
-  SmallVector<mlir::MemoryEffects::EffectInstance> instances;
-  effects.getEffects(instances);
-  for (const mlir::MemoryEffects::EffectInstance &instance : instances) {
-    if (!mlir::isa<mlir::MemoryEffects::Write>(instance.getEffect()))
-      continue;
-    if (!instance.getValue())
-      return true;
-    cir::AllocaOp written = cir::getUnderlyingAlloca(instance.getValue());
-    if (!written || written == slot)
-      return true;
-  }
-
-  // Those effects describe the op itself, so a region it holds can still
-  // carry a write.
-  for (mlir::Region &region : op->getRegions())
-    for (mlir::Block &block : region)
-      for (mlir::Operation &nested : block)
-        if (mayWriteSlot(&nested, slot))
-          return true;
-  return false;
-}
-
-/// True when nothing between \p load and \p call can write the storage \p
-/// load read, so a byval argument may name that storage rather than a copy
-/// of it.  byval takes the callee's copy at the call, while the operand
-/// carries the value as of the load, so a write in between would reach the
-/// callee that the operand does not hold.  prepareNonByvalParameters reads a
-/// parameter at its spill, which leaves the body's own stores in between.
+/// True when \p aliasAnalysis shows that nothing between \p load and \p call
+/// can write the storage \p load read, so a byval argument may name that
+/// storage rather than a copy of it.  byval takes the callee's copy at the
+/// call, while the operand carries the value as of the load, so a write in
+/// between would reach the callee that the operand does not hold.
+/// prepareNonByvalParameters reads a parameter at its spill, which leaves the
+/// body's own stores in between.
 ///
 /// A load in another block is not forwardable here, since the paths from it
 /// to the call are not walked.
-static bool storageUnwrittenBetween(cir::LoadOp load, mlir::Operation *call) {
+static bool storageUnwrittenBetween(cir::LoadOp load, mlir::Operation *call,
+                                    mlir::AliasAnalysis &aliasAnalysis) {
   if (load->getBlock() != call->getBlock())
     return false;
-  cir::AllocaOp slot = cir::getUnderlyingAlloca(load.getAddr());
-  assert(slot && "a forwardable load reads a slot allocated here");
   for (mlir::Operation *op = load->getNextNode(); op != call;
        op = op->getNextNode()) {
     assert(op && "the load must precede the call in the block they share");
-    if (mayWriteSlot(op, slot))
+    if (op->getNumRegions() != 0 ||
+        aliasAnalysis.getModRef(op, load.getAddr()).isMod())
       return false;
   }
   return true;
@@ -1690,7 +1652,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // load and the call, since the operand carries the value as of the
       // load.
       if (cir::LoadOp fwdLoad = forwardableIndirectLoad(srcLoad, minAlign);
-          fwdLoad && storageUnwrittenBetween(fwdLoad, call.getOperation())) {
+          fwdLoad && storageUnwrittenBetween(fwdLoad, call.getOperation(),
+                                             aliasAnalysis)) {
         newArgs.push_back(fwdLoad.getAddr());
         deadRecordLoads.push_back(fwdLoad);
         continue;
