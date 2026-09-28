@@ -173,13 +173,19 @@ namespace DependentTypenameReturnType {
   }
   template int h<int>();
 
+  template <class T> T i() {
+    auto b = ^auto()->typename S<T>::type { return 0; };
+    (void)b();
+  }
+  template int i<int>();
+
   // Failure case
   template <class T> struct NoType {};
-  template <class T> void i() {
+  template <class T> void j() {
     auto b = ^ typename NoType<T>::type () { return 0; }; // expected-error{{no type named 'type' in 'DependentTypenameReturnType::NoType<int>'}}
     (void)b;
   }
-  template void i<int>(); // expected-note{{in instantiation of function template specialization 'DependentTypenameReturnType::i<int>' requested here}}
+  template void j<int>(); // expected-note{{in instantiation of function template specialization 'DependentTypenameReturnType::j<int>' requested here}}
 }
 
 namespace GenericLambdaCapture {
