@@ -257,7 +257,7 @@ char bar[] = "@(#) bar";
 // DUP-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @foo], section "llvm.metadata"
 
 // ===========================================================================
-// MULTI option patterns — the option gien more than once
+// MULTI option patterns — the option given more than once
 // ===========================================================================
 
 // The option given twice: the lists are combined, so both are preserved.
