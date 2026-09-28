@@ -288,7 +288,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
   instruction set.
-* Added a 128-bit vector width preference for AMD Bulldozer CPUs.
+* AMD Bulldozer CPUs (bdver1/2/3/4) now only vectorize to 128-bit vector widths
+  by default to improve multi-threaded performance.
 
 ### Changes to the OCaml bindings
 
