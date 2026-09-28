@@ -2258,12 +2258,14 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  assert(!cir::MissingFeatures::addressSpace());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
+      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, globalName, c.getType(),
-                                        !cgm.getLangOpts().WritableStrings);
+  cir::GlobalOp gv =
+      cgm.createGlobalOp(loc, globalName, c.getType(),
+                         !cgm.getLangOpts().WritableStrings, addrSpace);
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
@@ -2356,10 +2358,25 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   cir::GlobalOp gv = getGlobalForStringLiteral(s, name);
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(gv.getSymType());
   assert(arrayTy && "String literal must be array");
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
+  cir::PointerType ptrTy = getBuilder().getPointerTo(
+      arrayTy.getElementType(),
+      getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
+  if (langOpts.OpenCL)
+    return LangAS::opencl_constant;
+  if (langOpts.SYCLIsDevice) {
+    errorNYI("SYCL global constant address space");
+    return LangAS::Default;
+  }
+  if (langOpts.HIP && langOpts.CUDAIsDevice && getTriple().isSPIRV())
+    return LangAS::cuda_device;
+  if (std::optional<LangAS> constAS = getTarget().getConstantAddressSpace())
+    return *constAS;
+  return LangAS::Default;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
