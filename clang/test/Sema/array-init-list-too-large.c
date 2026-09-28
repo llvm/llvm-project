@@ -1,9 +1,15 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple i386 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple msp430 -fsyntax-only -verify=expected,size16 %s
 // RUN: %clang_cc1 -triple avr -fsyntax-only -verify=expected,size16 %s
 // RUN: %clang_cc1 -triple msp430 -fsyntax-only -verify=expected,size16 -x c++ %s
 
+#if __SIZEOF_SIZE_T__ == 8
+// Array sizes are limited to 61 bits.
+typedef char Quarter[1ULL << 59];
+#else
 typedef char Quarter[__SIZE_MAX__ / 4 + 1];
+#endif
 Quarter fits[] = {{0}, {0}, {0}};
 Quarter explicit_bound[4]; // expected-error {{array is too large (4 elements)}}
 Quarter deduced_bound[] = {{0}, {0}, {0}, {0}}; // expected-error {{array is too large (4 elements)}}
