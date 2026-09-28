@@ -23,6 +23,8 @@ math_mpfr_test(name = "acosf")
 
 math_mpfr_test(name = "acoshf")
 
+math_mpfr_test(name = "acospif")
+
 math_mpfr_test(
     name = "asinbf16",
     deps = [
@@ -33,6 +35,8 @@ math_mpfr_test(
 math_mpfr_test(name = "asinf")
 
 math_mpfr_test(name = "asinhf")
+
+math_mpfr_test(name = "asinpif")
 
 math_mpfr_test(name = "atan2")
 
@@ -181,6 +185,13 @@ math_mpfr_test(
     deps = [
         "//libc:__support_math_exp10f_double_eval",
         "//libc:__support_math_exp10f_float_eval",
+    ],
+)
+
+math_mpfr_test(
+    name = "exp10m1f",
+    deps = [
+        "//libc:__support_cpp_array",
     ],
 )
 
@@ -854,6 +865,11 @@ math_mpfr_test(
 
 math_mpfr_test(name = "sqrtf16")
 
+math_mpfr_test(
+    name = "rsqrtf",
+    hdrs = ["RsqrtTest.h"],
+)
+
 math_mpfr_test(name = "rsqrtf16")
 
 math_mpfr_test(
@@ -868,6 +884,11 @@ math_mpfr_test(
     deps = [
         "//libc:__support_fputil_bfloat16",
     ],
+)
+
+math_mpfr_test(
+    name = "scalbnf",
+    hdrs = ["LdExpTest.h", "ScalbnTest.h"],
 )
 
 math_mpfr_test(
@@ -964,5 +985,7 @@ math_mpfr_test(name = "log2p1f16")
 math_mpfr_test(name = "log10f16")
 
 math_mpfr_test(name = "log10p1f16")
+
+math_mpfr_test(name = "lgammaf")
 
 math_mpfr_test(name = "lgammaf16")
