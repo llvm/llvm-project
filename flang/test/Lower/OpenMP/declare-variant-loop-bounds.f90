@@ -69,13 +69,14 @@ contains
     !$omp end parallel
   end subroutine
 
-  ! Composite lowering creates PARALLEL separately from the loop wrappers.
+  ! Original bounds are evaluated in the context before DISTRIBUTE.
+  ! Emitting the composite PARALLEL region first must not affect selection.
   ! CHECK-LABEL: func.func @_QMloop_contextPcomposite(
   ! CHECK: omp.teams
   ! CHECK: omp.parallel
   ! CHECK-NOT: fir.call @_QMloop_contextPbound(
   ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
-  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: fir.call @_QMloop_contextPteams_bound(
   ! CHECK: omp.distribute
   ! CHECK: omp.wsloop
   ! CHECK: fir.call @_QMloop_contextPdo_bound(
@@ -95,7 +96,7 @@ contains
   ! CHECK: omp.parallel
   ! CHECK-NOT: fir.call @_QMloop_contextPbound(
   ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
-  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: fir.call @_QMloop_contextPteams_bound(
   ! CHECK: omp.distribute
   ! CHECK: omp.wsloop
   ! CHECK: omp.simd
@@ -164,13 +165,15 @@ contains
 
   ! DIST_SCHEDULE sees only TEAMS. NUM_THREADS sees TEAMS, DISTRIBUTE, so
   ! CPU scores 5 and beats the vendor score of 4. A leaked PARALLEL would
-  ! make parallel_count a strict superset of cpu_count. The bound sees PARALLEL.
+  ! make parallel_count a strict superset of cpu_count. Bounds see only TEAMS.
   ! CHECK-LABEL: func.func @_QMloop_contextPcomposite_clauses(
   ! CHECK: omp.teams
   ! CHECK: fir.call @_QMloop_contextPteams_bound(
   ! CHECK: fir.call @_QMloop_contextPcpu_count(
   ! CHECK: omp.parallel
-  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: fir.call @_QMloop_contextPteams_bound(
+  ! CHECK: fir.call @_QMloop_contextPteams_bound(
+  ! CHECK: fir.call @_QMloop_contextPteams_bound(
   ! CHECK: omp.distribute
   ! CHECK: omp.wsloop
   ! CHECK: fir.call @_QMloop_contextPdo_bound(
@@ -179,7 +182,7 @@ contains
     integer :: n, a(n), i
     !$omp teams distribute parallel do dist_schedule(static, bound(n)) &
     !$omp& num_threads(thread_count(n))
-    do i = 1, bound(n)
+    do i = bound(1), bound(n), bound(1)
       a(i) = bound(n)
     end do
   end subroutine
@@ -191,7 +194,7 @@ contains
   ! CHECK: fir.call @_QMloop_contextPcpu_count(
   ! CHECK: omp.parallel
   ! CHECK: fir.call @_QMloop_contextPdo_pred(
-  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: fir.call @_QMloop_contextPscored_count(
   ! CHECK: omp.distribute
   ! CHECK: omp.wsloop
   ! CHECK: omp.simd
@@ -201,7 +204,7 @@ contains
     integer :: n, a(n), i
     !$omp teams distribute parallel do simd dist_schedule(static, bound(n)) &
     !$omp& num_threads(thread_count(n)) if(simd: pred(n))
-    do i = 1, bound(n)
+    do i = 1, thread_count(n)
       a(i) = bound(n)
     end do
   end subroutine
@@ -279,5 +282,65 @@ contains
       end do
     end do
     !$omp end teams
+  end subroutine
+
+  ! The same original-bound rule applies without PARALLEL in the composite.
+  ! CHECK-LABEL: func.func @_QMloop_contextPteams_distribute(
+  ! CHECK: omp.teams
+  ! CHECK: fir.call @_QMloop_contextPteams_bound(
+  ! CHECK: fir.call @_QMloop_contextPscored_count(
+  ! CHECK: omp.distribute
+  ! CHECK: fir.call @_QMloop_contextPcpu_count(
+  ! CHECK: fir.call @_QMloop_contextPscored_count(
+  ! CHECK: return
+  subroutine teams_distribute(n, a)
+    integer :: n, a(n), i
+    !$omp teams
+    !$omp distribute
+    do i = bound(1), thread_count(n)
+      a(i) = thread_count(n)
+    end do
+    i = thread_count(n)
+    !$omp end teams
+  end subroutine
+
+  ! Retain PARALLEL preceding DO in the same combined directive.
+  ! CHECK-LABEL: func.func @_QMloop_contextPparallel_do_simd(
+  ! CHECK: omp.parallel
+  ! CHECK: fir.call @_QMloop_contextPdo_pred(
+  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: fir.call @_QMloop_contextPbound(
+  ! CHECK: return
+  subroutine parallel_do_simd(n, a)
+    integer :: n, a(n), i
+    !$omp parallel do simd if(simd: pred(n))
+    do i = 1, bound(n)
+      a(i) = bound(n)
+    end do
+    i = bound(n)
+  end subroutine
+
+  ! An enclosing DO belongs to a different source loop and must remain active
+  ! for the inner SIMD bounds. Only the inner directive's frames are filtered.
+  ! CHECK-LABEL: func.func @_QMloop_contextPenclosing_do(
+  ! CHECK: omp.wsloop
+  ! CHECK: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: fir.call @_QMloop_contextPbound(
+  ! CHECK: return
+  subroutine enclosing_do(n, a)
+    integer :: n, a(n,n), i, j
+    !$omp do
+    do i = 1, n
+      !$omp simd
+      do j = 1, bound(n)
+        a(i,j) = bound(n)
+      end do
+    end do
+    i = bound(n)
   end subroutine
 end module

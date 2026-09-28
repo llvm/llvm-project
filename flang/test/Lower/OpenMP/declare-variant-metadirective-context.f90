@@ -146,4 +146,50 @@ contains
     !$omp end metadirective
     a(n) = value(n)
   end subroutine
+
+  ! SIMD clauses see DO; original bounds exclude both loop constituents.
+  ! CHECK-LABEL: func.func @_QMselected_contextPstatic_do_simd(
+  ! CHECK: fir.call @_QMselected_contextPin_do(
+  ! CHECK: fir.call @_QMselected_contextPvalue(
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMselected_contextPin_do(
+  ! CHECK: fir.call @_QMselected_contextPvalue(
+  ! CHECK: return
+  subroutine static_do_simd(n, a)
+    integer :: n, a(n), i
+    !$omp begin metadirective &
+    !$omp& when(implementation={vendor(llvm)}: do simd if(simd: value(n) > 0)) &
+    !$omp& otherwise(nothing)
+    do i = 1, value(n)
+      a(i) = value(n)
+    end do
+    !$omp end metadirective
+    a(n) = value(n)
+  end subroutine
+
+  ! Both runtime arms and the subsequent call restore the outer context.
+  ! CHECK-LABEL: func.func @_QMselected_contextPruntime_do_simd(
+  ! CHECK: fir.if
+  ! CHECK: fir.call @_QMselected_contextPin_do(
+  ! CHECK: fir.call @_QMselected_contextPvalue(
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMselected_contextPin_do(
+  ! CHECK: } else {
+  ! CHECK: fir.call @_QMselected_contextPvalue(
+  ! CHECK: fir.call @_QMselected_contextPvalue(
+  ! CHECK: fir.call @_QMselected_contextPvalue(
+  ! CHECK: return
+  subroutine runtime_do_simd(flag, n, a)
+    logical :: flag
+    integer :: n, a(n), i
+    !$omp metadirective &
+    !$omp& when(user={condition(flag)}: do simd if(simd: value(n) > 0)) &
+    !$omp& otherwise(nothing)
+    do i = 1, value(n)
+      a(i) = value(n)
+    end do
+    a(n) = value(n)
+  end subroutine
 end module
