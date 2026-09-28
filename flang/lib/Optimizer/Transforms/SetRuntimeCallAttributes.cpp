@@ -118,6 +118,23 @@ struct MemoryAttrDesc {
     return getGenericMemoryAttr(callOp);
   }
 };
+
+// OutputAscii accesses I/O state through pointers loaded from its opaque
+// cookie. That state is not based directly on a call argument, so it must be
+// represented as "other" memory rather than only argument memory.
+template <>
+struct MemoryAttrDesc<mkIOKey(OutputAscii)> {
+  static mlir::LLVM::MemoryEffectsAttr get(fir::CallOp callOp) {
+    return mlir::LLVM::MemoryEffectsAttr::get(
+        callOp->getContext(),
+        {/*other=*/mlir::LLVM::ModRefInfo::ModRef,
+         /*argMem=*/mlir::LLVM::ModRefInfo::ModRef,
+         /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef,
+         /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef});
+  }
+};
 } // end anonymous namespace
 
 // NosyncAttrDesc type provides get() method for computing
