@@ -5,11 +5,8 @@ symbol_exports("exports") {
 }
 
 shared_library("CASPluginTest") {
-  if (current_os == "win") {
-    output_dir = get_label_info("//llvm", "target_out_dir") + "/bin"
-  } else {
-    output_dir = get_label_info("//llvm", "target_out_dir") + "/lib"
-  }
+  # Put plugin next to the unit test executable.
+  output_dir = get_label_info("//llvm/unittests/CAS", "target_out_dir")
   output_name = "CASPluginTest"
   deps = [
     ":exports",

@@ -37,18 +37,18 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
   %c0 = arith.constant 0 : index
   %7 = arith.subi %c10_1, %c1 : index
   %8 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%7 : index) extent(%c10_1 : index) stride(%c1 : index) start_idx(%c1 : index)
-  %9 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(from) capture(ByRef) bounds(%8) -> !fir.ref<!fir.array<10xf32>> {name = "p"}
+  %9 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(from) capture(ByRef) bounds(%8) name("p") -> !fir.ref<!fir.array<10xf32>>
   omp.target_data map_entries(%9 : !fir.ref<!fir.array<10xf32>>) {
     %c1_2 = arith.constant 1 : index
     %c0_3 = arith.constant 0 : index
     %10 = arith.subi %c10, %c1_2 : index
     %11 = omp.map.bounds lower_bound(%c0_3 : index) upper_bound(%10 : index) extent(%c10 : index) stride(%c1_2 : index) start_idx(%c1_2 : index)
-    %12 = omp.map.info var_ptr(%2#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(to) capture(ByRef) bounds(%11) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+    %12 = omp.map.info var_ptr(%2#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(to) capture(ByRef) bounds(%11) name("a") -> !fir.ref<!fir.array<10xf32>>
     %c1_4 = arith.constant 1 : index
     %c0_5 = arith.constant 0 : index
     %13 = arith.subi %c10_1, %c1_4 : index
     %14 = omp.map.bounds lower_bound(%c0_5 : index) upper_bound(%13 : index) extent(%c10_1 : index) stride(%c1_4 : index) start_idx(%c1_4 : index)
-    %15 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%14) -> !fir.ref<!fir.array<10xf32>> {name = "p"}
+    %15 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%14) name("p") -> !fir.ref<!fir.array<10xf32>>
     omp.target kernel_type(generic) map_entries(%12 -> %arg3, %15 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
       %c10_10 = arith.constant 10 : index
       %22 = fir.shape %c10_10 : (index) -> !fir.shape<1>
@@ -68,12 +68,12 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
     %c0_7 = arith.constant 0 : index
     %16 = arith.subi %c10_0, %c1_6 : index
     %17 = omp.map.bounds lower_bound(%c0_7 : index) upper_bound(%16 : index) extent(%c10_0 : index) stride(%c1_6 : index) start_idx(%c1_6 : index)
-    %18 = omp.map.info var_ptr(%4#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(to) capture(ByRef) bounds(%17) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+    %18 = omp.map.info var_ptr(%4#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(to) capture(ByRef) bounds(%17) name("b") -> !fir.ref<!fir.array<10xf32>>
     %c1_8 = arith.constant 1 : index
     %c0_9 = arith.constant 0 : index
     %19 = arith.subi %c10_1, %c1_8 : index
     %20 = omp.map.bounds lower_bound(%c0_9 : index) upper_bound(%19 : index) extent(%c10_1 : index) stride(%c1_8 : index) start_idx(%c1_8 : index)
-    %21 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<10xf32>> {name = "p"}
+    %21 = omp.map.info var_ptr(%6#1 : !fir.ref<!fir.array<10xf32>>, !fir.array<10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%20) name("p") -> !fir.ref<!fir.array<10xf32>>
     omp.target kernel_type(generic) map_entries(%18 -> %arg3, %21 -> %arg4 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
       %c10_10 = arith.constant 10 : index
       %22 = fir.shape %c10_10 : (index) -> !fir.shape<1>

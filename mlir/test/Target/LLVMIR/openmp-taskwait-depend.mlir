@@ -25,7 +25,7 @@ llvm.func @taskwait_depend_iterator(%x: !llvm.ptr) {
 
 // CHECK-LABEL: define void @taskwait_depend_iterator
 // CHECK-SAME: (ptr[[xaddr:.+]])
-// CHECK: %[[dep_arr_addr:.+]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: %[[dep_arr_addr:.+]] = tail call ptr @malloc(i64 200)
 //
 // CHECK: omp_dep_iterator.header:
 // CHECK: %[[iv:.*]] = phi i64 [ 0, %omp_dep_iterator.preheader ], [ %[[next:.*]], %omp_dep_iterator.inc ]

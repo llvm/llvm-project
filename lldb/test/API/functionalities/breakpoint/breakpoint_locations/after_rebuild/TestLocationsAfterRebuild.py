@@ -18,8 +18,10 @@ class TestLocationsAfterRebuild(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @requireNotWasm  # a WASI executable wraps main, so a breakpoint on it takes two locations
-    @requireNotWindows  # On Windows we cannot remove a file that lldb is debugging.
+    @requireNotWasm(
+        "a WASI executable wraps main, so a breakpoint on it takes two locations"
+    )
+    @requireNotWindows("On Windows we cannot remove a file that lldb is debugging.")
     def test_remaining_location_spec(self):
         """If we rebuild a couple of times some of the old locations
         get removed.  Make sure the command-line breakpoint id

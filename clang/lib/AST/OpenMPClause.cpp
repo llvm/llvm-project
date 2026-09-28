@@ -654,13 +654,6 @@ OMPAlignedClause *OMPAlignedClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPAlignedClause(NumVars);
 }
 
-OMPAlignClause *OMPAlignClause::Create(const ASTContext &C, Expr *A,
-                                       SourceLocation StartLoc,
-                                       SourceLocation LParenLoc,
-                                       SourceLocation EndLoc) {
-  return new (C) OMPAlignClause(A, StartLoc, LParenLoc, EndLoc);
-}
-
 void OMPCopyinClause::setSourceExprs(ArrayRef<Expr *> SrcExprs) {
   assert(SrcExprs.size() == varlist_size() && "Number of source expressions is "
                                               "not the same as the "
@@ -1017,56 +1010,6 @@ OMPPermutationClause *OMPPermutationClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPPermutationClause(NumLoops);
 }
 
-OMPFullClause *OMPFullClause::Create(const ASTContext &C,
-                                     SourceLocation StartLoc,
-                                     SourceLocation EndLoc) {
-  OMPFullClause *Clause = CreateEmpty(C);
-  Clause->setLocStart(StartLoc);
-  Clause->setLocEnd(EndLoc);
-  return Clause;
-}
-
-OMPFullClause *OMPFullClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPFullClause();
-}
-
-OMPPartialClause *OMPPartialClause::Create(const ASTContext &C,
-                                           SourceLocation StartLoc,
-                                           SourceLocation LParenLoc,
-                                           SourceLocation EndLoc,
-                                           Expr *Factor) {
-  OMPPartialClause *Clause = CreateEmpty(C);
-  Clause->setLocStart(StartLoc);
-  Clause->setLParenLoc(LParenLoc);
-  Clause->setLocEnd(EndLoc);
-  Clause->setFactor(Factor);
-  return Clause;
-}
-
-OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPPartialClause();
-}
-
-OMPLoopRangeClause *
-OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation LParenLoc, SourceLocation FirstLoc,
-                           SourceLocation CountLoc, SourceLocation EndLoc,
-                           Expr *First, Expr *Count) {
-  OMPLoopRangeClause *Clause = CreateEmpty(C);
-  Clause->setLocStart(StartLoc);
-  Clause->setLParenLoc(LParenLoc);
-  Clause->setFirstLoc(FirstLoc);
-  Clause->setCountLoc(CountLoc);
-  Clause->setLocEnd(EndLoc);
-  Clause->setFirst(First);
-  Clause->setCount(Count);
-  return Clause;
-}
-
-OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPLoopRangeClause();
-}
-
 OMPAllocateClause *OMPAllocateClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
@@ -1105,20 +1048,6 @@ OMPFlushClause *OMPFlushClause::Create(const ASTContext &C,
 OMPFlushClause *OMPFlushClause::CreateEmpty(const ASTContext &C, unsigned N) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
   return new (Mem) OMPFlushClause(N);
-}
-
-OMPDepobjClause *OMPDepobjClause::Create(const ASTContext &C,
-                                         SourceLocation StartLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation RParenLoc,
-                                         Expr *Depobj) {
-  auto *Clause = new (C) OMPDepobjClause(StartLoc, LParenLoc, RParenLoc);
-  Clause->setDepobj(Depobj);
-  return Clause;
-}
-
-OMPDepobjClause *OMPDepobjClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPDepobjClause();
 }
 
 OMPDependClause *
@@ -1850,17 +1779,6 @@ void OMPInitClause::setAttrs(ArrayRef<unsigned> Counts,
   llvm::copy(Attrs, getTrailingObjects<Expr *>() + varlist_size());
 }
 
-OMPBindClause *
-OMPBindClause::Create(const ASTContext &C, OpenMPBindClauseKind K,
-                      SourceLocation KLoc, SourceLocation StartLoc,
-                      SourceLocation LParenLoc, SourceLocation EndLoc) {
-  return new (C) OMPBindClause(K, KLoc, StartLoc, LParenLoc, EndLoc);
-}
-
-OMPBindClause *OMPBindClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPBindClause();
-}
-
 OMPDoacrossClause *
 OMPDoacrossClause::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation LParenLoc, SourceLocation EndLoc,
@@ -1989,6 +1907,35 @@ OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPThreadLimitClause(N);
 }
 
+OMPNumThreadsClause *OMPNumThreadsClause::Create(
+    const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
+    ArrayRef<Expr *> VL,
+    OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
+    OpenMPNumThreadsClauseModifier DimsModifier,
+    SourceLocation PrescriptivenessModifierLoc, SourceLocation DimsModifierLoc,
+    Expr *DimsModifierExpr, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
+  OMPNumThreadsClause *Clause =
+      new (Mem) OMPNumThreadsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  Clause->setPrescriptivenessModifier(PrescriptivenessModifier);
+  Clause->setPrescriptivenessModifierLoc(PrescriptivenessModifierLoc);
+  Clause->setDimsModifier(DimsModifier);
+  Clause->setDimsModifierExpr(DimsModifierExpr);
+  Clause->setDimsModifierLoc(DimsModifierLoc);
+  Clause->setPreInitStmt(PreInit, CaptureRegion);
+  return Clause;
+}
+
+OMPNumThreadsClause *OMPNumThreadsClause::CreateEmpty(const ASTContext &C,
+                                                      unsigned N) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
+  return new (Mem) OMPNumThreadsClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -2008,14 +1955,30 @@ void OMPClausePrinter::VisitOMPFinalClause(OMPFinalClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPNumThreadsClause(OMPNumThreadsClause *Node) {
-  OS << "num_threads(";
-  OpenMPNumThreadsClauseModifier Modifier = Node->getModifier();
-  if (Modifier != OMPC_NUMTHREADS_unknown) {
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier)
-       << ": ";
+  if (!Node->varlist_empty()) {
+    OS << "num_threads";
+    bool HasPrescriptiveness =
+        Node->getPrescriptivenessModifier() != OMPC_NUMTHREADS_unknown;
+    bool HasDims = Node->getDimsModifier() != OMPC_NUMTHREADS_unknown;
+    if (HasPrescriptiveness || HasDims) {
+      OS << "(";
+      if (HasPrescriptiveness)
+        OS << getOpenMPSimpleClauseTypeName(
+            Node->getClauseKind(), Node->getPrescriptivenessModifier());
+      if (HasPrescriptiveness && HasDims)
+        OS << ",";
+      if (HasDims) {
+        OS << "dims(";
+        Node->getDimsModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+        OS << ")";
+      }
+      OS << ":";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
+    OS << ")";
   }
-  Node->getNumThreads()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPAlignClause(OMPAlignClause *Node) {
@@ -2070,6 +2033,15 @@ void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
+
+void OMPClausePrinter::VisitOMPDepthClause(OMPDepthClause *Node) {
+  OS << "depth";
+  if (Expr *Depth = Node->getDepth()) {
+    OS << '(';
+    Depth->printPretty(OS, nullptr, Policy, 0);
+    OS << ')';
+  }
+}
 
 void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   OS << "partial";

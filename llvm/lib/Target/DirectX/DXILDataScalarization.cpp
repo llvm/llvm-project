@@ -451,7 +451,7 @@ static bool findAndReplaceVectors(Module &M) {
 
       // Copy relevant attributes
       NewGlobal->setUnnamedAddr(G.getUnnamedAddr());
-      if (G.getAlignment() > 0) {
+      if (G.getAlign()) {
         NewGlobal->setAlignment(G.getAlign());
       }
 

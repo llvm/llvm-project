@@ -30,7 +30,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -607,11 +606,6 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
 }
 
 const TargetRegisterClass *
-AArch64RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &AArch64::GPR64spRegClass;
-}
-
-const TargetRegisterClass *
 AArch64RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &AArch64::CCRRegClass)
     return &AArch64::GPR64RegClass; // Only MSR & MRS copy NZCV.
@@ -792,7 +786,7 @@ bool AArch64RegisterInfo::requiresFrameIndexScavenging(
 bool
 AArch64RegisterInfo::cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
+  if (MF.disableFramePointerElim() && MFI.adjustsStack())
     return true;
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }

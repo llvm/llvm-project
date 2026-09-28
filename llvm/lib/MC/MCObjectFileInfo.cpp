@@ -563,9 +563,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   SFrameSection =
       Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
 
-  CallGraphSection =
-      Ctx->getELFSection(".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, 0);
-
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
@@ -680,6 +677,23 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       InitDebugSection("D_APPLNMSP", ".apple_namespaces");
   DwarfAccelTypesSection = InitDebugSection("D_APPLTYPS", ".apple_types");
   DwarfAccelObjCSection = InitDebugSection("D_APPLOBJC", ".apple_objc");
+
+  // Fission Sections
+  DwarfInfoDWOSection = InitDebugSection("D_INFO_DWO", ".debug_info.dwo");
+  DwarfTypesDWOSection = InitDebugSection("D_TYPES_DWO", ".debug_types.dwo");
+  DwarfAbbrevDWOSection = InitDebugSection("D_ABREV_DWO", ".debug_abbrev.dwo");
+  DwarfStrDWOSection = InitDebugSection("D_STR_DWO", ".debug_str.dwo");
+  DwarfLineDWOSection = InitDebugSection("D_LINE_DWO", ".debug_line.dwo");
+  DwarfLocDWOSection = InitDebugSection("D_LOC_DWO", ".debug_loc.dwo");
+  DwarfStrOffDWOSection =
+      InitDebugSection("D_STROFFS_DWO", ".debug_str_offsets.dwo");
+  DwarfRnglistsDWOSection =
+      InitDebugSection("D_RNGLISTS_DWO", ".debug_rnglists.dwo");
+  DwarfMacinfoDWOSection =
+      InitDebugSection("D_MACINFO_DWO", ".debug_macinfo.dwo");
+  DwarfMacroDWOSection = InitDebugSection("D_MACRO_DWO", ".debug_macro.dwo");
+  DwarfLoclistsDWOSection =
+      InitDebugSection("D_LOCLISTS_DWO", ".debug_loclists.dwo");
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -1240,7 +1254,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 MCSection *
 MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() != MCContext::IsELF)
-    return CallGraphSection;
+    return nullptr;
 
   const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
   unsigned Flags = ELF::SHF_LINK_ORDER;

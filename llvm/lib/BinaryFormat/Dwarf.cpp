@@ -192,7 +192,8 @@ static StringRef LlvmUserOperationEncodingString(unsigned Encoding) {
 static unsigned
 getLlvmUserOperationEncoding(StringRef LlvmUserOperationEncodingString) {
   unsigned E = StringSwitch<unsigned>(LlvmUserOperationEncodingString)
-#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) .Case(#NAME, DW_OP_LLVM_##NAME)
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME)                                     \
+  .Case("DW_OP_LLVM_" #NAME, DW_OP_LLVM_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
                    .Default(0);
   assert(E && "unhandled DWARF operation string with LLVM user op");
@@ -932,6 +933,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return DefaultedMemberString(Val);
   case DW_AT_APPLE_enum_kind:
     return EnumKindString(Val);
+  case DW_AT_LLVM_memory_space:
+    return MemorySpaceString(Val);
   case DW_AT_language_name:
     return SourceLanguageNameString(static_cast<SourceLanguageName>(Val));
   }
@@ -1080,6 +1083,29 @@ StringRef llvm::dwarf::RLEString(unsigned RLE) {
   case DW_RLE_##NAME:                                                          \
     return "DW_RLE_" #NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::getMemorySpace(StringRef MSString) {
+  return StringSwitch<unsigned>(MSString)
+#define HANDLE_DW_MSPACE(ID, NAME)                                             \
+  .Case("DW_MSPACE_LLVM_" #NAME, DW_MSPACE_LLVM_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(0);
+}
+
+StringRef llvm::dwarf::MemorySpaceString(unsigned MS) {
+  switch (MS) {
+  default:
+    return StringRef();
+#define HANDLE_DW_MSPACE(ID, NAME)                                             \
+  case DW_MSPACE_LLVM_##NAME:                                                  \
+    return "DW_MSPACE_LLVM_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  case DW_MSPACE_LLVM_lo_user:
+    return "DW_MSPACE_LLVM_lo_user";
+  case DW_MSPACE_LLVM_hi_user:
+    return "DW_MSPACE_LLVM_hi_user";
   }
 }
 

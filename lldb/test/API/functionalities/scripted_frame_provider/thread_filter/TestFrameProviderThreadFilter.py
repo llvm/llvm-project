@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
 
-@requireNotWasm  # multithreaded C++ inferior; wasm has no threads or exceptions
+@requireNotWasm("multithreaded C++ inferior; wasm has no threads or exceptions")
 class FrameProviderThreadFilterTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

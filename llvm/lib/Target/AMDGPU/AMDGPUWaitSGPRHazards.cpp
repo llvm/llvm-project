@@ -14,9 +14,7 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
@@ -275,7 +273,7 @@ public:
       }
 
       // Process only VALUs and SALUs
-      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true);
+      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/false);
       bool IsSALU = SIInstrInfo::isSALU(*MI);
       if (!IsVALU && !IsSALU)
         continue;

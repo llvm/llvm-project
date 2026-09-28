@@ -1,4 +1,15 @@
 add_header_library(
+  cmp_helper
+  HDRS
+    cmp_helper.h
+  DEPENDS
+    libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.c
+)
+
+add_header_library(
   floatint_helper
   HDRS
     floatint_helper.h
