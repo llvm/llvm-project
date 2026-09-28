@@ -6232,13 +6232,16 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
                                VPI->getDebugLoc());
 }
 
-VPWidenMemIntrinsicRecipe *VPRecipeBuilder::widenIfCompressedLoadOrStore(
+bool VPRecipeBuilder::isCompressedLoadOrStore(
     VPInstruction *VPI, VPConditionalInductionPHIRecipe *PhiR) {
   Instruction *I = VPI->getUnderlyingInstr();
-
   std::optional<CompressedPtrInfo> Info = Legal->isCompressedLoadOrStore(I);
-  if (!Info || Info->ConditionalInductionPHI != PhiR->getPHINode())
-    return nullptr;
+  return Info && Info->ConditionalInductionPHI == PhiR->getPHINode();
+}
+
+VPWidenMemIntrinsicRecipe *
+VPRecipeBuilder::handleCompressedLoadOrStore(VPInstruction *VPI) {
+  Instruction *I = VPI->getUnderlyingInstr();
 
   VPBuilder::InsertPointGuard Guard(Builder);
   Builder.setInsertPoint(VPI);

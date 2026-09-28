@@ -751,21 +751,12 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
 bool LoopVectorizationLegality::addConditionalInduction(
     PHINode *Phi, const ConditionalInductionDescriptor &CondID) {
-  for (User *U : Phi->users()) {
-    if (!TheLoop->contains(cast<Instruction>(U))) {
-      reportVectorizationFailure(
-          "Unsupported out-of-loop user of conditional induction phi",
-          "UnsupportedConditionalInductionUse", ORE, TheLoop);
-      return false;
-    }
-  }
-
   ConditionalInductions[Phi] = CondID;
   DenseMap<Value *, const SCEV *> CompressedPtrsForCondID;
   if (!collectCompressedPtrs(CompressedPtrsForCondID, *TheLoop, CondID,
                              *PSE.getSE())) {
     reportVectorizationFailure(
-        "Unsupported user of conditional induction phi in loop",
+        "Unsupported user of conditional induction found",
         "UnsupportedConditionalInductionUse", ORE, TheLoop);
     return false;
   }
