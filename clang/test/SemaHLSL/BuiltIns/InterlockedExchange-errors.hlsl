@@ -3,53 +3,54 @@
 // RUN:   -disable-llvm-passes -verify
 
 // InterlockedExchange is provided as a set of address-space-qualified
-// overloads (groupshared/device, {int,uint,int64_t,uint64_t}). It always
-// reports the previous value, so there is no 2-argument form.
+// overloads (groupshared/device, {int,uint,int64_t,uint64_t,float}). It always
+// reports the previous value, so there is no 2-argument form. Only 32-bit
+// float is accepted, so double has no overload.
 
 groupshared int gs_i32;
-groupshared float gs_f32;
+groupshared double gs_f64;
 struct S { int x; };
 groupshared S gs_s;
 
 void too_few() {
   InterlockedExchange(gs_i32); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
 void missing_original_value(int v) {
   InterlockedExchange(gs_i32, v); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
 void too_many(int v, int extra) {
   int orig;
   InterlockedExchange(gs_i32, v, orig, extra); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
 void local_dest(int v) {
   int dest;
   int orig;
   InterlockedExchange(dest, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
-void float_dest(float v) {
-  float orig;
-  InterlockedExchange(gs_f32, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+void double_dest(double v) {
+  double orig;
+  InterlockedExchange(gs_f64, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
 void struct_dest(int v) {
   int orig;
   InterlockedExchange(gs_s, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
 void mismatched_orig_type(int v) {
   uint orig;
   InterlockedExchange(gs_i32, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  // expected-note@*:* 10 {{candidate function}}
 }
 
 void direct_too_few() {
@@ -72,7 +73,13 @@ void direct_non_integer_dest() {
   S local_s;
   S orig;
   __builtin_hlsl_interlocked_exchange(local_s, 1, orig);
-  // expected-error@-1 {{1st argument must be a scalar integer type (was 'S')}}
+  // expected-error@-1 {{1st argument must be a scalar integer or 32 bit floating-point type (was 'S')}}
+}
+
+void direct_double_dest(double v) {
+  double orig;
+  __builtin_hlsl_interlocked_exchange(gs_f64, v, orig);
+  // expected-error@-1 {{1st argument must be a scalar integer or 32 bit floating-point type (was 'double')}}
 }
 
 void direct_nonlvalue_dest(int v) {

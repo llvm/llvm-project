@@ -474,8 +474,7 @@ define i64 @bitcast_combine_scalar_to_vector_v4i16(i16 %arg) {
 ; GFX11-NEXT:    v_lshrrev_b16 v1.l, 8, v1.l
 ; GFX11-NEXT:    v_or_b16 v2.h, v1.l, v1.h
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v2.h
-; GFX11-NEXT:    v_mov_b16_e32 v1.h, v2.h
+; GFX11-NEXT:    v_perm_b32 v1, v2, v2, 0x7060302
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %arg.cast = bitcast i16 %arg to <2 x i8>

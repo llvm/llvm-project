@@ -1614,7 +1614,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
     Register EntryExec = MRI->createVirtualRegister(TRI->getBoolRC());
     MachineInstr *SaveExec = BuildMI(*MBB, MBB->begin(), MI.getDebugLoc(),
                                      TII->get(LMC.OrSaveExecOpc), EntryExec)
-                                 .addImm(-1);
+                                 .addImm(-1)
+                                 .setOperandDead(3);
 
     // Replace all uses of MI's destination reg with EntryExec.
     MRI->replaceRegWith(MI.getOperand(0).getReg(), EntryExec);
@@ -1679,7 +1680,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   Register CountReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
   auto BfeMI = BuildMI(*MBB, FirstMI, DL, TII->get(AMDGPU::S_BFE_U32), CountReg)
                    .addReg(InputReg)
-                   .addImm((MI.getOperand(1).getImm() & Mask) | 0x70000);
+                   .addImm((MI.getOperand(1).getImm() & Mask) | 0x70000)
+                   .setOperandDead(3);
   auto BfmMI = BuildMI(*MBB, FirstMI, DL, TII->get(LMC.BfmOpc), LMC.ExecReg)
                    .addReg(CountReg)
                    .addImm(0);

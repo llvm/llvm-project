@@ -185,6 +185,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
   the pointer points to an incomplete (forward-declared) type.
 
+- Improved {doc}`bugprone-redundant-branch-condition
+  <clang-tidy/checks/bugprone/redundant-branch-condition>` check by fixing
+  false positives when the condition variable is changed later in a loop that
+  encloses the inner `if`.
+
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
@@ -321,6 +326,10 @@ infrastructure are described first, followed by tool-specific sections.
     synthesized for intermediate subobjects caused the trailing comma of the
     enclosing list to be incorrectly rewritten.
 
+  - Ignored preprocessor directives such as `#endif` that appear immediately
+    before an enum's closing brace, which previously produced a false positive
+    and a fix-it that inserted a comma after the directive.
+    
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
