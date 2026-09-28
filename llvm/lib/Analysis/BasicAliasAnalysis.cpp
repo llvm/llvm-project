@@ -169,14 +169,15 @@ static bool isObjectSmallerThan(const Value *V, const Value &OtherV,
   if (!isIdentifiedObject(V))
     return false;
 
-  TypeSize Size = getMinimalExtentFrom(OtherV, OtherSize, DL, NullIsValidLoc);
-
   // This function needs to use the aligned object size because we allow
   // reads a bit past the end given sufficient alignment.
   std::optional<TypeSize> ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
                                                      /*RoundToAlign*/ true);
+  if (!ObjectSize)
+    return false;
 
-  return ObjectSize && TypeSize::isKnownLT(*ObjectSize, Size);
+  TypeSize Size = getMinimalExtentFrom(OtherV, OtherSize, DL, NullIsValidLoc);
+  return TypeSize::isKnownLT(*ObjectSize, Size);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
