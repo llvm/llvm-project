@@ -1001,6 +1001,15 @@ CompilerType PdbAstBuilderClang::GetOrCreateType(PdbTypeSymId type) {
   return ToCompilerType(qt);
 }
 
+static clang::CXXMethodDecl *FindMethodDecl(clang::CXXRecordDecl *record,
+                                            llvm::StringRef name,
+                                            clang::QualType type) {
+  for (clang::CXXMethodDecl *method : record->methods())
+    if (method->getType() == type && method->getNameAsString() == name)
+      return method;
+  return nullptr;
+}
+
 clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
     PdbCompilandSymId func_id, llvm::StringRef func_name, TypeIndex func_ti,
     CompilerType func_ct, uint32_t param_count,
@@ -1016,11 +1025,14 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
             llvm::cast<clang::TypeDecl>(parent));
     lldb::opaque_compiler_type_t parent_opaque_ty =
         ToCompilerType(parent_qt).GetOpaqueQualType();
-    // FIXME: Remove this workaround.
+    // The method may already have been added while completing the class.
     auto iter = m_cxx_record_map.find(parent_opaque_ty);
     if (iter != m_cxx_record_map.end()) {
       if (iter->getSecond().contains({func_name, func_ct})) {
-        return nullptr;
+        auto *record = llvm::dyn_cast<clang::CXXRecordDecl>(parent);
+        return record ? FindMethodDecl(record, func_name,
+                                       FromCompilerType(func_ct))
+                      : nullptr;
       }
     }
 
@@ -1732,6 +1744,8 @@ clang::QualType PdbAstBuilderClang::FromCompilerType(CompilerType ct) {
 
 CompilerDeclContext
 PdbAstBuilderClang::ToCompilerDeclContext(clang::DeclContext *context) {
+  if (!context)
+    return CompilerDeclContext();
   return m_clang.CreateDeclContext(context);
 }
 
