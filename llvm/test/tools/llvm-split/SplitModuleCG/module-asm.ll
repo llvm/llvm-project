@@ -10,8 +10,8 @@ module asm ".long 42"
 
 ; CHECK0: module asm
 ; CHECK0:     ".globl __split_asm_marker"
-; CHECK1: module asm
-; CHECK1:     ".globl __split_asm_marker"
+; CHECK1-NOT: module asm
+; CHECK1-NOT:     ".globl __split_asm_marker"
 
 define void @foo() {
 entry:

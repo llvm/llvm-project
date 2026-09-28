@@ -329,6 +329,12 @@ void SplitModuleCG::splitModule(ModuleCreationCallback ModuleCallback,
           return ShouldCloneDefinition(I, GV);
         }));
 
+    // Keep the module inline asm only in the first partition: emitting it in
+    // every partition would duplicate its contents (and any symbols it
+    // defines) when the partition objects are linked together.
+    if (I != 0)
+      MPart->removeModuleInlineAsm();
+
     dealWithMpart(*MPart, I);
 
     // Serialize the cloned partition to bitcode and re-parse it inside the
