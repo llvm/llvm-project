@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
+#include "llvm/CAS/ValidationResult.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include <cstddef>
@@ -405,6 +406,44 @@ createOnDiskCAS(const Twine &Path);
 LLVM_ABI Expected<
     std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
 createPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
+
+/// Validate the on-disk data of a plugin-backed CAS in-process if needed, by
+/// calling the plugin's \c llcas_cas_validate_if_needed. The plugin decides
+/// whether validation is needed.
+///
+/// Validation can crash on invalid data. Clients that want to be resilient to
+/// that should call this from a separate process (e.g. via
+/// \c llvm-cas -validate-if-needed) and call \c recoverPluginCASDatabases if
+/// it fails.
+///
+/// \param PluginPath path of the dynamic library to load.
+/// \param OnDiskPath local path that the plugin uses for any on-disk
+/// resources/caches.
+/// \param PluginArgs name/value pairs passed to the plugin as custom options;
+/// they are opaque to the client.
+/// \param CheckHash Whether to validate hashes match the data.
+/// \param ForceValidation Whether to force validation to occur even if it
+/// should not be necessary.
+///
+/// \returns \c Valid if the data is valid, \c Skipped if validation is not
+/// needed, or an \c Error if validation cannot be performed (including if the
+/// plugin does not support it) or the data is invalid.
+LLVM_ABI Expected<ValidationResult> validatePluginCASDatabasesIfNeeded(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs, bool CheckHash,
+    bool ForceValidation);
+
+/// Recover the on-disk data of a plugin-backed CAS after a failed
+/// \c validatePluginCASDatabasesIfNeeded, by calling the plugin's
+/// \c llcas_cas_recover_ondisk_data.
+///
+/// \returns \c Recovered if the data has been recovered, \c Skipped if
+/// recovery is not needed (e.g. a concurrent process already recovered), or an
+/// \c Error if recovery cannot be performed (including if the plugin does not
+/// support it).
+LLVM_ABI Expected<ValidationResult> recoverPluginCASDatabases(
     StringRef PluginPath, StringRef OnDiskPath,
     ArrayRef<std::pair<std::string, std::string>> PluginArgs);
 
