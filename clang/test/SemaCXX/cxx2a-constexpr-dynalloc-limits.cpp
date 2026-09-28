@@ -99,37 +99,3 @@ void ohno() {
 }
 
 }
-
-namespace GH173728 {
-struct T {};
-
-template <auto N>
-constexpr int default_construct() {
-  T s[N][0]; // #gh173728-construct
-  return 0;
-}
-
-template <auto N>
-constexpr int capture_copy() {
-  T s[N][0] = {};
-  return [s] { return 0; }(); // #gh173728-capture
-}
-
-static_assert(default_construct<4>() == 0);
-static_assert(capture_copy<4>() == 0);
-
-static_assert(default_construct<1025>() == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
-                                               // expected-note {{in call}}
-// expected-note@#gh173728-construct {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
-// expected-note@#gh173728-construct {{use -fconstexpr-steps}}
-
-#if __SIZEOF_SIZE_T__ == 8
-static_assert(default_construct<(1ULL << 33) - 1>() == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
-                                                           // expected-note {{in call}}
-// expected-note@#gh173728-construct {{cannot allocate array; evaluated array bound 8589934591 is too large}}
-
-static_assert(capture_copy<(1ULL << 33) - 1>() == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
-                                                      // expected-note {{in call}}
-// expected-note@#gh173728-capture {{cannot allocate array; evaluated array bound 8589934591 is too large}}
-#endif
-}

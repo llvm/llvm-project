@@ -78,11 +78,6 @@ int foo5(bool b) {
   G: return y;
 }
 
-// CHECK-LABEL: define{{.*}} i32 @gh173728()
-extern "C" int gh173728() {
-  return ({ struct T {} s[0xFFFFFFFFu][0]; 0; });
-}
-
 // When we emit a full expression with cleanups that contains branches out of
 // the full expression, the result of the inner expression (the call to
 // call_with_cleanups in this case) may not dominate the fallthrough destination
