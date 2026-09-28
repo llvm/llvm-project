@@ -3873,16 +3873,20 @@ entry:
   %neg = sub i64 0, %s
   %neg2 = mul i64 %s, -2
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %next, %join ]
   %p0 = getelementptr i8, ptr %a, i64 %iv
   %p1 = getelementptr i8, ptr %p0, i64 %neg
   %p2 = getelementptr i8, ptr %p0, i64 %neg2
   br i1 %choose_bad, label %bad, label %good
+
 bad:
   br label %join
+
 good:
   br label %join
+
 join:
   %pick1 = phi ptr [ %p1, %bad ], [ %p0, %good ]
   %pick2 = phi ptr [ %p2, %bad ], [ %p0, %good ]
@@ -3894,6 +3898,7 @@ join:
   %next = add nuw nsw i64 %iv, 1
   %more = icmp ult i64 %next, 64
   br i1 %more, label %loop, label %exit
+
 exit:
   ret void
 }
