@@ -2009,9 +2009,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
