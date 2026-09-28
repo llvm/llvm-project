@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -108,9 +109,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   unsigned vecRank = vecTy.getRank();
   if (vecRank == 0)
     return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
-  if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
-    return rewriter.notifyMatchFailure(
-        xferOp, "Boundary check is available only for block instructions.");
 
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
@@ -220,6 +218,19 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
   return {strides, offsetVal};
 }
 
+// Adds the transfer's indices to `baseOffset`, the memref's own element offset:
+// the element at `indices` sits at `baseOffset + sum(indices[d] * strides[d])`.
+static Value computeBaseOffset(VectorTransferOpInterface xferOp,
+                               PatternRewriter &rewriter,
+                               ArrayRef<Value> strides, Value baseOffset) {
+  Location loc = xferOp.getLoc();
+  for (auto [index, stride] : llvm::zip_equal(xferOp.getIndices(), strides)) {
+    Value contrib = arith::MulIOp::create(rewriter, loc, index, stride);
+    baseOffset = arith::AddIOp::create(rewriter, loc, baseOffset, contrib);
+  }
+  return baseOffset;
+}
+
 // This function compute the vectors of localOffsets for scattered load/stores.
 // It is used in the lowering of vector.transfer_read/write to
 // load_gather/store_scatter Example:
@@ -253,8 +264,6 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
                             Value baseOffset) {
   Location loc = xferOp.getLoc();
   VectorType vectorType = xferOp.getVectorType();
-  SmallVector<Value> indices(xferOp.getIndices().begin(),
-                             xferOp.getIndices().end());
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
 
   // Create vector.step operations for each dimension
@@ -312,19 +321,110 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     localOffsets =
         arith::AddIOp::create(rewriter, loc, localOffsets, broadcasted[i]);
 
-  // Compute base offset from transfer read indices
-  for (size_t i = 0; i < indices.size(); ++i) {
-    Value strideVal = strides[i];
-    Value offsetContrib =
-        arith::MulIOp::create(rewriter, loc, indices[i], strideVal);
-    baseOffset =
-        arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
-  }
   // Broadcast base offset to match vector shape
+  baseOffset = computeBaseOffset(xferOp, rewriter, strides, baseOffset);
   Value bcastBase = vector::BroadcastOp::create(
       rewriter, loc, fullIndexVectorType, baseOffset);
   localOffsets = arith::AddIOp::create(rewriter, loc, bcastBase, localOffsets);
   return localOffsets;
+}
+
+// Returns the size of memref dimension `dim` as a value.
+static Value getMemrefDimSize(VectorTransferOpInterface xferOp, unsigned dim,
+                              PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  auto memrefTy = cast<MemRefType>(xferOp.getShapedType());
+  if (memrefTy.isDynamicDim(dim))
+    return memref::DimOp::create(rewriter, loc, xferOp.getBase(), dim)
+        .getResult();
+  return arith::ConstantIndexOp::create(rewriter, loc, memrefTy.getDimSize(dim))
+      .getResult();
+}
+
+// Builds the mask a scattered access needs to stay within the source bounds.
+//
+// The element at vector position `i` along vector dimension `v` accesses memref
+// dimension `d` (the one `v` maps to) at `indices[d] + i`, so it is in bounds
+// iff `i < dim(d) - indices[d]`. Dimensions the transfer declares in-bounds are
+// skipped; non-vector dimensions are always in bounds by the op's contract. The
+// per-dimension masks are spread over the full vector shape and combined, the
+// same way `computeOffsets` spreads the per-dimension offsets.
+//
+// Example, for a `vector<8xf32>` read of a `memref<?xf32>` at `%off`:
+//   %dim = memref.dim %src, %c0
+//   %limit = arith.subi %dim, %off
+//   %step = vector.step : vector<8xindex>
+//   %bcast = vector.broadcast %limit : index to vector<8xindex>
+//   %mask = arith.cmpi slt, %step, %bcast : vector<8xindex>
+static Value computeInBoundsMask(VectorTransferOpInterface xferOp,
+                                 PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
+  auto maskType = VectorType::get(vectorShape, rewriter.getI1Type());
+  AffineMap map = xferOp.getPermutationMap();
+  OperandRange indices = xferOp.getIndices();
+
+  Value mask;
+  for (unsigned v = 0, e = vectorShape.size(); v < e; ++v) {
+    if (xferOp.isDimInBounds(v))
+      continue;
+    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
+    Value bound = getMemrefDimSize(xferOp, d, rewriter);
+    // A negative limit masks the dimension off entirely, which is what a
+    // starting index past the end of the dimension should do.
+    Value limit = arith::SubIOp::create(rewriter, loc, bound, indices[d]);
+    auto stepType = VectorType::get({vectorShape[v]}, rewriter.getIndexType());
+    Value step = vector::StepOp::create(rewriter, loc, stepType);
+    Value limitVec =
+        vector::BroadcastOp::create(rewriter, loc, stepType, limit);
+    Value dimMask = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, step, limitVec);
+    if (vectorShape.size() > 1) {
+      SmallVector<int64_t> expandedShape(vectorShape.size(), 1);
+      expandedShape[v] = vectorShape[v];
+      dimMask = vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(expandedShape, rewriter.getI1Type()),
+          dimMask);
+      dimMask = vector::BroadcastOp::create(rewriter, loc, maskType, dimMask);
+    }
+    mask = mask
+               ? arith::AndIOp::create(rewriter, loc, mask, dimMask).getResult()
+               : dimMask;
+  }
+  if (mask)
+    return mask;
+  return vector::ConstantMaskOp::create(rewriter, loc, maskType, vectorShape);
+}
+
+// Builds that mask as a scalar `i1`, for a transfer of a single element. The
+// element sits at `indices`, so `i < dim(d) - indices[d]` at `i == 0` reduces
+// to `indices[d] < dim(d)`, which needs neither the limit subtraction nor the
+// step vector. The dimensions checked are the same.
+//
+// Example, for a `vector<1xf32>` read of a `memref<?xf32>` at `%off`:
+//   %dim = memref.dim %src, %c0
+//   %mask = arith.cmpi slt, %off, %dim : index
+static Value computeUnitInBoundsMask(VectorTransferOpInterface xferOp,
+                                     PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  AffineMap map = xferOp.getPermutationMap();
+  OperandRange indices = xferOp.getIndices();
+
+  Value mask;
+  for (unsigned v = 0, e = xferOp.getVectorType().getRank(); v < e; ++v) {
+    if (xferOp.isDimInBounds(v))
+      continue;
+    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
+    Value bound = getMemrefDimSize(xferOp, d, rewriter);
+    Value dimMask = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, indices[d], bound);
+    mask = mask
+               ? arith::AndIOp::create(rewriter, loc, mask, dimMask).getResult()
+               : dimMask;
+  }
+  if (mask)
+    return mask;
+  return arith::ConstantOp::create(rewriter, loc, rewriter.getBoolAttr(true));
 }
 
 // Compute the element-wise offsets for vector.gather or vector.scatter ops.
@@ -437,12 +537,66 @@ static Value memrefToIndexPtr(OpType xferOp, PatternRewriter &rewriter) {
       .getResult();
 }
 
+// Returns true if every use of `vec` extracts a scalar element from it. An
+// unused value does not qualify.
+static bool isUsedAsScalar(Value vec) {
+  if (vec.use_empty())
+    return false;
+  return llvm::all_of(vec.getUsers(), [](Operation *user) {
+    auto extractOp = dyn_cast<vector::ExtractOp>(user);
+    return extractOp && !isa<VectorType>(extractOp.getResult().getType());
+  });
+}
+
+// Lowers a transfer of a single element to a scalar `xegpu.load`.
+//
+// The transfer touches one location, which its own indices name, so the load
+// takes a scalar offset and a scalar mask - no descriptor, no lane vectors -
+// and the result is broadcast back to the transfer's unit-size vector type.
+//
+//   %off = arith.addi %base, %contrib : index
+//   %inb = arith.cmpi slt, %idx, %dim : index
+//   %val = xegpu.load %src[%off], %inb : i64, index, i1 -> f32
+//   %vec = vector.broadcast %val : f32 to vector<1xf32>
+static LogicalResult lowerToScalarLoadOp(vector::TransferReadOp readOp,
+                                         PatternRewriter &rewriter) {
+  Location loc = readOp.getLoc();
+  VectorType vectorType = readOp.getVectorType();
+  if (!isa<MemRefType>(readOp.getShapedType()))
+    return rewriter.notifyMatchFailure(readOp, "Expected memref source");
+
+  auto meta = computeMemrefMeta(readOp, rewriter);
+  if (meta.first.empty())
+    return rewriter.notifyMatchFailure(readOp, "Failed to compute strides");
+
+  Value offset = computeBaseOffset(readOp, rewriter, meta.first, meta.second);
+  Value flatMemref = memrefToIndexPtr(readOp, rewriter);
+
+  Value mask = computeUnitInBoundsMask(readOp, rewriter);
+  auto loadOp = xegpu::LoadGatherOp::create(
+      rewriter, loc, vectorType.getElementType(), flatMemref, offset, mask,
+      /*l1_hint=*/xegpu::CachePolicyAttr{},
+      /*l2_hint=*/xegpu::CachePolicyAttr{},
+      /*l3_hint=*/xegpu::CachePolicyAttr{},
+      /*layout=*/nullptr, /*contiguity=*/nullptr);
+
+  // A masked-off xegpu.load is unspecified, so the padding has to be applied
+  // explicitly, as in lowerToScatteredLoadOp. A poison padding is "don't care".
+  Value scalar = loadOp.getResult();
+  if (readOp.hasOutOfBoundsDim() &&
+      !readOp.getPadding().getDefiningOp<ub::PoisonOp>())
+    scalar = arith::SelectOp::create(rewriter, loc, mask, scalar,
+                                     readOp.getPadding());
+
+  rewriter.replaceOpWithNewOp<vector::BroadcastOp>(readOp, vectorType, scalar);
+  return success();
+}
+
 static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
                                             PatternRewriter &rewriter) {
 
   Location loc = readOp.getLoc();
   VectorType vectorType = readOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
   auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(readOp, "Expected memref source");
@@ -456,18 +610,26 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
 
   Value flatMemref = memrefToIndexPtr(readOp, rewriter);
 
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
+  Value mask = computeInBoundsMask(readOp, rewriter);
   auto gatherOp = xegpu::LoadGatherOp::create(
       rewriter, loc, vectorType, flatMemref, localOffsets, mask,
-      /*chunk_size=*/IntegerAttr{},
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
       /*l3_hint=*/xegpu::CachePolicyAttr{},
       /*layout=*/nullptr, /*contiguity=*/nullptr);
 
-  rewriter.replaceOp(readOp, gatherOp.getResult());
+  // The masked-off lanes of an xegpu.load are unspecified, so the transfer's
+  // padding has to be applied explicitly. A poison padding leaves them "don't
+  // care", so the select can be skipped.
+  Value result = gatherOp.getResult();
+  if (readOp.hasOutOfBoundsDim() &&
+      !readOp.getPadding().getDefiningOp<ub::PoisonOp>()) {
+    Value padding = vector::BroadcastOp::create(rewriter, loc, vectorType,
+                                                readOp.getPadding());
+    result = arith::SelectOp::create(rewriter, loc, mask, result, padding);
+  }
+
+  rewriter.replaceOp(readOp, result);
   return success();
 }
 
@@ -475,9 +637,6 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                              PatternRewriter &rewriter) {
 
   Location loc = writeOp.getLoc();
-  VectorType vectorType = writeOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
-
   auto memrefType = dyn_cast<MemRefType>(writeOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(writeOp, "Expected memref source");
@@ -491,12 +650,11 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
 
   Value flatMemref = memrefToIndexPtr(writeOp, rewriter);
 
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
+  // Out-of-bounds elements are simply not stored, so the mask is all this
+  // needs - no counterpart to the read's padding.
+  Value mask = computeInBoundsMask(writeOp, rewriter);
   xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
                                 localOffsets, mask,
-                                /*chunk_size=*/IntegerAttr{},
                                 /*l1_hint=*/xegpu::CachePolicyAttr{},
                                 /*l2_hint=*/xegpu::CachePolicyAttr{},
                                 /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -552,6 +710,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       rewriter.replaceOp(readOp, loadMatrixOp.getResult());
       return success();
     }
+
+    // A transfer of a single element that is only ever extracted to a scalar
+    // becomes a scalar load, at any rank: the vector is a wrapper its consumers
+    // undo, so neither an nd descriptor nor a lane-vector gather buys anything.
+    // A unit-size vector genuinely used as a vector keeps the paths below.
+    if (loadedVecTy.getNumElements() == 1 && isUsedAsScalar(readOp.getResult()))
+      return lowerToScalarLoadOp(readOp, rewriter);
 
     // TODO: This check needs to be replaced with proper uArch capability check.
     auto chip = xegpu::getChipStr(readOp);
@@ -620,10 +785,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     }
 
     // Fall back to a scattered load. It supports arbitrary permutations and any
-    // rank, but cannot express out-of-bounds accesses.
-    // TODO: add support for OutOfBound access.
-    if (isOutOfBounds)
-      return failure();
+    // rank, and masks off the out-of-bounds elements.
     return lowerToScatteredLoadOp(readOp, rewriter);
   }
 };
@@ -651,6 +813,10 @@ struct TransferWriteLowering
       if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
             writeOp, "Only 1D and 2D vector stores are supported for SLM");
+      // Out of bounds case is not supported for SLM stores.
+      if (writeOp.hasOutOfBoundsDim())
+        return rewriter.notifyMatchFailure(
+            writeOp, "Out-of-bounds access is not supported for SLM stores");
       // Create mem_desc for SLM
       auto memDescType =
           xegpu::MemDescType::get(rewriter.getContext(), writeMemTy.getShape(),
@@ -711,10 +877,7 @@ struct TransferWriteLowering
     }
 
     // Fall back to a scattered store. It supports arbitrary permutations and
-    // any rank, but cannot express out-of-bounds accesses.
-    // TODO: add support for OutOfBound access.
-    if (writeOp.hasOutOfBoundsDim())
-      return failure();
+    // any rank, and masks off the out-of-bounds elements.
     return lowerToScatteredStoreOp(writeOp, rewriter);
   }
 };
@@ -741,7 +904,6 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
 
     auto xeGatherOp = xegpu::LoadGatherOp::create(
         rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
-        /*chunk_size=*/IntegerAttr{},
         /*l1_hint=*/xegpu::CachePolicyAttr{},
         /*l2_hint=*/xegpu::CachePolicyAttr{},
         /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -776,7 +938,6 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
 
     xegpu::StoreScatterOp::create(rewriter, loc, scatterOp.getValueToStore(),
                                   flatMemref, localOffsets, scatterOp.getMask(),
-                                  /*chunk_size=*/IntegerAttr{},
                                   /*l1_hint=*/xegpu::CachePolicyAttr{},
                                   /*l2_hint=*/xegpu::CachePolicyAttr{},
                                   /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -965,14 +1126,148 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects operands of rank 4 or less");
 
-    auto dpasOp = xegpu::DpasOp::create(rewriter, loc,
-                                        TypeRange{contractOp.getResultType()},
-                                        ValueRange{lhs, rhs, acc});
+    auto dpasOp = xegpu::DpasOp::create(
+        rewriter, loc, contractOp.getResultType(), lhs, rhs, acc,
+        /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
     rewriter.replaceOp(contractOp, dpasOp);
 
     return success();
   }
 };
+
+// Returns the `vector.shape_cast` that flattened a value of type `ndType` into
+// `flat`, if that is how `flat` was produced.
+static vector::ShapeCastOp getFlattenCast(Value flat, VectorType ndType) {
+  auto shapeCast = flat.getDefiningOp<vector::ShapeCastOp>();
+  if (shapeCast && shapeCast.getSourceVectorType() == ndType)
+    return shapeCast;
+  return nullptr;
+}
+
+static DenseElementsAttr getDenseConstant(Value flat) {
+  DenseElementsAttr elements;
+  if (matchPattern(flat, m_Constant(&elements)))
+    return elements;
+  return nullptr;
+}
+
+static vector::BroadcastOp getSplatBroadcast(Value flat) {
+  auto broadcast = flat.getDefiningOp<vector::BroadcastOp>();
+  if (broadcast && !isa<VectorType>(broadcast.getSourceType()))
+    return broadcast;
+  return nullptr;
+}
+
+// Returns true if the cast `unflatten` creates will fold away, i.e. if `flat`
+// is a flattening cast, a constant or a splat.
+static bool canUnflatten(Value flat, VectorType ndType) {
+  return getFlattenCast(flat, ndType) || getDenseConstant(flat) ||
+         getSplatBroadcast(flat);
+}
+
+// Reshape `flat` to `ndType`; `canUnflatten` must hold so the cast folds away.
+static Value unflatten(PatternRewriter &rewriter, Value flat,
+                       VectorType ndType) {
+  assert(canUnflatten(flat, ndType) && "expected the cast to fold away");
+  return vector::ShapeCastOp::create(rewriter, flat.getLoc(), ndType, flat);
+}
+
+// Restore the N-D form of a flattened `vector.gather` / `vector.scatter`.
+//
+// XeGPU layouts are expressed in terms of the N-D shape of the accessed data,
+// so a flattened gather/scatter forces layout propagation to reason through the
+// surrounding `vector.shape_cast` ops. That adds complexity and tends to yield
+// layouts that lower to unoptimized code.
+//
+// Before:
+//   %cst = arith.constant dense<0.0> : vector<8192xbf16>
+//   %fi = vector.shape_cast %idx : vector<128x64xindex> to vector<8192xindex>
+//   %fm = vector.shape_cast %mask : vector<128x64xi1> to vector<8192xi1>
+//   %fr = vector.gather %src[%c0] [%fi], %fm, %cst : memref<?xbf16>,
+//       vector<8192xindex>, vector<8192xi1>, vector<8192xbf16>
+//       into vector<8192xbf16>
+//   %res = vector.shape_cast %fr : vector<8192xbf16> to vector<128x64xbf16>
+//
+// After:
+//   %cst = arith.constant dense<0.0> : vector<128x64xbf16>
+//   %res = vector.gather %src[%c0] [%idx], %mask, %cst : memref<?xbf16>,
+//       vector<128x64xindex>, vector<128x64xi1>, vector<128x64xbf16>
+//       into vector<128x64xbf16>
+template <typename OpTy>
+struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    constexpr bool isGather = std::is_same_v<OpTy, vector::GatherOp>;
+
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return rewriter.notifyMatchFailure(op, "expects a memref source");
+
+    if (op.getIndexVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op, "index vector is not 1-D");
+
+    // The N-D shape comes from the index operand's producer: this only undoes
+    // a flattening that already happened, it never invents a shape.
+    auto indexCast =
+        op.getIndices().template getDefiningOp<vector::ShapeCastOp>();
+    if (!indexCast || indexCast.getSourceVectorType().getRank() < 2)
+      return rewriter.notifyMatchFailure(
+          op, "index vector is not a shape_cast of an N-D vector");
+    VectorType ndIndexType = indexCast.getSourceVectorType();
+    VectorType ndMaskType =
+        ndIndexType.cloneWith(std::nullopt, rewriter.getI1Type());
+    VectorType ndType = ndIndexType.cloneWith(
+        std::nullopt, op.getVectorType().getElementType());
+
+    // Check everything before creating any IR: a partially applied rewrite
+    // would leave dead ops behind.
+    if (!canUnflatten(op.getMask(), ndMaskType))
+      return rewriter.notifyMatchFailure(op, "cannot un-flatten the mask");
+
+    if constexpr (isGather) {
+      if (!canUnflatten(op.getPassThru(), ndType))
+        return rewriter.notifyMatchFailure(op,
+                                           "cannot un-flatten the pass-thru");
+
+      Value mask = unflatten(rewriter, op.getMask(), ndMaskType);
+      Value passThru = unflatten(rewriter, op.getPassThru(), ndType);
+      auto ndGather = vector::GatherOp::create(
+          rewriter, op.getLoc(), ndType, op.getBase(), op.getOffsets(),
+          indexCast.getSource(), mask, passThru, op.getAlignmentAttr());
+      ndGather->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getVectorType(),
+                                                       ndGather);
+    } else {
+      if (!canUnflatten(op.getValueToStore(), ndType))
+        return rewriter.notifyMatchFailure(
+            op, "cannot un-flatten the stored value");
+
+      Value mask = unflatten(rewriter, op.getMask(), ndMaskType);
+      Value valueToStore = unflatten(rewriter, op.getValueToStore(), ndType);
+      // Only operand types change, and this keeps the optional tensor result
+      // untouched.
+      rewriter.modifyOpInPlace(op, [&] {
+        op.getIndicesMutable().assign(indexCast.getSource());
+        op.getMaskMutable().assign(mask);
+        op.getValueToStoreMutable().assign(valueToStore);
+      });
+    }
+    return success();
+  }
+};
+
+// Un-flatten every gather/scatter that was flattened to 1-D operands, so that
+// the conversion patterns and the XeGPU layouts downstream of them see the N-D
+// shape of the accessed data.
+static LogicalResult unflattenGatherScatter(Operation *root) {
+  MLIRContext *ctx = root->getContext();
+  RewritePatternSet patterns(ctx);
+  patterns.add<UnflattenGatherScatter<vector::GatherOp>,
+               UnflattenGatherScatter<vector::ScatterOp>>(ctx);
+  vector::ShapeCastOp::getCanonicalizationPatterns(patterns, ctx);
+  return applyPatternsGreedily(root, std::move(patterns));
+}
 
 // Returns `memrefTy` with its memory space replaced by `newMemSpace`.
 static MemRefType withMemorySpace(MemRefType memrefTy, Attribute newMemSpace) {
@@ -1053,6 +1348,11 @@ struct ConvertVectorToXeGPUPass
     // Promote local allocations to SLM (address space 3) so that
     // load_matrix/store_matrix lowerings have well-typed memref operands.
     promoteAllocasToSLM(getOperation());
+
+    // Undo any flattening of gather/scatter operands, so that the conversion
+    // below sees the N-D shape the XeGPU layouts are expressed in.
+    if (failed(unflattenGatherScatter(getOperation())))
+      return signalPassFailure();
 
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);

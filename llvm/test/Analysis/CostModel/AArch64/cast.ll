@@ -41,8 +41,8 @@ define void @ext() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i16i64 = zext <2 x i16> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i64 = sext <2 x i32> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i32i64 = zext <2 x i32> poison to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %s2i64i128 = sext <2 x i64> poison to <2 x i128>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %z2i64i128 = zext <2 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:6 for: %s2i64i128 = sext <2 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:6 for: %z2i64i128 = zext <2 x i64> poison to <2 x i128>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i16 = sext <4 x i8> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z4i8i16 = zext <4 x i8> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = sext <4 x i8> poison to <4 x i32>
@@ -919,8 +919,8 @@ define void @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v12 = sext <4 x i32> %loadv4i32 to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %v14 = sext <2 x i64> %loadv2i64 to <2 x i128>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %v15 = zext <2 x i64> %loadv2i64 to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:6 for: %v14 = sext <2 x i64> %loadv2i64 to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:6 for: %v15 = zext <2 x i64> %loadv2i64 to <2 x i128>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %loadi8 = load i8, ptr undef

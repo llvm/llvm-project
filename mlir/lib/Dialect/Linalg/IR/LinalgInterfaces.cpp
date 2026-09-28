@@ -227,19 +227,15 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 //===----------------------------------------------------------------------===//
 // Elementwise Single Unary/Binary-OpInterface implementation
 //===----------------------------------------------------------------------===//
-static bool
-isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op, unsigned arity,
-                                          bool allowNonIdentityMaps) {
+
+static bool isaElemwiseSingleOpInterface(linalg::GenericOp op, unsigned arity) {
   // Check all loops are parallel.
   if (!op.isAllParallelLoops() || op.getNumLoops() < 1)
     return false;
 
-  // Check there are arity-inputs, 1-output and all are identity-maps (unless
-  // requested otherwise).
-  if (op.getNumDpsInputs() != arity || op.getNumDpsInits() != 1 ||
-      (!allowNonIdentityMaps &&
-       !llvm::all_of(op.getIndexingMapsArray(),
-                     [](AffineMap map) { return map.isIdentity(); })))
+  // Check there are arity-inputs and 1-output. Non-identity indexing maps are
+  // allowed as they can be represented by the category op.
+  if (op.getNumDpsInputs() != arity || op.getNumDpsInits() != 1)
     return false;
 
   // Init should not be referenced for elementwise operations.
@@ -256,8 +252,8 @@ isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op, unsigned arity,
 
   // The payload op must have one result and at least arity-many operands
   // (otherwise not all inputs can be used). It can have additional operands
-  // from outside of the generic op (e.g. div(1, x) for linalg.reciprocal) or
-  // use an input more than once (e.g. mul(x, x) for linalg.square).
+  // from outside of the generic op (e.g. div(1, x) for elementwise reciprocal)
+  // or use an input more than once (e.g. mul(x, x) for elementwise square).
   Operation *oper = &body->front();
   if (oper->getNumOperands() < arity || oper->getNumResults() != 1)
     return false;
@@ -267,10 +263,9 @@ isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op, unsigned arity,
            yieldOp->getOperand(0).getDefiningOp() != oper);
 }
 
-bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op,
-                                               bool allowNonIdentityMaps) {
+bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
   // All basic elemwise checks.
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 1, allowNonIdentityMaps))
+  if (!isaElemwiseSingleOpInterface(op, 1))
     return false;
 
   // Check input is actually used.
@@ -279,10 +274,9 @@ bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op,
   return true;
 }
 
-bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op,
-                                                bool allowNonIdentityMaps) {
+bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
   // All basic elemwise checks.
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 2, allowNonIdentityMaps))
+  if (!isaElemwiseSingleOpInterface(op, 2))
     return false;
 
   // Check both inputs are used (elementwise).
@@ -290,6 +284,28 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op,
   OpOperand *inputOpOperand1 = op.getDpsInputOperand(1);
   return !(!op.payloadUsesValueFromOperand(inputOpOperand0) ||
            !op.payloadUsesValueFromOperand(inputOpOperand1));
+}
+
+bool linalg::isaElemwiseSingleTernaryOpInterface(linalg::GenericOp op) {
+  // All basic elemwise checks.
+  if (!isaElemwiseSingleOpInterface(op, 3))
+    return false;
+
+  // The only ternary (select) has a boolean argument as its first operand.
+  // If we add more ternaries later, we need to change this check.
+  // But for now, it simplifies other checks, like checking for swapped
+  // operands.
+  if (!getElementTypeOrSelf(op.getDpsInputOperand(0)->get().getType())
+           .isInteger(1))
+    return false;
+
+  // Check all three inputs are used (elementwise).
+  OpOperand *inputOpOperand0 = op.getDpsInputOperand(0);
+  OpOperand *inputOpOperand1 = op.getDpsInputOperand(1);
+  OpOperand *inputOpOperand2 = op.getDpsInputOperand(2);
+  return !(!op.payloadUsesValueFromOperand(inputOpOperand0) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand1) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand2));
 }
 
 //===----------------------------------------------------------------------===//
@@ -854,6 +870,12 @@ static FailureOr<ConvolutionDimensions> inferConvolutionDimsImpl(
   return dimensions;
 }
 
+static DenseIntElementsAttr getInherentConvolutionAttr(LinalgOp linalgOp,
+                                                       StringRef name) {
+  return dyn_cast_or_null<DenseIntElementsAttr>(
+      linalgOp->getInherentAttr(name).value_or(Attribute{}));
+}
+
 /// Find at least 1 parallel (output_image) and reduction (filter_loop)
 /// dimension candidates that form a convolution subcomputation within
 /// `linalgOp`. The LHS is assumed to be the convolution input while the
@@ -898,8 +920,8 @@ mlir::linalg::inferConvolutionDims(LinalgOp linalgOp) {
   return inferConvolutionDimsImpl(
       indexingMaps, linalgOp.getIteratorTypesArray(), inputExprWalker,
       /*allowEmptyConvolvedDims=*/false,
-      linalgOp->getAttrOfType<DenseIntElementsAttr>("strides"),
-      linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations"));
+      getInherentConvolutionAttr(linalgOp, "strides"),
+      getInherentConvolutionAttr(linalgOp, "dilations"));
 }
 
 FailureOr<ConvolutionDimensions>
@@ -1067,8 +1089,8 @@ mlir::linalg::detail::isConvolutionInterfaceImpl(
   if (dimensions) {
     FailureOr<ConvolutionDimensions> res = inferConvolutionDimsImpl(
         indexingMaps, iteratorTypes, inputExprWalker, allowEmptyConvolvedDims,
-        linalgOp->getAttrOfType<DenseIntElementsAttr>("strides"),
-        linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations"));
+        getInherentConvolutionAttr(linalgOp, "strides"),
+        getInherentConvolutionAttr(linalgOp, "dilations"));
     assert(succeeded(res) && "unexpected failure to infer convolution dims");
     *dimensions = *res;
   }

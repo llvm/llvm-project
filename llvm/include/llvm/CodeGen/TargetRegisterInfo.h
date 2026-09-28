@@ -39,6 +39,7 @@ class DIExpression;
 class LiveRegMatrix;
 class MachineFunction;
 class MachineInstr;
+class RegisterClassInfo;
 class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
@@ -702,6 +703,13 @@ protected:
     return RCInfos[getNumRegClasses() * HwMode + RC.getID()];
   }
 
+  /// Custom reordering of the allocation order.
+  virtual void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
+
 public:
   /// Returns the register class associated with the enumeration value.
   /// See class MCOperandInfo.
@@ -714,14 +722,6 @@ public:
   const TargetRegisterClass *
   getCommonSubClass(const TargetRegisterClass *A,
                     const TargetRegisterClass *B) const;
-
-  /// Returns a TargetRegisterClass used for pointer values.
-  /// If a target supports multiple different pointer register classes,
-  /// kind specifies which one is indicated.
-  virtual const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const {
-    llvm_unreachable("Target didn't implement getPointerRegClass!");
-  }
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
@@ -852,6 +852,18 @@ public:
     // Do nothing.
   }
 
+  /// Return true if Reg overlaps one of the anti-hinted register units.
+  bool isAntiHintedReg(MCPhysReg Reg,
+                       const BitVector &AntiHintedRegUnits) const;
+
+  /// Apply anti-hints to the allocation order.
+  void applyRegAllocationAntiHints(
+      Register VirtReg, ArrayRef<MCPhysReg> Order,
+      SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
+
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with
   /// many registers, this could reduce regalloc compile time by a large
@@ -866,9 +878,18 @@ public:
   /// Allow the target to override the cost of using a callee-saved register for
   /// the first time. Default value of 0 means we will use a callee-saved
   /// register if it is available.
-  virtual unsigned getCSRFirstUseCost() const { return 0; }
+  virtual unsigned getCSRFirstUseCost(const MachineFunction &MF) const {
+    return 0;
+  }
   /// FIXME: We should deprecate this usage.
   virtual unsigned getCSRCost() const { return 0; }
+
+  /// Scale the CSRFirstUseCost with this number.
+  /// The scale is a percentage (e.g., 30 means 30% of the base cost).
+  /// Target can tune and override this default value.
+  virtual unsigned getCSRCostScale(const MachineFunction &MF) const {
+    return 30;
+  }
 
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.
@@ -1081,8 +1102,8 @@ public:
       ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
 
   virtual const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                   const MachineRegisterInfo &MRI) const {
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const {
     return nullptr;
   }
 

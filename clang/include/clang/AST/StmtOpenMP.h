@@ -25,6 +25,8 @@
 
 namespace clang {
 
+class OMPInvariantPredicateBoundAttr;
+
 //===----------------------------------------------------------------------===//
 // AST classes for directives.
 //===----------------------------------------------------------------------===//
@@ -892,14 +894,45 @@ public:
                                   TryImperfectlyNestedLoops);
   }
 
+  /// Returns the intra-tile reinterpretation hint attached to \p S, or nullptr
+  /// if \p S does not carry one. See OMPInvariantPredicateBoundAttr.
+  static const OMPInvariantPredicateBoundAttr *getIntraTileHint(const Stmt *S);
+
+  /// If \p S is an intra-tile reinterpretation wrapper, returns the loop it
+  /// annotates; otherwise returns \p S unchanged.
+  static Stmt *ignoreIntraTileHint(Stmt *S);
+  static const Stmt *ignoreIntraTileHint(const Stmt *S) {
+    return ignoreIntraTileHint(const_cast<Stmt *>(S));
+  }
+
   /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
+  ///
+  /// \p Loop is always a ForStmt or CXXForRangeStmt. \p HintWrapper is the
+  /// intra-tile OMPInvariantPredicateBoundAttr wrapper around that loop, or
+  /// nullptr if the loop has no such hint. Callers that need the hint (see
+  /// checkOpenMPIterationSpace) can peel \p HintWrapper themselves; everyone
+  /// else can ignore it.
+  static bool
+  doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                unsigned NumLoops,
+                llvm::function_ref<bool(unsigned /*Cnt*/, Stmt * /*Loop*/,
+                                        Stmt * /*HintWrapper*/)>
+                    Callback,
+                llvm::function_ref<void(OMPLoopTransformationDirective *)>
+                    OnTransformationCallback);
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, Stmt *)> Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback);
+                    OnTransformationCallback) {
+    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *Loop, Stmt *) {
+      return Callback(Cnt, Loop);
+    };
+    return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops,
+                         NewCallback, OnTransformationCallback);
+  }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
@@ -1041,7 +1074,7 @@ public:
     Stmt::StmtClass C = T->getStmtClass();
     return C == OMPTileDirectiveClass || C == OMPUnrollDirectiveClass ||
            C == OMPReverseDirectiveClass || C == OMPInterchangeDirectiveClass ||
-           C == OMPStripeDirectiveClass;
+           C == OMPStripeDirectiveClass || C == OMPFlattenDirectiveClass;
   }
 };
 
@@ -6008,6 +6041,86 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPInterchangeDirectiveClass;
+  }
+};
+
+/// Represents the '#pragma omp flatten' loop transformation directive.
+///
+/// \code{c}
+///   #pragma omp flatten
+///   for (int i = 0; i < m; ++i)
+///     for (int j = 0; j < n; ++j)
+///       ..
+/// \endcode
+class OMPFlattenDirective final
+    : public OMPCanonicalLoopNestTransformationDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Offsets of child members.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+    FinalsOffset,
+  };
+
+  explicit OMPFlattenDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                               unsigned NumLoops)
+      : OMPCanonicalLoopNestTransformationDirective(
+            OMPFlattenDirectiveClass, llvm::omp::OMPD_flatten, StartLoc, EndLoc,
+            NumLoops) {}
+
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+  void setFinals(Stmt *S) { Data->getChildren()[FinalsOffset] = S; }
+
+public:
+  /// Create a new AST node representation for '#pragma omp flatten'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses.
+  /// \param NumLoops  Number of affected loops (the flatten depth: the
+  ///                  argument of the 'depth' clause, or 2 if omitted).
+  /// \param AssociatedStmt  The outermost associated loop.
+  /// \param TransformedStmt The flattened loop, or nullptr in dependent
+  ///                        contexts.
+  /// \param PreInits  Helper preinits statements for the loop nest.
+  /// \param Finals    Updates to the original loop variables after the loop.
+  static OMPFlattenDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals);
+
+  /// Build an empty '#pragma omp flatten' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  /// \param NumLoops   Number of associated loops to allocate.
+  static OMPFlattenDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, unsigned NumLoops);
+
+  /// Gets the flattened loop after the transformation. This is the de-sugared
+  /// replacement or nullptr in dependent contexts.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return preinits statement.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  /// Return updates to the original loop variables after the flattened loop.
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPFlattenDirectiveClass;
   }
 };
 

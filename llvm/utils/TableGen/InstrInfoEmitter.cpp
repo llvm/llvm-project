@@ -155,30 +155,36 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
       if (OpR->isSubClassOf("RegisterOperand"))
         OpR = OpR->getValueAsDef("RegClass");
 
-      if (OpR->isSubClassOf("RegClassByHwMode")) {
+      if (OpR->isSubClassOf("RegClassByHwMode") &&
+          !OpR->getValueAsListOfDefs("Objects").empty()) {
         Res += Namespace;
         Res += "::";
         Res += OpR->getName();
         Res += ", ";
-      } else if (OpR->isSubClassOf("RegisterClass"))
-        Res += getQualifiedName(OpR) + "RegClassID, ";
-      else if (OpR->isSubClassOf("PointerLikeRegClass")) {
+      } else if (OpR->isSubClassOf("RegClassByHwMode")) {
+        // An empty RegClassByHwMode is the generic ptr_rc placeholder. It must
+        // be substituted with a real class per target (via
+        // RemapAllTargetPseudoPointerOperands); reaching here means it was not.
         if (Inst.isPseudo) {
           // TODO: Verify this is a fixed pseudo
           PrintError(Inst.TheDef,
                      "missing target override for pseudoinstruction "
-                     "using PointerLikeRegClass");
+                     "using ptr_rc");
           PrintNote(OpR->getLoc(),
                     "target should define equivalent instruction "
                     "with RegisterClassLike replacement; (use "
                     "RemapAllTargetPseudoPointerOperands?)");
         } else {
-          PrintError(Inst.TheDef,
-                     "non-pseudoinstruction user of PointerLikeRegClass");
+          PrintError(Inst.TheDef, "non-pseudoinstruction user of ptr_rc");
         }
-      } else
         // -1 means the operand does not have a fixed register class.
         Res += "-1, ";
+      } else if (OpR->isSubClassOf("RegisterClass")) {
+        Res += getQualifiedName(OpR) + "RegClassID, ";
+      } else {
+        // -1 means the operand does not have a fixed register class.
+        Res += "-1, ";
+      }
 
       // Fill in applicable flags.
       Res += "0";
@@ -662,6 +668,16 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     NamespaceEmitter LlvmNS(OS, "llvm");
     OS << "class MCInst;\n";
     OS << "class FeatureBitset;\n\n";
+
+    const CodeGenTarget &Target = CDP.getTargetInfo();
+    ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
+    if (!RegClassByHwMode.empty()) {
+      const CodeGenHwModes &CGH = Target.getHwModes();
+      unsigned NumModes = CGH.getNumModeIds();
+      unsigned NumClassesByHwMode = RegClassByHwMode.size();
+      OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
+         << NumModes << "][" << NumClassesByHwMode << "];\n\n";
+    }
 
     NamespaceEmitter TargetNS(OS, (TargetName + "_MC").str());
     for (const Record *Rec : TIIPredicates)

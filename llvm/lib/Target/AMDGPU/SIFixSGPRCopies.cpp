@@ -68,7 +68,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -141,7 +140,6 @@ public:
 
   bool run(MachineFunction &MF);
   void fixSCCCopies(MachineFunction &MF);
-  void prepareRegSequenceAndPHIs(MachineFunction &MF);
   unsigned getNextVGPRToSGPRCopyId() { return ++NextVGPRToSGPRCopyID; }
   bool needToBeConvertedToVALU(V2SCopyInfo *I);
   void analyzeVGPRToSGPRCopy(MachineInstr *MI);

@@ -27,10 +27,6 @@ def GlobalDocumentation {
 AMDGPU Builtins
 ===============
 
-.. contents::
-   :local:
-   :depth: 2
-
 This document describes the AMDGPU target-specific builtins available in Clang.
 Most of these builtins provide direct access to AMDGPU hardware instructions
 and intrinsics.
@@ -580,7 +576,7 @@ and adds the 32x16 f32 accumulator ``C``.
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
 
-Requires target feature ``wmma-n16-insts`` and wave32.
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -601,7 +597,7 @@ WMMA with per-operand scale factors applied during the computation.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
 
-Requires target feature ``wmma-n16-insts`` and wave32.
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -679,6 +675,28 @@ Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
+def DocWMMA_scale16_f4_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Scaled wave matrix multiply-accumulate with 64-bit (16-bit per element)
+scale exponents, as opposed to the 32-bit exponents used by the non-16
+scale variant.
+
+- For ``..._f8f6f4`` variants, ``matrix_a_fmt`` / ``matrix_b_fmt`` are format
+  selectors for A and B. They must be compile-time constants.
+- ``c_mod``: accumulator modifier.
+- ``matrix_a_scale`` / ``matrix_b_scale``: scale factor selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_fmt`` / ``matrix_b_scale_fmt``: scale format selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-f4-insts`` and wave32.
+}];
+}
+
 def DocWMMA_f64_16x16x4_f64_GFX1251 : Documentation {
   let Category = DocCatWMMA;
   let Content = [{
@@ -743,6 +761,45 @@ Replicates each bit of the 32-bit ``src`` operand into two adjacent bits of a
 64-bit result. Bit ``i`` of the input is copied to bits ``2*i`` and ``2*i+1``
 of the output. The operand must be uniform across the wavefront. A divergent
 value gives an undefined result.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Raw Buffer Atomic Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatRawBufferAtomic : DocumentationCategory<"Raw Buffer Atomic Builtins"> {
+  let Content = [{
+These builtins perform an atomic read-modify-write on a location addressed
+through a buffer resource, and return the value that was in memory before the
+operation.
+
+The buffer resource is passed as ``__amdgpu_buffer_rsrc_t``, which can be
+created with ``__builtin_amdgcn_make_buffer_rsrc``. The address is formed from
+the resource base plus ``offset`` and ``soffset``; the ``raw`` addressing form
+does not take a record index.
+
+Each builtin requires the target feature listed in its description, and is only
+available when that feature is enabled for the target.
+}];
+}
+
+def DocRawPtrBufferAtomicFAddF64 : Documentation {
+  let Category = DocCatRawBufferAtomic;
+  let Content = [{
+Atomically adds a double-precision value to a location in a buffer and returns
+the value previously stored there.
+
+- ``vdata``: value added to the value in memory.
+- ``rsrc``: buffer resource descriptor.
+- ``offset``: byte offset from the base of the buffer, held in a VGPR.
+- ``soffset``: additional byte offset, held in an SGPR.
+- ``aux``: cache-policy and control flags. Must be a compile-time constant.
+  The encoding is target-dependent; see the corresponding field of
+  ``__builtin_amdgcn_s_buffer_load_*`` for the common fields.
+
+Requires target feature ``flat-buffer-global-fadd-f64-inst``. Maps to the
+``buffer_atomic_add_f64`` instruction.
 }];
 }
 

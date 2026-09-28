@@ -1,10 +1,11 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
 
 target triple = "dxil-unknown-shadermodel6.3-library"
 
 ;; CHECK-DAG: [[CU:![0-9]+]] = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C, sourceLanguageVersion: 199901,
-;; CHECK-DAG: DXIL: [[CU]]: to be replaced by: [[NEWCU:![0-9]+]]
-;; CHECK-DAG: [[NEWCU]] = distinct !DICompileUnit(language: DW_LANG_C99,
+;; CHECK-COMMENT-DAG: DXIL: [[CU]]: to be replaced by: [[NEWCU:![0-9]+]]
+;; CHECK-COMMENT-DAG: [[NEWCU]] = distinct !DICompileUnit(language: DW_LANG_C99,
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
