@@ -25914,11 +25914,8 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   SDValue Index = N->getOperand(1);
   EVT ScalarVT = N->getValueType(0);
   EVT VecVT = VecOp.getValueType();
-  if (VecOp.getOpcode() == ISD::POISON)
-    return DAG.getPOISON(ScalarVT);
-
-  if (VecOp.getOpcode() == ISD::UNDEF)
-    return DAG.getUNDEF(ScalarVT);
+  if (VecOp.isUndef())
+    return DAG.getUNDEFOrPOISON(VecOp);
 
   // extract_vector_elt (insert_vector_elt vec, val, idx), idx) -> val
   //
