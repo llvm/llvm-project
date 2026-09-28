@@ -61,6 +61,10 @@ public:
   /// Closes the ConPTY and invalidates its handle, without closing the STDIN
   /// and STDOUT pipes. Closing the ConPTY signals EOF to any process currently
   /// attached to it.
+  ///
+  /// In pipe mode there is no ConPTY to close: this cancels the read pending
+  /// on the STDOUT pipe and marks the pipes closed, so IsConnected() returns
+  /// false from then on, as it does once a ConPTY is closed.
   void Close();
 
   /// Closes the STDIN and STDOUT pipe handles and invalidates them.
@@ -142,6 +146,10 @@ protected:
       reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   HANDLE m_pipe_child_stdout =
       reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  // Pipe mode: set by Close(). Its CancelIoEx only reaches a read that is
+  // already pending, so a reader has to be able to tell that the pipes were
+  // closed before it starts the next one.
+  std::atomic<bool> m_pipes_closed = false;
   Mode m_mode = Mode::None;
   std::mutex m_mutex{};
   std::condition_variable m_cv{};

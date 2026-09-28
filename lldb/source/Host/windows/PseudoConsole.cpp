@@ -176,7 +176,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole(uint16_t req_cols,
 
 bool PseudoConsole::IsConnected() const {
   if (m_mode == Mode::Pipe)
-    return m_conpty_input != INVALID_HANDLE_VALUE &&
+    return !m_pipes_closed && m_conpty_input != INVALID_HANDLE_VALUE &&
            m_conpty_output != INVALID_HANDLE_VALUE;
   return m_conpty_handle != INVALID_HANDLE_VALUE &&
          m_conpty_input != INVALID_HANDLE_VALUE &&
@@ -188,8 +188,10 @@ void PseudoConsole::Close() {
   std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
-  if (m_mode == Mode::Pipe && m_conpty_output != INVALID_HANDLE_VALUE)
+  if (m_mode == Mode::Pipe && m_conpty_output != INVALID_HANDLE_VALUE) {
+    m_pipes_closed = true;
     CancelIoEx(m_conpty_output, nullptr);
+  }
   m_conpty_handle = INVALID_HANDLE_VALUE;
   SetStopping(false);
   m_cv.notify_all();
@@ -219,6 +221,7 @@ void PseudoConsole::Reset() {
   Close();
   ClosePseudoConsolePipes();
   CloseAnonymousPipes();
+  m_pipes_closed = false;
   m_mode = Mode::None;
 }
 
