@@ -44,7 +44,7 @@ module @outer {
     }
 
     // Visibility must propagate through all exposed tables below the root.
-    module @child attributes {sym_visibility = "nested"} {
+    module @child <sym_visibility = "nested"> {
       // SCOPED-LABEL: func.func nested @deep(
       // SCOPED-SAME: %{{[^ ,)]+}}: i32)
       // FULL-LABEL: func.func nested @deep()
@@ -79,7 +79,7 @@ module @outer {
     }
 
     // A private table hides the nested symbols below it.
-    module @hidden attributes {sym_visibility = "private"} {
+    module @hidden <sym_visibility = "private"> {
       // CHECK-LABEL: func.func nested @hidden_callee()
       // CHECK-NEXT: return
       func.func nested @hidden_callee(%dead: i32) -> i32 {

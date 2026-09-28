@@ -215,10 +215,10 @@ TEST(SymbolUserMap, AllUsesVisible) {
         "test.symbol"() <{sym_name = "private", sym_visibility = "private"}> : () -> ()
         "test.symbol"() <{sym_name = "nested", sym_visibility = "nested"}> : () -> ()
         "test.symbol"() <{sym_name = "local_user"}> {use = [@nested, @public]} : () -> ()
-        module @child attributes {sym_visibility = "nested"} {
+        module @child <sym_visibility = "nested"> {
           "test.symbol"() <{sym_name = "leaf", sym_visibility = "nested"}> : () -> ()
         }
-        module @hidden attributes {sym_visibility = "private"} {
+        module @hidden <sym_visibility = "private"> {
           "test.symbol"() <{sym_name = "leaf", sym_visibility = "nested"}> : () -> ()
           "test.symbol"() <{sym_name = "public"}> : () -> ()
         }
