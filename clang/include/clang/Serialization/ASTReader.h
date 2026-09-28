@@ -1465,14 +1465,13 @@ private:
   };
 
   /// Input files of loaded modules, keyed by the size the module recorded for
-  /// them. Built on first use. A size does not identify a file, so a lookup
-  /// confirms a match by name and by path.
-  llvm::DenseMap<off_t, SmallVector<LoadedInputModuleFile, 1>> LoadedInputFiles;
-  bool LoadedInputFilesBuilt = false;
+  /// them. Built on first use, and empty until then. A size does not identify a
+  /// file, so a lookup confirms a match by name and by path.
+  std::optional<llvm::DenseMap<off_t, SmallVector<LoadedInputModuleFile, 1>>>
+      LoadedInputFiles;
 
   void buildLoadedInputFiles();
-  serialization::InputFileLoc getLoadedInputFileLoc(ModuleFile &F,
-                                                    unsigned InputID);
+  serialization::InputFileLoc getInputFileLoc(ModuleFile &F, unsigned InputID);
 
 public:
   /// Get the buffer for resolving paths.

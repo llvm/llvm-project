@@ -1852,9 +1852,9 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
 }
 
 void ASTReader::buildLoadedInputFiles() {
-  LoadedInputFilesBuilt = true;
-  // ModuleManager iterates modules in index order, so the copy chosen for a
-  // file does not depend on module load order.
+  LoadedInputFiles.emplace();
+  // Modules are visited in index order, which is fixed before this runs, so the
+  // copy chosen for a file is the same on every write of this module.
   for (ModuleFile &F : ModuleMgr) {
     for (unsigned I = 0, N = F.InputFilesLoaded.size(); I != N; ++I) {
       InputFileInfo FI = getInputFileInfo(F, I + 1);
@@ -1864,12 +1864,12 @@ void ASTReader::buildLoadedInputFiles() {
       // path, so its path and size cannot identify matching contents.
       if (FI.Overridden)
         continue;
-      LoadedInputFiles[FI.StoredSize].push_back({&F, I + 1});
+      (*LoadedInputFiles)[FI.StoredSize].push_back({&F, I + 1});
     }
   }
 }
 
-InputFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F, unsigned InputID) {
+InputFileLoc ASTReader::getInputFileLoc(ModuleFile &F, unsigned InputID) {
   InputFileInfo FI = getInputFileInfo(F, InputID);
   // A module file records no entry index for an input file it redirected
   // elsewhere, so it has no copy to offer.
@@ -1880,11 +1880,11 @@ InputFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F, unsigned InputID) {
 }
 
 InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
-  if (!LoadedInputFilesBuilt)
+  if (!LoadedInputFiles)
     buildLoadedInputFiles();
 
-  auto Known = LoadedInputFiles.find(Size);
-  if (Known == LoadedInputFiles.end())
+  auto Known = LoadedInputFiles->find(Size);
+  if (Known == LoadedInputFiles->end())
     return InputFileLoc();
 
   StringRef WantedName = llvm::sys::path::filename(Path);
@@ -1914,8 +1914,8 @@ InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
 
     // An input file may have no source location entries, leaving no copy to
     // redirect to.
-    InputFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
-    if (Loc.FID.isValid())
+    InputFileLoc Loc = getInputFileLoc(*In.F, In.InputID);
+    if (Loc.isValid())
       return Loc;
   }
   return InputFileLoc();

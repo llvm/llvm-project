@@ -91,6 +91,8 @@ struct InputFileInfo {
 struct InputFileLoc {
   FileID FID;
   SourceLocation::UIntTy Offset = 0;
+
+  bool isValid() const { return FID.isValid(); }
 };
 
 /// The input file that has been loaded from this AST file, along with

@@ -5684,7 +5684,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
       continue;
     serialization::InputFileLoc Loaded = getChain()->getLoadedFileLoc(
         Cache->OrigEntry->getName(), Cache->OrigEntry->getSize());
-    if (Loaded.FID.isInvalid())
+    if (!Loaded.isValid())
       continue;
 
     IsSLocAffecting[I] = false;
