@@ -1880,11 +1880,16 @@ public:
   Value *CreateUnOp(Instruction::UnaryOps Opc,
                     Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMF))
+    return CreateUnOpFMF(Opc, V, {}, Name, FPMathTag);
+  }
+
+  Value *CreateUnOpFMF(Instruction::UnaryOps Opc, Value *V, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMFSource.get(FMF)))
       return Res;
     Instruction *UnOp = UnaryOperator::Create(Opc, V);
     if (isa<FPMathOperator>(UnOp))
-      setFPAttrs(UnOp, FPMathTag, FMF);
+      setFPAttrs(UnOp, FPMathTag, FMFSource.get(FMF));
     return Insert(UnOp, Name);
   }
 

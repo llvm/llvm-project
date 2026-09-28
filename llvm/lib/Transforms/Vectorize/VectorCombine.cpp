@@ -1449,16 +1449,17 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   // folding might remove the instructions, so post setting the flags might
   // pollute the later instructions.
   if (CI) {
-    if (FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I))
+    if (FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I)) {
       Scalar = Builder.CreateFCmpFMF(CI->getPredicate(), ScalarOps[0],
                                      ScalarOps[1], FPMO->getFastMathFlags(),
                                      CI->getName() + ".scalar");
-    else
+    } else {
       Scalar = Builder.CreateICmp(CI->getPredicate(), ScalarOps[0],
                                   ScalarOps[1], CI->getName() + ".scalar");
+    }
   } else if (UO) {
-    // FNeg is the only unary operator.
-    Scalar = Builder.CreateFNegFMF(ScalarOps[0], UO, UO->getName() + ".scalar");
+    Scalar = Builder.CreateUnOpFMF(UO->getOpcode(), ScalarOps[0], UO,
+                                   UO->getName() + ".scalar");
   } else if (BO) {
     if (OverflowingBinaryOperator *OBO =
             dyn_cast<OverflowingBinaryOperator>(&I)) {
