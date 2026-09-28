@@ -1920,6 +1920,10 @@ bool hasSiblingLoops(const LoopInfo &LI) {
 
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
+
+  if (!hasSiblingLoops(LI))
+    return PreservedAnalyses::all();
+
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &DI = AM.getResult<DependenceAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
@@ -1927,10 +1931,6 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-
-  if (!hasSiblingLoops(LI))
-    return PreservedAnalyses::all();
-
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added
   // LoopSimplify pass as a dependency.
