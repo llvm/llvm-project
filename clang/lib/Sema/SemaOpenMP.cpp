@@ -17415,21 +17415,21 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
         /*AllowExplicit=*/true));
   };
 
-  // Divisors in index recovery use max(1, N) so a zero trip count does not
-  // warn.
+  // Divisors in index recovery use (N == 0 ? 1 : N) so a zero trip count does
+  // not warn.
   auto MakeDivisorInIVTy = [&](unsigned I) -> Expr * {
     Expr *N = MakeNumIterationsInIVTy(I);
     Expr *NCmp = MakeNumIterationsInIVTy(I);
-    auto MakeOne = [&]() -> Expr * {
-      return IntegerLiteral::Create(Context, llvm::APInt(IVWidth, 1), IVTy,
+    auto MakeCst = [&](uint64_t V) -> Expr * {
+      return IntegerLiteral::Create(Context, llvm::APInt(IVWidth, V), IVTy,
                                     CondLoc);
     };
-    ExprResult TooSmall =
-        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, NCmp, MakeOne());
-    if (!TooSmall.isUsable())
+    ExprResult IsZero =
+        SemaRef.BuildBinOp(CurScope, CondLoc, BO_EQ, NCmp, MakeCst(0));
+    if (!IsZero.isUsable())
       return N;
     return AssertSuccess(SemaRef.ActOnConditionalOp(
-        CondLoc, CondLoc, TooSmall.get(), MakeOne(), N));
+        CondLoc, CondLoc, IsZero.get(), MakeCst(1), N));
   };
 
   // \code{.cpp}
