@@ -609,9 +609,8 @@ func.func @vecdim_none_reduction_rejected(%in: memref<256x512xf32>, %out: memref
 // The index_cast operation cannot be vectorized: vectorization is rolled back
 // and both loop nest and reduction op are removed.
 
-func.func @vecdim_reduction_rollback(%in: memref<512xf32>) -> f32 {
- %cst = arith.constant 0.000000e+00 : f32
- %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %cst) -> (f32) {
+func.func @vecdim_reduction_rollback(%in: memref<512xf32>, %init: f32) -> f32 {
+ %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %init) -> (f32) {
    %ld = affine.load %in[%j] : memref<512xf32>
    %j_i32 = arith.index_cast %j : index to i32
    %add = arith.addf %red_iter, %ld : f32
