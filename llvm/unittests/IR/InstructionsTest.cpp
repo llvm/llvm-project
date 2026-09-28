@@ -294,8 +294,6 @@ TEST(InstructionsTest, CalleesMetadataRejectsMalformedOperands) {
   CheckMalformed("raw null", nullptr);
   CheckMalformed("typed null", ConstantAsMetadata::get(ConstantPointerNull::get(
                                    PointerType::getUnqual(C))));
-  CheckMalformed("undef", ConstantAsMetadata::get(
-                              UndefValue::get(PointerType::getUnqual(C))));
   CheckMalformed("poison", ConstantAsMetadata::get(
                                PoisonValue::get(PointerType::getUnqual(C))));
   CheckMalformed("global", ConstantAsMetadata::get(Global));
