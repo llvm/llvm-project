@@ -1190,6 +1190,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const Register DstReg = Cmp->getReg(0);
   LLT DstTy = MRI.getType(DstReg);
   const auto Cond = Cmp->getCond();
+  Type *RetTy = EVT(TLI.getCmpLibcallReturnType()).getTypeForEVT(Ctx);
 
   // Reference:
   // https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html#Comparison-functions-1
@@ -1197,12 +1198,12 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
                                 const CmpInst::Predicate ICmpPred,
                                 const DstOp &Res) -> Register {
-    // FCMP libcall always returns an i32, and needs an ICMP with #0.
-    LLT TempLLT = LLT::integer(32);
+    // FCMP libcall returns an integer, and needs an ICMP with #0.
+    LLT TempLLT = LLT::integer(RetTy->getIntegerBitWidth());
     Register Temp = MRI.createGenericVirtualRegister(TempLLT);
     // Generate libcall, holding result in Temp
     const auto Status = createLibcall(
-        Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        Libcall, {Temp, RetTy, 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
     if (Status != Legalized)

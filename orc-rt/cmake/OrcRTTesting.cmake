@@ -37,7 +37,7 @@ endif()
 
 # Add dependencies on optional tools, if they're being built alongside us.
 # Tests that need these tools are gated on lit features, so they're not required.
-foreach(tool clang llvm-jitlink llvm-mc)
+foreach(tool clang llvm-jitlink llvm-mc split-file)
   if (TARGET ${tool})
     list(APPEND ORC_RT_TEST_DEPS ${tool})
   endif()
