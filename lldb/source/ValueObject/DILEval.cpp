@@ -46,34 +46,40 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       /* do_deref */ false);
 }
 
-llvm::Expected<lldb::LanguageType> Interpreter::GetSourceLanguageFromCU() {
-  auto frame_sp = m_exe_ctx.GetFrameSP();
+static llvm::Expected<SymbolContext>
+GetSymbolContexFromFrame(ExecutionContext &exe_ctx) {
+  auto frame_sp = exe_ctx.GetFrameSP();
   if (!frame_sp)
     return llvm::createStringError("no stack frame in execution context");
 
-  SymbolContext symbol_context =
-      frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  SymbolContext symbol_context = frame_sp->GetSymbolContext(
+      lldb::eSymbolContextCompUnit | lldb::eSymbolContextModule);
   if (!symbol_context.comp_unit)
     return llvm::createStringErrorV("no compile unit for frame: {0}",
                                     frame_sp->GetFunctionName());
+  if (!symbol_context.module_sp)
+    return llvm::createStringErrorV("no module for frame: {0}",
+                                    frame_sp->GetFunctionName());
+  return symbol_context;
+}
 
-  return symbol_context.comp_unit->GetLanguage();
+llvm::Expected<lldb::LanguageType> Interpreter::GetSourceLanguageFromCU() {
+  llvm::Expected<SymbolContext> symbol_context =
+      GetSymbolContexFromFrame(m_exe_ctx);
+  if (!symbol_context)
+    return symbol_context.takeError();
+
+  return symbol_context->comp_unit->GetLanguage();
 }
 
 llvm::Expected<lldb::TypeSystemSP> Interpreter::GetTypeSystemFromCU() {
-  auto frame_sp = m_exe_ctx.GetFrameSP();
-  if (!frame_sp)
-    return llvm::createStringError("no stack frame in execution context");
+  llvm::Expected<SymbolContext> symbol_context =
+      GetSymbolContexFromFrame(m_exe_ctx);
+  if (!symbol_context)
+    return symbol_context.takeError();
 
-  SymbolContext symbol_context =
-      frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  if (!symbol_context.comp_unit)
-    return llvm::createStringErrorV("no compile unit for frame: {0}",
-                                    frame_sp->GetFunctionName());
-
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-  symbol_context = frame_sp->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+  lldb::LanguageType language = symbol_context->comp_unit->GetLanguage();
+  return symbol_context->module_sp->GetTypeSystemForLanguage(language);
 }
 
 llvm::Expected<lldb::ValueObjectSP>

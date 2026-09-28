@@ -11,7 +11,6 @@
 
 #include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
