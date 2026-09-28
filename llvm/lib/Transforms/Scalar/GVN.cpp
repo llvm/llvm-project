@@ -34,6 +34,7 @@
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
@@ -41,6 +42,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PHITransAddr.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
@@ -934,6 +936,8 @@ void GVNPass::printPipeline(
       OS, MapClassName2PassName);
 
   OS << '<';
+  if (Options.PreserveVectorization)
+    OS << "preserve-vectorization;";
   if (Options.AllowScalarPRE != std::nullopt)
     OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
   if (Options.AllowLoadPRE != std::nullopt)
@@ -1976,9 +1980,11 @@ bool GVNPass::performLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 // When its clobber is a conditional store through a varying pointer, this can
 // prevent vectorization that could otherwise disambiguate the accesses using
 // runtime checks. Keep the load in such loops until the vectorizer has run.
-static bool shouldPreserveLoadForVectorization(LoadInst *Load, const Loop *L,
-                                               BasicBlock *Clobber,
-                                               AAResults &AA) {
+static bool
+shouldPreserveLoadForVectorization(LoadInst *Load, Loop *L, BasicBlock *Clobber,
+                                   AAResults &AA, const TargetLibraryInfo &TLI,
+                                   AssumptionCache &AC, DominatorTree &DT,
+                                   LoopInfo &LI) {
   if (!L->isInnermost() || (hasVectorizeTransformation(L) & TM_Disable) ||
       !VectorType::isValidElementType(Load->getType()))
     return false;
@@ -2012,13 +2018,26 @@ static bool shouldPreserveLoadForVectorization(LoadInst *Load, const Loop *L,
       return false;
     HasMayAliasStore = true;
   }
-  return HasMayAliasStore;
+  if (!HasMayAliasStore)
+    return false;
+
+  // A varying pointer need not have a checkable range (e.g. out[indices[iv]]).
+  // Ask the same memory analysis used by the vectorizer before giving up PRE.
+  // GVN mutates the IR without maintaining ScalarEvolution, so use fresh,
+  // short-lived analyses only after the inexpensive candidate checks above.
+  TargetLibraryInfo LocalTLI(TLI);
+  ScalarEvolution SE(*Load->getFunction(), LocalTLI, AC, DT, LI);
+  LoopAccessInfo LAI(L, &SE, /*TTI=*/nullptr, &TLI, &AA, &DT, &LI, &AC);
+  return LAI.canVectorizeMemory() &&
+         !LAI.hasStoreStoreDependenceInvolvingLoopInvariantAddress() &&
+         !LAI.hasLoadStoreDependenceInvolvingLoopInvariantAddress() &&
+         LAI.getRuntimePointerChecking()->Need;
 }
 
 bool GVNPass::performLoopLoadPRE(LoadInst *Load,
                                  AvailValInBlkVect &ValuesPerBlock,
                                  UnavailBlkVect &UnavailableBlocks) {
-  const Loop *L = LI->getLoopFor(Load->getParent());
+  Loop *L = LI->getLoopFor(Load->getParent());
   // TODO: Generalize to other loop blocks that dominate the latch.
   if (!L || L->getHeader() != Load->getParent())
     return false;
@@ -2080,7 +2099,9 @@ bool GVNPass::performLoopLoadPRE(LoadInst *Load,
   if (LoadPtr->canBeFreed())
     return false;
 
-  if (shouldPreserveLoadForVectorization(Load, L, LoopBlock, *AA)) {
+  if (Options.PreserveVectorization &&
+      shouldPreserveLoadForVectorization(Load, L, LoopBlock, *AA, *TLI, *AC,
+                                         *DT, *LI)) {
     ORE->emit([&]() {
       return OptimizationRemarkAnalysis(DEBUG_TYPE,
                                         "PreserveLoadForVectorization", Load)
