@@ -975,8 +975,9 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       if (AccessIdx.hasOffsetIdx()) {
         OffsetPhi->addIncoming(AccessIdx.OffsetIdx, BB);
         HasOffset = true;
-      } else
+      } else {
         OffsetPhi->addIncoming(ConstantInt::get(Builder.getInt32Ty(), 0), BB);
+      }
     }
 
     Value *GetPtrIdx;
