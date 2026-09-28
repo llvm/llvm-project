@@ -954,6 +954,12 @@ void NativeProcessWindows::StopStdioForwarding() {
   if (m_pty)
     m_pty->Close();
 
+  // Close() cancels the read pending on the pipe, but one that the read thread
+  // is about to start would only return at its 5s timeout: EOF cannot come
+  // while the inferior is held at its exit debug event. Wake the thread so that
+  // it sees the closed PTY right away.
+  m_stdio_communication.InterruptRead();
+
   if (m_stdio_communication.ReadThreadIsRunning())
     m_stdio_communication.JoinReadThread();
 
