@@ -175,9 +175,21 @@ typename fputil::FPBits<T>::StorageType ulp_distance(T x, T y) {
   using FPBits = fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
-  StorageType x_bits = FPBits(x).uintval();
-  StorageType y_bits = FPBits(y).uintval();
-  return x_bits > y_bits ? x_bits - y_bits : y_bits - x_bits;
+  FPBits x_bits(x);
+  FPBits y_bits(y);
+
+  if (x_bits == y_bits)
+    return FPBits::zero().uintval();
+
+  if (x_bits.is_nan()) {
+    if (y_bits.is_nan())
+      return FPBits::zero().uintval();
+    return FPBits::inf().uintval();
+  }
+
+  StorageType x_val = FPBits(x).uintval();
+  StorageType y_val = FPBits(y).uintval();
+  return x_val > y_val ? x_val - y_val : y_val - x_val;
 }
 
 template <TestCond C, typename T>

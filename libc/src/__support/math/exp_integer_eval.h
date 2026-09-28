@@ -15,7 +15,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 
-#include "exp_integer_constants.h" // LUTs
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits/enable_if.h"
@@ -27,23 +26,21 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/exp_integer_constants.h" // LUTs
 
 namespace LIBC_NAMESPACE_DECL {
-
-namespace shared {
 
 namespace math {
 
 namespace static_rounding {
 
 // Round the fractional result and combine it with its exponent.
-template <typename TFrac, typename TUInt,
-          cpp::enable_if_t<cpp::is_same<TFrac, Frac64>::value ||
-                               cpp::is_same<TFrac, Frac128>::value,
-                           int> = 0>
-LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
-                                       TUInt e_y,
-                                       [[maybe_unused]] int rounding) {
+template <typename TFrac, typename TUInt>
+LIBC_INLINE typename cpp::enable_if<cpp::is_same<TFrac, Frac64>::value ||
+                                        cpp::is_same<TFrac, Frac128>::value,
+                                    double>::type
+exp_handle_rounding(TFrac result_frac, bool is_neg, int d, TUInt e_y,
+                    [[maybe_unused]] int rounding) {
   constexpr bool IS_FAST_PATH = cpp::is_same<TFrac, Frac64>::value;
 
   uint32_t shift_length = 11;
@@ -82,7 +79,7 @@ LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
   result += static_cast<TUInt>(e_y) << 32;
 
   return cpp::bit_cast<double>(result);
-#else  // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+#else  // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   if (rounding == FE_TONEAREST) {
     TUInt result =
         (static_cast<TUInt>(frac_bits() >> shift_length) + (leading_one + 1));
@@ -224,17 +221,24 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
   uint64_t x_s = xbits.get_mantissa();
 
   // The idea of the algorithm below is that:
-  // For x = 2^(hi + mid + low), with:
+  // Let:
+  //  - y = x / ln(2) --> exp(x) = 2^y.
+  //  - y = hi + mid + low
+  //
+  // With:
   //  - hi is an integer
   //  - mid * 2^4 is an integer
-  //  - lo is the remainder bits
+  //  - lo are the remainder bits
+  //
   // Then:
   //  exp(x) = 2^hi * 2^mid * 2^lo
+  //
   // With this formula:
   //  - Multiplying by 2^hi is exact and cheap, via adding into the exponent
   //  field
   //  - 2^mid can be calculated via the LUT declared above
   //  - 2^lo ~ 1 + lo + a0 * lo^2 + ...
+  //
   // Then we can construct exp(x) pretty easily, as hi, mid, lo bits can be
   // separate and be used independently, then we only need to reconstruct in the
   // final steps, which makes our life easier.
@@ -370,13 +374,11 @@ LIBC_INLINE double exp(double x, [[maybe_unused]] int rounding) {
 
 } // namespace math
 
-} // namespace shared
-
 namespace math {
 namespace integer_eval {
 
 LIBC_INLINE double exp(double x) {
-  return shared::math::static_rounding::exp(x, FE_TONEAREST);
+  return math::static_rounding::exp(x, FE_TONEAREST);
 }
 
 } // namespace integer_eval

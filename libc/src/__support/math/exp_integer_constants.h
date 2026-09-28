@@ -21,8 +21,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace shared {
-
 namespace math {
 
 namespace static_rounding {
@@ -120,8 +118,6 @@ LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
 } // namespace static_rounding
 
 } // namespace math
-
-} // namespace shared
 
 } // namespace LIBC_NAMESPACE_DECL
 

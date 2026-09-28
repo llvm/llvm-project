@@ -28,7 +28,7 @@ using RoundingMode = LIBC_NAMESPACE::fputil::testing::RoundingMode;
 using ForceRoundingMode = LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::testing::tlog;
 
-namespace static_rounding = LIBC_NAMESPACE::shared::math::static_rounding;
+namespace static_rounding = LIBC_NAMESPACE::math::static_rounding;
 namespace math = LIBC_NAMESPACE::math;
 
 TEST_F(LlvmLibcExpStaticRoundingTest, SpecialNumbers) {

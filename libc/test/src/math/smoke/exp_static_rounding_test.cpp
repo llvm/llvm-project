@@ -22,7 +22,7 @@
 
 using LlvmLibcExpStaticRoundingTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
-namespace static_rounding = LIBC_NAMESPACE::shared::math::static_rounding;
+namespace static_rounding = LIBC_NAMESPACE::math::static_rounding;
 namespace math = LIBC_NAMESPACE::math;
 
 TEST_F(LlvmLibcExpStaticRoundingTest, SpecialNumbers) {

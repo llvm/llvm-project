@@ -15,7 +15,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_INTEGER_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_INTEGER_EVAL_H
 
-#include "exp_integer_constants.h" // LUTs
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -24,10 +23,9 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/check/exp_exceptions.h"
+#include "src/__support/math/exp_integer_constants.h" // LUTs
 
 namespace LIBC_NAMESPACE_DECL {
-
-namespace shared {
 
 namespace math {
 
@@ -255,13 +253,11 @@ LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
 
 } // namespace math
 
-} // namespace shared
-
 namespace math {
 namespace integer_eval {
 
 LIBC_INLINE float expf(float x) {
-  return shared::math::static_rounding::expf(x, FE_TONEAREST);
+  return math::static_rounding::expf(x, FE_TONEAREST);
 }
 
 } // namespace integer_eval
