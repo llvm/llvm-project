@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Printable.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -40,6 +39,7 @@ class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
 struct MCSchedClassDesc;
+class raw_ostream;
 class SDNode;
 class SUnit;
 class ScheduleDAG;
@@ -487,12 +487,12 @@ class TargetRegisterInfo;
 
     LLVM_ABI void dumpAttributes() const;
 
-    LLVM_ABI Printable printNum() const;
-
   private:
     LLVM_ABI void ComputeDepth();
     LLVM_ABI void ComputeHeight();
   };
+
+  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SUnit &SU);
 
   /// Returns true if the specified SDep is equivalent except for latency.
   inline bool SDep::overlaps(const SDep &Other) const {

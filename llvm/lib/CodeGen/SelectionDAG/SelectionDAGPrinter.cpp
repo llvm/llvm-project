@@ -284,7 +284,7 @@ void SelectionDAG::setSubgraphColor(SDNode *N, const char *Color) {
 std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream O(s);
-  O << SU->printNum() << ": ";
+  O << *SU << ": ";
   if (SU->getNode()) {
     SmallVector<SDNode *, 4> GluedNodes;
     for (SDNode *N = SU->getNode(); N; N = N->getGluedNode())

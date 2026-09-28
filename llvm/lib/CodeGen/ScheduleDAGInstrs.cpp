@@ -99,7 +99,7 @@ static void dumpSUList(const ScheduleDAGInstrs::SUList &L) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "{ ";
   for (const SUnit *SU : L) {
-    dbgs() << SU->printNum();
+    dbgs() << *SU;
     if (SU != L.back())
       dbgs() << ", ";
   }
@@ -881,7 +881,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       BarrierChain = SU;
 
       LLVM_DEBUG(dbgs() << "Global memory object and new barrier chain: "
-                        << BarrierChain->printNum() << ".\n");
+                        << *BarrierChain << ".\n");
 
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(Stores);

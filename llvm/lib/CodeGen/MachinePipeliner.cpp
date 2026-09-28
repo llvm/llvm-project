@@ -2513,7 +2513,7 @@ void SwingSchedulerDAG::registerPressureFilter(NodeSetType &NodeSets) {
                                              RecRegPressure.MaxSetPressure);
       if (RPDelta.Excess.isValid()) {
         LLVM_DEBUG(
-            dbgs() << "Excess register pressure: " << SU->printNum() << " "
+            dbgs() << "Excess register pressure: " << *SU << " "
                    << TRI->getRegPressureSetName(RPDelta.Excess.getPSet())
                    << ":" << RPDelta.Excess.getUnitInc() << "\n");
         NS.setExceedPressure(SU);
@@ -3681,9 +3681,9 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
       auto &OldS = getInstructions(OldCycle);
       llvm::erase(OldS, &SU);
       getInstructions(NewCycle).emplace_back(&SU);
-      LLVM_DEBUG(dbgs() << SU.printNum()
-                        << " is not pipelined; moving from cycle " << OldCycle
-                        << " to " << NewCycle << " Instr:" << *SU.getInstr());
+      LLVM_DEBUG(dbgs() << SU << " is not pipelined; moving from cycle "
+                        << OldCycle << " to " << NewCycle
+                        << " Instr:" << *SU.getInstr());
     }
 
     // We traverse the SUs in the order of the original basic block. Computing
@@ -3951,7 +3951,7 @@ void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
   for (const auto &I : Nodes)
-    os << "   " << I->printNum() << " " << *(I->getInstr());
+    os << "   " << *I << " " << *(I->getInstr());
   os << "\n";
 }
 
@@ -4482,7 +4482,7 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
   const auto DumpSU = [](const SUnit *SU) {
     std::string S;
     raw_string_ostream OS(S);
-    OS << SU->printNum();
+    OS << *SU;
     return S;
   };
 

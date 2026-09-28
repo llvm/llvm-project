@@ -453,7 +453,7 @@ void PipelineSolver::makePipeline() {
       for (auto &SU : SG.Collection) {
         if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
           SGBarr = SU;
-        LLVM_DEBUG(dbgs() << SU->printNum() << "\n");
+        LLVM_DEBUG(dbgs() << *SU << "\n");
       }
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
@@ -721,8 +721,8 @@ bool PipelineSolver::solveExact() {
   assert(static_cast<size_t>(CurrConflInstNo) <
          PipelineInstrs[CurrSyncGroupIdx].size());
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  LLVM_DEBUG(dbgs() << "Fitting " << CurrSU.first->printNum()
-                    << " in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
@@ -820,8 +820,8 @@ void PipelineSolver::greedyFind(
   std::optional<GroupInfo> Best;
 
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-  LLVM_DEBUG(dbgs() << "Fitting " << CurrSU.first->printNum()
-                    << " in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, IsBottomUp);
 

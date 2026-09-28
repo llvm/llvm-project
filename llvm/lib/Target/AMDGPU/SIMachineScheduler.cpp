@@ -180,7 +180,7 @@ void SIScheduleBlock::addUnit(SUnit *SU) {
 #ifndef NDEBUG
 void SIScheduleBlock::traceCandidate(const SISchedCandidate &Cand) {
 
-  dbgs() << "  " << Cand.SU->printNum() << " " << getReasonStr(Cand.Reason);
+  dbgs() << "  " << *Cand.SU << " " << getReasonStr(Cand.Reason);
   dbgs() << '\n';
 }
 #endif
@@ -1975,8 +1975,7 @@ void SIScheduleDAGMI::schedule()
 
     scheduleMI(SU, true);
 
-    LLVM_DEBUG(dbgs() << "Scheduling " << SU->printNum() << " "
-                      << *SU->getInstr());
+    LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
   }
 
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");

@@ -1606,7 +1606,7 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
               return Change.isValid();
             }))
           LLVM_DEBUG(dbgs()
-                         << "  UpdateRegPressure: " << SU.printNum() << " "
+                         << "  UpdateRegPressure: " << SU << " "
                          << printReg(Reg, TRI) << ':'
                          << PrintLaneMask(P.LaneMask) << ' ' << *SU.getInstr();
                      dbgs() << "                     to "; PDiff.dump(*TRI););
@@ -1644,8 +1644,8 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
             if (llvm::any_of(PDiff, [](const PressureChange &Change) {
                   return Change.isValid();
                 }))
-              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: " << SU->printNum()
-                                << " " << *SU->getInstr();
+              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: " << *SU << " "
+                                << *SU->getInstr();
                          dbgs() << "                     to ";
                          PDiff.dump(*TRI););
           }
@@ -1857,8 +1857,8 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
       } else
         CyclicLatency = 0;
 
-      LLVM_DEBUG(dbgs() << "Cyclic Path: " << DefSU->printNum() << " -> "
-                        << SU->printNum() << " = " << CyclicLatency << "c\n");
+      LLVM_DEBUG(dbgs() << "Cyclic Path: " << *DefSU << " -> " << *SU << " = "
+                        << CyclicLatency << "c\n");
       if (CyclicLatency > MaxCyclicLatency)
         MaxCyclicLatency = CyclicLatency;
     }
@@ -2144,8 +2144,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       continue;
 
     Clusters.unionSets(SUa, SUb);
-    LLVM_DEBUG(dbgs() << "Cluster ld/st " << SUa->printNum() << " - "
-                      << SUb->printNum() << "\n");
+    LLVM_DEBUG(dbgs() << "Cluster ld/st " << *SUa << " - " << *SUb << "\n");
     ++NumClustered;
 
     if (IsLoad) {
@@ -2170,8 +2169,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       for (const SDep &Pred : SUb->Preds) {
         if (Pred.getSUnit() == SUa)
           continue;
-        LLVM_DEBUG(dbgs() << "  Copy Pred " << Pred.getSUnit()->printNum()
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "  Copy Pred " << *Pred.getSUnit() << "\n");
         DAG->addEdge(SUa, SDep(Pred.getSUnit(), SDep::Artificial));
       }
     }
@@ -2447,7 +2445,7 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
       return;
     GlobalUses.push_back(Pred.getSUnit());
   }
-  LLVM_DEBUG(dbgs() << "Constraining copy " << CopySU->printNum() << "\n");
+  LLVM_DEBUG(dbgs() << "Constraining copy " << *CopySU << "\n");
   // Add the weak edges.
   for (SUnit *LU : LocalUses) {
     LLVM_DEBUG(dbgs() << "  Local use SU(" << LU->NodeNum << ") -> SU("
@@ -2455,8 +2453,8 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
     DAG->addEdge(GlobalSU, SDep(LU, SDep::Weak));
   }
   for (SUnit *GU : GlobalUses) {
-    LLVM_DEBUG(dbgs() << "  Global use " << GU->printNum() << " -> "
-                      << FirstLocalSU->printNum() << "\n");
+    LLVM_DEBUG(dbgs() << "  Global use " << *GU << " -> " << *FirstLocalSU
+                      << "\n");
     DAG->addEdge(FirstLocalSU, SDep(GU, SDep::Weak));
   }
 }
@@ -2717,14 +2715,14 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
     LLVM_DEBUG(dbgs().indent(2)
-               << "hazard: " << SU->printNum() << " reported by HazardRec\n");
+               << "hazard: " << *SU << " reported by HazardRec\n");
     return true;
   }
 
   unsigned uops = SchedModel->getNumMicroOps(SU->getInstr());
   if ((CurrMOps > 0) && (CurrMOps + uops > SchedModel->getIssueWidth())) {
-    LLVM_DEBUG(dbgs().indent(2) << "hazard:  " << SU->printNum() << " uops="
-                                << uops << ", CurrMOps = " << CurrMOps << ", "
+    LLVM_DEBUG(dbgs().indent(2) << "hazard:  " << *SU << " uops=" << uops
+                                << ", CurrMOps = " << CurrMOps << ", "
                                 << "CurrMOps + uops > issue width of "
                                 << SchedModel->getIssueWidth() << "\n");
     return true;
@@ -2733,7 +2731,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
   if (CurrMOps > 0 &&
       ((isTop() && SchedModel->mustBeginGroup(SU->getInstr())) ||
        (!isTop() && SchedModel->mustEndGroup(SU->getInstr())))) {
-    LLVM_DEBUG(dbgs().indent(2) << "hazard: " << SU->printNum() << " must "
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: " << *SU << " must "
                                 << (isTop() ? "begin" : "end") << " group\n");
     return true;
   }
@@ -2754,7 +2752,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
         MaxObservedStall = std::max(ReleaseAtCycle, MaxObservedStall);
 #endif
         LLVM_DEBUG(dbgs().indent(2)
-                   << "hazard:  " << SU->printNum() << " "
+                   << "hazard:  " << *SU << " "
                    << SchedModel->getResourceName(ResIdx) << '['
                    << InstanceIdx - ReservedCyclesIndex[ResIdx] << ']' << "="
                    << NRCycle << "c, is later than "
@@ -2779,8 +2777,8 @@ findMaxLatency(ArrayRef<SUnit*> ReadySUs) {
     }
   }
   if (LateSU) {
-    LLVM_DEBUG(dbgs() << Available.getName() << " RemLatency "
-                      << LateSU->printNum() << " " << RemLatency << "c\n");
+    LLVM_DEBUG(dbgs() << Available.getName() << " RemLatency " << *LateSU << " "
+                      << RemLatency << "c\n");
   }
   return RemLatency;
 }
@@ -2836,7 +2834,7 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
   bool HazardDetected = !IsBuffered && ReadyCycle > CurrCycle;
   if (HazardDetected)
     LLVM_DEBUG(dbgs().indent(2)
-               << "hazard: " << SU->printNum() << " ReadyCycle = " << ReadyCycle
+               << "hazard: " << *SU << " ReadyCycle = " << ReadyCycle
                << " is later than CurrCycle = " << CurrCycle
                << " on an unbuffered resource" << "\n");
   else
@@ -2850,8 +2848,7 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
 
   if (!HazardDetected) {
     Available.push(SU);
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Move " << SU->printNum() << " into Available Q\n");
+    LLVM_DEBUG(dbgs().indent(2) << "Move " << *SU << " into Available Q\n");
 
     if (InPQueue)
       Pending.remove(Pending.begin() + Idx);
@@ -3063,13 +3060,13 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   unsigned &BotLatency = isTop() ? DependentLatency : ExpectedLatency;
   if (SU->getDepth() > TopLatency) {
     TopLatency = SU->getDepth();
-    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " TopLatency "
-                      << SU->printNum() << " " << TopLatency << "c\n");
+    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " TopLatency " << *SU
+                      << " " << TopLatency << "c\n");
   }
   if (SU->getHeight() > BotLatency) {
     BotLatency = SU->getHeight();
-    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " BotLatency "
-                      << SU->printNum() << " " << BotLatency << "c\n");
+    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " BotLatency " << *SU
+                      << " " << BotLatency << "c\n");
   }
   // If we stall for any reason, bump the cycle.
   if (NextCycle > CurrCycle)
@@ -3131,7 +3128,7 @@ void SchedBoundary::releasePending() {
     SUnit *SU = *(Pending.begin() + I);
     unsigned ReadyCycle = isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
 
-    LLVM_DEBUG(dbgs() << "Checking pending node " << SU->printNum() << "\n");
+    LLVM_DEBUG(dbgs() << "Checking pending node " << *SU << "\n");
 
     if (ReadyCycle < MinReadyCycle)
       MinReadyCycle = ReadyCycle;
@@ -3407,8 +3404,7 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
     Latency = Cand.SU->getDepth();
     break;
   }
-  dbgs() << "  Cand " << Cand.SU->printNum() << " "
-         << getReasonStr(Cand.Reason);
+  dbgs() << "  Cand " << *Cand.SU << " " << getReasonStr(Cand.Reason);
   if (P.isValid())
     dbgs() << " " << TRI->getRegPressureSetName(P.getPSet())
            << ":" << P.getUnitInc() << " ";
@@ -3523,9 +3519,8 @@ static void tracePick(const SUnit *SU,
                       const GenericSchedulerBase::CandReason Reason,
                       const bool IsTop, const bool IsPostRA = false) {
   assert(SU && "SU must not be null for tracing");
-  LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ") << "Cand "
-                    << SU->printNum() << " "
-                    << GenericSchedulerBase::getReasonStr(Reason) << " ["
+  LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ") << "Cand " << *SU
+                    << " " << GenericSchedulerBase::getReasonStr(Reason) << " ["
                     << (IsPostRA ? "post-RA" : "pre-RA") << "]\n");
 
   if (IsPostRA) {
@@ -3947,7 +3942,7 @@ void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
     }
   }
   LLVM_DEBUG(if (Cand.RPDelta.Excess.isValid()) dbgs()
-             << "  Try  " << Cand.SU->printNum() << " "
+             << "  Try  " << *Cand.SU << " "
              << TRI->getRegPressureSetName(Cand.RPDelta.Excess.getPSet()) << ":"
              << Cand.RPDelta.Excess.getUnitInc() << "\n");
 }
@@ -4236,8 +4231,7 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling " << SU->printNum() << " "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
 
   if (IsTopNode) {
     if (SU->NodeNum == TopIdx++)
@@ -4595,8 +4589,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling " << SU->printNum() << " "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
 
   if (IsTopNode) {
     if (SU->NodeNum == TopIdx++)
@@ -4699,7 +4692,7 @@ public:
     SUnit *SU = ReadyQ.back();
     ReadyQ.pop_back();
     IsTopNode = false;
-    LLVM_DEBUG(dbgs() << "Pick node " << SU->printNum() << " "
+    LLVM_DEBUG(dbgs() << "Pick node " << *SU << " "
                       << " ILP: " << DAG->getDFSResult()->getILP(SU)
                       << " Tree: " << DAG->getDFSResult()->getSubtreeID(SU)
                       << " @"

@@ -168,9 +168,9 @@ const SUnit *GCNILPScheduler::pickBest(const SUnit *left, const SUnit *right)
   if (!DisableSchedCriticalPath) {
     int spread = (int)left->getDepth() - (int)right->getDepth();
     if (std::abs(spread) > MaxReorderWindow) {
-      LLVM_DEBUG(dbgs() << "Depth of " << left->printNum() << ": "
-                        << left->getDepth() << " != " << right->printNum()
-                        << ": " << right->getDepth() << "\n");
+      LLVM_DEBUG(dbgs() << "Depth of " << *left << ": " << left->getDepth()
+                        << " != " << *right << ": " << right->getDepth()
+                        << "\n");
       return left->getDepth() < right->getDepth() ? right : left;
     }
   }

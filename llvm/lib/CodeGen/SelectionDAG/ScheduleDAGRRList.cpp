@@ -1498,8 +1498,8 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
         if (!BtSU->isPending)
           AvailableQueue->remove(BtSU);
       }
-      LLVM_DEBUG(dbgs() << "ARTIFICIAL edge from " << BtSU->printNum() << " to "
-                        << TrySU->printNum() << "\n");
+      LLVM_DEBUG(dbgs() << "ARTIFICIAL edge from " << *BtSU << " to " << *TrySU
+                        << "\n");
       AddPredQueued(TrySU, SDep(BtSU, SDep::Artificial));
 
       // If one or more successors has been unscheduled, then the current
@@ -2205,7 +2205,7 @@ void RegReductionPQBase::scheduledNode(SUnit *SU) {
     if (RegPressure[RCId] < Cost) {
       // Register pressure tracking is imprecise. This can happen. But we try
       // hard not to let it happen because it likely results in poor scheduling.
-      LLVM_DEBUG(dbgs() << "  " << SU->printNum() << " has too many regdefs\n");
+      LLVM_DEBUG(dbgs() << "  " << *SU << " has too many regdefs\n");
       RegPressure[RCId] = 0;
     }
     else {
@@ -2396,7 +2396,7 @@ static void initVRegCycle(SUnit *SU) {
   if (!hasOnlyLiveInOpers(SU) || !hasOnlyLiveOutUses(SU))
     return;
 
-  LLVM_DEBUG(dbgs() << "VRegCycle: " << SU->printNum() << "\n");
+  LLVM_DEBUG(dbgs() << "VRegCycle: " << *SU << "\n");
 
   SU->isVRegCycle = true;
 
@@ -2519,8 +2519,8 @@ static bool BURRSort(SUnit *left, SUnit *right, RegReductionPQBase *SPQ) {
                                                 " defines a physreg" };
       #endif
       LLVM_DEBUG(dbgs() << "  SU (" << left->NodeNum << ") "
-                        << PhysRegMsg[LHasPhysReg] << " " << right->printNum()
-                        << " " << PhysRegMsg[RHasPhysReg] << "\n");
+                        << PhysRegMsg[LHasPhysReg] << " " << *right << " "
+                        << PhysRegMsg[RHasPhysReg] << "\n");
       return LHasPhysReg < RHasPhysReg;
     }
   }
@@ -2664,13 +2664,11 @@ bool hybrid_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   // Avoid causing spills. If register pressure is high, schedule for
   // register pressure reduction.
   if (LHigh && !RHigh) {
-    LLVM_DEBUG(dbgs() << "  pressure " << left->printNum() << " > "
-                      << right->printNum() << "\n");
+    LLVM_DEBUG(dbgs() << "  pressure " << *left << " > " << *right << "\n");
     return true;
   }
   else if (!LHigh && RHigh) {
-    LLVM_DEBUG(dbgs() << "  pressure " << right->printNum() << " > "
-                      << left->printNum() << "\n");
+    LLVM_DEBUG(dbgs() << "  pressure " << *right << " > " << *left << "\n");
     return false;
   }
   if (!LHigh && !RHigh) {
@@ -2732,9 +2730,8 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
     RPDiff = SPQ->RegPressureDiff(right, RLiveUses);
   }
   if (!DisableSchedRegPressure && LPDiff != RPDiff) {
-    LLVM_DEBUG(dbgs() << "RegPressureDiff " << left->printNum() << ": "
-                      << LPDiff << " != " << right->printNum() << ": " << RPDiff
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "RegPressureDiff " << *left << ": " << LPDiff
+                      << " != " << *right << ": " << RPDiff << "\n");
     return LPDiff > RPDiff;
   }
 
@@ -2746,9 +2743,8 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   }
 
   if (!DisableSchedLiveUses && (LLiveUses != RLiveUses)) {
-    LLVM_DEBUG(dbgs() << "Live uses " << left->printNum() << ": " << LLiveUses
-                      << " != " << right->printNum() << ": " << RLiveUses
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "Live uses " << *left << ": " << LLiveUses
+                      << " != " << *right << ": " << RLiveUses << "\n");
     return LLiveUses < RLiveUses;
   }
 
@@ -2762,9 +2758,9 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   if (!DisableSchedCriticalPath) {
     int spread = (int)left->getDepth() - (int)right->getDepth();
     if (std::abs(spread) > MaxReorderWindow) {
-      LLVM_DEBUG(dbgs() << "Depth of " << left->printNum() << ": "
-                        << left->getDepth() << " != " << right->printNum()
-                        << ": " << right->getDepth() << "\n");
+      LLVM_DEBUG(dbgs() << "Depth of " << *left << ": " << left->getDepth()
+                        << " != " << *right << ": " << right->getDepth()
+                        << "\n");
       return left->getDepth() < right->getDepth();
     }
   }

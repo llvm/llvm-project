@@ -205,7 +205,7 @@ void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
       LLVM_DEBUG({
         dbgs() << "Previous scheduled Unit: \n";
         dbgs() << "  IsTop: " << IsTopNode << "\n";
-        dbgs() << "  " << SU->printNum() << " - ";
+        dbgs() << "  " << *SU << " - ";
         MI->dump();
         dbgs() << "  \n";
         Info.dump();
