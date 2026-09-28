@@ -121,13 +121,13 @@ S37 xchg37(_Atomic(S37) *p, S37 v) {
 // CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[TMP1]], i64 [[TMP6]], i64 [[TMP5]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    [[TMP8]] = extractvalue { i64, i1 } [[TMP7]], 0
 // CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i1 } [[TMP7]], 1
-// CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP4]] to i37
-// CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP8]] to i37
-// CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i37 [[TMP11]], [[TMP10]]
+// CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP8]] to i37
+// CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP4]] to i37
+// CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i37 [[TMP10]], [[TMP11]]
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP8]], [[TMP6]]
-// CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[TMP12]], [[TMP13]]
-// CHECK-NEXT:    [[TMP15:%.*]] = xor i1 [[TMP9]], true
-// CHECK-NEXT:    [[TMP16:%.*]] = and i1 [[TMP15]], [[TMP14]]
+// CHECK-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP9]], true
+// CHECK-NEXT:    [[TMP15:%.*]] = and i1 [[TMP12]], [[TMP13]]
+// CHECK-NEXT:    [[TMP16:%.*]] = and i1 [[TMP14]], [[TMP15]]
 // CHECK-NEXT:    br i1 [[TMP16]], label %[[CMPXCHG_RETRY]], label %[[CMPXCHG_DONE:.*]]
 // CHECK:       [[CMPXCHG_DONE]]:
 // CHECK-NEXT:    br i1 [[TMP9]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]

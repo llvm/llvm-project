@@ -414,13 +414,14 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
 
   if (PaddedBitInt) {
     auto *ValueTy = CGF.Builder.getIntNTy(BIT->getNumBits());
-    auto *SameValue =
-        CGF.Builder.CreateICmpEQ(CGF.Builder.CreateTrunc(Old, ValueTy),
-                                 CGF.Builder.CreateTrunc(Expected, ValueTy));
+    auto *ObservedBits = CGF.Builder.CreateTrunc(Old, ValueTy);
+    auto *ExpectedBits = CGF.Builder.CreateTrunc(Expected, ValueTy);
+    auto *SameValue = CGF.Builder.CreateICmpEQ(ObservedBits, ExpectedBits);
     auto *DifferentPadding = CGF.Builder.CreateICmpNE(Old, AttemptExpected);
-    auto *Retry = CGF.Builder.CreateAnd(
-        CGF.Builder.CreateNot(Cmp),
-        CGF.Builder.CreateAnd(SameValue, DifferentPadding));
+    auto *Failed = CGF.Builder.CreateNot(Cmp);
+    auto *SameValueDifferentPadding =
+        CGF.Builder.CreateAnd(SameValue, DifferentPadding);
+    auto *Retry = CGF.Builder.CreateAnd(Failed, SameValueDifferentPadding);
     ExpectedPHI->addIncoming(Old, CGF.Builder.GetInsertBlock());
     auto *DoneBB = CGF.createBasicBlock("cmpxchg.done", CGF.CurFn);
     CGF.Builder.CreateCondBr(Retry, ExpectedPHI->getParent(), DoneBB);
@@ -1619,13 +1620,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     if (ExpectedBits) {
       auto *BIT = MemTy->castAs<BitIntType>();
       auto *Observed = Builder.CreateLoad(Val1);
-      auto *SameValue = Builder.CreateICmpEQ(
-          Builder.CreateTrunc(Observed, Builder.getIntNTy(BIT->getNumBits())),
-          ExpectedBits);
+      auto *ObservedBits =
+          Builder.CreateTrunc(Observed, Builder.getIntNTy(BIT->getNumBits()));
+      auto *SameValue = Builder.CreateICmpEQ(ObservedBits, ExpectedBits);
       auto *DifferentPadding = Builder.CreateICmpNE(Observed, AttemptExpected);
-      auto *Retry =
-          Builder.CreateAnd(Builder.CreateNot(Res.getScalarVal()),
-                            Builder.CreateAnd(SameValue, DifferentPadding));
+      auto *Failed = Builder.CreateNot(Res.getScalarVal());
+      auto *SameValueDifferentPadding =
+          Builder.CreateAnd(SameValue, DifferentPadding);
+      auto *Retry = Builder.CreateAnd(Failed, SameValueDifferentPadding);
       auto *DoneBB = createBasicBlock("cmpxchg.done", CurFn);
       Builder.CreateCondBr(Retry, RetryBB, DoneBB);
       Builder.SetInsertPoint(DoneBB);
@@ -2147,15 +2149,15 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
     if (ExpectedBits) {
       auto *Observed =
           CGF.Builder.CreateLoad(castToAtomicIntPointer(ExpectedAddr));
-      auto *SameValue = CGF.Builder.CreateICmpEQ(
-          CGF.Builder.CreateTrunc(Observed,
-                                  CGF.Builder.getIntNTy(BIT->getNumBits())),
-          ExpectedBits);
+      auto *ObservedBits = CGF.Builder.CreateTrunc(
+          Observed, CGF.Builder.getIntNTy(BIT->getNumBits()));
+      auto *SameValue = CGF.Builder.CreateICmpEQ(ObservedBits, ExpectedBits);
       auto *DifferentPadding =
           CGF.Builder.CreateICmpNE(Observed, AttemptExpected);
-      auto *Retry = CGF.Builder.CreateAnd(
-          CGF.Builder.CreateNot(Res),
-          CGF.Builder.CreateAnd(SameValue, DifferentPadding));
+      auto *Failed = CGF.Builder.CreateNot(Res);
+      auto *SameValueDifferentPadding =
+          CGF.Builder.CreateAnd(SameValue, DifferentPadding);
+      auto *Retry = CGF.Builder.CreateAnd(Failed, SameValueDifferentPadding);
       auto *DoneBB = CGF.createBasicBlock("cmpxchg.done", CGF.CurFn);
       CGF.Builder.CreateCondBr(Retry, CGF.Builder.GetInsertBlock(), DoneBB);
       CGF.Builder.SetInsertPoint(DoneBB);
@@ -2188,13 +2190,14 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
                                   DesiredVal, Success, Failure, IsWeak);
   if (ExpectedPHI) {
     auto *ValueTy = CGF.Builder.getIntNTy(BIT->getNumBits());
-    auto *SameValue =
-        CGF.Builder.CreateICmpEQ(CGF.Builder.CreateTrunc(Res.first, ValueTy),
-                                 CGF.Builder.CreateTrunc(ExpectedVal, ValueTy));
+    auto *ObservedBits = CGF.Builder.CreateTrunc(Res.first, ValueTy);
+    auto *ExpectedBits = CGF.Builder.CreateTrunc(ExpectedVal, ValueTy);
+    auto *SameValue = CGF.Builder.CreateICmpEQ(ObservedBits, ExpectedBits);
     auto *DifferentPadding = CGF.Builder.CreateICmpNE(Res.first, ExpectedPHI);
-    auto *Retry = CGF.Builder.CreateAnd(
-        CGF.Builder.CreateNot(Res.second),
-        CGF.Builder.CreateAnd(SameValue, DifferentPadding));
+    auto *Failed = CGF.Builder.CreateNot(Res.second);
+    auto *SameValueDifferentPadding =
+        CGF.Builder.CreateAnd(SameValue, DifferentPadding);
+    auto *Retry = CGF.Builder.CreateAnd(Failed, SameValueDifferentPadding);
     ExpectedPHI->addIncoming(Res.first, CGF.Builder.GetInsertBlock());
     auto *DoneBB = CGF.createBasicBlock("cmpxchg.done", CGF.CurFn);
     CGF.Builder.CreateCondBr(Retry, ExpectedPHI->getParent(), DoneBB);
