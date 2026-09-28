@@ -9,11 +9,11 @@ define void @conditional_alloca(i64 %n) nounwind {
 ; existing generated checks...
 ; Z-LABEL: conditional_alloca:
 ; Z:       # %bb.0:
+; Z-NEXT:    cgibe %r2, 0, 0(%r14)
+; Z-NEXT:  .LBB0_1: # %if.then
 ; Z-NEXT:    stmg %r11, %r15, 88(%r15)
 ; Z-NEXT:    aghi %r15, -160
 ; Z-NEXT:    lgr %r11, %r15
-; Z-NEXT:    cgije %r2, 0, .LBB0_2
-; Z-NEXT:  # %bb.1: # %if.then
 ; Z-NEXT:    lgr %r1, %r15
 ; Z-NEXT:    la %r0, 7(%r2)
 ; Z-NEXT:    nill %r0, 65528
@@ -22,7 +22,6 @@ define void @conditional_alloca(i64 %n) nounwind {
 ; Z-NEXT:    nill %r2, 65520
 ; Z-NEXT:    lay %r15, -8(%r1)
 ; Z-NEXT:    brasl %r14, notdead@PLT
-; Z-NEXT:  .LBB0_2: # %if.end
 ; Z-NEXT:    lmg %r11, %r15, 248(%r11)
 ; Z-NEXT:    br %r14
 ;
@@ -116,5 +115,237 @@ call:
   br label %ret
 
 ret:
+  ret void
+}
+
+define void @test_backchain(i64 %n) nounwind "backchain" {
+; CHECK-LABEL: test_backchain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r11, %r15, 88(%r15)
+; CHECK-NEXT:    lgr  %r1, %r15
+; CHECK-NEXT:    aghi %r15, -160
+; Z-LABEL: test_backchain:
+; Z:       # %bb.0:
+; Z-NEXT:    stmg %r11, %r15, 88(%r15)
+; Z-NEXT:    lgr %r1, %r15
+; Z-NEXT:    aghi %r15, -160
+; Z-NEXT:    stg %r1, 0(%r15)
+; Z-NEXT:    lgr %r11, %r15
+; Z-NEXT:    cgije %r2, 0, .LBB2_2
+; Z-NEXT:  # %bb.1: # %if.then
+; Z-NEXT:    lgr %r1, %r15
+; Z-NEXT:    la %r0, 7(%r2)
+; Z-NEXT:    lg %r3, 0(%r15)
+; Z-NEXT:    nill %r0, 65528
+; Z-NEXT:    sgr %r1, %r0
+; Z-NEXT:    lay %r15, -8(%r1)
+; Z-NEXT:    la %r2, 160(%r1)
+; Z-NEXT:    nill %r2, 65520
+; Z-NEXT:    stg %r3, -8(%r1)
+; Z-NEXT:    brasl %r14, notdead@PLT
+; Z-NEXT:  .LBB2_2: # %if.end
+; Z-NEXT:    lmg %r11, %r15, 248(%r11)
+; Z-NEXT:    br %r14
+;
+; SW-LABEL: test_backchain:
+; SW:       # %bb.0:
+; SW-NEXT:    cgibe %r2, 0, 0(%r14)
+; SW-NEXT:  .LBB2_1: # %if.then
+; SW-NEXT:    stmg %r11, %r15, 88(%r15)
+; SW-NEXT:    lgr %r1, %r15
+; SW-NEXT:    aghi %r15, -160
+; SW-NEXT:    stg %r1, 0(%r15)
+; SW-NEXT:    lgr %r11, %r15
+; SW-NEXT:    lgr %r1, %r15
+; SW-NEXT:    la %r0, 7(%r2)
+; SW-NEXT:    lg %r3, 0(%r15)
+; SW-NEXT:    nill %r0, 65528
+; SW-NEXT:    sgr %r1, %r0
+; SW-NEXT:    lay %r15, -8(%r1)
+; SW-NEXT:    la %r2, 160(%r1)
+; SW-NEXT:    nill %r2, 65520
+; SW-NEXT:    stg %r3, -8(%r1)
+; SW-NEXT:    brasl %r14, notdead@PLT
+; SW-NEXT:    lmg %r11, %r15, 248(%r11)
+; SW-NEXT:    br %r14
+  %cmp = icmp eq i64 %n, 0
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:
+  %addr = alloca i8, i64 %n, align 16
+  call void @notdead(ptr %addr)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @test_mcount(i64 %n) nounwind "systemz-instrument-function-entry"="mcount" {
+; CHECK-LABEL: test_mcount:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    brasl %r0, mcount@PLT
+; Z-LABEL: test_mcount:
+; Z:       # %bb.0:
+; Z-NEXT:    stg %r14, 8(%r15)
+; Z-NEXT:    brasl %r14, mcount@PLT
+; Z-NEXT:    lg %r14, 8(%r15)
+; Z-NEXT:    stmg %r11, %r15, 88(%r15)
+; Z-NEXT:    aghi %r15, -160
+; Z-NEXT:    lgr %r11, %r15
+; Z-NEXT:    cgije %r2, 0, .LBB3_2
+; Z-NEXT:  # %bb.1: # %if.then
+; Z-NEXT:    lgr %r1, %r15
+; Z-NEXT:    la %r0, 7(%r2)
+; Z-NEXT:    nill %r0, 65528
+; Z-NEXT:    sgr %r1, %r0
+; Z-NEXT:    la %r2, 160(%r1)
+; Z-NEXT:    nill %r2, 65520
+; Z-NEXT:    lay %r15, -8(%r1)
+; Z-NEXT:    brasl %r14, notdead@PLT
+; Z-NEXT:  .LBB3_2: # %if.end
+; Z-NEXT:    lmg %r11, %r15, 248(%r11)
+; Z-NEXT:    br %r14
+;
+; SW-LABEL: test_mcount:
+; SW:       # %bb.0:
+; SW-NEXT:    cgibe %r2, 0, 0(%r14)
+; SW-NEXT:  .LBB3_1: # %if.then
+; SW-NEXT:    stg %r14, 8(%r15)
+; SW-NEXT:    brasl %r14, mcount@PLT
+; SW-NEXT:    lg %r14, 8(%r15)
+; SW-NEXT:    stmg %r11, %r15, 88(%r15)
+; SW-NEXT:    aghi %r15, -160
+; SW-NEXT:    lgr %r11, %r15
+; SW-NEXT:    lgr %r1, %r15
+; SW-NEXT:    la %r0, 7(%r2)
+; SW-NEXT:    nill %r0, 65528
+; SW-NEXT:    sgr %r1, %r0
+; SW-NEXT:    la %r2, 160(%r1)
+; SW-NEXT:    nill %r2, 65520
+; SW-NEXT:    lay %r15, -8(%r1)
+; SW-NEXT:    brasl %r14, notdead@PLT
+; SW-NEXT:    lmg %r11, %r15, 248(%r11)
+; SW-NEXT:    br %r14
+  %cmp = icmp eq i64 %n, 0
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:
+  %addr = alloca i8, i64 %n, align 16
+  call void @notdead(ptr %addr)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+declare ghccc void @ghc_callee(i64)
+
+; to test that GHC functions disable shrink-wrapping without triggering the fatal
+; error in SystemZELFFrameLowering::emitPrologue. This test writes a standard
+; GHC function that calls another GHC function conditionally
+define ghccc void @test_ghc(i64 %n) nounwind {
+; CHECK-LABEL: test_ghc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cgije %r2, 0, .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    brasl %r14, ghc_callee
+; CHECK-NEXT:  .LBB3_2: # %if.end
+; CHECK-NEXT:    br %r14
+; Z-LABEL: test_ghc:
+; Z:       # %bb.0:
+; Z-NEXT:    cghi %r7, 0
+; Z-NEXT:    jglh ghc_callee@PLT
+; Z-NEXT:  .LBB4_1: # %if.end
+; Z-NEXT:    br %r14
+;
+; SW-LABEL: test_ghc:
+; SW:       # %bb.0:
+; SW-NEXT:    cghi %r7, 0
+; SW-NEXT:    jglh ghc_callee@PLT
+; SW-NEXT:  .LBB4_1: # %if.end
+; SW-NEXT:    br %r14
+  %cmp = icmp eq i64 %n, 0
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:
+  tail call ghccc void @ghc_callee(i64 %n)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+
+
+define void @test_stack_probe(i64 %n) nounwind "probe-stack"="inline-asm" {
+; CHECK-LABEL: test_stack_probe:
+; CHECK:       # %bb.0:
+; Z-LABEL: test_stack_probe:
+; Z:       # %bb.0:
+; Z-NEXT:    stmg %r11, %r15, 88(%r15)
+; Z-NEXT:    aghi %r15, -160
+; Z-NEXT:    lgr %r11, %r15
+; Z-NEXT:    cgije %r2, 0, .LBB5_6
+; Z-NEXT:  # %bb.1: # %if.then
+; Z-NEXT:    lghi %r1, 8200
+; Z-NEXT:    clgfi %r1, 4096
+; Z-NEXT:    jl .LBB5_3
+; Z-NEXT:  .LBB5_2: # %if.then
+; Z-NEXT:    # =>This Inner Loop Header: Depth=1
+; Z-NEXT:    slgfi %r1, 4096
+; Z-NEXT:    slgfi %r15, 4096
+; Z-NEXT:    cg %r15, 4088(%r15)
+; Z-NEXT:    clgfi %r1, 4096
+; Z-NEXT:    jhe .LBB5_2
+; Z-NEXT:  .LBB5_3: # %if.then
+; Z-NEXT:    cgije %r1, 0, .LBB5_5
+; Z-NEXT:  # %bb.4: # %if.then
+; Z-NEXT:    slgr %r15, %r1
+; Z-NEXT:    cg %r15, -8(%r1,%r15)
+; Z-NEXT:  .LBB5_5: # %if.then
+; Z-NEXT:    la %r2, 168(%r15)
+; Z-NEXT:    nill %r2, 65520
+; Z-NEXT:    brasl %r14, notdead@PLT
+; Z-NEXT:  .LBB5_6: # %if.end
+; Z-NEXT:    lmg %r11, %r15, 248(%r11)
+; Z-NEXT:    br %r14
+;
+; SW-LABEL: test_stack_probe:
+; SW:       # %bb.0:
+; SW-NEXT:    cgibe %r2, 0, 0(%r14)
+; SW-NEXT:  .LBB5_1: # %if.then
+; SW-NEXT:    stmg %r11, %r15, 88(%r15)
+; SW-NEXT:    aghi %r15, -160
+; SW-NEXT:    lgr %r11, %r15
+; SW-NEXT:    lghi %r1, 8200
+; SW-NEXT:    clgfi %r1, 4096
+; SW-NEXT:    jl .LBB5_3
+; SW-NEXT:  .LBB5_2: # %if.then
+; SW-NEXT:    # =>This Inner Loop Header: Depth=1
+; SW-NEXT:    slgfi %r1, 4096
+; SW-NEXT:    slgfi %r15, 4096
+; SW-NEXT:    cg %r15, 4088(%r15)
+; SW-NEXT:    clgfi %r1, 4096
+; SW-NEXT:    jhe .LBB5_2
+; SW-NEXT:  .LBB5_3: # %if.then
+; SW-NEXT:    cgije %r1, 0, .LBB5_5
+; SW-NEXT:  # %bb.4: # %if.then
+; SW-NEXT:    slgr %r15, %r1
+; SW-NEXT:    cg %r15, -8(%r1,%r15)
+; SW-NEXT:  .LBB5_5: # %if.then
+; SW-NEXT:    la %r2, 168(%r15)
+; SW-NEXT:    nill %r2, 65520
+; SW-NEXT:    brasl %r14, notdead@PLT
+; SW-NEXT:    lmg %r11, %r15, 248(%r11)
+; SW-NEXT:    br %r14
+  %cmp = icmp eq i64 %n, 0
+  br i1 %cmp, label %if.end, label %if.then
+
+if.then:
+  %addr = alloca i8, i64 8192, align 16
+  call void @notdead(ptr %addr)
+  br label %if.end
+
+if.end:
   ret void
 }

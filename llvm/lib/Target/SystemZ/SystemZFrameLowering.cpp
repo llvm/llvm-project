@@ -674,8 +674,10 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
     // Mark the FramePtr as live at the beginning of every block except
     // the entry block.  (We'll have marked R11 as live on entry when
     // saving the GPRs.)
-    for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
-      MBBJ.addLiveIn(SystemZ::R11D);
+    if (&MBB == &MF.front()) {
+      for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
+        MBBJ.addLiveIn(SystemZ::R11D);
+    }
   }
 
   // Skip over the FPR/VR saves.
@@ -1555,6 +1557,32 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+bool SystemZELFFrameLowering::enableShrinkWrapping(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+
+  // GHC calling convention does not use standard prologue/epilogue.
+  if (F.getCallingConv() == CallingConv::GHC)
+    return false;
+
+  // mcount instrumentation must be called at the function entry.
+  if (F.hasFnAttribute("systemz-instrument-function-entry"))
+    return false;
+
+  // Backchain setup currently assumes %r1 is free at the entry block.
+  // TODO: Investigate if we need to generalise the temp reg handling.
+  // Right now we just disable shrink-wrapping if Backchain is enabled
+  if (Subtarget.hasBackChain())
+    return false;
+
+  // stack probing uses %r0/%r1 scratch registers.
+  if (Subtarget.getTargetLowering()->hasInlineStackProbe(MF))
+    return false;
+
+  return true;
+}
+
 bool SystemZELFFrameLowering::canUseAsPrologue(
     const MachineBasicBlock &MBB) const {
   const MachineFunction &MF = *MBB.getParent();
@@ -1563,6 +1591,12 @@ bool SystemZELFFrameLowering::canUseAsPrologue(
   // before they can be clobbered.
   if (MF.getFunction().isVarArg())
     return &MBB == &MF.front();
+
+  // If CC is live into MBB, prologue instructions (e.g. AGHI/AGFI for stack
+  // adjustments) will clobber CC.
+  if (MBB.isLiveIn(SystemZ::CC))
+    return false;
+
   return true;
 }
 
