@@ -526,22 +526,13 @@ public:
     return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
   }
 
-  /// Creates the sizeless AArch64 SVE predicate type svbool_t.
-  const VectorType *getScalablePredicateVectorType() {
-    const Type *PredicateBit =
-        getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
-    return getVectorType(PredicateBit, ElementCount::getScalable(16), Align(2),
-                         VectorKind::SVEPredicate);
-  }
-
-  /// Creates the AArch64 __SVCount_t type. The type is opaque, so it is
-  /// modeled with the shape of svbool_t: a scalable vector of 16 one-bit
-  /// elements.
-  const VectorType *getSVECountType(Align ABIAlign) {
+  /// Creates a scalable predicate or count vector.
+  const VectorType *getScalablePredicateOrCountVectorType(Align ABIAlign,
+                                                          VectorKind Kind) {
     const Type *PredicateBit =
         getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
     return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
-                         VectorKind::SVECount);
+                         Kind);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,

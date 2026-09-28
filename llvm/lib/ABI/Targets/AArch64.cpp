@@ -59,7 +59,7 @@ private:
   const VectorType *
   convertFixedToScalableVectorType(const VectorType *VT) const;
 
-  ArgInfo coerceIllegalVector(const Type *Ty, unsigned &NSRN,
+  ArgInfo coerceIllegalVector(const VectorType *VT, unsigned &NSRN,
                               unsigned &NPRN) const;
 
   bool isIllegalVectorType(const Type *Ty) const;
@@ -97,7 +97,7 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
 
     // Large vector types should be returned via memory.
     if (VT->getABISizeInBits() > 128)
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace());
   }
 
   if (!passAsAggregateType(RetTy)) {
@@ -144,7 +144,7 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
 
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
-    return coerceIllegalVector(Ty, NSRN, NPRN);
+    return coerceIllegalVector(cast<VectorType>(Ty), NSRN, NPRN);
 
   if (!passAsAggregateType(Ty)) {
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
@@ -253,7 +253,8 @@ const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
   // mapping for that type.
 
   if (VT->isFixedLengthSVEPredicate())
-    return TB.getScalablePredicateVectorType();
+    return TB.getScalablePredicateOrCountVectorType(Align(2),
+                                                    VectorKind::SVEPredicate);
 
   assert(VT->isFixedLengthSVEData() && "expected a fixed-length SVE vector!");
 
@@ -266,10 +267,9 @@ const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
                           llvm::Align(16), VectorKind::SVEData);
 }
 
-ArgInfo AArch64TargetInfo::coerceIllegalVector(const Type *Ty, unsigned &NSRN,
+ArgInfo AArch64TargetInfo::coerceIllegalVector(const VectorType *VT,
+                                               unsigned &NSRN,
                                                unsigned &NPRN) const {
-  const auto *VT = cast<VectorType>(Ty);
-
   if (VT->isFixedLengthSVEPredicate()) {
     // Fixed-length predicates are described with 8-bit elements, but they are
     // passed in a predicate register as a scalable vector of 16 one-bit
@@ -278,7 +278,8 @@ ArgInfo AArch64TargetInfo::coerceIllegalVector(const Type *Ty, unsigned &NSRN,
            VT->getElementType()->getSizeInBits().getFixedValue() == 8 &&
            "unexpected element type for SVE predicate!");
     NPRN = std::min(NPRN + 1, 4u);
-    return ArgInfo::getDirect(TB.getScalablePredicateVectorType());
+    return ArgInfo::getDirect(TB.getScalablePredicateOrCountVectorType(
+        Align(2), VectorKind::SVEPredicate));
   }
 
   if (VT->isFixedLengthSVEData()) {
@@ -306,7 +307,7 @@ ArgInfo AArch64TargetInfo::coerceIllegalVector(const Type *Ty, unsigned &NSRN,
         TB.getVectorType(I32, ElementCount::getFixed(4), llvm::Align(16)));
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
 }
 
 bool AArch64TargetInfo::isIllegalVectorType(const Type *Ty) const {
@@ -322,12 +323,10 @@ bool AArch64TargetInfo::isIllegalVectorType(const Type *Ty) const {
       return false;
 
     // Check whether VT is legal.
-    assert(VT->getNumElements().isFixed() &&
-           "expected fixed number of elements!");
-    unsigned NumElements = VT->getNumElements().getKnownMinValue();
+    unsigned NumElements = VT->getNumElements().getFixedValue();
     uint64_t Size = VT->getABISizeInBits();
     // NumElements should be power of 2.
-    if (!llvm::isPowerOf2_32(NumElements))
+    if (!isPowerOf2_32(NumElements))
       return true;
 
     // arm64_32 has to be compatible with the ARM logic here, which allows huge

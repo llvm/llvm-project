@@ -78,6 +78,10 @@ protected:
   const llvm::abi::VectorType *FixedSVFloat64;
   const llvm::abi::VectorType *FixedSVBool;
   const ABIType *SVInt32x2;
+  const ABIType *SVInt32x3;
+  const ABIType *SVInt32x4;
+  const ABIType *SVBoolx2;
+  const ABIType *SVBoolx4;
   const ABIType *BitInt7;
   const ABIType *UBitInt7;
   const ABIType *BitInt65;
@@ -133,7 +137,8 @@ protected:
         SVBool(TB.getVectorType(Bool, llvm::ElementCount::getScalable(16),
                                 llvm::Align(2),
                                 llvm::abi::VectorKind::SVEPredicate)),
-        SVCount(TB.getSVECountType(llvm::Align(2))),
+        SVCount(TB.getScalablePredicateOrCountVectorType(
+            llvm::Align(2), llvm::abi::VectorKind::SVECount)),
         SVFloat64(TB.getVectorType(F64, llvm::ElementCount::getScalable(2),
                                    llvm::Align(16),
                                    llvm::abi::VectorKind::SVEData)),
@@ -156,6 +161,10 @@ protected:
                                      llvm::Align(2),
                                      llvm::abi::VectorKind::SVEPredicate)),
         SVInt32x2(TB.getTupleType(SVInt32, /*NumVectors=*/2)),
+        SVInt32x3(TB.getTupleType(SVInt32, /*NumVectors=*/3)),
+        SVInt32x4(TB.getTupleType(SVInt32, /*NumVectors=*/4)),
+        SVBoolx2(TB.getTupleType(SVBool, /*NumVectors=*/2)),
+        SVBoolx4(TB.getTupleType(SVBool, /*NumVectors=*/4)),
         BitInt7(TB.getIntegerType(7, llvm::Align(1), /*Signed=*/true,
                                   /*IsBitInt=*/true)),
         UBitInt7(TB.getIntegerType(7, llvm::Align(1), /*Signed=*/false,
@@ -572,6 +581,28 @@ TEST_F(AArch64TargetInfoTest, ClassifySizelessSVETypesDirect) {
         createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
 
     for (const ABIType *Ty : SVETypes) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Ty, {Ty});
+      FI->getReturnInfo() = ArgInfo::getIgnore();
+      TI->computeInfo(*FI);
+      expectUncoercedDirect(FI->getReturnInfo());
+      expectUncoercedDirect(FI->getArgInfo(0).Info);
+    }
+  }
+}
+
+// SVE data and predicate tuples are passed and returned directly, without
+// coercion, under DarwinPCS, Win64, and the soft-float ABI.
+TEST_F(AArch64TargetInfoTest, ClassifySVETuplesDirect) {
+  const ABIType *TupleTypes[] = {SVInt32x2, SVInt32x3, SVInt32x4, SVBoolx2,
+                                 SVBoolx4};
+
+  for (AArch64ABIKind Kind : {AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+                              AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    for (const ABIType *Ty : TupleTypes) {
       std::unique_ptr<FunctionInfo> FI =
           FunctionInfo::create(llvm::CallingConv::C, Ty, {Ty});
       FI->getReturnInfo() = ArgInfo::getIgnore();
