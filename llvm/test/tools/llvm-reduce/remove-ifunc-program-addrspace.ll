@@ -90,7 +90,7 @@ define void @load_removed() addrspace(0) {
   ret void
 }
 
-; CHECK-FINAL: define internal void [[TABLE_CTOR]]() addrspace(1) {
+; CHECK-FINAL: define internal void [[TABLE_CTOR]]() addrspace(1) #[[#CONSTRUCTOR_ATTR:]] {
 ; CHECK-FINAL-NEXT: %1 = call addrspace(1) ptr addrspace(1) @resolver1_in_1()
 ; CHECK-FINAL-NEXT: store ptr addrspace(1) %1, ptr addrspace(2) [[TABLE]], align 8
 ; CHECK-FINAL-NEXT: %2 = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
@@ -105,3 +105,4 @@ define void @load_removed() addrspace(0) {
 ; CHECK-FINAL-NEXT: %7 = call addrspace(0) ptr addrspace(1) @resolver1_in_0()
 ; CHECK-FINAL-NEXT: store ptr addrspace(1) %7, ptr addrspace(2) getelementptr inbounds ([6 x ptr addrspace(1)], ptr addrspace(2) [[TABLE]], i32 0, i32 5), align 8
 ; CHECK-FINAL-NEXT: ret void
+; CHECK-FINAL-DAG: attributes #[[#CONSTRUCTOR_ATTR]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
