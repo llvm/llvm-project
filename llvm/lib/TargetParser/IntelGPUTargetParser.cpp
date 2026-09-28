@@ -28,7 +28,7 @@ using namespace IntelGPU;
 // The reserved bits carry no information.
 static constexpr uint32_t GPUIPMajorShift = 22;
 static constexpr uint32_t GPUIPMinorShift = 14;
-static constexpr uint32_t GPUIPMajorMask = 0x3ff;
+[[maybe_unused]] static constexpr uint32_t GPUIPMajorMask = 0x3ff;
 static constexpr uint32_t GPUIPMinorMask = 0xff;
 static constexpr uint32_t GPUIPRevisionMask = 0x3f;
 

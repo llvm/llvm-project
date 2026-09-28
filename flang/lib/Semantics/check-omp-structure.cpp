@@ -4010,12 +4010,22 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
       firstClause = clause;
     }
   }
+
+  // [5.2:308] The nowait clause may only appear on a taskwait directive if the
+  // depend clause is present.
+  if (GetContext().directive == llvm::omp::OMPD_taskwait) {
+    if (FindClause(llvm::omp::Clause::OMPC_nowait) &&
+        !FindClause(llvm::omp::Clause::OMPC_depend)) {
+      context_.Say(GetContext().clauseSource,
+          "A NOWAIT clause may only appear on TASKWAIT if a DEPEND clause is present"_err_en_US);
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
   CheckArgumentObjectKind(x);
-  VerifyModifiers(x);
+  VerifyModifierSyntax(x);
 }
 
 // Restrictions specific to each clause are implemented apart from the
