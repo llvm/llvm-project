@@ -133,13 +133,25 @@ subroutine star_vector_ignores_worker(a)
   end do
 end subroutine
 
-! The loop device_type(*) gang is compared with the routine's
-! device_type(*) gang. The NVIDIA worker level is not applied.
-subroutine star_gang_does_not_use_nvidia_worker(a)
+! device_type(*) on the loop applies to NVIDIA, which this loop does not
+! name. The NVIDIA routine level is worker.
+subroutine star_gang_exceeds_nvidia_worker(a)
   real :: a(10)
   integer :: i
   !$acc routine device_type(nvidia) worker device_type(*) gang
+  !WARNING: GANG clause on the LOOP directive is not permitted and may be ignored in ACC ROUTINE WORKER procedure for DEVICE_TYPE(NVIDIA) [-Wopenacc-usage]
   !$acc loop device_type(*) gang
+  do i = 1, 10
+    a(i) = a(i) + 1.0
+  end do
+end subroutine
+
+! The loop names NVIDIA, so device_type(*) does not apply to it.
+subroutine star_gang_skips_named_nvidia(a)
+  real :: a(10)
+  integer :: i
+  !$acc routine device_type(nvidia) worker device_type(*) gang
+  !$acc loop device_type(nvidia) worker device_type(*) gang
   do i = 1, 10
     a(i) = a(i) + 1.0
   end do

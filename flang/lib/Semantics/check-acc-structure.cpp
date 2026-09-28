@@ -1408,10 +1408,24 @@ void AccStructureChecker::WarnIfLoopClausesExceedRoutine(
         }
       }
     } else if (info.isStar) {
-      if (const RoutineParallelism *level{findRoutineParallelism(
-              levels, Fortran::common::OpenACCDeviceType::Star)}) {
-        if (clauseExceedsRoutine(info.kind, info.gangDim, *level)) {
-          routine = level;
+      // device_type(*) applies to every device this directive does not name,
+      // including a device named only on the routine.
+      for (const RoutineParallelism &level : levels) {
+        if (level.deviceType != Fortran::common::OpenACCDeviceType::None &&
+            level.deviceType != Fortran::common::OpenACCDeviceType::Star &&
+            llvm::is_contained(namedDevices, level.deviceType)) {
+          continue;
+        }
+        const Fortran::common::OpenACCDeviceType lookup{
+            level.deviceType == Fortran::common::OpenACCDeviceType::None
+                ? Fortran::common::OpenACCDeviceType::Star
+                : level.deviceType};
+        if (const RoutineParallelism *effective{
+                findRoutineParallelism(levels, lookup)}) {
+          if (clauseExceedsRoutine(info.kind, info.gangDim, *effective)) {
+            routine = effective;
+            break;
+          }
         }
       }
     }
