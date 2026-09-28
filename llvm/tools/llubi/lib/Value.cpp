@@ -31,6 +31,15 @@ Provenance::getWithKnownMemoryObject(MemoryObject &KnownObj) {
   return Res;
 }
 
+IntrusiveRefCntPtr<Provenance>
+Provenance::getWithNoAliasNode(uint64_t NodeID) {
+  auto Res = makeIntrusiveRefCnt<Provenance>(*this);
+  Res->NoAliasNode = NodeID;
+  // The old tag denotes the old provenance, including its noalias ancestry.
+  Res->Tag = APInt();
+  return Res;
+}
+
 void Pointer::print(raw_ostream &OS) const {
   SmallString<32> AddrStr;
   Address.toStringUnsigned(AddrStr, 16);

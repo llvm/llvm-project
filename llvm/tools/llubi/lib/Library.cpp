@@ -121,10 +121,13 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (Ptr.isNullPtr(/*AS=*/0, DL))
     return AnyValue();
 
-  MemoryObject *Obj = Ctx.checkProvenance(Ptr, [](const Provenance &) {
-    // TODO: check nofree
-    return true;
-  });
+  uint64_t AccessNode = 0;
+  MemoryObject *Obj = Ctx.checkProvenance(
+      Ptr, [](const Provenance &) {
+        // TODO: check nofree
+        return true;
+      },
+      /*HasSideEffect=*/true, &AccessNode);
   if (!Obj) {
     Executor.reportImmediateUB()
         << "freeing a pointer with nullary provenance.";
@@ -158,7 +161,7 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   // allocation family (malloc, calloc, etc.) is freed with a different free
   // function comes from a different family (C++ delete, etc.)
 
-  if (!Executor.verifyNoAliasAccess(*Obj, 0, Obj->getSize(), Ptr,
+  if (!Executor.verifyNoAliasAccess(*Obj, 0, Obj->getSize(), AccessNode,
                                     NoAliasAccessKind::Deallocate))
     return AnyValue();
 

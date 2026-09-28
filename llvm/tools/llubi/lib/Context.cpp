@@ -466,10 +466,6 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   SmallVector<APInt::WordType> RawTagBits;
   if (Ty->isPointerTy())
     RawTagBits.resize(NumWords);
-  bool IsNoAliasValid = ExperimentalNoAlias && Ty->isPointerTy();
-  std::optional<uint64_t> LoadedNoAliasNode;
-  bool SawNoAliasBits = false;
-  bool SawMissingNoAliasBits = false;
   for (uint32_t I = 0; I < NumBitsToExtract; I += 8) {
     // Try to form a 'logical' byte that represents the bits in the range
     // [BitsStart, BitsEnd].
@@ -533,22 +529,6 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
         IsTagValid = false;
       }
     }
-    if (IsNoAliasValid) {
-      uint8_t NoAliasMask = LogicalByte.NoAliasMask & Mask;
-      if (NoAliasMask == Mask) {
-        SawNoAliasBits = true;
-        if (!LoadedNoAliasNode)
-          LoadedNoAliasNode = LogicalByte.NoAliasNode;
-        else if (*LoadedNoAliasNode != LogicalByte.NoAliasNode)
-          IsNoAliasValid = false;
-      } else if (!NoAliasMask) {
-        SawMissingNoAliasBits = true;
-      } else {
-        IsNoAliasValid = false;
-      }
-      if (SawNoAliasBits && SawMissingNoAliasBits)
-        IsNoAliasValid = false;
-    }
   }
 
   OffsetInBits = NewOffsetInBits;
@@ -586,9 +566,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   if (IsTagValid) {
     APInt Tag(NumBitsToExtract, RawTagBits);
     if (auto Prov = TaggedProvenances.lookup(Tag))
-      return Pointer(std::move(Prov), Bits,
-                     IsNoAliasValid && LoadedNoAliasNode ? *LoadedNoAliasNode
-                                                         : 0);
+      return Pointer(std::move(Prov), Bits);
   }
   return Pointer(Bits);
 }
@@ -690,8 +668,7 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   if (PaddingBits)
     NewOffsetInBits = alignTo(NewOffsetInBits, 8);
   bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
-  auto WriteBits = [&](const APInt &Bits, const APInt *TagBits,
-                       uint64_t NoAliasNode) {
+  auto WriteBits = [&](const APInt &Bits, const APInt *TagBits) {
     for (uint32_t I = 0, E = Bits.getBitWidth(); I < E; I += 8) {
       uint32_t NumBitsInByte = std::min(8U, E - I);
       uint32_t BitsStart = OffsetInBits + I;
@@ -723,15 +700,6 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
               static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
               static_cast<uint8_t>(TagBitsVal >> (8 - (BitsStart % 8))));
       }
-      if (NoAliasNode) {
-        Bytes[BitsStart / 8].writeNoAliasBits(
-            static_cast<uint8_t>(((1U << NumBitsInByte) - 1)
-                                 << (BitsStart % 8)),
-            NoAliasNode);
-        if (((BitsStart ^ BitsEnd) & ~7) != 0)
-          Bytes[BitsEnd / 8].writeNoAliasBits(
-              static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1), NoAliasNode);
-      }
     }
   };
   if (Val.isPoison()) {
@@ -746,21 +714,19 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   } else if (Ty->isIntegerTy()) {
     auto &Bits = Val.asInteger();
     WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits,
-              /*TagBits=*/nullptr, /*NoAliasNode=*/0);
+              /*TagBits=*/nullptr);
   } else if (Ty->isFloatingPointTy()) {
     auto Bits = Val.asFloat().bitcastToAPInt();
     WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits) : Bits,
-              /*TagBits=*/nullptr, /*NoAliasNode=*/0);
+              /*TagBits=*/nullptr);
   } else if (Ty->isPointerTy()) {
     auto &AddressBits = Val.asPointer().address();
     APInt Tag = getTag(AddressBits.getBitWidth(), Val.asPointer().provenance());
     if (NeedsPadding)
       Tag = Tag.zext(NewOffsetInBits - OffsetInBits);
-    uint64_t NoAliasNode =
-        ExperimentalNoAlias ? Val.asPointer().getNoAliasNodeID() : 0;
     WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
                            : AddressBits,
-              &Tag, NoAliasNode);
+              &Tag);
   } else if (Ty->isByteTy()) {
     assert(!PaddingBits &&
            "Non-vector-element cases should be handled by the fast path.");
@@ -1185,8 +1151,34 @@ Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
 }
 
 void Context::exposeProvenance(Provenance &Prov) {
-  if (Prov.Wildcard)
+  if (Prov.Wildcard) {
+    if (!Prov.NoAliasNode)
+      return;
+    // Flatten the snapshot using the new parameter's identity. Do not resolve
+    // the wildcard at its current address: pointer arithmetic may reach any
+    // allocation allowed by that snapshot. Append after iterating the lists.
+    SmallVector<IntrusiveRefCntPtr<Provenance>, 4> Exposures;
+    const auto &Wildcard = *Prov.Wildcard;
+    for (auto &[Address, Set] : ExposedProvenances) {
+      if (Prov.Obj && Prov.Obj->getAddress() != Address)
+        continue;
+      if (!Wildcard.ActiveMask.isZero() && Wildcard.BaseAddress != Address)
+        continue;
+      for (auto [I, Entry] : enumerate(Set.List)) {
+        if (Wildcard.ActiveMask.isZero()) {
+          if (Entry.Generation > Wildcard.Generation)
+            break;
+        } else if (I >= Wildcard.ActiveMask.getBitWidth() ||
+                   !Wildcard.ActiveMask[I]) {
+          continue;
+        }
+        Exposures.push_back(Entry.Prov->getWithNoAliasNode(Prov.NoAliasNode));
+      }
+    }
+    for (auto &Exposure : Exposures)
+      exposeProvenance(*Exposure);
     return;
+  }
   MemoryObject *Obj = Prov.getMemoryObject();
   if (!Obj)
     return;
@@ -1199,13 +1191,22 @@ void Context::exposeProvenance(Provenance &Prov) {
 MemoryObject *
 Context::checkProvenance(const Pointer &Ptr,
                          function_ref<bool(const Provenance &)> Check,
-                         bool HasSideEffect) {
+                         bool HasSideEffect, uint64_t *ResolvedNoAliasNode) {
+  if (ResolvedNoAliasNode)
+    *ResolvedNoAliasNode = 0;
   auto &Prov = Ptr.provenance();
   if (!Check(Prov))
     return nullptr;
+  // A noalias parameter retagged from a wildcard keeps its explicit node.
+  // Resolve the allocation for bounds/provenance, but do not replace that
+  // node with the exposed candidates used by the wildcard mechanism.
+  const uint64_t ExplicitNoAliasNode = Prov.NoAliasNode;
   // Early return for concrete provenances.
-  if (!Prov.Wildcard)
+  if (!Prov.Wildcard) {
+    if (ResolvedNoAliasNode)
+      *ResolvedNoAliasNode = Prov.NoAliasNode;
     return Prov.Obj.get();
+  }
 
   MemoryObject *MO = nullptr;
   APInt &Mask = Prov.Wildcard->ActiveMask;
@@ -1228,6 +1229,9 @@ Context::checkProvenance(const Pointer &Ptr,
         Set.List.begin(),
         upper_bound(Set.List,
                     ExposedProvenance{nullptr, Prov.Wildcard->Generation}));
+    // A snapshot can predate every exposure of this particular allocation.
+    if (!ProvenanceCount)
+      return nullptr;
     if (HasSideEffect) {
       Mask = APInt::getAllOnes(ProvenanceCount);
       Prov.Wildcard->BaseAddress = BaseAddress;
@@ -1254,6 +1258,8 @@ Context::checkProvenance(const Pointer &Ptr,
   }
 
   bool Valid = false;
+  std::optional<uint64_t> CommonNode;
+  bool AmbiguousNode = false;
   for (uint32_t I = 0; I != ProvenanceCount; ++I) {
     assert((!HasSideEffect || !Mask.isZero()) &&
            "Mask must be initialized if HasSideEffect is true.");
@@ -1261,13 +1267,23 @@ Context::checkProvenance(const Pointer &Ptr,
       continue;
     if (Check(*(*List)[I].Prov)) {
       Valid = true;
-      // Early return as we don't need to update the Mask.
-      if (!HasSideEffect)
+      if (ResolvedNoAliasNode) {
+        uint64_t Node = (*List)[I].Prov->NoAliasNode;
+        if (!CommonNode)
+          CommonNode = Node;
+        else if (*CommonNode != Node)
+          AmbiguousNode = true;
+      }
+      // Inspect every candidate when returning its common noalias ancestry.
+      if (!HasSideEffect && !ResolvedNoAliasNode)
         break;
     } else if (HasSideEffect)
       Mask.clearBit(I);
   }
 
+  if (Valid && ResolvedNoAliasNode)
+    *ResolvedNoAliasNode = ExplicitNoAliasNode ? ExplicitNoAliasNode
+                          : AmbiguousNode ? 0 : CommonNode.value_or(0);
   return Valid ? MO : nullptr;
 }
 
@@ -1376,7 +1392,37 @@ bool MemoryObject::isHeapAllocated() const {
   llvm_unreachable("Unknown MemAllocKind");
 }
 
-bool Context::isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const {
+uint64_t Context::resolveNoAliasNode(const Provenance &Prov,
+                                     const MemoryObject &MO) const {
+  if (Prov.NoAliasNode || !Prov.Wildcard)
+    return Prov.NoAliasNode;
+  const auto It = ExposedProvenances.find(MO.getAddress());
+  if (It == ExposedProvenances.end())
+    return 0;
+  const auto &Wildcard = *Prov.Wildcard;
+  if (!Wildcard.ActiveMask.isZero() &&
+      Wildcard.BaseAddress != MO.getAddress())
+    return 0;
+  std::optional<uint64_t> CommonNode;
+  for (auto [I, Entry] : enumerate(It->second.List)) {
+    if (Wildcard.ActiveMask.isZero()) {
+      if (Entry.Generation > Wildcard.Generation)
+        break;
+    } else if (I >= Wildcard.ActiveMask.getBitWidth() ||
+               !Wildcard.ActiveMask[I]) {
+      continue;
+    }
+    uint64_t Node = Entry.Prov->NoAliasNode;
+    if (!CommonNode)
+      CommonNode = Node;
+    else if (*CommonNode != Node)
+      return 0;
+  }
+  return CommonNode.value_or(0);
+}
+
+bool Context::isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant,
+                                const MemoryObject &MO) const {
   if (!Ancestor || !Descendant)
     return false;
   // Inactive nodes retain parent links: returned and escaped pointers can
@@ -1387,7 +1433,7 @@ bool Context::isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const {
     const auto It = NoAliasNodes.find(NodeID);
     if (It == NoAliasNodes.end())
       return false;
-    NodeID = It->second.Parent;
+    NodeID = resolveNoAliasNode(*It->second.Parent, MO);
   }
   return false;
 }
@@ -1443,7 +1489,7 @@ uint64_t Context::classifyNoAliasAccess(const NoAliasActivation &Activation,
     if (It == NoAliasNodes.end() || !It->second.Active ||
         (It->second.Object && It->second.Object != &MO))
       continue;
-    if (isNoAliasAncestor(NodeID, AccessNode))
+    if (isNoAliasAncestor(NodeID, AccessNode, MO))
       return NodeID;
   }
   return 0;
@@ -1608,7 +1654,7 @@ Pointer Context::createNoAliasPointer(const Pointer &Ptr,
   if (Parent && NoAliasNodes.find(Parent) == NoAliasNodes.end())
     Parent = 0;
   NoAliasNode Node;
-  Node.Parent = Parent;
+  Node.Parent = &Ptr.provenance();
   Node.Object = MO;
   Node.Active = true;
   NoAliasNodes.try_emplace(NodeID, std::move(Node));

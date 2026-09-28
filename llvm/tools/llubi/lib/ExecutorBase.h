@@ -120,7 +120,7 @@ public:
 
   /// Record an otherwise valid access, including a deallocation.
   bool verifyNoAliasAccess(MemoryObject &MO, uint64_t Offset, uint64_t Size,
-                           const Pointer &Ptr, NoAliasAccessKind Kind);
+                           uint64_t AccessNode, NoAliasAccessKind Kind);
 
   AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
                 bool NoUndef);

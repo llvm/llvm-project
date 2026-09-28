@@ -81,11 +81,14 @@ void ExecutorBase::reportErrorString(StringRef Msg) {
 std::pair<MemoryObject *, uint64_t>
 ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
                               Align Alignment, bool IsStore) {
-  auto *MO = Ctx.checkProvenance(Ptr, [](const Provenance &) {
-    // TODO: check provenance
-    // TODO: check inrange(S, E)
-    return true;
-  });
+  uint64_t AccessNode = 0;
+  auto *MO = Ctx.checkProvenance(
+      Ptr, [](const Provenance &) {
+        // TODO: check provenance
+        // TODO: check inrange(S, E)
+        return true;
+      },
+      /*HasSideEffect=*/true, &AccessNode);
   if (!MO) {
     reportImmediateUB()
         << "Invalid memory access via a pointer with nullary provenance.";
@@ -137,7 +140,7 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
     return {};
   }
 
-  if (!verifyNoAliasAccess(*MO, Offset.getZExtValue(), AccessSize, Ptr,
+  if (!verifyNoAliasAccess(*MO, Offset.getZExtValue(), AccessSize, AccessNode,
                            IsStore ? NoAliasAccessKind::Write
                                    : NoAliasAccessKind::Read))
     return {};
@@ -145,10 +148,10 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
 }
 
 bool ExecutorBase::verifyNoAliasAccess(MemoryObject &MO, uint64_t Offset,
-                                       uint64_t Size, const Pointer &Ptr,
+                                       uint64_t Size, uint64_t AccessNode,
                                        NoAliasAccessKind Kind) {
   bool Valid =
-      Ctx.accessNoAlias(MO, Offset, Size, Ptr.getNoAliasNodeID(), Kind);
+      Ctx.accessNoAlias(MO, Offset, Size, AccessNode, Kind);
   flushNoAliasEvents();
   if (!Valid)
     reportImmediateUB() << Ctx.getLastNoAliasError();

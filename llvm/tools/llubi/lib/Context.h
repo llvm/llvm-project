@@ -318,11 +318,12 @@ class Context {
     NoAliasAccessSummary Summary;
   };
 
-  /// A noalias access class created by retagging a function argument. Parent is
-  /// another node, or 0 for the raw/root parent. Nodes carry no memory state;
+  /// A noalias access class created by retagging a function argument. Parent
+  /// retains the incoming provenance, whose ancestry may still be wildcard.
+  /// Nodes carry no memory state;
   /// they are used only to classify accesses in active function activations.
   struct NoAliasNode {
-    uint64_t Parent = 0;
+    IntrusiveRefCntPtr<Provenance> Parent;
     // Null for wildcard provenance: this node may access any allocation its
     // provenance permits, including one reached by pointer arithmetic.
     MemoryObject *Object = nullptr;
@@ -361,7 +362,12 @@ class Context {
 
   /// Return whether \p Ancestor is on \p Descendant's noalias parent chain.
   /// This relation defines whether an access is local to a protected node.
-  bool isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const;
+  bool isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant,
+                         const MemoryObject &MO) const;
+  /// Resolve ancestry from the still-eligible exposure candidates for MO.
+  /// Distinct candidate nodes fall back to the raw/root class.
+  uint64_t resolveNoAliasNode(const Provenance &Prov,
+                            const MemoryObject &MO) const;
   static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
   static std::string getNoAliasNodeName(uint64_t NodeID);
   static std::string getNoAliasActivationName(uint64_t ActivationID);
@@ -468,8 +474,9 @@ public:
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
-  /// Mark this provenance as exposed. It is no-op if it is not associated with
-  /// a memory object or a wildcard provenance.
+  /// Mark this provenance as exposed. Retagged wildcard provenances expose
+  /// their noalias identity for each eligible allocation in their snapshot.
+  /// Untagged wildcard provenances and nullary provenances need no exposure.
   void exposeProvenance(Provenance &Prov);
   /// A helper to check both concrete and wildcard provenance. Please don't
   /// report UB inside the \p Check callback due to the existence of wildcard
@@ -478,10 +485,13 @@ public:
   /// within the bounds of the returned memory object. But the state is not
   /// checked, for better diagnostic messages. If \p HasSideEffect is true, some
   /// invalid provenances will be masked out. Note that in this case the caller
-  /// must report UB when the result is nullptr.
+  /// must report UB when the result is nullptr. If ResolvedNoAliasNode is set,
+  /// return the wrapper's explicit noalias node or the common node of the
+  /// eligible exposed candidates; disagreeing candidates use raw/root (zero).
   MemoryObject *checkProvenance(const Pointer &Ptr,
                                 function_ref<bool(const Provenance &)> Check,
-                                bool HasSideEffect = true);
+                                bool HasSideEffect = true,
+                                uint64_t *ResolvedNoAliasNode = nullptr);
   /// Returns the snapshot of currently exposed provenances.
   IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
