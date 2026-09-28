@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -O3 \
-; RUN:   -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs \
+; RUN:   -amdgpu-use-amdgpu-trackers=1 -vgpr-regalloc=basic -verify-machineinstrs \
 ; RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
 ; RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 | FileCheck %s
 
@@ -145,4 +145,4 @@ do.body:
 
 declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half>, <4 x half>, <16 x float>, i32 immarg, i32 immarg, i32 immarg)
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-lds-size"="32768" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-lds-size"="32768" "amdgpu-waves-per-eu"="2" }
