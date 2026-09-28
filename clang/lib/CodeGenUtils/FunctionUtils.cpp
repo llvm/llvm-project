@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGenUtils/FunctionUtils.h"
+#include "clang/AST/Stmt.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang::CodeGenUtils {
 
@@ -24,6 +26,17 @@ bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
 
   // For now, only in optimized builds.
   return CGOpts.OptimizationLevel != 0;
+}
+
+bool functionMightHaveBypass(const Stmt *S) {
+  if (!S)
+    return false;
+  if (llvm::isa<LabelStmt, SwitchStmt, IndirectGotoStmt>(S))
+    return true;
+  for (const Stmt *Child : S->children())
+    if (functionMightHaveBypass(Child))
+      return true;
+  return false;
 }
 
 } // namespace clang::CodeGenUtils

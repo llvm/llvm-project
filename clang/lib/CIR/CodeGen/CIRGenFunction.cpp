@@ -30,20 +30,6 @@
 
 namespace clang::CIRGen {
 
-/// Does the statement tree rooted at \p s contain a label, switch, or indirect
-/// goto that could bypass a local's initialization? A coarse stand-in for
-/// classic CodeGen's per-decl bypass analysis (PR28267).
-static bool functionMightHaveBypass(const Stmt *s) {
-  if (!s)
-    return false;
-  if (isa<LabelStmt, SwitchStmt, IndirectGotoStmt>(s))
-    return true;
-  for (const Stmt *child : s->children())
-    if (functionMightHaveBypass(child))
-      return true;
-  return false;
-}
-
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
@@ -780,7 +766,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       llvm::append_range(fnArgs, funcDecl->parameters());
 
     if (shouldEmitLifetimeMarkers)
-      fnHasBypassStmt = functionMightHaveBypass(body);
+      fnHasBypassStmt = CodeGenUtils::functionMightHaveBypass(body);
 
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);

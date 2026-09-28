@@ -17,11 +17,19 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
 
+namespace clang {
+class Stmt;
+}
+
 namespace clang::CodeGenUtils {
 
 /// Decide whether we need to emit the lifetime markers.
 bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
                                const LangOptions &LangOpts);
+
+/// Whether the statement tree contains a construct that may bypass a local's
+/// initialization. Used to conservatively suppress lifetime markers.
+bool functionMightHaveBypass(const Stmt *S);
 
 } // namespace clang::CodeGenUtils
 
