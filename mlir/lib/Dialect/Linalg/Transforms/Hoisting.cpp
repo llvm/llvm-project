@@ -423,5 +423,53 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // the walk.
       return WalkResult::interrupt();
     });
+
+    // Sink a singleton transfer_write whose operands are loop-invariant and
+    // that is the only op touching its memref: it stores the same value to the
+    // same place every iteration. A lone write introduces a store the loop may
+    // never perform, so it is only sunk past a loop proven to run at least
+    // once.
+    if (changed || !verifyNonZeroTrip)
+      continue;
+    root->walk([&](vector::TransferWriteOp transferWrite) {
+      if (!isa<MemRefType>(transferWrite.getShapedType()))
+        return WalkResult::advance();
+
+      // When masked, the transfer_write is sunk as its enclosing `vector.mask`
+      // op, so that op is what must sit directly under the loop.
+      Operation *writeOrMaskedWrite = transferWrite;
+      if (auto mask = dyn_cast<vector::MaskOp>(transferWrite->getParentOp()))
+        if (mask.getMaskableOp() == transferWrite.getOperation())
+          writeOrMaskedWrite = mask.getOperation();
+      auto loop =
+          dyn_cast<LoopLikeOpInterface>(writeOrMaskedWrite->getParentOp());
+      if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop) ||
+          !definiteNonZeroTripCountLoops.contains(loop))
+        return WalkResult::advance();
+
+      // All operands of the transfer_write must be defined outside of the loop.
+      for (auto operand : transferWrite.getOperands())
+        if (!loop.isDefinedOutsideOfLoop(operand))
+          return WalkResult::advance();
+      // A masked write is sunk with its `vector.mask` op, so that op's mask
+      // operand must be loop-invariant too.
+      if (auto writeMask = dyn_cast<vector::MaskOp>(writeOrMaskedWrite))
+        if (!loop.isDefinedOutsideOfLoop(writeMask.getMask()))
+          return WalkResult::advance();
+
+      // Sinking is only safe if nothing else in the loop accesses the memref:
+      // any other read or write could observe an intermediate state.
+      Operation *sunkWrite[] = {transferWrite};
+      if (!memref::hasNoAliasingAccessInScope(transferWrite.getBase(), loop,
+                                              sunkWrite,
+                                              /*readsAreSafe=*/false))
+        return WalkResult::advance();
+
+      writeOrMaskedWrite->moveAfter(loop);
+      changed = true;
+      // Need to interrupt and restart because moving the write messes up the
+      // walk.
+      return WalkResult::interrupt();
+    });
   }
 }
