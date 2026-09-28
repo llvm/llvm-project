@@ -4146,13 +4146,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Type *ReturnType = II->getType();
     // (extract_vector (insert_vector InsertTuple, InsertValue, InsertIdx),
     // ExtractIdx)
-    unsigned ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
+    uint64_t ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
     Value *InsertTuple, *InsertIdx, *InsertValue;
     if (match(Vec, m_Intrinsic<Intrinsic::vector_insert>(m_Value(InsertTuple),
                                                          m_Value(InsertValue),
                                                          m_Value(InsertIdx))) &&
         InsertValue->getType() == ReturnType) {
-      unsigned Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
+      uint64_t Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
       // Case where we get the same index right after setting it.
       // extract.vector(insert.vector(InsertTuple, InsertValue, Idx), Idx) -->
       // InsertValue
