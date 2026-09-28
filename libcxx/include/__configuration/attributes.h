@@ -153,8 +153,8 @@
 // clang-format off
 #define _LIBCPP_ODR_SIGNATURE                                                                                           \
   _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(                                                          \
-    _LIBCPP_VERSION,                                                                                                    \
-    _LIBCPP_HARDENING_SIG),                                                                                             \
+    _LIBCPP_HARDENING_SIG,                                                                                              \
+    _LIBCPP_VERSION),                                                                                                   \
     _LIBCPP_ASSERTION_SEMANTIC_SIG),                                                                                    \
     _LIBCPP_EXCEPTIONS_SIG),                                                                                            \
     _LIBCPP_STD_VER)
