@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -130,6 +131,21 @@ static mlir::Value getShapeFromDecl(mlir::Value src) {
   return mlir::Value{};
 }
 
+// hlfir.assign rejects a raw !fir.ref<!fir.array<?xT>> because a dynamic-size
+// array is not an HLFIR variable unless it is boxed. Use the transfer shape
+// (or a declare's shape) to build a descriptor.
+static mlir::Value asHLFIREntity(mlir::PatternRewriter &rewriter,
+                                 mlir::Location loc, mlir::Value val,
+                                 mlir::Value shape) {
+  if (hlfir::isFortranEntity(val))
+    return val;
+  mlir::Type unwrapped = fir::unwrapRefType(val.getType());
+  if (!shape)
+    shape = getShapeFromDecl(val);
+  auto boxTy = fir::BoxType::get(unwrapped);
+  return fir::EmboxOp::create(rewriter, loc, boxTy, val, shape);
+}
+
 static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
                             cuf::DataTransferOp op,
                             const mlir::SymbolTable &symtab,
@@ -215,6 +231,28 @@ struct CUFDataTransferOpConversion
     mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
 
     mlir::Location loc = op.getLoc();
+    // A transfer left in the accelerator copy of an OpenACC routine describes
+    // an assignment that the device executes itself. A host runtime copy makes
+    // no sense there, so turn it back into a plain assignment.
+    if (inDeviceContext(op) && mlir::acc::isSpecializedAccRoutine(
+                                   op->getParentOfType<mlir::func::FuncOp>())) {
+      mlir::Value src = op.getSrc();
+      mlir::Value dst = op.getDst();
+      if (fir::isa_trivial(srcTy) && fir::isa_ref_type(dst.getType()) &&
+          fir::isa_trivial(dstTy)) {
+        if (fir::isa_ref_type(src.getType()))
+          src = fir::LoadOp::create(rewriter, loc, src);
+        src = createConvertOp(rewriter, loc, dstTy, src);
+        fir::StoreOp::create(rewriter, loc, src, dst);
+      } else {
+        mlir::Value shape = op.getShape();
+        src = asHLFIREntity(rewriter, loc, src, shape);
+        dst = asHLFIREntity(rewriter, loc, dst, shape);
+        hlfir::AssignOp::create(rewriter, loc, src, dst);
+      }
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
     unsigned mode = 0;
     if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
       mode = kHostToDevice;
@@ -614,9 +652,17 @@ public:
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
-                           mlir::gpu::GPUDialect>();
+                           mlir::gpu::GPUDialect, hlfir::hlfirDialect>();
     target.addLegalOp<cuf::StreamCastOp>();
     target.addLegalOp<cuf::DeviceAddressOp>();
+    target.addDynamicallyLegalOp<cuf::DataTransferOp>(
+        [&](cuf::DataTransferOp op) {
+          if (!deferAccRoutineDataTransfers)
+            return false;
+          auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
+          return funcOp && mlir::acc::isAccRoutine(funcOp);
+        });
+    target.addLegalOp<cuf::DeviceIsActiveOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,

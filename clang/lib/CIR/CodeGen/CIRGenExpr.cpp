@@ -726,7 +726,7 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
   if (lvalue.getType()->isConstantMatrixType()) {
-    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
+    cgm.errorNYI("emitStoreOfScalar constant matrix type");
     return;
   }
 
@@ -784,13 +784,18 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
 /// returning the rvalue.
 RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
-  assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
   if (lv.isBitField())
     return emitLoadOfBitfieldLValue(lv, loc);
 
-  if (lv.isSimple())
+  if (lv.isSimple()) {
+    if (lv.getType()->isConstantMatrixType()) {
+      cgm.errorNYI(loc, "emitLoadOfLValue: constant matrix type");
+      return RValue::get(nullptr);
+    }
+
     return RValue::get(emitLoadOfScalar(lv, loc));
+  }
 
   if (lv.isVectorElt()) {
     const mlir::Value load =
@@ -914,17 +919,41 @@ static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
 LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field,
                                                 mlir::Value thisValue) {
   bool hasExplicitObjectParameter = false;
-  const auto *methD = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
+  const auto *md = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
   LValue lambdaLV;
-  if (methD) {
-    hasExplicitObjectParameter = methD->isExplicitObjectMemberFunction();
-    assert(methD->getParent()->isLambda());
-    assert(methD->getParent() == field->getParent());
+  if (md) {
+    hasExplicitObjectParameter = md->isExplicitObjectMemberFunction();
+    assert(md->getParent()->isLambda());
+    assert(md->getParent() == field->getParent());
   }
+
   if (hasExplicitObjectParameter) {
-    cgm.errorNYI(field->getSourceRange(), "ExplicitObjectMemberFunction");
+    const VarDecl *d = cast<CXXMethodDecl>(curCodeDecl)->getParamDecl(0);
+    auto it = localDeclMap.find(d);
+    assert(it != localDeclMap.end() && "explicit parameter not loaded?");
+    Address addrOfExplicitObject = it->second;
+    if (d->getType()->isReferenceType())
+      lambdaLV = emitLoadOfReferenceLValue(addrOfExplicitObject,
+                                           getLoc(field->getSourceRange()),
+                                           d->getType(), AlignmentSource::Decl);
+    else
+      lambdaLV = makeAddrLValue(addrOfExplicitObject,
+                                d->getType().getNonReferenceType());
+
+    // Make sure we have an lvalue to the lambda itself and not a derived class.
+    auto *thisTy = d->getType().getNonReferenceType()->getAsCXXRecordDecl();
+    auto *lambdaTy = cast<CXXRecordDecl>(field->getParent());
+    if (thisTy != lambdaTy) {
+      const CXXCastPath &basePathArray = getContext().LambdaCastPaths.at(md);
+      Address base = getAddressOfBaseClass(
+          lambdaLV.getAddress(), thisTy,
+          llvm::make_range(basePathArray.begin(), basePathArray.end()),
+          /*nullCheckValue=*/false, SourceLocation());
+      CanQualType t = getContext().getCanonicalTagType(lambdaTy);
+      lambdaLV = makeAddrLValue(base, t);
+    }
   } else {
-    QualType lambdaTagType =
+    CanQualType lambdaTagType =
         getContext().getCanonicalTagType(field->getParent());
     lambdaLV = makeNaturalAlignAddrLValue(thisValue, lambdaTagType);
   }
@@ -2599,6 +2628,14 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return emitIfOnBoolValue(condV, loc, thenBuilder, thenLoc, elseBuilder,
+                           elseLoc);
+}
+
+cir::IfOp CIRGenFunction::emitIfOnBoolValue(
+    mlir::Value condV, mlir::Location loc, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
   cir::IfOp ifOp = cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
                                      /*thenBuilder=*/thenBuilder,
                                      /*elseBuilder=*/elseBuilder);
@@ -2818,8 +2855,10 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
                        name, /*arraySize=*/nullptr, alloca, ip);
   if (ty->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "temporary matrix value");
+    cgm.errorNYI(loc, "createMemTemp constant matrix type");
+    return Address::invalid();
   }
+
   return result;
 }
 
@@ -3063,11 +3102,12 @@ CIRGenFunction::ConditionalInfo
 CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
                                       const FuncTy &branchGenFunc) {
   ConditionalInfo info;
-  ConditionalEvaluation eval(*this);
   mlir::Location loc = getLoc(e->getSourceRange());
   CIRGenBuilderTy &builder = getBuilder();
 
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
+
+  ConditionalEvaluation eval(*this, loc);
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {

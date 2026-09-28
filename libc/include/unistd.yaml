@@ -250,6 +250,12 @@ functions:
       - type: int
       - type: uid_t
       - type: gid_t
+  - name: fdatasync
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
   - name: fpathconf
     standards:
       - posix
@@ -417,6 +423,12 @@ functions:
     arguments:
       - type: const char *
       - type: int
+  - name: pause
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: void
   - name: pipe
     standards:
       - posix

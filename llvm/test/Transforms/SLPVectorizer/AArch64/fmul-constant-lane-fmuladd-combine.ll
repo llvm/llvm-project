@@ -72,3 +72,62 @@ entry:
   store double 0.000000e+00, ptr %o3, align 8
   ret void
 }
+
+; The last fadd adds a constant to a load, the fmul node of the 4-wide fadd
+; node gets the constant lane and still forms the combined fmuladd node. The
+; last lane has no fmul and is priced as a plain fadd, the tree is vectorized
+; 4-wide.
+define void @fadd_without_fmul_lane(ptr %a, ptr %b, ptr %z, ptr %out) {
+; CHECK-LABEL: define void @fadd_without_fmul_lane(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[Z:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A2P:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr [[A2P]], align 4
+; CHECK-NEXT:    [[B2P:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[B2P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[Z]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 5.000000e+00>, float [[A2]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 1.000000e+00>, float [[B2]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul contract <4 x float> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd contract <4 x float> [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %a0 = load float, ptr %a, align 4
+  %a1p = getelementptr inbounds float, ptr %a, i64 1
+  %a1 = load float, ptr %a1p, align 4
+  %a2p = getelementptr inbounds float, ptr %a, i64 2
+  %a2 = load float, ptr %a2p, align 4
+  %b0 = load float, ptr %b, align 4
+  %b1p = getelementptr inbounds float, ptr %b, i64 1
+  %b1 = load float, ptr %b1p, align 4
+  %b2p = getelementptr inbounds float, ptr %b, i64 2
+  %b2 = load float, ptr %b2p, align 4
+  %z0 = load float, ptr %z, align 4
+  %z1p = getelementptr inbounds float, ptr %z, i64 1
+  %z1 = load float, ptr %z1p, align 4
+  %z2p = getelementptr inbounds float, ptr %z, i64 2
+  %z2 = load float, ptr %z2p, align 4
+  %z3p = getelementptr inbounds float, ptr %z, i64 3
+  %z3 = load float, ptr %z3p, align 4
+  %m0 = fmul contract float %a0, %b0
+  %m1 = fmul contract float %a1, %b1
+  %m2 = fmul contract float %a2, %b2
+  %s0 = fadd contract float %m0, %z0
+  %s1 = fadd contract float %m1, %z1
+  %s2 = fadd contract float %m2, %z2
+  %s3 = fadd contract float %z3, 5.000000e+00
+  store float %s0, ptr %out, align 4
+  %o1 = getelementptr inbounds float, ptr %out, i64 1
+  store float %s1, ptr %o1, align 4
+  %o2 = getelementptr inbounds float, ptr %out, i64 2
+  store float %s2, ptr %o2, align 4
+  %o3 = getelementptr inbounds float, ptr %out, i64 3
+  store float %s3, ptr %o3, align 4
+  ret void
+}
