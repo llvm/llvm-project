@@ -1475,6 +1475,55 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
   return M.getDataLayout().getIndexSizeInBits(/*AddressSpace=*/0);
 }
 
+Align TargetLibraryInfoImpl::getMaxAlignTAlignment(const Module &M) const {
+  // TODO: Once clang emits alignof(max_align_t) as a module flag (like
+  // wchar_size), use that here and keep the code below only as a fallback.
+  const DataLayout &DL = M.getDataLayout();
+  LLVMContext &Ctx = M.getContext();
+
+  // alignof(max_align_t) can't be less than the alignment of long long or
+  // double, so their ABI alignment is a lower bound on it for every target.
+  Align LowerBound = std::max(DL.getABITypeAlign(Type::getInt64Ty(Ctx)),
+                              DL.getABITypeAlign(Type::getDoubleTy(Ctx)));
+
+  // The DataLayout doesn't know the alignment of long double, which can make
+  // max_align_t more aligned than the lower bound. Targets where that is the
+  // case can be added here, along with hasStrongMallocAlignment().
+  Triple T(M.getTargetTriple());
+  switch (T.getArch()) {
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    switch (T.getOS()) {
+    case Triple::Linux:
+      return std::max(LowerBound, Align(16));
+    default:
+      return LowerBound;
+    }
+  default:
+    return LowerBound;
+  }
+}
+
+bool TargetLibraryInfoImpl::hasStrongMallocAlignment(const Module &M) const {
+  // Add a target here if it is confirmed that its libc
+  // aligns every malloc/calloc result to alignof(max_align_t), and update
+  // getMaxAlignTAlignment() to match the alignment.
+  Triple T(M.getTargetTriple());
+  switch (T.getArch()) {
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    switch (T.getOS()) {
+    case Triple::Linux:
+      // glibc and musl both do this.
+      return T.isGNUEnvironment() || T.isMusl();
+    default:
+      return false;
+    }
+  default:
+    return false;
+  }
+}
+
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
     : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(Triple())) {}
 

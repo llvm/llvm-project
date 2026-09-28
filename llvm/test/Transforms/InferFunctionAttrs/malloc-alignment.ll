@@ -10,10 +10,10 @@
 ; malloc/calloc alignment guarantee is confirmed (together with an entry in
 ; hasStrongMallocAlignment in TargetLibraryInfo.cpp).
 
-; STRONG: declare noalias noundef ptr @malloc(i64 noundef) #{{[0-9]+}}
+; STRONG: declare noalias noundef align 16 ptr @malloc(i64 noundef) #{{[0-9]+}}
 ; NONE: declare noalias noundef ptr @malloc(i64 noundef) #{{[0-9]+}}
 declare ptr @malloc(i64)
 
-; STRONG: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) #{{[0-9]+}}
+; STRONG: declare noalias noundef align 16 ptr @calloc(i64 noundef, i64 noundef) #{{[0-9]+}}
 ; NONE: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) #{{[0-9]+}}
 declare ptr @calloc(i64, i64)
