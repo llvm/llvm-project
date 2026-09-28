@@ -6,7 +6,7 @@ define void @matching_store_metadata(ptr %p, i32 %a, i32 %b, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 [[A]]
-; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4, !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -46,7 +46,7 @@ define void @different_store_metadata(ptr %p, i32 %a, i32 %b, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P:%.*]], align 4, !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META6]]
 ; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 [[A]]
-; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4, !noalias [[META9:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -68,7 +68,7 @@ define i32 @matching_load_store_metadata(i32 %a0, i32 %b, i1 %cond) {
 ; CHECK-NEXT:    store i32 [[A0:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 [[A]]
-; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[P]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -116,4 +116,5 @@ exit:
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"noalias.a"}
 ; CHECK: [[META8]] = distinct !{[[META8]]}
+; CHECK: [[META9]] = !{}
 ;.
