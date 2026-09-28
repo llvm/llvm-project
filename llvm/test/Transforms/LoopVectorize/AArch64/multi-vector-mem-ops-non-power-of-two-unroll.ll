@@ -3,7 +3,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; Tests `scaleMemoryAccessesByUF` with a non-power-of-two unroll factor.
+; Tests `widenMemoryAccessesToVFMultiple` with a non-power-of-two unroll factor.
 ; On AArch64, this should be rejected (which results in `vscale x 4` loads/stores).
 
 define void @mixed_i64_i32_accesses(ptr noalias %x, ptr noalias %y, i64 %n) {
