@@ -10,6 +10,9 @@
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/fflush.h"
+
+#include <src/string/memory_utils/op_generic.h>
 
 #ifdef LIBC_COPT_SUPPORT_THREADS
 #include "src/__support/threads/thread.h"
@@ -26,7 +29,7 @@ extern "C" void __cxa_finalize(void *);
   internal::call_atexit_callbacks();
 #endif
   __cxa_finalize(nullptr);
-  // TODO: flushing needs to happen here
+  LIBC_NAMESPACE::fflush(nullptr);
   internal::exit(status);
 }
 

@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace FflushGeneric {
+namespace GENERIC_FLUSH {
 // NOTES: This is the generic implementation of fflush
 //  not considering cpu, gpu or baremetal development
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
@@ -65,5 +65,6 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
   }
   return 0;
 }
-} // namespace FflushGeneric
+} // namespace GENERIC_FLUSH
+
 } // namespace LIBC_NAMESPACE_DECL
