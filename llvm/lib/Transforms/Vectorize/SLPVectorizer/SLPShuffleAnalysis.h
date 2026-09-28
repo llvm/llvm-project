@@ -191,9 +191,9 @@ protected:
       SmallVector<int> ExtMask(Mask.size(), PoisonMaskElem);
       for (auto [Idx, I] :
            make_filter_range(enumerate(Mask), [&](const auto &P) {
-             auto [Idx, I] = P;
-             return I != PoisonMaskElem &&
-                    static_cast<unsigned>(I) < SV->getShuffleMask().size();
+             return P.value() != PoisonMaskElem &&
+                    static_cast<unsigned>(P.value()) <
+                        SV->getShuffleMask().size();
            }))
         ExtMask[Idx] = SV->getMaskValue(I);
       bool IsOp1Undef = isUndefVector</*isPoisonOnly=*/true>(
@@ -301,21 +301,21 @@ protected:
         if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
           if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
             SmallVector<int> ExtMask1(Mask.size(), PoisonMaskElem);
-            for (auto [Idx, I] :
+            for (const auto &P :
                  make_filter_range(enumerate(CombinedMask1), [](const auto &P) {
                    return P.value() != PoisonMaskElem;
                  }))
-              ExtMask1[Idx] = SV1->getMaskValue(I);
+              ExtMask1[P.index()] = SV1->getMaskValue(P.value());
             SmallBitVector UseMask1 = buildUseMask(
                 cast<FixedVectorType>(SV1->getOperand(1)->getType())
                     ->getNumElements(),
                 ExtMask1, UseMask::SecondArg);
             SmallVector<int> ExtMask2(CombinedMask2.size(), PoisonMaskElem);
-            for (auto [Idx, I] :
+            for (const auto &P :
                  make_filter_range(enumerate(CombinedMask2), [](const auto &P) {
                    return P.value() != PoisonMaskElem;
                  }))
-              ExtMask2[Idx] = SV2->getMaskValue(I);
+              ExtMask2[P.index()] = SV2->getMaskValue(P.value());
             SmallBitVector UseMask2 = buildUseMask(
                 cast<FixedVectorType>(SV2->getOperand(1)->getType())
                     ->getNumElements(),
