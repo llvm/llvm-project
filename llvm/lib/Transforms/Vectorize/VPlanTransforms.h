@@ -217,8 +217,8 @@ struct VPlanTransforms {
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
       VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
-      ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
-      unsigned EpilogueLoopStep, ScalarEvolution &SE);
+      ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
+      ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG. For the outermost loop, also create the

@@ -38,6 +38,8 @@ add_clang_library(clangInterpreter
   intrinsics_gen
   ClangDriverOptions
 
+  target_parser_gen
+
   LINK_LIBS
   clangAST
   clangAnalysis

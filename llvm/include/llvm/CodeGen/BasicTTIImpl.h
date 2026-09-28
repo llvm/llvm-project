@@ -443,7 +443,7 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
-    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(FromAS, ToAS);
+    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(DL, FromAS, ToAS);
   }
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
@@ -1333,7 +1333,7 @@ public:
       }
       break;
     case Instruction::AddrSpaceCast:
-      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
+      if (TLI->isFreeAddrSpaceCast(DL, Src->getPointerAddressSpace(),
                                    Dst->getPointerAddressSpace()))
         return 0;
       break;
@@ -2022,6 +2022,7 @@ public:
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
       const Value *Ptr = Args[1];
+      const Value *Stride = Args[2];
       const Value *Mask = Args[3];
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
@@ -2030,11 +2031,12 @@ public:
           I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Data->getType(), Ptr, VarMask,
-                                     Alignment, I),
+                                     Alignment, I, Stride),
           CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       const Value *Ptr = Args[0];
+      const Value *Stride = Args[1];
       const Value *Mask = Args[2];
       const Value *EVL = Args[3];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
@@ -2042,7 +2044,8 @@ public:
       Align Alignment =
           I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getMemIntrinsicInstrCost(
-          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I),
+          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I,
+                                     Stride),
           CostKind);
     }
     case Intrinsic::stepvector: {
@@ -2519,6 +2522,13 @@ public:
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
+    }
+    case Intrinsic::speculative_load: {
+      const IntrinsicInst *I = ICA.getInst();
+      Align Alignment = I ? I->getParamAlign(0).valueOrOne() : Align(1);
+      unsigned AS = Tys[0]->getPointerAddressSpace();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, Alignment, AS), CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
@@ -3276,6 +3286,10 @@ public:
     }
     case Intrinsic::vp_load_ff:
       return InstructionCost::getInvalid();
+    case Intrinsic::speculative_load:
+      // Speculative loads are lowered to regular loads of the full type.
+      return thisT()->getMemoryOpCost(Instruction::Load, DataTy, Alignment,
+                                      MICA.getAddressSpace(), CostKind);
     default:
       llvm_unreachable("unexpected intrinsic");
     }
