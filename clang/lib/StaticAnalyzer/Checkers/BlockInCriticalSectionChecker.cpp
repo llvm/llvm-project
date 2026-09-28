@@ -48,13 +48,11 @@ static const MemRegion *getObjectUnderConstruction(const CallEvent &Call) {
 }
 
 static const MemRegion *getCXXDestructorThisRegion(const CallEvent &Call) {
-  // An explicit destructor call (p->~T()) is a CXXMemberCall, not a
-  // CXXDestructorCall, so accept both.
-  if (const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call))
-    return Dtor->getCXXThisVal().getAsRegion();
-  if (const auto *Member = dyn_cast<CXXMemberCall>(&Call);
-      Member && isa_and_nonnull<CXXDestructorDecl>(Member->getDecl()))
-    return Member->getCXXThisVal().getAsRegion();
+  // Match both implicit (CXXDestructorCall) and explicit p->~T()
+  // (CXXMemberCall) destructions using the common CXXInstanceCall base.
+  const auto *Instance = dyn_cast<CXXInstanceCall>(&Call);
+  if (Instance && isa_and_nonnull<CXXDestructorDecl>(Instance->getDecl()))
+    return Instance->getCXXThisVal().getAsRegion();
   return nullptr;
 }
 
@@ -65,10 +63,8 @@ static bool isNotDeferLockUniqueLock(const CallEvent &Call) {
   if (Params.size() < 2)
     return true;
   QualType ParamType = Params[1]->getType().getNonReferenceType();
-  if (const auto *RD = ParamType->getAsRecordDecl();
-      RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace())
-    return false;
-  return true;
+  const auto *RD = ParamType->getAsRecordDecl();
+  return !(RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace());
 }
 
 namespace {
@@ -334,10 +330,10 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
   switch (Desc->Role) {
   case RoleKind::Lock:
     handleLock(*Desc, Call, C, C.getState());
-    break;
+    return;
   case RoleKind::Unlock:
     handleUnlock(*Desc, Call, C);
-    break;
+    return;
   }
 }
 
