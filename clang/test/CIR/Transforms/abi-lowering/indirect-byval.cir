@@ -231,8 +231,8 @@ module attributes {
   // CHECK-NEXT:   %[[V:.*]] = cir.load %[[M]] : !cir.ptr<!s64i>, !s64i
   // CHECK-NEXT:   cir.return %[[V]] : !s64i
 
-  // byval with the same CIRGen spill keeps a local copy: load the byval
-  // pointer at entry and store into the param-slot alloca.
+  // byval with the same CIRGen spill keeps a local copy: the byval memory is
+  // copied into the param-slot alloca.
   cir.func @takes_big_byval_field(%arg0: !rec_Big) -> !s64i
       attributes { test_classify = #byval_arg } {
     %0 = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
@@ -244,9 +244,8 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @takes_big_byval_field(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
-  // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:        %[[SLOT:.*]] = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[LOADED]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.copy %[[PTR]] align(8) to %[[SLOT]] : !cir.ptr<!rec_Big>
   // CHECK:        %[[M:.*]] = cir.get_member %[[SLOT]][0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
   // CHECK:        %[[V:.*]] = cir.load %[[M]] : !cir.ptr<!s64i>, !s64i
   // CHECK:        cir.return %[[V]] : !s64i

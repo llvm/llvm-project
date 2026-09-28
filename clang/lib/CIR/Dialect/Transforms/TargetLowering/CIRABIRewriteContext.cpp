@@ -800,8 +800,28 @@ void insertArgCoercion(
         if (destAlloca)
           pendingParamSlots.emplace_back(destAlloca, blockArg);
       } else {
-        // byval: load the incoming pointer so the body sees a T value (and
-        // any CIRGen param-slot store becomes a local copy of that value).
+        // byval: the body gets a local copy of the incoming value.  When a
+        // record's only use is CIRGen's param spill, copy the bytes into the
+        // slot: a loaded record value carries only the fields of the LLVM
+        // type, which for a union is one member's, so bytes that are padding
+        // in that member but data in another would be lost.
+        auto spill =
+            isa<cir::RecordType>(blockArg.getType()) && blockArg.hasOneUse()
+                ? dyn_cast<cir::StoreOp>(*blockArg.user_begin())
+                : cir::StoreOp();
+        if (spill && spill.getValue() == blockArg) {
+          builder.setInsertionPoint(spill);
+          cir::CopyOp::create(
+              builder, spill.getLoc(), spill.getAddr(), blockArg,
+              /*dst_alignment=*/{},
+              builder.getI64IntegerAttr(ac.indirectAlign.value()));
+          spill->erase();
+          blockArg.setType(ptrTy);
+          ++blockArgIdx;
+          continue;
+        }
+
+        // Otherwise load the incoming pointer so the body sees a T value.
         blockArg.setType(ptrTy);
 
         builder.setInsertionPointToStart(&entry);
@@ -1549,6 +1569,25 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         continue;
       }
       auto ptrTy = cir::PointerType::get(arg.getType());
+      // A record loaded from memory is copied as bytes, at the load so it
+      // sees the same value: a record value carries only the fields of its
+      // LLVM type, which for a union is one member's.
+      cir::LoadOp srcLoad = isa<cir::RecordType>(arg.getType())
+                                ? maybeGetSimpleLoad(arg)
+                                : cir::LoadOp();
+      if (srcLoad && srcLoad.getAddr().getType() == ptrTy) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointAfter(srcLoad);
+        auto slot = cir::AllocaOp::create(
+            builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
+            builder.getI64IntegerAttr(ac.indirectAlign.value()));
+        cir::CopyOp::create(builder, call.getLoc(), slot, srcLoad.getAddr(),
+                            builder.getI64IntegerAttr(ac.indirectAlign.value()),
+                            srcLoad.getAlignmentAttr());
+        newArgs.push_back(slot);
+        deadRecordLoads.push_back(srcLoad);
+        continue;
+      }
       auto slot = cir::AllocaOp::create(
           builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
           builder.getI64IntegerAttr(ac.indirectAlign.value()));
