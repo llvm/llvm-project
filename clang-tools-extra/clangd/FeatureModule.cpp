@@ -8,8 +8,6 @@
 
 #include "FeatureModule.h"
 #include "support/Logger.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace clangd {
@@ -46,17 +44,6 @@ FeatureModuleSet FeatureModuleSet::fromRegistry() {
     ModuleSet.add(E.instantiate());
   }
   return ModuleSet;
-}
-
-llvm::Error loadFeatureModule(llvm::StringRef SharedLibraryPath) {
-  std::string Err;
-  if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(
-          SharedLibraryPath.str().c_str(), &Err))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to load feature module '%s': %s",
-                                   SharedLibraryPath.str().c_str(),
-                                   Err.c_str());
-  return llvm::Error::success();
 }
 
 } // namespace clangd

@@ -74,9 +74,10 @@ static FeatureModuleRegistry::Add<Dummy>
 MATCHER_P(moduleName, Name, "") { return arg.getName() == Name; }
 MATCHER_P(tweakID, ID, "") { return arg->id() == llvm::StringRef(ID); }
 
-// Feature modules can be added statically via FeatureModuleRegistry::Add,
-// or loaded dynamically at runtime via the -load command-line option or
-// loadFeatureModule().
+// In this test, it is assumed that for unittests executable, all feature
+// modules are added to the registry only here (in this file). To implement
+// modules for clangd tool, one need to link them directly to the clangd
+// executable in clangd/tool/CMakeLists.txt.
 TEST(FeatureModulesRegistryTest, DummyModule) {
   EXPECT_THAT(FeatureModuleRegistry::entries(),
               ElementsAre(moduleName("dummy")));
@@ -85,12 +86,6 @@ TEST(FeatureModulesRegistryTest, DummyModule) {
   std::vector<std::unique_ptr<Tweak>> Tweaks;
   Set.begin()->contributeTweaks(Tweaks);
   EXPECT_THAT(Tweaks, ElementsAre(tweakID("DummyTweak")));
-}
-
-TEST(FeatureModulesRegistryTest, LoadNonexistentModule) {
-  llvm::Error Err = loadFeatureModule("nonexistent_module.so");
-  EXPECT_TRUE(bool(Err));
-  llvm::consumeError(std::move(Err));
 }
 
 } // namespace

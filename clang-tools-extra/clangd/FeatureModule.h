@@ -14,7 +14,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
@@ -215,12 +214,6 @@ public:
 template <typename Mod> int FeatureModuleSet::ID<Mod>::Key;
 
 using FeatureModuleRegistry = llvm::Registry<FeatureModule>;
-
-/// Dynamically load a feature module from a shared library.
-/// The shared library is expected to register one or more FeatureModules
-/// via FeatureModuleRegistry.
-/// Returns an Error if the library could not be loaded.
-llvm::Error loadFeatureModule(llvm::StringRef SharedLibraryPath);
 
 } // namespace clangd
 } // namespace clang
