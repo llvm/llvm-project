@@ -2297,10 +2297,12 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       SemaRef.Diag(IList->getBeginLoc(), diag::ext_typecheck_zero_array_size);
     }
 
-    if (!elementType->isDependentType() && !elementType->isIncompleteType() &&
-        ConstantArrayType::getNumAddressingBits(SemaRef.Context, elementType,
-                                                maxElements) >
-            ConstantArrayType::getMaxSizeBits(SemaRef.Context)) {
+    unsigned ActiveSizeBits = maxElements.getActiveBits();
+    if (!elementType->isDependentType() && !elementType->isIncompleteType())
+      ActiveSizeBits = std::max(ActiveSizeBits,
+                                ConstantArrayType::getNumAddressingBits(
+                                    SemaRef.Context, elementType, maxElements));
+    if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(SemaRef.Context)) {
       SemaRef.Diag(IList->getBeginLoc(), diag::err_array_too_large)
           << toString(maxElements, 10, maxElements.isSigned(),
                       /*formatAsCLiteral=*/false, /*UpperCase=*/false,
