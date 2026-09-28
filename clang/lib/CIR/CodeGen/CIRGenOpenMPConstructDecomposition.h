@@ -288,6 +288,27 @@ struct LeafWithClauses {
 
 using ConstructQueue = llvm::SmallVector<LeafWithClauses>;
 
+/// The decomposition algorithm resolves a directive-name-modifier on an `if`
+/// clause (e.g. `if(parallel: cond)`) by synthesizing a fresh clause with the
+/// modifier stripped -- reusing the same condition expression -- and
+/// assigning it to the leaf named by the modifier. That synthesized clause
+/// has no Clang AST node of its own (\c original is null), but it shares its
+/// condition expression's identity with the clause it was derived from. Use
+/// that to recover the original \c OMPIfClause so a resolved `if` clause is
+/// routed to its leaf like any other clause, instead of being reported as an
+/// unimplemented synthesized clause.
+inline const clang::OMPClause *
+findOriginalIfClause(const OMPExecutableDirective &s, const Clause &c) {
+  const auto &ifClause = std::get<tomp::clause::IfT<TypeTy, IdTy, ExprTy>>(c.u);
+  const clang::Expr *condition = std::get<ExprTy>(ifClause.t);
+  for (const clang::OMPClause *oc : s.clauses()) {
+    const auto *ic = llvm::dyn_cast<clang::OMPIfClause>(oc);
+    if (ic && ic->getCondition() == condition)
+      return ic;
+  }
+  return nullptr;
+}
+
 /// Given a potentially compound directive with a list of clauses that apply to
 /// it, break it up into individual leaf constructs each with the subset of
 /// applicable clauses (plus implicit clauses, if any). From that create a work
@@ -310,10 +331,17 @@ inline ConstructQueue buildConstructQueue(unsigned openmpVersion,
     LeafWithClauses leaf;
     leaf.id = dwc.id;
     for (const Clause &c : dwc.clauses) {
-      if (c.original)
+      if (c.original) {
         leaf.clauses.push_back(c.original);
-      else
-        leaf.synthesized.push_back(c.id);
+        continue;
+      }
+      if (c.id == llvm::omp::OMPC_if) {
+        if (const clang::OMPClause *orig = findOriginalIfClause(s, c)) {
+          leaf.clauses.push_back(orig);
+          continue;
+        }
+      }
+      leaf.synthesized.push_back(c.id);
     }
     result.push_back(std::move(leaf));
   }
