@@ -6,23 +6,20 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
 
 licenses(["notice"])
 
-genrule(
-    name = "as_lib_elf_srcdir",
-    srcs = ["AsLibELF/CMakeLists.txt"],
-    outs = ["llvm.srcdir.txt"],
-    cmd = "p=$(rootpath AsLibELF/CMakeLists.txt); echo $${p%/*} > $@",
-)
+_REPOSITORY_NAME = repository_name().lstrip("@")
+
+_LLD_SRC_DIR = "../%s/lld" % _REPOSITORY_NAME if _REPOSITORY_NAME else "lld"
 
 cc_test(
     name = "LLDAsLibELFTests",
     size = "small",
     srcs = glob(["AsLibELF/*.cpp"]),
-    data = glob(["AsLibELF/Inputs/*"]) + [":as_lib_elf_srcdir"],
+    data = glob(["AsLibELF/Inputs/*"]),
+    env = {"LLD_SRC_DIR": _LLD_SRC_DIR},
     deps = [
         "//lld:Common",
         "//lld:ELF",
         "//llvm:Support",
-        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
