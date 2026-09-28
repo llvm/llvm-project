@@ -10731,29 +10731,10 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   // Precondition tests if there is at least one iteration (all conditions are
   // true).
   auto PreCond = ExprResult(IterSpaces[0].PreCond);
-  Expr *N0 = IterSpaces[0].NumIterations;
-  ExprResult LastIteration32 = widenIterationCount(
-      /*Bits=*/32,
-      SemaRef
-          .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
-                                     AssignmentAction::Converting,
-                                     /*AllowExplicit=*/true)
-          .get(),
-      SemaRef);
-  ExprResult LastIteration64 = widenIterationCount(
-      /*Bits=*/64,
-      SemaRef
-          .PerformImplicitConversion(N0->IgnoreImpCasts(), N0->getType(),
-                                     AssignmentAction::Converting,
-                                     /*AllowExplicit=*/true)
-          .get(),
-      SemaRef);
-
-  if (!LastIteration32.isUsable() || !LastIteration64.isUsable())
-    return NestedLoopCount;
-
   ASTContext &C = SemaRef.Context;
-  bool AllCountsNeedLessThan32Bits = C.getTypeSize(N0->getType()) < 32;
+  unsigned FirstCountBits =
+      C.getTypeSize(IterSpaces[0].NumIterations->getType());
+  bool AllCountsNeedLessThan32Bits = FirstCountBits < 32;
 
   Scope *CurScope = DSA.getCurScope();
   for (unsigned Cnt = 1; Cnt < NestedLoopCount; ++Cnt) {
@@ -10763,37 +10744,63 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                              PreCond.get(), IterSpaces[Cnt].PreCond);
     }
     Expr *N = IterSpaces[Cnt].NumIterations;
-    SourceLocation Loc = N->getExprLoc();
     AllCountsNeedLessThan32Bits &= C.getTypeSize(N->getType()) < 32;
-    if (LastIteration32.isUsable())
-      LastIteration32 = SemaRef.BuildBinOp(
-          CurScope, Loc, BO_Mul, LastIteration32.get(),
-          SemaRef
-              .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         AssignmentAction::Converting,
-                                         /*AllowExplicit=*/true)
-              .get());
-    if (LastIteration64.isUsable())
-      LastIteration64 = SemaRef.BuildBinOp(
-          CurScope, Loc, BO_Mul, LastIteration64.get(),
-          SemaRef
-              .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
-                                         AssignmentAction::Converting,
-                                         /*AllowExplicit=*/true)
-              .get());
   }
 
-  // Choose either the 32-bit or 64-bit version.
-  ExprResult LastIteration = LastIteration64;
+  auto BuildLastIteration = [&](unsigned Bits) -> ExprResult {
+    ExprResult Result;
+    for (unsigned Cnt : llvm::seq<unsigned>(NestedLoopCount)) {
+      Expr *N = IterSpaces[Cnt].NumIterations;
+      ExprResult Count = widenIterationCount(
+          Bits,
+          SemaRef
+              .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
+                                         AssignmentAction::Converting,
+                                         /*AllowExplicit=*/true)
+              .get(),
+          SemaRef);
+      if (!Count.isUsable())
+        return ExprError();
+      if (Cnt == 0)
+        Result = Count;
+      else
+        Result = SemaRef.BuildBinOp(CurScope, N->getExprLoc(), BO_Mul,
+                                    Result.get(), Count.get());
+      if (!Result.isUsable())
+        return ExprError();
+    }
+    return Result;
+  };
+
+  // Build the 32-bit tree immediately only when it is always selected.
+  // Otherwise, build the 64-bit tree first and build the 32-bit tree only when
+  // the constant product may fit.
+  ExprResult LastIteration;
   if (SemaRef.getLangOpts().OpenMPOptimisticCollapse ||
-      (LastIteration32.isUsable() &&
-       C.getTypeSize(LastIteration32.get()->getType()) == 32 &&
-       (AllCountsNeedLessThan32Bits || NestedLoopCount == 1 ||
-        fitsInto(
-            /*Bits=*/32,
-            LastIteration32.get()->getType()->hasSignedIntegerRepresentation(),
-            LastIteration64.get(), SemaRef))))
-    LastIteration = LastIteration32;
+      AllCountsNeedLessThan32Bits ||
+      (NestedLoopCount == 1 && FirstCountBits == 32)) {
+    LastIteration = BuildLastIteration(/*Bits=*/32);
+  } else {
+    ExprResult LastIteration64 = BuildLastIteration(/*Bits=*/64);
+    if (!LastIteration64.isUsable())
+      return NestedLoopCount;
+    LastIteration = LastIteration64;
+    if (LastIteration64.get()->isIntegerConstantExpr(C)) {
+      ExprResult LastIteration32 = BuildLastIteration(/*Bits=*/32);
+      if (LastIteration32.isUsable() &&
+          C.getTypeSize(LastIteration32.get()->getType()) == 32 &&
+          fitsInto(
+              /*Bits=*/32,
+              LastIteration32.get()
+                  ->getType()
+                  ->hasSignedIntegerRepresentation(),
+              LastIteration64.get(), SemaRef))
+        LastIteration = LastIteration32;
+    }
+  }
+  if (!LastIteration.isUsable())
+    return NestedLoopCount;
+
   QualType VType = LastIteration.get()->getType();
   QualType RealVType = VType;
   QualType StrideVType = VType;
@@ -10803,9 +10810,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     StrideVType =
         SemaRef.Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
   }
-
-  if (!LastIteration.isUsable())
-    return 0;
 
   // Save the number of iterations.
   ExprResult NumIterations = LastIteration;
@@ -19251,10 +19255,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
   QualType Type = ME->getType();
-  // OpenMP 5.1 [2.5.4, error Directive]
-  // msg-string is a string of const char * type.
   if ((!Type->isPointerType() && !Type->isArrayType()) ||
-      !Type->getPointeeOrArrayElementType()->isCharType()) {
+      !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseNameForDiag(OMPC_message) << 0;
     return nullptr;
