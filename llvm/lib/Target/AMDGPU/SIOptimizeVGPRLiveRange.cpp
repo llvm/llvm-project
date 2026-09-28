@@ -108,9 +108,6 @@ private:
   // in.
   bool isLiveIntoMBB(Register Reg, const MachineBasicBlock *MBB) const;
 
-  // Is \p Reg a virtual register of a vector class without SGPRs?
-  bool isVectorVirtReg(Register Reg) const;
-
 public:
   SIOptimizeVGPRLiveRange(LiveIntervals *LIS, LiveVariables *LV,
                           MachineDominatorTree *MDT, MachineLoopInfo *Loops)
@@ -220,13 +217,6 @@ bool SIOptimizeVGPRLiveRange::isLiveIntoMBB(
   return LIS->isLiveInToMBB(LI, MBB);
 }
 
-bool SIOptimizeVGPRLiveRange::isVectorVirtReg(Register Reg) const {
-  if (!Reg.isVirtual())
-    return false;
-  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-  return TRI->hasVectorRegisters(RC) && !TRI->hasSGPRs(RC);
-}
-
 void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
     MachineBasicBlock *Flow, MachineBasicBlock *Endif,
     SmallSetVector<MachineBasicBlock *, 16> &Blocks) const {
@@ -285,7 +275,8 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
 
         Register MOReg = MO.getReg();
         // We can only optimize VGPR/AGPR/AV virtual registers.
-        if (!isVectorVirtReg(MOReg))
+        if (!MOReg.isVirtual() ||
+            !TRI->hasVectorRegisters(MRI->getRegClass(MOReg)))
           continue;
 
         if (MO.readsReg()) {
@@ -323,7 +314,7 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
         continue;
 
       Register Reg = MO.getReg();
-      if (!isVectorVirtReg(Reg))
+      if (!Reg.isVirtual() || !TRI->hasVectorRegisters(MRI->getRegClass(Reg)))
         continue;
 
       if (isLiveIntoMBB(Reg, Endif)) {
@@ -407,7 +398,8 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
 
       Register MOReg = MO.getReg();
       // We can only optimize VGPR/AGPR/AV virtual registers.
-      if (!isVectorVirtReg(MOReg))
+      if (!MOReg.isVirtual() ||
+          !TRI->hasVectorRegisters(MRI->getRegClass(MOReg)))
         continue;
 
       if (MO.readsReg()) {
