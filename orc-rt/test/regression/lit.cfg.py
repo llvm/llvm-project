@@ -82,6 +82,14 @@ if llvm_mc:
         )
     )
 
+# split-file splits a test into several files, e.g. so that a test can build
+# and link more than one object. Tests that use it must be gated on the
+# split-file feature.
+split_file = llvm_config.use_llvm_tool("split-file")
+if split_file:
+    config.available_features.add("split-file")
+    llvm_config.add_tool_substitutions([ToolSubst("split-file", command=split_file)])
+
 # Describe the runtime's target architecture and object format, so that object
 # format tests can gate on them:
 #   target-arch=<arch>             (arm64 and aarch64 are aliases)
