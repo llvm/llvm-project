@@ -1052,6 +1052,11 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageImageMultisample,
                     Capability::ImageMSArray});
 
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)) ||
+      ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
+    addAvailableCaps({Capability::VariablePointersStorageBuffer,
+                      Capability::VariablePointers});
+
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
     addAvailableCaps(

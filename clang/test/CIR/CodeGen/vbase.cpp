@@ -138,3 +138,31 @@ void ppp() { B b; }
 // OGCG:   %[[BASE_A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 12
 // OGCG:   store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV1B, i64 24), ptr %[[THIS]]
 // OGCG:   ret void
+
+// Pointer to virtual base must null-check.
+A *conv(B *p) { return p; }
+
+// CIR-LABEL: cir.func {{.*}} @_Z4convP1B(
+// CIR:   %[[P:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
+// CIR:   %[[IS_NULL:.*]] = cir.cmp eq %[[P]], {{.*}} : !cir.ptr<!rec_B>
+// CIR:   cir.ternary(%[[IS_NULL]], true {
+// CIR:     %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_A>
+// CIR:     cir.yield %[[NULLPTR]] : !cir.ptr<!rec_A>
+// CIR:   }, false {
+// CIR:     cir.vtable.get_vptr %[[P]]
+// CIR:     cir.yield {{.*}} : !cir.ptr<!rec_A>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!rec_A>
+
+// LLVM: define {{.*}} ptr @_Z4convP1B(
+// LLVM:   %[[P:.*]] = load ptr, ptr {{.*}}
+// LLVM:   %[[IS_NULL:.*]] = icmp eq ptr %[[P]], null
+// LLVM:   br i1 %[[IS_NULL]], label %{{.*}}, label %{{.*}}
+// LLVM:   load ptr, ptr %[[P]]
+// LLVM: phi ptr
+
+// OGCG: define {{.*}} ptr @_Z4convP1B(
+// OGCG:   %[[P:.*]] = load ptr, ptr {{.*}}
+// OGCG:   %[[IS_NULL:.*]] = icmp eq ptr %[[P]], null
+// OGCG:   br i1 %[[IS_NULL]], label %{{.*}}, label %{{.*}}
+// OGCG:   load ptr, ptr %[[P]]
+// OGCG: phi ptr
