@@ -77,48 +77,74 @@ HazardClassMask getInstHazardClass(const MachineInstr &MI,
   return Mask;
 }
 
+bool isVirtualVGPR(const HazardContext &Ctx, const MachineOperand &MO) {
+  if (!MO.isReg() || !MO.getReg().isVirtual())
+    return false;
+  return Ctx.TRI->hasVGPRs(Ctx.MRI->getRegClass(MO.getReg()));
+}
+
 void collectOperandRegs(const MachineInstr &MI, HazardOperand Op,
                         const HazardContext &Ctx,
                         SmallVectorImpl<Register> &Out) {
   const SIInstrInfo &TII = *Ctx.TII;
-  auto Add = [&](const MachineOperand *MO) {
-    if (MO && MO->isReg() && MO->getReg().isVirtual() &&
-        Ctx.TRI->hasVGPRs(Ctx.MRI->getRegClass(MO->getReg())))
-      Out.push_back(MO->getReg());
-  };
-  auto Named = [&](AMDGPU::OpName N) { Add(TII.getNamedOperand(MI, N)); };
   switch (Op) {
   case HazardOperand::None:
     break;
   case HazardOperand::Def:
-    for (const MachineOperand &MO : MI.operands())
-      if (MO.isReg() && MO.isDef())
-        Add(&MO);
+    for (const MachineOperand &MO : MI.all_defs()) {
+      if (isVirtualVGPR(Ctx, MO))
+        Out.push_back(MO.getReg());
+    }
     break;
   case HazardOperand::Src0:
-    Named(AMDGPU::OpName::src0);
+    if (const MachineOperand *MO =
+            TII.getNamedOperand(MI, AMDGPU::OpName::src0)) {
+      if (isVirtualVGPR(Ctx, *MO))
+        Out.push_back(MO->getReg());
+    }
     break;
   case HazardOperand::Src1:
-    Named(AMDGPU::OpName::src1);
+    if (const MachineOperand *MO =
+            TII.getNamedOperand(MI, AMDGPU::OpName::src1)) {
+      if (isVirtualVGPR(Ctx, *MO))
+        Out.push_back(MO->getReg());
+    }
     break;
   case HazardOperand::Src2:
-    Named(AMDGPU::OpName::src2);
+    if (const MachineOperand *MO =
+            TII.getNamedOperand(MI, AMDGPU::OpName::src2)) {
+      if (isVirtualVGPR(Ctx, *MO))
+        Out.push_back(MO->getReg());
+    }
     break;
   case HazardOperand::Idx:
-    Named(AMDGPU::OpName::idx);
+    if (const MachineOperand *MO =
+            TII.getNamedOperand(MI, AMDGPU::OpName::idx)) {
+      if (isVirtualVGPR(Ctx, *MO))
+        Out.push_back(MO->getReg());
+    }
     break;
   case HazardOperand::Vaddr:
-    Named(AMDGPU::OpName::vaddr);
+    if (const MachineOperand *MO =
+            TII.getNamedOperand(MI, AMDGPU::OpName::vaddr)) {
+      if (isVirtualVGPR(Ctx, *MO))
+        Out.push_back(MO->getReg());
+    }
     break;
   case HazardOperand::AnySrc:
-    Named(AMDGPU::OpName::src0);
-    Named(AMDGPU::OpName::src1);
-    Named(AMDGPU::OpName::src2);
+    for (AMDGPU::OpName Name :
+         {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
+      if (const MachineOperand *MO = TII.getNamedOperand(MI, Name)) {
+        if (isVirtualVGPR(Ctx, *MO))
+          Out.push_back(MO->getReg());
+      }
+    }
     break;
   case HazardOperand::AnyUse:
-    for (const MachineOperand &MO : MI.uses())
-      if (MO.isReg() && MO.isUse())
-        Add(&MO);
+    for (const MachineOperand &MO : MI.all_uses()) {
+      if (isVirtualVGPR(Ctx, MO))
+        Out.push_back(MO.getReg());
+    }
     break;
   }
 }
@@ -364,9 +390,10 @@ public:
       Tracking[R].resize(Rules[R].Consumers.size());
 
     for (const MachineBasicBlock &MBB : MF) {
-      for (RuleTracking &RT : Tracking)
+      for (RuleTracking &RT : Tracking) {
         for (ConsumerTracking &Track : RT)
           Track.clear();
+      }
       for (const MachineInstr &MI : MBB) {
         if (MI.isMetaInstruction())
           continue;
@@ -425,9 +452,10 @@ private:
           });
       // Advance by RAW window from the producer if that is larger than current
       // Window.Elapsed.
-      if (ReadsProducerDef)
+      if (ReadsProducerDef) {
         Window.Elapsed = std::max(
             Window.Elapsed, Rule.AdvanceForRawWindow(*Window.Producer, C, Ctx));
+      }
     }
   }
 
@@ -458,9 +486,10 @@ private:
           addAntiHints(CT, MI, Track);
 
         // This instruction's own wait states count toward the next one.
-        if (!CT.CounterMask || (C & CT.CounterMask))
+        if (!CT.CounterMask || (C & CT.CounterMask)) {
           for (AntiHintWindow &Window : Track)
             Window.Elapsed += WaitStates;
+        }
       }
     }
   }
@@ -501,9 +530,10 @@ private:
                    << Ctx.TII->getName(MI.getOpcode()) << ")\n");
       }
     };
-    for (const AntiHintWindow &Window : Track)
+    for (const AntiHintWindow &Window : Track) {
       for (Register ProducerReg : Window.Regs)
         AntiHint(ProducerReg);
+    }
   }
 };
 
