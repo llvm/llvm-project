@@ -5093,6 +5093,12 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   } else
     return false;
 
+  // If the kept operand is defined as NOT(OpToInvert), freelyInvert(OpToInvert)
+  // will also flip the kept operand as a side effect of updating its uses,
+  // invalidating the assumption that it stays fixed while I is rewriten.
+  if (match(*OpToInvert == Op1 ? Op0 : Op1, m_Not(m_Specific(*OpToInvert))))
+    return false;
+
   // And can our users be adapted?
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
