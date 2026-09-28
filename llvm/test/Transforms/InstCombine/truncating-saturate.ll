@@ -911,3 +911,37 @@ entry:
   %trunc = trunc i32 %cond to i8
   ret i8 %trunc
 }
+
+define i8 @trunc_sext_i1(i32 %x) {
+; CHECK-LABEL: @trunc_sext_i1(
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X]], -1
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[C]] to i8
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[X]] to i8
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 [[T]], i8 [[S]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt = icmp ult i32 %x, 256
+  %c = icmp sgt i32 %x, -1
+  %s = sext i1 %c to i8
+  %t = trunc nuw i32 %x to i8
+  %r = select i1 %lt, i8 %t, i8 %s
+  ret i8 %r
+}
+
+define i8 @trunc_zext_i1(i32 %x) {
+; CHECK-LABEL: @trunc_zext_i1(
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i8
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[X]] to i8
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LT]], i8 [[T]], i8 [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt = icmp ult i32 %x, 2
+  %c = icmp sgt i32 %x, 0
+  %z = zext i1 %c to i8
+  %t = trunc nuw i32 %x to i8
+  %r = select i1 %lt, i8 %t, i8 %z
+  ret i8 %r
+}
