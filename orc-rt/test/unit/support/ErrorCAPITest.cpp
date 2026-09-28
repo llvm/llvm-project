@@ -12,12 +12,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-c/support/Error.h"
+#include "orc-rt-c/support/RTTI.h"
 #include "orc-rt/support/Error.h"
 #include "gtest/gtest.h"
 
 #include <cstring>
 
 using namespace orc_rt;
+
+// Test wrapping a custom C++ error type and checking its type via C API.
+namespace orc_rt {
+
+class CustomCAPITestError
+    : public ErrorExtends<CustomCAPITestError, ErrorInfoBase> {
+public:
+  static constexpr const char *RTTIName = "::CustomCAPITestError";
+
+  CustomCAPITestError(int Code) : Code(Code) {}
+  std::string toString() const noexcept override {
+    return "CustomCAPITestError: " + std::to_string(Code);
+  }
+  int getCode() const { return Code; }
+
+private:
+  int Code;
+};
+
+extern "C" {
+
+typedef struct orc_rt_OpaqueCustomCAPITestError *orc_rt_CustomCAPITestErrorRef;
+
+ORC_RT_RTTI_PARTICIPANT(CustomCAPITestError)
+ORC_RT_C_RTTI_IMPL(CustomCAPITestError)
+
+} // extern "C"
+
+} // namespace orc_rt
 
 namespace {
 
@@ -43,16 +73,6 @@ TEST(ErrorCAPITest, WrapUnwrapRoundTrip) {
 TEST(ErrorCAPITest, UnwrapSuccess) {
   Error E = unwrap(orc_rt_ErrorSuccess);
   EXPECT_FALSE(E) << "Unwrapping null should produce success";
-}
-
-// Test orc_rt_Error_getTypeId returns the correct type ID.
-TEST(ErrorCAPITest, GetTypeId) {
-  orc_rt_ErrorRef ErrRef = orc_rt_StringError_create("test");
-  orc_rt_Error_TypeId TypeId = orc_rt_Error_getTypeId(ErrRef);
-
-  EXPECT_EQ(TypeId, orc_rt_StringError_getTypeId());
-
-  orc_rt_Error_consume(ErrRef);
 }
 
 // Test orc_rt_Error_consume properly disposes of an error.
@@ -95,29 +115,12 @@ TEST(ErrorCAPITest, StringErrorCreate) {
   EXPECT_NE(ErrRef, orc_rt_ErrorSuccess);
 
   // Verify it's a StringError.
-  EXPECT_EQ(orc_rt_Error_getTypeId(ErrRef), orc_rt_StringError_getTypeId());
+  EXPECT_TRUE(!!ORC_RT_DYNCAST(StringError, Error, ErrRef));
 
   // Verify the message.
   char *Msg = orc_rt_Error_toString(ErrRef);
   EXPECT_STREQ(Msg, TestMsg);
   orc_rt_Error_freeErrorMessage(Msg);
-}
-
-// Test orc_rt_StringError_getTypeId returns a consistent value.
-TEST(ErrorCAPITest, StringErrorTypeIdConsistent) {
-  orc_rt_Error_TypeId TypeId1 = orc_rt_StringError_getTypeId();
-  orc_rt_Error_TypeId TypeId2 = orc_rt_StringError_getTypeId();
-
-  EXPECT_EQ(TypeId1, TypeId2);
-  EXPECT_NE(TypeId1, nullptr);
-}
-
-// Test that C API type ID matches C++ StringError class ID.
-TEST(ErrorCAPITest, StringErrorTypeIdMatchesCpp) {
-  orc_rt_Error_TypeId CTypeId = orc_rt_StringError_getTypeId();
-  const void *CppTypeId = StringError::classID();
-
-  EXPECT_EQ(CTypeId, CppTypeId);
 }
 
 // Test creating and consuming multiple errors.
@@ -143,35 +146,32 @@ TEST(ErrorCAPITest, MultipleErrors) {
   orc_rt_Error_freeErrorMessage(Msg3);
 }
 
-// Test wrapping a custom C++ error type and checking its type via C API.
-class CustomCAPITestError
-    : public ErrorExtends<CustomCAPITestError, ErrorInfoBase> {
-public:
-  CustomCAPITestError(int Code) : Code(Code) {}
-  std::string toString() const noexcept override {
-    return "CustomCAPITestError: " + std::to_string(Code);
-  }
-  int getCode() const { return Code; }
-
-private:
-  int Code;
-};
-
-TEST(ErrorCAPITest, CustomErrorTypeId) {
+TEST(ErrorCAPITest, CustomErrorTypeChecks) {
   Error CppError = make_error<CustomCAPITestError>(42);
   orc_rt_ErrorRef ErrRef = wrap(std::move(CppError));
 
-  orc_rt_Error_TypeId TypeId = orc_rt_Error_getTypeId(ErrRef);
-
-  // Should not be a StringError.
-  EXPECT_NE(TypeId, orc_rt_StringError_getTypeId());
-
-  // Should match the C++ class ID.
-  EXPECT_EQ(TypeId, CustomCAPITestError::classID());
+  EXPECT_TRUE(!!ORC_RT_DYNCAST(CustomCAPITestError, Error, ErrRef));
+  EXPECT_FALSE(!!ORC_RT_DYNCAST(StringError, Error, ErrRef));
 
   char *Msg = orc_rt_Error_toString(ErrRef);
   EXPECT_STREQ(Msg, "CustomCAPITestError: 42");
   orc_rt_Error_freeErrorMessage(Msg);
+}
+
+// Test orc_rt_RTTIRoot_getTypeName reports the dynamic type's RTTIName.
+TEST(ErrorCAPITest, GetTypeName) {
+  // The static type of an orc_rt_ErrorRef is Error, so these also check that
+  // getTypeName reports the most-derived type rather than the one named by the
+  // reference it was handed.
+  orc_rt_ErrorRef StrErr = orc_rt_StringError_create("test error");
+  EXPECT_STREQ(orc_rt_RTTIRoot_getTypeName(orc_rt_Error_toRTTIRoot(StrErr)),
+               "orc_rt::StringError");
+  orc_rt_Error_consume(StrErr);
+
+  orc_rt_ErrorRef CustomErr = wrap(make_error<CustomCAPITestError>(42));
+  EXPECT_STREQ(orc_rt_RTTIRoot_getTypeName(orc_rt_Error_toRTTIRoot(CustomErr)),
+               "::CustomCAPITestError");
+  orc_rt_Error_consume(CustomErr);
 }
 
 } // namespace

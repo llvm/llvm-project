@@ -161,9 +161,10 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     }
 
     std::string layoutName = getTemporaryLayoutName(result);
-    if (defOp->hasAttr(layoutName)) {
+    if (defOp->hasDiscardableAttr(layoutName)) {
       auto layout =
-          defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+          defOp->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(
+              layoutName);
       return layout;
     }
   }
@@ -246,27 +247,15 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
 
-    if (isa<xegpu::StoreScatterOp>(op)) {
-      xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
-      if (layout && idx >= 2 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+    // For gather/scatter ops the mask and offsets share the value's layout.
+    if (isa<xegpu::StoreScatterOp, xegpu::LoadGatherOp>(op))
       return layout;
-    }
-    if (isa<xegpu::LoadGatherOp>(op)) {
-      xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
-      if (layout && idx >= 1 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
-      return layout;
-    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -323,11 +312,11 @@ void xegpu::setDistributeLayoutAttr(
   }
 
   std::string name = xegpu::getTemporaryLayoutName(result);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -371,11 +360,11 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
   }
 
   std::string name = xegpu::getTemporaryLayoutName(operand);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -385,8 +374,9 @@ xegpu::getTemporaryLayout(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
   std::string layoutName = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -403,11 +393,11 @@ void xegpu::setTemporaryLayout(const T &operandOrResult,
                                const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -760,18 +750,26 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
           elemTy, APInt::getSignedMinValue(intTy.getWidth())));
     return nullptr;
 
-  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
           elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
     return nullptr;
 
-  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+          elemTy,
+          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
+    return nullptr;
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
     return nullptr;
   }
   return nullptr;

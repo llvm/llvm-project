@@ -164,6 +164,13 @@ public:
   virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
                                                  unsigned OpNum) const;
 
+  /// Return the register class to use for the register operand of an inline asm
+  /// memory operand with constraint \p C.
+  virtual const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const {
+    llvm_unreachable("target did not implement memory operand support");
+  }
+
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
   virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
@@ -450,7 +457,7 @@ public:
   /// getInstSizeInBytes() should be verified.
   virtual InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const {
-    return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
   }
 
   /// Return true if the instruction is as cheap as a move instruction.
@@ -741,6 +748,19 @@ public:
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
     return true;
+  }
+
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
   }
 
   /// Represents a predicate at the MachineFunction level.  The control flow a
@@ -1098,10 +1118,12 @@ public:
   /// (non-PC) registers as offsets or scaling values, which inherently
   /// tags the corresponding MachineOperand with OPERAND_PCREL.
   ///
-  /// @param MO The MachineOperand in question. MO.isReg() should always
-  /// be true.
+  /// @param MI The instruction containing the operand in question.
+  /// @param OpIdx The index of the operand in question. It should always be a
+  /// register operand.
   /// @return Whether this operand is allowed to be used PC-relatively.
-  virtual bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const {
+  virtual bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                           unsigned OpIdx) const {
     return false;
   }
 
@@ -2257,8 +2279,9 @@ public:
   ///
   /// If an entire block is mappable, then its range is [MBB.begin(), MBB.end())
   ///
-  /// All instructions not present in an outlinable range are considered
-  /// illegal.
+  /// All non-debug instructions not present in an outlinable range are
+  /// considered illegal. Debug instructions are ignored wherever they appear,
+  /// so each gap between ranges must contain a non-debug instruction.
   virtual SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const {

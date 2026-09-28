@@ -16,9 +16,8 @@ define <4 x i32> @any_of_select_vf4(<4 x i32> %mask, <4 x i32> %a, <4 x i32> %b)
 ; CHECK-SD-LABEL: any_of_select_vf4:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-SD-NEXT:    movi d3, #0000000000000000
 ; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    cmeq v0.2d, v0.2d, v3.2d
+; CHECK-SD-NEXT:    cmeq v0.2d, v0.2d, #0
 ; CHECK-SD-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
@@ -106,9 +105,8 @@ define <2 x i64> @any_of_select_vf2(<2 x i64> %mask, <2 x i64> %a, <2 x i64> %b)
 ; CHECK-LABEL: any_of_select_vf2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
-; CHECK-NEXT:    movi d3, #0000000000000000
 ; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v3.2d
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
 ; CHECK-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret

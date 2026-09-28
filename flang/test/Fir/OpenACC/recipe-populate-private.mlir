@@ -231,3 +231,23 @@ func.func @test_box_ptr_array() {
   %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
+
+// -----
+
+// Recipe generation from an acc.copyin result must use the host variable's
+// Fortran properties. The host is not OPTIONAL, so init is a plain alloca.
+// CHECK: acc.private.recipe @private_from_copyin : !fir.ref<i32> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
+// CHECK-NOT: fir.is_present
+// CHECK:   %[[ALLOC:.*]] = fir.alloca i32
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<i32>
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_from_copyin() {
+  %host = fir.alloca i32
+  %in = acc.copyin varPtr(%host : !fir.ref<i32>) -> !fir.ref<i32> {test.var = "from_copyin"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}

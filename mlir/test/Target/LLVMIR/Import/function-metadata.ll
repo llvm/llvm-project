@@ -1,5 +1,5 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
-; RUN: mlir-translate -import-llvm -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
+; RUN: mlir-translate -import-llvm -split-input-file %s --verify-diagnostics | FileCheck %s
+; RUN: mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
 
 ; CHECK-LABEL: llvm.func @repeated_type_metadata
 ; CHECK-SAME: function_metadata

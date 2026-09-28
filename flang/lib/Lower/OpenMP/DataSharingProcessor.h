@@ -37,14 +37,26 @@ private:
   /// at any point in time. This is used to track Symbol definition scopes in
   /// order to tell which OMP scope defined vs. references a certain Symbol.
   struct OMPConstructSymbolVisitor {
-    OMPConstructSymbolVisitor(semantics::SemanticsContext &ctx)
-        : version(ctx.langOptions().getOpenMPVersion()) {}
+    OMPConstructSymbolVisitor(
+        semantics::SemanticsContext &ctx,
+        llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs)
+        : metadirectiveLoopIVs(metadirectiveLoopIVs.begin(),
+                               metadirectiveLoopIVs.end()),
+          isMetadirectiveLoop(!metadirectiveLoopIVs.empty()),
+          version(ctx.langOptions().getOpenMPVersion()) {}
     template <typename T>
     bool Pre(const T &) {
       return true;
     }
     template <typename T>
     void Post(const T &) {}
+
+    bool Pre(const parser::LoopControl::Bounds &bounds) {
+      if (isMetadirectiveLoop)
+        if (const semantics::Symbol *symbol = bounds.Name().thing.symbol)
+          metadirectiveLoopIVs.insert(symbol);
+      return true;
+    }
 
     bool Pre(const parser::OpenMPConstruct &omp) {
       // Skip constructs that may not have privatizations.
@@ -87,6 +99,8 @@ private:
                                       const parser::DeclarationConstruct *>;
     llvm::SmallVector<ConstructPtr> constructs;
     llvm::DenseMap<semantics::Symbol *, ConstructPtr> symDefMap;
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> metadirectiveLoopIVs;
+    bool isMetadirectiveLoop;
 
     llvm::omp::Version version;
   };
@@ -117,6 +131,7 @@ private:
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
+  bool isMetadirectiveLoop;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
@@ -157,13 +172,12 @@ private:
   bool isOpenMPPrivatizingEvaluation(const pft::Evaluation &eval) const;
 
 public:
-  DataSharingProcessor(lower::AbstractConverter &converter,
-                       semantics::SemanticsContext &semaCtx,
-                       const List<Clause> &clauses,
-                       lower::pft::Evaluation &eval,
-                       bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false);
+  DataSharingProcessor(
+      lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+      const List<Clause> &clauses, lower::pft::Evaluation &eval,
+      bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
+      lower::SymMap &symTable, bool isTargetPrivatization = false,
+      llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs = {});
 
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,

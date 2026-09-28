@@ -169,8 +169,9 @@ def AS_Block : Association<"Block"> {}            // Block (incl. single
 def AS_Declaration : Association<"Declaration"> {}   // Declaration
 def AS_Delimited : Association<"Delimited"> {}    // Region delimited with
                                                   // begin/end
+def AS_Explicit : Association<"Explicit"> {}      // Explicit association
 def AS_LoopNest : Association<"LoopNest"> {}      // Loop nest
-def AS_LoopSeq : Association<"LoopSeq"> {}        // Loop sequence
+def AS_LoopSeq : Association<"LoopSequence"> {}   // Loop sequence
 def AS_Separating : Association<"Separating"> {}  // Separates parts of a
                                                   // construct
 

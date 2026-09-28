@@ -11,8 +11,12 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -43,17 +47,29 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
 
   ExecutorSharedMemoryMapperService MapperService;
 
-  SharedMemoryMapper::SymbolAddrs SAs;
+  ExecutionSession ES(std::move(SelfEPC));
+
+  // Bind directly to the mapper service's wrapper functions, dispatching each
+  // through the SPS controller interface.
+  SharedMemoryMapBindings B;
   {
     StringMap<ExecutorAddr> Map;
     MapperService.addBootstrapSymbols(Map);
-    SAs.Instance = Map[rt::ExecutorSharedMemoryMapperServiceInstanceName];
-    SAs.Reserve = Map[rt::ExecutorSharedMemoryMapperServiceReserveWrapperName];
-    SAs.Initialize =
-        Map[rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName];
-    SAs.Deinitialize =
-        Map[rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName];
-    SAs.Release = Map[rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName];
+    Mangler Mangle{Triple(sys::getProcessTriple())};
+    B.Instance =
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperInstanceName)];
+    B.Reserve = {
+        sps::SharedMemoryMapReserveProxySpec::dispatch,
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperReserve::Name)]};
+    B.Initialize = {sps::SharedMemoryMapInitializeProxySpec::dispatch,
+                    Map[Mangle.mangledCopy(
+                        rt::sps_ci::SharedMemoryMapperInitialize::Name)]};
+    B.Deinitialize = {sps::SharedMemoryMapDeinitializeProxySpec::dispatch,
+                      Map[Mangle.mangledCopy(
+                          rt::sps_ci::SharedMemoryMapperDeinitialize::Name)]};
+    B.Release = {
+        sps::SharedMemoryMapReleaseProxySpec::dispatch,
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperRelease::Name)]};
   }
 
   std::string TestString = "Hello, World!";
@@ -64,7 +80,7 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
 
   {
     std::unique_ptr<MemoryMapper> Mapper =
-        cantFail(SharedMemoryMapper::Create(*SelfEPC, SAs));
+        cantFail(SharedMemoryMapper::Create(ES, std::move(B)));
 
     auto PageSize = Mapper->getPageSize();
     size_t ReqSize = PageSize;
@@ -132,7 +148,7 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
   }
 
   EXPECT_THAT_ERROR(MapperService.shutdown(), Succeeded());
-  cantFail(SelfEPC->disconnect());
+  cantFail(ES.endSession());
 }
 
 #endif

@@ -985,6 +985,22 @@ bool ClauseProcessor::processThreadLimit(
   return false;
 }
 
+bool ClauseProcessor::processThreadset(
+    mlir::omp::ThreadsetClauseOps &result) const {
+  using Threadset = omp::clause::Threadset;
+  if (auto *clause = findUniqueClause<Threadset>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::omp::ThreadsetPolicy policy =
+        clause->v == Threadset::ThreadsetPolicy::Omp_Pool
+            ? mlir::omp::ThreadsetPolicy::omp_pool
+            : mlir::omp::ThreadsetPolicy::omp_team;
+    result.threadset =
+        mlir::omp::ThreadsetPolicyAttr::get(firOpBuilder.getContext(), policy);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Untied>(result.untied);
 }
@@ -1902,7 +1918,7 @@ void ClauseProcessor::processMapObjects(
 
     mlir::FlatSymbolRefAttr mapperId =
         resolveMapperId(converter, clauseLocation, object, mapperIdNameRef,
-                        mapTypeBits, directive, parentObj.has_value());
+                        mapTypeBits, directive);
 
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture

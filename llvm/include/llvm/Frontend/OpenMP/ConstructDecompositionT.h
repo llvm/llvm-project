@@ -612,17 +612,20 @@ bool ConstructDecompositionT<C, H>::applyClause(
   }
 
   // [5.2:340:8]
-  auto findWorksharing = [&]() {
+  // Match only a worksharing construct that accepts firstprivate; "workshare"
+  // does not, so it falls through to "parallel" per [5.2:340:10].
+  auto findWorksharingAcceptingFirstprivate = [&]() {
     auto worksharing = getWorksharing();
     for (auto &leaf : leafs) {
       auto found = llvm::find(worksharing, leaf.id);
-      if (found != std::end(worksharing))
+      if (found != std::end(worksharing) &&
+          llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
         return &leaf;
     }
     return static_cast<typename decltype(leafs)::value_type *>(nullptr);
   };
 
-  auto dirWorksharing = findWorksharing();
+  auto dirWorksharing = findWorksharingAcceptingFirstprivate();
   if (dirWorksharing != nullptr) {
     dirWorksharing->clauses.push_back(input);
     applied = true;

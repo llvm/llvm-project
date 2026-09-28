@@ -539,7 +539,7 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+64bit,+v" }
+attributes #0 = { "target-features"="+64bit,+v" vscale_range(2, 1024) }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

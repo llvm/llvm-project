@@ -7,7 +7,7 @@ omp.declare_reduction @add_reduction_f32 : f32 init {
   omp.yield(%0 : f32)
 } combiner {
 ^bb0(%arg0: f32, %arg1: f32):
-  %0 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<contract>} : f32
+  %0 = llvm.fadd %arg0, %arg1 fastmath<contract> : f32
   omp.yield(%0 : f32)
 }
 llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapture}, %arg1: !llvm.ptr {fir.bindc_name = "sum", llvm.nocapture}) {
@@ -26,7 +26,7 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
       %8 = llvm.sub %7, %3 overflow<nsw> : i64
       %9 = llvm.getelementptr %arg0[%8] : (!llvm.ptr, i64) -> !llvm.ptr, f32
       %10 = llvm.load %9 : !llvm.ptr -> f32
-      %11 = llvm.fadd %5, %10 {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %11 = llvm.fadd %5, %10 fastmath<contract> : f32
       llvm.store %11, %arg3 : f32, !llvm.ptr
       omp.yield
     }
