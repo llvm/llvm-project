@@ -276,11 +276,11 @@ void SarifDocumentWriter::endRun() {
         {"enabled", R.DefaultConfiguration.Enabled},
         {"level", resultLevelToStr(R.DefaultConfiguration.Level)},
         {"rank", R.DefaultConfiguration.Rank}};
-    json::Object Rule{{"name", R.Name},
-                      {"id", R.Id},
-                      {"defaultConfiguration", std::move(Config)}};
-    if (!(Tool.getObject("driver")->getString("fullName") == "clang-tidy"))
-      Rule["fullDescription"] = json::Object{{"text", R.Description}};
+    json::Object Rule{
+        {"name", R.Name},
+        {"id", R.Id},
+        {"fullDescription", json::Object{{"text", R.Description}}},
+        {"defaultConfiguration", std::move(Config)}};
     if (!R.HelpURI.empty())
       Rule["helpUri"] = R.HelpURI;
     if (!R.DeprecatedIds.empty())
@@ -344,22 +344,23 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
 
 void SarifDocumentWriter::createRun(StringRef ShortToolName,
                                     StringRef LongToolName,
-                                    StringRef ToolVersion) {
+                                    StringRef ToolVersion,
+                                    StringRef InformationUri) {
   // Clear resources associated with a previous run.
   endRun();
 
   // Signify a new run has begun.
   Closed = false;
-
-  StringRef InformationUri = "https://clang.llvm.org/docs/UsersManual.html";
-  if (LongToolName == "clang-tidy")
-    InformationUri = "https://clang.llvm.org/extra/clang-tidy/";
+  StringRef EffectiveInformationUri =
+      InformationUri.empty() ? "https://clang.llvm.org/docs/UsersManual.html"
+                             : InformationUri;
 
   json::Object Tool{{"driver", json::Object{{"name", ShortToolName},
                                             {"fullName", LongToolName},
                                             {"language", "en-US"},
                                             {"version", ToolVersion},
-                                            {"informationUri", InformationUri},
+                                            {"informationUri",
+                                             EffectiveInformationUri},
                                             {"rules", json::Array{}}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
                       {"results", {}},

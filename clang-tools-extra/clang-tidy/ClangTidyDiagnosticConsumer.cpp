@@ -70,37 +70,29 @@ protected:
             ? tooling::DiagnosticMessage(Message, Loc.getManager(), Loc)
             : tooling::DiagnosticMessage(Message);
 
-    // Make sure that if a TokenRange is received from the check it is unfurled
-    // into a real CharRange for the diagnostic printer later.
-    // Whatever we store here gets decoupled from the current SourceManager, so
-    // we **have to** know the exact position and length of the highlight.
-    const auto ToCharRange = [this, &Loc](const CharSourceRange &SourceRange) {
-      if (SourceRange.isCharRange())
-        return SourceRange;
-      assert(SourceRange.isTokenRange());
-      const SourceLocation End = Lexer::getLocForEndOfToken(
-          SourceRange.getEnd(), 0, Loc.getManager(), LangOpts);
-      return CharSourceRange::getCharRange(SourceRange.getBegin(), End);
+    // Whatever we store here gets decoupled from the current Source Manager, so
+    // each range must become a character range in a real file now.
+    // makeFileCharRange maps a range covering a whole macro expansion to the
+    // macro call, and a range inside a macro argument to where the argument is
+    // written. Ranges it cannot map (invalid, or only part of a macro body)
+    // come back invalid and are dropped.
+    const auto StoreRanges = [&](tooling::DiagnosticMessage &Stored) {
+      for (const CharSourceRange &Range : Ranges) {
+        const CharSourceRange FileRange =
+            Lexer::makeFileCharRange(Range, Loc.getManager(), LangOpts);
+        if (FileRange.isValid())
+          Stored.Ranges.emplace_back(Loc.getManager(), FileRange);
+      }
     };
-
-    // We are only interested in valid ranges.
-    const auto ValidRanges =
-        llvm::make_filter_range(Ranges, [](const CharSourceRange &R) {
-          return R.getAsRange().isValid();
-        });
 
     if (Level == DiagnosticsEngine::Note) {
       Error.Notes.push_back(TidyMessage);
-      for (const CharSourceRange &SourceRange : ValidRanges)
-        Error.Notes.back().Ranges.emplace_back(Loc.getManager(),
-                                               ToCharRange(SourceRange));
+      StoreRanges(Error.Notes.back());
       return;
     }
     assert(Error.Message.Message.empty() && "Overwriting a diagnostic message");
     Error.Message = TidyMessage;
-    for (const CharSourceRange &SourceRange : ValidRanges)
-      Error.Message.Ranges.emplace_back(Loc.getManager(),
-                                        ToCharRange(SourceRange));
+    StoreRanges(Error.Message);
   }
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,

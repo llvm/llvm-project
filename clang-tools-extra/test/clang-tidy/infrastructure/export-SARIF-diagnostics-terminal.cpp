@@ -241,6 +241,9 @@ struct Foo {
 //CHECK-NEXT:                 "level": "error",
 //CHECK-NEXT:                 "rank": 50
 //CHECK-NEXT:               },
+//CHECK-NEXT:               "fullDescription": {
+//CHECK-NEXT:                 "text": ""
+//CHECK-NEXT:               },
 //CHECK-NEXT:               "id": "clang-diagnostic-missing-prototypes",
 //CHECK-NEXT:               "name": "clang-diagnostic-missing-prototypes"
 //CHECK-NEXT:             },
@@ -249,6 +252,9 @@ struct Foo {
 //CHECK-NEXT:                 "enabled": true,
 //CHECK-NEXT:                 "level": "error",
 //CHECK-NEXT:                 "rank": 50
+//CHECK-NEXT:               },
+//CHECK-NEXT:               "fullDescription": {
+//CHECK-NEXT:                 "text": ""
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "id": "clang-diagnostic-error",
 //CHECK-NEXT:               "name": "clang-diagnostic-error"
@@ -259,6 +265,9 @@ struct Foo {
 //CHECK-NEXT:                 "level": "warning",
 //CHECK-NEXT:                 "rank": -1
 //CHECK-NEXT:               },
+//CHECK-NEXT:               "fullDescription": {
+//CHECK-NEXT:                 "text": ""
+//CHECK-NEXT:               },
 //CHECK-NEXT:               "id": "clang-diagnostic-zero-length-array",
 //CHECK-NEXT:               "name": "clang-diagnostic-zero-length-array"
 //CHECK-NEXT:             },
@@ -267,6 +276,9 @@ struct Foo {
 //CHECK-NEXT:                 "enabled": true,
 //CHECK-NEXT:                 "level": "error",
 //CHECK-NEXT:                 "rank": 50
+//CHECK-NEXT:               },
+//CHECK-NEXT:               "fullDescription": {
+//CHECK-NEXT:                 "text": ""
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "id": "google-explicit-constructor",
 //CHECK-NEXT:               "name": "google-explicit-constructor"

@@ -117,7 +117,8 @@ public:
         SarifOS(SarifOS) {
     if (SarifOS) {
       SarifWriter.emplace(SourceMgr);
-      SarifWriter->createRun("clang-tidy", "clang-tidy");
+      SarifWriter->createRun("clang-tidy", "clang-tidy", CLANG_VERSION_STRING,
+                             "https://clang.llvm.org/extra/clang-tidy/");
     }
 
     DiagOpts.setShowColors(Context.getOptions().UseColor.value_or(

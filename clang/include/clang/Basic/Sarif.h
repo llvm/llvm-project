@@ -472,7 +472,8 @@ public:
   /// Each run requires specifying the tool that is generating reporting items.
   void createRun(const llvm::StringRef ShortToolName,
                  const llvm::StringRef LongToolName,
-                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING);
+                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING,
+                 const llvm::StringRef InformationUri = "");
 
   /// If there is a current run, end it.
   ///

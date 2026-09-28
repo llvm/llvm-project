@@ -76,6 +76,9 @@ class A { A(int) {} };
 //CHECK-SARIF-NEXT:                 "level": "error",
 //CHECK-SARIF-NEXT:                 "rank": 50
 //CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "fullDescription": {
+//CHECK-SARIF-NEXT:                 "text": ""
+//CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "id": "clang-diagnostic-error",
 //CHECK-SARIF-NEXT:               "name": "clang-diagnostic-error"
 //CHECK-SARIF-NEXT:             },
@@ -84,6 +87,9 @@ class A { A(int) {} };
 //CHECK-SARIF-NEXT:                 "enabled": true,
 //CHECK-SARIF-NEXT:                 "level": "warning",
 //CHECK-SARIF-NEXT:                 "rank": -1
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "fullDescription": {
+//CHECK-SARIF-NEXT:                 "text": ""
 //CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "id": "google-explicit-constructor",
 //CHECK-SARIF-NEXT:               "name": "google-explicit-constructor"
