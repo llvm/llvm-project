@@ -130,6 +130,10 @@ __device__ _BitInt(36) c;
 
 // CIR: cir.global "private" constant cir_private @__cuda_fatbin_str = #cir.const_array<"GPU binary would be here." : !cir.array<!u8i x 25>> : !cir.array<!u8i x 25> {alignment = 8 : i64, section = ".nv_fatbin"}
 
+// The bytes arrive as the #cir.cu.device_binary module attribute, which
+// LoweringPrepare erases once they are in the global above.
+// CIR-NOT: cir.cu.device_binary
+
 // Check the fatbin wrapper struct: { magic, version, ptr to fatbin, null }, with section.
 // CIR: cir.global constant cir_private @__cuda_fatbin_wrapper = #cir.const_record<{
 // CIR-SAME: #cir.int<1180844977> : !s32i,
@@ -213,6 +217,7 @@ __device__ _BitInt(36) c;
 // LLVM: call i32 @atexit(ptr @__cuda_module_dtor)
 
 // No GPU binary — no registration infrastructure at all.
+// NOGPUBIN-NOT: cir.cu.device_binary
 // NOGPUBIN-NOT: fatbin
 // NOGPUBIN-NOT: gpubin
 // NOGPUBIN-NOT: __cuda_register_globals
@@ -354,6 +359,7 @@ __device__ _BitInt(36) c;
 // HIP-LLVM: ret void
 
 // No GPU binary: no fatbin, no handle, no registration scaffolding.
+// HIP-NOGPUBIN-NOT: cir.cu.device_binary
 // HIP-NOGPUBIN-NOT: __hip_fatbin
 // HIP-NOGPUBIN-NOT: __hip_gpubin_handle
 // HIP-NOGPUBIN-NOT: __hip_register_globals

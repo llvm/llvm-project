@@ -8,6 +8,7 @@ set(ORC_RT_HEADERS
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
     orc-rt-c/support/Error.h
+    orc-rt-c/support/LogLevel.h
     orc-rt-c/support/Logging.h
     orc-rt-c/support/WrapperFunction.h
     orc-rt/bedrock/BootstrapInfo.h
@@ -58,6 +59,13 @@ set(ORC_RT_HEADERS
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
     orc-rt/support/sps/SimplePackedSerialization.h
 )
+
+# Headers for POSIX-only interfaces, installed only where they're implemented.
+if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  list(APPEND ORC_RT_HEADERS
+    orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
+  )
+endif()
 
 # Headers for Darwin-only interfaces, installed only where they're implemented.
 if (APPLE)
