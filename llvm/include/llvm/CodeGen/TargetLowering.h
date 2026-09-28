@@ -366,6 +366,7 @@ public:
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
+    LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -2428,6 +2429,25 @@ public:
 
   /// @}
 
+  //===--------------------------------------------------------------------===//
+  /// \name Speculative load lowering.
+  /// @{
+
+  /// Emit code to check if a speculative load of the given size from Ptr is
+  /// safe. Returns a Value* representing the check result (i1), or nullptr
+  /// to use the default lowering (which returns false). Targets can override
+  /// to provide their own safety check (e.g., alignment-based page boundary
+  /// check).
+  /// \param Builder IRBuilder positioned at the intrinsic call site
+  /// \param Ptr the pointer operand
+  /// \param Size the size in bytes (constant or runtime value for scalable)
+  virtual Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                          Value *Size) const {
+    return nullptr;
+  }
+
+  /// @}
+
   /// Inserts in the IR a target-specific intrinsic specifying a fence.
   /// It is called by AtomicExpandPass before expanding an
   ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
@@ -4330,6 +4350,13 @@ public:
     return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
                        Chain);
   }
+
+  /// Build a call argument list for \p FuncTy, taking the argument node values
+  /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
+  /// \p FuncAttrs. \p Ops must have one entry per parameter of \p FuncTy.
+  static ArgListTy getArgListForFunctionType(FunctionType *FuncTy,
+                                             const AttributeList &FuncAttrs,
+                                             ArrayRef<SDValue> Ops);
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be

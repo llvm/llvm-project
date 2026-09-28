@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include <numeric>
@@ -2063,6 +2064,67 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
 
   return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_range_prefetch),
                             Ops);
+}
+
+static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
+                                             unsigned BuiltinID,
+                                             const CallExpr *E) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+  Expr::EvalResult Result;
+  if (!E->getArg(2)->EvaluateAsInt(Result, CGM.getContext()))
+    llvm_unreachable(
+        "Expected integer policy argument to atomic store with hint.");
+
+  const Expr *Ptr = E->getArg(0);
+  Address Addr = CGF.EmitPointerWithAlignment(Ptr);
+  Addr = Addr.withElementType(
+      CGF.ConvertTypeForMem(Ptr->getType()->getPointeeType()));
+
+  const Expr *Data = E->getArg(1);
+  Value *DataVal = CGF.EmitToMemory(CGF.EmitScalarExpr(Data), Data->getType());
+
+  StoreInst *Store = Builder.CreateStore(DataVal, Addr);
+  Store->setVolatile(Ptr->getType()->getPointeeType().isVolatileQualified());
+
+  AtomicOrdering Ordering;
+  unsigned OrderingArg = Result.Val.getInt().getExtValue();
+  assert(isValidAtomicOrderingCABI(OrderingArg) && "Invalid atomic ordering");
+
+  switch (static_cast<AtomicOrderingCABI>(OrderingArg)) {
+  default:
+    llvm_unreachable("Unsupported atomic ordering found.");
+  case AtomicOrderingCABI::relaxed:
+    Ordering = AtomicOrdering::Monotonic;
+    break;
+  case AtomicOrderingCABI::release:
+    Ordering = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Ordering = AtomicOrdering::SequentiallyConsistent;
+    break;
+  }
+  Store->setAtomic(Ordering);
+
+  if (!E->getArg(3)->EvaluateAsInt(Result, CGM.getContext()))
+    llvm_unreachable(
+        "Expected integer hint argument to atomic store with hint.");
+  unsigned HintArg = Result.Val.getInt().getExtValue();
+
+  // Attach the hint if valid
+  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    MDNode *MemHint = MDNode::get(
+        Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
+              llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
+    MDNode *HintNode = MDNode::get(
+        CGM.getLLVMContext(),
+        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), MemHint});
+
+    Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+  }
+
+  return Store;
 }
 
 /// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
@@ -4840,6 +4902,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
     return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
 
+  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+    return EmitAtomicStoreWithHintBuiltin(*this, BuiltinID, E);
+
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
@@ -6154,7 +6219,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vmax_v:
   case NEON::BI__builtin_neon_vmaxq_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umax : Intrinsic::aarch64_neon_smax;
+    Int = usgn ? Intrinsic::umax : Intrinsic::smax;
     if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmax;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmax");
   case NEON::BI__builtin_neon_vmaxh_f16: {
@@ -6164,7 +6229,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.
-    Int = usgn ? Intrinsic::aarch64_neon_umin : Intrinsic::aarch64_neon_smin;
+    Int = usgn ? Intrinsic::umin : Intrinsic::smin;
     if (Ty->isFPOrFPVectorTy()) Int = Intrinsic::aarch64_neon_fmin;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vmin");
   case NEON::BI__builtin_neon_vminh_f16: {

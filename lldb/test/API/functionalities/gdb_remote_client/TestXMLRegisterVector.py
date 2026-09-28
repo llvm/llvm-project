@@ -9,28 +9,9 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 from lldbsuite.test.lldbtest import *
 
 
-class MultiDocResponder(MockGDBServerResponder):
-    def __init__(self, docs, register_data):
-        super().__init__()
-        self.docs = docs
-        self.register_data = register_data
-
-    def qXferRead(self, obj, annex, offset, length):
-        try:
-            return self.docs[annex], False
-        except KeyError:
-            return (None,)
-
-    def readRegister(self, regnum):
-        return "E01"
-
-    def readRegisters(self):
-        return self.register_data
-
-
 class TestXMLRegisterVector(GDBRemoteTestBase):
     def setup_multidoc_test(self, docs, register_data):
-        self.server.responder = MultiDocResponder(docs, register_data)
+        self.server.responder = MockGDBServerXMLResponder(docs, register_data)
         target = self.dbg.CreateTarget("")
 
         if self.TraceOn():
