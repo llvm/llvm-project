@@ -26,5 +26,6 @@ static_library("Analyses") {
     "UnsafeBufferUsage/UnsafeBufferUsageAnalysis.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsageFormat.cpp",
+    "VirtualMethodFamily/VirtualMethodEntityExtractor.cpp",
   ]
 }
