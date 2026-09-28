@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestThreadName(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @requireWindows
     @skipIfWindows(windows_version=["<", "10.0.14393"])
     def test_with_thread_description(self):

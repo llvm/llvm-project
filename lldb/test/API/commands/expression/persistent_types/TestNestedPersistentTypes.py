@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class NestedPersistentTypesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_persistent_types(self):
         """Test that nested persistent types work."""
         self.build()

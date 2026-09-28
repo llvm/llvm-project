@@ -8,6 +8,8 @@ from lldbsuite.test.decorators import *
 
 
 class IntegerTypeExprTestCase(AbstractBase.GenericTester):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @requireDarwin
     def test_unsigned_short_type_from_block(self):
         """Test that 'unsigned short'-type variables are displayed correctly from a block."""

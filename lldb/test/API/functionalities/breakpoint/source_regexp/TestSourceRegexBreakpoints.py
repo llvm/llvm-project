@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestSourceRegexBreakpoints(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_location(self):
         self.build()
         self.source_regex_locations()

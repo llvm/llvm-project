@@ -7,6 +7,8 @@ from lldbsuite.test import lldbutil
 
 
 class LocationListLookupTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def launch(self) -> lldb.SBProcess:
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)

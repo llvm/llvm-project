@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class ValueAPITestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

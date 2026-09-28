@@ -10,6 +10,8 @@ from lldbsuite.test import decorators
 
 
 class TestCppTypeLookup(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def check_value(self, value, ivar_name, ivar_value):
         self.assertSuccess(value.GetError(), "Invalid valobj")
         ivar = value.GetChildMemberWithName(ivar_name)

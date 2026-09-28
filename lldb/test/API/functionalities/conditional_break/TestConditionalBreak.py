@@ -14,6 +14,8 @@ from lldbsuite.test import lldbutil
 
 
 class ConditionalBreakTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @add_test_categories(["pyapi"])
     def test_with_python(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""

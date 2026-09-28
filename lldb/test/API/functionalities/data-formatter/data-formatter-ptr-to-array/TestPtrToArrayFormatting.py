@@ -9,6 +9,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class PtrToArrayDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_with_run_command(self):
         """Test that LLDB handles the clang typeclass Paren correctly."""
         self.build()

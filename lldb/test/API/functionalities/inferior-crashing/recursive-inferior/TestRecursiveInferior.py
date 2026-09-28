@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 @requireNotWasm("wasm has no memory-protection faults/signals")
 class CrashingRecursiveInferiorTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD
     def test_recursive_inferior_crashing(self):

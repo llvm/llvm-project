@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class PersistentPtrUpdateTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test that we can have persistent pointer variables"""
         self.build()

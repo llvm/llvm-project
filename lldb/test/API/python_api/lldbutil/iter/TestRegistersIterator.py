@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 @requireThreadSupport
 class RegistersIteratorTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

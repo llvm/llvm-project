@@ -9,6 +9,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class BreakpointOptionsTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test breakpoint command for different options."""
         self.build()

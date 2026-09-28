@@ -10,6 +10,7 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 
 class ThreadAPITestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def test_get_process(self):

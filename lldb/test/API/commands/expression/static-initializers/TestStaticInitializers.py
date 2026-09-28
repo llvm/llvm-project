@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class StaticInitializers(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @expectedFailureAll(
         archs="aarch64",
         oslist=["freebsd"],

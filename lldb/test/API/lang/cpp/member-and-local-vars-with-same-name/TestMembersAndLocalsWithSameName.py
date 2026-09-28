@@ -5,6 +5,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestMembersAndLocalsWithSameName(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_when_stopped_in_method(self):
         self._load_exe()
 

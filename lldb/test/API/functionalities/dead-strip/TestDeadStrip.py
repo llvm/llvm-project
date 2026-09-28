@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class DeadStripTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test breakpoint works correctly with dead-code stripping."""
         self.build()

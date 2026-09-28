@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class RvalueReferencesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     # rdar://problem/11479676
     @expectedFailureAll(
         compiler="icc",

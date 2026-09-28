@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class DoubleTypesTestCase(AbstractBase.GenericTester):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_double_type(self):
         """Test that double-type variables are displayed correctly."""
         self.build_and_run("double.cpp", set(["double"]))

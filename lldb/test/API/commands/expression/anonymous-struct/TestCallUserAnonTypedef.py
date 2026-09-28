@@ -15,6 +15,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestExprLookupAnonStructTypedef(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""
         self.build_and_run()

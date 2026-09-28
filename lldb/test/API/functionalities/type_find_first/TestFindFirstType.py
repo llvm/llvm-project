@@ -8,6 +8,8 @@ from lldbsuite.test import lldbutil
 
 
 class TypeFindFirstTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_find_first_type(self):
         """
         Test SBTarget::FindFirstType() and SBModule::FindFirstType() APIs.

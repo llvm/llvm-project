@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class FloatTypesTestCase(AbstractBase.GenericTester):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_float_type(self):
         """Test that float-type variables are displayed correctly."""
         self.build_and_run("float.cpp", set(["float"]))

@@ -25,6 +25,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class UnicodeLiteralsTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.rdar12991846(expr=1)

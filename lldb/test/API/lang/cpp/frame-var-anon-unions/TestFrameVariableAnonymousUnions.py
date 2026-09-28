@@ -7,6 +7,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class FrameVariableAnonymousUnionsTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_with_run_command(self):
         """Tests that frame variable looks into anonymous unions"""
         self.build()

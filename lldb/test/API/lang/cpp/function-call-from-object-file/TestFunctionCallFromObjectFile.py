@@ -17,6 +17,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestFunctionCallFromObjectFile(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_lib1(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "lib1_func")

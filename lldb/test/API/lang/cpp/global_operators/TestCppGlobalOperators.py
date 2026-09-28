@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestCppGlobalOperators(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def prepare_executable_and_get_frame(self):
         self.build()
 

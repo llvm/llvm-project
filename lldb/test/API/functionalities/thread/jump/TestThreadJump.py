@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 
 @skipIfWasm  # Wasm has no writable PC to jump
 class ThreadJumpTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.build()

@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class StdIteratorDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 
 @skipIfWasm  # no expression evaluation
 class TemplateArgsTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 

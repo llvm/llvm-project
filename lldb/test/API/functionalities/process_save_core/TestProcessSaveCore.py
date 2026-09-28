@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class ProcessSaveCoreTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @skipIfRemote
     @skipUnlessWindows
     def test_cannot_save_core_unless_process_stopped(self):

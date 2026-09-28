@@ -9,6 +9,8 @@ from lldbsuite.test import decorators
 
 
 class TestTypeLookupDuplicate(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_namespace_only(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

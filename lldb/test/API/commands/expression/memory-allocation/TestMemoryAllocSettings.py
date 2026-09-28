@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestMemoryAllocSettings(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test changing settings for expression memory allocation."""
         self.build()

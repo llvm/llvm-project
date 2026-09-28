@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class UniqueTypesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test for unique types of std::vector<long> and std::vector<short>."""
         self.build()

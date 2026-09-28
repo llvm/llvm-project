@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestProgressReporting(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.broadcaster = self.dbg.GetBroadcaster()

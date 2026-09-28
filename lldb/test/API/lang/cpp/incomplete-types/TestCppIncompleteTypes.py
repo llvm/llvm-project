@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCppIncompleteTypes(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @skipIf(compiler="gcc")
     def test_limit_debug_info(self):
         self.build()

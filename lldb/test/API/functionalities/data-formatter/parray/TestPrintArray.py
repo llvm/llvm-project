@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class PrintArrayTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_print_array(self):
         """Test that expr -Z works"""
         self.build()

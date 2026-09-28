@@ -11,6 +11,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class CxxChar8_tTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @skipIfDarwin  # Chained Fixups
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])
     def test_without_process(self):

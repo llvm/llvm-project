@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class FloatTypesExprTestCase(AbstractBase.GenericTester):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     # rdar://problem/8493023
     # test/types failures for Test*TypesExpr.py: element offset computed wrong
     # and sign error?

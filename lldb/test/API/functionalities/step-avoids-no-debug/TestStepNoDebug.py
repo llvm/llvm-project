@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class StepAvoidsNoDebugTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @add_test_categories(["pyapi"])
     @expectedFailureAll(
         archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292"

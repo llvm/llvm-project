@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class SymbolContextTwoFilesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @expectedFailureAll(oslist=["windows"])
     def test_lookup_by_address(self):
         """Test lookup by address in a module with multiple compilation units"""

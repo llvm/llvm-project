@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def _long_size(self):
         """Return sizeof(long) in bytes, read from the 'long_size' global."""
         long_size = self.target().FindFirstGlobalVariable("long_size")

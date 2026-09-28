@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 # Flaky on buildbot, https://github.com/llvm/llvm-project/issues/206141.
 @skipIf(oslist=["windows"], archs=["aarch64"])
 class BreakpointConditionsTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_breakpoint_condition_and_run_command(self):
         """Exercise breakpoint condition with 'breakpoint modify -c <expr> id'."""
         self.build()

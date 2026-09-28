@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class DefaultSourceFileTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_default_source_file_is_entry_point(self):
         """The default file for a line breakpoint is main's file, not Foo::main's."""
         self.build()

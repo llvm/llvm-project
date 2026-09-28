@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 @requireThreadSupport
 class ExprDoesntDeadlockTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @add_test_categories(["basic_process"])
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""

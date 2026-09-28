@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class UniqueTypesTestCase3(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def do_test(self, debug_flags):

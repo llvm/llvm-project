@@ -12,6 +12,8 @@ from lldbsuite.test import lldbtest
 
 
 class PlatformProcessCrashInfoTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.runCmd("settings set auto-confirm true")

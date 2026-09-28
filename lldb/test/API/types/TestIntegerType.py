@@ -8,6 +8,8 @@ from lldbsuite.test.decorators import *
 
 
 class IntegerTypesTestCase(AbstractBase.GenericTester):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_int_type(self):
         """Test that int-type variables are displayed correctly."""
         self.build_and_run("int.cpp", ["int"])

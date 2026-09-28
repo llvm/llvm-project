@@ -7,6 +7,8 @@ from lldbsuite.test import lldbutil
 
 
 class ExprSyscallTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @expectedFailureNetBSD
     def test_setpgid(self):
         self.build()

@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class HitcountResetUponRun(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     BREAKPOINT_TEXT = "Set a breakpoint here"
 
     def check_stopped_at_breakpoint_and_hit_once(self, thread, breakpoint):

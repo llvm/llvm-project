@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """
         Test debugging a binary that has two templates with the same name

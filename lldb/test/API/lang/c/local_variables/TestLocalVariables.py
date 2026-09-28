@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class LocalVariablesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

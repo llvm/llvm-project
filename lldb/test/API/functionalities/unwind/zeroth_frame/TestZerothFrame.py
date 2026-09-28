@@ -28,6 +28,8 @@ from lldbsuite.test import lldbutil
 
 
 class ZerothFrame(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """
         Test that line information is recalculated properly for a frame when it moves

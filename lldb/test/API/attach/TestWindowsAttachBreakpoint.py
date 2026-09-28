@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 
 class WindowsAttachLoaderBreakpointTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def create_suspended_process(self, exe):
         """Create ``exe`` suspended and return its (pid, hProcess, hThread).
 

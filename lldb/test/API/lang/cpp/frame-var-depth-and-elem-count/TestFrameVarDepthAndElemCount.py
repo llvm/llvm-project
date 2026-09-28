@@ -8,6 +8,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestFrameVarDepthAndElemCount(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Test that bool types work in the expression parser"""
         self.build()

@@ -9,6 +9,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class IRInterpreterPHINodesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_phi_node_support(self):
         """Test support for PHI nodes in the IR interpreter."""
 

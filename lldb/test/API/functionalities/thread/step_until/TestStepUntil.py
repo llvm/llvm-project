@@ -7,6 +7,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 
 class StepUntilTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def setUp(self):

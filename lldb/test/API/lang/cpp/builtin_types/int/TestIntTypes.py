@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test(self):
         """Check the types and values of all integer-typed variables."""
         self.build_and_run()
