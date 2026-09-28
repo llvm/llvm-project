@@ -9696,7 +9696,7 @@ following fields:
 ```
 
 - **section_name**: The name of the output section.
-- **alignment**: The byte alignment of the section data.
+- **alignment**: The byte alignment of the section data. Must be a power-of-two.
 - **flags**: A bitmask describing the properties of the section. Each target
   maps this onto format-appropriate section flags. The supported bits are
   listed below.

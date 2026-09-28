@@ -1936,10 +1936,17 @@ void Verifier::visitModuleRawSections() {
           "llvm.raw.sections entry operand 0 must be a string "
           "(section name)",
           N);
-    Check(mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(1)),
+    auto *AlignCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(1));
+    Check(AlignCI,
           "llvm.raw.sections entry operand 1 must be an integer "
           "(alignment)",
           N);
+    if (!isPowerOf2_64(AlignCI->getZExtValue())) {
+      CheckFailed("llvm.raw.sections entry operand 1 must be a power of two "
+                  "(alignment)",
+                  N);
+      continue;
+    }
     auto *FlagsCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(2));
     Check(FlagsCI,
           "llvm.raw.sections entry operand 2 must be an integer "
