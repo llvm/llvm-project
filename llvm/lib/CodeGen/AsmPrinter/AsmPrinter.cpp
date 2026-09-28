@@ -2920,6 +2920,24 @@ static void removeMemtagFromGlobal(GlobalVariable &G) {
   G.setSanitizerMetadata(Meta);
 }
 
+/// Map the target-independent flags of an `llvm.raw.sections` entry onto the
+/// SectionKind that targets use to derive format-specific section flags.
+/// The flag combination is validated by the IR verifier.
+static SectionKind getKindForRawSectionFlags(uint64_t Flags) {
+  assert(Module::isValidRawSectionFlags(Flags) &&
+         "invalid llvm.raw.sections flags should be rejected by the verifier");
+
+  if (Flags & Module::RawSectionExclude)
+    return SectionKind::getExclude();
+  if (!(Flags & Module::RawSectionAlloc))
+    return SectionKind::getMetadata();
+  if (Flags & Module::RawSectionExec)
+    return SectionKind::getText();
+  if (Flags & Module::RawSectionWrite)
+    return SectionKind::getData();
+  return SectionKind::getReadOnly();
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
@@ -2997,6 +3015,28 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitRemarksSection(*RS);
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
+
+  // Emit raw section data from llvm.raw.sections metadata. Each operand is
+  // a tuple of {section_name, alignment, flags, data}.
+  if (const NamedMDNode *RawSections =
+          M.getNamedMetadata("llvm.raw.sections")) {
+    for (const MDNode *Op : RawSections->operands()) {
+      auto *SectionName = cast<MDString>(Op->getOperand(0));
+      auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
+      auto *FlagsCI = mdconst::extract<ConstantInt>(Op->getOperand(2));
+      auto *Data = cast<MDString>(Op->getOperand(3));
+
+      SectionKind Kind = getKindForRawSectionFlags(FlagsCI->getZExtValue());
+      if (MCSection *Section =
+              TLOF.getNamedSection(SectionName->getString(), Kind)) {
+        OutStreamer->pushSection();
+        OutStreamer->switchSection(Section);
+        OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
+        OutStreamer->emitBytes(Data->getString());
+        OutStreamer->popSection();
+      }
+    }
+  }
 
   if (Target.isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
