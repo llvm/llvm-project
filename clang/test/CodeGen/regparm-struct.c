@@ -199,3 +199,27 @@ struct s15 {
 };
 __attribute__((regparm(3))) void pass_wrapped_f128(struct s15 a, int b, int c, int d) {}
 // CHECK-LABEL: define{{.*}} void @pass_wrapped_f128(ptr noundef byval(%struct.s15) align 4 {{%[^,]*}}, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+__attribute__((regparm(3))) void pass_complex_float(_Complex float a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_complex_float(ptr noundef byval({ float, float }) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+__attribute__((regparm(3))) void pass_complex_int(int a, _Complex int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_complex_int(i32 inreg noundef %a, ptr noundef byval({ i32, i32 }) align 4 %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+struct s16 {
+  _Complex float x1;
+};
+__attribute__((regparm(3))) void pass_wrapped_complex_float(struct s16 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_wrapped_complex_float(float %a.0, float %a.1, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+struct s17 {
+  _Complex int x1[1];
+};
+__attribute__((regparm(3))) void pass_wrapped_complex_int(struct s17 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_wrapped_complex_int(ptr noundef byval(%struct.s17) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+struct s18 {
+  float x1[1];
+};
+__attribute__((regparm(3))) void pass_struct_singleton_array_float(struct s18 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_struct_singleton_array_float(ptr noundef byval(%struct.s18) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
