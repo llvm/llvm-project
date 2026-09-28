@@ -888,8 +888,8 @@ contiguously.
 
 ``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time argument in the range [0, 3] to select the
-applicable scale factor.
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
 }];
@@ -906,8 +906,8 @@ contiguously.
 
 ``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time argument in the range [0, 3] to select the
-applicable scale factor.
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
 }];
@@ -924,8 +924,8 @@ contiguously.
 
 ``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time argument in the range [0, 3] to select the
-applicable scale factor.
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
 }];
@@ -942,8 +942,8 @@ contiguously.
 
 ``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time argument in the range [0, 3] to select the
-applicable scale factor.
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
 }];
@@ -960,8 +960,8 @@ contiguously.
 
 ``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time argument in the range [0, 3] to select the
-applicable scale factor.
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
 }];
@@ -978,8 +978,8 @@ contiguously.
 
 ``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time argument in the range [0, 3] to select the
-applicable scale factor.
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
 }];
