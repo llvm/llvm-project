@@ -456,8 +456,11 @@ static bool hasDistinctMetadataIntrinsic(const Function &F) {
 
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
+  // Oracle functions of llvm.speculative.load may only be referenced by
+  // llvm.speculative.load, so they can neither become thunks nor be called.
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
          !F.hasFnAttribute(Attribute::NoIPA) &&
+         !F.hasFnAttribute("speculative-load-oracle") &&
          !hasDistinctMetadataIntrinsic(F);
 }
 
