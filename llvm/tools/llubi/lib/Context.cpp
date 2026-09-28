@@ -1283,7 +1283,8 @@ Context::checkProvenance(const Pointer &Ptr,
 
   if (Valid && ResolvedNoAliasNode)
     *ResolvedNoAliasNode = ExplicitNoAliasNode ? ExplicitNoAliasNode
-                          : AmbiguousNode ? 0 : CommonNode.value_or(0);
+                           : AmbiguousNode     ? 0
+                                               : CommonNode.value_or(0);
   return Valid ? MO : nullptr;
 }
 
@@ -1400,8 +1401,7 @@ uint64_t Context::resolveNoAliasNode(const Provenance &Prov,
   if (It == ExposedProvenances.end())
     return 0;
   const auto &Wildcard = *Prov.Wildcard;
-  if (!Wildcard.ActiveMask.isZero() &&
-      Wildcard.BaseAddress != MO.getAddress())
+  if (!Wildcard.ActiveMask.isZero() && Wildcard.BaseAddress != MO.getAddress())
     return 0;
   std::optional<uint64_t> CommonNode;
   for (auto [I, Entry] : enumerate(It->second.List)) {

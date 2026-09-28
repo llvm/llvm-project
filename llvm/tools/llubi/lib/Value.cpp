@@ -31,8 +31,7 @@ Provenance::getWithKnownMemoryObject(MemoryObject &KnownObj) {
   return Res;
 }
 
-IntrusiveRefCntPtr<Provenance>
-Provenance::getWithNoAliasNode(uint64_t NodeID) {
+IntrusiveRefCntPtr<Provenance> Provenance::getWithNoAliasNode(uint64_t NodeID) {
   auto Res = makeIntrusiveRefCnt<Provenance>(*this);
   Res->NoAliasNode = NodeID;
   // The old tag denotes the old provenance, including its noalias ancestry.

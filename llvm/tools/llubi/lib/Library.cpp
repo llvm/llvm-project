@@ -123,7 +123,8 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
 
   uint64_t AccessNode = 0;
   MemoryObject *Obj = Ctx.checkProvenance(
-      Ptr, [](const Provenance &) {
+      Ptr,
+      [](const Provenance &) {
         // TODO: check nofree
         return true;
       },

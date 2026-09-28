@@ -367,7 +367,7 @@ class Context {
   /// Resolve ancestry from the still-eligible exposure candidates for MO.
   /// Distinct candidate nodes fall back to the raw/root class.
   uint64_t resolveNoAliasNode(const Provenance &Prov,
-                            const MemoryObject &MO) const;
+                              const MemoryObject &MO) const;
   static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
   static std::string getNoAliasNodeName(uint64_t NodeID);
   static std::string getNoAliasActivationName(uint64_t ActivationID);
