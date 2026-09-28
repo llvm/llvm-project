@@ -561,6 +561,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
+- Clang now diagnoses arrays whose size is deduced from an initializer list
+  when they exceed the maximum object size.
   
 #### Bug Fixes to Compiler Builtins
 
