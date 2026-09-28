@@ -27,7 +27,7 @@ struct CastOpInterface
 
     if (llvm::isa<RankedTensorType>(castOp.getResult().getType()) &&
         llvm::isa<RankedTensorType>(castOp.getSource().getType())) {
-      cstr.bound(value)[dim] == cstr.getExpr(castOp.getSource(), dim);
+      cstr.bound(value)[dim] == cstr.getExpr({castOp.getSource(), dim});
     }
   }
 };
@@ -44,10 +44,10 @@ struct CollapseShapeOpInterface
     const ReassociationIndices reassocIndices =
         collapseOp.getReassociationIndices()[dim];
     AffineExpr productExpr =
-        cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
+        cstr.getExpr({collapseOp.getSrc(), reassocIndices[0]});
     for (size_t i = 1; i < reassocIndices.size(); ++i) {
       productExpr =
-          productExpr * cstr.getExpr(collapseOp.getSrc(), reassocIndices[i]);
+          productExpr * cstr.getExpr({collapseOp.getSrc(), reassocIndices[i]});
     }
     cstr.bound(value)[dim] == productExpr;
   }
@@ -67,14 +67,14 @@ struct ConcatOpInterface
       // concatenated. Relate the result to every input: relating it to a single
       // input loses the bound when that input is the unbounded one.
       for (Value input : inputs)
-        cstr.bound(value)[dim] == cstr.getExpr(input, dim);
+        cstr.bound(value)[dim] == cstr.getExpr({input, dim});
       return;
     }
 
     // The concatenated dimension is the sum of the input sizes.
-    AffineExpr sum = cstr.getExpr(inputs.front(), dim);
+    AffineExpr sum = cstr.getExpr({inputs.front(), dim});
     for (Value input : inputs.drop_front())
-      sum = sum + cstr.getExpr(input, dim);
+      sum = sum + cstr.getExpr({input, dim});
     cstr.bound(value)[dim] == sum;
   }
 };
@@ -90,7 +90,7 @@ struct DimOpInterface
     auto constIndex = dimOp.getConstantIndex();
     if (!constIndex.has_value())
       return;
-    cstr.bound(value) == cstr.getExpr(dimOp.getSource(), *constIndex);
+    cstr.bound(value) == cstr.getExpr({dimOp.getSource(), *constIndex});
   }
 };
 
@@ -146,7 +146,7 @@ struct PadOpInterface
     auto padOp = cast<PadOp>(op);
     assert(value == padOp.getResult() && "invalid value");
 
-    AffineExpr srcSize = cstr.getExpr(padOp.getSource(), dim);
+    AffineExpr srcSize = cstr.getExpr({padOp.getSource(), dim});
     AffineExpr lowPad = cstr.getExpr(padOp.getMixedLowPad()[dim]);
     AffineExpr highPad = cstr.getExpr(padOp.getMixedHighPad()[dim]);
     cstr.bound(value)[dim] == srcSize + lowPad + highPad;

@@ -112,18 +112,15 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
 
     // Prepare stop condition. By default, reify in terms of the op's
     // operands. No stop condition is used when a constant was requested.
-    std::function<bool(Value, std::optional<int64_t>,
-                       ValueBoundsConstraintSet & cstr)>
-        stopCondition = [&](Value v, std::optional<int64_t> d,
-                            ValueBoundsConstraintSet &cstr) {
+    ValueBoundsConstraintSet::StopConditionFn stopCondition =
+        [&](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
           // Reify in terms of SSA values that are different from `value`.
-          return v != value;
+          return valueDim.first != value;
         };
     if (reifyToFuncArgs) {
       // Reify in terms of function block arguments.
-      stopCondition = [](Value v, std::optional<int64_t> d,
-                         ValueBoundsConstraintSet &cstr) {
-        auto bbArg = dyn_cast<BlockArgument>(v);
+      stopCondition = [](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
+        auto bbArg = dyn_cast<BlockArgument>(valueDim.first);
         if (!bbArg)
           return false;
         return isa<FunctionOpInterface>(bbArg.getParentBlock()->getParentOp());
@@ -143,10 +140,10 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
       options.closedUB = true;
       auto reifiedScalable =
           vector::ScalableValueBoundsConstraintSet::computeScalableBound(
-              value, dim, *op.getVscaleMin(), *op.getVscaleMax(), boundType,
+              {value, dim}, *op.getVscaleMin(), *op.getVscaleMax(), boundType,
               options);
       if (succeeded(reifiedScalable)) {
-        SmallVector<std::pair<Value, std::optional<int64_t>>, 1> vscaleOperand;
+        SmallVector<ValueDim, 1> vscaleOperand;
         if (reifiedScalable->map.getNumInputs() == 1) {
           // The only possible input to the bound is vscale.
           vscaleOperand.push_back(std::make_pair(

@@ -205,8 +205,8 @@ ValueBoundsConstraintSet::ValueBoundsConstraintSet(
 char ValueBoundsConstraintSet::ID = 0;
 
 #ifndef NDEBUG
-static void assertValidValueDim(Value value, std::optional<int64_t> dim,
-                                ValueBoundsOptions options) {
+static void assertValidValueDim(ValueDim valueDim, ValueBoundsOptions options) {
+  auto [value, dim] = valueDim;
   if (isIndexLikeType(value.getType(), options)) {
     assert(!dim.has_value() && "invalid dim value");
   } else if (auto shapedType = dyn_cast<ShapedType>(value.getType())) {
@@ -242,10 +242,10 @@ void ValueBoundsConstraintSet::addBound(BoundType type, int64_t pos,
   }
 }
 
-AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
-                                             std::optional<int64_t> dim) {
+AffineExpr ValueBoundsConstraintSet::getExpr(ValueDim valueDim) {
+  auto [value, dim] = valueDim;
 #ifndef NDEBUG
-  assertValidValueDim(value, dim, options);
+  assertValidValueDim(valueDim, options);
 #endif // NDEBUG
 
   // Check if the value/dim is statically known. In that case, an affine
@@ -263,21 +263,20 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
 
   // If the value/dim is already mapped, return the corresponding expression
   // directly.
-  ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
   if (valueDimToPosition.contains(valueDim)) {
     // If it is a constant, return an affine constant expression. Otherwise,
     // return an affine expression that represents the respective column in the
     // constraint set.
     if (constSize)
       return builder.getAffineConstantExpr(*constSize);
-    return getPosExpr(getPos(value, dim));
+    return getPosExpr(getPos(valueDim));
   }
 
   if (constSize) {
     // Constant index value/dim: add column to the constraint set, add EQ bound
     // and return an affine constant expression without pushing the newly added
     // column to the worklist.
-    (void)insert(value, dim, /*isSymbol=*/true, /*addToWorklist=*/false);
+    (void)insert(valueDim, /*isSymbol=*/true, /*addToWorklist=*/false);
     if (shapedType)
       bound(value)[*dim] == *constSize;
     else
@@ -288,12 +287,12 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
   // Dynamic value/dim: insert column to the constraint set and put it on the
   // worklist. Return an affine expression that represents the newly inserted
   // column in the constraint set.
-  return getPosExpr(insert(value, dim, /*isSymbol=*/true));
+  return getPosExpr(insert(valueDim, /*isSymbol=*/true));
 }
 
 AffineExpr ValueBoundsConstraintSet::getExpr(OpFoldResult ofr) {
   if (Value value = llvm::dyn_cast_if_present<Value>(ofr))
-    return getExpr(value, /*dim=*/std::nullopt);
+    return getExpr(value);
   auto constInt = ::getConstantIntValue(ofr);
   assert(constInt.has_value() && "expected Integer constant");
   return builder.getAffineConstantExpr(*constInt);
@@ -303,20 +302,54 @@ AffineExpr ValueBoundsConstraintSet::getExpr(int64_t constant) {
   return builder.getAffineConstantExpr(constant);
 }
 
-int64_t ValueBoundsConstraintSet::insert(Value value,
-                                         std::optional<int64_t> dim,
-                                         bool isSymbol, bool addToWorklist) {
+void ValueBoundsConstraintSet::addMerge(ValueDim valueDim,
+                                        ValueDimList candidates) {
 #ifndef NDEBUG
-  assertValidValueDim(value, dim, options);
+  assertValidValueDim(valueDim, options);
+#endif // NDEBUG
+  assert(isMapped(valueDim) &&
+         "the merged value must already be in the constraint set");
+  assert(!candidates.empty() && "expected at least one merge candidate");
+  assert(llvm::none_of(mergeRelations,
+                       [&](const MergeRelation &relation) {
+                         return relation.value == valueDim;
+                       }) &&
+         "a merge relationship was already registered for this value");
+
+  ValueDimList candidateValues;
+  candidateValues.reserve(candidates.size());
+  for (auto [candidate, candidateDim] : candidates) {
+#ifndef NDEBUG
+    assertValidValueDim({candidate, candidateDim}, options);
 #endif // NDEBUG
 
-  ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
+    // Map every candidate and schedule its defining relationship for
+    // collection. No merge-derived constraints are added until the complete
+    // relation has been stored below.
+    (void)getExpr({candidate, candidateDim});
+    ValueDim candidateValue{candidate, candidateDim};
+    if (!llvm::is_contained(candidateValues, candidateValue))
+      candidateValues.push_back(candidateValue);
+  }
+
+  mergeRelations.push_back(
+      MergeRelation{/*value=*/valueDim,
+                    /*candidates=*/std::move(candidateValues)});
+}
+
+int64_t ValueBoundsConstraintSet::insert(ValueDim valueDim, bool isSymbol,
+                                         bool addToWorklist) {
+  auto [value, dim] = valueDim;
+#ifndef NDEBUG
+  assertValidValueDim(valueDim, options);
+#endif // NDEBUG
+
   assert(!valueDimToPosition.contains(valueDim) && "already mapped");
   int64_t pos = isSymbol ? cstr.appendVar(VarKind::Symbol)
                          : cstr.appendVar(VarKind::SetDim);
   LDBG() << "Inserting constraint set column " << pos << " for: " << value
-         << " (dim: " << dim.value_or(kIndexValue)
-         << ", owner: " << getOwnerOfValue(value)->getName() << ")";
+         << " (dim: " << dim << ", owner: " << getOwnerOfValue(value)->getName()
+         << ")";
   positionToValueDim.insert(positionToValueDim.begin() + pos, valueDim);
   // Update reverse mapping.
   for (int64_t i = pos, e = positionToValueDim.size(); i < e; ++i)
@@ -333,8 +366,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
   if (addToWorklist &&
       (!isa<BlockArgument>(value) ||
        cast<BlockArgument>(value).getOwner()->isEntryBlock())) {
-    LDBG() << "Push to worklist: " << value
-           << " (dim: " << dim.value_or(kIndexValue) << ")";
+    LDBG() << "Push to worklist: " << value << " (dim: " << dim << ")";
     worklist.push(valueDim);
   }
 
@@ -362,9 +394,7 @@ int64_t ValueBoundsConstraintSet::insert(AffineMap map,
   // Add map and operands to the constraint set. Dimensions are converted to
   // symbols. All operands are added to the worklist (unless they were already
   // processed).
-  auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
-    return getExpr(v.first, v.second);
-  };
+  auto mapper = [&](ValueDim valueDim) { return getExpr(valueDim); };
   SmallVector<AffineExpr> dimReplacements = llvm::map_to_vector(
       ArrayRef(operands).take_front(map.getNumDims()), mapper);
   SmallVector<AffineExpr> symReplacements = llvm::map_to_vector(
@@ -380,16 +410,14 @@ int64_t ValueBoundsConstraintSet::insert(const Variable &var, bool isSymbol) {
   return insert(var.map, var.mapOperands, isSymbol);
 }
 
-int64_t ValueBoundsConstraintSet::getPos(Value value,
-                                         std::optional<int64_t> dim) const {
+int64_t ValueBoundsConstraintSet::getPos(ValueDim valueDim) const {
+  auto [value, dim] = valueDim;
 #ifndef NDEBUG
-  assertValidValueDim(value, dim, options);
+  assertValidValueDim(valueDim, options);
 #endif // NDEBUG
-  LDBG() << "Getting pos for: " << value
-         << " (dim: " << dim.value_or(kIndexValue)
+  LDBG() << "Getting pos for: " << value << " (dim: " << dim
          << ", owner: " << getOwnerOfValue(value)->getName() << ")";
-  auto it =
-      valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
+  auto it = valueDimToPosition.find(valueDim);
   assert(it != valueDimToPosition.end() && "expected mapped entry");
   return it->second;
 }
@@ -401,11 +429,8 @@ AffineExpr ValueBoundsConstraintSet::getPosExpr(int64_t pos) {
              : builder.getAffineSymbolExpr(pos - cstr.getNumDimVars());
 }
 
-bool ValueBoundsConstraintSet::isMapped(Value value,
-                                        std::optional<int64_t> dim) const {
-  auto it =
-      valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
-  return it != valueDimToPosition.end();
+bool ValueBoundsConstraintSet::isMapped(ValueDim valueDim) const {
+  return valueDimToPosition.contains(valueDim);
 }
 
 void ValueBoundsConstraintSet::processWorklist() {
@@ -416,22 +441,20 @@ void ValueBoundsConstraintSet::processWorklist() {
     assert(valueDimToPosition.contains(valueDim) &&
            "expected mapped worklist entry");
     Value value = valueDim.first;
-    int64_t dim = valueDim.second;
+    std::optional<int64_t> dim = valueDim.second;
 
     // Check for static dim size.
-    if (dim != kIndexValue) {
+    if (dim) {
       auto shapedType = cast<ShapedType>(value.getType());
-      if (shapedType.hasRank() && !shapedType.isDynamicDim(dim)) {
-        bound(value)[dim] == getExpr(shapedType.getDimSize(dim));
+      if (shapedType.hasRank() && !shapedType.isDynamicDim(*dim)) {
+        bound(value)[*dim] == getExpr(shapedType.getDimSize(*dim));
         continue;
       }
     }
 
     // Do not process any further if the stop condition is met.
-    auto maybeDim = dim == kIndexValue ? std::nullopt : std::make_optional(dim);
-    if (stopCondition(value, maybeDim, *this)) {
-      LDBG() << "Stop condition met for: " << value << " (dim: " << maybeDim
-             << ")";
+    if (stopCondition(valueDim, *this)) {
+      LDBG() << "Stop condition met for: " << value << " (dim: " << dim << ")";
       continue;
     }
 
@@ -442,10 +465,10 @@ void ValueBoundsConstraintSet::processWorklist() {
     LDBG() << "Query value bounds for: " << value
            << " (owner: " << getOwnerOfValue(value)->getName() << ")";
     if (valueBoundsOp) {
-      if (dim == kIndexValue) {
+      if (!dim) {
         valueBoundsOp.populateBoundsForIndexValue(value, *this);
       } else {
-        valueBoundsOp.populateBoundsForShapedValueDim(value, dim, *this);
+        valueBoundsOp.populateBoundsForShapedValueDim(value, *dim, *this);
       }
       continue;
     }
@@ -455,11 +478,114 @@ void ValueBoundsConstraintSet::processWorklist() {
     // implements the `DestinationStyleOpInterface`. OpResults of such ops are
     // tied to OpOperands. Tied values have the same shape.
     auto dstOp = value.getDefiningOp<DestinationStyleOpInterface>();
-    if (!dstOp || dim == kIndexValue)
+    if (!dstOp || !dim)
       continue;
     Value tiedOperand = dstOp.getTiedOpOperand(cast<OpResult>(value))->get();
-    bound(value)[dim] == getExpr(tiedOperand, dim);
+    bound(value)[*dim] == getExpr({tiedOperand, dim});
   }
+
+  // Every merge is registered atomically with its complete candidate list, so
+  // it is safe to solve here even when processWorklist was entered recursively
+  // by a temporary query such as populateAndCompare. This is required for that
+  // query to observe bounds derived from relationships it just collected.
+  solveMerges();
+}
+
+void ValueBoundsConstraintSet::solveMerges() {
+  // Solving one merge can make another merge solvable. For example, in
+  //
+  //   inner = merge(4, 9)
+  //   outer = merge(inner, 12)
+  //
+  // the bounds of `inner` must be added before `inner` can be compared with
+  // 12. Relationships are discovered in worklist order, which is not a
+  // topological order in the presence of shared dependencies. Iterate over the
+  // unsolved relations until a pass makes no progress. Every successful
+  // relation is marked solved, so this loop performs at most N successful
+  // iterations for the two independently tracked bounds of every relation.
+  bool madeProgress;
+  do {
+    madeProgress = false;
+    for (MergeRelation &relation : mergeRelations) {
+      if (relation.lowerBoundSolved && relation.upperBoundSolved)
+        continue;
+
+      // No interface should normally create an empty relation because a
+      // relation is allocated by addMerge together with its first candidate.
+      // Keep the guard to make this routine robust against future construction
+      // paths that may reserve a merge before discovering its predecessors.
+      if (relation.candidates.empty())
+        continue;
+
+      auto getValueExpr = [&](ValueDim valueDim) { return getExpr(valueDim); };
+      auto addResultBound = [&](presburger::BoundType type,
+                                ValueDim candidate) {
+        std::optional<int64_t> resultDim = relation.value.second;
+        BoundBuilder resultBound = bound(relation.value.first);
+        if (resultDim)
+          resultBound[*resultDim];
+        if (type == presburger::BoundType::LB)
+          resultBound >= getValueExpr(candidate);
+        else
+          resultBound <= getValueExpr(candidate);
+      };
+
+      // A one-candidate merge is no longer a disjunction. Preserve that exact
+      // information as an equality instead of weakening it to an envelope.
+      if (relation.candidates.size() == 1) {
+        ValueDim candidate = relation.candidates.front();
+        std::optional<int64_t> resultDim = relation.value.second;
+        BoundBuilder resultBound = bound(relation.value.first);
+        if (resultDim)
+          resultBound[*resultDim];
+        resultBound == getValueExpr(candidate);
+        relation.lowerBoundSolved = true;
+        relation.upperBoundSolved = true;
+        madeProgress = true;
+        continue;
+      }
+
+      // Find a candidate that is no greater than every other candidate. Such a
+      // candidate is a sound lower bound for the merge, regardless of which
+      // origin is selected at runtime. This O(N^2) search intentionally does
+      // not require a total order: it can still produce one side of the
+      // envelope for a partially ordered set.
+      auto findExtremum =
+          [&](ComparisonOperator comparison) -> std::optional<ValueDim> {
+        for (ValueDim candidate : relation.candidates) {
+          int64_t candidatePos = getPos(candidate);
+          bool isExtremum =
+              llvm::all_of(relation.candidates, [&](ValueDim otherCandidate) {
+                if (candidate == otherCandidate)
+                  return true;
+                int64_t otherPos = getPos(otherCandidate);
+                return comparePos(candidatePos, comparison, otherPos);
+              });
+          if (isExtremum)
+            return candidate;
+        }
+        return std::nullopt;
+      };
+
+      if (!relation.lowerBoundSolved) {
+        if (std::optional<ValueDim> lower =
+                findExtremum(ComparisonOperator::LE)) {
+          addResultBound(presburger::BoundType::LB, *lower);
+          relation.lowerBoundSolved = true;
+          madeProgress = true;
+        }
+      }
+
+      if (!relation.upperBoundSolved) {
+        if (std::optional<ValueDim> upper =
+                findExtremum(ComparisonOperator::GE)) {
+          addResultBound(presburger::BoundType::UB, *upper);
+          relation.upperBoundSolved = true;
+          madeProgress = true;
+        }
+      }
+    }
+  } while (madeProgress);
 }
 
 void ValueBoundsConstraintSet::projectOut(int64_t pos) {
@@ -525,11 +651,8 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
 
   // Project out all variables (apart from `valueDim`) that do not match the
   // stop condition.
-  cstr.projectOut([&](ValueDim p) {
-    auto maybeDim =
-        p.second == kIndexValue ? std::nullopt : std::make_optional(p.second);
-    return !stopCondition(p.first, maybeDim, cstr);
-  });
+  cstr.projectOut(
+      [&](ValueDim valueDim) { return !stopCondition(valueDim, cstr); });
   cstr.projectOutAnonymous(/*except=*/pos);
 
   // Compute lower and upper bounds for `valueDim`.
@@ -608,10 +731,10 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
 
     assert(cstr.positionToValueDim[i].has_value() &&
            "cannot build affine map in terms of anonymous column");
-    ValueBoundsConstraintSet::ValueDim valueDim = *cstr.positionToValueDim[i];
+    ValueDim valueDim = *cstr.positionToValueDim[i];
     Value value = valueDim.first;
-    int64_t dim = valueDim.second;
-    if (dim == ValueBoundsConstraintSet::kIndexValue) {
+    std::optional<int64_t> dim = valueDim.second;
+    if (!dim) {
       // An index-typed/integer-typed value is used: it can be used directly in
       // the computed bound.
       assert(isIndexLikeType(value.getType(), options) &&
@@ -620,9 +743,9 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
       continue;
     }
 
-    assert(cast<ShapedType>(value.getType()).isDynamicDim(dim) &&
+    assert(cast<ShapedType>(value.getType()).isDynamicDim(*dim) &&
            "expected dynamic dim");
-    mapOperands.push_back(std::make_pair(value, dim));
+    mapOperands.push_back(valueDim);
   }
 
   resultMap = bound.replaceDimsAndSymbols(replacementDims, replacementSymbols,
@@ -636,8 +759,8 @@ LogicalResult ValueBoundsConstraintSet::computeDependentBound(
     ValueBoundsOptions options) {
   return computeBound(
       resultMap, mapOperands, type, var,
-      [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
-        return llvm::is_contained(dependencies, std::make_pair(v, d));
+      [&](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
+        return llvm::is_contained(dependencies, valueDim);
       },
       options);
 }
@@ -671,8 +794,8 @@ LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
   // Reify bounds in terms of any independent values.
   return computeBound(
       resultMap, mapOperands, type, var,
-      [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
-        return isIndependent(v);
+      [&](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
+        return isIndependent(valueDim.first);
       },
       options);
 }
@@ -683,7 +806,7 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   // Default stop condition if none was specified: Keep adding constraints until
   // a bound could be computed.
   int64_t pos = 0;
-  auto defaultStopCondition = [&](Value v, std::optional<int64_t> dim,
+  auto defaultStopCondition = [&](ValueDim valueDim,
                                   ValueBoundsConstraintSet &cstr) {
     return cstr.cstr.getConstantBound64(type, pos).has_value();
   };
@@ -701,15 +824,14 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   return failure();
 }
 
-void ValueBoundsConstraintSet::populateConstraints(Value value,
-                                                   std::optional<int64_t> dim) {
+void ValueBoundsConstraintSet::populateConstraints(ValueDim valueDim) {
 #ifndef NDEBUG
-  assertValidValueDim(value, dim, options);
+  assertValidValueDim(valueDim, options);
 #endif // NDEBUG
 
   // `getExpr` pushes the value/dim onto the worklist (unless it was already
   // analyzed).
-  (void)getExpr(value, dim);
+  (void)getExpr(valueDim);
   // Process all values/dims on the worklist. This may traverse and analyze
   // additional IR, depending the current stop function.
   processWorklist();
@@ -725,19 +847,21 @@ int64_t ValueBoundsConstraintSet::populateConstraints(AffineMap map,
 }
 
 FailureOr<int64_t>
-ValueBoundsConstraintSet::computeConstantDelta(Value value1, Value value2,
-                                               std::optional<int64_t> dim1,
-                                               std::optional<int64_t> dim2) {
+ValueBoundsConstraintSet::computeConstantDelta(ValueDim valueDim1,
+                                               ValueDim valueDim2) {
 #ifndef NDEBUG
-  assertValidValueDim(value1, dim1, /*options=*/{});
-  assertValidValueDim(value2, dim2, /*options=*/{});
+  assertValidValueDim(valueDim1, /*options=*/{});
+  assertValidValueDim(valueDim2, /*options=*/{});
 #endif // NDEBUG
 
-  Builder b(value1.getContext());
+  Builder b(valueDim1.first.getContext());
   AffineMap map = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
                                  b.getAffineDimExpr(0) - b.getAffineDimExpr(1));
+  SmallVector<Variable, 2> operands;
+  operands.emplace_back(valueDim1.first, valueDim1.second);
+  operands.emplace_back(valueDim2.first, valueDim2.second);
   return computeConstantBound(presburger::BoundType::EQ,
-                              Variable(map, {{value1, dim1}, {value2, dim2}}));
+                              Variable(map, operands));
 }
 
 bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
@@ -837,8 +961,7 @@ bool ValueBoundsConstraintSet::compare(const Variable &lhs,
                                        ComparisonOperator cmp,
                                        const Variable &rhs) {
   int64_t lhsPos = -1, rhsPos = -1;
-  auto stopCondition = [&](Value v, std::optional<int64_t> dim,
-                           ValueBoundsConstraintSet &cstr) {
+  auto stopCondition = [&](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
     // Keep processing as long as lhs/rhs were not processed.
     if (size_t(lhsPos) >= cstr.positionToValueDim.size() ||
         size_t(rhsPos) >= cstr.positionToValueDim.size())
@@ -854,8 +977,7 @@ FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
                                                         ComparisonOperator cmp,
                                                         const Variable &rhs) {
   int64_t lhsPos = -1, rhsPos = -1;
-  auto stopCondition = [&](Value v, std::optional<int64_t> dim,
-                           ValueBoundsConstraintSet &cstr) {
+  auto stopCondition = [&](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
     // Keep processing as long as lhs/rhs were not processed.
     if (size_t(lhsPos) >= cstr.positionToValueDim.size() ||
         size_t(rhsPos) >= cstr.positionToValueDim.size())
@@ -986,10 +1108,10 @@ void ValueBoundsConstraintSet::dump() const {
   for (auto [index, valueDim] : llvm::enumerate(positionToValueDim)) {
     llvm::errs() << " " << index << "\t";
     if (valueDim) {
-      if (valueDim->second == kIndexValue) {
+      if (!valueDim->second) {
         llvm::errs() << "n/a\t";
       } else {
-        llvm::errs() << valueDim->second << "\t";
+        llvm::errs() << *valueDim->second << "\t";
       }
       llvm::errs() << getOwnerOfValue(valueDim->first)->getName() << " ";
       if (OpResult result = dyn_cast<OpResult>(valueDim->first)) {
@@ -1014,16 +1136,16 @@ ValueBoundsConstraintSet::BoundBuilder::operator[](int64_t dim) {
   assert(!this->dim.has_value() && "dim was already set");
   this->dim = dim;
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim, cstr.options);
+  assertValidValueDim({value, this->dim}, cstr.options);
 #endif // NDEBUG
   return *this;
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator<(AffineExpr expr) {
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim, cstr.options);
+  assertValidValueDim({value, this->dim}, cstr.options);
 #endif // NDEBUG
-  cstr.addBound(BoundType::UB, cstr.getPos(value, this->dim), expr);
+  cstr.addBound(BoundType::UB, cstr.getPos({value, this->dim}), expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator<=(AffineExpr expr) {
@@ -1036,16 +1158,16 @@ void ValueBoundsConstraintSet::BoundBuilder::operator>(AffineExpr expr) {
 
 void ValueBoundsConstraintSet::BoundBuilder::operator>=(AffineExpr expr) {
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim, cstr.options);
+  assertValidValueDim({value, this->dim}, cstr.options);
 #endif // NDEBUG
-  cstr.addBound(BoundType::LB, cstr.getPos(value, this->dim), expr);
+  cstr.addBound(BoundType::LB, cstr.getPos({value, this->dim}), expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator==(AffineExpr expr) {
 #ifndef NDEBUG
-  assertValidValueDim(value, this->dim, cstr.options);
+  assertValidValueDim({value, this->dim}, cstr.options);
 #endif // NDEBUG
-  cstr.addBound(BoundType::EQ, cstr.getPos(value, this->dim), expr);
+  cstr.addBound(BoundType::EQ, cstr.getPos({value, this->dim}), expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator<(OpFoldResult ofr) {

@@ -259,51 +259,19 @@ struct SelectOpInterface
     if (isa<ShapedType>(condition.getType())) {
       // If the condition is a shaped type, the condition is applied
       // element-wise. All three operands must have the same shape.
-      cstr.bound(value)[*dim] == cstr.getExpr(trueValue, dim);
-      cstr.bound(value)[*dim] == cstr.getExpr(falseValue, dim);
-      cstr.bound(value)[*dim] == cstr.getExpr(condition, dim);
+      cstr.bound(value)[*dim] == cstr.getExpr({trueValue, dim});
+      cstr.bound(value)[*dim] == cstr.getExpr({falseValue, dim});
+      cstr.bound(value)[*dim] == cstr.getExpr({condition, dim});
       return;
     }
 
-    // Populate constraints for the true/false values (and all values on the
-    // backward slice, as long as the current stop condition is not satisfied).
-    cstr.populateConstraints(trueValue, dim);
-    cstr.populateConstraints(falseValue, dim);
-    auto boundsBuilder = cstr.bound(value);
-    if (dim)
-      boundsBuilder[*dim];
-
-    // Compare yielded values.
-    // If trueValue <= falseValue:
-    // * result <= falseValue
-    // * result >= trueValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{trueValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{falseValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(trueValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(falseValue, dim);
-      } else {
-        cstr.bound(value) >= trueValue;
-        cstr.bound(value) <= falseValue;
-      }
-    }
-    // If falseValue <= trueValue:
-    // * result <= trueValue
-    // * result >= falseValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{falseValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{trueValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(falseValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(trueValue, dim);
-      } else {
-        cstr.bound(value) >= falseValue;
-        cstr.bound(value) <= trueValue;
-      }
-    }
+    // A scalar select has one of two candidate origins. Keep this disjunction
+    // explicit instead of comparing the candidates while the op interface is
+    // still collecting relationships. The common merge solver will reproduce
+    // the previous conservative envelope after candidate constraints have been
+    // collected.
+    ValueDimList candidates{{trueValue, dim}, {falseValue, dim}};
+    cstr.addMerge({value, dim}, std::move(candidates));
   }
 
   void populateBoundsForIndexValue(Operation *op, Value value,

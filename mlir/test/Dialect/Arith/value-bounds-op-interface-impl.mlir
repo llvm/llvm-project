@@ -167,6 +167,25 @@ func.func @arith_divui_positive_lhs() -> index {
 
 // -----
 
+// The divui interface temporarily queries whether its lhs is non-negative.
+// That nested query must solve the complete select merge before returning;
+// otherwise divui would add no relationship for its result.
+// CHECK-LABEL: func @arith_divui_merge_lhs(
+//       CHECK:   %[[c3:.*]] = arith.constant 3 : index
+//       CHECK:   return %[[c3]]
+func.func @arith_divui_merge_lhs(%cond: i1) -> index {
+  %c6 = arith.constant 6 : index
+  %c10 = arith.constant 10 : index
+  %c2 = arith.constant 2 : index
+  %lhs = arith.select %cond, %c6, %c10 : index
+  %quotient = arith.divui %lhs, %c2 : index
+  %lb = "test.reify_bound"(%quotient) {type = "LB", constant}
+      : (index) -> index
+  return %lb : index
+}
+
+// -----
+
 // CHECK-LABEL: func @arith_divsi_negative_positive()
 //       CHECK:   %[[cm1:.*]] = arith.constant -1 : index
 //       CHECK:   return %[[cm1]]
@@ -381,6 +400,62 @@ func.func @arith_select(%c: i1) -> (index, index) {
   %1 = "test.reify_bound"(%r) {type = "UB"} : (index) -> (index)
   // CHECK: return %[[c5]], %[[c10]]
   return %0, %1 : index, index
+}
+
+// -----
+
+// A merge with one candidate is an equality.
+// CHECK-LABEL: func @single_candidate_merge(
+func.func @single_candidate_merge() -> index {
+  // CHECK: arith.constant 7 : index
+  %c7 = arith.constant 7 : index
+  %r = test.merge_values %c7 : index
+  // CHECK: %[[eq:.*]] = arith.constant 7 : index
+  %eq = "test.reify_bound"(%r) {type = "EQ", constant} : (index) -> index
+  // CHECK: return %[[eq]]
+  return %eq : index
+}
+
+// -----
+
+// More than two candidates use the minimum and maximum candidates as a
+// conservative envelope. Candidate order is intentionally not sorted.
+// CHECK-LABEL: func @multi_candidate_merge(
+func.func @multi_candidate_merge() -> (index, index) {
+  // CHECK: arith.constant 11 : index
+  %c11 = arith.constant 11 : index
+  // CHECK: arith.constant 3 : index
+  %c3 = arith.constant 3 : index
+  // CHECK: arith.constant 7 : index
+  %c7 = arith.constant 7 : index
+  // CHECK: arith.constant 5 : index
+  %c5 = arith.constant 5 : index
+  %r = test.merge_values %c11, %c3, %c7, %c5 : index
+  // CHECK: %[[lb:.*]] = arith.constant 3 : index
+  // CHECK: %[[ub:.*]] = arith.constant 12 : index
+  %lb = "test.reify_bound"(%r) {type = "LB"} : (index) -> index
+  %ub = "test.reify_bound"(%r) {type = "UB"} : (index) -> index
+  // CHECK: return %[[lb]], %[[ub]]
+  return %lb, %ub : index, index
+}
+
+// -----
+
+// The result dimension and candidate dimensions are independent. Here result
+// dimension 0 merges lhs dimension 1 (size 4) and rhs dimension 0 (size 9).
+// CHECK-LABEL: func @merge_different_dims(
+func.func @merge_different_dims(
+    %lhs: tensor<?x4xf32>, %rhs: tensor<9x?xf32>) -> (index, index) {
+  %r = "test.merge_different_dims"(%lhs, %rhs)
+      : (tensor<?x4xf32>, tensor<9x?xf32>) -> tensor<?xf32>
+  // CHECK: %[[lb:.*]] = arith.constant 4 : index
+  // CHECK: %[[ub:.*]] = arith.constant 10 : index
+  %lb = "test.reify_bound"(%r) {dim = 0, type = "LB"}
+      : (tensor<?xf32>) -> index
+  %ub = "test.reify_bound"(%r) {dim = 0, type = "UB"}
+      : (tensor<?xf32>) -> index
+  // CHECK: return %[[lb]], %[[ub]]
+  return %lb, %ub : index, index
 }
 
 // -----

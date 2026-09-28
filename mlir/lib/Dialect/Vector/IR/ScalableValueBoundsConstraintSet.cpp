@@ -41,15 +41,16 @@ char ScalableValueBoundsConstraintSet::ID = 0;
 
 FailureOr<ConstantOrScalableBound>
 ScalableValueBoundsConstraintSet::computeScalableBound(
-    Value value, std::optional<int64_t> dim, unsigned vscaleMin,
-    unsigned vscaleMax, presburger::BoundType boundType,
-    ValueBoundsOptions options, const StopConditionFn &stopCondition) {
+    ValueDim valueDim, unsigned vscaleMin, unsigned vscaleMax,
+    presburger::BoundType boundType, ValueBoundsOptions options,
+    const StopConditionFn &stopCondition) {
   using namespace presburger;
   assert(vscaleMin <= vscaleMax);
+  Value value = valueDim.first;
 
   // No stop condition specified: Keep adding constraints until the worklist
   // is empty.
-  auto defaultStopCondition = [&](Value v, std::optional<int64_t> dim,
+  auto defaultStopCondition = [&](ValueDim valueDim,
                                   mlir::ValueBoundsConstraintSet &cstr) {
     return false;
   };
@@ -57,7 +58,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
   ScalableValueBoundsConstraintSet scalableCstr(
       value.getContext(), stopCondition ? stopCondition : defaultStopCondition,
       vscaleMin, vscaleMax, options);
-  int64_t pos = scalableCstr.insert(value, dim, /*isSymbol=*/false);
+  int64_t pos = scalableCstr.insert(valueDim, /*isSymbol=*/false);
   scalableCstr.processWorklist();
 
   // Check the resulting constraints set is valid.
@@ -67,11 +68,9 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   // Project out all columns apart from vscale and the starting point
   // (value/dim). This should result in constraints in terms of vscale only.
-  auto projectOutFn = [&](ValueDim p) {
-    bool isStartingPoint =
-        p.first == value &&
-        p.second == dim.value_or(ValueBoundsConstraintSet::kIndexValue);
-    return p.first != scalableCstr.getVscaleValue() && !isStartingPoint;
+  auto projectOutFn = [&](ValueDim candidate) {
+    bool isStartingPoint = candidate == valueDim;
+    return candidate.first != scalableCstr.getVscaleValue() && !isStartingPoint;
   };
   scalableCstr.projectOut(projectOutFn);
   scalableCstr.projectOutAnonymous(/*except=*/pos);
@@ -90,8 +89,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     if (i == pos)
       continue;
     if (scalableCstr.positionToValueDim[i] !=
-        ValueDim(scalableCstr.getVscaleValue(),
-                 ValueBoundsConstraintSet::kIndexValue)) {
+        ValueDim(scalableCstr.getVscaleValue(), std::nullopt)) {
       return failure();
     }
   }
