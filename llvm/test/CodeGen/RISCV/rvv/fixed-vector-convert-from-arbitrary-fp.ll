@@ -116,20 +116,15 @@ define <2 x bfloat> @v2fp8e5m2_to_v2bf16(<2 x i8> %x) nounwind {
 ; CHECK-NEXT:    flw fa0, 12(sp)
 ; CHECK-NEXT:    zext.h s0, a0
 ; CHECK-NEXT:    call __truncsfbf2
-; CHECK-NEXT:    lui a0, 1048560
-; CHECK-NEXT:    fmv.x.w a1, fa0
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    or a1, s0, a1
+; CHECK-NEXT:    fmv.x.w a0, fa0
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    or a0, s0, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    or a1, a1, a0
-; CHECK-NEXT:    or a0, a2, a0
-; CHECK-NEXT:    fmv.w.x fa0, a1
-; CHECK-NEXT:    fmv.w.x fa1, a0
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32

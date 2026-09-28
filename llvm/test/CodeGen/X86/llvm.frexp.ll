@@ -133,13 +133,10 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; WIN32-LABEL: test_frexp_bf16_i32:
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $28, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    calll ___truncsfbf2
-; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
-; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    subl $24, %esp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    shll $16, %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -150,12 +147,8 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; WIN32-NEXT:    fstps (%esp)
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    calll ___truncsfbf2
-; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
-; WIN32-NEXT:    shll $16, %eax
-; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl %esi, %eax
-; WIN32-NEXT:    addl $28, %esp
+; WIN32-NEXT:    movl %esi, %edx
+; WIN32-NEXT:    addl $24, %esp
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
   %result = call { bfloat, i32 } @llvm.frexp.bf16.i32(bfloat %a)

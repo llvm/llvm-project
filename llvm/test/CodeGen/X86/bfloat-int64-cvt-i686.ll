@@ -18,10 +18,6 @@ define bfloat @sitofp_i64_to_bf16(i64 %a) nounwind {
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    calll __truncsfbf2
-; X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X87-NEXT:    shll $16, %eax
-; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    retl
 ;
@@ -72,10 +68,6 @@ define bfloat @sitofp_load_i64_to_bf16(ptr %p) nounwind {
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    calll __truncsfbf2
-; X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X87-NEXT:    shll $16, %eax
-; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    retl
 ;
@@ -130,10 +122,6 @@ define bfloat @uitofp_i64_to_bf16(i64 %a) nounwind {
 ; X87-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    calll __truncsfbf2
-; X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X87-NEXT:    shll $16, %eax
-; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    retl
 ;
@@ -199,10 +187,6 @@ define bfloat @uitofp_load_i64_to_bf16(ptr %p) nounwind {
 ; X87-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    calll __truncsfbf2
-; X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X87-NEXT:    shll $16, %eax
-; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    retl
 ;
@@ -271,11 +255,6 @@ define bfloat @strict_sitofp_load_i64_to_bf16(ptr %p) strictfp nounwind {
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    calll __truncsfbf2
-; X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X87-NEXT:    shll $16, %eax
-; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    wait
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    retl
 ;
@@ -340,11 +319,6 @@ define bfloat @strict_uitofp_i64_to_bf16(i64 %a) strictfp nounwind {
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    calll __truncsfbf2
-; X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X87-NEXT:    shll $16, %eax
-; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    wait
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    retl
 ;

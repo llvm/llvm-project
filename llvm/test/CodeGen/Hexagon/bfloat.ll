@@ -6,10 +6,7 @@ define bfloat @load_scalar_bf(ptr %addr) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[REG:r[0-9]+]] = memuh(r0+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = aslh([[REG]])
+; CHECK-NEXT:     r0 = memuh(r0+#0)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 
@@ -23,35 +20,8 @@ define void @store_scalar_bf(bfloat %v, ptr %addr) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R_A:r[0-9]+]] = ##131071
-; CHECK-NEXT:     [[R_B:r[0-9]+]] = ##32768
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R_C:r[0-9]+]] = ##65535
-; CHECK-NEXT:     [[R_D:r[0-9]+]] = asrh(r0)
-; CHECK-NEXT:     [[R_A]] = and(r0,[[R_A]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[P0:p[0-9]+]] = sfclass(r0,#16)
-; CHECK-NEXT:     [[R_E:r[0-9]+]] = and(r0,[[R_B]])
-; CHECK-NEXT:     [[P1:p[0-9]+]] = cmp.eq([[R_A]],[[R_B]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = add(r0,[[R_E]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = asrh(r0)
-; CHECK-NEXT:     if ([[P1]]) [[R_B]] = and([[R_D]],[[R_C]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (![[P1]]) [[R_B]] = and(r0,[[R_C]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if ([[P0]]) [[R_B]] = ##32767
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     memh(r1+#0) = [[R_B]]
+; CHECK-NEXT:     memh(r1+#0) = r0
 ; CHECK-NEXT:    }
 
 entry:
@@ -64,74 +34,36 @@ define bfloat @sum(bfloat %a, bfloat %b) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R3:r[0-9]+]] = ##32768
-; CHECK-NEXT:     [[R4:r[0-9]+]] = ##131071
+; CHECK-NEXT:     r0 = aslh(r0)
+; CHECK-NEXT:     r1 = aslh(r1)
+; CHECK-NEXT:     r2 = ##32768
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R2:r[0-9]+]] = ##65535
-; CHECK-NEXT:     [[R6:r[0-9]+]] = and(r0,[[R3]])
-; CHECK-NEXT:     [[R5:r[0-9]+]] = and(r0,[[R4]])
+; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:     r6 = ##131071
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R8:r[0-9]+]] = and(r1,[[R3]])
-; CHECK-NEXT:     [[R7:r[0-9]+]] = and(r1,[[R4]])
-; CHECK-NEXT:     [[R6]] = add(r0,[[R6]])
-; CHECK-NEXT:     [[P0:p[0-9]+]] = cmp.eq([[R5]],[[R3]])
+; CHECK-NEXT:     r3 = ##65535
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R5]] = asrh(r0)
-; CHECK-NEXT:     [[P1:p[0-9]+]] = cmp.eq([[R7]],[[R3]])
-; CHECK-NEXT:     [[R7]] = asrh(r1)
-; CHECK-NEXT:     [[R8]] = add(r1,[[R8]])
+; CHECK-NEXT:     p0 = sfclass(r0,#16)
+; CHECK-NEXT:     r1 = and(r0,r6)
+; CHECK-NEXT:     r4 = and(r0,r2)
+; CHECK-NEXT:     r5 = asrh(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R6]] = asrh([[R6]])
-; CHECK-NEXT:     if ([[P0]]) [[R5]] = and([[R5]],[[R2]])
+; CHECK-NEXT:     r0 = add(r0,r4)
+; CHECK-NEXT:     p1 = cmp.eq(r1,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[P0]] = sfclass(r0,#16)
-; CHECK-NEXT:     if (![[P0]]) [[R5]] = and([[R6]],[[R2]])
-; CHECK-NEXT:     [[R6]] = asrh([[R8]])
-; CHECK-NEXT:     if ([[P1]]) [[R7]] = and([[R7]],[[R2]])
+; CHECK-NEXT:     r1 = asrh(r0)
+; CHECK-NEXT:     if (p1) r0 = and(r5,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[P1]] = sfclass(r1,#16)
-; CHECK-NEXT:     [[R0:r[0-9]+]] = #32767
-; CHECK-NEXT:     if (![[P1]]) [[R7]] = and([[R6]],[[R2]])
+; CHECK-NEXT:     if (!p1) r0 = and(r1,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if ([[P0]]) [[R5]] = add([[R0]],#0)
-; CHECK-NEXT:     if ([[P1]]) [[R7]] = add([[R0]],#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R6]] = aslh([[R7]])
-; CHECK-NEXT:     [[R5]] = aslh([[R5]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R1:r[0-9]+]] = sfadd([[R5]],[[R6]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R5]] = and([[R1]],[[R3]])
-; CHECK-NEXT:     [[R4]] = and([[R1]],[[R4]])
-; CHECK-NEXT:     [[R6]] = asrh([[R1]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[P0]] = cmp.eq([[R4]],[[R3]])
-; CHECK-NEXT:     [[R5]] = add([[R1]],[[R5]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R3]] = asrh([[R5]])
-; CHECK-NEXT:     if ([[P0]]) [[R4]] = and([[R6]],[[R2]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     [[P0]] = sfclass([[R1]],#16)
-; CHECK-NEXT:     if (![[P0]]) [[R4]] = and([[R3]],[[R2]])
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if ([[P0]]) [[R4]] = add([[R0]],#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = aslh([[R4]])
+; CHECK-NEXT:     if (p0) r0 = ##32767
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 
@@ -146,28 +78,32 @@ define dso_local i32 @double_bf16(bfloat %a, bfloat %b) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[PAIR_A:r[0-9]+:[0-9]+]] = convert_sf2df(r0)
-; CHECK-NEXT:     [[PAIR_B:r[0-9]+:[0-9]+]] = convert_sf2df(r1)
-; CHECK-NEXT:     [[SP:r[0-9]+]] = add([[SP]],#-16)
+; CHECK-NEXT:     r0 = aslh(r0)
+; CHECK-NEXT:     r1 = aslh(r1)
+; CHECK-NEXT:     r29 = add(r29,#-16)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RESULT:r[0-9]+:[0-9]+]] = dfadd([[PAIR_A]],[[PAIR_B]])
+; CHECK-NEXT:     r3:2 = convert_sf2df(r0)
+; CHECK-NEXT:     r5:4 = convert_sf2df(r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memd([[SP]]+#8) = [[RESULT]]
+; CHECK-NEXT:     r3:2 = dfadd(r3:2,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[TMP:r[0-9]+]] = convert_df2sf([[RESULT]])
+; CHECK-NEXT:     memd(r29+#8) = r3:2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[TMP1:r[0-9]+]] = lsr([[TMP]],#16)
-; CHECK-NEXT:     [[R0:r[0-9]+]] = and([[TMP]],##-65536)
-; CHECK-NEXT:     memh([[SP]]+#6) = [[TMP1]].new
+; CHECK-NEXT:     r4 = convert_df2sf(r3:2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R0]] = convert_sf2w([[R0]]):chop
+; CHECK-NEXT:     r4 = insert(r1,#16,#0)
+; CHECK-NEXT:     r2 = lsr(r4,#16)
+; CHECK-NEXT:     r29 = add(r29,#16)
+; CHECK-NEXT:     memh(r29+#6) = r2.new
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = convert_sf2w(r4):chop
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     [[SP]] = add([[SP]],#16)
 ; CHECK-NEXT:    }
 
 entry:
