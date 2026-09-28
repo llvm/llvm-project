@@ -19,7 +19,6 @@
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
-#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MLModelRunner.h"
@@ -28,6 +27,7 @@
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Analysis/Utils/MLGOUtils.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -72,26 +72,64 @@ using CompiledModelType = llvm::InlinerSizeModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
+#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
+constexpr bool HaveMLIRLoweringInliner = true;
+#include "llvm/Analysis/EmitCModelRunner.h"
+#include "llvm/Analysis/InlinerModels.h"
+
+enum class EmitCModelChoice {
+  Default,
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG) CLASS_NAME,
+#include "llvm/Analysis/InlinerModels.def"
+};
+
+static llvm::cl::opt<EmitCModelChoice> SelectedMLGOModel(
+    "mlgo-model", llvm::cl::desc("Select the MLGO model to execute:"),
+    llvm::cl::init(EmitCModelChoice::Default),
+    llvm::cl::values(clEnumValN(EmitCModelChoice::Default, "default",
+                                "Use standard heuristic")
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  , clEnumValN(EmitCModelChoice::CLASS_NAME, CLI_FLAG,                         \
+               "Use the " CLI_FLAG " MLGO model")
+#include "llvm/Analysis/InlinerModels.def"
+                         ));
+
+static std::unique_ptr<MLModelRunner>
+createEmitCModelRunner(LLVMContext &Ctx,
+                       const std::vector<TensorSpec> &InputFeatures) {
+  switch (SelectedMLGOModel) {
+  case EmitCModelChoice::Default:
+    return nullptr;
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  case EmitCModelChoice::CLASS_NAME:                                           \
+    return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
+#include "llvm/Analysis/InlinerModels.def"
+  }
+  llvm_unreachable("Unknown MLGO model type!");
+}
+#else
+constexpr bool HaveMLIRLoweringInliner = false;
+enum class EmitCModelChoice { Default };
+static const EmitCModelChoice SelectedMLGOModel = EmitCModelChoice::Default;
+static inline std::unique_ptr<MLModelRunner>
+createEmitCModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
+  return nullptr;
+}
+#endif
+
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                             std::function<bool(CallBase &)> GetDefaultAdvice) {
-  if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
-      InteractiveChannelBaseName.empty())
+  if (!isReleaseModelValid<CompiledModelType>(InteractiveChannelBaseName,
+                                              SelectedMLGOModel))
     return nullptr;
   auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
       -> std::unique_ptr<MLModelRunner> {
-    std::unique_ptr<MLModelRunner> AOTRunner;
-    if (InteractiveChannelBaseName.empty())
-      AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-          M.getContext(), InputFeatures, DecisionName,
-          EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
-    else {
-      AOTRunner = std::make_unique<InteractiveModelRunner>(
-          M.getContext(), InputFeatures, InlineDecisionSpec,
-          InteractiveChannelBaseName + ".out",
-          InteractiveChannelBaseName + ".in");
-    }
-    return AOTRunner;
+    return createReleaseModeModelRunner<CompiledModelType,
+                                        HaveMLIRLoweringInliner>(
+        M.getContext(), InputFeatures, DecisionName, InteractiveChannelBaseName,
+        InlineDecisionSpec, createEmitCModelRunner,
+        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
   };
   return std::make_unique<MLInlineAdvisor>(M, MAM, RunnerFactory,
                                            GetDefaultAdvice);

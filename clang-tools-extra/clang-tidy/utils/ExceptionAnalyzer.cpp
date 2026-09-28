@@ -362,6 +362,8 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
   SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
+    if (!ExceptionTy)
+      continue;
     const CanQualType ExceptionCanTy =
         ExceptionTy->getCanonicalTypeUnqualified();
     const CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
@@ -607,6 +609,8 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
                                   Excs.getExceptions(), CallStack));
     for (const auto &Exception : Excs.getExceptions()) {
       const Type *ExcType = Exception.getFirst();
+      if (!ExcType)
+        continue;
       if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
         const ExceptionInfo DestructorExcs = throwsException(
             ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});

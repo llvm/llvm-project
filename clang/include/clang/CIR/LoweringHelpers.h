@@ -54,6 +54,14 @@ mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                                    const mlir::TypeConverter &converter,
                                    const mlir::DataLayout &dataLayout);
 
+// A version of adjustGlobalTypeForInit which records where additional padding
+// was added in the middle, so we can properly adjust field indexes.
+mlir::Type
+adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
+                        const mlir::TypeConverter &converter,
+                        const mlir::DataLayout &dataLayout,
+                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes);
+
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val);
 
@@ -68,4 +76,21 @@ mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
                       const llvm::APInt &rhs);
 
 mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+
+mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                mlir::DataLayout const &dataLayout,
+                                mlir::Type type);
+
+/// The type of a load/store's *value*, as opposed to convertTypeForMemory's
+/// type of the memory it lives in. The two are effectively identical except
+/// with split-storage bit-int.
+mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
+                                   mlir::DataLayout const &dataLayout,
+                                   mlir::Type type);
+
+// Convert a bit-int value to its llvm value, which can be either an array, or
+// just a large-power-of-2 integer.
+mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
+                                     cir::IntAttr attr,
+                                     const mlir::DataLayout &dataLayout);
 #endif

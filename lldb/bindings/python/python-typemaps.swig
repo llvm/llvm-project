@@ -177,35 +177,52 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 
 // typemap for a char buffer
 %typemap(in) (char *dst, size_t dst_len) {
-  if (!PyLong_Check($input)) {
-    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+  $1 = NULL;
+  $2 = PyLong_AsSize_t($input);
+  if (PyErr_Occurred()) {
     SWIG_fail;
   }
-  $2 = PyLong_AsLong($input);
-  if ($2 <= 0) {
+
+  if ($2 == 0) {
     PyErr_SetString(PyExc_ValueError, "Positive integer expected");
     SWIG_fail;
   }
-  $1 = (char *)malloc($2);
+
+  $1 = (char *)::malloc($2);
+  if (!$1) {
+    PyErr_NoMemory();
+    SWIG_fail;
+  }
 }
 // SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
 // as char data instead of byte data.
 %typemap(in) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
 
+%typemap(typecheck) (char *dst, size_t dst_len) {
+  $1 = PyLong_Check($input);
+}
+
+%typemap(freearg) (char *dst, size_t dst_len) {
+  /* Free the allocated memory in typemap(in) on failure.*/ 
+  ::free($1);
+}
+
 // Return the char buffer.  Discarding any previous return result
 %typemap(argout) (char *dst, size_t dst_len) {
   Py_XDECREF($result); /* Blow away any previous result */
-  if (result == 0) {
-    PythonString string("");
-    $result = string.release();
-    Py_INCREF($result);
-  } else {
-    llvm::StringRef ref(static_cast<const char *>($1), result);
-    PythonString string(ref);
-    $result = string.release();
+
+  size_t str_len = result;
+  if (str_len >= $2)  {
+    /* We allocated $2 (dst_len) but the result is larger,
+    trim to match the expected length so we don't read random data.*/
+    str_len = $2 - 1;
   }
-  free($1);
+
+  llvm::StringRef ref(static_cast<const char *>($1), str_len);
+  PythonString string(ref);
+  $result = string.release();
 }
+
 // SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
 // as char data instead of byte data.
 %typemap(argout) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
@@ -215,7 +232,6 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 %feature("python:annotations", "0") lldb::SBProcess::GetSTDOUT;
 %feature("python:annotations", "0") lldb::SBProcess::GetSTDERR;
 %feature("python:annotations", "0") lldb::SBProcess::GetAsyncProfileData;
-%feature("python:annotations", "0") lldb::SBStructuredData::GetStringValue;
 
 // Uses (void *char_buf, size_t size) argout typemap.
 // Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_void]]]`.
@@ -341,6 +357,12 @@ AND call SWIG_fail at the same time, because it will result in a double free.
     SWIG_fail;
   }
   $1 = (void *)malloc($2);
+}
+
+// typecheck so overloaded methods taking a buffer (e.g. SBProcess::ReadMemory)
+// can participate in overload resolution.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_INTEGER) (void *buf, size_t size) {
+  $1 = PyLong_Check($input) ? 1 : 0;
 }
 
 // Return the buffer.  Discarding any previous return result

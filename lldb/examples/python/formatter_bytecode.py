@@ -61,6 +61,7 @@ define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
 define_opcode(0x22, None, "lit_string")
 define_opcode(0x23, None, "lit_selector")
+define_opcode(0x24, None, "lit_integer")
 
 define_opcode(0x2A, "as_int", "as_int")
 define_opcode(0x2B, "as_uint", "as_uint")
@@ -398,7 +399,9 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
             else:
-                emit(op_lit_int)
+                # With the introduction of op_lit_integer, op_lit_int is no
+                # longer emitted by the assembler.
+                emit(op_lit_integer)
                 emit(int(tok))  # FIXME
         elif tok[0] == "@":
             emit(op_lit_selector)
@@ -472,6 +475,9 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             asm += str(b)  # FIXME uleb
             asm += "u"
         elif b == op_lit_int:
+            b = next_byte()
+            asm += str(b)
+        elif b == op_lit_integer:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_selector:
@@ -616,6 +622,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             data.append(int(b))
         elif b == op_lit_int:
             b = next_byte()  # FIXME uleb
+            data.append(int(b))
+        elif b == op_lit_integer:
+            b = next_byte()  # FIXME sleb
             data.append(int(b))
         elif b == op_lit_selector:
             b = next_byte()
@@ -1066,13 +1075,13 @@ class Compiler(ast.NodeVisitor):
                 "unsupported attribute access (only self.attr is supported)", node
             )
         pick_idx = self._attr_index(node.attr, node)
-        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
+        self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
 
     def visit_Name(self, node: ast.Name) -> None:
         idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx}u pick")  # "# {node.id}"
+        self._output(f"{idx} pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
@@ -1251,7 +1260,7 @@ if __name__ == "__main__":
         def test_assemble(self):
             self.assertEqual(assemble("1u dup").hex(), "200101")
             self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "24105210010111")
             self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):

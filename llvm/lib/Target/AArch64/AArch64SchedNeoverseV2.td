@@ -26,6 +26,7 @@ def NeoverseV2Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
+                                                     HasSVEBFSCALE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
@@ -890,14 +891,24 @@ def V2Write_11c_18L01_18S_18V01 : SchedWriteRes<[V2UnitL01, V2UnitL01,
 
 def V2Write_ArithI : SchedWriteVariant<[
                        SchedVar<IsCheapLSL,  [V2Write_1c_1I]>,
+                       SchedVar<NeoverseShift0,  [V2Write_1c_1I]>,
                        SchedVar<NoSchedPred, [V2Write_2c_1M]>]>;
 
 def V2Write_ArithF : SchedWriteVariant<[
                        SchedVar<IsCheapLSL,  [V2Write_1c_1F_1Flg]>,
+                       SchedVar<NeoverseShift0,  [V2Write_1c_1F_1Flg]>,
                        SchedVar<NoSchedPred, [V2Write_2c_1M_1Flg]>]>;
 
+def V2Write_ArithWExtend : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V2Write_2c_1M]>,
+                       SchedVar<NoSchedPred,        [V2Write_1c_1I]>]>;
+
+def V2Write_ArithWExtendS : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V2Write_2c_1M_1Flg]>,
+                       SchedVar<NoSchedPred,        [V2Write_1c_1F_1Flg]>]>;
+
 def V2Write_Logical : SchedWriteVariant<[
-                        SchedVar<NeoverseNoLSL, [V2Write_1c_1F_1Flg]>,
+                        SchedVar<NeoverseShift0, [V2Write_1c_1F_1Flg]>,
                         SchedVar<NoSchedPred,   [V2Write_2c_1M_1Flg]>]>;
 
 def V2Write_Extr : SchedWriteVariant<[
@@ -1125,6 +1136,11 @@ def : InstRW<[V2Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V2Write_2c_1M>;
+
+def : InstRW<[V2Write_ArithWExtend],  (instrs ADDWrx, SUBWrx)>;
+def : InstRW<[V2Write_ArithWExtendS], (instrs ADDSWrx, SUBSWrx)>;
+def : InstRW<[V2Write_1c_1I],      (instrs ADDXrx64, SUBXrx64)>;
+def : InstRW<[V2Write_1c_1F_1Flg], (instrs ADDSXrx64, SUBSXrx64)>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
@@ -2539,7 +2555,7 @@ def : InstRW<[V2Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[V2Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[V2Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

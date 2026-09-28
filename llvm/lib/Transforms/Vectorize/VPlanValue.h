@@ -199,9 +199,6 @@ public:
   /// concrete subclass.
   Type *getScalarType() const;
 
-  /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
-
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
@@ -360,7 +357,7 @@ public:
 };
 
 /// A VPRecipeValue defined by a VPSingleDefRecipe.
-class VPSingleDefValue : public VPRecipeValue {
+class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
   friend class VPDef;
   friend class VPSingleDefRecipe;
 
@@ -475,6 +472,7 @@ public:
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
   }
+  bool operands_empty() const { return Operands.empty(); } // NOLINT
 
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.

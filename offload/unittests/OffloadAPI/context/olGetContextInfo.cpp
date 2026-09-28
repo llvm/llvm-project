@@ -10,20 +10,7 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-struct olGetContextInfoTest : OffloadDeviceTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olCreateContext(1, &Device, &Context));
-  }
-
-  void TearDown() override {
-    if (Context)
-      olDestroyContext(Context);
-    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
-  }
-
-  ol_context_handle_t Context = nullptr;
-};
+using olGetContextInfoTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetContextInfoTest);
 
 TEST_P(olGetContextInfoTest, SuccessNumDevices) {

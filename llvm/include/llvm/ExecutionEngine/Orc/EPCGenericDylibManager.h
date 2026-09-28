@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // Implements dylib loading and searching by calling executor-side wrapper
-// functions through rt::Proxy objects.
+// functions through Proxy objects.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
 // as this implementation will always work (at the cost of some performance
 // overhead for the calls).
+//
+// This header is protocol-agnostic. To build an instance that targets the ORC
+// runtime's SPS controller interface, see EPCGenericDylibManagerSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,10 +23,8 @@
 
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -37,35 +38,26 @@ public:
   /// Proxy for the executor-side dylib-open function. Given the manager
   /// instance address, a path and mode flags it returns a handle to the opened
   /// dylib.
-  using OpenProxy = rt::Proxy<Expected<tpctypes::DylibHandle>(
-      ExecutorAddr, StringRef, uint64_t)>;
+  using OpenProxy =
+      Proxy<Expected<tpctypes::DylibHandle>(ExecutorAddr, StringRef, uint64_t)>;
 
   /// Proxy for the executor-side symbol-resolution function. Given the manager
   /// instance address, a dylib handle and a lookup set it returns the resolved
   /// addresses.
-  using ResolveProxy = rt::Proxy<Expected<tpctypes::LookupResult>(
+  using ResolveProxy = Proxy<Expected<tpctypes::LookupResult>(
       ExecutorAddr, ExecutorAddr, SymbolLookupSet)>;
 
   /// The resolved controller-side handle to an executor-side dylib manager: the
   /// address of the manager instance (passed as the first argument to each
-  /// call) plus the proxies for its functions. These are protocol-agnostic: the
-  /// Create methods populate them for the runtime's SPS controller interface,
-  /// but a client targeting a different protocol can build its own Bindings and
-  /// pass them to the constructor.
+  /// call) plus the proxies for its functions. These are protocol-agnostic:
+  /// sps::createEPCGenericDylibManager populates them for the runtime's SPS
+  /// controller interface, but a client targeting a different protocol can
+  /// build its own Bindings and pass them to the constructor.
   struct Bindings {
     ExecutorAddr Instance;
     OpenProxy Open;
     ResolveProxy Resolve;
   };
-
-  /// Create an EPCGenericDylibManager for the ORC runtime's NativeDylibManager
-  /// interface, resolving its symbols in the given JITDylib.
-  static Expected<EPCGenericDylibManager> Create(JITDylib &JD);
-
-  /// Create an EPCGenericDylibManager for the ORC runtime's NativeDylibManager
-  /// interface, resolving its symbols in the given ExecutionSession's bootstrap
-  /// JITDylib.
-  static Expected<EPCGenericDylibManager> Create(ExecutionSession &ES);
 
   /// Create an EPCGenericDylibManager instance from a given set of
   /// dylib-manager bindings.

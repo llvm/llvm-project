@@ -42,18 +42,21 @@ public:
     /// @returns The inner size of blocks in the list containing this node.
     LIBC_INLINE size_t size() const { return block().inner_size(); }
 
+    /// @returns The next node in the list containing this node.
+    LIBC_INLINE Node *next() const { return next_; }
+
   protected:
     LIBC_INLINE void integrity_check() const {
-      LIBC_HEAP_INTEGRITY_CHECK(next->prev == this,
+      LIBC_HEAP_INTEGRITY_CHECK(next_->prev_ == this,
                                 "FreeList node corruption detected");
-      LIBC_HEAP_INTEGRITY_CHECK(prev->next == this,
+      LIBC_HEAP_INTEGRITY_CHECK(prev_->next_ == this,
                                 "FreeList node corruption detected");
     }
 
   private:
     // Circularly linked pointers to adjacent nodes.
-    Node *prev;
-    Node *next;
+    Node *prev_;
+    Node *next_;
     friend class FreeList;
   };
 

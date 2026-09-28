@@ -89,12 +89,13 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           FloatABI::ABIType FloatABI, bool MinSize,
-                           DenormalMode DM)
+                           FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
+                           bool MinSize, DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
       IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FloatABIType(FloatABI), FrameLowering(initializeFrameLowering(CPU, FS)),
+      FloatABIType(FloatABI), ABI(ABI),
+      FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
@@ -333,9 +334,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (TM.isAAPCS_ABI())
+  if (isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (TM.isAAPCS16_ABI())
+  if (isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -612,8 +613,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // If R7 is the frame pointer, we must split at R7 to ensure that the
   // previous frame pointer (R7) and return address (LR) are adjacent on the
   // stack, to form a valid frame record.
-  if (getFramePointerReg() == ARM::R7 &&
-      MF.getTarget().Options.FramePointerIsReserved(MF))
+  if (getFramePointerReg() == ARM::R7 && MF.framePointerIsReserved())
     return SplitR7;
 
   // Returns SplitR11WindowsSEH when the stack pointer needs to be
@@ -630,8 +630,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // and LR to be adjacent on the stack, and branch signing is enabled,
   // requiring R12 to be on the stack.
   if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-      getFramePointerReg() == ARM::R11 &&
-      MF.getTarget().Options.FramePointerIsReserved(MF))
+      getFramePointerReg() == ARM::R11 && MF.framePointerIsReserved())
     return SplitR11AAPCSSignRA;
   return NoSplit;
 }

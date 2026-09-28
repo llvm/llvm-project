@@ -17,6 +17,7 @@
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
+#include <sycl/__impl/nd_range.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 

@@ -1170,8 +1170,17 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
       return rewriter.notifyMatchFailure(castOp,
                                          "inner cast operation is narrowing");
 
+    // Bail out of the canonicalization if (inner) cast(input_unsigned=false) ->
+    // (outer) cast(input_unsigned=true)
+    if (!innerCastOp.getInputUnsigned() && castOp.getInputUnsigned()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid rewriting cast(input_unsigned=false) -> "
+                  "cast(input_unsigned=true)");
+    }
+
     rewriter.replaceOpWithNewOp<tosa::CastOp>(castOp, outerOutputType,
-                                              innerCastInput);
+                                              innerCastInput,
+                                              innerCastOp.getInputUnsigned());
 
     return success();
   }
@@ -2025,7 +2034,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<FloatType>(outETy)) {
-      auto unsign = llvm::cast<IntegerType>(inETy).isUnsignedInteger();
+      const bool unsign = llvm::cast<IntegerType>(inETy).isUnsignedInteger() ||
+                          adaptor.getInputUnsigned();
       APFloat splatVal(llvm::cast<FloatType>(outETy).getFloatSemantics());
       splatVal.convertFromAPInt(operand.getSplatValue<APInt>(), !unsign,
                                 llvm::RoundingMode::NearestTiesToEven);
@@ -2045,7 +2055,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<IntegerType>(outETy)) {
       const auto inIntType = llvm::cast<IntegerType>(inETy);
-      auto unsignIn = inIntType.isUnsignedInteger();
+      const bool unsignIn =
+          inIntType.isUnsignedInteger() || adaptor.getInputUnsigned();
       bool trunc =
           inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
       auto intVal = operand.getSplatValue<APInt>();
@@ -2205,7 +2216,9 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
   auto operandTy = llvm::cast<ShapedType>(operand.getType());
   auto axis = getAxis();
   // If the dim-length is 1, or reversing axis is unit-dim, also a no-op.
+  // A splat of block-scaled values may still have different scales per block.
   const bool isSplatInput =
+      !isa<BlockScaledType>(operandTy.getElementType()) &&
       llvm::isa_and_nonnull<SplatElementsAttr>(adaptor.getInput1());
   if (!operandTy.hasRank() ||
       (!isSplatInput && operandTy.getDimSize(axis) != 1))

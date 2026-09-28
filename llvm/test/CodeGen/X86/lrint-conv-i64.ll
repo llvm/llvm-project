@@ -194,46 +194,6 @@ define i64 @test_lrint_i64_f80(x86_fp80 %x) nounwind {
 }
 
 ; FIXME(#44744): incorrect libcall
-define i64 @test_lrint_i64_f128(fp128 %x) nounwind {
-; X86-LABEL: test_lrint_i64_f128:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
-; X86-NEXT:    calll lrintl
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X86-NOX87-LABEL: test_lrint_i64_f128:
-; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl %ebp
-; X86-NOX87-NEXT:    movl %esp, %ebp
-; X86-NOX87-NEXT:    andl $-16, %esp
-; X86-NOX87-NEXT:    subl $16, %esp
-; X86-NOX87-NEXT:    pushl 20(%ebp)
-; X86-NOX87-NEXT:    pushl 16(%ebp)
-; X86-NOX87-NEXT:    pushl 12(%ebp)
-; X86-NOX87-NEXT:    pushl 8(%ebp)
-; X86-NOX87-NEXT:    calll lrintl
-; X86-NOX87-NEXT:    addl $16, %esp
-; X86-NOX87-NEXT:    movl %ebp, %esp
-; X86-NOX87-NEXT:    popl %ebp
-; X86-NOX87-NEXT:    retl
-;
-; CHECK-LABEL: test_lrint_i64_f128:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp lrintl@PLT # TAILCALL
-  %conv = tail call i64 @llvm.lrint.i64.f128(fp128 %x)
-  ret i64 %conv
-}
-
 define i64 @test_lrint_i64_f16_strict(half %x) nounwind {
 ; X86-NOSSE-LABEL: test_lrint_i64_f16_strict:
 ; X86-NOSSE:       # %bb.0:
@@ -387,49 +347,6 @@ define i64 @test_lrint_i64_f80_strict(x86_fp80 %x) nounwind {
 }
 
 ; FIXME(#44744): incorrect libcall
-define i64 @test_lrint_i64_f128_strict(fp128 %x) nounwind {
-; X86-LABEL: test_lrint_i64_f128_strict:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
-; X86-NEXT:    calll lrintl
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X86-NOX87-LABEL: test_lrint_i64_f128_strict:
-; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl %ebp
-; X86-NOX87-NEXT:    movl %esp, %ebp
-; X86-NOX87-NEXT:    andl $-16, %esp
-; X86-NOX87-NEXT:    subl $16, %esp
-; X86-NOX87-NEXT:    pushl 20(%ebp)
-; X86-NOX87-NEXT:    pushl 16(%ebp)
-; X86-NOX87-NEXT:    pushl 12(%ebp)
-; X86-NOX87-NEXT:    pushl 8(%ebp)
-; X86-NOX87-NEXT:    calll lrintl
-; X86-NOX87-NEXT:    addl $16, %esp
-; X86-NOX87-NEXT:    movl %ebp, %esp
-; X86-NOX87-NEXT:    popl %ebp
-; X86-NOX87-NEXT:    retl
-;
-; CHECK-LABEL: test_lrint_i64_f128_strict:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq lrintl@PLT
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    retq
-  %conv = tail call i64 @llvm.experimental.constrained.lrint.i64.f128(fp128 %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
-  ret i64 %conv
-}
-
 define i32 @PR125324(float %x) nounwind {
 ; X86-NOSSE-LABEL: PR125324:
 ; X86-NOSSE:       # %bb.0:
