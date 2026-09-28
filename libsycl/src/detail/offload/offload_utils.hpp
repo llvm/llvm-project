@@ -69,12 +69,12 @@ void checkAndThrow(ol_result_t Result) {
 
 /// Checks liboffload API call result, attaches the context to the exception.
 ///
-/// Used after calling the API without check.
+/// Used after calling the API without a check.
 /// To be called when specific handling is needed and explicitly done by
-/// developer before throwing exception.
+/// developer before throwing an exception.
 ///
-/// \param Context context the failed API call was made for.
-/// \param Result liboffload result of calling API.
+/// \param Context the context the failed API call was made for.
+/// \param Result the liboffload result of calling API.
 ///
 /// \throw sycl::exception if the call was not successful.
 template <sycl::errc errc = sycl::errc::runtime>
@@ -111,11 +111,11 @@ void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
   checkAndThrow(Err);
 }
 
-/// Calls the API and checks result, attaches the context to the exception.
+/// Calls the API and checks the result, attaches the context to the exception.
 ///
-/// \param Context context the API call is made for.
-/// \param Function liboffload API function to be called.
-/// \param Args arguments to be passed to the liboffload API function.
+/// \param Context the context the API call is made for.
+/// \param Function the liboffload API function to be called.
+/// \param Args the arguments to be passed to the liboffload API function.
 ///
 /// \throw sycl::exception if the call was not successful.
 template <typename FunctionType, typename... ArgsT>
