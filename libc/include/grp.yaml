@@ -1,7 +1,6 @@
 header: grp.h
 standards:
   - posix
-  - bsd
 types:
   - type_name: struct_group
   - type_name: gid_t
