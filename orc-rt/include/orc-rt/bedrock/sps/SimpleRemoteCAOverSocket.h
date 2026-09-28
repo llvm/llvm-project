@@ -23,7 +23,8 @@
 namespace orc_rt {
 
 /// Creates a ControllerAccess that carries SimpleRemote messages over Sock,
-/// taking ownership of it. Sock must be a connected stream socket.
+/// taking ownership of it. Fails if Sock is not a stream socket. Sock must be
+/// connected.
 ///
 /// The result is ready to hand to Session::attach, which is what starts the
 /// conversation; nothing is sent before then.

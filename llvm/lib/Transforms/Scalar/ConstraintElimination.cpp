@@ -217,11 +217,12 @@ struct MonotonicInfo {
 struct State {
   DominatorTree &DT;
   LoopInfo &LI;
-  ScalarEvolution &SE;
+  /// Only available for functions with loops.
+  ScalarEvolution *SE;
   TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
 
-  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution *SE,
         TargetLibraryInfo &TLI)
       : DT(DT), LI(LI), SE(SE), TLI(TLI) {}
 
@@ -1150,14 +1151,14 @@ MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
   if (Info.Unsigned || Info.Signed || !StepOffset)
     return Info;
 
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(&PN));
   if (!AR)
     return Info;
   ScalarEvolution::MonotonicPredicateType Expected =
       Info.Decreasing ? ScalarEvolution::MonotonicallyDecreasing
                       : ScalarEvolution::MonotonicallyIncreasing;
   auto IsMonotonic = [&](CmpInst::Predicate Pred) {
-    return SE.getMonotonicPredicateType(AR, Pred) == Expected;
+    return SE->getMonotonicPredicateType(AR, Pred) == Expected;
   };
   Info.Signed = IsMonotonic(CmpInst::ICMP_SGT);
   Info.Unsigned = !Info.Decreasing && IsMonotonic(CmpInst::ICMP_UGT);
@@ -1238,7 +1239,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
-      !SE.isSCEVable(PN->getType()))
+      !SE->isSCEVable(PN->getType()))
     return;
 
   // For latch conditions, we need to inject the condition that holds for the
@@ -1307,7 +1308,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     if (StepOffset->isZero())
       return;
   } else {
-    const SCEV *Expr = SE.getSCEV(PN);
+    const SCEV *Expr = SE->getSCEV(PN);
     if (!match(Expr,
                m_scev_AffineAddRec(m_SCEV(StartSCEV), m_scev_APInt(StepOffset),
                                    m_SpecificLoop(L))))
@@ -1362,10 +1363,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!StepOffset->isOne()) {
     // Check whether B-Start is known to be a multiple of StepOffset.
     if (!StartSCEV)
-      StartSCEV = SE.getSCEV(StartValue);
-    const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
+      StartSCEV = SE->getSCEV(StartValue);
+    const SCEV *BMinusStart = SE->getMinusSCEV(SE->getSCEV(B), StartSCEV);
     if (isa<SCEVCouldNotCompute>(BMinusStart) ||
-        !SE.getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
+        !SE->getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
       return;
   }
 
@@ -2359,7 +2360,7 @@ tryToSimplifyOverflowMath(WithOverflowInst *II, ConstraintInfo &Info,
 }
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
-                                 ScalarEvolution &SE,
+                                 ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
   bool Changed = false;
@@ -2698,7 +2699,8 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  // SCEV is only used for loops, only construct it if there are some.
+  auto *SE = LI.empty() ? nullptr : &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))

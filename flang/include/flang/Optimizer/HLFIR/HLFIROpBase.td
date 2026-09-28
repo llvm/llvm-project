@@ -21,6 +21,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def hlfir_Dialect : Dialect {
   let name = "hlfir";
+  let useStrictPropertiesInAssemblyFormat = 0;
 
   let summary = "High Level Fortran IR.";
 
