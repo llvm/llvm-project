@@ -2950,32 +2950,32 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s20, 5
 ; GPRIDX-NEXT:    s_cselect_b64 s[10:11], s[18:19], s[12:13]
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s20, 6
+; GPRIDX-NEXT:    s_cselect_b64 s[12:13], s[18:19], s[14:15]
+; GPRIDX-NEXT:    s_cmp_eq_u32 s20, 7
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, s3
-; GPRIDX-NEXT:    s_cselect_b64 s[12:13], s[18:19], s[14:15]
-; GPRIDX-NEXT:    s_cmp_eq_u32 s20, 7
+; GPRIDX-NEXT:    s_cselect_b64 s[14:15], s[18:19], s[16:17]
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s7
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
-; GPRIDX-NEXT:    s_cselect_b64 s[14:15], s[18:19], s[16:17]
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, s4
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s5
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s6
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, s7
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s8
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s9
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s10
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s15
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, s12
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s13
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s14
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, s15
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
@@ -3074,32 +3074,32 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; GFX8-NEXT:    s_cmp_eq_u32 s20, 5
 ; GFX8-NEXT:    s_cselect_b64 s[10:11], s[18:19], s[12:13]
 ; GFX8-NEXT:    s_cmp_eq_u32 s20, 6
+; GFX8-NEXT:    s_cselect_b64 s[12:13], s[18:19], s[14:15]
+; GFX8-NEXT:    s_cmp_eq_u32 s20, 7
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s3
-; GFX8-NEXT:    s_cselect_b64 s[12:13], s[18:19], s[14:15]
-; GFX8-NEXT:    s_cmp_eq_u32 s20, 7
+; GFX8-NEXT:    s_cselect_b64 s[14:15], s[18:19], s[16:17]
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
+; GFX8-NEXT:    v_mov_b32_e32 v5, s5
+; GFX8-NEXT:    v_mov_b32_e32 v6, s6
+; GFX8-NEXT:    v_mov_b32_e32 v7, s7
 ; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    s_cselect_b64 s[14:15], s[18:19], s[16:17]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX8-NEXT:    v_mov_b32_e32 v3, s7
-; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
+; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s11
+; GFX8-NEXT:    v_mov_b32_e32 v4, s12
+; GFX8-NEXT:    v_mov_b32_e32 v5, s13
+; GFX8-NEXT:    v_mov_b32_e32 v6, s14
+; GFX8-NEXT:    v_mov_b32_e32 v7, s15
 ; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s12
-; GFX8-NEXT:    v_mov_b32_e32 v1, s13
-; GFX8-NEXT:    v_mov_b32_e32 v2, s14
-; GFX8-NEXT:    v_mov_b32_e32 v3, s15
-; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
+; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_endpgm
 entry:

@@ -1937,6 +1937,15 @@ public:
   virtual unsigned getInstrLatency(const InstrItineraryData *ItinData,
                                    SDNode *Node) const;
 
+  /// Return the number of additional scheduling cycles that should be
+  /// accounted for when scheduling a COPY instruction. This is used by
+  /// targets where wide copies expand to multiple instructions.
+  /// \returns How many MOps the scheduler should account for issuing this
+  /// instruction.
+  virtual unsigned getIssueCyclesForCopy(const MachineInstr &MI) const {
+    return 0;
+  }
+
   /// Return the default expected latency for a def based on its opcode.
   unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
                              const MCSchedModel &SchedModel,

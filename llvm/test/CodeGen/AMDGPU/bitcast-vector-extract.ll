@@ -19,17 +19,16 @@ define amdgpu_kernel void @store_bitcast_constant_v8i32_to_v8f32(ptr addrspace(1
 ; GCN-6-NEXT:    s_mov_b32 s5, s4
 ; GCN-6-NEXT:    s_mov_b32 s6, s4
 ; GCN-6-NEXT:    s_mov_b32 s7, s4
-; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-6-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-6-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-6-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-6-NEXT:    s_waitcnt expcnt(0)
-; GCN-6-NEXT:    v_mov_b32_e32 v3, 9
-; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt vmcnt(0) expcnt(1)
+; GCN-6-NEXT:    v_mov_b32_e32 v3, 9
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -49,16 +48,16 @@ define amdgpu_kernel void @store_bitcast_constant_v8i32_to_v8f32(ptr addrspace(1
 ; GCN-802-NEXT:    s_mov_b32 s5, s4
 ; GCN-802-NEXT:    s_mov_b32 s6, s4
 ; GCN-802-NEXT:    s_mov_b32 s7, s4
-; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-802-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-802-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-802-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-802-NEXT:    v_mov_b32_e32 v3, 9
+; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
+; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
+; GCN-802-NEXT:    v_mov_b32_e32 v3, 9
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -86,17 +85,16 @@ define amdgpu_kernel void @store_bitcast_constant_v4i64_to_v8f32(ptr addrspace(1
 ; GCN-6-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-6-NEXT:    s_mov_b32 s6, s4
 ; GCN-6-NEXT:    s_mov_b32 s7, s5
-; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-6-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-6-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-6-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-6-NEXT:    s_waitcnt expcnt(0)
-; GCN-6-NEXT:    v_mov_b32_e32 v2, 9
-; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt vmcnt(0) expcnt(1)
+; GCN-6-NEXT:    v_mov_b32_e32 v2, 9
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -116,16 +114,16 @@ define amdgpu_kernel void @store_bitcast_constant_v4i64_to_v8f32(ptr addrspace(1
 ; GCN-802-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-802-NEXT:    s_mov_b32 s6, s4
 ; GCN-802-NEXT:    s_mov_b32 s7, s5
-; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-802-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-802-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-802-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-802-NEXT:    v_mov_b32_e32 v2, 9
+; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
+; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
+; GCN-802-NEXT:    v_mov_b32_e32 v2, 9
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -153,17 +151,16 @@ define amdgpu_kernel void @store_bitcast_constant_v4i64_to_v4f64(ptr addrspace(1
 ; GCN-6-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-6-NEXT:    s_mov_b32 s6, s4
 ; GCN-6-NEXT:    s_mov_b32 s7, s5
-; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-6-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-6-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-6-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-6-NEXT:    s_waitcnt expcnt(0)
-; GCN-6-NEXT:    v_mov_b32_e32 v2, 9
-; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt vmcnt(0) expcnt(1)
+; GCN-6-NEXT:    v_mov_b32_e32 v2, 9
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -183,16 +180,16 @@ define amdgpu_kernel void @store_bitcast_constant_v4i64_to_v4f64(ptr addrspace(1
 ; GCN-802-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-802-NEXT:    s_mov_b32 s6, s4
 ; GCN-802-NEXT:    s_mov_b32 s7, s5
-; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-802-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-802-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-802-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-802-NEXT:    v_mov_b32_e32 v2, 9
+; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
+; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
+; GCN-802-NEXT:    v_mov_b32_e32 v2, 9
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -220,17 +217,16 @@ define amdgpu_kernel void @store_bitcast_constant_v8i32_to_v16i16(ptr addrspace(
 ; GCN-6-NEXT:    s_mov_b32 s5, s4
 ; GCN-6-NEXT:    s_mov_b32 s6, s4
 ; GCN-6-NEXT:    s_mov_b32 s7, s4
-; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-6-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-6-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-6-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-6-NEXT:    s_waitcnt expcnt(0)
-; GCN-6-NEXT:    v_mov_b32_e32 v3, 0x90007
-; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
+; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GCN-6-NEXT:    s_waitcnt vmcnt(0) expcnt(1)
+; GCN-6-NEXT:    v_mov_b32_e32 v3, 0x90007
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-6-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-6-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
@@ -250,16 +246,16 @@ define amdgpu_kernel void @store_bitcast_constant_v8i32_to_v16i16(ptr addrspace(
 ; GCN-802-NEXT:    s_mov_b32 s5, s4
 ; GCN-802-NEXT:    s_mov_b32 s6, s4
 ; GCN-802-NEXT:    s_mov_b32 s7, s4
-; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-802-NEXT:    v_mov_b32_e32 v5, s5
 ; GCN-802-NEXT:    v_mov_b32_e32 v6, s6
 ; GCN-802-NEXT:    v_mov_b32_e32 v7, s7
-; GCN-802-NEXT:    v_mov_b32_e32 v3, 0x90007
+; GCN-802-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
+; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
+; GCN-802-NEXT:    v_mov_b32_e32 v3, 0x90007
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GCN-802-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-802-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0

@@ -259,9 +259,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_1
 ; FLATSCR-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
-; FLATSCR-NEXT:    s_add_i32 s6, s0, 0x3000
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    s_movk_i32 s6, 0x2000
 ; FLATSCR-NEXT:    s_mov_b32 s1, s0
 ; FLATSCR-NEXT:    s_mov_b32 s2, s0
 ; FLATSCR-NEXT:    s_mov_b32 s3, s0
@@ -269,13 +268,14 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, s1
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, s2
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, s3
-; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s6 offset:256
+; FLATSCR-NEXT:    s_add_i32 s0, s6, 0x3000
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:256
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s6 offset:272
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:272
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 offset:208 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x3000
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s6 offset:208 glc
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s0 offset:64 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -563,24 +563,24 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB1_1
 ; FLATSCR-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
-; FLATSCR-NEXT:    s_add_i32 s4, s33, s0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    s_movk_i32 s4, 0x2000
 ; FLATSCR-NEXT:    s_mov_b32 s1, s0
 ; FLATSCR-NEXT:    s_mov_b32 s2, s0
 ; FLATSCR-NEXT:    s_mov_b32 s3, s0
-; FLATSCR-NEXT:    s_addk_i32 s4, 0x3000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v5, s3
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, s2
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, s1
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, s0
-; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[2:5], s4 offset:256
+; FLATSCR-NEXT:    s_add_i32 s0, s33, s4
+; FLATSCR-NEXT:    s_addk_i32 s0, 0x3000
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[2:5], s0 offset:256
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[2:5], s4 offset:272
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[2:5], s0 offset:272
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s0 offset:208 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_add_i32 s0, s33, 0x3000
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s4 offset:208 glc
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s0 offset:64 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s32, s34
@@ -889,9 +889,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB2_1
 ; FLATSCR-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
-; FLATSCR-NEXT:    s_add_i32 s6, s0, 0x4000
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    s_movk_i32 s6, 0x2000
 ; FLATSCR-NEXT:    s_mov_b32 s1, s0
 ; FLATSCR-NEXT:    s_mov_b32 s2, s0
 ; FLATSCR-NEXT:    s_mov_b32 s3, s0
@@ -899,11 +898,12 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, s1
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, s2
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, s3
+; FLATSCR-NEXT:    s_add_i32 s0, s6, 0x4000
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:256
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:272
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x1000
-; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s6 offset:256
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s6 offset:272
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_addk_i32 s0, 0x4000
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[8:9], off, s0 offset:720 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)

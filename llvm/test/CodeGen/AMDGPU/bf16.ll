@@ -42847,18 +42847,18 @@ define <4 x bfloat> @v_vselect_v4bf16(<4 x i1> %cond, <4 x bfloat> %a, <4 x bflo
 ; GFX10-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX10-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 1, v1
-; GFX10-NEXT:    v_and_b32_e32 v1, 1, v2
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s5, 1, v0
-; GFX10-NEXT:    v_cndmask_b32_sdwa v2, v7, v5, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v7, v5, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v6, v4, vcc_lo
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s4
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v3, v6, v4, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v6, v4, s5
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v7, v5, vcc_lo
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
 ; GFX10-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
-; GFX10-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, v7, v5, vcc_lo
+; GFX10-NEXT:    v_perm_b32 v1, v1, v2, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11TRUE16-LABEL: v_vselect_v4bf16:
@@ -43160,24 +43160,24 @@ define <8 x bfloat> @v_vselect_v8bf16(<8 x i1> %cond, <8 x bfloat> %a, <8 x bflo
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX10-NEXT:    v_and_b32_e32 v7, 1, v7
 ; GFX10-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX10-NEXT:    v_and_b32_e32 v7, 1, v7
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 1, v1
 ; GFX10-NEXT:    v_and_b32_e32 v1, 1, v5
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v7
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s5, 1, v3
-; GFX10-NEXT:    v_and_b32_e32 v3, 1, v6
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v7
+; GFX10-NEXT:    v_and_b32_e32 v3, 1, v4
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s6, 1, v1
-; GFX10-NEXT:    v_and_b32_e32 v1, 1, v4
+; GFX10-NEXT:    v_and_b32_e32 v1, 1, v6
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v4, v15, v11, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, v14, v10, vcc_lo
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
+; GFX10-NEXT:    v_cndmask_b32_e32 v3, v14, v10, vcc_lo
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s6
-; GFX10-NEXT:    v_cndmask_b32_sdwa v6, v14, v10, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v5, v14, v10, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s5
-; GFX10-NEXT:    v_cndmask_b32_sdwa v1, v13, v9, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v6, v13, v9, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v12, v8, vcc_lo
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, s4
@@ -43185,11 +43185,11 @@ define <8 x bfloat> @v_vselect_v8bf16(<8 x i1> %cond, <8 x bfloat> %a, <8 x bflo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
 ; GFX10-NEXT:    v_perm_b32 v0, v7, v0, 0x5040100
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, v13, v9, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
-; GFX10-NEXT:    v_perm_b32 v1, v1, v2, 0x5040100
-; GFX10-NEXT:    v_cndmask_b32_e32 v3, v15, v11, vcc_lo
-; GFX10-NEXT:    v_perm_b32 v2, v6, v5, 0x5040100
-; GFX10-NEXT:    v_perm_b32 v3, v4, v3, 0x5040100
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX10-NEXT:    v_perm_b32 v1, v6, v2, 0x5040100
+; GFX10-NEXT:    v_cndmask_b32_e32 v8, v15, v11, vcc_lo
+; GFX10-NEXT:    v_perm_b32 v2, v5, v3, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v3, v4, v8, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11TRUE16-LABEL: v_vselect_v8bf16:

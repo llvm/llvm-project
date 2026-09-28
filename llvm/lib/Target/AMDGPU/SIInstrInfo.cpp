@@ -11213,6 +11213,13 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return SchedModel.computeInstrLatency(&MI);
 }
 
+unsigned SIInstrInfo::getIssueCyclesForCopy(const MachineInstr &MI) const {
+  if (!MI.isCopy())
+    return 1;
+
+  return (getOpSize(MI, 0) + 7) / 8;
+}
+
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
   if (!ST.hasGFX1250VALUBlockingCycles())
     return 0;

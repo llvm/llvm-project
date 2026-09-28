@@ -3093,6 +3093,15 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     CheckPending = true;
   }
 
+  // COPY lowering may result in expanding to multiple instructions -- account
+  // for this as additional issue cycles.
+  if (MachineInstr *MI = SU->getInstr()) {
+    if (MI->isCopy()) {
+      unsigned ExtraCycles = DAG->TII->getIssueCyclesForCopy(*MI);
+      IncMOps = std::max(IncMOps, ExtraCycles);
+    }
+  }
+
   // Update CurrMOps after calling bumpCycle to handle stalls, since bumpCycle
   // resets CurrMOps. Loop to handle instructions with more MOps than issue in
   // one cycle.  Since we commonly reach the max MOps here, opportunistically

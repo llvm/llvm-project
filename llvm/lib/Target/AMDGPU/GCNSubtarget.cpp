@@ -849,6 +849,24 @@ void GCNSubtarget::adjustSchedDependency(
     return; // This is not a data dependency anymore.
   }
 
+  if (DefI->isCopy()) {
+    // Wide copies will be lowered into multiple instructions. Thus, if the
+    // user uses the last copy in the sequence, it must wait NumCopies - 1 to
+    // issue the additional copies, plus the latency of the actual COPY. We
+    // pessimistically assume this is the case.
+    //
+    // TODO: Certain architectures have different rules regarding issuing back
+    // to back copies. For example, on gfx1250, v_mov_b64 blocks execution of
+    // subsequent VALU (e.g. v_mov_b64) for a number of cycles.
+    //
+    // TODO: Plug this into getInstrLatency override to use consistent latency
+    // queries.
+    unsigned Latency = Dep.getLatency();
+    Latency += InstrInfo.getIssueCyclesForCopy(*DefI) - 1;
+    Dep.setLatency(Latency);
+    return;
+  }
+
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();

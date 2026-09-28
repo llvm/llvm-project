@@ -26,8 +26,8 @@ body:             |
     ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
     ; GCN-NEXT: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (store (s32), addrspace 3)
-    ; GCN-NEXT: $vgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     ; GCN-NEXT: $m0 = S_MOV_B32 0
+    ; GCN-NEXT: $vgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     ; GCN-NEXT: BUNDLE implicit $vgpr0, implicit $m0, implicit $exec {
     ; GCN-NEXT:   DS_GWS_INIT $vgpr0, 11, implicit $m0, implicit $exec :: (store (s32))
     ; GCN-NEXT:   S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
