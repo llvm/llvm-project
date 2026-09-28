@@ -526,8 +526,25 @@ MergeFunctions::runOnFunctions(ArrayRef<Function *> Funcs) {
   return this->DelToNewMap;
 }
 
+// Direct calls to Old are about to call New. The verifier requires a location
+// on a call from a function with debug info to a function with debug info, but
+// a call to Old need not have one if Old has no debug info. Give such calls a
+// line 0 location in the caller.
+static void addMissingCallLocations(Function *Old, Function *New) {
+  if (!New->getSubprogram())
+    return;
+  for (Use &U : Old->uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) || CB->getDebugLoc())
+      continue;
+    if (DISubprogram *SP = CB->getFunction()->getSubprogram())
+      CB->setDebugLoc(DILocation::get(CB->getContext(), 0, 0, SP));
+  }
+}
+
 // Replace direct callers of Old with New.
 void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
+  addMissingCallLocations(Old, New);
   for (Use &U : make_early_inc_range(Old->uses())) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (CB && CB->isCallee(&U)) {
@@ -858,6 +875,21 @@ static bool canCreateAliasFor(Function *F) {
   return true;
 }
 
+static bool hasNonLocalAlias(const Function *F) {
+  for (const GlobalAlias &GA : F->getParent()->aliases())
+    if (!GA.hasLocalLinkage() && GA.getAliaseeObject() == F)
+      return true;
+  return false;
+}
+
+/// A COFF weak external must name its target, and a local symbol has no name
+/// the linker can agree on across objects (LNK1227).
+static bool canBeAliasee(const Function *F) {
+  if (!F->getParent()->getTargetTriple().isOSBinFormatCOFF())
+    return true;
+  return F->hasName() && !F->hasLocalLinkage();
+}
+
 // Replace G with an alias to F (deleting function G)
 void MergeFunctions::writeAlias(Function *F, Function *G) {
   PointerType *PtrType = G->getType();
@@ -911,7 +943,7 @@ static void mergeEntryCountsAndImportsInto(Function &F, Function &G) {
 bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
   bool ShouldErase =
       G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
-  bool ShouldAlias = canCreateAliasFor(G);
+  bool ShouldAlias = canCreateAliasFor(G) && canBeAliasee(F);
   bool ShouldThunk = canCreateThunkFor(F);
 
   if (!ShouldErase && !ShouldAlias && !ShouldThunk)
@@ -1177,12 +1209,15 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       // Functions referred to by llvm.used/llvm.compiler.used are special:
       // there are uses of the symbol name that are not visible to LLVM,
       // usually from inline asm.
-      if (G->hasGlobalUnnamedAddr() && !Used.contains(G)) {
+      // Replacing G also retargets G's aliases at F.
+      if (G->hasGlobalUnnamedAddr() && !Used.contains(G) &&
+          (!hasNonLocalAlias(G) || canBeAliasee(F))) {
         // G might have been a key in our GlobalNumberState, and it's illegal
         // to replace a key in ValueMap<GlobalValue *> with a non-global.
         GlobalNumbers.erase(G);
         // If G's address is not significant, replace it entirely.
         removeUsers(G);
+        addMissingCallLocations(G, F);
         G->replaceAllUsesWith(F);
       } else {
         // Redirect direct callers of G to F. (See note on MergeFunctionsPDI

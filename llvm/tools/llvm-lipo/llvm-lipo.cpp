@@ -70,27 +70,14 @@ enum LipoID {
 };
 
 namespace lipo {
-#define OPTTABLE_STR_TABLE_CODE
-#include "LipoOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LipoOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info LipoInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
+#define OPTTABLE_CODE
 #include "LipoOpts.inc"
-#undef OPTION
-};
 } // namespace lipo
 
-class LipoOptTable : public opt::GenericOptTable {
+class LipoOptTable : public opt::OptTable {
 public:
-  LipoOptTable()
-      : opt::GenericOptTable(lipo::OptionStrTable, lipo::OptionPrefixesTable,
-                             lipo::LipoInfoTable) {}
+  LipoOptTable() : opt::OptTable(lipo::optionTables()) {}
 };
 
 enum class LipoAction {

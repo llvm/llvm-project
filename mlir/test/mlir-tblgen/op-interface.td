@@ -122,6 +122,25 @@ def TestOpInterface : OpInterface<"TestOpInterface"> {
       /*body=*/[{ return 0; }]
     >,
     InterfaceMethod<
+      /*desc=*/[{shared operation body}],
+      /*retTy=*/"int",
+      /*methodName=*/"shared_body_foo",
+      /*args=*/(ins "int":$input),
+      /*body=*/[{
+        return $_raw_op->getNumOperands() + input;
+      }],
+      /*defaultImplementation=*/[{ return input; }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{raw and concrete operation body}],
+      /*retTy=*/"int",
+      /*methodName=*/"mixed_body_foo",
+      /*args=*/(ins "int":$input),
+      /*body=*/[{
+        return ::llvm::cast<ConcreteOp>($_raw_op).getNumOperands() + input;
+      }]
+    >,
+    InterfaceMethod<
       /*desc=*/[{some function comment}],
       /*retTy=*/"int",
       /*methodName=*/"default_foo",
@@ -163,6 +182,12 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
       [DeclareOpInterfaceMethods<TestOpInterface, ["default_foo"]>]>;
 
 // DECL-LABEL: TestOpInterfaceInterfaceTraits
+// DECL: static int shared_shared_body_foo(const Concept *impl, ::mlir::Operation *tablegen_opaque_val, int input);
+// DECL: class Model : public Concept
+// DECL: Model() : Concept{foo, body_foo, Concept::shared_shared_body_foo, mixed_body_foo, default_foo}
+// DECL: static inline int foo(
+// DECL: class FallbackModel : public Concept
+// DECL: static inline int foo(
 // DECL: class TestOpInterface : public ::mlir::OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
 
 // DECL: /// some function comment
@@ -183,6 +208,13 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
 // Method implementations come last, after all class definitions.
 // DECL: template<typename ConcreteOp>
 // DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::foo
+// DECL: inline int detail::TestOpInterfaceInterfaceTraits::Concept::shared_shared_body_foo
+// DECL-NEXT:   return tablegen_opaque_val->getNumOperands() + input;
+// DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::mixed_body_foo
+// DECL: return ::llvm::cast<ConcreteOp>(tablegen_opaque_val).getNumOperands() + input;
+// DECL: int detail::TestOpInterfaceInterfaceTraits::FallbackModel<ConcreteOp>::shared_body_foo
+// DECL: int detail::TestOpInterfaceInterfaceTraits::ExternalModel<ConcreteModel, ConcreteOp>::shared_body_foo
+// DECL: return input;
 
 // OP_DECL-LABEL: class DeclareMethodsOp : public
 // OP_DECL: int foo(int input);
