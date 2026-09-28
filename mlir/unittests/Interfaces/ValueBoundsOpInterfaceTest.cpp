@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include <gtest/gtest.h>
 
@@ -45,16 +45,16 @@ TEST(ValueBoundsOpInterfaceTest, EquivalentSlices) {
   // Identical components must not hide a later non-equivalent component.
   HyperrectangularSlice differentSlice({zero, dynamicValue},
                                        {five, dynamicValue}, {one, one});
-  equivalent = ValueBoundsConstraintSet::areEquivalentSlices(
-      &context, slice, differentSlice);
+  equivalent = ValueBoundsConstraintSet::areEquivalentSlices(&context, slice,
+                                                             differentSlice);
   ASSERT_TRUE(succeeded(equivalent));
   EXPECT_FALSE(*equivalent);
 
   // Distinct dynamic values continue to use the ValueBounds fallback.
   HyperrectangularSlice unknownSlice({zero, otherDynamicValue},
                                      {four, dynamicValue}, {one, one});
-  equivalent = ValueBoundsConstraintSet::areEquivalentSlices(
-      &context, slice, unknownSlice);
+  equivalent = ValueBoundsConstraintSet::areEquivalentSlices(&context, slice,
+                                                             unknownSlice);
   EXPECT_TRUE(failed(equivalent));
 }
 
