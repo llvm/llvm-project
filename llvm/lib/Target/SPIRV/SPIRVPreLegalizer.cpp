@@ -632,7 +632,7 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   // per use.
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   for (MachineInstr *MI : Info.SignSensitiveWorklist) {
-    for (MachineOperand &MO : MI->all_uses()) {
+    for (const MachineOperand &MO : MI->all_uses()) {
       Register Reg = MO.getReg();
       auto It = Info.OrigWidth.find(Reg);
       if (It == Info.OrigWidth.end())
