@@ -1793,7 +1793,7 @@ struct InputFileEntry {
   /// The first source location entry written for the file, and the offset that
   /// entry starts at. \c SLocIndex is zero when no entries were written.
   unsigned SLocIndex = 0;
-  uint32_t SLocOffset = 0;
+  SourceLocation::UIntTy SLocOffset = 0;
 
   InputFileEntry(FileEntryRef File) : File(File) {}
 

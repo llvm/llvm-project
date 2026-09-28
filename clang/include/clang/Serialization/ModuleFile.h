@@ -78,7 +78,7 @@ struct InputFileInfo {
   /// the offset that entry starts at. \c SLocIndex is zero when it wrote
   /// none.
   unsigned SLocIndex;
-  uint32_t SLocOffset;
+  SourceLocation::UIntTy SLocOffset;
 
   bool isValid() const {
     return !UnresolvedImportedFilenameAsRequested.empty();

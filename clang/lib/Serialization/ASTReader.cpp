@@ -1875,7 +1875,9 @@ InputFileLoc ASTReader::getInputFileLoc(ModuleFile &F, unsigned InputID) {
   // elsewhere, so it has no copy to offer.
   if (!FI.SLocIndex)
     return InputFileLoc();
-  return {FileID::get(F.SLocEntryBaseID + FI.SLocIndex),
+  // \c SLocIndex is a FileID, which counts from one, and a module file's
+  // entries are indexed from zero.
+  return {FileID::get(F.SLocEntryBaseID + FI.SLocIndex - 1),
           F.SLocEntryBaseOffset + FI.SLocOffset};
 }
 
