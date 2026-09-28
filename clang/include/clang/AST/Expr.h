@@ -5175,7 +5175,7 @@ struct EmbedDataStorage {
 ///  { {EE(9th and 10th element), { zeroinitializer }}}
 ///
 /// EmbedExpr inside of a semantic initializer list and referencing more than
-/// one element can only appear for arrays of scalars.
+/// one element can only appear for arrays of integer or floating-point type.
 class EmbedExpr final : public Expr {
   SourceLocation EmbedKeywordLoc;
   IntegerLiteral *FakeChildNode = nullptr;
@@ -5389,7 +5389,7 @@ public:
   unsigned getNumInitsWithEmbedExpanded() const {
     unsigned Sum = InitExprs.size();
     for (auto *IE : InitExprs)
-      if (auto *EE = dyn_cast<EmbedExpr>(IE))
+      if (auto *EE = dyn_cast<EmbedExpr>(cast<Expr>(IE)->IgnoreParenImpCasts()))
         Sum += EE->getDataElementCount() - 1;
     return Sum;
   }

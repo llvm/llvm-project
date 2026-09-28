@@ -44,11 +44,25 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       libc.src.__support.freelist_heap
   )
+  # Same fuzzer, but with the heap rotating between several free stores, so
+  # that both configurations get covered by a single build.
+  add_libc_fuzzer(
+    freelist_heap_rotation_fuzz
+    SRCS
+      freelist_heap_fuzz.cpp
+    COMPILE_OPTIONS
+      -DLIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+    DEPENDS
+      libc.src.__support.freelist_heap
+  )
   # TODO(#119995): Remove this once sccache on Windows no longer requires
   # the use of -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded.
   get_fq_target_name(freelist_heap_fuzz freelist_heap_fuzz_target_name)
+  get_fq_target_name(freelist_heap_rotation_fuzz
+                     freelist_heap_rotation_fuzz_target_name)
   set_target_properties(
     ${freelist_heap_fuzz_target_name}
+    ${freelist_heap_rotation_fuzz_target_name}
     PROPERTIES
       MSVC_DEBUG_INFORMATION_FORMAT ""
   )

@@ -98,7 +98,7 @@ define i1 @test2(i32 %n) {
 ; CHECK-NEXT:    [[COND2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i64 [[INDVAR_NEXT]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[INDVAR_NEXT]] to i32
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 false

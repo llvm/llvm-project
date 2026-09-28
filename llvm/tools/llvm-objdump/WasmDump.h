@@ -17,7 +17,6 @@ class Error;
 
 namespace object {
 class WasmObjectFile;
-class ObjectFile;
 class RelocationRef;
 } // namespace object
 
@@ -26,8 +25,6 @@ namespace objdump {
 Error getWasmRelocationValueString(const object::WasmObjectFile *Obj,
                                    const object::RelocationRef &RelRef,
                                    llvm::SmallVectorImpl<char> &Result);
-
-void printWasmFileHeader(const object::ObjectFile *O);
 
 } // namespace objdump
 } // namespace llvm

@@ -151,6 +151,7 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -184,6 +185,7 @@
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/ResetMachineFunctionPass.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -897,6 +899,11 @@ Expected<bool> parseInstCountOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
 }
 
+Expected<bool> parseInferAddressSpacesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(
+      Params, "assume-default-is-flat-addrspace", "InferAddressSpacesPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -1608,11 +1615,6 @@ parseStructuralHashPrinterPassOptions(StringRef Params) {
   return make_error<StringError>(
       formatv("invalid structural hash printer parameter '{}'", Params).str(),
       inconvertibleErrorCode());
-}
-
-Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "demote-catchswitch-only",
-                                            "WinEHPreparePass");
 }
 
 Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {

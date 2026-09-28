@@ -497,7 +497,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);
-    typename Intrinsic::Properties properties;
+    typename Intrinsic::Properties properties{};
     properties.aux = rewriter.getI32IntegerAttr(0);
     Operation *lowered =
         Intrinsic::create(rewriter, loc, resultTypes, args, properties);
@@ -2254,7 +2254,9 @@ struct TransposeLoadOpLowering
         if (numElements != 16)
           return emitNumElementsError(16, "gfx1250+");
         intrinsic =
-            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
                 .getResult();
         break;
       }
@@ -2262,7 +2264,9 @@ struct TransposeLoadOpLowering
         if (numElements != 16)
           return emitNumElementsError(16, "gfx1250+");
         intrinsic =
-            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr)
+            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
                 .getResult();
         break;
       }
@@ -2270,15 +2274,18 @@ struct TransposeLoadOpLowering
         if (numElements != 8)
           return emitNumElementsError(8, "gfx1250+");
         intrinsic =
-            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
                 .getResult();
         break;
       }
       case 16: {
         if (numElements != 8)
           return emitNumElementsError(8, "gfx1250+");
-        intrinsic = ROCDL::DsLoadTr16_B128::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::DsLoadTr16_B128::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
@@ -2290,32 +2297,36 @@ struct TransposeLoadOpLowering
       case 4: {
         if (numElements != 16)
           return emitNumElementsError(16, "gfx950");
-        intrinsic = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr4_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
       case 6: {
         if (numElements != 16)
           return emitNumElementsError(16, "gfx950");
-        intrinsic = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr6_b96::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
       case 8: {
         if (numElements != 8)
           return emitNumElementsError(8, "gfx950");
-        intrinsic = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr8_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
       case 16: {
         if (numElements != 4)
           return emitNumElementsError(4, "gfx950");
-        intrinsic = ROCDL::ds_read_tr16_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr16_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
@@ -2377,8 +2388,9 @@ struct GlobalTransposeLoadOpLowering
       assert(numElements == 16);
       if (chipset < kGfx1250)
         return op.emitOpError("4-bit global_transpose_load requires gfx1250+");
-      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
@@ -2386,22 +2398,24 @@ struct GlobalTransposeLoadOpLowering
       assert(numElements == 16);
       if (chipset < kGfx1250)
         return op.emitOpError("6-bit global_transpose_load requires gfx1250+");
-      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 8: {
       assert(numElements == 8);
-      auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 16: {
       assert(numElements == 8);
-      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadTr8_B128>(op, llvmResultType,
-                                                             srcPtr);
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadTr8_B128>(
+          op, llvmResultType, srcPtr, ArrayAttr{}, ArrayAttr{}, ArrayAttr{});
       break;
     }
     default:
@@ -4567,7 +4581,7 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
       });
   typeConverter.addConversion([](gpu::NamedBarrierType type) {
     return LLVM::LLVMPointerType::get(
-        type.getContext(), ROCDL::ROCDLDialect::kSharedMemoryAddressSpace);
+        type.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
   });
 }
 

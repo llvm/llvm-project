@@ -363,7 +363,7 @@ static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
              << "omp.declare_target 'automap' is not valid on functions";
 
     // TODO: Disallow the `local` clause (OpenMP 6.0).
-    if (declareTargetAttr.getCaptureClause().getValue() ==
+    if (declareTargetAttr.getCaptureClause() ==
         mlir::omp::DeclareTargetCaptureClause::link)
       return op->emitOpError()
              << "omp.declare_target 'link' is not valid on functions";
@@ -722,6 +722,10 @@ static LogicalResult verifyAllocateClause(
       return op->emitError()
              << "type mismatch between allocate variable and private variable "
                 "at index "
+             << privateIndex;
+    if (allocateVar != privateVar)
+      return op->emitError()
+             << "allocate variable does not match private variable at index "
              << privateIndex;
 
     if (!privateSyms ||
@@ -3005,7 +3009,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                     /*allocate_private_indices=*/nullptr, /*if_expr=*/nullptr,
                     /*num_threads_vars=*/ValueRange(),
                     /*private_vars=*/ValueRange(),
-                    /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
+                    /*private_syms=*/nullptr, /*private_needs_barrier=*/false,
                     /*proc_bind_kind=*/nullptr,
                     /*reduction_mod =*/nullptr, /*reduction_vars=*/ValueRange(),
                     /*reduction_byref=*/nullptr, /*reduction_syms=*/nullptr);
@@ -3135,7 +3139,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
       clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
       clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
       clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
-      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+      /*private_needs_barrier=*/false, clauses.reductionMod,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
@@ -3276,7 +3280,8 @@ LogicalResult ScopeOp::verify() {
   if (failed(verifyAllocateClause(
           getOperation(), getAllocateVars(), getAllocatorVars(),
           getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
-          getPrivateVars(), getPrivateSymsAttr())))
+          getPrivateVars(), getPrivateSymsAttr(),
+          /*requirePrivateIndices=*/true)))
     return failure();
 
   if (failed(verifyPrivateVarList(*this)))
@@ -3843,19 +3848,20 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(
-      builder, state, clauses.iterated, clauses.affinityVars,
-      clauses.allocateVars, clauses.allocatorVars,
-      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
-      clauses.final, clauses.ifExpr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-      clauses.priority, /*private_vars=*/clauses.privateVars,
-      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
+  TaskOp::build(builder, state, clauses.iterated, clauses.affinityVars,
+                clauses.allocateVars, clauses.allocatorVars,
+                makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+                makeArrayAttr(ctx, clauses.dependIteratedKinds),
+                clauses.dependIterated, clauses.final, clauses.ifExpr,
+                clauses.inReductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+                clauses.priority, /*private_vars=*/clauses.privateVars,
+                /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+                clauses.privateNeedsBarrier, clauses.threadset, clauses.untied,
+                clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
@@ -3925,7 +3931,8 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
       clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadset,
+      clauses.untied);
   state.addAttribute("omp.combined", UnitAttr::get(ctx));
 }
 
@@ -5007,7 +5014,7 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
       /*depend_vars=*/clauses.dependVars,
       /*depend_iterated_kinds=*/makeArrayAttr(ctx, clauses.dependIteratedKinds),
       /*depend_iterated=*/ValueRange(clauses.dependIterated),
-      /*nowait=*/nullptr);
+      /*nowait=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5424,6 +5431,16 @@ LogicalResult PrivateClauseOp::verifyRegions() {
 void MaskedOp::build(OpBuilder &builder, OperationState &state,
                      const MaskedOperands &clauses) {
   MaskedOp::build(builder, state, clauses.filteredThreadId);
+}
+
+//===----------------------------------------------------------------------===//
+// Spec 5.2: Dispatch construct (7.6)
+//===----------------------------------------------------------------------===//
+
+void DispatchOp::build(OpBuilder &builder, OperationState &state,
+                       const DispatchOperands &clauses) {
+  DispatchOp::build(builder, state, clauses.nocontext, clauses.novariants,
+                    clauses.nowait);
 }
 
 //===----------------------------------------------------------------------===//
