@@ -32,13 +32,16 @@ static cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
 
-namespace llvm {
-cl::opt<bool> CodeGenDataThinLTOTwoRounds(
+static cl::opt<bool> CodeGenDataThinLTOTwoRounds(
     "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
     cl::desc("Enable two-round ThinLTO code generation. The first round "
              "emits codegen data, while the second round uses the emitted "
              "codegen data for further optimizations."));
-} // end namespace llvm
+static cl::opt<bool> IndexedCodeGenDataLazyLoading(
+    "indexed-codegen-data-lazy-loading", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Lazily load indexed CodeGenData. Enable to save memory and time "
+        "for final consumption of the indexed CodeGenData in production."));
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
@@ -123,6 +126,8 @@ const char *CodeGenDataSectNamePrefix[] = {
 
 } // namespace
 
+bool llvm::cgdata::thinLTOTwoRounds() { return CodeGenDataThinLTOTwoRounds; }
+
 namespace llvm {
 
 std::string getCodeGenDataSectionName(CGDataSectKind CGSK,
@@ -156,7 +161,8 @@ CodeGenData &CodeGenData::getInstance() {
       // Instead, just emit an warning message and fall back as if no CGData
       // were available.
       auto FS = vfs::getRealFileSystem();
-      auto ReaderOrErr = CodeGenDataReader::create(CodeGenDataUsePath, *FS);
+      auto ReaderOrErr = CodeGenDataReader::create(
+          CodeGenDataUsePath, *FS, IndexedCodeGenDataLazyLoading);
       if (Error E = ReaderOrErr.takeError()) {
         warn(std::move(E), CodeGenDataUsePath);
         return;
