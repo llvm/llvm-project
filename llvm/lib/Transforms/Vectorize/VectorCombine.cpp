@@ -80,7 +80,7 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                ScalarEvolution &SE, const DataLayout *DL,
+                ScalarEvolution *SE, const DataLayout *DL,
                 TTI::TargetCostKind CostKind, bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
         DT(DT), AA(AA), SE(SE), DL(DL), CostKind(CostKind),
@@ -95,7 +95,7 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
-  ScalarEvolution &SE;
+  ScalarEvolution *SE;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
   const SimplifyQuery SQ;
@@ -6819,7 +6819,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 //
 // The fold would transform this to:
 //   %loadAB = load <32 x i8>, ptr %a
-//   %shuffle0 = shufflevector <32 x i8> %loadAB, <32 x i8> poison, 
+//   %shuffle0 = shufflevector <32 x i8> %loadAB, <32 x i8> poison,
 //               <32 x i8> <...>
 //   %shuffle1 = shufflevector <32 x i8> %loadAB, <32 x i8> poison,
 //               <32 x i8> <...>
@@ -6842,7 +6842,7 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   if (!LoadTy)
     return false;
 
-  // We restrict to loads occuring in the same BB for now.
+  // We restrict to loads occurring in the same BB for now.
   if (Load0->getParent() != Load1->getParent())
     return false;
 
@@ -6860,10 +6860,11 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   // exactly contiguous. isConsecutiveAccess(A, B) is true only when B directly
   // follows A, so we probe both orderings to also handle the reversed case.
   LoadInst *LowLoad, *HighLoad;
-  if (isConsecutiveAccess(Load0, Load1, *DL, SE)) {
+  assert(SE && "ScalarEvolution is only available for late folds");
+  if (isConsecutiveAccess(Load0, Load1, *DL, *SE)) {
     LowLoad = Load0;
     HighLoad = Load1;
-  } else if (isConsecutiveAccess(Load1, Load0, *DL, SE)) {
+  } else if (isConsecutiveAccess(Load1, Load0, *DL, *SE)) {
     LowLoad = Load1;
     HighLoad = Load0;
   } else {
@@ -6955,7 +6956,7 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
                           LowLoad->getPointerAddressSpace(), CostKind);
   for (ShuffleVectorInst *SV : Shuffles) {
     OldCost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SV->getType(), LoadTy,
-                                  SV->getShuffleMask(), CostKind);
+                                  CostKind, SV->getShuffleMask());
     SmallVector<int, 32> NewMask;
     RemapMask(SV, NewMask);
     // LoadSz = initial load size
@@ -6965,7 +6966,7 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
     if (!ShuffleVectorInst::isValidOperands(Poison, Poison, NewMask))
       return false;
     NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SV->getType(),
-                                  WideTy, NewMask, CostKind);
+                                  WideTy, CostKind, NewMask);
   }
 
   LLVM_DEBUG(dbgs() << "Found adjacent loads feeding shuffles: " << *LowLoad
@@ -7002,8 +7003,8 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
     Builder.SetCurrentDebugLocation(SV->getDebugLoc());
     Value *NewShuf = Builder.CreateShuffleVector(WideLoad, Poison, NewMask);
     // We do not want to erase shuffles immediately because they may invalidate
-    // the iterators adjoining callsite for this function.
-    replaceValue(*SV, *NewShuf, false);
+    // the NextInst pointer in the caller's BB traversal.
+    replaceValue(*SV, *NewShuf, /*Erase=*/false);
   }
   return true;
 }
@@ -7330,7 +7331,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  ScalarEvolution &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  ScalarEvolution *SE =
+      TryEarlyFoldsOnly ? nullptr : &FAM.getResult<ScalarEvolutionAnalysis>(F);
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
