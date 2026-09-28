@@ -2516,8 +2516,8 @@ bool ScalarEvolution::isAvailableAtLoopEntry(const SCEV *S, const Loop *L) {
 /// Get a canonical add expression, or something simpler if possible.
 SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
                                     SCEVFlagsPair Flags, unsigned Depth) {
-  SCEV::NoWrapFlags ExprFlags, UseFlags;
-  std::tie(ExprFlags, UseFlags) = Flags;
+  SCEV::NoWrapFlags ExprFlags = Flags.ExprFlags;
+  SCEV::NoWrapFlags UseFlags = Flags.UseFlags;
   assert(!(ExprFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
          "only nuw or nsw allowed");
   assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
@@ -3132,8 +3132,8 @@ static bool containsConstantInAddMulChain(const SCEV *StartExpr) {
 /// Get a canonical multiply expression, or something simpler if possible.
 SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
                                     SCEVFlagsPair Flags, unsigned Depth) {
-  SCEVNoWrapFlags ExprFlags, UseFlags;
-  std::tie(ExprFlags, UseFlags) = Flags;
+  SCEVNoWrapFlags ExprFlags = Flags.ExprFlags;
+  SCEVNoWrapFlags UseFlags = Flags.UseFlags;
   assert(ExprFlags == maskFlags(ExprFlags, SCEV::FlagNUW | SCEV::FlagNSW) &&
          "only nuw or nsw allowed");
   assert(UseFlags == maskFlags(UseFlags, SCEV::FlagNUW | SCEV::FlagNSW) &&
@@ -3691,7 +3691,8 @@ SCEVUse ScalarEvolution::getAddRecExpr(SCEVUse Start, SCEVUse Step,
       append_range(Operands, StepChrec->operands());
       // The use flags describe the two-operand recurrence, not the flattened
       // one built here, so drop them just like the expression's NUW/NSW.
-      return getAddRecExpr(Operands, L, maskFlags(Flags.first, SCEV::FlagNW));
+      return getAddRecExpr(Operands, L,
+                           maskFlags(Flags.ExprFlags, SCEV::FlagNW));
     }
 
   Operands.push_back(Step);
@@ -3702,7 +3703,8 @@ SCEVUse ScalarEvolution::getAddRecExpr(SCEVUse Start, SCEVUse Step,
 /// expression as much as possible.
 SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
                                        const Loop *L, SCEVFlagsPair NWFlags) {
-  auto [ExprFlags, UseFlags] = NWFlags;
+  SCEVNoWrapFlags ExprFlags = NWFlags.ExprFlags;
+  SCEVNoWrapFlags UseFlags = NWFlags.UseFlags;
   assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
          "only nuw or nsw allowed");
   if (Operands.size() == 1) return Operands[0];

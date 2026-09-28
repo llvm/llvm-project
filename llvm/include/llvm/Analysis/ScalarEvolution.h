@@ -193,14 +193,18 @@ template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// The no-wrap flags to apply when creating a SCEV expression, to the
-/// expression and use: the first component of the pair is applied directly to a
-/// SCEV expression, and the second component is only applied to a SCEVUse.
-struct SCEVFlagsPair : public std::pair<SCEVNoWrapFlags, SCEVNoWrapFlags> {
-  using BaseT = std::pair<SCEVNoWrapFlags, SCEVNoWrapFlags>;
+/// expression and use respectively.
+struct SCEVFlagsPair {
+  /// Flags applied directly to a SCEV expression, must be valid wherever the
+  /// expression is valid.
+  SCEVNoWrapFlags ExprFlags;
+
+  /// Flags only applied to a SCEVUse.
+  SCEVNoWrapFlags UseFlags;
 
   constexpr SCEVFlagsPair(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagNone,
                           SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagNone)
-      : BaseT(ExprFlags, UseFlags) {}
+      : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
 };
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
