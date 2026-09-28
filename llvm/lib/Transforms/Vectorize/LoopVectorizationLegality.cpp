@@ -1986,10 +1986,28 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   // a bottom-test and a single exiting block. We'd have to handle the fact
   // that not every instruction executes on the last iteration.  This will
   // require a lane mask which varies through the vector loop body.  (TODO)
-  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Cannot fold tail by masking. Requires a singe latch exit\n");
+  bool LatchIsOnlyCountableExit =
+      hasUncountableEarlyExit()
+          ? all_of(getCountableExitingBlocks(),
+                   equal_to(TheLoop->getLoopLatch()))
+          : TheLoop->getExitingBlock() == TheLoop->getLoopLatch();
+  if (!LatchIsOnlyCountableExit) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking. Requires the latch "
+                         "to be the only countable exit\n");
+    return false;
+  }
+
+  // TODO: Handle multiple exit blocks in foldTailByMasking.
+  if (!TheLoop->getUniqueExitBlock()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking yet. Requires a "
+                         "single exit block\n");
+    return false;
+  }
+
+  // TODO: Handle early exits with side effects without a scalar tail.
+  if (hasUncountableExitWithSideEffects()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking. Uncountable exit "
+                         "with side effects requires a scalar epilogue\n");
     return false;
   }
 
