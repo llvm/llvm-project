@@ -22,20 +22,14 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.SKU }}
+    env:
+      DXC_VERSION: 1.9.2607.13
     steps:
       - name: Setup Windows
         if: runner.os == 'Windows'
         uses: llvm/actions/setup-windows@89a8cf80982d830faab019237860b344a6390c30 # main
         with:
           arch: amd64
-      - name: Checkout DXC
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          repository: Microsoft/DirectXShaderCompiler
-          ref: main
-          path: DXC
-          submodules: true
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -61,20 +55,27 @@ jobs:
           python-version: '3.x'
       - name: Install test dependencies
         run: python -m pip install -r OffloadTest/test/requirements.txt
-      - name: Build DXC
+      - name: Download DXC validator
         run: |
-            cd DXC
-            mkdir build
-            cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
-            ninja dxv
+            nuget install Microsoft.Direct3D.DXC -Version $env:DXC_VERSION -OutputDirectory DXC -ExcludeVersion -NonInteractive
+            $dxcDir = "${{ github.workspace }}/DXC/Microsoft.Direct3D.DXC/build/native/bin/x64"
+            foreach ($file in @("dxv.exe", "dxcompiler.dll", "dxil.dll")) {
+              if (-not (Test-Path "$dxcDir/$file")) {
+                throw "$file was not found in Microsoft.Direct3D.DXC $env:DXC_VERSION"
+              }
+            }
+            "DXC_DIR=$dxcDir" >> $env:GITHUB_ENV
       - name: Build LLVM
         run: |
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DLLVM_USE_LINKER=lld -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=$env:DXC_DIR -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends
+      - name: Show sccache statistics
+        if: always()
+        shell: bash
+        run: sccache --show-stats || true
       - name: Run HLSL Tests
         run: |
             cd llvm-project
