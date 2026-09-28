@@ -142,7 +142,7 @@ static bool RetCC_SH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 //===----------------------------------------------------------------------===//
 //                        CONDITIONAL BRANCH LOWERING
 //===----------------------------------------------------------------------===//
-SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
+SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
                                        ISD::CondCode CC, SDValue &OutCC,
                                        SelectionDAG &DAG, SDLoc DL) const {
   SDValue InCC;
@@ -177,11 +177,15 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
     break;
   }
   case ISD::SETLT: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
     SHcc = SHCC::COND_GE;
     SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETLE: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
     SHcc = SHCC::COND_GT;
     SHocc = SHCC::COND_F;
     break;
@@ -221,11 +225,15 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
     break;
   }
   case ISD::SETULT: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
     SHcc = SHCC::COND_HS;
     SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETULE: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
     SHcc = SHCC::COND_HI;
     SHocc = SHCC::COND_F;
     break;

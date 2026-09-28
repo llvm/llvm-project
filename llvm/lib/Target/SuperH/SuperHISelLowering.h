@@ -78,7 +78,7 @@ public:
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &OutCC,
+  SDValue getSHCmp(SDValue &LHS, SDValue &RHS, ISD::CondCode CC, SDValue &OutCC,
                    SelectionDAG &DAG, SDLoc DL) const;
 
   // Inserters
