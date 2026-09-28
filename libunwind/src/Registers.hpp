@@ -3194,45 +3194,49 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
 }
 
 inline bool Registers_mips_o32::validFloatRegister(int regNum) const {
-#if defined(__mips_hard_float) &&                                              \
-    (defined(__mips_single_float) || __mips_fpr == 64)
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float) || __mips_fpr == 64
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
-#else
-  (void)regNum;
 #endif
+#endif
+  (void)regNum;
   return false;
 }
 
 inline double Registers_mips_o32::getFloatRegister(int regNum) const {
-#if defined(__mips_hard_float) && defined(__mips_single_float)
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float)
   assert(validFloatRegister(regNum));
   float result;
   memcpy(&result, &_floats[regNum - UNW_MIPS_F0], sizeof(result));
   return result;
-#elif defined(__mips_hard_float) && __mips_fpr == 64
+#elif __mips_fpr == 64
   assert(validFloatRegister(regNum));
   return _floats[regNum - UNW_MIPS_F0];
-#else
+#endif
+#endif
   (void)regNum;
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
-#endif
 }
 
 inline void Registers_mips_o32::setFloatRegister(int regNum,
                                                  double value) {
-#if defined(__mips_hard_float) && defined(__mips_single_float)
+#if defined(__mips_hard_float)
+#if defined(__mips_single_float)
   assert(validFloatRegister(regNum));
   float single = static_cast<float>(value);
   memcpy(&_floats[regNum - UNW_MIPS_F0], &single, sizeof(single));
-#elif defined(__mips_hard_float) && __mips_fpr == 64
+  return;
+#elif __mips_fpr == 64
   assert(validFloatRegister(regNum));
   _floats[regNum - UNW_MIPS_F0] = value;
-#else
+  return;
+#endif
+#endif
   (void)regNum;
   (void)value;
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
-#endif
 }
 
 inline bool Registers_mips_o32::validVectorRegister(int /* regNum */) const {
