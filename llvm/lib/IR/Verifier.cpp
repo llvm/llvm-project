@@ -8410,8 +8410,8 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
 bool TBAAVerifier::visitTBAAStructMetadata(const Instruction *I,
                                            const MDNode *MD) {
   // !tbaa.struct is a list of (offset, size, tag) triples with ascending
-  // offsets. Offset and size must be constants; a non-null tag must be a
-  // valid access tag.
+  // offsets. Offset and size must be constants; a tag must be null or a valid
+  // access tag.
   CheckTBAA(MD->getNumOperands() % 3 == 0,
             "!tbaa.struct operands must come in groups of three", I, MD);
 
@@ -8424,9 +8424,12 @@ bool TBAAVerifier::visitTBAAStructMetadata(const Instruction *I,
     CheckTBAA(
         mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx + 1)),
         "!tbaa.struct field size must be a constant integer", I, MD);
-    if (auto *Tag = dyn_cast_or_null<MDNode>(MD->getOperand(Idx + 2)))
+    if (const Metadata *TagMD = MD->getOperand(Idx + 2)) {
+      auto *Tag = dyn_cast<MDNode>(TagMD);
+      CheckTBAA(Tag, "!tbaa.struct field tag must be null or an MDNode", I, MD);
       if (!visitTBAAMetadata(I, Tag))
         return false;
+    }
 
     const APInt &Offset = OffsetCI->getValue();
     if (PrevOffset) {

@@ -1,7 +1,8 @@
 ; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
-; FIXME: The verifier does not yet reject the overlapping-region (@test_overlapping_regions)
-; or null-tag (@test_tbaa_missing) nodes below.
+; FIXME: The verifier does not yet reject the overlapping-region
+; (@test_overlapping_regions) node below. A null tag (@test_tbaa_missing) is
+; valid.
 
 define void @test_overlapping_regions(ptr %a1) {
   %ld = load i8, ptr %a1, align 1, !tbaa.struct !0
@@ -31,6 +32,12 @@ define void @test_offsets_not_increasing(ptr %a1) {
   ret void
 }
 
+define void @test_tag_not_mdnode(ptr %a1) {
+; CHECK: !tbaa.struct field tag must be null or an MDNode
+  store i8 1, ptr %a1, align 1, !tbaa.struct !10
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 !0 = !{i64 0, i64 4, !1, i64 1, i64 4, !1}
@@ -42,3 +49,4 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounw
 !6 = !{!2, i64 0, !1}
 !7 = !{i64 0, i64 4, null}
 !9 = !{i64 4, i64 4, !1, i64 0, i64 4, !1}
+!10 = !{i64 0, i64 4, !"int"}
