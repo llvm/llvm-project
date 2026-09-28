@@ -833,6 +833,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   BasicBlock *BB = I.getParent();
   BasicBlock *Header = TheLoop->getHeader();
 
+  // llvm.prefetch is an optional hint with no semantic effect. It is omitted
+  // from the vector loop when VPlan recipes are created.
+  if (match(&I, m_Intrinsic<Intrinsic::prefetch>()))
+    return true;
+
   if (auto *Phi = dyn_cast<PHINode>(&I)) {
     Type *PhiTy = Phi->getType();
     // Check that this PHI type is allowed.
@@ -1381,6 +1386,10 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
     SmallPtrSetImpl<const Instruction *> &MaskedOp) const {
   for (Instruction &I : *BB) {
+    // Prefetches are omitted from the vector loop.
+    if (match(&I, m_Intrinsic<Intrinsic::prefetch>()))
+      continue;
+
     // We can predicate blocks with calls to assume, as long as we drop them in
     // case we flatten the CFG via predication.
     if (match(&I, m_Intrinsic<Intrinsic::assume>())) {
