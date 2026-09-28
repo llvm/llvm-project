@@ -41,11 +41,6 @@ SuperHRegisterInfo::SuperHRegisterInfo(const SuperHSubtarget &ST)
                             /*PC*/ SH::PC),
       Subtarget(ST) {}
 
-const TargetRegisterClass *
-SuperHRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &SH::GPRRegClass;
-}
-
 const MCPhysReg *
 SuperHRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SH_SaveList;
