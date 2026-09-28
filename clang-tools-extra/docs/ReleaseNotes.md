@@ -249,7 +249,7 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
-- Improved {doc}`noexcept-move-constructors
+- Improved {doc}`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
   false positives for implicitly declared `noexcept(false)`.
 
