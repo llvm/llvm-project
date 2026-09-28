@@ -231,9 +231,8 @@ define void @store_v3i8(<3 x i8> %a, ptr %ptr){
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    fmov s0, w0
 ; CHECK-SD-NEXT:    strb w2, [x3, #2]
-; CHECK-SD-NEXT:    mov v0.h[1], w1
-; CHECK-SD-NEXT:    mov v0.h[2], w2
-; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    mov v0.b[1], w1
+; CHECK-SD-NEXT:    mov v0.b[2], w2
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    str h0, [x3]
 ; CHECK-SD-NEXT:    add sp, sp, #16

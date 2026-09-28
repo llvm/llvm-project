@@ -155,7 +155,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
   if (TT.isOSBinFormatMachO()) {
@@ -224,7 +223,7 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
   // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
   // even on triples whose default float ABI is soft (the triple default only
   // detects AAPCS16 when it is the triple's own default ABI).
-  if (TargetABI == ARM::ARM_ABI_AAPCS16)
+  if (getEffectiveABI(M) == ARM::ARM_ABI_AAPCS16)
     return FloatABI::Hard;
   // Otherwise fall back to the ABI implied by the target triple.
   return M.getTargetTriple().getDefaultFloatABI();
@@ -234,7 +233,7 @@ ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
   // Consistency of "target-abi" and -target-abi is validated elsewhere.
   if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     return ARM::computeTargetABI(TargetTriple, MD->getString());
-  return TargetABI;
+  return ARM::computeTargetABI(TargetTriple, Options.MCOptions.getABIName());
 }
 
 const ARMSubtarget *
