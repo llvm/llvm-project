@@ -733,7 +733,7 @@ TEST_F(InstrProfTest, test_symtab_lookup_renamed_function_by_guid) {
   const uint64_t GUID = Function::getGUIDAssumingExternalLinkage(ProfiledName);
   F->setMetadata(LLVMContext::MD_guid,
                  MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
-                                       Type::getInt64Ty(Ctx), GUID))}));
+                                      Type::getInt64Ty(Ctx), GUID))}));
 
   // Promote and rename the function the way ThinLTO would.
   F->setName("InternalFoo.llvm.9999");
@@ -772,7 +772,7 @@ TEST_F(InstrProfTest, test_symtab_lookup_deprecated_name_with_assigned_guid) {
 
   F->setMetadata(LLVMContext::MD_guid,
                  MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
-                                       Type::getInt64Ty(Ctx), GUID))}));
+                                      Type::getInt64Ty(Ctx), GUID))}));
 
   InstrProfSymtab WithGUID;
   EXPECT_THAT_ERROR(WithGUID.create(*M), Succeeded());
