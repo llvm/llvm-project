@@ -4760,6 +4760,7 @@ cc_library(
     deps = [
         ":Support",
         ":config",
+        "//third-party:libxml2",
     ],
 )
 
@@ -5254,6 +5255,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "CovGcovOptsTableGen",
+    strip_include_prefix = "tools/llvm-cov",
+    tbl_outs = {"tools/llvm-cov/GcovOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cov/GcovOpts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "llvm-cov",
     srcs = glob([
@@ -5263,11 +5273,13 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":CovGcovOptsTableGen",
         ":Coverage",
         ":Debuginfod",
         ":HTTP",
         ":Instrumentation",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -6674,6 +6686,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "SplitFileOptsTableGen",
+    strip_include_prefix = "utils/split-file",
+    tbl_outs = {"utils/split-file/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "utils/split-file/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "split-file",
     srcs = glob([
@@ -6682,6 +6703,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":Option",
+        ":SplitFileOptsTableGen",
         ":Support",
     ],
 )
@@ -7155,6 +7178,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "Obj2YamlOptsTableGen",
+    strip_include_prefix = "tools/obj2yaml",
+    tbl_outs = {"tools/obj2yaml/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/obj2yaml/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "obj2yaml",
     testonly = True,
@@ -7169,8 +7201,10 @@ cc_binary(
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":MC",
+        ":Obj2YamlOptsTableGen",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
     ],
 )
@@ -7193,6 +7227,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "Yaml2ObjOptsTableGen",
+    strip_include_prefix = "tools/yaml2obj",
+    tbl_outs = {"tools/yaml2obj/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/yaml2obj/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "yaml2obj",
     testonly = True,
@@ -7207,7 +7250,9 @@ cc_binary(
         ":MC",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
+        ":Yaml2ObjOptsTableGen",
     ],
 )
 

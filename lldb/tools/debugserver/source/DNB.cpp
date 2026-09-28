@@ -1465,7 +1465,7 @@ nub_bool_t DNBThreadGetStopReason(nub_process_t pid, nub_thread_t tid,
 
 // Return string description for the specified thread.
 //
-// RETURNS: NULL if the thread isn't valid, else a NULL terminated C
+// RETURNS: NULL if the thread isn't valid, else a null-terminated C
 // string from a static buffer that must be copied prior to subsequent
 // calls.
 const char *DNBThreadGetInfo(nub_process_t pid, nub_thread_t tid) {

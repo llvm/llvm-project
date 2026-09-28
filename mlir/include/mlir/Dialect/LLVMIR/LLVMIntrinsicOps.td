@@ -197,6 +197,8 @@ def LLVM_FshrOp : LLVM_TernarySameArgsIntrOpI<"fshr">;
 def LLVM_ClmulOp : LLVM_BinarySameArgsIntrOpI<"clmul">;
 def LLVM_PdepOp : LLVM_BinarySameArgsIntrOpI<"pdep">;
 def LLVM_PextOp : LLVM_BinarySameArgsIntrOpI<"pext">;
+def LLVM_SMulHOp : LLVM_BinarySameArgsIntrOpI<"smulh">;
+def LLVM_UMulHOp : LLVM_BinarySameArgsIntrOpI<"umulh">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
@@ -441,15 +443,6 @@ def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
 
 def LLVM_LaunderInvariantGroupOp
     : LLVM_OneResultIntrOp<"launder.invariant.group", [], [0],
-        [DeclareOpInterfaceMethods<PromotableOpInterface>,
-         SameOperandsAndResultType]> {
-  let arguments = (ins LLVM_AnyPointer:$ptr);
-  let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
-}
-
-def LLVM_StripInvariantGroupOp
-    : LLVM_OneResultIntrOp<"strip.invariant.group", [], [0],
         [DeclareOpInterfaceMethods<PromotableOpInterface>,
          SameOperandsAndResultType]> {
   let arguments = (ins LLVM_AnyPointer:$ptr);
