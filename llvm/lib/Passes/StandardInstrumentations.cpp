@@ -1168,25 +1168,25 @@ void PrintPassInstrumentation::registerCallbacks(
         if (isSpecialPass(PassID, SpecialPasses))
           return;
 
-    auto &OS = print();
-    OS << "Running pass: " << PassID << " on "
-       << getIRName(IR, this->IRContext);
-    if (const auto *F = unwrapIR<Function>(IR)) {
-      unsigned Count = F->getInstructionCount();
-      OS << " (" << Count << " instruction";
-      if (Count != 1)
-        OS << 's';
-      OS << ')';
-    } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
-      int Count = C->size();
-      OS << " (" << Count << " node";
-      if (Count != 1)
-        OS << 's';
-      OS << ')';
-    }
-    OS << "\n";
-    Indent += 2;
-  });
+        auto &OS = print();
+        OS << "Running pass: " << PassID << " on "
+           << getIRName(IR, this->IRContext);
+        if (const auto *F = dyn_cast<Function>(IR)) {
+          unsigned Count = F->getInstructionCount();
+          OS << " (" << Count << " instruction";
+          if (Count != 1)
+            OS << 's';
+          OS << ')';
+        } else if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
+          int Count = C->size();
+          OS << " (" << Count << " node";
+          if (Count != 1)
+            OS << 's';
+          OS << ')';
+        }
+        OS << "\n";
+        Indent += 2;
+      });
   PIC.registerAfterPassCallback(
       [this, SpecialPasses](StringRef PassID, IRUnitRef IR,
                             const PreservedAnalyses &) {

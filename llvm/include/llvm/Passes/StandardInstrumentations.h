@@ -220,6 +220,8 @@ class ExtendedIRTraits {
   virtual std::optional<std::string> getIRName(IRUnitRef IR) const = 0;
 };
 
+// Stores custom IR-name traits used to specialize instrumentation output for
+// non-standard IR representations.
 struct ExtendedIRContext {
   ExtendedIRContext() = default;
   ExtendedIRContext(const ExtendedIRContext&) = delete;
@@ -229,7 +231,7 @@ struct ExtendedIRContext {
   ExtendedIRContext& operator=(ExtendedIRContext&&) = delete;
 
   llvm::SmallVector<std::unique_ptr<ExtendedIRTraits>> traits;
-  // Add an ExtendedIRTraits to the traits vector
+  // Register an ExtendedIRTraits implementation for this IR context.
   void addTrait(std::unique_ptr<ExtendedIRTraits> trait) {
     traits.push_back(std::move(trait));
   }
@@ -301,7 +303,6 @@ protected:
   // Run in verbose mode, printing everything?
   const bool VerboseMode;
 
-  // Optional extended context used to resolve custom IR names.
   ExtendedIRContext *context = nullptr;
 };
 
