@@ -4259,9 +4259,9 @@ _Bool atomic_cmpxchg_struct_padding(_Atomic(struct S2) *ptr, struct S2 *expected
 // CIR: cir.libc.memset %{{.+}} bytes at %[[EXPECTED_ATOMIC_TMP]] {{.*}} to %{{.+}} : !cir.ptr<!void>, !u8i, !u64i
 
 // CIR: cir.libc.memcpy %{{.+}} bytes from %[[EXPECTED_VOID]] {{.*}} to %[[EXPECTED_ATOMIC_TMP]] {{.*}} : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
-// CIR: %old, %success = cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(16) : (!cir.ptr<!u128i>, !u128i, !u128i) -> (!u128i, !cir.bool)
+// CIR: %[[OLD:.*]], %[[SUCCESS:.*]] = cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(16) : (!cir.ptr<!u128i>, !u128i, !u128i) -> (!u128i, !cir.bool)
 // CIR: cir.if %{{.+}} {
-// CIR:   cir.store align(16) %old, %[[OLD_TMP]] : !u128i, !cir.ptr<!u128i>
+// CIR:   cir.store align(16) %[[OLD]], %[[OLD_TMP]] : !u128i, !cir.ptr<!u128i>
 // CIR:   %[[OLD_TMP_VOID:.+]] = cir.cast bitcast %[[OLD_TMP]] : !cir.ptr<!u128i> -> !cir.ptr<!void>
 // back, and it is written into "expected" itself, not into a temporary.
 // CIR:   %[[EXPECTED_VOID2:.+]] = cir.cast bitcast %[[EXPECTED]] : !cir.ptr<!rec_S2> -> !cir.ptr<!void>
