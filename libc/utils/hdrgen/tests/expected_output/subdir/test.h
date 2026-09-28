@@ -21,7 +21,7 @@ type_a func(type_b) __NOEXCEPT;
 
 void gnufunc(type_a) __NOEXCEPT;
 
-int *ptrfunc(int (*)(const struct type_b **, const struct type_c **)) __NOEXCEPT;
+int *ptrfunc(int (*)(struct type_b **, struct type_c **)) __NOEXCEPT;
 
 __END_C_DECLS
 

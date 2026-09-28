@@ -15,4 +15,4 @@ functions:
   - name: ptrfunc
     return_type: int *
     arguments:
-      - type: int (*)(const struct type_b **, const struct type_c **)
+      - type: int (*)(struct type_b **, struct type_c **)
