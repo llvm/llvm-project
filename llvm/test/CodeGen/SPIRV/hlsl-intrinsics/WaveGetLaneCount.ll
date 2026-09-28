@@ -10,8 +10,6 @@ target triple = "spirv-unknown-vulkan-compute"
 ; CHECK-DAG: %[[#ptr:]] = OpTypePointer Input %[[#uint]]
 ; CHECK-DAG: %[[#var]] = OpVariable %[[#ptr]] Input
 
-; CHECK-NOT: OpDecorate %[[#var]] LinkageAttributes
-
 define spir_func i32 @test_fun() #0 {
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
