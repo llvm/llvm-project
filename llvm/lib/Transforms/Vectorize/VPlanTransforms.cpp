@@ -879,7 +879,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 /// constant is also matched, and \p PostIncStart is set to the constant start
 /// value of the affine expression \p VPV computes.
 static VPWidenInductionRecipe *
-getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
+getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
                    VPValue **PostIncStart = nullptr) {
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
@@ -935,7 +935,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
   if (!PostIncStart)
     return IsWideIVInc() ? WideIV : nullptr;
 
-  // start + C + i * step stays affine for any constant C, including the step,
+  // (start + C) + IV * Step stays affine for any constant C, including the step,
   // so it can be folded into the start value.
   const APInt *C;
   APInt Offset;
@@ -949,8 +949,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
   const APInt *StartC;
   if (!match(WideIV->getStartValue(), m_APInt(StartC)))
     return nullptr;
-  *PostIncStart =
-      WideIV->getParent()->getPlan()->getConstantInt(*StartC + Offset);
+  *PostIncStart = Plan.getConstantInt(*StartC + Offset);
   return WideIV;
 }
 
@@ -963,7 +962,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
                                m_VPValue(Incoming))))
     return nullptr;
 
-  auto *WideIV = getOptimizableIVOf(Incoming, PSE);
+  auto *WideIV = getOptimizableIVOf(Incoming, Plan, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -1045,7 +1044,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                            m_VPValue(Incoming)))))
     return nullptr;
 
-  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
+  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, Plan, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -5994,7 +5993,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 
       VPValue *Op = VPI.getOperand(0);
       VPValue *Start = nullptr;
-      VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Op, PSE, &Start);
+      VPWidenInductionRecipe *WideIV =
+          getOptimizableIVOf(Op, Plan, PSE, &Start);
       if (!WideIV)
         continue;
       if (!Start)
