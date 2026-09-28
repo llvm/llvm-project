@@ -997,6 +997,13 @@ static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
   return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
 }
 
+/// Flushing a denormal to +0.0 breaks f(-x) = -f(x) for odd f.
+static bool mayFlushDenormalsToPositiveZero(const CallInst *CI) {
+  DenormalMode Mode = CI->getFunction()->getDenormalMode(
+      CI->getType()->getScalarType()->getFltSemantics());
+  return Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero();
+}
+
 /// \returns the compare predicate type if the test performed by
 /// llvm.is.fpclass(x, \p Mask) is equivalent to fcmp o__ x, 0.0 with the
 /// floating-point environment assumed for \p F for type \p Ty
@@ -3415,7 +3422,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))) &&
+        !mayFlushDenormalsToPositiveZero(II)) {
       // f(-x) --> -f(x)
       // for f in {sin, sinh, tan, tanh}
       Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
