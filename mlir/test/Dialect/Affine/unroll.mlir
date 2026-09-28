@@ -23,6 +23,7 @@
 // UNROLL-BY-4-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
 // UNROLL-BY-4-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]*]] = affine_map<(d0) -> (d0)>
+// UNROLL-BY-4-DAG: [[$MAP_CLEANUP_LB:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> (d0 + ((-d0 - s0 + s1) floordiv 4) * 4 + s0, d0 + s0)>
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
 func.func @loop_nest_simplest() {
@@ -541,7 +542,7 @@ func.func @loop_nest_symbolic_bound(%N : index) {
     // UNROLL-BY-4-NEXT: %3 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: }
     // A cleanup loop will be generated here.
-    // UNROLL-BY-4-NEXT: affine.for %arg2 = #map{{[0-9]*}}()[%arg0] to %arg0 {
+    // UNROLL-BY-4-NEXT: affine.for %arg2 = max #map{{[0-9]*}}()[%arg0] to %arg0 {
     // UNROLL-BY-4-NEXT: %0 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: }
     affine.for %j = 0 to %N {
@@ -566,7 +567,30 @@ func.func @loop_nest_symbolic_bound_with_step(%N : index) {
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT: }
 // A cleanup loop will be be generated here.
-// UNROLL-BY-4-NEXT: affine.for %{{.*}} = #map{{[0-9]*}}()[%[[N]]] to %[[N]] step 3 {
+// UNROLL-BY-4-NEXT: affine.for %{{.*}} = max #map{{[0-9]*}}()[%[[N]]] to %[[N]] step 3 {
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT: }
+  }
+  return
+}
+
+// The cleanup loop must not execute when the original loop would not (%N below
+// %i + %M), so its lower bound includes the original one.
+// UNROLL-BY-4-LABEL: func @loop_nest_symbolic_lower_bound
+// UNROLL-BY-4-SAME:    %[[M:.*]]: index, %[[N:.*]]: index
+func.func @loop_nest_symbolic_lower_bound(%M : index, %N : index) {
+  // UNROLL-BY-4: affine.for %[[I:.*]] = 0 to 100 {
+  affine.for %i = 0 to 100 {
+    affine.for %j = affine_map<(d0)[s0] -> (d0 + s0)>(%i)[%M] to %N {
+      "foo"() : () -> ()
+    }
+// UNROLL-BY-4:      affine.for %{{.*}} = #map{{[0-9]*}}(%[[I]])[%[[M]]] to #map{{[0-9]*}}(%[[I]])[%[[M]], %[[N]]] step 4 {
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT: }
+// UNROLL-BY-4-NEXT: affine.for %{{.*}} = max [[$MAP_CLEANUP_LB]](%[[I]])[%[[M]], %[[N]]] to %[[N]] {
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT: }
   }
