@@ -1084,7 +1084,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // other costs here, so will likely only be dealing with relatively small
     // functions (and hence LI will hopefully be cheap).
     auto *Caller = CandidateCall.getFunction();
-    if (Caller->hasMinSize()) {
+    if (Caller->hasMinSize() || Caller->hasOptSize()) {
       LoopInfo LI;
       LI.analyze(&F);
       int NumLoops = 0;
@@ -1393,7 +1393,7 @@ private:
 
   InlineResult finalizeAnalysis() override {
     auto *Caller = CandidateCall.getFunction();
-    if (Caller->hasMinSize()) {
+    if (Caller->hasMinSize() || Caller->hasOptSize()) {
       LoopInfo LI;
       LI.analyze(&F);
       for (Loop *L : LI) {
