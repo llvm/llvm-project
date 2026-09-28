@@ -7,7 +7,6 @@ add_libc_test(
   SRCS
     pthread_attr_test.cpp
   DEPENDS
-    libc.include.pthread
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_getdetachstate
@@ -18,6 +17,8 @@ add_libc_test(
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_setstack
+    libc.src.pthread.pthread_attr_getinheritsched
+    libc.src.pthread.pthread_attr_setinheritsched
     libc.src.pthread.pthread_attr_getschedparam
     libc.src.pthread.pthread_attr_setschedparam
     libc.src.pthread.pthread_attr_getschedpolicy
@@ -27,6 +28,7 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.pthread_macros
     libc.hdr.sched_macros
+    libc.hdr.types.pthread_attr_t
     libc.hdr.types.struct_sched_param
 )
 

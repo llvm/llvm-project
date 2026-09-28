@@ -257,3 +257,28 @@ define i32 @fptosi_float_i8(i32 %arg) {
   %V16I8 = fptosi <16 x float> poison to <16 x i8>
   ret i32 poison
 }
+
+define i32 @fptosi_half_i64(i32 %arg) {
+; ALL-LABEL: 'fptosi_half_i64'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptosi half poison to i64
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptosi <2 x half> poison to <2 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptosi <4 x half> poison to <4 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptosi <8 x half> poison to <8 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = fptosi <16 x half> poison to <16 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
+;
+; ALL-SIZE-LABEL: 'fptosi_half_i64'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptosi half poison to i64
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptosi <2 x half> poison to <2 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptosi <4 x half> poison to <4 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptosi <8 x half> poison to <8 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = fptosi <16 x half> poison to <16 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
+;
+  %I64 = fptosi half poison to i64
+  %V2I64 = fptosi <2 x half> poison to <2 x i64>
+  %V4I64 = fptosi <4 x half> poison to <4 x i64>
+  %V8I64 = fptosi <8 x half> poison to <8 x i64>
+  %V16I64 = fptosi <16 x half> poison to <16 x i64>
+  ret i32 poison
+}

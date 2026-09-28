@@ -877,8 +877,6 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
 
   const TargetRegisterClass *SrcRC =
       TRI.getRegClassForSizeOnBank(SrcSize, *SrcBank);
-  if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
-    return false;
 
   // Note we could have mixed SGPR and VGPR destination banks for an SGPR
   // source, and this relies on the fact that the same subregister indices are
@@ -895,10 +893,11 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     } else {
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), DstReg)
           .addReg(SrcReg, {}, SubRegs[I]);
+
+      // Make sure the subregister index is valid for the source register.
+      SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
     }
 
-    // Make sure the subregister index is valid for the source register.
-    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
     if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
       return false;
 
@@ -2860,7 +2859,7 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   if (mi_match(In, MRI, m_GUnmerge(Unmerge))) {
     if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(1).getReg() == In &&
         MRI.getType(In).getSizeInBits() == 16) {
-      Out = Unmerge->getSourceReg();
+      Out = stripBitCast(Unmerge->getSourceReg(), MRI);
       return true;
     }
   }
@@ -2904,7 +2903,7 @@ static bool isExtractLoElt(MachineRegisterInfo &MRI, Register In,
   if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
     if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(0).getReg() == In &&
         MRI.getType(In).getSizeInBits() == 16) {
-      Out = Unmerge->getSourceReg();
+      Out = stripBitCast(Unmerge->getSourceReg(), MRI);
       return true;
     }
   }

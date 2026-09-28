@@ -95,10 +95,6 @@ Transforms/OpenMP/spmdization_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
-Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
-Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
-Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
-Transforms/PreISelIntrinsicLowering/AArch64/expand-multi-result.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll
@@ -106,5 +102,6 @@ Transforms/TailCallElim/basic.ll
 Transforms/TailCallElim/debugloc.ll
 Transforms/TailCallElim/dropping_debugloc_acc_rec_inst_rnew.ll
 Transforms/TailCallElim/inf-recursion.ll
+Transforms/TailCallElim/shl-accumulator-opt.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/lowerswitch.ll

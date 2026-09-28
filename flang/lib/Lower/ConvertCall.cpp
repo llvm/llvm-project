@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertCall.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -1101,12 +1102,15 @@ namespace {
 struct CallCleanUp {
   struct CopyIn {
     void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-      hlfir::CopyOutOp::create(builder, loc, tempBox, wasCopied, copyBackVar);
+      hlfir::CopyOutOp::create(builder, loc, tempBox, wasCopied, mustFree,
+                               copyBackVar);
     }
-    // address of the descriptor holding the temp if a temp was created.
+    // Address of the descriptor holding the temp if a temp was created.
     mlir::Value tempBox;
     // Boolean indicating if a copy was made or not.
     mlir::Value wasCopied;
+    // Boolean indicating if the temporary storage must be freed.
+    mlir::Value mustFree;
     // copyBackVar may be null if copy back is not needed.
     mlir::Value copyBackVar;
   };
@@ -1146,9 +1150,9 @@ struct CallCleanUp {
 /// clean-ups to be done after the call.
 struct PreparedDummyArgument {
   void pushCopyInCleanUp(mlir::Value tempBox, mlir::Value wasCopied,
-                         mlir::Value copyBackVar) {
-    cleanups.emplace_back(
-        CallCleanUp{CallCleanUp::CopyIn{tempBox, wasCopied, copyBackVar}});
+                         mlir::Value mustFree, mlir::Value copyBackVar) {
+    cleanups.emplace_back(CallCleanUp{
+        CallCleanUp::CopyIn{tempBox, wasCopied, mustFree, copyBackVar}});
   }
   void pushExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
     cleanups.emplace_back(
@@ -1188,6 +1192,7 @@ struct ConditionallyPreparedDummy {
       if (const auto *copyInCleanUp =
               std::get_if<CallCleanUp::CopyIn>(&c.cleanUp)) {
         thenResultValues.push_back(copyInCleanUp->wasCopied);
+        thenResultValues.push_back(copyInCleanUp->mustFree);
         if (copyInCleanUp->copyBackVar)
           thenResultValues.push_back(copyInCleanUp->copyBackVar);
       } else {
@@ -1244,7 +1249,8 @@ struct ConditionallyPreparedDummy {
         // tempBox is an hlfir.copy_in argument created outside of the
         // fir.if region. It needs not to be threaded as a fir.if result.
         preparedDummy.pushCopyInCleanUp(copyInCleanUp->tempBox,
-                                        ifOp.getResults()[1], copyBackVar);
+                                        ifOp.getResults()[1],
+                                        ifOp.getResults()[2], copyBackVar);
       } else {
         preparedDummy.pushExprAssociateCleanUp(ifOp.getResults()[1],
                                                ifOp.getResults()[2]);
@@ -1455,16 +1461,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   auto genCopyIn = [&](hlfir::Entity var, bool doCopyOut) -> hlfir::Entity {
     auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType());
     assert(baseBoxTy && "expect non simply contiguous variables to be boxes");
-    // Create allocatable descriptor for the potential temporary.
-    mlir::Type tempBoxType = baseBoxTy.getBoxTypeWithNewAttr(
-        fir::BaseBoxType::Attribute::Allocatable);
-    mlir::Value tempBox = builder.createTemporary(loc, tempBoxType);
+    mlir::Value tempBox = builder.createTemporary(loc, var.getType());
     auto copyIn = hlfir::CopyInOp::create(builder, loc, var, tempBox,
                                           /*var_is_present=*/mlir::Value{});
     // Register the copy-out after the call.
-    preparedDummy.pushCopyInCleanUp(copyIn.getTempBox(), copyIn.getWasCopied(),
-                                    doCopyOut ? copyIn.getVar()
-                                              : mlir::Value{});
+    preparedDummy.pushCopyInCleanUp(
+        copyIn.getTempBox(), copyIn.getWasCopied(), copyIn.getMustFree(),
+        doCopyOut ? copyIn.getVar() : mlir::Value{});
     return hlfir::Entity{copyIn.getCopiedIn()};
   };
 
@@ -1743,7 +1746,6 @@ void prepareUserCallArguments(
       caller.placeInput(arg, builder.genAbsentOp(loc, argTy));
       continue;
     }
-
     switch (arg.passBy) {
     case PassBy::Value: {
       // True pass-by-value semantics.
@@ -3150,6 +3152,34 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   return genIntrinsicRef(intrinsic, *intrinsicEntry, callContext);
 }
 
+static bool isCUDADeviceDummy(
+    const Fortran::evaluate::characteristics::DummyArgument *dummy) {
+  if (!dummy)
+    return false;
+  return Fortran::common::visit(
+      Fortran::common::visitors{
+          [](const Fortran::evaluate::characteristics::DummyDataObject
+                 &object) {
+            return object.cudaDataAttr == Fortran::common::CUDADataAttr::Device;
+          },
+          [](const auto &) { return false; },
+      },
+      dummy->u);
+}
+
+/// Make the objects of \p expr that are mapped by an enclosing structured
+/// OpenACC data construct denote their device copy in the current symbol map
+/// scope. Returns true if any such binding was found, in which case \p expr
+/// must be lowered while that scope is alive.
+static bool mapOpenACCDeviceBindings(const Fortran::lower::SomeExpr &expr,
+                                     Fortran::lower::SymMap &symMap) {
+  bool found = false;
+  for (const Fortran::semantics::Symbol &symbol :
+       Fortran::evaluate::GetSymbolVector(expr))
+    found |= symMap.copyDeviceBindingToCurrentScope(symbol);
+  return found;
+}
+
 /// Main entry point to lower procedure references, regardless of what they are.
 static std::optional<hlfir::EntityWithAttributes>
 genProcedureRef(CallContext &callContext) {
@@ -3177,6 +3207,10 @@ genProcedureRef(CallContext &callContext) {
                                          callContext.converter);
   mlir::FunctionType callSiteType = caller.genFunctionType();
   const bool isElemental = callContext.isElementalProcWithArrayArgs();
+  // A kernel launch already maps its arguments onto the device through the
+  // CUDA Fortran launch lowering. Substituting an OpenACC device binding here
+  // would pass an address the launch does not expect.
+  const bool isKernelLaunch = !callContext.procRef.chevrons().empty();
   Fortran::lower::PreparedActualArguments loweredActuals;
   // Lower the actual arguments
   for (const Fortran::lower::CallInterface<
@@ -3245,9 +3279,24 @@ genProcedureRef(CallContext &callContext) {
         continue;
       }
 
+      // An object mapped by an enclosing structured OpenACC data construct is
+      // associated with a CUDA DEVICE dummy through its device copy. The
+      // binding must be in place for this lowering, which is the only one of
+      // the actual argument: lowering it again would duplicate any side
+      // effect of its subscripts.
+      std::optional<Fortran::lower::SymMapScope> deviceScope;
+      if (!isKernelLaunch && isCUDADeviceDummy(arg.characteristics) &&
+          Fortran::evaluate::IsVariable(*expr)) {
+        deviceScope.emplace(callContext.symMap);
+        if (!mapOpenACCDeviceBindings(*expr, callContext.symMap))
+          deviceScope.reset();
+      }
+
       auto loweredActual = Fortran::lower::convertExprToHLFIR(
           loc, callContext.converter, *expr, callContext.symMap,
           callContext.stmtCtx);
+      deviceScope.reset();
+
       std::optional<mlir::Value> isPresent;
       if (arg.isOptional())
         isPresent = genIsPresentIfArgMaybeAbsent(

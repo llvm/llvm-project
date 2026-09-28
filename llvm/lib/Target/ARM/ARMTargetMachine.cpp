@@ -152,29 +152,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
-
-  // Default to triple-appropriate EABI
-  if (Options.EABIVersion == EABI::Default ||
-      Options.EABIVersion == EABI::Unknown) {
-    // musl is compatible with glibc with regard to EABI version
-    if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-         TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-        !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
-      this->Options.EABIVersion = EABI::GNU;
-    else
-      this->Options.EABIVersion = EABI::EABI5;
-  }
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
@@ -242,7 +223,7 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
   // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
   // even on triples whose default float ABI is soft (the triple default only
   // detects AAPCS16 when it is the triple's own default ABI).
-  if (TargetABI == ARM::ARM_ABI_AAPCS16)
+  if (getEffectiveABI(M) == ARM::ARM_ABI_AAPCS16)
     return FloatABI::Hard;
   // Otherwise fall back to the ABI implied by the target triple.
   return M.getTargetTriple().getDefaultFloatABI();
@@ -252,7 +233,7 @@ ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
   // Consistency of "target-abi" and -target-abi is validated elsewhere.
   if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     return ARM::computeTargetABI(TargetTriple, MD->getString());
-  return TargetABI;
+  return ARM::computeTargetABI(TargetTriple, Options.MCOptions.getABIName());
 }
 
 const ARMSubtarget *
