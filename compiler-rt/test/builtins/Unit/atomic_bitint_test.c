@@ -25,6 +25,9 @@ typedef unsigned _BitInt(37) U37;
 typedef signed _BitInt(256) S256; // no padding (exactly 32 bytes)
 typedef signed _BitInt(200) S200; // padded: 200 value bits in 32-byte storage
 
+static _Atomic(S37) initialized = 100;
+static _Atomic(S37) negative_initialized = -3;
+
 // Each macro runs the atomic op and asserts the returned old value and the
 // resulting object both match the non-atomic computation at width N.
 #define CHECK_FETCH(T, init, op, rhs, expr)                                    \
@@ -155,6 +158,17 @@ static void test_operator_loops(void) {
   assert(old == -9 && (S37)s.a == -8);
 }
 
+static void test_static_initialization(void) {
+  assert((S37)initialized == 100);
+  assert((S37)negative_initialized == -3);
+  assert(initialized++ == 100);
+  assert(--initialized == 100);
+  assert((S37)initialized == 100);
+  assert(negative_initialized++ == -3);
+  assert(--negative_initialized == -3);
+  assert((S37)negative_initialized == -3);
+}
+
 static void test_unsigned_increment_wraparound(void) {
   union {
     _Atomic(U37) a;
@@ -173,6 +187,7 @@ int main(void) {
   test_orderings();
   test_compare_exchange_padding();
   test_operator_loops();
+  test_static_initialization();
   test_unsigned_increment_wraparound();
   printf("PASS\n");
   return 0;

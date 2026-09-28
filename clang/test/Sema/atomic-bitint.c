@@ -7,6 +7,11 @@
 // code imposes no width cap of its own; widths past 128 are available wherever
 // the target accepts _BitInt > 128 (x86 and RISC-V today).
 
+// expected-error@+1 {{constexpr variable cannot have type}}
+constexpr _Atomic _BitInt(12) constant_atomic = 100;
+// expected-error@+1 {{not exactly representable}}
+constexpr _BitInt(3) overflow_bitint = 100;
+
 _Atomic(_BitInt(4))    a4;     // small
 _Atomic(_BitInt(9))    a9;     // non-power-of-two
 _Atomic(_BitInt(37))   a37;    // padded
