@@ -1,7 +1,7 @@
 # RUN: orc-rt-process-info-check --print-triple --print-page-size \
 # RUN:     --print-cpu-features \
 # RUN:   | FileCheck %s -DARCH=%host-arch -DOS=%host-os \
-# RUN:     -DVERSION=%macos-product-version -DPAGESIZE=%host-page-size
+# RUN:     -DVERSION=%host-os-version -DPAGESIZE=%host-page-size
 
 # CHECK:      triple: [[ARCH]]-{{.*}}-[[OS]][[VERSION]]
 # CHECK-NEXT: page-size: [[PAGESIZE]]
