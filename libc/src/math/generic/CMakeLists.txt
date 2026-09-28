@@ -3766,6 +3766,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tanhbf16
+  SRCS
+    tanhbf16.cpp
+  HDRS
+    ../tanhbf16.h
+  DEPENDS
+    libc.src.__support.math.tanhbf16
+)
+
+add_entrypoint_object(
   tanhf
   SRCS
     tanhf.cpp
