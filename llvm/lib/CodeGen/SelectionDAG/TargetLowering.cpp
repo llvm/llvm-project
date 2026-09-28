@@ -3283,9 +3283,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   assert(VT.getVectorNumElements() == NumElts &&
          "Mask size mismatches value type element count!");
 
-  // Undef operand.
+  // Undef operand. SDNode::isUndef() is also true for ISD::POISON, but poison
+  // elements must not be reported as KnownUndef: undef-keyed folds substitute
+  // a chosen concrete value for those elements, which is invalid for poison.
   if (Op.isUndef()) {
-    KnownUndef.setAllBits();
+    if (Op.getOpcode() == ISD::UNDEF)
+      KnownUndef.setAllBits();
     return false;
   }
 
