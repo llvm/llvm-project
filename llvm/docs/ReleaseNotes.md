@@ -247,6 +247,10 @@ Makes programs 10x faster by doing Special New Thing.
   * `llvm.amdgcn.icmp`
   * `llvm.amdgcn.fcmp`
 
+* Added `llvm.amdgcn.exclusive.scan.*` intrinsics (and matching
+  `__builtin_amdgcn_exclusive_scan_*` clang builtins) providing direct access to
+  the `v_exclusive_scan_*` subgroup prefix-scan instructions.
+
 ### Changes to the ARM Backend
 
 * Using the hard-float procedure call standard without floating-point registers
