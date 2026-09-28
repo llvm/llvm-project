@@ -31,10 +31,6 @@
 // expected-no-diagnostics
 
 void test_enum_constants(void) {
-    // coop_matrix_scope_t
-    coop_matrix_scope_t s = CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP;
-    (void)s;
-
     // coop_matrix_use_t
     coop_matrix_use_t u0 = CLK_COOPERATIVE_MATRIX_A;
     coop_matrix_use_t u1 = CLK_COOPERATIVE_MATRIX_B;
@@ -53,7 +49,7 @@ void test_enum_constants(void) {
 
 // ── 2d. Enum constant values match the spec ──────────────────────────────────
 void test_enum_values(void) {
-    _Static_assert(CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP     == 3, "scope subgroup");
+    _Static_assert(memory_scope_sub_group                    == 4, "scope subgroup");
     _Static_assert(CLK_COOPERATIVE_MATRIX_A                  == 0, "use A");
     _Static_assert(CLK_COOPERATIVE_MATRIX_B                  == 1, "use B");
     _Static_assert(CLK_COOPERATIVE_MATRIX_ACCUMULATOR        == 2, "use ACC");
