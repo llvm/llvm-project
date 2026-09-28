@@ -58,11 +58,11 @@ struct Bar {
 } // namespace
 
 
-// On XCOFF, Foo's constructors/destructors have linkonce_odr linkage. C1/D1
-// are emitted as full definitions since linkonce_odr does not guarantee that
-// an alias and its target will be retained from the same translation unit.
-// Bar's C1/D1 have internal linkage, so they are confined to the translation
-// unit and can safely be aliases to C2/D2.
+// C1/D1 are aliases to C2/D2 when the linkage is not weak-for-linker.
+// Bar has internal linkage (not weak-for-linker), so C1/D1 are aliases.
+// Foo has linkonce_odr linkage (weak-for-linker): on ELF this produces a
+// COMDAT, but XCOFF does not support COMDAT so C1/D1 are emitted as full
+// definitions instead.
 // XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooC1Ev
 // XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooC2Ev
 // XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooD1Ev
