@@ -7924,9 +7924,8 @@ static OMPAdjustArgsVal checkOMPAdjustArgsValue(SemaOpenMP &S, Expr *E,
 /// checkOMPAdjustArgsValue. An 'omp_num_args' bound's logical_offset has the
 /// non-negative property instead, so it is checked with a different lower
 /// bound.
-static bool
-checkOMPAdjustArgsBound(SemaOpenMP &S,
-                        const OMPAdjustArgsItem::Bound &Bound) {
+static bool checkOMPAdjustArgsBound(SemaOpenMP &S,
+                                    const OMPAdjustArgsItem::Bound &Bound) {
   if (Bound.Kind == OMPAdjustArgsItem::Bound::Omitted)
     return true;
   if (Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs && !Bound.E)
@@ -7936,8 +7935,7 @@ checkOMPAdjustArgsBound(SemaOpenMP &S,
           Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs) &&
          Bound.E && "expected an adjust_args bound expression");
   llvm::APSInt Result;
-  bool StrictlyPositive =
-      Bound.Kind == OMPAdjustArgsItem::Bound::Expression;
+  bool StrictlyPositive = Bound.Kind == OMPAdjustArgsItem::Bound::Expression;
   return checkOMPAdjustArgsValue(S, Bound.E, StrictlyPositive, Result) !=
          OMPAdjustArgsVal::Invalid;
 }
@@ -7950,9 +7948,8 @@ static bool checkOMPAdjustArgsRange(SemaOpenMP &S,
          checkOMPAdjustArgsBound(S, Range.Upper);
 }
 
-static SourceLocation
-getOMPAdjustArgsItemLoc(const OMPAdjustArgsItem &Item,
-                        SourceLocation FallbackLoc) {
+static SourceLocation getOMPAdjustArgsItemLoc(const OMPAdjustArgsItem &Item,
+                                              SourceLocation FallbackLoc) {
   if (Item.E)
     return Item.E->getExprLoc();
   if (Item.Lower.E)
@@ -8084,9 +8081,9 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
                                  Positions);
         for (unsigned Pos : Positions) {
           if (!FD->getParamDecl(Pos - 1)->getType()->isReferenceType()) {
-            Diag(getOMPAdjustArgsItemLoc(
-                     Item, AdjustArgsLoc.isValid() ? AdjustArgsLoc
-                                                  : SR.getBegin()),
+            Diag(getOMPAdjustArgsItemLoc(Item, AdjustArgsLoc.isValid()
+                                                   ? AdjustArgsLoc
+                                                   : SR.getBegin()),
                  diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
             break; // One diagnostic per written item.
           }

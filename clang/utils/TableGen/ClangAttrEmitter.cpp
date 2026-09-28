@@ -1033,8 +1033,7 @@ namespace {
         OS << "        Record.writeBool(Item." << Bound << ".E != nullptr);\n";
         OS << "        if (Item." << Bound << ".E) Record.AddStmt(Item."
            << Bound << ".E);\n";
-        OS << "        Record.writeBool(Item." << Bound
-           << ".IsSubtraction);\n";
+        OS << "        Record.writeBool(Item." << Bound << ".IsSubtraction);\n";
       }
       OS << "      }\n";
       OS << "    }\n";

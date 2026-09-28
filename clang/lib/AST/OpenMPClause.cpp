@@ -3275,8 +3275,8 @@ bool TargetOMPContext::matchesISATrait(StringRef RawString) const {
 /// expression. An omitted bound leaves Result unchanged. Returns false if the
 /// bound is dependent or not constant.
 static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
-                                   unsigned NumArgs,
-                                   const ASTContext &Ctx, int64_t &Result) {
+                                   unsigned NumArgs, const ASTContext &Ctx,
+                                   int64_t &Result) {
   if (Bound.Kind == OMPAdjustArgsItem::Bound::Omitted)
     return true;
   if (Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs) {
@@ -3305,9 +3305,10 @@ static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
   return true;
 }
 
-bool clang::resolveOMPAdjustArgsItem(
-    const OMPAdjustArgsItem &Item, const FunctionDecl *FD, unsigned NumArgs,
-    const ASTContext &Ctx, SmallVectorImpl<unsigned> &Positions) {
+bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                                     const FunctionDecl *FD, unsigned NumArgs,
+                                     const ASTContext &Ctx,
+                                     SmallVectorImpl<unsigned> &Positions) {
   auto AppendIfInRange = [&](int64_t Pos) {
     if (Pos >= 1 && Pos <= static_cast<int64_t>(NumArgs))
       Positions.push_back(static_cast<unsigned>(Pos));

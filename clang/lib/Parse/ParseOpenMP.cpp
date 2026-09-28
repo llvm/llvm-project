@@ -5012,12 +5012,10 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
   return Tail;
 }
 
-bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
-                                OpenMPClauseKind Kind,
-                                SmallVectorImpl<Expr *> &Vars,
-                                SemaOpenMP::OpenMPVarListDataTy &Data,
-                                SmallVectorImpl<OMPAdjustArgsItem>
-                                    *AdjustArgsItems) {
+bool Parser::ParseOpenMPVarList(
+    OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
+    SmallVectorImpl<Expr *> &Vars, SemaOpenMP::OpenMPVarListDataTy &Data,
+    SmallVectorImpl<OMPAdjustArgsItem> *AdjustArgsItems) {
   UnqualifiedId UnqualifiedReductionId;
   bool InvalidReductionId = false;
   bool IsInvalidMapperModifier = false;
@@ -5428,8 +5426,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         assert(AdjustArgsItems &&
                "expected storage for OpenMP 6.0 adjust_args items");
         ParsedAdjustArgsList = true;
-        InvalidAdjustArgsList =
-            ParseOpenMPAdjustArgsList(*AdjustArgsItems);
+        InvalidAdjustArgsList = ParseOpenMPAdjustArgsList(*AdjustArgsItems);
       }
     }
   } else if (Kind == OMPC_use_device_ptr) {
@@ -5653,8 +5650,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   if (HasIterator)
     ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_doacross && Kind != OMPC_map &&
-          Vars.empty() &&
-          (!AdjustArgsItems || AdjustArgsItems->empty())) ||
+          Vars.empty() && (!AdjustArgsItems || AdjustArgsItems->empty())) ||
          (MustHaveTail && !Data.DepModOrTailExpr && StepFound) ||
          InvalidReductionId || IsInvalidMapperModifier || InvalidIterator ||
          InvalidAdjustArgsList;

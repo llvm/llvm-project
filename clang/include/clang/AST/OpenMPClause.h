@@ -10584,8 +10584,8 @@ public:
 /// Emits no diagnostics; callers are responsible for diagnosing invalid items
 /// before calling this function.
 bool resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
-                              const FunctionDecl *FD,
-                              unsigned NumArgs, const ASTContext &Ctx,
+                              const FunctionDecl *FD, unsigned NumArgs,
+                              const ASTContext &Ctx,
                               SmallVectorImpl<unsigned> &Positions);
 
 } // namespace clang

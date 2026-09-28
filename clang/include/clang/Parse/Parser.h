@@ -7062,15 +7062,13 @@ public:
   /// Parses an OpenMP 6.0 'adjust_args' parameter list, whose items may be
   /// parameter names, positions, or ranges with optional bounds.
   /// Returns true on error.
-  bool ParseOpenMPAdjustArgsList(
-      SmallVectorImpl<OMPAdjustArgsItem> &Items);
+  bool ParseOpenMPAdjustArgsList(SmallVectorImpl<OMPAdjustArgsItem> &Items);
 
   /// Parses clauses with list.
-  bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
-                          SmallVectorImpl<Expr *> &Vars,
-                          SemaOpenMP::OpenMPVarListDataTy &Data,
-                          SmallVectorImpl<OMPAdjustArgsItem> *AdjustArgsItems =
-                              nullptr);
+  bool ParseOpenMPVarList(
+      OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
+      SmallVectorImpl<Expr *> &Vars, SemaOpenMP::OpenMPVarListDataTy &Data,
+      SmallVectorImpl<OMPAdjustArgsItem> *AdjustArgsItems = nullptr);
 
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);
