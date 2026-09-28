@@ -242,8 +242,9 @@ define void @PR33560(i8 %x, i64 %y) {
 ; CHECK-LABEL: PR33560:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negb %dil
-; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    decq %rax
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    retq
 entry:

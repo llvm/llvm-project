@@ -462,6 +462,7 @@ private:
       SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
   bool splitBranchCondition(Function &F);
   bool simplifyOffsetableRelocate(GCStatepointInst &I);
+  bool hoistExt(Instruction *Inst);
 
   bool tryToSinkFreeOperands(Instruction *I);
   bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0, Value *Arg1,
@@ -7408,6 +7409,8 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
   bool MadeChange = false;
   for (Use &U : make_early_inc_range(Src->uses())) {
     Instruction *User = cast<Instruction>(U.getUser());
+    if (RemovedInsts.count(User))
+      continue;
 
     // Figure out which BB this ext is used in.
     BasicBlock *UserBB = User->getParent();
@@ -8953,6 +8956,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (InsertedInsts.count(I))
     return AnyChange;
 
+  if (hoistExt(I))
+    return true;
+
   // TODO: Move into the switch on opcode below here.
   if (PHINode *P = dyn_cast<PHINode>(I)) {
     // It is possible for very late stage optimizations (such as SimplifyCFG)
@@ -9524,4 +9530,119 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
                TmpBB->dump());
   }
   return MadeChange;
+}
+
+// Suppose we have following instructions in different basic blocks,
+//   %v =
+//      ...
+//   %ext1 = zext i16 %v to i32
+//   use %ext1
+//      ...
+//   %ext2 = zext i16 %v to i32
+//   use %ext2
+//
+// We can hoist the zext/sext instructions to the definition of %v.
+//
+//   %v =
+//   %ext = zext i16 %v to i32
+//      ...
+//   use %ext
+//      ...
+//   use %ext
+//
+// If %ext1 and %ext2 have differnt widths and the truncate from the wide to
+// narrow is free, we can zext/sext to the wider width, then truncate it at the
+// appropriate position.
+//   %v =
+//      ...
+//   %ext1 = zext i16 %v to i64
+//   use %ext1
+//      ...
+//   %ext2 = zext i16 %v to i32
+//   use %ext2
+//
+// ===>
+//
+//   %v =
+//   %ext = zext i16 %v to i64
+//      ...
+//   use %ext
+//      ...
+//   %ext2 = trunc i64 %ext to i32
+//   use %ext2
+bool CodeGenPrepare::hoistExt(Instruction *Inst) {
+  Instruction::CastOps ExtOpcode = Instruction::CastOpsEnd;
+  unsigned DestWidth = 0;
+  Type *DestType = nullptr;
+  const CastInst *OrigCast;
+
+  if (!Inst->hasNUsesOrMore(2))
+    return false;
+
+  // Check if all users of Inst are ZExt/SExt.
+  for (const User *U : Inst->users()) {
+    auto *Cast = dyn_cast<CastInst>(U);
+    if (!Cast)
+      return false;
+
+    Instruction::CastOps Op = Cast->getOpcode();
+    if (Op != Instruction::ZExt && Op != Instruction::SExt)
+      return false;
+
+    if (ExtOpcode == Instruction::CastOpsEnd)
+      ExtOpcode = Op;
+    else if (ExtOpcode != Op)
+      return false;
+
+    Type *DestTy = Cast->getType();
+    if (!DestTy->isIntegerTy())
+      return false;
+
+    unsigned Width = DestTy->getIntegerBitWidth();
+    if (DestWidth == 0) {
+      DestWidth = Width;
+      DestType = DestTy;
+      OrigCast = Cast;
+    } else if (Width > DestWidth) {
+      if (TLI->isTruncateFree(DestTy, DestType)) {
+        DestWidth = Width;
+        DestType = DestTy;
+        OrigCast = Cast;
+      } else
+        return false;
+    } else if (Width < DestWidth) {
+      if (!TLI->isTruncateFree(DestType, DestTy))
+        return false;
+    } else if (Cast->getParent() == Inst->getParent())
+      OrigCast = Cast;
+  }
+
+  // Insert new ZExt/SExt.
+  auto *ExtInst = CastInst::Create(ExtOpcode, Inst, DestType,
+                                   OrigCast->getName());
+  ExtInst->insertAfter(Inst->getIterator());
+  ExtInst->setDebugLoc(OrigCast->getDebugLoc());
+
+  // Replace all users of original ZExt/SExt instructions, add Truncate if
+  // necessary.
+  for (User *U : Inst->users()) {
+    auto *Cast = dyn_cast<CastInst>(U);
+    if (Cast == ExtInst)
+      continue;
+
+    Type *DestTy = Cast->getType();
+    if (DestTy != DestType) {
+      auto *Trunc = new TruncInst(ExtInst, DestTy, Cast->getName());
+      Trunc->insertAfter(Cast->getIterator());
+      Trunc->setDebugLoc(Cast->getDebugLoc());
+      replaceAllUsesWith(Cast, Trunc, FreshBBs, IsHugeFunc);
+    } else
+      replaceAllUsesWith(Cast, ExtInst, FreshBBs, IsHugeFunc);
+
+    RemovedInsts.insert(Cast);
+    Cast->removeFromParent();
+  }
+
+  CurInstIterator = ExtInst->getIterator();
+  return true;
 }
