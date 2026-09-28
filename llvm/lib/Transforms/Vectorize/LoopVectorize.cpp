@@ -6825,7 +6825,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // Remove the predicated select if the target doesn't want it.
     VPValue *V;
     if (!CM->usePredicatedReductionSelect(
-            RecurrenceKind, RdxDesc.hasUsesOutsideReductionChain()) &&
+            RecurrenceKind, PhiR->hasUsesOutsideReductionChain()) &&
         match(PhiR->getBackedgeValue(),
               m_Select(m_Specific(HeaderMask), m_VPValue(V), m_Specific(PhiR))))
       PhiR->setBackedgeValue(V);

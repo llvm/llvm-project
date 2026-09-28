@@ -2147,7 +2147,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // reduction cycle.
     // There is an additional user if the tail was folded:
     // 3) the select operation of the vector.latch block. This select uses the
-    // the original MinOrMaxPhiR if the mask is zero.
+    // original MinOrMaxPhiR if the mask is zero.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
@@ -2164,12 +2164,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     auto *MinOrMaxOp = MinOrMaxBackedgeR;
     VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
     VPValue *MinOrMaxTailfold;
-    if (HeaderMask &&
-        match(MinOrMaxBackedgeR,
-              m_SelectLike(m_Specific(HeaderMask), m_VPValue(MinOrMaxTailfold),
-                           m_Specific(MinOrMaxPhiR)))) {
-      MinOrMaxOp =
-          dyn_cast<VPRecipeWithIRFlags>(MinOrMaxTailfold->getDefiningRecipe());
+    if (HeaderMask) {
+      if (!match(MinOrMaxBackedgeR, m_SelectLike(m_Specific(HeaderMask),
+                                                 m_VPValue(MinOrMaxTailfold),
+                                                 m_Specific(MinOrMaxPhiR))))
+        return false;
+
+      MinOrMaxOp = dyn_cast<VPRecipeWithIRFlags>(MinOrMaxTailfold);
       if (!MinOrMaxOp)
         return false;
     }
