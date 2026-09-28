@@ -588,6 +588,13 @@ int main(int, char**) {
           (void)std::uninitialized_move_n(policy, std::move(first1), n, std::move(dest));
         });
       }
+
+      {
+        // swap_ranges(first1, last1, first2)
+        assert_non_throwing([=, &policy] {
+          (void)std::swap_ranges(policy, std::move(first1), std::move(last1), std::move(first2));
+        });
+      }
     }
   });
 
