@@ -562,6 +562,10 @@ defm AshrPkInsts : AMDGPUSubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
+defm ExclusiveScanInsts : AMDGPUSubtargetFeature<"exclusive-scan-insts",
+  "Has exclusive scan instructions"
+>;
+
 defm CvtPkF16F32Inst : AMDGPUSubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
@@ -1282,8 +1286,19 @@ defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   /*GenPredicate=*/0
 >;
 
+defm GFX1250VALUBlockingCycles : AMDGPUSubtargetFeature<"gfx1250-valu-blocking-cycles",
+  "VALU pipe occupancy is modeled with GFX1250BlockingCycles",
+  /*GenPredicate=*/0
+>;
+
 defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   "Hazards when WMMA co-executes with other WMMA/VALU instruction",
+  /*GenPredicate=*/0
+>;
+
+defm VOPD3F64OPYSrcHazard : AMDGPUSubtargetFeature<"vopd3-f64-opy-src-hazard",
+  "Hazard when an OPY VGPR source of a VOPD3 with a 64-bit OPX names the last "
+  "VGPR allocated to the wave",
   /*GenPredicate=*/0
 >;
 
@@ -2528,7 +2543,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
 
 def FeatureISAVersion12_50_STRICT : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureGFX1250_STRICT,
+  [FeatureVOPD3F64OPYSrcHazard,
+   FeatureGFX1250_STRICT,
    FeatureAddressableLocalMemorySize327680,
    FeatureLDSAllocGranularity2048,
    FeatureLDSEncodingGranularity2048,
@@ -2549,6 +2565,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2561,7 +2578,8 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680,
+  [FeatureVOPD3F64OPYSrcHazard,
+   FeatureAddressableLocalMemorySize327680,
    FeatureLDSAllocGranularity2048,
    FeatureLDSEncodingGranularity2048,
    FeatureLDSBankCount64,
@@ -2583,6 +2601,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2594,7 +2613,8 @@ def FeatureISAVersion12_50 : FeatureSet<
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680,
+  [FeatureVOPD3F64OPYSrcHazard,
+   FeatureAddressableLocalMemorySize327680,
    FeatureLDSAllocGranularity2048,
    FeatureLDSEncodingGranularity2048,
    FeatureLDSBankCount64,
@@ -2635,7 +2655,8 @@ def FeatureISAVersion12_Generic: FeatureSet<
 
 def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680,
+  [FeatureVOPD3F64OPYSrcHazard,
+   FeatureAddressableLocalMemorySize327680,
    FeatureLDSAllocGranularity2048,
    FeatureLDSEncodingGranularity2048,
    FeatureLDSBankCount64,
@@ -2644,6 +2665,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresCOV6,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2655,6 +2677,7 @@ def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
    FeatureWaveMatchInsts,
+   FeatureExclusiveScanInsts,
    FeatureAddressableLocalMemorySize196608,
    FeatureLDSAllocGranularity1024,
    FeatureLDSEncodingGranularity1024,
@@ -3325,6 +3348,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
   FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
   FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,

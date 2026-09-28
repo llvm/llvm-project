@@ -1378,6 +1378,7 @@ Currently, only the following parameter attributes are defined:
     interpreted as a call to memcpy with the allocation size of the specified type,
     instead of loading from the pointee and storing back into the copy in the type.
     In particular, the padding between field types of a struct type is still copied.
+    The type's allocation size must be known at compile time.
 
     The byval attribute also supports specifying an alignment with the
     `align` attribute. It indicates the alignment of the stack slot to
@@ -2528,6 +2529,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
     Annotated functions may still raise an exception, i.a., `nounwind` is not implied.
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
+
+    If the annotated function has observable behavior (such as I/O or a volatile
+    access), note that the annotation can cause UB to time-travel around such
+    behavior, i.e., code that is after the function can cause UB to occur before
+    the observable behavior of the function. See the {doc}`UB documentation
+    <UndefinedBehavior>` for further details.
 
 `nosync`
 :   This function attribute indicates that the function does not introduce any
@@ -11711,6 +11718,107 @@ The truth table used for the '`xor`' instruction is:
 <result> = xor i32 %V, -1          ; yields i32:result = ~%V
 ```
 
+### Byte Operations
+
+Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
+
+(i_bitextract)=
+
+#### '`bitextract`' Instruction
+
+##### Syntax:
+
+```
+<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+```
+
+##### Overview:
+
+The '`bitextract`' instruction reads a contiguous range of bits from a
+{ref}`byte type <t_byte>` value and returns them as a value of type `ty`.
+
+##### Arguments:
+
+`<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
+and specifies the result type. The first operand, `source`, must be a value
+of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
+position at which the extraction begins within `source`.
+
+```{note}
+Vector types are not currently supported as the result type.
+```
+
+##### Semantics:
+
+The result is the bit range `source[offset : offset + bitwidth(ty))`,
+reinterpreted as a value of type `ty` as if by a {ref}`bitcast <i_bitcast>`.
+Bit `0` is the least significant bit of `source`.
+
+If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
+{ref}`poison value <poisonvalues>` is returned.
+
+##### Example:
+
+```text
+%result = bitextract i8, b32 %src, i32 24 ; Extract the 8 most-significant bits (bits [24..31]) of %src and return an 8-bit integer
+
+%result = bitextract i1, b32 %src, i32 5  ; Extract a single bit (bit 5) of %src and return it as an i1
+
+%result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
+
+%result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+```
+
+(i_bitinsert)=
+
+#### '`bitinsert`' Instruction
+
+##### Syntax:
+```
+<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+```
+##### Overview:
+
+The '`bitinsert`' instruction writes a contiguous range of bits from a
+value of type `ty` into a {ref}`byte type <t_byte>` value and returns
+the result as a value of the same byte type.
+
+##### Arguments:
+
+`<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
+and specifies the type of the value to insert. The first operand, `base`,
+must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
+be a value of type `ty`. The `offset` operand is an `i32` giving the bit
+position at which the insertion begins within `base`.
+
+```{note}
+Vector types are not currently supported as the type of the value
+to insert.
+```
+
+##### Semantics:
+
+The result is `base` with the bit range `[offset : offset + bitwidth(ty))`
+replaced by the bits of `val`, reinterpreted as if by a {ref}`bitcast <i_bitcast>`.
+Bit `0` is the least significant bit of `base`.
+
+If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
+{ref}`poison value <poisonvalues>` is returned.
+
+##### Example:
+
+```text
+%result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
+
+%result = bitinsert b32 %x, i1 %flag, i32 7 ; Inserts a single bit (%flag) into bit 7 of %x, leaving all other bits unchanged
+
+%result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
+
+%result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
+```
+
 ### Vector Operations
 
 LLVM supports several instructions to represent vector operations in a
@@ -20803,6 +20911,28 @@ indices. If this condition cannot be determined statically but is false at
 runtime, then the result vector is a {ref}`poison value <poisonvalues>`. The
 `idx` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
+
+#### '`llvm.vector.repeat`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %vec)
+```
+
+##### Overview:
+
+The '`llvm.vector.repeat.*`' intrinsic repeatedly copies the elements of the
+source fixed-length vector, in order, until the result scalable vector is
+filled. For example, repeating `<A, B>` produces a scalable vector containing
+`vscale` copies of `<A, B>`.
+
+##### Arguments:
+
+The argument must be a fixed-length vector (i.e. `<N x Ty>`) and the result a
+scalable vector that is exactly `vscale` times longer (i.e.
+`<vscale x N x Ty>`).
 
 #### '`llvm.vector.reverse`' Intrinsic
 
