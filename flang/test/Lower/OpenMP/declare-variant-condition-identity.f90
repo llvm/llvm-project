@@ -41,8 +41,8 @@
 ! Same runtime condition: the low-scoring strict superset wins when true.
 ! IMPORTED-LABEL: func.func @_QPruntime_same(
 ! IMPORTED: fir.if
-! IMPORTED: omp.taskwait
-! IMPORTED: } else {
+! IMPORTED-NEXT: omp.taskwait
+! IMPORTED-NEXT: } else {
 ! IMPORTED: return
 
 ! Different variables must not be merged even when their values might agree.
