@@ -4087,27 +4087,25 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
-  // First try to simplify using SimplifyMultipleUseDemandedBits which allows
-  // the operands to have other uses, but will only perform simplifications that
-  // involve bypassing some nodes for this user.
-  SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
-  SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
-
-  SDValue NewLHS = DemandedLHS ? DemandedLHS : LHS;
-  SDValue NewRHS = DemandedRHS ? DemandedRHS : RHS;
-  if (isNullConstant(NewLHS) || isNullConstant(NewRHS))
+  if (isNullConstant(LHS) || isNullConstant(RHS))
     return DAG.getConstant(0, SDLoc(Node24), Node24->getValueType(0));
 
-  if (DemandedLHS || DemandedRHS)
-    return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(), NewLHS,
-                       NewRHS);
-
-  // Now try SimplifyDemandedBits which can simplify the nodes used by our
+  // First try SimplifyDemandedBits which can simplify the nodes used by our
   // operands if this node is the only user.
   if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
     return SDValue(Node24, 0);
   if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
     return SDValue(Node24, 0);
+
+  // Then try SimplifyMultipleUseDemandedBits which allows the operands to have
+  // other uses, but will only perform simplifications that involve bypassing
+  // some nodes for this user.
+  SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
+  SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
+  if (DemandedLHS || DemandedRHS)
+    return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
+                       DemandedLHS ? DemandedLHS : LHS,
+                       DemandedRHS ? DemandedRHS : RHS);
 
   return SDValue();
 }
