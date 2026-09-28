@@ -1585,11 +1585,11 @@ LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
   unsigned align = *(globalOp.getAlignment());
   mlir::Value addr =
       builder.createGetGlobal(getLoc(e->getSourceRange()), globalOp);
-  cir::PointerType destPtrTy =
-      builder.getPointerTo(globalOp.getSymType(),
-                           cgm.getTypes().getPointerAddressSpace(e->getType()));
-  if (addr.getType() != destPtrTy)
-    addr = performAddrSpaceCast(addr, destPtrTy);
+  mlir::ptr::MemorySpaceAttrInterface destAS =
+      cgm.getTypes().getPointerAddressSpace(e->getType());
+  if (mlir::cast<cir::PointerType>(addr.getType()).getAddrSpace() != destAS)
+    addr = performAddrSpaceCast(
+        addr, builder.getPointerTo(globalOp.getSymType(), destAS));
   return makeAddrLValue(
       Address(addr, globalOp.getSymType(), CharUnits::fromQuantity(align)),
       e->getType(), AlignmentSource::Decl);
