@@ -1448,7 +1448,7 @@ namespace {
     const APValue::LValueBase getLValueBase() const { return Base; }
     bool allowConstexprUnknown() const { return AllowConstexprUnknown; }
     CharUnits &getLValueOffset() { return Offset; }
-    const CharUnits &getLValueOffset() const { return Offset; }
+    CharUnits getLValueOffset() const { return Offset; }
     SubobjectDesignator &getLValueDesignator() { return Designator; }
     const SubobjectDesignator &getLValueDesignator() const { return Designator;}
     bool isNullPointer() const { return IsNullPtr;}
@@ -11018,23 +11018,21 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   bool IsNothrow = false;
   bool IsPlacement = false;
 
-  if (E->getNumPlacementArgs() == 1 &&
-      E->getPlacementArg(0)->getType()->isNothrowT()) {
-    // The only new-placement list we support is of the form (std::nothrow).
-    //
-    // FIXME: There is no restriction on this, but it's not clear that any
-    // other form makes any sense. We get here for cases such as:
-    //
-    //   new (std::align_val_t{N}) X(int)
-    //
-    // (which should presumably be valid only if N is a multiple of
-    // alignof(int), and in any case can't be deallocated unless N is
-    // alignof(X) and X has new-extended alignment).
-    LValue Nothrow;
-    if (!EvaluateLValue(E->getPlacementArg(0), Nothrow, Info))
-      return false;
-    IsNothrow = true;
-  } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
+  // The only new-placement list we support (other than the reserved placement
+  // form) is of the form (std::nothrow).
+  //
+  // FIXME: There is no restriction on this, but it's not clear that any
+  // other form makes any sense. We get here for cases such as:
+  //
+  //   new (std::align_val_t{N}) X(int)
+  //
+  // (which should presumably be valid only if N is a multiple of
+  // alignof(int), and in any case can't be deallocated unless N is
+  // alignof(X) and X has new-extended alignment).
+  bool HasNothrowArg = E->getNumPlacementArgs() == 1 &&
+                       E->getPlacementArg(0)->getType()->isNothrowT();
+
+  if (OperatorNew->isReservedGlobalPlacementOperator()) {
     if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26 ||
         (Info.CurrentCall->CanEvalMSConstexpr &&
          OperatorNew->hasAttr<MSConstexprAttr>())) {
@@ -11049,15 +11047,23 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
           << /*C++26 feature*/ 1 << E->getSourceRange();
       return false;
     }
-  } else if (E->getNumPlacementArgs()) {
+  } else if (E->getNumPlacementArgs() && !HasNothrowArg) {
     Info.FFDiag(E, diag::note_constexpr_new_placement)
         << /*Unsupported*/ 0 << E->getSourceRange();
     return false;
   } else if (!OperatorNew
                   ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
+    // [expr.const] only permits new-expressions that select a replaceable
+    // global allocation function. Check this before evaluating a
+    // (std::nothrow) placement argument.
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
     return false;
+  } else if (HasNothrowArg) {
+    LValue Nothrow;
+    if (!EvaluateLValue(E->getPlacementArg(0), Nothrow, Info))
+      return false;
+    IsNothrow = true;
   }
 
   const Expr *Init = E->getInitializer();
@@ -19386,8 +19392,8 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       return Success(CmpResult::Unequal, E);
     }
 
-    const CharUnits &LHSOffset = LHSValue.getLValueOffset();
-    const CharUnits &RHSOffset = RHSValue.getLValueOffset();
+    CharUnits LHSOffset = LHSValue.getLValueOffset();
+    CharUnits RHSOffset = RHSValue.getLValueOffset();
 
     SubobjectDesignator &LHSDesignator = LHSValue.getLValueDesignator();
     SubobjectDesignator &RHSDesignator = RHSValue.getLValueDesignator();
@@ -19692,8 +19698,8 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         return Error(E);
       return Success(APValue(LHSAddrExpr, RHSAddrExpr), E);
     }
-    const CharUnits &LHSOffset = LHSValue.getLValueOffset();
-    const CharUnits &RHSOffset = RHSValue.getLValueOffset();
+    CharUnits LHSOffset = LHSValue.getLValueOffset();
+    CharUnits RHSOffset = RHSValue.getLValueOffset();
 
     SubobjectDesignator &LHSDesignator = LHSValue.getLValueDesignator();
     SubobjectDesignator &RHSDesignator = RHSValue.getLValueDesignator();
