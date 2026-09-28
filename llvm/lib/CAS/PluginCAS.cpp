@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginAPI.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -69,9 +70,8 @@ void PluginCASContext::printIDImpl(raw_ostream &OS, const CASID &ID) const {
   Functions.string_dispose(c_printed_id);
 }
 
-Expected<std::shared_ptr<PluginCASContext>> PluginCASContext::create(
-    StringRef PluginPath, StringRef OnDiskPath,
-    ArrayRef<std::pair<std::string, std::string>> PluginArgs) {
+/// Loads the plugin library at \p PluginPath and looks up its functions.
+static Expected<llcas_functions_t> loadPluginFunctions(StringRef PluginPath) {
   auto reportError = [PluginPath](const Twine &Description) -> Error {
     std::error_code EC = inconvertibleErrorCode();
     return createStringError(EC, "error loading '" + PluginPath +
@@ -96,9 +96,15 @@ Expected<std::shared_ptr<PluginCASContext>> PluginCASContext::create(
 #include "PluginAPI_functions.def"
 #undef CASPLUGINAPI_FUNCTION
 
-  llcas_cas_options_t c_opts = Functions.cas_options_create();
-  scope_exit DisposeOptions([&]() { Functions.cas_options_dispose(c_opts); });
+  return Functions;
+}
 
+/// Creates a \c llcas_cas_options_t for \p OnDiskPath and \p PluginArgs. On
+/// success the caller is responsible for disposing it.
+static Expected<llcas_cas_options_t>
+createPluginOptions(const llcas_functions_t &Functions, StringRef OnDiskPath,
+                    ArrayRef<std::pair<std::string, std::string>> PluginArgs) {
+  llcas_cas_options_t c_opts = Functions.cas_options_create();
   Functions.cas_options_set_client_version(c_opts, LLCAS_VERSION_MAJOR,
                                            LLCAS_VERSION_MINOR);
   SmallString<256> OnDiskPathBuf = OnDiskPath;
@@ -106,9 +112,26 @@ Expected<std::shared_ptr<PluginCASContext>> PluginCASContext::create(
   for (const auto &Pair : PluginArgs) {
     char *c_err = nullptr;
     if (Functions.cas_options_set_option(c_opts, Pair.first.c_str(),
-                                         Pair.second.c_str(), &c_err))
-      return errorAndDispose(c_err, Functions);
+                                         Pair.second.c_str(), &c_err)) {
+      Functions.cas_options_dispose(c_opts);
+      return PluginCASContext::errorAndDispose(c_err, Functions);
+    }
   }
+  return c_opts;
+}
+
+Expected<std::shared_ptr<PluginCASContext>> PluginCASContext::create(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs) {
+  llcas_functions_t Functions{};
+  if (Error E = loadPluginFunctions(PluginPath).moveInto(Functions))
+    return std::move(E);
+
+  llcas_cas_options_t c_opts = nullptr;
+  if (Error E = createPluginOptions(Functions, OnDiskPath, PluginArgs)
+                    .moveInto(c_opts))
+    return std::move(E);
+  scope_exit DisposeOptions([&]() { Functions.cas_options_dispose(c_opts); });
 
   char *c_err = nullptr;
   llcas_cas_t c_cas = Functions.cas_create(c_opts, &c_err);
@@ -562,4 +585,69 @@ cas::createPluginCASDatabases(
   auto CAS = std::make_shared<PluginObjectStore>(Ctx);
   auto AC = std::make_shared<PluginActionCache>(std::move(Ctx));
   return std::make_pair(std::move(CAS), std::move(AC));
+}
+
+/// Loads the plugin and calls \p Fn with a \c llcas_cas_options_t for
+/// \p OnDiskPath and \p PluginArgs, converting the returned
+/// \c llcas_validation_result_t.
+static Expected<ValidationResult> callPluginValidationFunction(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs,
+    function_ref<Expected<llcas_validation_result_t>(
+        const llcas_functions_t &, llcas_cas_options_t, char **)>
+        Fn) {
+  llcas_functions_t Functions{};
+  if (Error E = loadPluginFunctions(PluginPath).moveInto(Functions))
+    return std::move(E);
+
+  llcas_cas_options_t c_opts = nullptr;
+  if (Error E = createPluginOptions(Functions, OnDiskPath, PluginArgs)
+                    .moveInto(c_opts))
+    return std::move(E);
+  scope_exit DisposeOptions([&]() { Functions.cas_options_dispose(c_opts); });
+
+  char *c_err = nullptr;
+  llcas_validation_result_t Result;
+  if (Error E = Fn(Functions, c_opts, &c_err).moveInto(Result))
+    return std::move(E);
+  switch (Result) {
+  case LLCAS_VALIDATION_RESULT_VALID:
+    return ValidationResult::Valid;
+  case LLCAS_VALIDATION_RESULT_RECOVERED:
+    return ValidationResult::Recovered;
+  case LLCAS_VALIDATION_RESULT_SKIPPED:
+    return ValidationResult::Skipped;
+  case LLCAS_VALIDATION_RESULT_ERROR:
+    return PluginCASContext::errorAndDispose(c_err, Functions);
+  }
+  llvm_unreachable("unknown llcas_validation_result_t value");
+}
+
+Expected<ValidationResult> cas::validatePluginCASDatabasesIfNeeded(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs, bool CheckHash,
+    bool ForceValidation) {
+  return callPluginValidationFunction(
+      PluginPath, OnDiskPath, PluginArgs,
+      [&](const llcas_functions_t &Functions, llcas_cas_options_t c_opts,
+          char **c_err) -> Expected<llcas_validation_result_t> {
+        if (!Functions.cas_validate_if_needed)
+          return createStringError(
+              "plugin cas doesn't support validate-if-needed");
+        return Functions.cas_validate_if_needed(c_opts, CheckHash,
+                                                ForceValidation, c_err);
+      });
+}
+
+Expected<ValidationResult> cas::recoverPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs) {
+  return callPluginValidationFunction(
+      PluginPath, OnDiskPath, PluginArgs,
+      [&](const llcas_functions_t &Functions, llcas_cas_options_t c_opts,
+          char **c_err) -> Expected<llcas_validation_result_t> {
+        if (!Functions.cas_recover_ondisk_data)
+          return createStringError("plugin cas doesn't support recovery");
+        return Functions.cas_recover_ondisk_data(c_opts, c_err);
+      });
 }
