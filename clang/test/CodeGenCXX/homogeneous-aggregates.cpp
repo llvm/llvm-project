@@ -302,3 +302,22 @@ struct test2 : base2 { test2(double); protected: double v2;};
 test2 f(test2 *x) { return *x; }
 // WOA64: define dso_local void @"?f@pr62223@@YA?AUtest2@1@PEAU21@@Z"(ptr dead_on_unwind inreg noalias writable sret(%"struct.pr62223::test2") align 8 %{{.*}}, ptr noundef %{{.*}})
 }
+
+namespace pr113104 {
+struct HFA {
+  float a;
+  float b;
+};
+
+using HVA = float __attribute__((__vector_size__(16), __aligned__(16)));
+
+struct base_hfa { HFA v1; };
+struct test_hfa : base_hfa { test_hfa(double); protected: HFA v2;};
+test_hfa CC f(test_hfa *x) { return *x; }
+// X64: define dso_local x86_vectorcallcc %"struct.pr113104::test_hfa" @"\01_ZN8pr1131041fEPNS_8test_hfaE@@8"(ptr noundef %x)
+
+struct base_hva { HVA v1; };
+struct test_hva : base_hva { test_hva(double); protected: HVA v2;};
+test_hva CC f(test_hva *x) { return *x; }
+// X64: define dso_local x86_vectorcallcc %"struct.pr113104::test_hva" @"\01_ZN8pr1131041fEPNS_8test_hvaE@@8"(ptr noundef %x)
+}
