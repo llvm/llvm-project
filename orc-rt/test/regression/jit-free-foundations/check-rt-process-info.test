@@ -3,6 +3,6 @@
 # RUN:   | FileCheck %s -DARCH=%host-arch -DOS=%host-os \
 # RUN:     -DVERSION=%macos-product-version -DPAGESIZE=%host-page-size
 
-# CHECK:      [[ARCH]]-{{.*}}-[[OS]][[VERSION]]
-# CHECK-NEXT: [[PAGESIZE]]
-# CHECK-NEXT: {{^\+[a-z0-9_.]+(,\+[a-z0-9_.]+)*$}}
+# CHECK:      triple: [[ARCH]]-{{.*}}-[[OS]][[VERSION]]
+# CHECK-NEXT: page-size: [[PAGESIZE]]
+# CHECK-NEXT: cpu-features: {{(\+[a-z0-9_.]+(,\+[a-z0-9_.]+)*)?$}}
