@@ -10,15 +10,15 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-LABEL: @multiply_noalias_4x4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[COLS_HEADER:%.*]]
-; CHECK:       cols.header:
+; CHECK:       rows.header:
 ; CHECK-NEXT:    [[COLS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[COLS_STEP:%.*]], [[COLS_LATCH:%.*]] ]
 ; CHECK-NEXT:    br label [[COLS_BODY:%.*]]
-; CHECK:       cols.body:
+; CHECK:       rows.body:
 ; CHECK-NEXT:    br label [[ROWS_HEADER:%.*]]
-; CHECK:       rows.header:
+; CHECK:       cols.header:
 ; CHECK-NEXT:    [[ROWS_IV:%.*]] = phi i64 [ 0, [[COLS_BODY]] ], [ [[ROWS_STEP:%.*]], [[ROWS_LATCH:%.*]] ]
 ; CHECK-NEXT:    br label [[ROWS_BODY:%.*]]
-; CHECK:       rows.body:
+; CHECK:       cols.body:
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       k.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
@@ -28,11 +28,11 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       k.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[COLS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[ROWS_IV]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
@@ -51,20 +51,20 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_STEP]], 4
 ; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
-; CHECK:       rows.latch:
-; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
-; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
-; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK:       cols.latch:
+; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[ROWS_IV]], 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[TMP8]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[TMP8]], i64 [[COLS_IV]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 32
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[VEC_GEP16]], align 8
-; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF0]]
-; CHECK:       cols.latch:
+; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
+; CHECK-NEXT:    [[COLS_COND_NOT1:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
+; CHECK-NEXT:    br i1 [[COLS_COND_NOT1]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF0]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[COLS_COND_NOT:%.*]] = icmp eq i64 [[COLS_STEP]], 4
-; CHECK-NEXT:    br i1 [[COLS_COND_NOT]], label [[CONTINUE:%.*]], label [[COLS_HEADER]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[COLS_COND_NOT]], label [[CONTINUE:%.*]], label [[COLS_HEADER]], !prof [[PROF0]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    ret void
 ;
@@ -150,15 +150,15 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK-LABEL: @multiply_noalias_4x2_2x8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[COLS_HEADER:%.*]]
-; CHECK:       cols.header:
+; CHECK:       rows.header:
 ; CHECK-NEXT:    [[COLS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[COLS_STEP:%.*]], [[COLS_LATCH:%.*]] ]
 ; CHECK-NEXT:    br label [[COLS_BODY:%.*]]
-; CHECK:       cols.body:
+; CHECK:       rows.body:
 ; CHECK-NEXT:    br label [[ROWS_HEADER:%.*]]
-; CHECK:       rows.header:
+; CHECK:       cols.header:
 ; CHECK-NEXT:    [[ROWS_IV:%.*]] = phi i64 [ 0, [[COLS_BODY]] ], [ [[ROWS_STEP:%.*]], [[ROWS_LATCH:%.*]] ]
 ; CHECK-NEXT:    br label [[ROWS_BODY:%.*]]
-; CHECK:       rows.body:
+; CHECK:       cols.body:
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       k.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
@@ -168,11 +168,11 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK:       k.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[COLS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 4
+; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[ROWS_IV]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
@@ -194,21 +194,21 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK:       k.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_IV]], 0
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !prof [[PROF3:![0-9]+]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       rows.latch:
-; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
-; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
-; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       cols.latch:
+; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[ROWS_IV]], 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP12]], i64 [[COLS_IV]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP13]], i64 32
 ; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
-; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF0]]
-; CHECK:       cols.latch:
+; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
+; CHECK-NEXT:    [[COLS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 8
+; CHECK-NEXT:    br i1 [[COLS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]], !prof [[PROF7:![0-9]+]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[COLS_COND_NOT:%.*]] = icmp eq i64 [[COLS_STEP]], 8
-; CHECK-NEXT:    br i1 [[COLS_COND_NOT]], label [[CONTINUE:%.*]], label [[COLS_HEADER]], !prof [[PROF6:![0-9]+]]
+; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[COLS_STEP]], 4
+; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[CONTINUE:%.*]], label [[COLS_HEADER]], !prof [[PROF0]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    ret void
 ;
@@ -301,9 +301,12 @@ declare <4 x float> @llvm.matrix.multiply.v4f32.v4f32.v4f32(<4 x float>, <4 x fl
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 2}
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.count", i32 2}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.unroll.count", i32 1}
-; CHECK: [[PROF6]] = !{!"branch_weights", i32 1, i32 4}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]]}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 1, i32 1}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]]}
+; CHECK: [[PROF7]] = !{!"branch_weights", i32 1, i32 4}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]]}
 ;.

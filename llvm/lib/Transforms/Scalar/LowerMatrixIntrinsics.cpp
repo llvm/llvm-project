@@ -117,6 +117,14 @@ static cl::opt<unsigned>
     LoopMinTilesCount("fuse-matrix-loop-min-tiles-count", cl::init(4),
                       cl::desc("The minimum number of computed tiles required "
                                "to make loop generation profitable."));
+static cl::opt<bool> EnablePushingToMemForTiling(
+    "matrix-enable-pushing-to-mem-for-tiling", cl::init(true), cl::Hidden,
+    cl::desc("Push operands of large matrix multiplies into memory in order to "
+             "satisfy the requirements for tiling."));
+
+// Frame pointers are unsupported currently, so disable dynamic allocas.
+static cl::opt<bool> AllocaInEntryBlock("matrix-alloca-in-entry-block",
+                                        cl::init(false));
 
 static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
     "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
@@ -281,6 +289,233 @@ raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
 }
 
 } // namespace
+
+// Returns true if \p V is a matrix load.
+static bool isAnyLoad(Value *V) {
+  if (isa<LoadInst>(V))
+    return true;
+  if (match(V, m_Intrinsic<Intrinsic::matrix_column_major_load>()))
+    return true;
+  return false;
+}
+
+// Information about the way a matrix is loaded. Used to analyze the operands
+// of a matrix multiply and help with lowering different types of lowering
+// sequences.
+// This can represent:
+// * a regular matrix load
+// * matrix.column.major.load intrinsics
+class LoadInfo {
+public:
+  LoadInfo(Instruction *Load, Instruction *Transpose = nullptr)
+      : Load(Load), Ptr(Load->getOperand(0)), Transpose(Transpose) {
+    assert(isAnyLoad(Load) &&
+           "Only loads and matrix.column.major.loads are supported.");
+  }
+
+  Instruction *getLoad() { return Load; }
+  Value *getPointerOperand() const { return Ptr; }
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperand()->getType()->getPointerAddressSpace();
+  }
+  MaybeAlign getAlign() const {
+    if (auto *LI = dyn_cast<LoadInst>(Load))
+      return LI->getAlign();
+    return cast<CallInst>(Load)->getParamAlign(0);
+  }
+
+  bool isVolatile() const {
+    if (auto *LI = dyn_cast<LoadInst>(Load))
+      return LI->isVolatile();
+    return cast<ConstantInt>(cast<CallInst>(Load)->getArgOperand(2))->isOne();
+  }
+
+  void setNonAliasingPtr(Value *NonAliasingPtr) {
+    if (NonAliasingPtr != getPointerOperand())
+      Ptr = NonAliasingPtr;
+  }
+
+  Value *getRealStride(unsigned ShapeStride, IRBuilder<> &Builder) const {
+    if (isa<LoadInst>(Load))
+      return asIndex(Builder, ShapeStride);
+    // It's a column.major load otherwise. If it's a constant, use the index
+    // type, otherwise just return the dynamic value.
+    Value *Stride = Load->getOperand(1);
+    if (auto *CI = dyn_cast<ConstantInt>(Stride))
+      return asIndex(Builder, CI->getZExtValue());
+    return Stride;
+  }
+
+  MemoryLocation getMemLoc(const DataLayout &DL) const {
+    AAMDNodes AATags = Load->getAAMetadata();
+    MemoryLocation LoadLoc(
+        getPointerOperand(),
+        LocationSize::precise(DL.getTypeStoreSize(Load->getType())), AATags);
+    return LoadLoc;
+  }
+
+  bool isTransposed() const { return Transpose != nullptr; }
+  Instruction *getTranspose() { return Transpose; }
+
+private:
+  Instruction *Load = nullptr;
+  Value *Ptr = nullptr;
+  Instruction *Transpose = nullptr;
+};
+
+/// Information about the way a matrix is stored.
+/// This can represent:
+/// * a regular store: store(matmul)
+/// * an accumulating store: store(add(load, matmul))
+class StoreInfo {
+public:
+  /// Create a regular store.
+  StoreInfo(Instruction *Store) : Store(Store) {}
+  /// Create an accumulating store.
+  StoreInfo(Instruction *Store, Instruction *BinOp, LoadInfo LI)
+      : Store(Store), BinOp(BinOp), LI(LI) {}
+
+  /// Returns true when the accumulating operation is an add, false if it's a
+  /// sub.
+  bool isAdd() const {
+    switch (BinOp->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::FAdd:
+      return true;
+    case Instruction::Sub:
+    case Instruction::FSub:
+      return false;
+    default:
+      llvm_unreachable(
+          "Only add and sub operations are supported with a store.");
+    }
+  }
+
+  /// Returns true if this is an accumulating store.
+  bool isAccumulating() const { return BinOp && LI; }
+
+  /// Returns the value used by the store as a pointer.
+  Value *getPointerOperand() const {
+    Value *PointerOperand = Store->getOperand(1);
+    if (LI) {
+      assert(!isAccumulating() ||
+             PointerOperand->stripPointerCasts() ==
+                     LI->getPointerOperand()->stripPointerCasts() &&
+                 "Accumulating store has different load and store pointers.");
+    }
+    return PointerOperand;
+  }
+
+  Value *getRealStride(unsigned ShapeStride, IRBuilder<> &Builder) const {
+    if (isa<StoreInst>(Store))
+      return asIndex(Builder, ShapeStride);
+    // It's a column.major store otherwise. If it's a constant, use the index
+    // type, otherwise just return the dynamic value.
+    Value *Stride = Store->getOperand(2);
+    if (auto *CI = dyn_cast<ConstantInt>(Stride))
+      return asIndex(Builder, CI->getZExtValue());
+    return Stride;
+  }
+
+  MemoryLocation getMemLoc(const DataLayout &DL) const {
+    Value *ValueOperand = Store->getOperand(0);
+    AAMDNodes AATags = Store->getAAMetadata();
+    MemoryLocation StoreLoc(
+        getPointerOperand(),
+        LocationSize::precise(DL.getTypeStoreSize(ValueOperand->getType())),
+        AATags);
+    return StoreLoc;
+  }
+
+  Instruction *getStore() { return Store; }
+  Instruction *getBinOp() { return BinOp; }
+  std::optional<LoadInfo> getLoadInfo() { return LI; }
+
+  MaybeAlign getAlign() const {
+    if (auto *SI = dyn_cast<StoreInst>(Store))
+      return SI->getAlign();
+    return cast<CallInst>(Store)->getParamAlign(1);
+  }
+
+  bool isVolatile() const {
+    if (auto *SI = dyn_cast<StoreInst>(Store))
+      return SI->isVolatile();
+    return cast<ConstantInt>(cast<CallInst>(Store)->getArgOperand(3))->isOne();
+  }
+
+private:
+  /// The final store instruction. Can be either a `store` or a
+  /// `matrix.column.major.store`.
+  Instruction *Store = nullptr;
+  /// The accumulating binop part of the accumulating sequence: can be either
+  /// an add or a sub.
+  Instruction *BinOp = nullptr;
+  /// The load part of the accumulating sequence.
+  std::optional<LoadInfo> LI;
+};
+
+static bool isAnyStore(Instruction *MaybeStore) {
+  if (isa<StoreInst>(MaybeStore))
+    return true;
+  if (match(MaybeStore, m_Intrinsic<Intrinsic::matrix_column_major_store>()))
+    return true;
+  return false;
+}
+
+// Starting from \p MatMul, analyze how its result is stored.
+// Returns a StoreInfo object:
+// * None: the matrix is not directly stored (or stored in an unrecognized way).
+// * StoreInfo::isAccumulating() == false: regular store: store(MatMul)
+// * StoreInfo::isAccumulating() == true: accumulating store:
+//     store(fadd(load(PTR), MATMUL), PTR)
+static std::optional<StoreInfo> analyzeStore(CallInst *MatMul,
+                                             unsigned ShapeStride) {
+  assert(MatMul->hasOneUse() && "Expected matmul with single use");
+  Instruction *MaybeStore = dyn_cast<Instruction>(*MatMul->user_begin());
+  if (!MaybeStore)
+    return std::nullopt;
+
+  if (isAnyStore(MaybeStore))
+    return StoreInfo(MaybeStore);
+
+  return std::nullopt;
+}
+
+static std::optional<LoadInfo> analyzeLoadOperand(Value *Operand) {
+  if (isAnyLoad(Operand))
+    return LoadInfo(cast<Instruction>(Operand));
+
+  Value *Ptr = nullptr;
+  Instruction *Load = nullptr;
+  Instruction *Transpose = nullptr;
+
+  if (match(Operand,
+            m_CombineAnd(
+                m_Intrinsic<Intrinsic::matrix_transpose>(m_CombineAnd(
+                    m_CombineOr(
+                        m_Load(m_Value(Ptr)),
+                        m_Intrinsic<Intrinsic::matrix_column_major_load>()),
+                    m_Instruction(Load))),
+                m_Instruction(Transpose))))
+    return LoadInfo(Load, Transpose);
+
+  return std::nullopt;
+}
+
+static std::optional<std::pair<LoadInfo, LoadInfo>>
+analyzeLoadOperands(CallInst *MatMul) {
+  assert(MatMul->hasOneUse() && "Expected matmul with single use");
+  Value *Op0 = MatMul->getOperand(0);
+  Value *Op1 = MatMul->getOperand(1);
+  std::optional<LoadInfo> MaybeOp0 = analyzeLoadOperand(Op0);
+  std::optional<LoadInfo> MaybeOp1 = analyzeLoadOperand(Op1);
+
+  // Return only if both operands are valid.
+  if (MaybeOp0 && MaybeOp1)
+    return std::make_pair(*MaybeOp0, *MaybeOp1);
+
+  return std::nullopt;
+}
 
 static bool isShapePreserving(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
@@ -1216,6 +1451,90 @@ public:
   /// Perform inst-combine-like transformations on matrix operations.
   /// Note that this doesn't update the ShapeInfo and relies on it being called
   /// before shape propagation.
+  /// Push V to the stack, read it back and change the original users to use the
+  /// load. This is used to push inputs and output of a matmul to the stack in
+  /// order to satisfy the requirements for the tiling loops.
+  void pushToStackForMatmul(Value *V, Instruction *Before, bool IsInput) {
+    IRBuilder<> Builder(Before);
+    if (IsInput) {
+      Value *TA;
+      while (match(V, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(TA)))) {
+        Builder.SetInsertPoint(cast<Instruction>(V));
+        V = TA;
+      }
+    }
+
+    IRBuilder<>::InsertPoint IP;
+    if (AllocaInEntryBlock) {
+      IP = Builder.saveIP();
+      Builder.SetInsertPoint(Builder.GetInsertBlock()
+                                 ->getParent()
+                                 ->getEntryBlock()
+                                 .getFirstNonPHIIt());
+    }
+    Value *Alloca =
+        Builder.CreateAlloca(V->getType(), nullptr, "fused_matmul_op_stack");
+    if (AllocaInEntryBlock)
+      Builder.restoreIP(IP);
+
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      unsigned StoreSize = DL.getTypeStoreSize(V->getType());
+      if (ORE) {
+        ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                           "large-matmul-stored-to-stack", I)
+                  << "Store and re-load of the value of size "
+                  << ore::NV("StoreSize", StoreSize)
+                  << " is required to facilitate tiling");
+        emitRemarksForInlineChain(*I, *ORE);
+      }
+    }
+
+    StoreInst *Store = Builder.CreateStore(V, Alloca);
+    LoadInst *Load = Builder.CreateLoad(V->getType(), Alloca);
+    V->replaceUsesWithIf(Load, [&](Use &U) { return U.getUser() != Store; });
+  }
+
+  /// Try to transform a matmul with multiple uses to a matmul with a single
+  /// use. If at least one of the uses is a store, try to make it the unique use
+  /// of the matmul to facilitate tiling loop creation. Once that is done,
+  /// this inserts a load from the stored matrix to be used by the rest of the
+  /// uses.
+  /// Returns whether it succeeded at transforming the matmul.
+  bool makeMatMulOneUse(Value *MatMul) {
+    assert(!MatMul->hasOneUse() && "Expecting matmul with multiple uses.");
+
+    // Look for at least one store instruction in the list of uses.
+    auto Found = llvm::find_if(
+        MatMul->uses(), [&](Use &U) { return isa<StoreInst>(U.getUser()); });
+    // If there is no store, there's nothing to be done.
+    if (Found == MatMul->uses().end())
+      return false;
+
+    auto *Store = cast<StoreInst>(Found->getUser());
+    // If the store doesn't dominate all the other uses, we can't rely on
+    // reloading from that memory location, so we need to give up.
+    // FIXME: We can try to improve this by hoisting the store as close as
+    // possible to the MatMul.
+    if (llvm::any_of(MatMul->uses(), [&](Use &U) {
+          if (auto *Inst = dyn_cast<Instruction>(U.getUser()))
+            if (Store != Inst && (!DT || !DT->dominates(Store, Inst)))
+              return true;
+          return false;
+        }))
+      return false;
+
+    // Now, insert a load right after the store, and make all the uses use it
+    // instead of the matmul directly.
+    auto AfterStore = std::next(Store->getIterator());
+    IRBuilder<> Builder(&*AfterStore);
+    LoadInst *Load = Builder.CreateLoad(Store->getValueOperand()->getType(),
+                                        Store->getPointerOperand());
+    // Replace every use except the original store.
+    MatMul->replaceUsesWithIf(Load,
+                              [&](Use &U) { return U.getUser() != Store; });
+    return true;
+  }
+
   void combineMatrixOps() {
     // Only do this for column major.
     if (MatrixLayout != MatrixLayoutTy::ColumnMajor)
@@ -1240,6 +1559,30 @@ public:
           // Re-process the changed instruction.
           Next = It;
           continue;
+        }
+
+        TileInfo TI(R->getZExtValue(), M->getZExtValue(), C->getZExtValue(),
+                    TileSizeRows, TileSizeInner, TileSizeColumns, I.getType());
+        bool FacilitateTilingLoops = EnablePushingToMemForTiling &&
+                                     TileUseLoops && isTilingLoopProfitable(TI);
+
+        if (FacilitateTilingLoops) {
+          if (!analyzeLoadOperand(A))
+            pushToStackForMatmul(A, &I, true);
+          if (!analyzeLoadOperand(B))
+            pushToStackForMatmul(B, &I, true);
+
+          if (!I.hasOneUse() && !makeMatMulOneUse(&I)) {
+            LLVM_DEBUG(dbgs()
+                       << "Could not simplify matmul with multiple uses\n");
+          }
+
+          if (!I.hasOneUse() ||
+              !analyzeStore(cast<CallInst>(&I),
+                            ShapeInfo(R->getZExtValue(), C->getZExtValue())
+                                .getStride())) {
+            pushToStackForMatmul(&I, I.getNextNode(), false);
+          }
         }
       }
     }
@@ -1615,6 +1958,21 @@ public:
                      {Inst->getArgOperand(3), Inst->getArgOperand(4)}, Builder);
   }
 
+  /// Loads a sub-matrix with shape \p ResultShape from a \p MatrixShape matrix,
+  /// starting at \p LoadInfo's pointer at offset [I][J].
+  MatrixTy loadMatrix(class LoadInfo LoadInfo, ShapeInfo MatrixShape, Value *I,
+                      Value *J, ShapeInfo ResultShape, Type *EltTy,
+                      IRBuilder<> &Builder) {
+    Value *Stride = LoadInfo.getRealStride(MatrixShape.getStride(), Builder);
+    Value *Offset = Builder.CreateAdd(Builder.CreateMul(J, Stride), I);
+    Value *MatrixPtr = LoadInfo.getPointerOperand();
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
+    auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
+                                                   ResultShape.NumColumns);
+    return loadMatrix(TileTy, TileStart, LoadInfo.getAlign(), Stride,
+                      LoadInfo.isVolatile(), ResultShape, Builder);
+  }
+
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
   /// MatrixPtr[I][J].
   void storeMatrix(const MatrixTy &StoreVal, Value *MatrixPtr,
@@ -1654,6 +2012,63 @@ public:
     }
     return MatrixTy().addNumStores(getNumOps(StoreVal.getVectorTy()) *
                                    StoreVal.getNumVectors());
+  }
+
+  /// Stores a sub-matrix \p StoreVal into the matrix at \p StoreInfo's pointer,
+  /// starting at \p MatrixShape[I][J].
+  void storeMatrix(const MatrixTy &StoreVal, class StoreInfo SI,
+                   ShapeInfo MatrixShape, Value *I, Value *J, Type *EltTy,
+                   IRBuilder<> &Builder) {
+    Value *MatrixPtr = SI.getPointerOperand();
+    Value *Stride = SI.getRealStride(MatrixShape.getStride(), Builder);
+    Value *Offset = Builder.CreateAdd(Builder.CreateMul(J, Stride), I);
+
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
+    auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
+                                                   StoreVal.getNumColumns());
+    storeMatrix(TileTy, StoreVal, TileStart, Stride, SI, Builder);
+  }
+
+  /// Store matrix \p StoreVal, accumulating into existing memory if \p SI is
+  /// an accumulating store.
+  MatrixTy storeMatrix(Type *Ty, MatrixTy StoreVal, Value *Ptr, Value *Stride,
+                       class StoreInfo SI, IRBuilder<> &Builder) {
+    auto *VType = cast<FixedVectorType>(Ty);
+    auto *EltType = VType->getElementType();
+    Value *EltPtr = Ptr;
+    for (auto Vec : enumerate(StoreVal.vectors())) {
+      Value *GEP = computeVectorAddr(
+          EltPtr,
+          Builder.getIntN(Stride->getType()->getScalarSizeInBits(),
+                          Vec.index()),
+          Stride, StoreVal.getStride(), VType->getElementType(), Builder);
+      Value *V = Vec.value();
+      if (SI.isAccumulating()) {
+        Value *Load = Builder.CreateLoad(V->getType(), GEP, "load.accumulator");
+        if (SI.isAdd()) {
+          if (EltType->isFloatingPointTy())
+            V = Builder.CreateFAdd(Load, V, "accumulate");
+          else
+            V = Builder.CreateAdd(Load, V, "accumulate");
+        } else {
+          if (EltType->isFloatingPointTy())
+            V = Builder.CreateFSub(Load, V, "accumulate");
+          else
+            V = Builder.CreateSub(Load, V, "accumulate");
+        }
+      }
+      Builder.CreateAlignedStore(V, GEP,
+                                 getAlignForIndex(Vec.index(), Stride,
+                                                  VType->getElementType(),
+                                                  SI.getAlign()),
+                                 SI.isVolatile());
+    }
+    return MatrixTy()
+        .addNumStores(getNumOps(StoreVal.getVectorTy()) *
+                      StoreVal.getNumVectors())
+        .addNumComputeOps(SI.isAccumulating()
+                              ? StoreVal.getNumVectors() * /*load + add*/ 2
+                              : 0);
   }
 
   /// Lower a store instruction with shape information.
@@ -2019,6 +2434,19 @@ public:
     assert(A.isColumnMajor() == B.isColumnMajor() &&
            Result.isColumnMajor() == A.isColumnMajor() &&
            "operands must agree on matrix layout");
+
+    if (!IsTiled && R * C * M > 100) {
+      Instruction &I = *Builder.GetInsertPoint();
+      assert(match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()));
+      if (ORE) {
+        ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                           "large-matmul-without-tiling", &I)
+                  << "Not tiling for matmul with FLOPS "
+                  << ore::NV("FLOPS", R * M * C));
+        emitRemarksForInlineChain(I, *ORE);
+      }
+    }
+
     unsigned NumComputeOps = 0;
 
     Builder.setFastMathFlags(FMF);
@@ -2081,31 +2509,108 @@ public:
     Result.addNumComputeOps(NumComputeOps);
   }
 
-  /// Ensure that the memory in \p Load does not alias \p Store by potentially
+  /// Compute \p Result = \p A^t * \p B using a dot product through
+  /// vector_reduce_fadd(fmul(col(A), col(B))).
+  void emitMatrixMultiplyTN(MatrixTy &Result, const MatrixTy &A,
+                            const MatrixTy &B, IRBuilder<> &Builder,
+                            bool isTiled) {
+    auto *EltType = Result.getElementType();
+    unsigned VF = std::max<unsigned>(
+        TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                .getFixedValue() /
+            EltType->getPrimitiveSizeInBits().getFixedValue(),
+        1U);
+
+    unsigned Rows = Result.getNumRows();
+    unsigned Cols = Result.getNumColumns();
+    unsigned Inner = B.getNumRows();
+
+    assert(A.isColumnMajor());
+
+    if (!isTiled && Rows * Cols * Inner > 100) {
+      Instruction &I = *Builder.GetInsertPoint();
+      assert(match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()));
+      if (ORE) {
+        ORE->emit(
+            OptimizationRemarkMissed(DEBUG_TYPE, "matmul TN without tiling", &I)
+            << "Not tiling for TN matmul with FLOPS "
+            << ore::NV("FLOPS", Rows * Inner * Cols));
+        emitRemarksForInlineChain(I, *ORE);
+      }
+    }
+
+    // Extract a column from A and a column from B, compute the dot product (of
+    // dimension VF) and accumulate the result into the result column one by
+    // one.
+    for (unsigned C = 0; C < Cols; ++C) {
+      Value *InitialResultColumn = Result.getColumn(C);
+      Value *ResultColumn = InitialResultColumn;
+      for (unsigned R = 0; R < Rows; ++R) {
+        // Accumulate the dot products of the inner loop.
+        Value *InnerAccumulator = nullptr;
+        for (unsigned M = 0; M < Inner; M += VF) {
+          // The vectorization size for the iteration. This allows for the
+          // last iteration to use a narrower vector size if needed.
+          unsigned IterVF = std::min(VF, Inner - M);
+          Value *AVect = A.extractVector(M, R, IterVF, Builder);
+          Value *BVect = B.extractVector(M, C, IterVF, Builder);
+          Value *FMul = Builder.CreateFMul(AVect, BVect);
+          auto *ZeroAccumulator = Constant::getNullValue(EltType);
+          auto *Reduce = Builder.CreateFAddReduce(ZeroAccumulator, FMul);
+          cast<Instruction>(Reduce)->setFast(true);
+          Result.addNumComputeOps(1);
+          // Start the accumulation, or accumulate in the existing value.
+          InnerAccumulator = InnerAccumulator
+                                 ? Builder.CreateFAdd(InnerAccumulator, Reduce)
+                                 : Reduce;
+        }
+        // Insert the computed matrix element into the result column.
+        ResultColumn =
+            Builder.CreateInsertElement(ResultColumn, InnerAccumulator, R);
+      }
+      // Finally, set the result column.
+      if (isTiled)
+        ResultColumn = Builder.CreateFAdd(ResultColumn, InitialResultColumn);
+      Result.setVector(C, ResultColumn);
+    }
+  }
+
+  /// Ensure that the memory in \p LI does not alias \p SI by potentially
   /// copying it to a new location.  This new or otherwise the original location
   /// is returned.
   std::pair<Value *, AllocaInst *>
-  getNonAliasingPointer(LoadInst *Load, StoreInst *Store, CallInst *MatMul) {
-    MemoryLocation StoreLoc = MemoryLocation::get(Store);
-    MemoryLocation LoadLoc = MemoryLocation::get(Load);
+  getNonAliasingPointer(class LoadInfo LoadInf, class StoreInfo StoreInf,
+                        CallInst *MatMul, unsigned MatMulOpNumber) {
+    MemoryLocation StoreLoc = StoreInf.getMemLoc(DL);
+    LoadInst *Load = cast<LoadInst>(LoadInf.getLoad());
+    MemoryLocation LoadLoc = LoadInf.getMemLoc(DL);
 
     // If we can statically determine noalias we're good.
     if (AA->isNoAlias(LoadLoc, StoreLoc))
-      return {Load->getPointerOperand(), nullptr};
+      return {LoadInf.getPointerOperand(), nullptr};
+
+    if (ORE) {
+      ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE, "alias-check", Load)
+                << "Adding run-time alias check between load operand #"
+                << ore::NV("LoadOpNumber", MatMulOpNumber)
+                << " of a matrix multiply and the store of the result");
+      emitRemarksForInlineChain(*Load, *ORE);
+    }
 
     // If the pointers are in different address spaces, we cannot compare them
     // at runtime. Conservatively copy the load operand to a new buffer.
     IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
-    if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
+    if (LoadInf.getPointerAddressSpace() !=
+        StoreInf.getPointerOperand()->getType()->getPointerAddressSpace()) {
       auto *VT = cast<FixedVectorType>(Load->getType());
       auto *ArrayTy =
           ArrayType::get(VT->getElementType(), VT->getNumElements());
       AllocaInst *Alloca =
-          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+          AllocaBuilder.CreateAlloca(ArrayTy, LoadInf.getPointerAddressSpace());
       IRBuilder<> Builder(MatMul);
       Builder.CreateLifetimeStart(Alloca);
       Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
-                           Load->getPointerOperand(), Load->getAlign(),
+                           LoadInf.getPointerOperand(), LoadInf.getAlign(),
                            LoadLoc.Size.getValue());
       return {Alloca, Alloca};
     }
@@ -2138,13 +2643,13 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *AddrTy = DL.getAddressType(Store->getPointerOperand()->getType());
-    Value *StoreBegin = Store->getPointerOperand();
+    Type *AddrTy = DL.getAddressType(StoreInf.getPointerOperand()->getType());
+    Value *StoreBegin = StoreInf.getPointerOperand();
     Value *StoreEnd = Builder.CreatePtrAdd(
         StoreBegin, ConstantInt::get(AddrTy, StoreLoc.Size.getValue()),
         "store.end",
         GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
-    Value *LoadBegin = Load->getPointerOperand();
+    Value *LoadBegin = LoadInf.getPointerOperand();
     CondBrInst *BR1 = Builder.CreateCondBr(
         Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1, Fusion);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR1, DEBUG_TYPE);
@@ -2160,7 +2665,7 @@ public:
     // requirements for large vector types.
     auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
     AllocaInst *Alloca =
-        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+        AllocaBuilder.CreateAlloca(ArrayTy, LoadInf.getPointerAddressSpace());
     Builder.CreateLifetimeStart(Alloca);
 
     Value *LoadEnd = Builder.CreatePtrAdd(
@@ -2173,12 +2678,13 @@ public:
 
     // Copy load operand to new alloca.
     Builder.SetInsertPoint(Copy, Copy->begin());
-    Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
-                         Load->getAlign(), LoadLoc.Size.getValue());
+    Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
+                         LoadInf.getPointerOperand(), LoadInf.getAlign(),
+                         LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
-    PHINode *PHI = Builder.CreatePHI(Load->getPointerOperandType(), 3);
-    PHI->addIncoming(Load->getPointerOperand(), Check0);
-    PHI->addIncoming(Load->getPointerOperand(), Check1);
+    PHINode *PHI = Builder.CreatePHI(LoadInf.getPointerOperand()->getType(), 3);
+    PHI->addIncoming(LoadInf.getPointerOperand(), Check0);
+    PHI->addIncoming(LoadInf.getPointerOperand(), Check1);
     PHI->addIncoming(Alloca, Copy);
 
     // Adjust DT.
@@ -2263,8 +2769,99 @@ public:
     return Res;
   }
 
-  void createTiledLoops(CallInst *MatMul, Value *LPtr, ShapeInfo LShape,
-                        Value *RPtr, ShapeInfo RShape, StoreInst *Store) {
+  void createKLoop(class LoadInfo LoadInfoL, ShapeInfo LShape,
+                   class LoadInfo LoadInfoR, ShapeInfo RShape,
+                   class StoreInfo StoreInf, Value *Row, Value *Column,
+                   Value *K, Type *EltType, unsigned TileNumRows,
+                   unsigned TileNumInner, unsigned TileNumColumns,
+                   BasicBlock *LoopHeader, BasicBlock *LoopEntry,
+                   BasicBlock *LoopExit, FastMathFlags FMF,
+                   IRBuilder<> &Builder) {
+    BasicBlock *LoopBody = LoopHeader->getSingleSuccessor();
+    BasicBlock *LoopLatch = LoopBody->getSingleSuccessor();
+    ShapeInfo ResultShape{LShape.NumRows, RShape.NumColumns};
+    unsigned NumInner = LShape.NumColumns;
+    ShapeInfo ResultTileShape{TileNumRows, TileNumColumns};
+
+    Type *TileColumnVecTy =
+        FixedVectorType::get(EltType, ResultTileShape.NumRows);
+    MatrixTy TileResult;
+    // Create PHI nodes for the result columns to accumulate across iterations
+    // and insert them in the loop header.
+    Builder.SetInsertPoint(LoopHeader->getTerminator());
+    SmallVector<PHINode *, 4> ColumnPhis;
+    for (unsigned I = 0; I < ResultTileShape.NumColumns; I++) {
+      auto *Phi =
+          Builder.CreatePHI(TileColumnVecTy, 2, "result.vec." + Twine(I));
+      // Result vectors start out as zeroes we FMA into.
+      Phi->addIncoming(ConstantAggregateZero::get(TileColumnVecTy), LoopEntry);
+      TileResult.addVector(Phi);
+      ColumnPhis.push_back(Phi);
+    }
+
+    Builder.SetInsertPoint(LoopBody->getTerminator());
+    ShapeInfo LTileShape{std::min(TileNumRows, LShape.NumRows),
+                         std::min(TileNumInner, LShape.NumColumns)};
+    ShapeInfo RTileShape{std::min(TileNumInner, RShape.NumRows),
+                         std::min(TileNumColumns, RShape.NumColumns)};
+
+    if (LoadInfoL.isTransposed()) {
+      MatrixTy L = loadMatrix(LoadInfoL, LShape.t(), K, Row, LTileShape.t(),
+                              EltType, Builder);
+      MatrixTy R = loadMatrix(LoadInfoR, RShape, K, Column, RTileShape, EltType,
+                              Builder);
+      emitMatrixMultiplyTN(TileResult, L, R, Builder, /*isTiled=*/true);
+    } else {
+      MatrixTy L =
+          loadMatrix(LoadInfoL, LShape, Row, K, LTileShape, EltType, Builder);
+      MatrixTy R = loadMatrix(LoadInfoR, RShape, K, Column, RTileShape, EltType,
+                              Builder);
+      emitMatrixMultiply(TileResult, L, R, Builder,
+                         /*isTiled=*/true, /*IsScalarMatrixTransposed=*/false,
+                         FMF);
+    }
+
+    for (unsigned I = 0; I < TileResult.getNumVectors(); I++)
+      ColumnPhis[I]->addIncoming(TileResult.getVector(I), LoopLatch);
+
+    // Store result after the inner loop is done.
+    Builder.SetInsertPoint(&*LoopExit->getFirstInsertionPt());
+
+    // Handle the K remainder inline, right before the store.
+    if (unsigned RemainderInner = NumInner % TileNumInner) {
+      Value *RemK = asIndex(Builder, NumInner - RemainderInner);
+      ShapeInfo LRemShape{ResultTileShape.NumRows, RemainderInner};
+      ShapeInfo RRemShape{RemainderInner, ResultTileShape.NumColumns};
+      if (LoadInfoL.isTransposed()) {
+        MatrixTy L = loadMatrix(LoadInfoL, LShape.t(), RemK, Row, LRemShape.t(),
+                                EltType, Builder);
+        MatrixTy R = loadMatrix(LoadInfoR, RShape, RemK, Column, RRemShape,
+                                EltType, Builder);
+        emitMatrixMultiplyTN(TileResult, L, R, Builder, /*isTiled=*/true);
+      } else {
+        MatrixTy L = loadMatrix(LoadInfoL, LShape, Row, RemK, LRemShape,
+                                EltType, Builder);
+        MatrixTy R = loadMatrix(LoadInfoR, RShape, RemK, Column, RRemShape,
+                                EltType, Builder);
+        emitMatrixMultiply(TileResult, L, R, Builder,
+                           /*isTiled=*/true,
+                           /*IsScalarMatrixTransposed=*/false, FMF);
+      }
+    }
+
+    storeMatrix(TileResult, StoreInf, ResultShape, Row, Column, EltType,
+                Builder);
+  }
+
+  /// Given a matrix multiply \p MatMul and a store of its result \p StoreInf,
+  /// generate a loop nest that computes the result.
+  ///
+  /// Note: this is only supported for column-major for now.
+  void createTiledLoops(CallInst *MatMul, class LoadInfo LoadInfoL,
+                        ShapeInfo LShape, class LoadInfo LoadInfoR,
+                        ShapeInfo RShape, class StoreInfo StoreInf) {
+    assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
+           "Tiling only supported for column-major matrixes at the moment!");
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
     // Create the main tiling loop nest.
@@ -2276,56 +2873,69 @@ public:
     BasicBlock *End =
         SplitBlock(InsertI->getParent(), InsertI, DT, LI, nullptr, "continue");
     IRBuilder<> Builder(MatMul);
-    BasicBlock *InnerBody = TI.CreateTiledLoops(Start, End, Builder, DTU, *LI);
+    TI.CreateTiledLoopsWithRemainder(Start, End, Builder, DTU, *LI);
 
-    Type *TileVecTy =
-        FixedVectorType::get(MatMul->getType()->getScalarType(), TileSizeRows);
-    MatrixTy TileResult;
-    // Insert in the inner loop header.
-    Builder.SetInsertPoint(TI.KLoop.Header->getTerminator());
-    // Create PHI nodes for the result columns to accumulate across iterations.
-    SmallVector<PHINode *, 4> ColumnPhis;
-    for (unsigned I = 0; I < TileSizeColumns; I++) {
-      auto *Phi = Builder.CreatePHI(TileVecTy, 2, "result.vec." + Twine(I));
-      Phi->addIncoming(ConstantAggregateZero::get(TileVecTy),
-                       TI.RowLoop.Header->getSingleSuccessor());
-      TileResult.addVector(Phi);
-      ColumnPhis.push_back(Phi);
+    BasicBlock *ColumnLoopBody = TI.ColumnLoop.Header->getSingleSuccessor();
+    createKLoop(LoadInfoL, LShape, LoadInfoR, RShape, StoreInf,
+                TI.RowLoop.Index, TI.ColumnLoop.Index, TI.KLoop.Index, EltType,
+                TI.TileNumRows, TI.TileNumInner, TI.TileNumColumns,
+                TI.KLoop.Header, ColumnLoopBody, TI.ColumnLoop.Latch,
+                getFastMathFlags(MatMul), Builder);
+
+    if (unsigned RemainderColumns = TI.NumColumns % TI.TileNumColumns) {
+      Value *CurrentColumn = asIndex(Builder, TI.NumColumns - RemainderColumns);
+      createKLoop(LoadInfoL, LShape, LoadInfoR, RShape, StoreInf,
+                  TI.RowLoop.Index, CurrentColumn,
+                  TI.RemainderColumnsKLoop.Index, EltType, TI.TileNumRows,
+                  TI.TileNumInner, RemainderColumns,
+                  TI.RemainderColumnsKLoop.Header, TI.ColumnLoop.Latch,
+                  TI.RowLoop.Latch, getFastMathFlags(MatMul), Builder);
     }
 
-    // Insert in the inner loop body, which computes
-    //   Res += Load(CurrentRow, K) * Load(K, CurrentColumn)
-    Builder.SetInsertPoint(InnerBody->getTerminator());
-    // Load tiles of the operands.
-    MatrixTy A =
-        loadMatrix(LPtr, {}, false, LShape, TI.RowLoop.Index, TI.KLoop.Index,
-                   {TileSizeRows, TileSizeInner}, EltType, Builder);
-    MatrixTy B =
-        loadMatrix(RPtr, {}, false, RShape, TI.KLoop.Index, TI.ColumnLoop.Index,
-                   {TileSizeInner, TileSizeColumns}, EltType, Builder);
-    emitMatrixMultiply(TileResult, A, B, Builder, true, false,
-                       getFastMathFlags(MatMul));
-    // Store result after the inner loop is done.
-    Builder.SetInsertPoint(TI.RowLoop.Latch->getTerminator());
-    storeMatrix(TileResult, Store->getPointerOperand(), Store->getAlign(),
-                Store->isVolatile(), {LShape.NumRows, RShape.NumColumns},
-                TI.RowLoop.Index, TI.ColumnLoop.Index, EltType, Builder);
+    if (unsigned RemainderRows = TI.NumRows % TI.TileNumRows) {
+      Value *Row = asIndex(Builder, TI.NumRows - RemainderRows);
+      BasicBlock *RemainderRowsColumnLoopBody =
+          TI.RemainderRowsColumnLoop.Header->getSingleSuccessor();
+      createKLoop(LoadInfoL, LShape, LoadInfoR, RShape, StoreInf, Row,
+                  TI.RemainderRowsColumnLoop.Index, TI.RemainderRowsKLoop.Index,
+                  EltType, RemainderRows, TI.TileNumInner, TI.TileNumColumns,
+                  TI.RemainderRowsKLoop.Header, RemainderRowsColumnLoopBody,
+                  TI.RemainderRowsColumnLoop.Latch, getFastMathFlags(MatMul),
+                  Builder);
 
-    for (unsigned I = 0; I < TileResult.getNumVectors(); I++)
-      ColumnPhis[I]->addIncoming(TileResult.getVector(I), TI.KLoop.Latch);
+      if (unsigned RemainderColumns = TI.NumColumns % TI.TileNumColumns) {
+        Value *Column = asIndex(Builder, TI.NumColumns - RemainderColumns);
+        createKLoop(LoadInfoL, LShape, LoadInfoR, RShape, StoreInf, Row, Column,
+                    TI.RemainderRowsRemainderColumnsKLoop.Index, EltType,
+                    RemainderRows, TI.TileNumInner, RemainderColumns,
+                    TI.RemainderRowsRemainderColumnsKLoop.Header,
+                    TI.RemainderRowsColumnLoop.Latch, End,
+                    getFastMathFlags(MatMul), Builder);
+      }
+    }
 
-    // Force unrolling of a few iterations of the inner loop, to make sure there
-    // is enough work per iteration.
+    // Mark all loops as already unrolled — the remainder handling is explicit
+    // and the backend should not attempt to re-unroll.
     // FIXME: The unroller should make this decision directly instead, but
     // currently the cost-model is not up to the task.
-    unsigned InnerLoopUnrollCount =
-        std::min(10u, LShape.NumColumns / TileSizeInner);
-    addStringMetadataToLoop(LI->getLoopFor(TI.KLoop.Header),
-                            "llvm.loop.unroll.count", InnerLoopUnrollCount);
+    auto NoUnroll = [&](BasicBlock *Header) {
+      if (!Header)
+        return;
+      auto *Loop = LI->getLoopFor(Header);
+      if (Loop)
+        Loop->setLoopAlreadyUnrolled();
+    };
+    NoUnroll(TI.KLoop.Header);
+    NoUnroll(TI.ColumnLoop.Header);
+    NoUnroll(TI.RowLoop.Header);
+    NoUnroll(TI.RemainderColumnsKLoop.Header);
+    NoUnroll(TI.RemainderRowsKLoop.Header);
+    NoUnroll(TI.RemainderRowsColumnLoop.Header);
+    NoUnroll(TI.RemainderRowsRemainderColumnsKLoop.Header);
   }
 
-  void emitSIMDTiling(CallInst *MatMul, LoadInst *LoadOp0, LoadInst *LoadOp1,
-                      StoreInst *Store,
+  void emitSIMDTiling(CallInst *MatMul, class LoadInfo LoadInfoL,
+                      class LoadInfo LoadInfoR, class StoreInfo StoreInf,
                       SmallPtrSetImpl<Instruction *> &FusedInsts) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Tiling only supported for column-major matrixes at the moment!");
@@ -2340,15 +2950,19 @@ public:
     const unsigned M = LShape.NumColumns;
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
-    auto [APtr, AAlloca] = getNonAliasingPointer(LoadOp0, Store, MatMul);
-    auto [BPtr, BAlloca] = getNonAliasingPointer(LoadOp1, Store, MatMul);
-    Value *CPtr = Store->getPointerOperand();
+    auto [LPtr, AAlloca] =
+        getNonAliasingPointer(LoadInfoL, StoreInf, MatMul, 0);
+    LoadInfoL.setNonAliasingPtr(LPtr);
+    auto [RPtr, BAlloca] =
+        getNonAliasingPointer(LoadInfoR, StoreInf, MatMul, 1);
+    LoadInfoR.setNonAliasingPtr(RPtr);
+    Instruction *Store = StoreInf.getStore();
 
     TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns,
                 TileSizeRows, TileSizeInner, TileSizeColumns, EltType);
 
     if (TileUseLoops && isTilingLoopProfitable(TI))
-      createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
+      createTiledLoops(MatMul, LoadInfoL, LShape, LoadInfoR, RShape, StoreInf);
     else {
       IRBuilder<> Builder(Store);
       for (unsigned J = 0; J < C; J += TileSizeColumns)
@@ -2359,19 +2973,29 @@ public:
 
           for (unsigned K = 0; K < M; K += TileSizeInner) {
             const unsigned TileM = std::min(M - K, unsigned(TileSizeInner));
-            MatrixTy A =
-                loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
-                           LShape, getIndex(APtr, I), getIndex(APtr, K),
-                           {TileR, TileM}, EltType, Builder);
-            MatrixTy B =
-                loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
-                           RShape, getIndex(BPtr, K), getIndex(BPtr, J),
-                           {TileM, TileC}, EltType, Builder);
-            emitMatrixMultiply(Res, A, B, Builder, true, false,
-                               getFastMathFlags(MatMul));
+            if (LoadInfoL.isTransposed()) {
+              MatrixTy A = loadMatrix(LoadInfoL, LShape.t(), getIndex(LPtr, K),
+                                      getIndex(LPtr, I), {TileM, TileR},
+                                      EltType, Builder);
+              MatrixTy B = loadMatrix(LoadInfoR, RShape, getIndex(RPtr, K),
+                                      getIndex(RPtr, J), {TileM, TileC},
+                                      EltType, Builder);
+              emitMatrixMultiplyTN(Res, A, B, Builder, /*isTiled=*/true);
+            } else {
+              MatrixTy A = loadMatrix(LoadInfoL, LShape, getIndex(LPtr, I),
+                                      getIndex(LPtr, K), {TileR, TileM},
+                                      EltType, Builder);
+              MatrixTy B = loadMatrix(LoadInfoR, RShape, getIndex(RPtr, K),
+                                      getIndex(RPtr, J), {TileM, TileC},
+                                      EltType, Builder);
+              emitMatrixMultiply(Res, A, B, Builder, /*isTiled=*/true,
+                                 /*IsScalarMatrixTransposed=*/false,
+                                 getFastMathFlags(MatMul));
+            }
           }
-          storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
-                      getIndex(CPtr, I), getIndex(CPtr, J), EltType, Builder);
+          storeMatrix(
+              Res, StoreInf, {R, M}, getIndex(StoreInf.getPointerOperand(), I),
+              getIndex(StoreInf.getPointerOperand(), J), EltType, Builder);
         }
     }
 
@@ -2388,14 +3012,34 @@ public:
     FusedInsts.insert(Store);
     FusedInsts.insert(MatMul);
     eraseFromParentAndRemoveFromShapeMap(Store);
-    eraseFromParentAndRemoveFromShapeMap(MatMul);
-    if (LoadOp0->use_empty()) {
-      FusedInsts.insert(LoadOp0);
-      eraseFromParentAndRemoveFromShapeMap(LoadOp0);
+    if (StoreInf.getBinOp() && StoreInf.getBinOp()->hasNUses(0)) {
+      FusedInsts.insert(StoreInf.getBinOp());
+      StoreInf.getBinOp()->eraseFromParent();
     }
-    if (LoadOp1 != LoadOp0 && LoadOp1->use_empty()) {
-      FusedInsts.insert(LoadOp1);
-      eraseFromParentAndRemoveFromShapeMap(LoadOp1);
+    std::optional<class LoadInfo> MaybeLoadInfo = StoreInf.getLoadInfo();
+    if (MaybeLoadInfo && MaybeLoadInfo->getLoad()->hasNUses(0)) {
+      FusedInsts.insert(MaybeLoadInfo->getLoad());
+      MaybeLoadInfo->getLoad()->eraseFromParent();
+    }
+    eraseFromParentAndRemoveFromShapeMap(MatMul);
+    Instruction *LTranspose = LoadInfoL.getTranspose();
+    if (LTranspose && LTranspose->hasNUses(0)) {
+      FusedInsts.insert(LTranspose);
+      LTranspose->eraseFromParent();
+    }
+    if (LoadInfoL.getLoad()->hasNUses(0)) {
+      FusedInsts.insert(LoadInfoL.getLoad());
+      LoadInfoL.getLoad()->eraseFromParent();
+    }
+    Instruction *RTranspose = LoadInfoR.getTranspose();
+    if (RTranspose && RTranspose->hasNUses(0)) {
+      FusedInsts.insert(RTranspose);
+      RTranspose->eraseFromParent();
+    }
+    if (LoadInfoR.getLoad() != LoadInfoL.getLoad() &&
+        LoadInfoR.getLoad()->hasNUses(0)) {
+      FusedInsts.insert(LoadInfoR.getLoad());
+      eraseFromParentAndRemoveFromShapeMap(LoadInfoR.getLoad());
     }
   }
 
@@ -2461,9 +3105,134 @@ public:
       return;
     }
 
-    if (!MatMul->hasOneUse() || MatrixLayout != MatrixLayoutTy::ColumnMajor)
+    if (!MatMul->hasOneUse()) {
+      // Emit a remark for large matmuls that can't be tiled due to multiple
+      // uses.
+      ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
+      ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
+      const unsigned R = LShape.NumRows;
+      const unsigned M = LShape.NumColumns;
+      const unsigned C = RShape.NumColumns;
+      if (R * M * C > 100 && ORE) {
+        ORE->emit(
+            OptimizationRemarkMissed(DEBUG_TYPE, "no-tiling-multiple-uses",
+                                     MatMul)
+            << "Not tiling because the matrix multiply has multiple uses, "
+               "FLOPS="
+            << ore::NV("FLOPS", R * M * C));
+        emitRemarksForInlineChain(*MatMul, *ORE);
+      }
+      return;
+    }
+
+    if (MatrixLayout != MatrixLayoutTy::ColumnMajor)
       return;
 
+    {
+      ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
+      ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
+      const unsigned R = LShape.NumRows;
+      const unsigned M = LShape.NumColumns;
+      const unsigned C = RShape.NumColumns;
+      auto *EltType =
+          cast<FixedVectorType>(MatMul->getType())->getElementType();
+
+      auto Operands = analyzeLoadOperands(MatMul);
+      if (Operands) {
+        auto StoreInf = analyzeStore(MatMul, ShapeInfo(R, C).getStride());
+        if (!StoreInf) {
+          if (R * M * C > 100 && ORE) {
+            ORE->emit(
+                OptimizationRemarkMissed(DEBUG_TYPE, "no-tiling-unknown-store",
+                                         MatMul)
+                << "Not tiling because the matrix multiply has an unknown "
+                   "store, FLOPS="
+                << ore::NV("FLOPS", R * M * C));
+            emitRemarksForInlineChain(*MatMul, *ORE);
+          }
+          // Fall through to the legacy path.
+        } else if (R > TileSizeRows || M > TileSizeRows ||
+                   C > TileSizeColumns) {
+          // The matrix is larger than one tile — use the LoadInfo path.
+          TileInfo TI(R, C, M, TileSizeRows, TileSizeInner, TileSizeColumns,
+                      EltType);
+
+          // The store address must dominate the MatMul instruction.
+          SetVector<Value *> WL;
+          WL.insert(StoreInf->getPointerOperand());
+          SmallVector<Instruction *> ToHoist;
+          for (unsigned I = 0; I != WL.size(); ++I) {
+            Value *Current = WL[I];
+            auto *CurrI = dyn_cast<Instruction>(Current);
+            if (!CurrI)
+              continue;
+            if (isa<PHINode>(CurrI))
+              return;
+            if (DT->dominates(CurrI, MatMul))
+              continue;
+            if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
+              return;
+            ToHoist.push_back(CurrI);
+            WL.insert_range(CurrI->operands());
+          }
+          sort(ToHoist, [this](Instruction *A, Instruction *B) {
+            return DT->dominates(A, B);
+          });
+          for (Instruction *I : ToHoist)
+            I->moveBefore(MatMul->getIterator());
+
+          // Handle lifetime.end markers between the loads and store.
+          MemoryLocation Load0Loc = Operands->first.getMemLoc(DL);
+          MemoryLocation Load1Loc = Operands->second.getMemLoc(DL);
+          BasicBlock *StoreParent = StoreInf->getStore()->getParent();
+          bool FusableOpsInSameBlock =
+              Operands->first.getLoad()->getParent() == StoreParent &&
+              Operands->second.getLoad()->getParent() == StoreParent;
+          for (unsigned Idx = 0; Idx != LifetimeEnds.size();) {
+            IntrinsicInst *End = LifetimeEnds[Idx];
+            llvm::scope_exit Inc([&Idx]() { Idx++; });
+            if (DT->dominates(End, Operands->first.getLoad()) &&
+                DT->dominates(End, Operands->second.getLoad()))
+              continue;
+            if (DT->dominates(StoreInf->getStore(), End))
+              continue;
+            if (FusableOpsInSameBlock && End->getParent() != StoreParent)
+              continue;
+            MemoryLocation EndLoc =
+                MemoryLocation::getForArgument(End, 0, nullptr);
+            if (!EndLoc.Ptr)
+              continue;
+            if (AA->isNoAlias(Load0Loc, EndLoc) &&
+                AA->isNoAlias(Load1Loc, EndLoc))
+              continue;
+            if (End->getParent() == StoreParent) {
+              End->moveAfter(StoreInf->getStore());
+              continue;
+            }
+            ToRemove.push_back(End);
+            std::swap(LifetimeEnds[Idx], LifetimeEnds.back());
+            LifetimeEnds.pop_back();
+            Inc.release();
+          }
+
+          emitSIMDTiling(MatMul, Operands->first, Operands->second, *StoreInf,
+                         FusedInsts);
+          return;
+        }
+      } else {
+        if (R * M * C > 100 && ORE) {
+          ORE->emit(
+              OptimizationRemarkMissed(DEBUG_TYPE, "no-tiling-unknown-load",
+                                       MatMul)
+              << "Not tiling because the matrix multiply has unknown loads, "
+                 "FLOPS="
+              << ore::NV("FLOPS", R * M * C));
+          emitRemarksForInlineChain(*MatMul, *ORE);
+        }
+      }
+    }
+
+    // Legacy path: lower {ld, ld} -> matmul -> st chains directly.
     // Lower {ld, ld} -> matmul -> st chains.  No need to call finalizeLowering
     // since the single store user will be lowered as part of this.
     auto *LoadOp0 = dyn_cast<LoadInst>(A);
@@ -2545,7 +3314,8 @@ public:
         Inc.release();
       }
 
-      emitSIMDTiling(MatMul, LoadOp0, LoadOp1, Store, FusedInsts);
+      emitSIMDTiling(MatMul, LoadInfo(LoadOp0), LoadInfo(LoadOp1),
+                     StoreInfo(Store), FusedInsts);
       return;
     }
   }
@@ -2966,9 +3736,10 @@ public:
         for (Value *S : SI->second) {
           if (S == Leaf)
             continue;
-          DebugLoc DL = cast<Instruction>(S)->getDebugLoc();
-          write("shared with remark at line " + std::to_string(DL.getLine()) +
-                " column " + std::to_string(DL.getCol()) + " (");
+          if (DebugLoc DbgLoc = cast<Instruction>(S)->getDebugLoc())
+            write("shared with remark at line " +
+                  std::to_string(DbgLoc.getLine()) + " column " +
+                  std::to_string(DbgLoc.getCol()) + " (");
         }
         ExprShared = SI->second.size() > 1;
       }
