@@ -877,6 +877,53 @@ TEST_F(ExtractFunctionTest, ConstParametersConservativeAliasing) {
               Not(HasSubstr("const")));
 }
 
+TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
+  Context = File;
+  // A non-const-ref argument to a member call (as opposed to the implicit
+  // object, already covered by ConstParameters) stays non-const. The
+  // method itself is const so it doesn't also mark `s` mutated, isolating
+  // the argument check from the object check.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void mayMutate(int &) const; };
+    void f(S s, int x) { [[s.mayMutate(x);]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int &x)"));
+  // Same, but through an overloaded operator: the implicit object is
+  // args[0], so the real parameter (checked against args[1:]) must be
+  // found at the right offset.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void operator()(int &) const; };
+    void f(S s, int x) { [[s(x);]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int &x)"));
+  // A free (non-member) operator overload has no implicit object, so all
+  // operands align directly with the callee's parameters.
+  EXPECT_THAT(apply(R"cpp(
+    struct S {};
+    void operator+(const S &, int &);
+    void f(S s, int x) { [[s + x;]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int &x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
+  Context = File;
+  // Mutating a member/element through a pointer only mutates the pointee,
+  // never the pointer's own binding, so the pointer stays const-eligible --
+  // unlike the same access through a value or reference (already covered
+  // by ConstParameters' `ptr` case, which is mutated directly instead).
+  EXPECT_THAT(apply(R"cpp(
+    struct S { int x; };
+    void f(S *ptr) { [[ptr->x = 1;]] }
+  )cpp"),
+              HasSubstr("extracted(S *const &ptr)"));
+  EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
+              HasSubstr("extracted(int *const &p)"));
+  // Same for a plain dereference.
+  EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
+              HasSubstr("extracted(int *const &p)"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

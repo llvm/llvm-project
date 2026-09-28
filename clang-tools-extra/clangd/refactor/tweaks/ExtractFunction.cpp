@@ -647,24 +647,42 @@ bool isLoop(const Stmt *S) {
 
 // Strips E down to the Decl whose storage it ultimately refers to, chaining
 // through parens, casts, and member/array-element access (e.g. `a.b[i]`
-// resolves to `a`). Mutating any part of such a chain requires the base
-// Decl itself to be non-const if the chain is through value members/
-// elements (e.g. `a.b = 1` mutates `a`'s own storage); for a chain through a
-// pointer or reference, the base Decl's own binding usually isn't actually
-// touched (e.g. `p->b = 1` only mutates `*p`, not `p` itself), but treating
-// it as if it were is conservative and safe, just occasionally overcautious.
+// resolves to `a`), but only when that access reaches through value
+// semantics: mutating `a.b` mutates `a`'s own storage, so we keep chaining.
+// We deliberately stop at a pointer-typed base (e.g. `p->b`, `p[i]`,
+// `p->*pmf`): that only mutates `*p`, never `p`'s own binding, so chaining
+// through it would incorrectly require `p` to stay non-const. For the same
+// reason, a dereference (`*p = 1`) is intentionally not handled at all: it
+// only ever mutates the pointee, never the pointer itself.
+//
+// A genuine array subscript (`arr[i]` where `arr` is an array, not a
+// pointer) also stops here: the base is always wrapped in an
+// ArrayToPointerDecay cast, indistinguishable at this point from
+// subscripting a real pointer. That's fine because createParameters()
+// never makes an array-typed capture const in the first place, regardless
+// of what we compute here.
+//
 // Returns null if E isn't ultimately grounded in a variable this way (e.g.
-// it's a temporary or a call result).
+// it's a temporary, a call result, or reached through a pointer).
 const Decl *underlyingDecl(const Expr *E) {
+  if (!E)
+    return nullptr;
   E = E->IgnoreParenCasts();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
     return DRE->getDecl();
-  if (const auto *ME = dyn_cast<MemberExpr>(E))
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (ME->getBase()->getType()->isPointerType())
+      return nullptr;
     return underlyingDecl(ME->getBase());
-  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+  }
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    if (ASE->getBase()->getType()->isPointerType())
+      return nullptr;
     return underlyingDecl(ASE->getBase());
+  }
   if (const auto *BO = dyn_cast<BinaryOperator>(E))
-    if (BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI)
+    if ((BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI) &&
+        !BO->getLHS()->getType()->isPointerType())
       return underlyingDecl(BO->getLHS());
   return nullptr;
 }
@@ -777,20 +795,6 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
         markPossiblyMutated(Object);
     }
 
-    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) {
-      markPossiblyMutatedCallee(MCE->getImplicitObjectArgument(),
-                                MCE->getMethodDecl());
-      return true;
-    }
-
-    bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
-      if (OCE->getNumArgs() >= 1)
-        markPossiblyMutatedCallee(
-            OCE->getArg(0),
-            dyn_cast_or_null<CXXMethodDecl>(OCE->getCalleeDecl()));
-      return true;
-    }
-
     // Marks the arguments of a call that bind to a non-const reference
     // parameter of Callee (a FunctionDecl or CXXConstructorDecl). If Callee
     // is null (e.g. a call through a function pointer), conservatively marks
@@ -808,9 +812,50 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       }
     }
 
+    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) {
+      markPossiblyMutatedCallee(MCE->getImplicitObjectArgument(),
+                                MCE->getMethodDecl());
+      // getArgs() here is just the explicit argument list, without the
+      // implicit object handled above, so it aligns directly with the
+      // method's own parameters.
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(MCE->getArgs(), MCE->getNumArgs()),
+          MCE->getMethodDecl());
+      return true;
+    }
+
+    bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
+      // Unlike CXXMemberCallExpr, a member operator's implicit object is
+      // args[0], not split out separately; args[1:] are the real
+      // parameters. A non-member (free function) operator overload has no
+      // implicit object at all, so all args align directly with params.
+      // Every operator has at least one operand, but guard anyway since
+      // the arithmetic below would underflow on an empty argument list.
+      if (OCE->getNumArgs() == 0)
+        return true;
+      const auto *Method =
+          dyn_cast_or_null<CXXMethodDecl>(OCE->getCalleeDecl());
+      if (Method) {
+        markPossiblyMutatedCallee(OCE->getArg(0), Method);
+        markPossiblyMutatedArgs(llvm::ArrayRef<const Expr *>(
+                                    OCE->getArgs() + 1, OCE->getNumArgs() - 1),
+                                Method);
+      } else {
+        markPossiblyMutatedArgs(
+            llvm::ArrayRef<const Expr *>(OCE->getArgs(), OCE->getNumArgs()),
+            OCE->getDirectCallee());
+      }
+      return true;
+    }
+
     bool VisitCallExpr(CallExpr *CE) {
-      // Member/operator calls are already handled by their own visitors
-      // above (the callee there is a method, not a plain function).
+      // Both are already fully handled by their own visitors above,
+      // including their arguments: skip CXXMemberCallExpr here to avoid
+      // redundant work (its getArgs()/getDirectCallee() would otherwise
+      // align fine on their own), and skip CXXOperatorCallExpr because its
+      // getArgs() includes the implicit object as args[0], which would
+      // misalign against a member operator's real parameter list if
+      // checked here too.
       if (isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE))
         return true;
       markPossiblyMutatedArgs(
@@ -918,8 +963,7 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 // needed.
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
-                      const CapturedZoneInfo &CapturedInfo,
-                      const ExtractionZone &ExtZone) {
+                      const CapturedZoneInfo &CapturedInfo) {
   // FIXME: Pass non-mutated parameters of built-in type by value.
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
@@ -1048,7 +1092,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
-  if (!createParameters(ExtractedFunc, CapturedInfo, ExtZone) ||
+  if (!createParameters(ExtractedFunc, CapturedInfo) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");
