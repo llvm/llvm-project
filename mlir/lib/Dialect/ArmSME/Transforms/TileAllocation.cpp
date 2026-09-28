@@ -800,12 +800,45 @@ struct TestTileAllocationPass
 };
 } // namespace
 
+/// Returns true if `function` contains any SME tile values, either as block
+/// arguments (e.g., function arguments, or arguments to blocks merging values
+/// from different paths) or as results of operations.
+static bool functionHasSMETileValues(FunctionOpInterface function) {
+  auto hasSMETileType = [](TypeRange types) {
+    return llvm::any_of(
+        types, [](Type type) { return isValidSMETileVectorType(type); });
+  };
+
+  bool hasSMETileValues = false;
+  function.walk([&](Block *block) -> WalkResult {
+    if (hasSMETileType(block->getArgumentTypes())) {
+      hasSMETileValues = true;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  if (hasSMETileValues)
+    return true;
+  function.walk([&](Operation *op) -> WalkResult {
+    if (hasSMETileType(op->getResultTypes())) {
+      hasSMETileValues = true;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return hasSMETileValues;
+}
+
 LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
                                               bool dumpRanges) {
-  if (function.empty()) {
-    // TODO: Also return early if the function contains no ArmSME ops?
+  if (function.empty())
     return success();
-  }
+
+  // Bail out early if the function has no SME tile values, this avoids
+  // running the (non-trivial) preprocessing and liveness analysis below
+  // for functions that have nothing to allocate.
+  if (!functionHasSMETileValues(function))
+    return success();
 
   LiveRange::Allocator liveRangeAllocator;
   IRRewriter rewriter(function.getContext());

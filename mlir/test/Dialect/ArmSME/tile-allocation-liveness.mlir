@@ -608,3 +608,21 @@ func.func @reactivate_inactive_live_range(%cond: i1) {
 ^bb3:
   return
 }
+
+// -----
+
+// A function argument that is a valid SME tile type must be processed
+// for tile allocation, even though it is not produced by an ArmSME op.
+
+//  CHECK-LIVE-RANGE-LABEL: @tile_value_from_function_argument
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: E test.some_use
+
+// CHECK-LABEL: @tile_value_from_function_argument(
+// CHECK-SAME:                                     %[[TILE:.*]]: vector<[4]x[4]xf32>
+func.func @tile_value_from_function_argument(%tile: vector<[4]x[4]xf32>) {
+  // CHECK: "test.some_use"(%[[TILE]])
+  "test.some_use"(%tile) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
