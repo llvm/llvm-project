@@ -1533,7 +1533,6 @@ static bool isCallPromotable(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::objectsize:
     return true;
   default:
@@ -1945,8 +1944,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     }
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       // Since the worklist can be in any order, the argument may still be the
       // old type. Its type will be fixed when processing its definition.
       Function *NewF = Intrinsic::getOrInsertDeclaration(

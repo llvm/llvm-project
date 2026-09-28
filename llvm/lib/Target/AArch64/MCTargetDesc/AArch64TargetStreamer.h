@@ -112,9 +112,6 @@ public:
   getActiveAttributesSubsection();
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
   getAttributesSubsectionByName(StringRef Name);
-  void
-  insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
-                         MCELFStreamer::AttributeSubSection &AttSubSection);
 
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
