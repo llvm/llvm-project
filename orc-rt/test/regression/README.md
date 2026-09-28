@@ -17,7 +17,7 @@ Place a test by the *question it asks*, not by the kind of input file it uses:
   directive) is handled correctly. These are written in assembly.
 
 The `jit-free-foundations/` rule is enforced: the `%{cc}`, `%{cxx}`, `%{mc}`,
-and `%{jit}` substitutions are unavailable there.
+and `%{obj-jit}` substitutions are unavailable there.
 
 ## Writing tests that run JIT'd code
 
@@ -27,7 +27,7 @@ A typical test:
 // Check that a trivial C program can be compiled and run under ogre.
 //
 // RUN: %{cc} -c -o %t.o %s
-// RUN: %{jit} -show-jit-result %t.o | FileCheck %s
+// RUN: %{obj-jit} -show-jit-result %t.o | FileCheck %s
 
 // CHECK: JIT result: 0
 
@@ -54,8 +54,8 @@ Conventions:
   target, using `llvm-mc`. Unlike `%{cc}` and `%{cxx}`, this can't be
   overridden, so object format tests always check the runtime against the
   same assembler.
-* **`%{jit}`**: Links and runs its inputs under ogre, using `llvm-jitlink` as
-  the controller. Pass `-show-jit-result` to print `JIT result: <value>`.
+* **`%{obj-jit}`**: Links and runs its inputs under ogre, using `llvm-jitlink`
+  as the controller. Pass `-show-jit-result` to print `JIT result: <value>`.
 * **`%{ogre}`**: Path to the ogre executable.
 
 Don't spell out a target triple or connection method in a test unless that's
@@ -78,7 +78,7 @@ the host:
 * **`orc-rt-cc`**: `%{cc}` is usable.
 * **`orc-rt-cxx`**: `%{cxx}` is usable.
 * **`llvm-mc`**: `%{mc}` is usable.
-* **`llvm-jitlink`**: `%{jit}` is usable.
+* **`llvm-jitlink`**: `%{obj-jit}` is usable.
 * **`target-arch=<arch>`**: The runtime's target architecture (`arm64` and
   `aarch64` are aliases).
 * **`target-object-format=<coff|elf|mach-o>`**: The runtime's target object
