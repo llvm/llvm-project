@@ -1784,7 +1784,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     // provides the cleanup region for the deferred destructors.
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
 
-    ConditionalEvaluation eval(*this);
+    ConditionalEvaluation eval(*this, getLoc(e->getSourceRange()));
     nullCheckOp =
         cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
                           /*withElseRegion=*/false,
