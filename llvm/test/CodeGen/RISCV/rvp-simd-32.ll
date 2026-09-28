@@ -4184,3 +4184,71 @@ define <2 x i16> @test_pusati_u16x2_max_width(<2 x i16> %a) {
   %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 15)
   ret <2 x i16> %res
 }
+
+define <4 x i8> @test_pslide1up_v4i8(<4 x i8> %rd, i8 %rs1) {
+; RV32-LABEL: test_pslide1up_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 24
+; RV32-NEXT:    li a2, 8
+; RV32-NEXT:    slx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1up_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a1, 56
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    slx a0, a1, a2
+; RV64-NEXT:    ret
+  %scalar = insertelement <4 x i8> poison, i8 %rs1, i64 0
+  %res = shufflevector <4 x i8> %rd, <4 x i8> %scalar, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_pslide1down_v4i8(<4 x i8> %rd, i8 %rs1) {
+; RV32-LABEL: test_pslide1down_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a2, 8
+; RV32-NEXT:    srx a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1down_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 8
+; RV64-NEXT:    ret
+  %scalar = insertelement <4 x i8> poison, i8 %rs1, i64 0
+  %res = shufflevector <4 x i8> %rd, <4 x i8> %scalar, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_pslide1up_v2i16(<2 x i16> %rd, i16 %rs1) {
+; RV32-LABEL: test_pslide1up_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pack a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1up_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmv.hs a1, a1
+; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    ret
+  %scalar = insertelement <2 x i16> poison, i16 %rs1, i64 0
+  %res = shufflevector <2 x i16> %rd, <2 x i16> %scalar, <2 x i32> <i32 2, i32 0>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pslide1down_v2i16(<2 x i16> %rd, i16 %rs1) {
+; RV32-LABEL: test_pslide1down_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairoe.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pslide1down_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmv.hs a1, a1
+; RV64-NEXT:    ppairoe.h a0, a0, a1
+; RV64-NEXT:    ret
+  %scalar = insertelement <2 x i16> poison, i16 %rs1, i64 0
+  %res = shufflevector <2 x i16> %rd, <2 x i16> %scalar, <2 x i32> <i32 1, i32 2>
+  ret <2 x i16> %res
+}

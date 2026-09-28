@@ -274,6 +274,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __builtin_shufflevector(__lo, __hi, 0, 1, 2, 3, 4, 5, 6, 7);        \
   }
 
+#define __packed_slide1(name, ty, elt_ty, ...)                                 \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd,              \
+                                                         elt_ty __rs1) {       \
+    return __builtin_shufflevector(__rd, (ty){__rs1}, __VA_ARGS__);            \
+  }
+
 #define __packed_pair_ee2(name, ty)                                            \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return __builtin_shufflevector(__rs1, __rs2, 0, 2);                        \
@@ -1304,6 +1310,30 @@ __packed_concat4(pjoin2_u8x8, uint8x8_t, uint8x4_t)
 __packed_concat2(pjoin2_i16x4, int16x4_t, int16x2_t)
 __packed_concat2(pjoin2_u16x4, uint16x4_t, uint16x2_t)
 
+/* Packed Slide 1 up/down (32-bit) */
+__packed_slide1(pslide1up_i8x4, int8x4_t, int8_t, 4, 0, 1, 2)
+__packed_slide1(pslide1up_u8x4, uint8x4_t, uint8_t, 4, 0, 1, 2)
+__packed_slide1(pslide1up_i16x2, int16x2_t, int16_t, 2, 0)
+__packed_slide1(pslide1up_u16x2, uint16x2_t, uint16_t, 2, 0)
+__packed_slide1(pslide1down_i8x4, int8x4_t, int8_t, 1, 2, 3, 4)
+__packed_slide1(pslide1down_u8x4, uint8x4_t, uint8_t, 1, 2, 3, 4)
+__packed_slide1(pslide1down_i16x2, int16x2_t, int16_t, 1, 2)
+__packed_slide1(pslide1down_u16x2, uint16x2_t, uint16_t, 1, 2)
+
+/* Packed Slide 1 up/down (64-bit) */
+__packed_slide1(pslide1up_i8x8, int8x8_t, int8_t, 8, 0, 1, 2, 3, 4, 5, 6)
+__packed_slide1(pslide1up_u8x8, uint8x8_t, uint8_t, 8, 0, 1, 2, 3, 4, 5, 6)
+__packed_slide1(pslide1up_i16x4, int16x4_t, int16_t, 4, 0, 1, 2)
+__packed_slide1(pslide1up_u16x4, uint16x4_t, uint16_t, 4, 0, 1, 2)
+__packed_slide1(pslide1up_i32x2, int32x2_t, int32_t, 2, 0)
+__packed_slide1(pslide1up_u32x2, uint32x2_t, uint32_t, 2, 0)
+__packed_slide1(pslide1down_i8x8, int8x8_t, int8_t, 1, 2, 3, 4, 5, 6, 7, 8)
+__packed_slide1(pslide1down_u8x8, uint8x8_t, uint8_t, 1, 2, 3, 4, 5, 6, 7, 8)
+__packed_slide1(pslide1down_i16x4, int16x4_t, int16_t, 1, 2, 3, 4)
+__packed_slide1(pslide1down_u16x4, uint16x4_t, uint16_t, 1, 2, 3, 4)
+__packed_slide1(pslide1down_i32x2, int32x2_t, int32_t, 1, 2)
+__packed_slide1(pslide1down_u32x2, uint32x2_t, uint32_t, 1, 2)
+
 /* Packed Subvector Extract */
 __packed_subvector_extract8(pget_i8x8_i8x4, int8x4_t, int8x8_t)
 __packed_subvector_extract8(pget_u8x8_u8x4, uint8x4_t, uint8x8_t)
@@ -1525,6 +1555,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_unzipo4
 #undef __packed_concat2
 #undef __packed_concat4
+#undef __packed_slide1
 #undef __packed_pair_ee2
 #undef __packed_pair_eo2
 #undef __packed_pair_oe2

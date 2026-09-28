@@ -2007,6 +2007,14 @@ def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPair>;
 def riscv_ppaireo : RVSDNode<"PPAIREO", SDT_RISCVPPair>;
 def riscv_ppairoe : RVSDNode<"PPAIROE", SDT_RISCVPPair>;
 def riscv_ppairo : RVSDNode<"PPAIRO", SDT_RISCVPPair>;
+
+// Slide packed elements by one and insert an XLEN scalar at either end.
+def SDT_RISCVPackedSlide1 : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                 SDTCisSameAs<0, 1>,
+                                                 SDTCisVT<2, XLenVT>]>;
+def riscv_pslide1up   : RVSDNode<"PSLIDE1UP", SDT_RISCVPackedSlide1>;
+def riscv_pslide1down : RVSDNode<"PSLIDE1DOWN", SDT_RISCVPackedSlide1>;
+
 def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                  SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>]>;
@@ -2768,6 +2776,17 @@ let append Predicates = [IsRV32] in {
             (WZIP8P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pwzip (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (WZIP16P GPR:$rs1, GPR:$rs2)>;
+
+  // Packed slide by one element.
+  def : Pat<(v4i8 (riscv_pslide1up (v4i8 GPR:$rd), GPR:$rs1)),
+            (SLX GPR:$rd, (SLLI GPR:$rs1, (XLenVT 24)),
+                 (XLenVT (ADDI (XLenVT X0), 8)))>;
+  def : Pat<(v4i8 (riscv_pslide1down (v4i8 GPR:$rd), GPR:$rs1)),
+            (SRX GPR:$rd, GPR:$rs1, (XLenVT (ADDI (XLenVT X0), 8)))>;
+  def : Pat<(v2i16 (riscv_pslide1up (v2i16 GPR:$rd), GPR:$rs1)),
+            (PACK GPR:$rs1, GPR:$rd)>;
+  def : Pat<(v2i16 (riscv_pslide1down (v2i16 GPR:$rd), GPR:$rs1)),
+            (PPAIROE_H GPR:$rd, GPR:$rs1)>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : Pat<(v4i8 (riscv_ppaire (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
@@ -3628,7 +3647,25 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v4i16 (riscv_pzip (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (ZIP16P GPR:$rs1, GPR:$rs2)>;
 
+  // Packed slide by one element.
+  def : Pat<(v8i8 (riscv_pslide1up (v8i8 GPR:$rd), GPR:$rs1)),
+            (SLX GPR:$rd, (SLLI GPR:$rs1, (XLenVT 56)),
+                 (XLenVT (ADDI (XLenVT X0), 8)))>;
+  def : Pat<(v8i8 (riscv_pslide1down (v8i8 GPR:$rd), GPR:$rs1)),
+            (SRX GPR:$rd, GPR:$rs1, (XLenVT (ADDI (XLenVT X0), 8)))>;
+  def : Pat<(v4i16 (riscv_pslide1up (v4i16 GPR:$rd), GPR:$rs1)),
+            (SLX GPR:$rd, (SLLI GPR:$rs1, (XLenVT 48)),
+                 (XLenVT (ADDI (XLenVT X0), 16)))>;
+  def : Pat<(v4i16 (riscv_pslide1down (v4i16 GPR:$rd), GPR:$rs1)),
+            (SRX GPR:$rd, GPR:$rs1, (XLenVT (ADDI (XLenVT X0), 16)))>;
+  def : Pat<(v2i32 (riscv_pslide1up (v2i32 GPR:$rd), GPR:$rs1)),
+            (PACK GPR:$rs1, GPR:$rd)>;
+  def : Pat<(v2i32 (riscv_pslide1down (v2i32 GPR:$rd), GPR:$rs1)),
+            (PPAIROE_W GPR:$rd, GPR:$rs1)>;
+
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
+  def : Pat<(v2i32 (riscv_ppaire (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PACK GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v8i8 (riscv_ppaire (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
             (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v8i8 (riscv_ppaireo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),

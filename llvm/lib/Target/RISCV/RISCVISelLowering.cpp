@@ -6497,6 +6497,100 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
+// Match a slide by one element with a scalar inserted at either end:
+//   <b0, a0, ..., aN-2> -> slide1up
+//   <a1, ..., aN-1, b0> -> slide1down
+static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
+                                            const RISCVSubtarget &Subtarget,
+                                            SelectionDAG &DAG) {
+  MVT VT = SVN->getSimpleValueType(0);
+  if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v2i16 &&
+      VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+  if (!Subtarget.is64Bit() && VT == MVT::v2i32)
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  ArrayRef<int> Mask = SVN->getMask();
+  unsigned ActiveElts = NumElts;
+  if (Subtarget.is64Bit() &&
+      all_of(Mask.drop_front(NumElts / 2), [](int M) { return M < 0; }))
+    ActiveElts /= 2;
+
+  ArrayRef<int> ActiveMask = Mask.take_front(ActiveElts);
+  bool SlideUp = ActiveMask[0] == (int)NumElts &&
+                 all_of(enumerate(ActiveMask.drop_front()), [](const auto &M) {
+                   return M.value() == (int)M.index();
+                 });
+  bool SlideDown = ActiveMask.back() == (int)NumElts &&
+                   all_of(enumerate(ActiveMask.drop_back()), [](const auto &M) {
+                     return M.value() == (int)M.index() + 1;
+                   });
+  if (!SlideUp && !SlideDown)
+    return SDValue();
+
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+  SDLoc DL(SVN);
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned SlideBits = ActiveElts * EltBits;
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, XLenVT, V2,
+                               DAG.getVectorIdxConstant(0, DL));
+
+  if (SlideBits == Subtarget.getXLen())
+    return DAG.getNode(SlideUp ? RISCVISD::PSLIDE1UP
+                               : RISCVISD::PSLIDE1DOWN,
+                       DL, VT, V1, Scalar);
+
+  // A 32-bit packed slide on RV64 is carried in the low word of a GPR. Expand
+  // it using XLEN operations or packed pair instructions.
+  if (Subtarget.is64Bit()) {
+    assert(SlideBits == 32 && "Unexpected RV64 packed slide width");
+    if (ActiveElts == 2)
+      return DAG.getNode(SlideUp ? RISCVISD::PPAIRE : RISCVISD::PPAIROE, DL,
+                         VT, SlideUp ? V2 : V1, SlideUp ? V1 : V2);
+
+    SDValue Shamt = DAG.getConstant(EltBits, DL, MVT::i64);
+    SDValue Bits = DAG.getBitcast(MVT::i64, V1);
+    if (SlideUp) {
+      Scalar = DAG.getNode(ISD::SHL, DL, MVT::i64, Scalar,
+                           DAG.getConstant(64 - EltBits, DL, MVT::i64));
+      Bits = DAG.getNode(ISD::FSHL, DL, MVT::i64, Bits, Scalar, Shamt);
+    } else {
+      SDValue Pair = DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i32,
+                                 DAG.getBitcast(MVT::v2i32, V1),
+                                 DAG.getBitcast(MVT::v2i32, Scalar));
+      Bits = DAG.getNode(ISD::SRL, DL, MVT::i64,
+                         DAG.getBitcast(MVT::i64, Pair), Shamt);
+    }
+    return DAG.getBitcast(VT, Bits);
+  }
+
+  // RV32 represents 64-bit packed values as two GPRs. Form each shifted half
+  // directly so the slide uses two XLEN funnel shifts.
+  assert(SlideBits == 64 && "Unexpected RV32 packed slide width");
+  auto [LoVec, HiVec] = DAG.SplitVector(V1, DL);
+  MVT HalfVT = LoVec.getSimpleValueType();
+  SDValue Lo = DAG.getBitcast(MVT::i32, LoVec);
+  SDValue Hi = DAG.getBitcast(MVT::i32, HiVec);
+  SDValue Shamt = DAG.getConstant(EltBits, DL, MVT::i32);
+  SDValue NewLo;
+  SDValue NewHi;
+  if (SlideUp) {
+    SDValue Insert = DAG.getNode(ISD::SHL, DL, MVT::i32, Scalar,
+                                 DAG.getConstant(32 - EltBits, DL, MVT::i32));
+    NewLo = DAG.getNode(ISD::FSHL, DL, MVT::i32, Lo, Insert, Shamt);
+    NewHi = DAG.getNode(ISD::FSHL, DL, MVT::i32, Hi, Lo, Shamt);
+  } else {
+    NewLo = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, Shamt);
+    NewHi = DAG.getNode(ISD::FSHR, DL, MVT::i32, Scalar, Hi, Shamt);
+  }
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                     DAG.getBitcast(HalfVT, NewLo),
+                     DAG.getBitcast(HalfVT, NewHi));
+}
+
 // Match the packed zero-extend shuffle mask <0, N, 2, N+2, ...>: even result
 // lanes keep operand 0's even lanes and odd result lanes come from operand 1.
 // The odd lanes may select any element of operand 1, which is looser than a
@@ -6670,6 +6764,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return DAG.getBitcast(VT, Srl);
     }
 
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPSlide1(SVN, Subtarget, DAG))
+      return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPUnzip(SVN, DAG, Subtarget.is64Bit()))
       return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, Subtarget, DAG))
