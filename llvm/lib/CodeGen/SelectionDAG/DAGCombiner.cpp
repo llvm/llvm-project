@@ -2482,8 +2482,7 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
   }
 
   if (N.getValueType().getScalarType() != MVT::i1 ||
-      !sd_match(
-          N, m_c_SetCC(m_Value(Op), m_Zero(), m_SpecificCondCode(ISD::SETNE))))
+      !sd_match(N, m_c_SpecificSetCC(ISD::SETNE, m_Value(Op), m_Zero())))
     return false;
 
   Known = DAG.computeKnownBits(Op);
@@ -2718,8 +2717,9 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
     return SDValue();
 
   // Match the compare as: setcc (X & 1), 0, eq.
-  if (!sd_match(Z.getOperand(0), m_SetCC(m_And(m_Value(), m_One()), m_Zero(),
-                                         m_SpecificCondCode(ISD::SETEQ))))
+  if (!sd_match(
+          Z.getOperand(0),
+          m_SpecificSetCC(ISD::SETEQ, m_And(m_Value(), m_One()), m_Zero())))
     return SDValue();
 
   // We are adding/subtracting a constant and an inverted low bit. Turn that
@@ -3957,10 +3957,9 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
 static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                             const TargetLowering &TLI) {
   SDValue A, B, CarryIn;
-  if (!sd_match(N, m_Or(m_SetCC(m_Value(A), m_Value(B),
-                                m_SpecificCondCode(ISD::SETULT)),
-                        m_And(m_c_SetCC(m_Deferred(A), m_Deferred(B),
-                                        m_SpecificCondCode(ISD::SETEQ)),
+  if (!sd_match(N, m_Or(m_SpecificSetCC(ISD::SETULT, m_Value(A), m_Value(B)),
+                        m_And(m_c_SpecificSetCC(ISD::SETEQ, m_Deferred(A),
+                                                m_Deferred(B)),
                               m_Value(CarryIn)))))
     return SDValue();
 
@@ -4311,13 +4310,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     auto MS0 = m_Specific(N0);
     auto MVY = m_Value(Y);
     auto MZ = m_Zero();
-    auto MCC1 = m_SpecificCondCode(ISD::SETULT);
-    auto MCC2 = m_SpecificCondCode(ISD::SETUGE);
 
-    if (sd_match(N1, m_SelectCCLike(MS0, MVY, MZ, m_Deferred(Y), MCC1)) ||
-        sd_match(N1, m_SelectCCLike(MS0, MVY, m_Deferred(Y), MZ, MCC2)) ||
-        sd_match(N1, m_VSelect(m_SetCC(MS0, MVY, MCC1), MZ, m_Deferred(Y))) ||
-        sd_match(N1, m_VSelect(m_SetCC(MS0, MVY, MCC2), m_Deferred(Y), MZ)))
+    if (sd_match(N1, m_SpecificSelectCCLike(ISD::SETULT, MS0, MVY, MZ,
+                                            m_Deferred(Y))) ||
+        sd_match(N1, m_SpecificSelectCCLike(ISD::SETUGE, MS0, MVY,
+                                            m_Deferred(Y), MZ)) ||
+        sd_match(N1, m_VSelect(m_SpecificSetCC(ISD::SETULT, MS0, MVY), MZ,
+                               m_Deferred(Y))) ||
+        sd_match(N1, m_VSelect(m_SpecificSetCC(ISD::SETUGE, MS0, MVY),
+                               m_Deferred(Y), MZ)))
 
       return DAG.getNode(ISD::UMIN, DL, VT, N0,
                          DAG.getNode(ISD::SUB, DL, VT, N0, Y));
@@ -6392,14 +6393,12 @@ static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
   //   select (setcc X, 0.0, uno), 0, (and (fp_to_sint/uint X), M)
   //   select (setcc X, 0.0, ord), (and (fp_to_sint/uint X), M), 0
   SDValue X, GuardedVal;
-  if (!sd_match(N,
-                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
-                                              m_SpecificCondCode(ISD::SETUO))),
-                             m_Zero(), m_Value(GuardedVal))) &&
-      !sd_match(N,
-                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
-                                              m_SpecificCondCode(ISD::SETO))),
-                             m_Value(GuardedVal), m_Zero())))
+  if (!sd_match(N, m_SelectLike(m_OneUse(m_SpecificSetCC(ISD::SETUO, m_Value(X),
+                                                         m_AnyZeroFP())),
+                                m_Zero(), m_Value(GuardedVal))) &&
+      !sd_match(N, m_SelectLike(m_OneUse(m_SpecificSetCC(ISD::SETO, m_Value(X),
+                                                         m_AnyZeroFP())),
+                                m_Value(GuardedVal), m_Zero())))
     return SDValue();
 
   // The guarded value must be fp_to_sint/fp_to_uint of the same X, optionally
@@ -13179,8 +13178,7 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Cond0, Cond1;
   ISD::CondCode CC;
-  if (!sd_match(N0, m_OneUse(m_SetCC(m_Value(Cond0), m_Value(Cond1),
-                                     m_CondCode(CC)))) ||
+  if (!sd_match(N0, m_OneUse(m_SetCC(CC, m_Value(Cond0), m_Value(Cond1)))) ||
       VT != Cond0.getValueType())
     return SDValue();
 

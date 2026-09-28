@@ -124,26 +124,32 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
 
   using namespace SDPatternMatch;
   ISD::CondCode CC;
-  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(),
-                                         m_SpecificCondCode(ISD::SETUGT))));
   EXPECT_TRUE(
-      sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_CondCode(CC))));
+      sd_match(ICMP_UGT, m_SpecificSetCC(ISD::SETUGT, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(CC, m_Value(), m_Value())));
   EXPECT_TRUE(CC == ISD::SETUGT);
-  EXPECT_FALSE(sd_match(
-      ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_SpecificCondCode(ISD::SETLE))));
+  EXPECT_FALSE(
+      sd_match(ICMP_UGT, m_SpecificSetCC(ISD::SETLE, m_Value(), m_Value())));
 
-  EXPECT_TRUE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                          m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_TRUE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                          m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_FALSE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                           m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_FALSE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                           m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                            m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_TRUE(sd_match(ICMP_EQ10, m_c_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                            m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op0),
+                                                  m_Specific(Op1))));
+  EXPECT_TRUE(sd_match(ICMP_EQ10, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op1),
+                                                  m_Specific(Op0))));
+  EXPECT_FALSE(sd_match(ICMP_EQ01, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op1),
+                                                   m_Specific(Op0))));
+  EXPECT_FALSE(sd_match(ICMP_EQ10, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op0),
+                                                   m_Specific(Op1))));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SpecificSetCC(ISD::SETEQ, m_Specific(Op1),
+                                                    m_Specific(Op0))));
+  EXPECT_TRUE(sd_match(ICMP_EQ10, m_c_SpecificSetCC(ISD::SETEQ, m_Specific(Op0),
+                                                    m_Specific(Op1))));
+  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Select, m_SetCC(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SetCC(m_Specific(Op1), m_Specific(Op0))));
+  CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(
+      sd_match(ICMP_EQ10, m_c_SetCC(CC, m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_TRUE(CC == ISD::SETEQ);
 
   EXPECT_TRUE(sd_match(
       Select, m_Select(m_Specific(Cond), m_Specific(T), m_Specific(F))));
@@ -1218,10 +1224,43 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
   SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
                                 TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
-  ISD::CondCode CC = ISD::SETLT;
-  EXPECT_TRUE(sd_match(
-      Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
-                             m_Specific(FVal), m_CondCode(CC))));
+  ISD::CondCode CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(
+      sd_match(Select, m_SelectCCLike(CC, m_Specific(LHS), m_Specific(RHS),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(CC == ISD::SETLT);
+  EXPECT_TRUE(
+      sd_match(Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(sd_match(Select, m_SpecificSelectCCLike(
+                                   ISD::SETLT, m_Specific(LHS), m_Specific(RHS),
+                                   m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_FALSE(
+      sd_match(Select, m_SpecificSelectCCLike(ISD::SETGT, m_Specific(LHS),
+                                              m_Specific(RHS), m_Specific(TVal),
+                                              m_Specific(FVal))));
+
+  // Use non-constant operands so the SETCC isn't constant folded.
+  SDValue X = DAG->getCopyFromReg(DAG->getEntryNode(), SDLoc(),
+                                  Register::index2VirtReg(1), MVT::i32);
+  SDValue Y = DAG->getCopyFromReg(DAG->getEntryNode(), SDLoc(),
+                                  Register::index2VirtReg(2), MVT::i32);
+  SDValue Cond = DAG->getSetCC(SDLoc(), MVT::i1, X, Y, ISD::SETULT);
+  SDValue SelectOfSetCC =
+      DAG->getNode(ISD::SELECT, SDLoc(), MVT::i32, Cond, TVal, FVal);
+  CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(sd_match(SelectOfSetCC,
+                       m_SelectCCLike(CC, m_Specific(X), m_Specific(Y),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(CC == ISD::SETULT);
+  EXPECT_TRUE(
+      sd_match(SelectOfSetCC,
+               m_SpecificSelectCCLike(ISD::SETULT, m_Specific(X), m_Specific(Y),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_FALSE(
+      sd_match(SelectOfSetCC,
+               m_SpecificSelectCCLike(ISD::SETLT, m_Specific(X), m_Specific(Y),
+                                      m_Specific(TVal), m_Specific(FVal))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
@@ -1234,10 +1273,18 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
   SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
                                 TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
-  ISD::CondCode CC = ISD::SETLT;
+  ISD::CondCode CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(sd_match(Select, m_SelectCC(CC, m_Specific(LHS), m_Specific(RHS),
+                                          m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(CC == ISD::SETLT);
   EXPECT_TRUE(sd_match(Select, m_SelectCC(m_Specific(LHS), m_Specific(RHS),
-                                          m_Specific(TVal), m_Specific(FVal),
-                                          m_CondCode(CC))));
+                                          m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(sd_match(
+      Select, m_SpecificSelectCC(ISD::SETLT, m_Specific(LHS), m_Specific(RHS),
+                                 m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_FALSE(sd_match(
+      Select, m_SpecificSelectCC(ISD::SETGE, m_Specific(LHS), m_Specific(RHS),
+                                 m_Specific(TVal), m_Specific(FVal))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
