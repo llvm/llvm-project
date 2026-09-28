@@ -8,11 +8,6 @@
 
 # Fortran Extensions supported by Flang
 
-```{contents}
----
-local:
----
-```
 
 As a general principle, this compiler will accept by default and
 without complaint many legacy features, extensions to the standard

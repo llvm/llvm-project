@@ -696,21 +696,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   :  ST(ST_) {
   using namespace TargetOpcode;
 
-  auto GetAddrSpacePtr = [&TM](unsigned AS) {
-    return LLT::pointer(AS, TM.getPointerSizeInBits(AS));
-  };
-
-  const LLT GlobalPtr = GetAddrSpacePtr(AMDGPUAS::GLOBAL_ADDRESS);
-  const LLT ConstantPtr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS);
-  const LLT Constant32Ptr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS_32BIT);
-  const LLT LocalPtr = GetAddrSpacePtr(AMDGPUAS::LOCAL_ADDRESS);
-  const LLT RegionPtr = GetAddrSpacePtr(AMDGPUAS::REGION_ADDRESS);
-  const LLT FlatPtr = GetAddrSpacePtr(AMDGPUAS::FLAT_ADDRESS);
-  const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
-  const LLT BufferFatPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_FAT_POINTER);
-  const LLT RsrcPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_RESOURCE);
+  const LLT GlobalPtr = LLT::pointer(AMDGPUAS::GLOBAL_ADDRESS, 64);
+  const LLT ConstantPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
+  const LLT Constant32Ptr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32);
+  const LLT LocalPtr = LLT::pointer(AMDGPUAS::LOCAL_ADDRESS, 32);
+  const LLT RegionPtr = LLT::pointer(AMDGPUAS::REGION_ADDRESS, 32);
+  const LLT FlatPtr = LLT::pointer(AMDGPUAS::FLAT_ADDRESS, 64);
+  const LLT PrivatePtr = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
+  const LLT BufferFatPtr = LLT::pointer(AMDGPUAS::BUFFER_FAT_POINTER, 160);
+  const LLT RsrcPtr = LLT::pointer(AMDGPUAS::BUFFER_RESOURCE, 128);
   const LLT BufferStridedPtr =
-      GetAddrSpacePtr(AMDGPUAS::BUFFER_STRIDED_POINTER);
+      LLT::pointer(AMDGPUAS::BUFFER_STRIDED_POINTER, 192);
 
   const LLT CodePtr = FlatPtr;
 
@@ -727,8 +723,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const std::initializer_list<LLT> FPTypesBase = {F32, F64};
   const std::initializer_list<LLT> FPTypes16 = {F32, F64, F16};
   const std::initializer_list<LLT> FPTypesPK16 = {F32, F64, F16, V2F16};
-  const std::initializer_list<LLT> FPTypesPK16_64 = {F32, F64, F16, V2F16,
-                                                     V2F64};
 
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
@@ -998,6 +992,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FDIVActions.customFor({F16});
   }
 
+  if (ST.hasBF16PackedInsts()) {
+    FPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    FCanonicalizeActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16,
+                                                                      2);
+    StrictFPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+  }
+
   FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
 
@@ -1021,37 +1022,51 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &MinNumMaxNumIeee =
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
-
-  if (ST.hasVOP3PInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypesPK16)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, F16, 2)
-        .scalarize(0);
-  } else if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypes16).scalarize(0);
-  } else {
-    MinNumMaxNumIeee.legalFor(FPTypesBase).scalarize(0);
-  }
-
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
-  if (ST.hasAnyPackedFP64Ops()) {
-    MinNumMaxNum.customFor(FPTypesPK16_64)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, F16, 2)
-        .clampMaxNumElements(0, F64, 2)
-        .scalarize(0);
-  } else if (ST.hasVOP3PInsts()) {
-    MinNumMaxNum.customFor(FPTypesPK16)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, F16, 2)
-        .scalarize(0);
-  } else if (ST.has16BitInsts()) {
-    MinNumMaxNum.customFor(FPTypes16).scalarize(0);
-  } else {
-    MinNumMaxNum.customFor(FPTypesBase).scalarize(0);
+  MinNumMaxNumIeee.legalFor({F32, F64});
+  MinNumMaxNum.customFor({F32, F64});
+
+  if (ST.has16BitInsts()) {
+    MinNumMaxNumIeee.legalFor({F16});
+    MinNumMaxNum.customFor({F16});
   }
+
+  // V2F16
+  if (ST.hasVOP3PInsts()) {
+    MinNumMaxNumIeee.legalFor({V2F16})
+        .moreElementsIf(all(elementTypeIs(0, F16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, F16, 2);
+    MinNumMaxNum.customFor({V2F16})
+        .moreElementsIf(all(elementTypeIs(0, F16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, F16, 2);
+  }
+
+  // V2F64
+  if (ST.hasAnyPackedFP64Ops()) {
+    MinNumMaxNum.customFor({V2F64})
+        .moreElementsIf(all(elementTypeIs(0, F64), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, F64, 2);
+  }
+
+  // V2BF16
+  if (ST.hasBF16PackedInsts()) {
+    MinNumMaxNumIeee.legalFor({V2BF16})
+        .moreElementsIf(all(elementTypeIs(0, BF16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, BF16, 2);
+    MinNumMaxNum.customFor({V2BF16})
+        .moreElementsIf(all(elementTypeIs(0, BF16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, BF16, 2);
+  }
+
+  MinNumMaxNumIeee.scalarize(0);
+  MinNumMaxNum.scalarize(0);
 
   if (!ST.has16BitInsts()) {
     MinNumMaxNumIeee.minScalar(0, F32);
@@ -1183,6 +1198,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .legalFor({F32})
         // Must use fadd + fneg
         .lowerFor({F64, F16, V2F16});
+  }
+
+  if (ST.hasBF16PackedInsts()) {
+    FSubActions.lowerFor({V2BF16}).clampMaxNumElements(0, BF16, 2);
   }
 
   if (ST.hasAnyPackedFP32Ops())
@@ -2567,7 +2586,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   // flag; otherwise we need to guess.
   const bool IsNonNull = MI.getFlag(MachineInstr::MIFlag::NonNull);
 
-  if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
+  if (TM.isNoopAddrSpaceCast(MF.getDataLayout(), SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
     return true;
   }

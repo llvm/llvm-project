@@ -15,31 +15,33 @@ define void @fmul_constant_lane_rows(ptr %p, ptr %out, double %c0, double %c1, d
 ; CHECK-LABEL: define void @fmul_constant_lane_rows(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]], double [[C0:%.*]], double [[C1:%.*]], double [[C2:%.*]], double [[C3:%.*]], double [[C4:%.*]], double [[C5:%.*]], double [[C6:%.*]], double [[C7:%.*]], double [[C8:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[P]], i64 1
+; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr double, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[L2:%.*]] = load double, ptr [[P2]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> <double undef, double -0.000000e+00>, <4 x i32> <i32 0, i32 0, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[C3]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[C6]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> <double poison, double 0.000000e+00, double poison, double poison>, <4 x double> [[TMP7]], <4 x i32> <i32 5, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C1]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP10]], double [[C4]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[C7]], i64 2
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast <4 x double> [[TMP9]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <4 x double> [[TMP13]], [[TMP5]]
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double poison, double poison>, double [[L2]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C2]], i64 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP17]], double [[C5]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> [[TMP18]], double [[C8]], i64 2
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul fast <4 x double> [[TMP16]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <4 x double> [[TMP14]], [[TMP20]]
-; CHECK-NEXT:    store <4 x double> [[TMP21]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[A00:%.*]] = fmul fast double [[L0]], [[C0]]
+; CHECK-NEXT:    [[A01:%.*]] = fmul fast double [[L1]], [[C1]]
+; CHECK-NEXT:    [[A02:%.*]] = fadd fast double [[A01]], [[A00]]
+; CHECK-NEXT:    [[A03:%.*]] = fmul fast double [[L2]], [[C2]]
+; CHECK-NEXT:    [[A:%.*]] = fadd fast double [[A02]], [[A03]]
+; CHECK-NEXT:    [[B00:%.*]] = fmul fast double [[L0]], [[C3]]
+; CHECK-NEXT:    [[B01:%.*]] = fmul fast double [[L1]], [[C4]]
+; CHECK-NEXT:    [[B02:%.*]] = fadd fast double [[B01]], [[B00]]
+; CHECK-NEXT:    [[B03:%.*]] = fmul fast double [[L2]], [[C5]]
+; CHECK-NEXT:    [[B:%.*]] = fadd fast double [[B02]], [[B03]]
+; CHECK-NEXT:    [[D00:%.*]] = fmul fast double [[L0]], [[C6]]
+; CHECK-NEXT:    [[D01:%.*]] = fmul fast double [[L1]], [[C7]]
+; CHECK-NEXT:    [[D02:%.*]] = fadd fast double [[D01]], [[D00]]
+; CHECK-NEXT:    [[D03:%.*]] = fmul fast double [[L2]], [[C8]]
+; CHECK-NEXT:    [[D:%.*]] = fadd fast double [[D02]], [[D03]]
+; CHECK-NEXT:    store double [[A]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store double [[B]], ptr [[O1]], align 8
+; CHECK-NEXT:    [[O2:%.*]] = getelementptr double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store double [[D]], ptr [[O2]], align 8
+; CHECK-NEXT:    [[O3:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[O3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -70,5 +72,64 @@ entry:
   store double %d, ptr %o2, align 8
   %o3 = getelementptr double, ptr %out, i64 3
   store double 0.000000e+00, ptr %o3, align 8
+  ret void
+}
+
+; The last fadd adds a constant to a load, the fmul node of the 4-wide fadd
+; node gets the constant lane and still forms the combined fmuladd node. The
+; last lane has no fmul and is priced as a plain fadd, the tree is vectorized
+; 4-wide.
+define void @fadd_without_fmul_lane(ptr %a, ptr %b, ptr %z, ptr %out) {
+; CHECK-LABEL: define void @fadd_without_fmul_lane(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[Z:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A2P:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr [[A2P]], align 4
+; CHECK-NEXT:    [[B2P:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[B2P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[Z]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 5.000000e+00>, float [[A2]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 1.000000e+00>, float [[B2]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul contract <4 x float> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd contract <4 x float> [[TMP3]], [[TMP10]]
+; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %a0 = load float, ptr %a, align 4
+  %a1p = getelementptr inbounds float, ptr %a, i64 1
+  %a1 = load float, ptr %a1p, align 4
+  %a2p = getelementptr inbounds float, ptr %a, i64 2
+  %a2 = load float, ptr %a2p, align 4
+  %b0 = load float, ptr %b, align 4
+  %b1p = getelementptr inbounds float, ptr %b, i64 1
+  %b1 = load float, ptr %b1p, align 4
+  %b2p = getelementptr inbounds float, ptr %b, i64 2
+  %b2 = load float, ptr %b2p, align 4
+  %z0 = load float, ptr %z, align 4
+  %z1p = getelementptr inbounds float, ptr %z, i64 1
+  %z1 = load float, ptr %z1p, align 4
+  %z2p = getelementptr inbounds float, ptr %z, i64 2
+  %z2 = load float, ptr %z2p, align 4
+  %z3p = getelementptr inbounds float, ptr %z, i64 3
+  %z3 = load float, ptr %z3p, align 4
+  %m0 = fmul contract float %a0, %b0
+  %m1 = fmul contract float %a1, %b1
+  %m2 = fmul contract float %a2, %b2
+  %s0 = fadd contract float %m0, %z0
+  %s1 = fadd contract float %m1, %z1
+  %s2 = fadd contract float %m2, %z2
+  %s3 = fadd contract float %z3, 5.000000e+00
+  store float %s0, ptr %out, align 4
+  %o1 = getelementptr inbounds float, ptr %out, i64 1
+  store float %s1, ptr %o1, align 4
+  %o2 = getelementptr inbounds float, ptr %out, i64 2
+  store float %s2, ptr %o2, align 4
+  %o3 = getelementptr inbounds float, ptr %out, i64 3
+  store float %s3, ptr %o3, align 4
   ret void
 }
