@@ -52,8 +52,8 @@ export namespace std {
     // [time.duration.io], duration I/O
 #if _LIBCPP_HAS_LOCALIZATION
     using std::chrono::operator<<;
+    using std::chrono::from_stream;
 #endif
-    // using std::chrono::from_stream;
 
     // convenience typedefs
     using std::chrono::days;
@@ -256,7 +256,9 @@ export namespace std {
 #endif
 
   namespace chrono {
-    // using std::chrono::parse;
+#if _LIBCPP_HAS_LOCALIZATION
+    using std::chrono::parse;
+#endif
 
     // calendrical constants
     using std::chrono::last;

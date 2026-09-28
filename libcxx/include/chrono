@@ -228,6 +228,12 @@ template<class charT, class traits, class Rep, class Period>       // C++20
     operator<<(basic_ostream<charT, traits>& os,
                const duration<Rep, Period>& d);
 
+template<class charT, class traits, class Rep, class Period, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                duration<Rep, Period>& d, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // time_point arithmetic (all constexpr in C++14)
 template <class Clock, class Duration1, class Rep2, class Period2>
   time_point<Clock, typename common_type<Duration1, duration<Rep2, Period2>>::type>
@@ -309,6 +315,12 @@ template<class charT, class traits>                    // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const sys_days& dp);
 
+template<class charT, class traits, class Duration, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                sys_time<Duration>& tp, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // [time.clock.utc], class utc_clock
 class utc_clock {                                      // C++20
 public:
@@ -335,6 +347,12 @@ using utc_seconds = utc_time<seconds>;                  // C++20
 template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const utc_time<Duration>& t);
+
+template<class charT, class traits, class Duration, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                utc_time<Duration>& tp, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
 
 struct leap_second_info {                               // C++20
   bool    is_leap_second;
@@ -372,6 +390,12 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const tai_time<Duration>& t);
 
+template<class charT, class traits, class Duration, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                tai_time<Duration>& tp, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // [time.clock.gps], class gps_clock
 class gps_clock {                                      // C++20
 public:
@@ -399,6 +423,12 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const gps_time<Duration>& t);
 
+template<class charT, class traits, class Duration, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                gps_time<Duration>& tp, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 class file_clock                                        // C++20
 {
 public:
@@ -423,6 +453,12 @@ template<class Duration>
 template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const file_time<Duration>& tp);
+
+template<class charT, class traits, class Duration, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                file_time<Duration>& tp, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
 
 class steady_clock
 {
@@ -449,6 +485,12 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const local_time<Duration>& tp);
 
+template<class charT, class traits, class Duration, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                local_time<Duration>& tp, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // [time.cal.last] class last_spec    // C++20
 struct last_spec;
 
@@ -465,6 +507,12 @@ template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const day& d);
 
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                day& d, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // [time.cal.month] class month    // C++20
 class month;
 constexpr bool operator==(const month& x, const month& y) noexcept;
@@ -477,6 +525,12 @@ constexpr months operator-(const month&  x,  const month& y) noexcept;
 template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const month& m);
+
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                month& m, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
 
 // [time.cal.year] class year    // C++20
 class year;
@@ -491,6 +545,12 @@ template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const year& y);
 
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                year& y, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // [time.cal.wd] class weekday    // C++20
 class weekday;
 
@@ -502,6 +562,12 @@ constexpr days    operator-(const weekday& x, const weekday& y) noexcept;
 template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const weekday& wd);
+
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                weekday& wd, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
 
 // [time.cal.wdidx] class weekday_indexed    // C++20
 
@@ -530,6 +596,12 @@ constexpr strong_ordering operator<=>(const month_day& x, const month_day& y) no
 template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const month_day& md);
+
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                month_day& md, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
 
 // [time.cal.mdlast] class month_day_last    // C++20
 class month_day_last;
@@ -578,6 +650,12 @@ template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const year_month& ym);
 
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                year_month& ym, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
+
 // [time.cal.ymd] class year_month_day class    // C++20
 year_month_day;
 
@@ -594,6 +672,12 @@ constexpr year_month_day operator-(const year_month_day& ymd, const years& dy) n
 template<class charT, class traits>
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const year_month_day& ymd);
+
+template<class charT, class traits, class Alloc = allocator<charT>> // C++20
+  basic_istream<charT, traits>&
+    from_stream(basic_istream<charT, traits>& is, const charT* fmt,
+                year_month_day& ymd, basic_string<charT, traits, Alloc>* abbrev = nullptr,
+                minutes* offset = nullptr);
 
 // [time.cal.ymdlast] class year_month_day_last    // C++20
 class year_month_day_last;
@@ -996,6 +1080,31 @@ namespace std {
 } // namespace std
 
 namespace chrono {
+// [time.parse], parsing
+template<class charT, class Parsable> // C++20
+  unspecified parse(const charT* fmt, Parsable& tp);
+template<class charT, class traits, class Alloc, class Parsable> // C++20
+  unspecified parse(const basic_string<charT, traits, Alloc>& fmt, Parsable& tp);
+
+template<class charT, class traits, class Alloc, class Parsable> // C++20
+  unspecified parse(const charT* fmt, Parsable& tp,
+                    basic_string<charT, traits, Alloc>& abbrev);
+template<class charT, class traits, class Alloc, class Parsable> // C++20
+  unspecified parse(const basic_string<charT, traits, Alloc>& fmt, Parsable& tp,
+                    basic_string<charT, traits, Alloc>& abbrev);
+
+template<class charT, class Parsable> // C++20
+  unspecified parse(const charT* fmt, Parsable& tp, minutes& offset);
+template<class charT, class traits, class Alloc, class Parsable> // C++20
+  unspecified parse(const basic_string<charT, traits, Alloc>& fmt, Parsable& tp, minutes& offset);
+
+template<class charT, class traits, class Alloc, class Parsable> // C++20
+  unspecified parse(const charT* fmt, Parsable& tp,
+                    basic_string<charT, traits, Alloc>& abbrev, minutes& offset);
+template<class charT, class traits, class Alloc, class Parsable> // C++20
+  unspecified parse(const basic_string<charT, traits, Alloc>& fmt, Parsable& tp,
+                    basic_string<charT, traits, Alloc>& abbrev, minutes& offset);
+
 // calendrical constants
 inline constexpr last_spec                              last{};       // C++20
 inline constexpr chrono::weekday                        Sunday{0};    // C++20
@@ -1119,7 +1228,10 @@ namespace std {
 
 #    if _LIBCPP_HAS_LOCALIZATION
 #      include <__chrono/formatter.h>
+#      include <__chrono/from_stream.h>
 #      include <__chrono/ostream.h>
+#      include <__chrono/parse.h>
+#      include <__chrono/parser_data.h>
 #      include <__chrono/parser_std_format_spec.h>
 #      include <__chrono/statically_widen.h>
 #    endif

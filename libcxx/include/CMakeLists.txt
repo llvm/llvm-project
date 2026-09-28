@@ -266,6 +266,7 @@ set(files
   __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
+  __chrono/from_stream.h
   __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
@@ -277,6 +278,8 @@ set(files
   __chrono/month_weekday.h
   __chrono/monthday.h
   __chrono/ostream.h
+  __chrono/parse.h
+  __chrono/parser_data.h
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
