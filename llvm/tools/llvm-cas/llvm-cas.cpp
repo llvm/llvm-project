@@ -418,16 +418,18 @@ static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
   if (Opts.Force)
     Args.push_back("--force");
 
+  // Discard stderr if quiet, and otherwise inherit all of stdin, stdout and
+  // stderr.
   bool QuietErrors = Opts.AllowRecovery && !Opts.Verbose;
-  std::optional<StringRef> Redirects[] = {std::nullopt, std::nullopt,
-                                          StringRef("")};
+  SmallVector<std::optional<StringRef>, 3> Redirects;
+  if (QuietErrors)
+    Redirects = {std::nullopt, std::nullopt, StringRef("")};
 
   outs().flush();
   std::string ErrMsg;
-  int Result = sys::ExecuteAndWait(
-      Exec, Args, /*Env=*/std::nullopt,
-      QuietErrors ? ArrayRef(Redirects) : ArrayRef<std::optional<StringRef>>(),
-      /*SecondsToWait=*/120, /*MemoryLimit=*/0, &ErrMsg);
+  int Result = sys::ExecuteAndWait(Exec, Args, /*Env=*/std::nullopt, Redirects,
+                                   /*SecondsToWait=*/120,
+                                   /*MemoryLimit=*/0, &ErrMsg);
   if (Result == -1)
     return createStringError("failed to exec " + join(Args, " ") + ": " +
                              ErrMsg);
