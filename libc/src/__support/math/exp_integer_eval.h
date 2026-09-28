@@ -36,11 +36,11 @@ namespace static_rounding {
 
 // Round the fractional result and combine it with its exponent.
 template <typename TFrac, typename TUInt>
-LIBC_INLINE typename cpp::enable_if<cpp::is_same<TFrac, Frac64>::value ||
-                                        cpp::is_same<TFrac, Frac128>::value,
-                                    double>::type
-exp_handle_rounding(TFrac result_frac, bool is_neg, int d, TUInt e_y,
-                    [[maybe_unused]] int rounding) {
+LIBC_INLINE double exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
+                                       TUInt e_y,
+                                       [[maybe_unused]] int rounding) {
+  static_assert(cpp::is_same<TFrac, Frac64>::value ||
+                cpp::is_same<TFrac, Frac128>::value);
   constexpr bool IS_FAST_PATH = cpp::is_same<TFrac, Frac64>::value;
 
   uint32_t shift_length = 11;
