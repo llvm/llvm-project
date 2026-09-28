@@ -621,12 +621,16 @@ static Expected<ValidationResult> callPluginValidationFunction(
     return PluginCASContext::errorAndDispose(c_err, Functions);
   }
   // The plugin is outside of our control, so an unknown result is an error
-  // rather than unreachable.
-  if (c_err)
+  // rather than unreachable. Include the plugin's error message, if any.
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  OS << "unknown validation result " << static_cast<int>(Result) << " from '"
+     << PluginPath << "'";
+  if (c_err) {
+    OS << ": " << c_err;
     Functions.string_dispose(c_err);
-  return createStringError("unknown validation result " +
-                           Twine(static_cast<int>(Result)) + " from '" +
-                           PluginPath + "'");
+  }
+  return createStringError(Msg);
 }
 
 Expected<ValidationResult> cas::validatePluginCASDatabasesIfNeeded(
