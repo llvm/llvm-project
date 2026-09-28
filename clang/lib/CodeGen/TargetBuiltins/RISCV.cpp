@@ -1199,6 +1199,18 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Widening Shifts
+  case RISCV::BI__builtin_riscv_pwsll_s_u16x4:
+  case RISCV::BI__builtin_riscv_pwsll_s_u32x2:
+    ID = Intrinsic::riscv_pwsll;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pwsla_s_i16x4:
+  case RISCV::BI__builtin_riscv_pwsla_s_i32x2:
+    ID = Intrinsic::riscv_pwsla;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+
   // Packed Averaging Addition and Subtraction
   case RISCV::BI__builtin_riscv_paadd_i8x4:
   case RISCV::BI__builtin_riscv_paadd_i16x2:
