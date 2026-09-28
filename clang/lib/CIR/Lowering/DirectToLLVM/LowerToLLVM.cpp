@@ -577,25 +577,37 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
   return mlir::success();
 }
 
+static mlir::LLVM::FastmathFlags
+convertFastMathFlags(cir::FastMathFlags cirFlags);
+
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    const mlir::TypeConverter &typeConverter,
+    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode) {
   mlir::Type llvmResTy = typeConverter.convertType(op->getResultTypes()[0]);
   if (!llvmResTy)
     return op->emitError("expected LLVM result type for floating-point op");
 
+  mlir::LLVM::FastmathFlags fastmathFlags = {};
+  if (fastmath)
+    fastmathFlags = convertFastMathFlags(fastmath.getValue());
+
   if (!fenv) {
-    rewriter.replaceOpWithNewOp<LLVMOp>(
+    auto newOp = rewriter.replaceOpWithNewOp<LLVMOp>(
         op, mlir::TypeRange{llvmResTy}, operands,
         cir::getDefaultProperties<LLVMOp>(op->getContext()));
+    if (fastmathFlags != mlir::LLVM::FastmathFlags::none)
+      mlir::cast<mlir::LLVM::FastmathFlagsInterface>(newOp.getOperation())
+          .setFastmathAttr(mlir::LLVM::FastmathFlagsAttr::get(
+              rewriter.getContext(), fastmathFlags));
     return mlir::success();
   }
 
   return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
-                                       constrainedMnemonic, hasRoundingMode);
+                                       constrainedMnemonic, hasRoundingMode,
+                                       fastmathFlags);
 }
 
 static mlir::LLVM::FastmathFlags

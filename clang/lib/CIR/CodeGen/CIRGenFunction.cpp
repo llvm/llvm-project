@@ -51,9 +51,19 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   ehStack.setCGF(this);
   shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
+  setFastMathFlags(curFPFeatures);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
+
+void CIRGenFunction::setFastMathFlags(FPOptions fpFeatures) {
+  // TODO(cir): set the remaining fast-math flags.
+  assert(!cir::MissingFeatures::fastMathFlags());
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (fpFeatures.allowFPContractAcrossStatement())
+    flags = flags | cir::FastMathFlags::contract;
+  builder.setFastMathFlags(flags);
+}
 
 // This is copied from clang/lib/CodeGen/CodeGenFunction.cpp
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
@@ -1440,8 +1450,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   if (oldFPFeatures == fpFeatures)
     return;
 
-  // TODO(cir): create guard to restore fast math configurations.
-  assert(!cir::MissingFeatures::fastMathGuard());
+  oldFastMathFlags = cgf.builder.getFastMathFlags();
 
   llvm::RoundingMode newRoundingMode = fpFeatures.getRoundingMode();
   LangOptions::FPExceptionModeKind newExceptionBehavior =
@@ -1450,8 +1459,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
   cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
 
-  // TODO(cir): override FP flags once FM configs are guarded.
-  assert(!cir::MissingFeatures::fastMathFlags());
+  cgf.setFastMathFlags(fpFeatures);
 
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
@@ -1468,6 +1476,8 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.curFPFeatures = oldFPFeatures;
   cgf.builder.setDefaultConstrainedExcept(oldExcept);
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
+  if (oldFastMathFlags)
+    cgf.builder.setFastMathFlags(*oldFastMathFlags);
 }
 
 // TODO(cir): should be shared with LLVM codegen.

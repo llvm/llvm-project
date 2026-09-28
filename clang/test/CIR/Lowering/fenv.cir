@@ -251,4 +251,13 @@ module {
     %4 = cir.lround %a : !cir.double -> !s64i
     cir.return
   }
+
+  // CHECK-LABEL: llvm.func @fastmath_flags
+  cir.func @fastmath_flags(%a: !cir.float, %b: !cir.float) {
+    // CHECK: llvm.fmul %{{.*}}, %{{.*}} fastmath<contract> : f32
+    %0 = cir.fmul %a, %b : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<contract>} : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+    %1 = cir.fadd %0, %b : !cir.float {fenv = #cir.fenv<>, fastmath_flags = #cir.fastmath<contract>}
+    cir.return
+  }
 }
