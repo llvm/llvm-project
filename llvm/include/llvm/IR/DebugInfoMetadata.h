@@ -3517,6 +3517,13 @@ public:
   // return it's sign information.
   LLVM_ABI std::optional<SignedOrUnsignedConstant> isConstant() const;
 
+  /// Return the value of a constant expression, as recognized by isConstant().
+  /// This accounts for DW_OP_lit<n>, which encodes its value in the opcode.
+  LLVM_ABI uint64_t getConstantValue() const;
+
+  /// Return true if \p Op is one of DW_OP_lit0 through DW_OP_lit31.
+  LLVM_ABI static bool isLitOp(uint64_t Op);
+
   /// Return the number of unique location operands referred to (via
   /// DW_OP_LLVM_arg) in this expression; this is not necessarily the number of
   /// instances of DW_OP_LLVM_arg within the expression.
@@ -3918,9 +3925,11 @@ public:
   /// `DW_OP_LLVM_arg, n` for all n in [0, N).
   LLVM_ABI bool hasAllLocationOps(unsigned N) const;
 
-  /// Checks if the last 4 elements of the expression are DW_OP_constu <DWARF
-  /// Address Space> DW_OP_swap DW_OP_xderef and extracts the <DWARF Address
-  /// Space>.
+  /// Checks if the expression ends with <DWARF Address Space> DW_OP_swap
+  /// DW_OP_xderef[_size], where the address space is pushed by DW_OP_constu or
+  /// DW_OP_lit<n>, and extracts the <DWARF Address Space>. Returns the
+  /// expression with that sequence removed (nullptr if nothing remains), or
+  /// \p Expr unchanged if the sequence is not present.
   LLVM_ABI static const DIExpression *
   extractAddressClass(const DIExpression *Expr, unsigned &AddrClass);
 

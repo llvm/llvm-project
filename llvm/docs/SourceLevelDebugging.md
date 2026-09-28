@@ -439,6 +439,10 @@ vocabulary is limited, but includes at least:
   of the stack is treated as an address. The second stack entry is treated as an
   address space identifier. The two entries are popped and then an
   implementation defined value is pushed on the stack.
+- `DW_OP_xderef_size, 4` behaves like `DW_OP_xderef`, but the size in bytes
+  of the value read is given by its operand (`4` as an example).
+- `DW_OP_lit0` through `DW_OP_lit31` push the literal values 0 through 31
+  onto the stack; `DW_OP_lit5` is equivalent to `DW_OP_constu, 5`.
 - `DW_OP_stack_value` may appear at most once in an expression, and must be
   the last opcode if `DW_OP_LLVM_fragment` is not present, or the second last
   opcode if `DW_OP_LLVM_fragment` is present. It pops the top value of the

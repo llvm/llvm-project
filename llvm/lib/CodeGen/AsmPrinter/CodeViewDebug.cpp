@@ -3478,7 +3478,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     bool isUnsigned = isFloatDIType(DIGV->getType())
                           ? true
                           : DebugHandlerBase::isUnsignedDIType(DIGV->getType());
-    APSInt Value(APInt(/*BitWidth=*/64, DIE->getElement(1)), isUnsigned);
+    APSInt Value(APInt(/*BitWidth=*/64, DIE->getConstantValue()), isUnsigned);
     emitConstantSymbolRecord(DIGV->getType(), Value, QualifiedName);
   }
 }
