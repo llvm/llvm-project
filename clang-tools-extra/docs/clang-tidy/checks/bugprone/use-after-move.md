@@ -259,7 +259,9 @@ use-after-move warning.
 A semicolon-separated list of regular expressions matching names of functions
 that cause their first arguments to be invalidated (e.g., closing a handle).
 For member functions, the first argument is considered to be the implicit
-object argument (`this`). Default value is an empty string.
+object argument (`this`). Defaults to `::std::move;::std::forward`. Setting
+this option replaces the default, so include those functions explicitly to
+continue checking them alongside additional invalidation functions.
 ```
 
 ```{option} ReinitializationFunctions

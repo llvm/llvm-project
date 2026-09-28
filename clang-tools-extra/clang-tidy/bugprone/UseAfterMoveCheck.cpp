@@ -103,8 +103,7 @@ private:
 } // namespace
 
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
-  return anyOf(hasAnyName("::std::move", "::std::forward"),
-               matchers::matchesAnyListedRegexName(InvalidationFunctions));
+  return matchers::matchesAnyListedRegexName(InvalidationFunctions);
 }
 
 static StatementMatcher
@@ -604,7 +603,7 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
 UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       InvalidationFunctions(utils::options::parseStringList(
-          Options.get("InvalidationFunctions", ""))),
+          Options.get("InvalidationFunctions", "::std::move;::std::forward"))),
       ReinitializationFunctions(utils::options::parseStringList(
           Options.get("ReinitializationFunctions", ""))),
       ReportAccessOnlyUseForTypes(utils::options::parseStringList(
