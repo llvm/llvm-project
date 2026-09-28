@@ -42,7 +42,9 @@ exit:
   ret void
 }
 
-!2 = !{!"float", !3, i64 0}
+!1 = !{!"float", !3, i64 0}
+!2 = !{!1, !1, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
-!6 = !{!"float *ptr", !3, i64 0}
+!5 = !{!"float *ptr", !3, i64 0}
+!6 = !{!5, !5, i64 0}
