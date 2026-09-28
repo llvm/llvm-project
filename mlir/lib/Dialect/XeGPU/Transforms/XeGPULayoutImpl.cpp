@@ -2470,21 +2470,19 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           consumerLayout ? consumerLayout.getNumSubgroups() : numSg;
       int consumerIdx = 0;
 
-      // First pass: Match consumer's layout on non-reduction dimensions
+      // First pass: match the consumer's layout on non-reduction dims.
       for (int i = 0; i < srcRank; i++) {
         if (!llvm::is_contained(reductionDims, i) &&
             consumerIdx < static_cast<int>(consumerSgLayout.size())) {
           sgLayout[i] = consumerSgLayout[consumerIdx];
           sgData[i] = consumerSgData[consumerIdx];
           remainingSgCount /= sgLayout[i];
-          order[i] = consumerOrder[consumerIdx];
           consumerIdx++;
         }
       }
 
-      // Second pass: Distribute remaining subgroups across reduction dimensions
-      // the reduction to scalar case is handled only by this loop
-      int64_t remainOrder = consumerSgLayout.size();
+      // Second pass: distribute remaining subgroups across the reduction dims.
+      // The reduction-to-scalar case is handled only by this loop.
       for (int i = 0; i < srcRank; i++) {
         if (llvm::is_contained(reductionDims, i)) {
           sgLayout[i] =
@@ -2493,13 +2491,40 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
                  "source shape not divisible by sg_layout");
           sgData[i] = srcShape[i] / sgLayout[i];
           remainingSgCount /= sgLayout[i];
-          order[i] = remainOrder++;
         }
       }
-      DenseI32ArrayAttr resOrderAttr = DenseI32ArrayAttr::get(
-          context, SmallVector<int32_t>(order.begin(), order.end()));
-      if (!orderAttr || orderAttr.empty())
-        resOrderAttr = nullptr;
+      // The reduction dims are assumed to be row-major contiguous with the
+      // left-hand neighbor.
+      DenseI32ArrayAttr resOrderAttr = nullptr;
+      int numRetainedDims = srcRank - static_cast<int>(reductionDims.size());
+      if (orderAttr && !orderAttr.empty() &&
+          static_cast<int>(consumerOrder.size()) == numRetainedDims) {
+        // Fill known order
+        int retainedRank = 0;
+        for (int dim = 0; dim < srcRank; dim++)
+          if (!llvm::is_contained(reductionDims, dim))
+            order[dim] = consumerOrder[retainedRank++];
+        // Each new order is placed as close as possible to its neighbors,
+        // row-major. Re-index the order of higher walk orders.
+        for (int reducedDim = 0; reducedDim < srcRank; reducedDim++) {
+          if (!llvm::is_contained(reductionDims, reducedDim))
+            continue;
+          int64_t insertRank = 0;
+          // Add as an inner dim to the outer neighbor
+          if (reducedDim)
+            insertRank = order[reducedDim - 1];
+          // Add as an outer dim to the inner neighbor if no left neighbor
+          // exists.
+          else if (srcRank > 1)
+            insertRank = order[reducedDim + 1] + 1;
+          for (int otherDim = 0; otherDim < srcRank; otherDim++)
+            if (order[otherDim] >= insertRank)
+              order[otherDim]++;
+          order[reducedDim] = insertRank;
+        }
+        resOrderAttr = DenseI32ArrayAttr::get(
+            context, SmallVector<int32_t>(order.begin(), order.end()));
+      }
       assert(remainingSgCount == 1 && "not all subgroups distributed");
       srcLayout = buildLayout(context, sgLayout, sgData,
                               /*instData=*/{}, /*laneLayout=*/{},

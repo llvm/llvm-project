@@ -270,6 +270,21 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
 
+  // LoweringPrepare uses this attribute directly as the fatbin global's
+  // initializer, so it must be a valid #cir.const_array payload for its type.
+  if (attrName == getCUDADeviceBinaryAttrName()) {
+    auto bytes = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    auto arrayTy =
+        bytes ? mlir::dyn_cast<cir::ArrayType>(bytes.getType()) : nullptr;
+    if (!arrayTy || arrayTy.getSize() != bytes.size())
+      return op->emitOpError()
+             << "expects '" << getCUDADeviceBinaryAttrName()
+             << "' to be a string typed as an array of its length";
+    return cir::ConstArrayAttr::verify([&] { return op->emitOpError(); },
+                                       arrayTy, bytes,
+                                       /*trailingZerosNum=*/0);
+  }
+
   return success();
 }
 
@@ -759,8 +774,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
-            opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::MatrixType, cir::VectorType,
+            cir::ComplexType>(opType))
       return success();
     return op->emitOpError(
         "zero expects struct, array, vector, or complex type");
@@ -2708,8 +2723,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
-    state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
+  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded()) {
+    std::string comdatKey;
+    if (mlir::succeeded(parser.parseOptionalLParen())) {
+      if (parser.parseString(&comdatKey).failed())
+        return failure();
+      if (parser.parseRParen().failed())
+        return failure();
+    }
+    state.addAttribute(comdatNameAttr,
+                       parser.getBuilder().getStringAttr(comdatKey));
+  }
 
   auto parseAlignmentBody = [&](int64_t &value) {
     if (parser.parseLParen().failed() || parser.parseInteger(value).failed() ||
@@ -3043,8 +3067,11 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  if (getComdat())
+  if (std::optional<StringRef> comdatKey = getComdat()) {
     p << " comdat";
+    if (!comdatKey->empty())
+      p << "(\"" << *comdatKey << "\")";
+  }
 
   if (getAlignment())
     p << " alignment(" << *getAlignment() << ')';

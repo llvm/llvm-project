@@ -179,7 +179,7 @@ SDValue MipsTargetLowering::getTargetNode(ConstantPoolSDNode *N, EVT Ty,
 
 MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                                        const MipsSubtarget &STI)
-    : TargetLowering(TM, STI), Subtarget(STI), ABI(TM.getABI()) {
+    : TargetLowering(TM, STI), Subtarget(STI), ABI(STI.getABI()) {
   // Mips does not have i1 type, so use i32 for
   // setcc operations results (slt, sgt, ...).
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -422,6 +422,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
                        ISD::SIGN_EXTEND});
 
+  // Sink shifts into their users' blocks to expose extract patterns.
+  setHasExtractBitsInsn(Subtarget.hasExtractInsert());
+
   // R5900 has no LL/SC instructions for atomic operations
   if (Subtarget.isR5900())
     setMaxAtomicSizeInBitsSupported(0);
@@ -467,7 +470,7 @@ FastISel *MipsTargetLowering::createFastISel(
 
   // Disable if either of the following is true:
   // We do not generate PIC, the ABI is not O32, XGOT is being used.
-  if (!TM.isPositionIndependent() || !TM.getABI().IsO32() ||
+  if (!TM.isPositionIndependent() || !Subtarget.getABI().IsO32() ||
       Subtarget.useXGOT())
     UseFastISel = false;
 
@@ -2223,7 +2226,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
         static_cast<const MipsTargetObjectFile *>(
             getTargetMachine().getObjFileLowering());
     const GlobalObject *GO = GV->getAliaseeObject();
-    if (GO && TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
+    if (Subtarget.useSmallSection() && GO && TLOF->IsGlobalInSmallSection(GO))
       // %gp_rel relocation
       return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 
@@ -2375,7 +2378,7 @@ lowerConstantPool(SDValue Op, SelectionDAG &DAG) const
             getTargetMachine().getObjFileLowering());
 
     if (TLOF->IsConstantInSmallSection(DAG.getDataLayout(), N->getConstVal(),
-                                       getTargetMachine()))
+                                       &DAG.getMachineFunction().getFunction()))
       // %gp_rel relocation
       return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 
