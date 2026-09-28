@@ -1,6 +1,6 @@
 ; AIX doesn't have support for DWARF 6 DW_AT_language_name.
 ; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
-; RUN: %llc_dwarf --dwarf-version=6 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info -v - | FileCheck %s --implicit-check-not "DW_AT_language"
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info -v - | FileCheck %s --implicit-check-not "DW_AT_language"
 
 ; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_Roc)
 ; CHECK-NOT: DW_AT_language_version
@@ -21,7 +21,7 @@ define void @_Z4funcv() !dbg !8 {
 !3 = !DIFile(filename: "cu.roc", directory: "/tmp")
 !4 = !{!0}
 !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!6 = !{i32 7, !"Dwarf Version", i32 6}
+!6 = !{i32 7, !"Dwarf Version", i32 5}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcv", scope: !3, file: !3, line: 2, type: !9, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2)
 !9 = !DISubroutineType(types: !10)
