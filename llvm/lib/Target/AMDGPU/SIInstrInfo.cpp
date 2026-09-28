@@ -5183,11 +5183,8 @@ bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
   unsigned Opc = Def->getOpcode();
   if (Opc == AMDGPU::COPY && Recurse(1))
     return true;
-  // AND only needs one masked operand, because a zero bit in either operand
-  // forces a zero bit in the result.
   if (Opc == LMC.AndOpc && (Recurse(1) || Recurse(2)))
     return true;
-  // Likewise ANDN2, but only for its first operand.
   if (Opc == LMC.AndN2Opc && Recurse(1))
     return true;
   if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
