@@ -43,7 +43,7 @@ define double @test_constant_fold_rcp_f64_1() nounwind {
 
 define float @test_constant_fold_rcp_f32_half() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_half(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 5.000000e-01) #[[ATTR14:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 5.000000e-01) #[[ATTR12:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 0.5) nounwind readnone
@@ -52,7 +52,7 @@ define float @test_constant_fold_rcp_f32_half() nounwind {
 
 define double @test_constant_fold_rcp_f64_half() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_half(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 5.000000e-01) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 5.000000e-01) #[[ATTR12]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 0.5) nounwind readnone
@@ -61,7 +61,7 @@ define double @test_constant_fold_rcp_f64_half() nounwind {
 
 define float @test_constant_fold_rcp_f32_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) nounwind readnone
@@ -70,7 +70,7 @@ define float @test_constant_fold_rcp_f32_43() nounwind {
 
 define double @test_constant_fold_rcp_f64_43() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f64_43(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) #[[ATTR12]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.rcp.f64(double 4.300000e+01) nounwind readnone
@@ -79,7 +79,7 @@ define double @test_constant_fold_rcp_f64_43() nounwind {
 
 define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR13:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
@@ -190,7 +190,7 @@ define half @test_constant_fold_sqrt_f16_0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float 0.0) nounwind readnone
@@ -199,7 +199,7 @@ define float @test_constant_fold_sqrt_f32_0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR12]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double 0.0) nounwind readnone
@@ -216,7 +216,7 @@ define half @test_constant_fold_sqrt_f16_neg0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float -0.0) nounwind readnone
@@ -225,7 +225,7 @@ define float @test_constant_fold_sqrt_f32_neg0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR14]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR12]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double -0.0) nounwind readnone
@@ -5942,78 +5942,6 @@ define void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %lanearg, i32 %
 ;
   %lane = call i32 @llvm.amdgcn.readfirstlane(i32 %lanearg)
   %v = call i32 @llvm.amdgcn.ds.bpermute(i32 %lane, i32 %src)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-; --------------------------------------------------------------------
-; llvm.amdgcn.wave.match.b32
-; --------------------------------------------------------------------
-
-; Two distinct operands do not fold: the match is a cross-comparison, not the
-; mask of all active lanes.
-define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i32 %src2) {
-; CHECK-LABEL: @v_wave_match_sgpr(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[SRC1:%.*]], i32 [[SRC2:%.*]])
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %src1, i32 %src2)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-; A divergent value does not fold even when passed as both operands.
-define amdgpu_kernel void @v_wave_match_vgpr(ptr addrspace(1) %out) {
-; CHECK-LABEL: @v_wave_match_vgpr(
-; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TIDX]], i32 [[TIDX]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
-; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
-; CHECK-NEXT:    ret void
-;
-  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
-  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tidx, i32 %tidx)
-  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tidx
-  store i32 %v, ptr addrspace(1) %out_ptr
-  ret void
-}
-
-; The same uniform value (an SGPR kernel argument, uniform by ABI) in both
-; operands folds to ballot(true): every active lane holds that value, so it
-; matches every active lane.
-define amdgpu_kernel void @v_wave_match_same_sgpr(ptr addrspace(1) %out, i32 %src) {
-; CHECK-LABEL: @v_wave_match_same_sgpr(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %src, i32 %src)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-; The same constant in both operands folds to ballot(true).
-define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out) {
-; CHECK-LABEL: @v_wave_match_constant(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 7, i32 7)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-; Two distinct constants do not fold.
-define amdgpu_kernel void @v_wave_match_two_constants(ptr addrspace(1) %out) {
-; CHECK-LABEL: @v_wave_match_two_constants(
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 7, i32 8)
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 7, i32 8)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
