@@ -24,6 +24,7 @@ namespace interp {
 class Context;
 class Function;
 class InterpStack;
+class FrameAllocator;
 class Program;
 enum Opcode : uint32_t;
 
@@ -36,9 +37,14 @@ public:
   using PtrCallback =
       llvm::function_ref<bool(InterpState &S, CodePtr OpPC, const Pointer &)>;
 
-  EvaluationResult interpretExpr(const Expr *E,
-                                 bool ConvertResultToRValue = false,
+  EvaluationResult interpretExpr(const Expr *E) {
+    return interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue(),
+                         /*DestroyToplevelScope=*/false);
+  }
+
+  EvaluationResult interpretExpr(const Expr *E, bool ConvertResultToRValue,
                                  bool DestroyToplevelScope = false);
+
   EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
                                  bool CheckFullyInitialized);
   EvaluationResult interpretDestructor(const VarDecl *VD, const APValue &Value);
@@ -60,8 +66,17 @@ public:
   /// Returns the source location of the current opcode.
   SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
 
+  bool constantFolding() const {
+    return S.EvalMode == EvaluationMode::ConstantFold;
+  }
+
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
+              FrameAllocator &FrameAlloc,
+              ConstantExprKind ConstexprKind = ConstantExprKind::Normal);
+
+  EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -115,6 +130,7 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  ConstantExprKind ConstexprKind = ConstantExprKind::Normal;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
   /// Whether we should check if the result has been fully

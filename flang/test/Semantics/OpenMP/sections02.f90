@@ -1,11 +1,8 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 ! OpenMP version 5.0.0
 ! 2.8.1 sections construct
 ! The code enclosed in a sections construct must be a structured block.
 program OmpConstructSections01
-   use omp_lib
    integer :: section_count = 0
    integer, parameter :: NT = 4
    print *, 'section_count', section_count

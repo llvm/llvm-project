@@ -11,6 +11,10 @@
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -70,7 +74,7 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_ownership) {
 }
 
 int SBFile::OpenFdFromHandle(intptr_t handle, int flags) {
-#if _WIN32
+#ifdef _WIN32
   return _open_osfhandle(handle, flags);
 #else
   (void)handle;

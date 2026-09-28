@@ -10,4 +10,4 @@
 
 #include "src/math/remquof128.h"
 
-LIST_REMQUO_TESTS(float128, LIBC_NAMESPACE::remquof128)
+LIST_REMQUO_TESTS(Remquof128, float128, LIBC_NAMESPACE::remquof128)

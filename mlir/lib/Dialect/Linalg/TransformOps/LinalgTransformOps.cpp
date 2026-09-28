@@ -271,6 +271,11 @@ void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
   linalg::populateSwapExtractSliceWithFillPatterns(patterns);
 }
 
+void transform::ApplyEraseUnusedOperandsAndResultsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateEraseUnusedOperandsAndResultsPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -1925,10 +1930,8 @@ PackGreedilyOp::apply(transform::TransformRewriter &rewriter,
                       transform::TransformResults &transformResults,
                       transform::TransformState &state) {
   SmallVector<Operation *> results;
-  for (Operation *op : state.getPayloadOps(getTarget())) {
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      continue;
+  for (auto linalgOp :
+       llvm::make_isa_range<LinalgOp>(state.getPayloadOps(getTarget()))) {
     // linalgOp will be replaced and the insertion point may be invalidated if
     // we set it before -> set it after.
     rewriter.setInsertionPointAfter(linalgOp);
