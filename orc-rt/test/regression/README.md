@@ -17,34 +17,135 @@ Place a test by the *question it asks*, not by the kind of input file it uses:
   directive) is handled correctly. These are written in assembly.
 
 The `jit-free-foundations/` rule is enforced: the `%{cc}`, `%{cxx}`, `%{mc}`,
-and `%{jit}` substitutions are unavailable there.
+and `%{obj-jit}` substitutions are unavailable there.
 
 ## Writing tests that run JIT'd code
 
 A typical test:
 
 ```c
-// Check that a trivial C program can be compiled and run under ogre.
+// Check that JIT'd code can load from static data defined in the same object.
 //
-// RUN: %{cc} -c -o %t.o %s
-// RUN: %{jit} -show-jit-result %t.o | FileCheck %s
+// Stresses: fixups for code addressing data in the same object.
+//
+// RUN: %{cc} -O0 -c -o %t.O0.o %s
+// RUN: %{obj-jit} -show-jit-result %t.O0.o | FileCheck %s
+// RUN: %{cc} -O2 -c -o %t.O2.o %s
+// RUN: %{obj-jit} -show-jit-result %t.O2.o | FileCheck %s
 
 // CHECK: JIT result: 0
 
-int main(void) { return 0; }
+static int Data = 42;
+
+int main(void) {
+  // Volatile load, to prevent constant propagation of the initializer.
+  if (*(volatile int *)&Data != 42)
+    return 1;
+  return 0;
+}
 ```
 
 Conventions:
 
-* **Return 0 on success, and a distinct non-zero value from each check.**
-  A failure then reports which check failed (`JIT result: 3`), not just that
-  the test failed.
+* **Test one construct per test.** Linker and loader bugs usually crash the
+  JIT'd program rather than return a wrong value, and a crash identifies only
+  the test, not the check that crashed. Keep each test to a single source
+  construct (in language tests) or object format feature (in object format
+  tests), so that the name of a failing test says what broke. Tests of how
+  constructs interact are the exception, and should say so.
+* **Say what the test checks, and what it stresses.** Start with a one-line
+  "Check that ..." summary of the behavior under test, followed by a
+  "Stresses:" line naming the linker or loader behavior that it depends on.
+  This tells someone triaging a failure where to look. Be specific: name the
+  fixups, sections, or optimizations involved.
+* **Return 0 on success.** If a test makes more than one check of its
+  construct (e.g. that data reads correctly, then that it can be written),
+  return a distinct non-zero value from each, so that a failure reports which
+  check failed (`JIT result: 2`).
 * **Check behavior, not object contents.** Language tests should keep passing
   if the compiler changes how a construct is lowered, and only fail if the
   new lowering doesn't work under the runtime.
 * **Write freestanding sources.** Don't include system headers; declare any
   library functions you need yourself. This keeps tests usable when
   cross-compiling for targets without a sysroot.
+
+For tests compiled from source:
+
+* **Test at `-O0` and `-O2`,** with RUN lines for each. Most JIT'd code is
+  optimized, and optimization changes how constructs are lowered. If a
+  construct can only be tested at one level, say which, and why.
+* **Keep constructs alive under optimization, but no more.** An optimizing
+  compiler may fold away a construct (e.g. replace a load of static data with
+  its initializer), leaving nothing for the JIT linker to handle. Prefer
+  making the construct opaque to the compiler (e.g. defining data in another
+  object, or with external linkage) over constraining it with `volatile` or
+  `noinline`, which may hide the optimized lowering we want to test. When a
+  test needs a barrier, apply the weakest one to the construct under test
+  only, and name the optimization it suppresses (e.g. `// Volatile load, to
+  prevent store-to-load forwarding.`).
+* **Don't assume a particular compiler.** `%{cc}` and `%{cxx}` may be
+  user-supplied (see below). Say what a compiler *may* do, not what it will
+  do, and use generic optimization names rather than those of a particular
+  compiler's passes.
+
+### Tests with more than one source file
+
+Tests that need more than one source file (e.g. to link several objects) are
+`.test` files that hold their sources, split out with `split-file`:
+
+```
+# Check that JIT'd code can load from global data defined in another object.
+#
+# Stresses: fixups for code addressing data defined in another object, which
+# the compiler usually addresses through the GOT.
+
+REQUIRES: split-file
+RUN: rm -rf %t && split-file %s %t
+RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
+RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
+RUN: %{obj-jit} -show-jit-result %t/main.O0.o %t/def.O0.o | FileCheck %s
+RUN: %{cc} -O2 -c -o %t/def.O2.o %t/def.c
+RUN: %{cc} -O2 -c -o %t/main.O2.o %t/main.c
+RUN: %{obj-jit} -show-jit-result %t/main.O2.o %t/def.O2.o | FileCheck %s
+
+CHECK: JIT result: 0
+
+#--- def.c
+int Data = 42;
+
+#--- main.c
+extern int Data;
+
+int main(void) {
+  if (Data != 42)
+    return 1;
+  return 0;
+}
+```
+
+### Tests with more than one source file
+
+Tests that need more than one source file (e.g. to link several objects) are
+`.test` files that hold their sources, split out with `split-file`:
+
+```
+# Check that JIT'd code can load from global data defined in another object.
+
+REQUIRES: split-file
+RUN: rm -rf %t && split-file %s %t
+RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
+RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
+RUN: %{obj-jit} -show-jit-result %t/main.O0.o %t/def.O0.o | FileCheck %s
+
+CHECK: JIT result: 0
+
+#--- def.c
+int Data = 42;
+
+#--- main.c
+extern int Data;
+int main(void) { return Data == 42 ? 0 : 1; }
+```
 
 ### Substitutions
 
@@ -54,8 +155,8 @@ Conventions:
   target, using `llvm-mc`. Unlike `%{cc}` and `%{cxx}`, this can't be
   overridden, so object format tests always check the runtime against the
   same assembler.
-* **`%{jit}`**: Links and runs its inputs under ogre, using `llvm-jitlink` as
-  the controller. Pass `-show-jit-result` to print `JIT result: <value>`.
+* **`%{obj-jit}`**: Links and runs its inputs under ogre, using `llvm-jitlink`
+  as the controller. Pass `-show-jit-result` to print `JIT result: <value>`.
 * **`%{ogre}`**: Path to the ogre executable.
 
 Don't spell out a target triple or connection method in a test unless that's
@@ -78,7 +179,8 @@ the host:
 * **`orc-rt-cc`**: `%{cc}` is usable.
 * **`orc-rt-cxx`**: `%{cxx}` is usable.
 * **`llvm-mc`**: `%{mc}` is usable.
-* **`llvm-jitlink`**: `%{jit}` is usable.
+* **`llvm-jitlink`**: `%{obj-jit}` is usable.
+* **`split-file`**: `split-file` is usable.
 * **`target-arch=<arch>`**: The runtime's target architecture (`arm64` and
   `aarch64` are aliases).
 * **`target-object-format=<coff|elf|mach-o>`**: The runtime's target object
