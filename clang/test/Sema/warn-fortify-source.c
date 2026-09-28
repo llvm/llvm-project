@@ -325,7 +325,10 @@ void call_poll(void) {
   struct pollfd single_fd;
   poll(fds, 2, 0);
   poll(fds, 3, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 16, but size argument is 24}}
-  poll(fds, -1, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 16, but size argument is }}
+  poll(fds, -1, 0); // expected-warning-re {{'poll' size argument is too large; destination buffer has size 16, but size argument is {{34359738360|147573952589676412920}}}}
+#if !defined(USE_BUILTINS)
+  poll(fds, ((nfds_t)1 << 61) + 1, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 16, but size argument is 18446744073709551624}}
+#endif
   poll(&single_fd, 1, 0);
   poll(&single_fd, 2, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 8, but size argument is 16}}
 }
@@ -334,10 +337,10 @@ void call_ppoll(void) {
   struct pollfd fds[2];
   ppoll(fds, 2, (const struct timespec *)0, (const sigset_t *)0);
   ppoll(fds, 3, (const struct timespec *)0, (const sigset_t *)0); // expected-warning {{'ppoll' size argument is too large; destination buffer has size 16, but size argument is 24}}
-  ppoll(fds, -1, (const struct timespec *)0, (const sigset_t *)0); // expected-warning {{'ppoll' size argument is too large; destination buffer has size 16, but size argument is }}
+  ppoll(fds, -1, (const struct timespec *)0, (const sigset_t *)0); // expected-warning-re {{'ppoll' size argument is too large; destination buffer has size 16, but size argument is {{34359738360|147573952589676412920}}}}
   ppoll64(fds, 2, (const struct timespec *)0, (const sigset64_t *)0);
   ppoll64(fds, 3, (const struct timespec *)0, (const sigset64_t *)0); // expected-warning {{'ppoll64' size argument is too large; destination buffer has size 16, but size argument is 24}}
-  ppoll64(fds, -1, (const struct timespec *)0, (const sigset64_t *)0); // expected-warning {{'ppoll64' size argument is too large; destination buffer has size 16, but size argument is }}
+  ppoll64(fds, -1, (const struct timespec *)0, (const sigset64_t *)0); // expected-warning-re {{'ppoll64' size argument is too large; destination buffer has size 16, but size argument is {{34359738360|147573952589676412920}}}}
 }
 
 void call_poll_runtime(nfds_t n) {

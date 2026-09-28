@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -verify
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c %s -DMISMATCHED_SIG -verify
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DMISMATCHED_SIG -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c %s -DMISMATCHED_SIG2 -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DMISMATCHED_SIG2 -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c %s -DMISMATCHED_SIG3 -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ %s -DMISMATCHED_SIG3 -verify
 // expected-no-diagnostics
 
 // Declarations that are not the POSIX/Bionic poll/ppoll/ppoll64 should not
@@ -12,6 +16,11 @@
 //     POSIX poll/ppoll/ppoll64.
 
 struct pollfd {
+  int fd;
+  short events;
+  short revents;
+};
+struct other_fd {
   int fd;
   short events;
   short revents;
@@ -40,6 +49,39 @@ void call_mismatched_poll(void) {
   (void)poll(fds, 5);
   (void)ppoll(buf, 10, (const struct timespec *)0, (const sigset_t *)0);
   (void)ppoll64(fds, buf, (const struct timespec *)0, (const sigset64_t *)0);
+}
+#elif defined(MISMATCHED_SIG2)
+#ifdef __cplusplus
+extern "C" {
+#endif
+int poll(struct other_fd *fds, nfds_t nfds, int timeout);
+int ppoll(struct pollfd *fds, nfds_t nfds, const struct other_fd *tmo_p,
+          const sigset_t *sigmask);
+int ppoll64(struct pollfd *fds, nfds_t nfds, const struct timespec *tmo_p,
+            int sigmask);
+#ifdef __cplusplus
+}
+#endif
+
+void call_mismatched_poll2(void) {
+  struct pollfd fds[2];
+  struct other_fd other_fds[2];
+  (void)poll(other_fds, 5, 0);
+  (void)ppoll(fds, 5, (const struct other_fd *)0, (const sigset_t *)0);
+  (void)ppoll64(fds, 5, (const struct timespec *)0, 0);
+}
+#elif defined(MISMATCHED_SIG3)
+#ifdef __cplusplus
+extern "C" {
+#endif
+int poll(struct pollfd *fds, nfds_t nfds, const void *timeout);
+#ifdef __cplusplus
+}
+#endif
+
+void call_mismatched_poll3(void) {
+  struct pollfd fds[2];
+  (void)poll(fds, 5, (const void *)0);
 }
 #else
 static int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
