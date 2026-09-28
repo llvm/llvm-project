@@ -598,6 +598,27 @@ mlir::LogicalResult lowerConstrainableFPOp(
                                        constrainedMnemonic, hasRoundingMode);
 }
 
+static mlir::LLVM::FastmathFlags
+convertFastMathFlags(cir::FastMathFlags cirFlags) {
+  mlir::LLVM::FastmathFlags llvmFlags{};
+  const std::pair<cir::FastMathFlags, mlir::LLVM::FastmathFlags> flags[] = {
+      {cir::FastMathFlags::nnan, mlir::LLVM::FastmathFlags::nnan},
+      {cir::FastMathFlags::ninf, mlir::LLVM::FastmathFlags::ninf},
+      {cir::FastMathFlags::nsz, mlir::LLVM::FastmathFlags::nsz},
+      {cir::FastMathFlags::arcp, mlir::LLVM::FastmathFlags::arcp},
+      {cir::FastMathFlags::contract, mlir::LLVM::FastmathFlags::contract},
+      {cir::FastMathFlags::afn, mlir::LLVM::FastmathFlags::afn},
+      {cir::FastMathFlags::reassoc, mlir::LLVM::FastmathFlags::reassoc},
+  };
+
+  for (auto [cirFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(cirFlags, cirFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+
+  return llvmFlags;
+}
+
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
     cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -610,6 +631,9 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
       return op.emitError("expected LLVM result type");
   }
   StringRef name = op.getIntrinsicName();
+  mlir::LLVM::FastmathFlags fastmathFlags = {};
+  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
+    fastmathFlags = convertFastMathFlags(*fastmath);
 
   // Some LLVM intrinsics require ElementType attribute to be attached to
   // the argument of pointer type. That prevents us from generating LLVM IR
@@ -622,7 +646,7 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   // to set LLVM IR attribute.
   assert(!cir::MissingFeatures::intrinsicElementTypeSupport());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
-                                   adaptor.getOperands());
+                                   adaptor.getOperands(), fastmathFlags);
   return mlir::success();
 }
 

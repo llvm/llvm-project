@@ -2042,7 +2042,6 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
-  this->TM = &TM;
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
