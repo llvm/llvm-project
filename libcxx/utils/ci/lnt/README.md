@@ -115,7 +115,7 @@ lnt_url: "http://localhost:8000"
 database: default
 auth_token: example_token
 EOF
-lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schema.yaml
+lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schemas/libcxx.yaml
 
 # Then submit to the local instance
 submit-benchmarks --lnt-url http://localhost:8000 --test-suite libcxx result.json
