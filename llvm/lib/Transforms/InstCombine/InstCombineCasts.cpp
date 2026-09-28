@@ -1265,9 +1265,10 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
                               m_Value(TVal), m_Value(FVal))))) {
     APInt TruncatedMax = APInt::getLowBitsSet(SrcWidth, DestWidth);
     Value *SExtVal = nullptr;
-    if (Pred == ICmpInst::ICMP_ULT && *CmpC == TruncatedMax + 1 && TVal == A)
+    // Check the select arm first so that A is known to have type SrcTy.
+    if (Pred == ICmpInst::ICMP_ULT && TVal == A && *CmpC == TruncatedMax + 1)
       SExtVal = FVal;
-    else if (Pred == ICmpInst::ICMP_UGT && *CmpC == TruncatedMax && FVal == A)
+    else if (Pred == ICmpInst::ICMP_UGT && FVal == A && *CmpC == TruncatedMax)
       SExtVal = TVal;
     if (SExtVal &&
         match(SExtVal, m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(

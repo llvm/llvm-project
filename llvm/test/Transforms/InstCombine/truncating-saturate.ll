@@ -876,3 +876,38 @@ entry:
   store i64 %extra_use, ptr %p, align 8
   ret i8 %trunc
 }
+
+; The icmp operand type differs from the select type. Don't crash.
+define i32 @no_clamp_icmp_different_type(i32 %a, i64 %x, i64 %y) {
+; CHECK-LABEL: @no_clamp_icmp_different_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SEL]] to i32
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+entry:
+  %cmp = icmp ult i32 %a, 2
+  %sel = select i1 %cmp, i64 %x, i64 %y
+  %trunc = trunc i64 %sel to i32
+  ret i32 %trunc
+}
+
+define i8 @no_clamp_icmp_different_type_swapped(i64 %a, i32 %x) {
+; CHECK-LABEL: @no_clamp_icmp_different_type_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A:%.*]], 255
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SHR]], i32 [[X]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %cmp = icmp ugt i64 %a, 255
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %cmp, i32 %shr, i32 %x
+  %trunc = trunc i32 %cond to i8
+  ret i8 %trunc
+}
