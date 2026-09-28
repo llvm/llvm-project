@@ -707,11 +707,6 @@ features cannot lower the translation-unit ABI level;
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
-- Fixed an assertion when the body of an invalid function template definition,
-  such as `template <class T, int N> void T::f() {}`, used an OpenMP loop
-  directive. Such bodies are now skipped instead of being analyzed as
-  non-template code. (#GH219354)
-
 - Fixed a crash when a non-type template parameter of reference type is bound
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
@@ -1016,6 +1011,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
+- Fixed a crash or a bogus error on an OpenMP loop directive whose loop nest
+  depends on a template parameter outside of a dependent context, e.g. in a
+  block within a variable template or in the body of an invalid function
+  template definition. (#GH219354)
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
