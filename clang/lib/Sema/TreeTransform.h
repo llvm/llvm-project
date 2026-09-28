@@ -1824,6 +1824,14 @@ public:
                                                        LParenLoc, EndLoc);
   }
 
+  /// Build a new OpenMP 'depth' clause.
+  OMPClause *RebuildOMPDepthClause(Expr *Depth, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPDepthClause(Depth, StartLoc, LParenLoc,
+                                                     EndLoc);
+  }
+
   OMPClause *
   RebuildOMPLoopRangeClause(Expr *First, Expr *Count, SourceLocation StartLoc,
                             SourceLocation LParenLoc, SourceLocation FirstLoc,
@@ -5458,7 +5466,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return isa<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;
@@ -7849,6 +7857,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
         return QualType();
     }
 
+    if (SemaRef.getLangOpts().HLSL) {
+      if (oldType->getAttrKind() == attr::HLSLRowMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::RowMajor);
+      else if (oldType->getAttrKind() == attr::HLSLColumnMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::ColumnMajor);
+    }
+
     // Check whether we can add nullability; it is only represented as
     // type sugar, and therefore cannot be diagnosed in any other way.
     if (auto nullability = oldType->getImmediateNullability()) {
@@ -10155,6 +10172,17 @@ TreeTransform<Derived>::TransformOMPSplitDirective(OMPSplitDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPFlattenDirective(OMPFlattenDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPFuseDirective(OMPFuseDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -11102,6 +11130,20 @@ TreeTransform<Derived>::TransformOMPPartialClause(OMPPartialClause *C) {
     return C;
   return RebuildOMPPartialClause(Factor, C->getBeginLoc(), C->getLParenLoc(),
                                  C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPDepthClause(OMPDepthClause *C) {
+  ExprResult T = getDerived().TransformExpr(C->getDepth());
+  if (T.isInvalid())
+    return nullptr;
+  Expr *Depth = T.get();
+  bool Changed = Depth != C->getDepth();
+
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+  return RebuildOMPDepthClause(Depth, C->getBeginLoc(), C->getLParenLoc(),
+                               C->getEndLoc());
 }
 
 template <typename Derived>

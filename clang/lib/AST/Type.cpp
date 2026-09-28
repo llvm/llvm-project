@@ -496,15 +496,17 @@ MatrixType::MatrixType(TypeClass tc, QualType matrixType, QualType canonType,
       ElementType(matrixType) {}
 
 ConstantMatrixType::ConstantMatrixType(QualType matrixType, unsigned nRows,
-                                       unsigned nColumns, QualType canonType)
-    : ConstantMatrixType(ConstantMatrix, matrixType, nRows, nColumns,
-                         canonType) {}
+                                       unsigned nColumns, QualType canonType,
+                                       std::optional<LayoutKind> Layout)
+    : ConstantMatrixType(ConstantMatrix, matrixType, nRows, nColumns, canonType,
+                         Layout) {}
 
 ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
                                        unsigned nRows, unsigned nColumns,
-                                       QualType canonType)
+                                       QualType canonType,
+                                       std::optional<LayoutKind> Layout)
     : MatrixType(tc, matrixType, canonType), NumRows(nRows),
-      NumColumns(nColumns) {}
+      NumColumns(nColumns), Layout(Layout) {}
 
 DependentSizedMatrixType::DependentSizedMatrixType(QualType ElementType,
                                                    QualType CanonicalType,
@@ -1279,7 +1281,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getConstantMatrixType(elementType, T->getNumRows(),
-                                     T->getNumColumns());
+                                     T->getNumColumns(), T->getLayout());
   }
 
   QualType VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
@@ -4177,7 +4179,19 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   if (epi.ExceptionSpec.Type == EST_Dynamic) {
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
-  } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
+  } else if (epi.ExceptionSpec.Type == EST_NoexceptTrue ||
+             epi.ExceptionSpec.Type == EST_NoexceptFalse) {
+    // If the exception type has already been determined, we can use the
+    // address of the expression as profiling results instead of profiling the
+    // expression.
+    //
+    // This is not only an optimization but avoids an access on uninitialized
+    // fields during the profiling.
+    //
+    // See clang/test/Modules/concept-specialization-deserialization.cppm for
+    // an example.
+    ID.AddPointer(epi.ExceptionSpec.NoexceptExpr);
+  } else if (epi.ExceptionSpec.Type == EST_DependentNoexcept) {
     // getFunctionTypeInternal compares noexcept expressions after the lookup,
     // so the key only needs their canonical form.
     epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
