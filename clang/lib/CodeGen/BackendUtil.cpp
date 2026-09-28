@@ -1215,10 +1215,12 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 
   TimeCodegenPasses([&]() {
-    Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
-        !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
-        CI.getVirtualFileSystemPtr());
+    CodeGenPipelineConfig Config;
+    Config.PrintPipelinePasses = PrintPipelinePasses.has_value();
+    Config.DisableVerify = !CodeGenOpts.VerifyModule;
+    Config.VFS = CI.getVirtualFileSystemPtr();
+    Error CodeGenError =
+        runCodeGenPipeline(*TM, *TheModule, *OS, DwoOS, CGFT, Config);
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });

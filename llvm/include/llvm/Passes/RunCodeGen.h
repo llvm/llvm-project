@@ -16,12 +16,30 @@
 
 namespace llvm {
 
-LLVM_ABI Error runCodeGenPipeline(
-    TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-    std::unique_ptr<ToolOutputFile> &DwoOS, CodeGenFileType CGFT,
-    bool PrintPipelinePasses = false, bool DisableVerify = true,
-    bool DisableSimplifyLibCalls = false,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem());
+class ModuleSummaryIndex;
+
+/// Options for runCodeGenPipeline().
+struct CodeGenPipelineConfig {
+  /// FIXME: Need to be implemented in runCodeGenPipeline().
+  bool PrintPipelinePasses = false;
+
+  bool DisableVerify = true;
+  bool DisableSimplifyLibCalls = false;
+  /// Log each pass as it runs. New pass manager only.
+  bool DebugPassManager = false;
+  /// Verify the IR between passes. New pass manager only.
+  bool VerifyEach = false;
+  /// LTO uses this to expose the combined summary index to summary-consuming
+  /// codegen passes.
+  const ModuleSummaryIndex *SummaryIndex = nullptr;
+  /// For passes needing file access.
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr;
+};
+
+Error runCodeGenPipeline(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
+                         std::unique_ptr<ToolOutputFile> &DwoOS,
+                         CodeGenFileType CGFT,
+                         const CodeGenPipelineConfig &Config = {});
 
 } // namespace llvm
 
