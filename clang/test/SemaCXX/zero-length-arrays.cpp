@@ -29,8 +29,6 @@ void testBar() {
   Bar b2(b);
 #if __cplusplus >= 201103L
 // expected-error@-2 {{call to implicitly-deleted copy constructor of 'Bar}}
-#else
-// expected-no-diagnostics
 #endif
   b = b2;
 }
@@ -47,4 +45,45 @@ void test () {
     long bar = foo;
 }
 #endif
+}
+
+namespace GH173728 {
+#if __SIZEOF_SIZE_T__ == 8
+int reduced() {
+  int i;
+  return ({
+    struct T {
+    } s[-sizeof(0)][0 == sizeof(i < 0)]; // expected-error {{array is too large}}
+    0;
+  });
+}
+
+int original() {
+  int i = 0;
+  return 1 + ({
+    struct tree_el {
+      int val;
+      struct tree_el **right, *left;
+    } state_t[1 + -(sizeof(0x1c))][0 == sizeof(sizeof(i))]; // expected-error {{array is too large}}
+    0x97 < 10000;
+  });
+}
+
+int too_large() {
+  return 1 + ({ struct T {} s[(1ULL << 33) - 1][0]; 0x97 < 10000; });
+}
+
+signed char too_large_no_fold() {
+  return ({ struct T {} s[(1ULL << 33) - 1][0]; 1000; });
+}
+#endif
+
+int over_limit() {
+  return 1 + ({ struct T {} s[0xFFFFFFFFu][0]; 0x97 < 10000; });
+}
+
+void small() {
+  signed char a = ({ struct T {} s[4]; 1000; }); // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 1000 to -24}}
+  signed char b = ({ struct T {} s[4][0]; 1000; }); // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 1000 to -24}}
+}
 }

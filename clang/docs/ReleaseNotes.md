@@ -792,6 +792,10 @@ features cannot lower the translation-unit ABI level;
   that was inherited from a different declarator, for example when
   ``__typeof__`` resolves to the type of another, already-processed
   declaration. (#GH217489)
+- Fixed a crash when constant-evaluating a default-constructed or copied local
+  array with a huge number of zero-sized elements, e.g. ``T s[N][0]``. Such
+  arrays are now also diagnosed as too large when their element count exceeds
+  the limit that already applies to their size in bytes. (#GH173728)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr

@@ -2307,12 +2307,14 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
           return QualType();
       }
 
-      // Is the array too large?
-      unsigned ActiveSizeBits =
-          (!T->isDependentType() && !T->isVariablyModifiedType() &&
-           !T->isIncompleteType() && !T->isUndeducedType())
-              ? ConstantArrayType::getNumAddressingBits(Context, T, ConstVal)
-              : ConstVal.getActiveBits();
+      // Is the array too large? Check the element count too, for zero-sized
+      // elements.
+      unsigned ActiveSizeBits = ConstVal.getActiveBits();
+      if (!T->isDependentType() && !T->isVariablyModifiedType() &&
+          !T->isIncompleteType() && !T->isUndeducedType())
+        ActiveSizeBits = std::max(
+            ActiveSizeBits,
+            ConstantArrayType::getNumAddressingBits(Context, T, ConstVal));
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
         Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
             << toString(ConstVal, 10, ConstVal.isSigned(),

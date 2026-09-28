@@ -10,3 +10,10 @@ void pr8256(void) {
   typedef char b[(long long)sizeof(a)-1];
 }
 
+void gh173728(void) {
+  struct S {} a[-sizeof(0)][0]; // expected-error {{array is too large}}
+  int b[1ULL << 61][0];         // expected-error {{array is too large}}
+  int c[(1ULL << 61) - 1][0];
+  int d[1ULL << 40][0];
+}
+
