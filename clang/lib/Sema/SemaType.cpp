@@ -2088,9 +2088,8 @@ bool Sema::checkArrayTooLarge(QualType ElementType,
                               const llvm::APSInt &NumElements,
                               SourceLocation Loc, SourceRange Range) {
   unsigned ActiveSizeBits = NumElements.getActiveBits();
-  if (!ElementType->isDependentType() &&
-      !ElementType->isVariablyModifiedType() &&
-      !ElementType->isIncompleteType() && !ElementType->isUndeducedType())
+  if (!ElementType->isDependentType() && !ElementType->isIncompleteType() &&
+      !ElementType->isUndeducedType() && ElementType->isConstantSizeType())
     ActiveSizeBits =
         std::max(ActiveSizeBits, ConstantArrayType::getNumAddressingBits(
                                      Context, ElementType, NumElements));

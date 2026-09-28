@@ -38,6 +38,13 @@ char past_size16_max[] = {X32768(0), X32768(0)}; // size16-error {{array is too 
 struct E {};
 struct E zero_sized[] = {X32768({}), X32768({})}; // size16-error {{array is too large (65'536 elements)}}
 
+#ifndef __cplusplus
+void pointers_to_vla(int n) {
+  int (*explicit_ptrs[32768])[n]; // size16-error {{array is too large (32'768 elements)}}
+  int (*deduced_ptrs[])[n] = {X32768(0)}; // size16-error {{array is too large (32'768 elements)}}
+}
+#endif
+
 #ifdef __cplusplus
 template <typename T> void deduced_in_template() {
   static T a[] = {{0}, {0}, {0}, {0}}; // expected-error {{array is too large (4 elements)}}
