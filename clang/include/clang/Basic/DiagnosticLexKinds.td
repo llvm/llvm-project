@@ -15,6 +15,14 @@ let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
 defm c23_pp_directive : C23Compat<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is", /*ext_warn*/true>;
 
+// C++11 compatibility with C++98.
+defm empty_fnmacro_arg : CXX11Compat<
+  "empty macro arguments are", /*ext_warn*/false>;
+
+// C++17 compatibility with C++14 and earlier.
+defm hex_literal : CXX17Compat<
+  "hexadecimal floating literals are", /*ext_warn*/false>;
+
 // C++23 compatibility with C++20 and earlier.
 defm cxx23_pp_directive : CXX23Compat<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is">;
@@ -260,12 +268,6 @@ def err_hex_constant_requires : Error<
   "%select{an exponent|a significand}1">;
 def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
-def ext_hex_literal_invalid : Extension<
-  "hexadecimal floating literals are a C++17 feature">, InGroup<CXX17>;
-def warn_cxx17_hex_literal : Warning<
-  "hexadecimal floating literals are incompatible with "
-  "C++ standards before C++17">,
-  InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def ext_octal_literal : Extension<
   "octal integer literals are a C2y extension">, InGroup<C2y>;
 def ext_cpp_octal_literal : Extension<
@@ -545,9 +547,6 @@ def warn_cxx17_compat_missing_varargs_arg : Warning<
   InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_empty_fnmacro_arg : Extension<
   "empty macro arguments are a C99 feature">, InGroup<C99>;
-def warn_cxx98_compat_empty_fnmacro_arg : Warning<
-  "empty macro arguments are incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def note_macro_here : Note<"macro %0 defined here">;
 def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 

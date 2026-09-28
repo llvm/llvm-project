@@ -1014,11 +1014,11 @@ def __builtin_amdgcn_global_store_async_from_lds_b128 : AMDGPUBuiltin<"void(_Ext
 def __builtin_amdgcn_ds_atomic_async_barrier_arrive_b64 : AMDGPUBuiltin<"void(long int address_space<3> *)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64 : AMDGPUBuiltin<"long int(long int address_space<3> *, long int)", [Const], "gfx1250-insts">;
 
-def __builtin_amdgcn_tensor_load_to_lds : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "gfx1250-insts"> {
+def __builtin_amdgcn_tensor_load_to_lds : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "tdm-insts"> {
   let Documentation = [DocTensorLoadToLDS_GFX1250];
   let ArgNames = ["D0", "D1", "D2", "D3", "D4", "cpol"];
 }
-def __builtin_amdgcn_tensor_store_from_lds : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "gfx1250-insts"> {
+def __builtin_amdgcn_tensor_store_from_lds : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int>, _ExtVector<8, int>, _ExtVector<4, int>, _ExtVector<4, int>, _ExtVector<8, int>, _Constant int)", [Const], "tdm-insts"> {
   let Documentation = [DocTensorStoreFromLDS_GFX1250];
   let ArgNames = ["D0", "D1", "D2", "D3", "D4", "cpol"];
 }

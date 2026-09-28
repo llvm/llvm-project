@@ -204,7 +204,7 @@ end module
 ! CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "l"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QMmFtest_scalar_characterEl"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QMmFtest_scalar_characterEx"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QMmFtest_scalar_characterEx"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMmFtest_scalar_characterEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
