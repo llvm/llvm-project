@@ -202,9 +202,8 @@ bool FunctionPass::skipFunction(const Function &F) const {
     PassName = this->getPassName();
 
   if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(PassName, getDescription(F), F.getName())) {
+      !Gate.shouldRunPass(PassName, getDescription(F), F.getName()))
     return true;
-  }
 
   if (F.hasOptNone()) {
     LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' on function "

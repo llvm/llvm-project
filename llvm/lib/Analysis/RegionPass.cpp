@@ -300,10 +300,9 @@ bool RegionPass::skipRegion(Region &R) const {
   Function &F = *R.getEntry()->getParent();
   const OptPassGate &Gate = F.getContext().getOptPassGate();
 
-  if (Gate.isEnabled() && !Gate.shouldRunPass(this->getPassName(),
-                                              getDescription(R), F.getName())) {
+  if (Gate.isEnabled() &&
+      !Gate.shouldRunPass(this->getPassName(), getDescription(R), F.getName()))
     return true;
-  }
 
   if (F.hasOptNone()) {
     // Report this only once per function.
