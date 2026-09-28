@@ -168,6 +168,19 @@ void CastDoubleMatrixToIntCStyle() {
   i = (matrix_5_5<int>)d; // expected-error{{use of undeclared identifier 'i'}}
   make7<s> x; // expected-note{{in instantiation of}}
 }
+
+template <typename T>
+using matrix_4_4 = T __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be a power of 2}}
+
+template <unsigned N>
+using bit_int_matrix_4_4 = _BitInt(N) __attribute__((matrix_type(4, 4))); // expected-error{{'_BitInt' matrix element width must be a power of 2}}
+
+void BitIntElementType() {
+  matrix_4_4<_BitInt(8)> m1;
+  matrix_4_4<_BitInt(7)> m2; // expected-note{{in instantiation of template type alias 'matrix_4_4' requested here}}
+  bit_int_matrix_4_4<64> m3;
+  bit_int_matrix_4_4<12> m4; // expected-note{{in instantiation of template type alias 'bit_int_matrix_4_4' requested here}}
+}
 } // namespace GH202744
 
 namespace Deduction {
