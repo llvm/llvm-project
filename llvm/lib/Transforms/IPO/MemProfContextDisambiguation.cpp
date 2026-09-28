@@ -1588,18 +1588,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
   for (auto EI = OrigEdges.begin(); EI != OrigEdges.end();) {
     auto Edge = *EI;
     DenseSet<uint32_t> NewEdgeContextIds;
-    DenseSet<uint32_t> NotFoundContextIds;
     // Remove any matching context ids from Edge, return set that were found and
-    // removed, these are the new edge's context ids. Also update the remaining
-    // (not found ids).
-    set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds,
-                 NotFoundContextIds);
+    // removed, these are the new edge's context ids.
+    set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds);
+    // If no matching context ids for this edge, skip it.
+    if (NewEdgeContextIds.empty()) {
+      ++EI;
+      continue;
+    }
     // Update the remaining context ids set for the later edges. This is a
     // compile time optimization.
     if (RecursiveContextIds.empty()) {
-      // No recursive ids, so all of the previously remaining context ids that
-      // were not seen on this edge are the new remaining set.
-      RemainingContextIds.swap(NotFoundContextIds);
+      set_subtract(RemainingContextIds, NewEdgeContextIds);
     } else {
       // Keep the recursive ids in the remaining set as we expect to see those
       // on another edge. We can remove the non-recursive remaining ids that
@@ -1612,11 +1612,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
       DenseSet<uint32_t> NonRecursiveRemainingCurEdgeIds =
           set_difference(NewEdgeContextIds, RecursiveContextIds);
       set_subtract(RemainingContextIds, NonRecursiveRemainingCurEdgeIds);
-    }
-    // If no matching context ids for this edge, skip it.
-    if (NewEdgeContextIds.empty()) {
-      ++EI;
-      continue;
     }
     if (TowardsCallee) {
       uint8_t NewAllocType = computeAllocType(NewEdgeContextIds);
@@ -4067,9 +4062,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
                         return true;
 
                       if (A->AllocTypes == B->AllocTypes)
-                        // Use the first context id for each edge as a
+                        // Use the caller node id as a deterministic
                         // tie-breaker.
-                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                        return A->Caller->NodeId < B->Caller->NodeId;
                       return AllocTypeCloningPriority[A->AllocTypes] <
                              AllocTypeCloningPriority[B->AllocTypes];
                     });
@@ -4582,8 +4577,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
   }
 
   // Helper for callee edge sorting below. Return true if A's callee has fewer
-  // caller edges than B, or if A is a clone and B is not, or if A's first
-  // context id is smaller than B's.
+  // caller edges than B, or if A is a clone and B is not, or if A's callee
+  // node id is smaller than B's.
   auto CalleeCallerEdgeLessThan = [](const std::shared_ptr<ContextEdge> &A,
                                      const std::shared_ptr<ContextEdge> &B) {
     if (A->Callee->CallerEdges.size() != B->Callee->CallerEdges.size())
@@ -4592,9 +4587,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
       return true;
     else if (!A->Callee->CloneOf && B->Callee->CloneOf)
       return false;
-    // Use the first context id for each edge as a
-    // tie-breaker.
-    return *A->ContextIds.begin() < *B->ContextIds.begin();
+    // Use the callee node id as a deterministic tie-breaker.
+    return A->Callee->NodeId < B->Callee->NodeId;
   };
 
   // Process each set of callee clones called by Node, performing the needed

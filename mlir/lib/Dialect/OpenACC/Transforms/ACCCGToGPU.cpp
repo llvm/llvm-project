@@ -53,7 +53,7 @@
 // --------
 // Before:
 //   %c128 = arith.constant 128 : index
-//   %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+//   %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
 //   acc.compute_region launch(%arg0 = %tx) {
 //     %c0 = arith.constant 0 : index
 //     %c1 = arith.constant 1 : index
@@ -397,6 +397,20 @@ static bool isThreadXPrivatize(PrivatizeOp privatize) {
   return false;
 }
 
+/// True when \p block is nested in a region that only part of the workgroup
+/// enters.
+static bool isInsideConditional(Block *block) {
+  if (!block)
+    return false;
+  for (Operation *parent = block->getParentOp();
+       parent && !isa<gpu::LaunchOp, FunctionOpInterface>(parent);
+       parent = parent->getParentOp())
+    if (isa<RegionBranchOpInterface>(parent) &&
+        !isa<LoopLikeOpInterface, scf::ExecuteRegionOp>(parent))
+      return true;
+  return false;
+}
+
 /// Emits a workgroup-wide GPU barrier.
 static void emitGPUBarrierWorkgroup(OpBuilder &builder, Location loc) {
   gpu::BarrierOp::create(builder, loc);
@@ -477,6 +491,10 @@ private:
                       std::optional<int64_t> sharedMemCopies = std::nullopt);
   /// Lower an `acc.privatize` to device storage.
   Value processPrivatize(acc::PrivatizeOp privatize);
+  /// Heap-allocate privatize storage and insert a matching dealloc.
+  Value allocatePrivatizeHeapStorage(acc::PrivatizeOp privatize,
+                                     MemRefType baseTy,
+                                     ValueRange mappedDynamicSizes);
   /// Clone and lower an `scf.execute_region`.
   void processExecuteRegion(scf::ExecuteRegionOp op);
   /// Lower `acc.reduction_accumulate`.
@@ -525,6 +543,12 @@ private:
   /// Reserve \p bytes from the shared-memory budget.
   bool tryAllocateSharedMemory(int64_t bytes);
 
+  /// Record \p privateLocal as given per-thread storage, for the closing
+  /// remark. Whether that storage lands in registers or in local memory is
+  /// decided later, so the remark reports the allocation, not the placement.
+  /// Privates with no recoverable name or compiler temps are skipped.
+  void recordThreadPrivate(acc::PrivateLocalOp privateLocal);
+
   /// Element size in bytes for \p elementType .
   int64_t getElementSizeInBytes(Location loc, Type elementType) const;
 
@@ -560,9 +584,24 @@ private:
   /// `acc.privatize` that materialized the private buffer for \p memref.
   acc::PrivatizeOp getPrivatizeForMemref(Value memref);
 
+  /// Collect privatize ops of gang- or worker-private stores under \p root.
+  /// Returns Gang if any such store is gang-private, else Worker, else None.
+  PrivateMemScope collectSharedPrivateStores(
+      Operation *root, llvm::SmallPtrSetImpl<Operation *> &storePrivatizes);
+
+  /// True when \p memref is backed by one of \p storePrivatizes at \p
+  /// storeScope.
+  bool isMatchingPrivateMemref(
+      Value memref, PrivateMemScope storeScope,
+      const llvm::SmallPtrSetImpl<Operation *> &storePrivatizes);
+
   /// Whether a predicate region needs a barrier before stores that will be read
   /// by a later parallel loop over the same private memory.
   PrivateMemScope needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp);
+
+  /// Whether \p loopOp needs a barrier at the top of its body because a
+  /// gang-private slot it writes is reused by the next iteration.
+  bool needsInLoopReuseBarrier(Operation *loopOp);
 
   /// Emit `gpu.all_reduce` for a reduction partial.
   void createGPUAllReduceOp(Location loc, Value input, Value memref,
@@ -697,6 +736,7 @@ private:
   acc::DefaultACCToGPUMappingPolicy defaultPolicy;
   SharedMemoryBudget sharedMemBudget;
   SmallVector<std::string> sharedMemPrivateVarNames;
+  SmallVector<std::string> threadPrivateVarNames;
   llvm::SmallVector<Operation *, 4> deferredBarrierSeqLoops;
 
   Value getThreadId(Location loc, gpu::Dimension dim) {
@@ -859,6 +899,16 @@ ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
 
 bool ACCCGToGPULowering::tryAllocateSharedMemory(int64_t bytes) {
   return sharedMemBudget.tryAllocate(bytes);
+}
+
+void ACCCGToGPULowering::recordThreadPrivate(acc::PrivateLocalOp privateLocal) {
+  std::string varName = accSupport.getVariableName(privateLocal.getResult());
+  // A name that could not be recovered, or a compiler temp are skipped.
+  if (varName.empty())
+    return;
+  // The same variable reaches this point once per acc.private_local it has.
+  if (!llvm::is_contained(threadPrivateVarNames, varName))
+    threadPrivateVarNames.push_back(varName);
 }
 
 FailureOr<arith::AtomicRMWKind>
@@ -1246,6 +1296,14 @@ LogicalResult ACCCGToGPULowering::rewrite() {
   if (hasFailed)
     return failure();
 
+  if (!threadPrivateVarNames.empty()) {
+    accSupport.emitRemark(computeRegion, [&]() {
+      return (llvm::Twine("Thread-private storage used for ") +
+              llvm::join(threadPrivateVarNames, ","))
+          .str();
+    });
+  }
+
   if (!sharedMemPrivateVarNames.empty()) {
     accSupport.emitRemark(computeRegion, [&]() {
       return (llvm::Twine("GPU shared memory used for ") +
@@ -1468,9 +1526,10 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   }
 
   // The active set is precomputed separately from the ownership par_dims for
-  // privatizations; prefer that attribute when present. The inactive dims are
+  // privatizations, and a predicate region may likewise state which dims run
+  // it unpredicated; prefer that attribute when present. The inactive dims are
   // the launch dims which are not active.
-  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp>(op)) {
+  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp, acc::PredicateRegionOp>(op)) {
     if (mlir::acc::ActiveParDimsAttr precomputedActiveParDims =
             getActiveParDimsAttr(op)) {
       mlir::acc::GPUParallelDimAttr lowestParDim =
@@ -2162,6 +2221,31 @@ acc::PrivatizeOp ACCCGToGPULowering::getPrivatizeForMemref(Value memref) {
   return acc::PrivatizeOp();
 }
 
+PrivateMemScope ACCCGToGPULowering::collectSharedPrivateStores(
+    Operation *root, llvm::SmallPtrSetImpl<Operation *> &storePrivatizes) {
+  PrivateMemScope storeScope = PrivateMemScope::None;
+  root->walk([&](memref::StoreOp storeOp) {
+    PrivateMemScope scope = getPrivateScopeForMemref(storeOp.getMemref());
+    if (scope != PrivateMemScope::Gang && scope != PrivateMemScope::Worker)
+      return;
+    if (acc::PrivatizeOp privatize = getPrivatizeForMemref(storeOp.getMemref()))
+      storePrivatizes.insert(privatize.getOperation());
+    // Prefer gang: a workgroup-shared slot is the stronger reuse hazard.
+    if (storeScope == PrivateMemScope::None || scope == PrivateMemScope::Gang)
+      storeScope = scope;
+  });
+  return storeScope;
+}
+
+bool ACCCGToGPULowering::isMatchingPrivateMemref(
+    Value memref, PrivateMemScope storeScope,
+    const llvm::SmallPtrSetImpl<Operation *> &storePrivatizes) {
+  if (getPrivateScopeForMemref(memref) != storeScope)
+    return false;
+  acc::PrivatizeOp usePrivatize = getPrivatizeForMemref(memref);
+  return usePrivatize && storePrivatizes.contains(usePrivatize.getOperation());
+}
+
 PrivateMemScope
 ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
 
@@ -2173,18 +2257,9 @@ ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
 
   // Check if any op in the predicate region stores to gang- or worker-private
   // memory. If not, no barrier is needed.
-  PrivateMemScope storeScope = PrivateMemScope::None;
   llvm::SmallPtrSet<Operation *, 4> storePrivatizes;
-  interOp.getRegion().walk([&](memref::StoreOp storeOp) {
-    PrivateMemScope scope = getPrivateScopeForMemref(storeOp.getMemref());
-    if (scope != PrivateMemScope::Gang && scope != PrivateMemScope::Worker)
-      return WalkResult::advance();
-    if (auto privatize = getPrivatizeForMemref(storeOp.getMemref()))
-      storePrivatizes.insert(privatize.getOperation());
-    if (storeScope == PrivateMemScope::None)
-      storeScope = scope;
-    return WalkResult::advance();
-  });
+  PrivateMemScope storeScope =
+      collectSharedPrivateStores(interOp, storePrivatizes);
   if (storeScope == PrivateMemScope::None || storePrivatizes.empty())
     return PrivateMemScope::None;
 
@@ -2203,12 +2278,7 @@ ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
     else
       return WalkResult::advance();
 
-    PrivateMemScope scope = getPrivateScopeForMemref(memref);
-    if (scope != storeScope)
-      return WalkResult::advance();
-
-    acc::PrivatizeOp usePrivatize = getPrivatizeForMemref(memref);
-    if (!usePrivatize || !storePrivatizes.contains(usePrivatize.getOperation()))
+    if (!isMatchingPrivateMemref(memref, storeScope, storePrivatizes))
       return WalkResult::advance();
 
     bool insideNestedParallel = false;
@@ -2237,6 +2307,77 @@ ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
     return PrivateMemScope::None;
 
   return storeScope;
+}
+
+bool ACCCGToGPULowering::needsInLoopReuseBarrier(Operation *loopOp) {
+  // A sequential scf.parallel is the remainder of a partitioned gang loop: the
+  // gang iterations this workgroup still runs as a grid stride. Its scalar
+  // stores stay predicated and already reconverge between iterations, so the
+  // reuse hole is the nested scf.for coming from `acc loop seq`.
+  if (scf::ParallelOp par = dyn_cast<scf::ParallelOp>(loopOp))
+    return false;
+
+  // The hazard needs a worker- or vector-level routine call in the body: every
+  // workgroup thread reaches such a call and the callee synchronizes
+  // internally, so threads leave it in no particular order and can then be
+  // running different iterations of this loop at the same time.
+  if (!hasThreadLevelRoutineCall)
+    return false;
+  bool callsThreadLevelRoutine = false;
+  loopOp->walk([&](CallOpInterface callOp) -> WalkResult {
+    if (mlir::acc::GPUParallelDimAttr parDim =
+            getAccRoutineCallParDim(callOp, defaultPolicy)) {
+      if (parDim.isThreadX() || parDim.isThreadY()) {
+        callsThreadLevelRoutine = true;
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+  if (!callsThreadLevelRoutine)
+    return false;
+
+  // Only gang-level privatizations are a single copy shared by the whole
+  // workgroup and reused by every iteration; worker- and thread-private copies
+  // cannot be clobbered by another thread.
+  llvm::SmallPtrSet<Operation *, 4> storedPrivatizes;
+  if (collectSharedPrivateStores(loopOp, storedPrivatizes) !=
+          PrivateMemScope::Gang ||
+      storedPrivatizes.empty())
+    return false;
+
+  // Storing alone is harmless: the next iteration only clobbers a value someone
+  // still needs when the slot is read back in the body, either directly or by a
+  // callee it is handed to.
+  bool reusesGangPrivate = false;
+  loopOp->walk([&](Operation *op) -> WalkResult {
+    if (memref::LoadOp loadOp = dyn_cast<memref::LoadOp>(op))
+      reusesGangPrivate = isMatchingPrivateMemref(
+          loadOp.getMemref(), PrivateMemScope::Gang, storedPrivatizes);
+    else if (CallOpInterface callOp = dyn_cast<CallOpInterface>(op))
+      reusesGangPrivate = llvm::any_of(callOp.getArgOperands(), [&](Value arg) {
+        return isMatchingPrivateMemref(arg, PrivateMemScope::Gang,
+                                       storedPrivatizes);
+      });
+    return reusesGangPrivate ? WalkResult::interrupt() : WalkResult::advance();
+  });
+  if (!reusesGangPrivate)
+    return false;
+
+  // A barrier inside the body is only safe when the whole workgroup runs every
+  // iteration, so bail out under any thread-level worksharing loop, whose trip
+  // count varies per thread.
+  for (Operation *p = loopOp->getParentOp();
+       p && p != computeRegion.getOperation(); p = p->getParentOp()) {
+    scf::ParallelOp par = dyn_cast<scf::ParallelOp>(p);
+    if (!par)
+      continue;
+    if (mlir::acc::GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(par))
+      for (mlir::acc::GPUParallelDimAttr d : parDims.getArray())
+        if (d.isThreadX() || d.isThreadY())
+          return false;
+  }
+  return true;
 }
 
 void ACCCGToGPULowering::processPredicateRegion(
@@ -2320,10 +2461,8 @@ void ACCCGToGPULowering::processPredicateRegion(
           bool predicatesThreadX = llvm::any_of(
               parDimsPair.second,
               [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
-          if (predicatesThreadX) {
-            createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
-                                   interOp->getContext(), parDimsPair.second));
-          }
+          if (predicatesThreadX)
+            createPerRowBarrier(loc);
         }
         // For acc routine ThreadY routines, skip barrier
       } else if (!parDimsPair.first.empty()) {
@@ -2541,6 +2680,26 @@ void ACCCGToGPULowering::processPredicateRegion(
 //
 // clang-format on
 
+Value ACCCGToGPULowering::allocatePrivatizeHeapStorage(
+    acc::PrivatizeOp privatize, MemRefType baseTy,
+    ValueRange mappedDynamicSizes) {
+  Location loc = privatize.getLoc();
+  Value mem =
+      memref::AllocOp::create(rewriter, loc, baseTy, mappedDynamicSizes);
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block *allocBlock = mem.getDefiningOp()->getBlock();
+  if (allocBlock->mightHaveTerminator()) {
+    rewriter.setInsertionPoint(allocBlock->getTerminator());
+    memref::DeallocOp::create(rewriter, loc, mem);
+  }
+  mapping.map(privatize.getResult(), mem);
+  // Ops inside the kernel are rewritten from scratch. If privatize is
+  // outside the kernel, it must be replaced with the allocated storage.
+  if (!privatize->getParentOfType<acc::ComputeRegionOp>())
+    rewriter.replaceOp(privatize, mem);
+  return mem;
+}
+
 Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   LLVM_DEBUG(llvm::dbgs() << "processing privatize: ";
              privatize->print(llvm::dbgs()); llvm::dbgs() << "\n");
@@ -2554,6 +2713,8 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   }
   Operation *privatizeUser = getOnlyUser(tracked);
   assert(privatizeUser && "expected PrivateLocalOp user for privatize");
+  acc::PrivateLocalOp privateLocalUser =
+      dyn_cast<acc::PrivateLocalOp>(privatizeUser);
 
   std::pair<SmallVector<mlir::acc::GPUParallelDimAttr>,
             SmallVector<mlir::acc::GPUParallelDimAttr>>
@@ -2578,13 +2739,16 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
     return privatize.getResult();
   }
 
-  for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
-    if (parDim.isThreadX() &&
-        canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
-      auto alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
-      mapping.map(privatize.getResult(), alloca.getResult());
-      return alloca.getResult();
-    }
+  bool threadXActive =
+      llvm::any_of(parDimsPair.first, [](mlir::acc::GPUParallelDimAttr parDim) {
+        return parDim.isThreadX();
+      });
+  if (threadXActive &&
+      canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
+    auto alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+    recordThreadPrivate(privateLocalUser);
+    mapping.map(privatize.getResult(), alloca.getResult());
+    return alloca.getResult();
   }
 
   if (!gpuFuncOp)
@@ -2641,24 +2805,20 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
       // Static sizes: use alloca (stack allocation)
       auto alloca =
           memref::AllocaOp::create(rewriter, privatize->getLoc(), baseTy);
+      recordThreadPrivate(privateLocalUser);
       mapping.map(privatize.getResult(), alloca.getResult());
       return alloca.getResult();
     }
     // Dynamic sizes: use alloc (heap allocation) with dealloc
-    auto alloc = memref::AllocOp::create(rewriter, privatize->getLoc(), baseTy,
-                                         mappedDynamicSizes);
+    return allocatePrivatizeHeapStorage(privatize, baseTy, mappedDynamicSizes);
+  }
 
-    // Insert dealloc (free) before the function return
-    OpBuilder::InsertPoint currentInsertPoint = rewriter.saveInsertionPoint();
-    Block &parentBlock = *alloc->getBlock();
-    if (parentBlock.mightHaveTerminator()) {
-      rewriter.setInsertionPoint(parentBlock.getTerminator());
-      memref::DeallocOp::create(rewriter, privatize->getLoc(), alloc);
-    }
-    rewriter.restoreInsertionPoint(currentInsertPoint);
-
-    mapping.map(privatize.getResult(), alloc.getResult());
-    return alloc.getResult();
+  if (threadXActive) {
+    // Reached only after canUseStackAlloca failed: either the static size is
+    // over the per-thread stack budget, or the shape is dynamic so the size
+    // is unknown. Heap-allocate in both cases so a large runtime extent
+    // cannot overflow the stack. Each lane still owns its own copy.
+    return allocatePrivatizeHeapStorage(privatize, baseTy, mappedDynamicSizes);
   }
 
   // Predication - when threadYIsActive, don't predicate on ThreadY dimension
@@ -2755,11 +2915,11 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   Value load;
   if (threadYIsActive) {
     Value threadYId = getThreadId(loc, gpu::Dimension::y);
-    load = memref::LoadOp::create(rewriter, privatize->getLoc(), baseTy, alloca,
+    load = memref::LoadOp::create(rewriter, privatize->getLoc(), alloca,
                                   ValueRange{threadYId});
   } else {
-    load =
-        memref::LoadOp::create(rewriter, privatize->getLoc(), baseTy, alloca);
+    load = memref::LoadOp::create(rewriter, privatize->getLoc(), alloca,
+                                  ValueRange{});
   }
   rewriter.setInsertionPointAfter(load.getDefiningOp());
   mapping.map(privatize.getResult(), load);
@@ -2832,6 +2992,7 @@ void ACCCGToGPULowering::processPrivateLocal(
          (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+      recordThreadPrivate(privateLocal);
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -2922,6 +3083,7 @@ void ACCCGToGPULowering::processPrivateLocal(
          (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+      recordThreadPrivate(privateLocal);
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -3048,6 +3210,14 @@ void ACCCGToGPULowering::processSeqLoop(LoopOp loopOp) {
   Block::BlockArgListType blockArgs = loopOp.getBody()->getArguments();
   assert(blockArgs.size() && "expected block arguments for loop");
   mapping.map(blockArgs, newLoop.getBody()->getArguments());
+
+  // A gang-private slot written here is one copy per workgroup, reused by every
+  // iteration, and a thread that has already started the next iteration would
+  // overwrite the value another thread has not read yet. Separate the
+  // iterations with a barrier at the top of the body.
+  if (needsInLoopReuseBarrier(loopOp.getOperation()) &&
+      !isInsideConditional(rewriter.getInsertionBlock()))
+    emitGPUBarrierWorkgroup(rewriter, loopOp->getLoc());
 
   for (auto &bodyOp : loopOp.getBody()->getOperations()) {
     if (preProcessedPrivateLocals.contains(&bodyOp))
@@ -3927,7 +4097,8 @@ void ACCCGToGPULowering::processReductionCombineOp(acc::ReductionCombineOp op) {
       // by the parent predicate_region processing.
       // Reloading a grid-shared slot races with other blocks; record
       // it and replace with the block-reduced register value in the fixup.
-      auto srcLoad = memref::LoadOp::create(rewriter, loc, srcMemref);
+      auto srcLoad =
+          memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
       pendingCombineReloads.push_back({srcMemref, srcLoad});
       constructAtomicAccumulation(loc, destMemref, /*indices=*/{}, srcLoad,
                                   kind);
@@ -3972,7 +4143,8 @@ void ACCCGToGPULowering::processCombineRegionOp(
             return;
           Value srcMemref = mapping.lookupOrDefault(accumulateOp.getMemref());
           // Recorded and patched in the fixup to avoid the reload race.
-          auto reductionLoad = memref::LoadOp::create(rewriter, loc, srcMemref);
+          auto reductionLoad =
+              memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
           pendingCombineReloads.push_back({srcMemref, reductionLoad});
           constructAtomicAccumulation(loc,
                                       mapping.lookupOrDefault(op.getDestVar()),
@@ -3988,7 +4160,7 @@ void ACCCGToGPULowering::processCombineRegionOp(
       if (isa<ComplexType>(memrefTy.getElementType())) {
         Location loc = op.getLoc();
         Value reductionResult =
-            memref::LoadOp::create(rewriter, loc, privateMemref);
+            memref::LoadOp::create(rewriter, loc, privateMemref, ValueRange{});
         arith::AtomicRMWKind kind = arith::AtomicRMWKind::addf;
         op.getRegion().walk([&](Operation *innerOp) {
           if (isa<complex::MulOp>(innerOp))

@@ -70,6 +70,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
@@ -103,7 +104,7 @@ using namespace llvm;
 static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-irtranslator",
                             cl::desc("Should enable CSE in irtranslator"),
-                            cl::Optional, cl::init(false));
+                            cl::init(false));
 
 namespace llvm {
 
@@ -129,19 +130,25 @@ class IRTranslatorImpl {
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
     VRegListT *getVRegs(const Value &V) {
-      auto It = ValToVRegs.find(&V);
-      if (It != ValToVRegs.end())
+      auto [It, Inserted] = ValToVRegs.try_emplace(&V);
+      if (!Inserted)
         return It->second;
 
-      return insertVRegs(V);
+      // We placement new using our fast allocator since we never try to free
+      // the vectors until translation is finished.
+      It->second = new (VRegAlloc.Allocate()) VRegListT();
+      return It->second;
     }
 
     OffsetListT *getOffsets(const Value &V) {
-      auto It = TypeToOffsets.find(V.getType());
-      if (It != TypeToOffsets.end())
+      assert(V.getType()->isAggregateType() &&
+             "Offsets are for aggregate values");
+      auto [It, Inserted] = TypeToOffsets.try_emplace(V.getType());
+      if (!Inserted)
         return It->second;
 
-      return insertOffsets(V);
+      It->second = new (OffsetAlloc.Allocate()) OffsetListT();
+      return It->second;
     }
 
     const_vreg_iterator findVRegs(const Value &V) const {
@@ -149,6 +156,8 @@ class IRTranslatorImpl {
     }
 
     bool contains(const Value &V) const { return ValToVRegs.contains(&V); }
+
+    void reserveVRegs(unsigned NumValues) { ValToVRegs.reserve(NumValues); }
 
     void reset() {
       ValToVRegs.clear();
@@ -158,23 +167,6 @@ class IRTranslatorImpl {
     }
 
   private:
-    VRegListT *insertVRegs(const Value &V) {
-      assert(!ValToVRegs.contains(&V) && "Value already exists");
-
-      // We placement new using our fast allocator since we never try to free
-      // the vectors until translation is finished.
-      auto *VRegList = new (VRegAlloc.Allocate()) VRegListT();
-      ValToVRegs[&V] = VRegList;
-      return VRegList;
-    }
-
-    OffsetListT *insertOffsets(const Value &V) {
-      assert(!TypeToOffsets.contains(V.getType()) && "Type already exists");
-
-      auto *OffsetList = new (OffsetAlloc.Allocate()) OffsetListT();
-      TypeToOffsets[V.getType()] = OffsetList;
-      return OffsetList;
-    }
     SpecificBumpPtrAllocator<VRegListT> VRegAlloc;
     SpecificBumpPtrAllocator<OffsetListT> OffsetAlloc;
 
@@ -611,6 +603,9 @@ class IRTranslatorImpl {
   bool translateFence(const User &U, MachineIRBuilder &MIRBuilder);
   bool translateFreeze(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateBitExtract(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateBitInsert(const User &U, MachineIRBuilder &MIRBuilder);
+
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
   bool translateResume(const User &U, MachineIRBuilder &MIRBuilder) {
@@ -774,14 +769,11 @@ class IRTranslatorImpl {
 
     auto Reg = MRI->createGenericVirtualRegister(LLT::token());
     Regs.push_back(Reg);
-    auto &Offsets = *VMap.getOffsets(Token);
-    if (Offsets.empty())
-      Offsets.push_back(0);
     return Reg;
   }
 
-  /// Allocate some vregs and offsets in the VMap. Then populate just the
-  /// offsets while leaving the vregs empty.
+  /// Allocate empty vregs for \p Val. For aggregate values, also populate
+  /// their offsets.
   ValueToVRegInfo::VRegListT &allocateVRegs(const Value &Val);
 
   /// Get the frame index that represents \p Val.
@@ -950,6 +942,11 @@ IRTranslatorImpl::allocateVRegs(const Value &Val) {
   if (VRegsIt != VMap.vregs_end())
     return *VRegsIt->second;
   auto *Regs = VMap.getVRegs(Val);
+  if (!Val.getType()->isAggregateType()) {
+    Regs->push_back(0);
+    return *Regs;
+  }
+
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
@@ -969,7 +966,6 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
 
   // Create entry for this type.
   auto *VRegs = VMap.getVRegs(Val);
-  auto *Offsets = VMap.getOffsets(Val);
 
   if (!Val.getType()->isTokenTy())
     assert(Val.getType()->isSized() &&
@@ -978,8 +974,6 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   // Fast-path values that lower to a single vreg.
   if (!Val.getType()->isAggregateType()) {
     LLT Ty = getLLTForType(*Val.getType(), *DL);
-    if (Offsets->empty())
-      Offsets->push_back(0);
     VRegs->push_back(MRI->createGenericVirtualRegister(Ty));
     if (isa<Constant>(Val)) {
       bool Success = translate(cast<Constant>(Val), VRegs->front());
@@ -995,6 +989,7 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   }
 
   SmallVector<LLT, 4> SplitTys;
+  auto *Offsets = VMap.getOffsets(Val);
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
 
@@ -2330,7 +2325,6 @@ bool IRTranslatorImpl::translateCopy(const User &U, Register Src,
   auto &Regs = *VMap.getVRegs(U);
   if (Regs.empty()) {
     Regs.push_back(Src);
-    VMap.getOffsets(U)->push_back(0);
   } else {
     // If we already assigned a vreg for this instruction, we can't change that.
     // Emit a copy to satisfy the users we already emitted.
@@ -2684,8 +2678,9 @@ void IRTranslatorImpl::getStackGuard(Register DstReg,
     return;
   }
 
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  MRI->setRegClass(DstReg, TRI->getPointerRegClass());
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+  MRI->setRegClass(DstReg,
+                   TII.getRegClass(TII.get(TargetOpcode::LOAD_STACK_GUARD), 0));
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
 
@@ -2750,6 +2745,10 @@ unsigned IRTranslatorImpl::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FCOSH;
     case Intrinsic::ctpop:
       return TargetOpcode::G_CTPOP;
+    case Intrinsic::smulh:
+      return TargetOpcode::G_SMULH;
+    case Intrinsic::umulh:
+      return TargetOpcode::G_UMULH;
     case Intrinsic::exp:
       return TargetOpcode::G_FEXP;
     case Intrinsic::exp2:
@@ -3163,13 +3162,11 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::udiv_fix_sat:
     return translateFixedPointIntrinsic(TargetOpcode::G_UDIVFIXSAT, CI, MIRBuilder);
   case Intrinsic::fmuladd: {
-    const TargetMachine &TM = MF->getTarget();
     Register Dst = getOrCreateVReg(CI);
     Register Op0 = getOrCreateVReg(*CI.getArgOperand(0));
     Register Op1 = getOrCreateVReg(*CI.getArgOperand(1));
     Register Op2 = getOrCreateVReg(*CI.getArgOperand(2));
-    if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
-        TLI->isFMAFasterThanFMulAndFAdd(*MF,
+    if (TLI->isFMAFasterThanFMulAndFAdd(*MF,
                                         TLI->getValueType(*DL, CI.getType()))) {
       // TODO: Revisit this to see if we should move this part of the
       // lowering to the combiner.
@@ -3293,7 +3290,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::threadlocal_address: {
     // Drop the intrinsic, but forward the value.
     MIRBuilder.buildCopy(getOrCreateVReg(CI),
@@ -3484,6 +3480,24 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     MIRBuilder.buildPrefetch(getOrCreateVReg(*Addr), RW, Locality, CacheType,
                              MMO);
 
+    return true;
+  }
+
+  case Intrinsic::speculative_load: {
+    // Only the pointer operand is needed at codegen; the remaining arguments
+    // carry IR-level semantics only.
+    const Value *Ptr = CI.getArgOperand(0);
+    Register Dst = getOrCreateVReg(CI);
+    MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
+    Flags |= TLI->getTargetMMOFlags(CI);
+    if (CI.hasMetadata(LLVMContext::MD_nontemporal))
+      Flags |= MachineMemOperand::MONonTemporal;
+    if (CI.hasMetadata(LLVMContext::MD_invariant_load))
+      Flags |= MachineMemOperand::MOInvariant;
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(Ptr), Flags, MRI->getType(Dst),
+        CI.getParamAlign(0).valueOrOne(), MMOMetadata(CI.getAAMetadata()));
+    MIRBuilder.buildLoad(Dst, getOrCreateVReg(*Ptr), *MMO);
     return true;
   }
 
@@ -3952,10 +3966,10 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
   const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
-  if (TLI->getExceptionPointerRegister(
-          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
-      TLI->getExceptionSelectorRegister(
-          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
+  if (TLI->getExceptionPointerRegister(FuncInfo.ExceptionModel,
+                                       PersonalityFn) == 0 &&
+      TLI->getExceptionSelectorRegister(FuncInfo.ExceptionModel,
+                                        PersonalityFn) == 0)
     return true;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -3986,8 +4000,8 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
-  Register ExceptionReg = TLI->getExceptionPointerRegister(
-      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
+  Register ExceptionReg =
+      TLI->getExceptionPointerRegister(FuncInfo.ExceptionModel, PersonalityFn);
   if (!ExceptionReg)
     return false;
 
@@ -3995,8 +4009,8 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   ArrayRef<Register> ResRegs = getOrCreateVRegs(LP);
   MIRBuilder.buildCopy(ResRegs[0], ExceptionReg);
 
-  Register SelectorReg = TLI->getExceptionSelectorRegister(
-      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
+  Register SelectorReg =
+      TLI->getExceptionSelectorRegister(FuncInfo.ExceptionModel, PersonalityFn);
   if (!SelectorReg)
     return false;
 
@@ -4325,6 +4339,106 @@ bool IRTranslatorImpl::translateShuffleVector(const User &U,
                   {getOrCreateVReg(*U.getOperand(0)),
                    getOrCreateVReg(*U.getOperand(1))})
       .addShuffleMask(MaskAlloc);
+  return true;
+}
+
+bool IRTranslatorImpl::translateBitInsert(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  Register Res = getOrCreateVReg(U);
+  Register Base = getOrCreateVReg(*U.getOperand(0));
+  Register Val = getOrCreateVReg(*U.getOperand(1));
+  Register Offset = getOrCreateVReg(*U.getOperand(2));
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT BaseTy = MRI.getType(Base);
+  LLT ValTy = MRI.getType(Val);
+
+  assert(BaseTy.getSizeInBits() >= ValTy.getSizeInBits() &&
+         "bitinsert val wider than base should be rejected by verifier");
+
+  // If Val is a floating-point type, bitcast it to an integer of the same
+  // size so buildZExtOrTrunc can safely extend or truncate it.
+  if (ValTy.isFloat()) {
+    ValTy = LLT::scalar(ValTy.getSizeInBits());
+    Val = MIRBuilder.buildBitcast(ValTy, Val).getReg(0);
+  } else if (ValTy.isPointer()) {
+    ValTy = LLT::scalar(ValTy.getSizeInBits());
+    Val = MIRBuilder.buildPtrToInt(ValTy, Val).getReg(0);
+  }
+
+  // Convert Offset to the target's preferred shift amount type.
+  LLT ShiftAmtTy = TLI->getPreferredShiftAmountTy(BaseTy);
+  Register LegalOffset =
+      MIRBuilder.buildZExtOrTrunc(ShiftAmtTy, Offset).getReg(0);
+
+  // Truncate or extend Val to BaseTy so only the inserted bit range remains.
+  Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
+
+  unsigned BaseBitWidth = BaseTy.getSizeInBits();
+  unsigned ValBitWidth = ValTy.getSizeInBits();
+  APInt InsertMask = APInt::getLowBitsSet(BaseBitWidth, ValBitWidth);
+  Register MaskConst = MIRBuilder.buildConstant(BaseTy, InsertMask).getReg(0);
+  Register ShiftedMask =
+      MIRBuilder.buildShl(BaseTy, MaskConst, LegalOffset).getReg(0);
+  Register ClearMask = MIRBuilder.buildNot(BaseTy, ShiftedMask).getReg(0);
+  Register ClearedBase = MIRBuilder.buildAnd(BaseTy, Base, ClearMask).getReg(0);
+  Register ShiftedVal =
+      MIRBuilder.buildShl(BaseTy, ExtVal, LegalOffset).getReg(0);
+  MIRBuilder.buildOr(Res, ClearedBase, ShiftedVal);
+  return true;
+}
+
+bool IRTranslatorImpl::translateBitExtract(const User &U,
+                                           MachineIRBuilder &MIRBuilder) {
+  Register Res = getOrCreateVReg(U);
+  Register Src = getOrCreateVReg(*U.getOperand(0));
+  Register Offset = getOrCreateVReg(*U.getOperand(1));
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT SrcTy = MRI.getType(Src);
+  LLT ResTy = MRI.getType(Res);
+
+  assert(ResTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
+         "bitextract result wider than source should be rejected by verifier");
+
+  // Convert Offset to the target's preferred shift amount type.
+  LLT ShiftAmtTy = TLI->getPreferredShiftAmountTy(SrcTy);
+  Register LegalOffset =
+      MIRBuilder.buildZExtOrTrunc(ShiftAmtTy, Offset).getReg(0);
+
+  // Shift right by Offset to bring the target field down to bit 0.
+  Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
+
+  if (ResTy.isFloat()) {
+    // Drop into the integer domain to safely handle the size conversion
+    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
+
+    if (SrcTy == IntResTy)
+      MIRBuilder.buildCopy(IntRes, Shifted);
+    else
+      MIRBuilder.buildTrunc(IntRes, Shifted);
+
+    // Bitcast the raw integer bits back into the requested floating-point
+    // register
+    MIRBuilder.buildBitcast(Res, IntRes);
+  } else if (ResTy.isPointer()) {
+    // Drop into the integer domain to safely handle the size conversion
+    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
+
+    if (SrcTy == IntResTy)
+      MIRBuilder.buildCopy(IntRes, Shifted);
+    else
+      MIRBuilder.buildTrunc(IntRes, Shifted);
+
+    MIRBuilder.buildIntToPtr(Res, IntRes);
+  } else {
+    // Normal integer path
+    if (SrcTy == ResTy)
+      MIRBuilder.buildCopy(Res, Shifted);
+    else
+      MIRBuilder.buildTrunc(Res, Shifted);
+  }
+
   return true;
 }
 
@@ -5043,6 +5157,10 @@ bool IRTranslatorImpl::runOnMachineFunction(
   const TargetMachine &TM = MF->getTarget();
   EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
   FuncInfo.MF = MF;
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
+  if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
+    FuncInfo.ExceptionModel = TM.getExceptionModel();
   if (EnableOpts) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();
@@ -5087,10 +5205,14 @@ bool IRTranslatorImpl::runOnMachineFunction(
 
   bool IsVarArg = F.isVarArg();
   bool HasMustTailInVarArgFn = false;
+  // Use arguments and instructions to estimate the number of mapped values and
+  // virtual registers.
+  unsigned NumValues = F.arg_size();
 
   // Create all blocks, in IR order, to preserve the layout.
   FuncInfo.MBBMap.resize(F.getMaxBlockNumber());
   for (const BasicBlock &BB: F) {
+    NumValues += BB.size();
     auto *&MBB = FuncInfo.MBBMap[BB.getNumber()];
 
     MBB = MF->CreateMachineBasicBlock(&BB);
@@ -5108,6 +5230,9 @@ bool IRTranslatorImpl::runOnMachineFunction(
     if (!HasMustTailInVarArgFn)
       HasMustTailInVarArgFn = checkForMustTailInVarArgFn(IsVarArg, BB);
   }
+
+  VMap.reserveVRegs(NumValues);
+  MRI->reserveVirtRegs(NumValues);
 
   MF->getFrameInfo().setHasMustTailInVarArgFunc(HasMustTailInVarArgFn);
 
@@ -5277,7 +5402,8 @@ PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
   const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
   Function &F = MF.getFunction();
 
-  bool ShouldSkipOpts = MF.getFunction().hasOptNone();
+  bool ShouldSkipOpts = MF.getFunction().hasOptNone() ||
+                        shouldSkipOptimizationForOptBisect(MF.getFunction());
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &MAMProxy =

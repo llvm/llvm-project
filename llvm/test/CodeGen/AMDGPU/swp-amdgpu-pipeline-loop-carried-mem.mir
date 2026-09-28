@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=pipeliner -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes=pipeliner -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 # A loop that loads a[i] and stores a[i+1] must get a loop-carried memory dependence
 # between the load and the store, so they are not reordered across iterations.

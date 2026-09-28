@@ -2339,7 +2339,7 @@ func.func @omp_task_depend_iterated_no_vars(%data_var: memref<i32>) {
   // expected-error @below {{op unexpected depend iterated values}}
     "omp.task"() ({
       "omp.terminator"() : () -> ()
-    }) {depend_iterated_kinds = [#omp<clause_task_depend(taskdependin)>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
+    }) {depend_iterated_kinds = [#omp.clause_task_depend<taskdependin>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
    "func.return"() : () -> ()
 }
 
@@ -3277,7 +3277,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {kernel_type = #omp<kernel_type(generic)>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {kernel_type = #omp.kernel_type<generic>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -3523,6 +3523,79 @@ func.func @omp_parallel_allocate_type_mismatch(
   // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
   omp.parallel allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
       private(@allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected an allocate private index for each allocate variable}}
+  omp.scope allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@scope_allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{allocate private index is out of range}}
+  omp.scope allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_private_indices([1])
+      private(@scope_allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_x_private : i32
+omp.private {type = private} @scope_y_private : i32
+
+func.func @omp_scope_allocate_map_duplicate(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate private index refers to a private variable more than once}}
+  omp.scope allocate(%allocator : i64 -> %x : !llvm.ptr,
+                     %allocator : i64 -> %y : !llvm.ptr) allocate_private_indices([0, 0])
+      private(@scope_x_private %x -> %x_private,
+              @scope_y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_type_mismatch(
+    %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
+  // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
+  omp.scope allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
+      private(@scope_allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_x_private : i32
+omp.private {type = private} @scope_y_private : i32
+
+func.func @omp_scope_allocate_wrong_private_slot(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate variable does not match private variable at index 1}}
+  omp.scope allocate(%allocator : i64 -> %x : !llvm.ptr) allocate_private_indices([1])
+      private(@scope_x_private %x -> %x_private,
+              @scope_y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   return
@@ -3923,7 +3996,7 @@ func.func @target_private_count_mismatch(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
   "omp.target"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
                          private_syms = [@x.privatizer, @y.privatizer],
-                         kernel_type = #omp<kernel_type(generic)>}> ({
+                         kernel_type = #omp.kernel_type<generic>}> ({
   ^bb0(%arg1 : !llvm.ptr):
     omp.terminator
   }) : (!llvm.ptr) -> ()
@@ -4774,7 +4847,7 @@ func.func @omp_wsloop_linear_modifiers_mismatch(%lb : index, %ub : index, %step 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+  }) {linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<val>],
       operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
   return
 }
@@ -4788,7 +4861,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+  }) {linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<val>],
       operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
   return
 }
@@ -4797,7 +4870,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
 
 func.func @omp_declare_simd_linear_modifiers_mismatch(%iv : i32, %step : i32) {
   // expected-error @below {{'omp.declare_simd' op expected as many linear modifiers as linear variables}}
-  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(ref)>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
+  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<ref>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
   return
 }
 

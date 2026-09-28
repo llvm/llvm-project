@@ -37,10 +37,6 @@
 #include "RecordReplay.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "omp-tools.h"
-#endif
-
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
@@ -288,7 +284,11 @@ private:
             else if constexpr (std::is_same_v<T, std::monostate>) {
               // Do nothing
             } else
-              static_assert(false, "doPrint visit not exhaustive");
+              // Use a type-dependent condition so the assert only fires when
+              // this branch is actually instantiated. GCC < 13 does not
+              // implement CWG2518 and rejects a non-dependent
+              // static_assert(false) even in a discarded constexpr branch.
+              static_assert(!sizeof(T *), "doPrint visit not exhaustive");
           },
           Value);
       llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
@@ -896,6 +896,14 @@ public:
   }
 };
 
+/// Description of an allocation: owning device, kind, base address and size.
+struct PluginAllocInfoTy {
+  GenericDeviceTy *Device;
+  TargetAllocTy Kind;
+  void *Base;
+  size_t Size;
+};
+
 /// A plugin-side context grouping a set of devices.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
@@ -907,7 +915,7 @@ struct PluginContextTy {
   PluginContextTy(PluginContextTy &&) = delete;
   PluginContextTy &operator=(PluginContextTy &&) = delete;
 
-  virtual ~PluginContextTy() = default;
+  virtual ~PluginContextTy();
 
   /// Release resources owned by this context. Called from olDestroyContext
   /// before the object is destroyed so that errors are propagated instead of
@@ -922,9 +930,63 @@ struct PluginContextTy {
   virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
                                   AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Allocate Size bytes of Kind memory accessible from Device. HostPtr is an
+  /// optional hint (e.g. for pinned-buffer registration); pass nullptr when
+  /// unused.
+  virtual llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                                          void *HostPtr, TargetAllocTy Kind,
+                                          size_t Alignment);
+
+  /// Free a pointer returned by allocate; resolves owner/kind via
+  /// getAllocInfo. Requires a non-empty device set, so this is only valid on
+  /// user-created contexts (not on the per-plugin default context, which
+  /// carries no devices).
+  virtual llvm::Error deallocate(void *Ptr);
+
+  /// Free a pointer when the caller already knows the owning device and kind.
+  virtual llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                                 TargetAllocTy Kind);
+
+  /// Look up the allocation containing Ptr. Returns NOT_FOUND when Ptr is not
+  /// known to this context. Only valid on user-created contexts.
+  virtual llvm::Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) = 0;
+
 protected:
   GenericPluginTy &Plugin;
   llvm::SmallVector<GenericDeviceTy *> Devices;
+
+private:
+  MemoryManagerTy *getDeviceMemoryManagerFor(GenericDeviceTy &Device,
+                                             TargetAllocTy Kind);
+  MemoryManagerTy *getHostMemoryManager();
+
+  llvm::DenseMap<std::pair<GenericDeviceTy *, int>,
+                 std::unique_ptr<MemoryManagerTy>>
+      DeviceMemoryManagers;
+  std::unique_ptr<MemoryManagerTy> HostMemoryManager;
+  std::mutex MemoryManagersMutex;
+};
+
+/// Default plugin context: a device-less placeholder used as the per-plugin
+/// MemoryManager dispatcher for libomptarget. Allocations made through this
+/// context are pooled but not tracked per-pointer, so getAllocInfo is not
+/// supported.
+struct DefaultPluginContextTy : public PluginContextTy {
+  DefaultPluginContextTy(GenericPluginTy &Plugin)
+      : PluginContextTy(Plugin, llvm::ArrayRef<GenericDeviceTy *>{}) {}
+
+  llvm::Expected<PluginAllocInfoTy>
+  getAllocInfo(const void * /*Ptr*/) override {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "getAllocInfo is not supported on the default "
+                         "plugin context");
+  }
+
+  Error initAsyncInfoImpl(GenericDeviceTy & /*Device*/,
+                          AsyncInfoWrapperTy & /*AsyncInfoWrapper*/) override {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "default plugin context cannot initialize async info");
+  }
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin
@@ -960,6 +1022,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the device identifier within the corresponding plugin. Notice that
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
+
+  virtual uint32_t getDriverId() const { return 0; }
 
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
@@ -1300,7 +1364,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return nullptr;
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
   }
 
   virtual Error releaseInterop(omp_interop_val_t *Interop) {
@@ -1400,6 +1465,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
 
+  /// Per device setting of MemoryManager's Threshold
+  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1409,16 +1477,6 @@ private:
   /// Indicate whether or not the device should setup the RPC server. This is
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
-
-  /// Pointer to the device memory manager or nullptr if not available.
-  MemoryManagerTy *MemoryManager;
-  /// Memory managers for the host and shared allocation kinds or nullptr if not
-  /// available.
-  MemoryManagerTy *HostMemoryManager;
-  MemoryManagerTy *SharedMemoryManager;
-
-  /// Per device setting of MemoryManager's Threshold
-  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
 
   virtual Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) {
     return false;
@@ -1451,20 +1509,6 @@ private:
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
-
-  /// Return the memory manager for the given allocation kind.
-  MemoryManagerTy *getMemoryManagerFor(TargetAllocTy Kind) {
-    switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-      return MemoryManager;
-    case TARGET_ALLOC_HOST:
-      return HostMemoryManager;
-    case TARGET_ALLOC_SHARED:
-      return SharedMemoryManager;
-    }
-    return nullptr;
-  }
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -1507,16 +1551,6 @@ protected:
   /// A pointer to an RPC server instance attached to this device if present.
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
-
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
 
   /// The total per-block native shared memory that a kernel may use.
   size_t MaxBlockSharedMemSize = 0;
@@ -1569,12 +1603,6 @@ struct GenericPluginTy {
 
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
-
-  /// Get the plugin-specific device identifier.
-  int32_t getUserId(int32_t DeviceId) const {
-    assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
-    return UserDeviceIds.at(DeviceId);
-  }
 
   /// Get the UID for the host device.
   static constexpr const char *getHostDeviceUid() { return "HOST"; }
@@ -1683,6 +1711,16 @@ struct GenericPluginTy {
   /// Create a plugin-side context grouping the given devices.
   virtual Expected<std::unique_ptr<PluginContextTy>>
   createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
+
+  /// Create the per-plugin default context returned by getDefaultContext.
+  /// The default builds a plain PluginContextTy with no devices, which is
+  /// sufficient for plugins where the default is just a MemoryManager
+  /// dispatcher.
+  virtual Expected<std::unique_ptr<PluginContextTy>>
+  createDefaultPluginContext();
+
+  /// Return the default context that services Device.
+  virtual PluginContextTy &getDefaultContext(GenericDeviceTy &Device);
 
 protected:
   /// Indicate whether a device id is valid.
@@ -1815,9 +1853,6 @@ public:
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
 
-  /// Sets the offset into the devices for use by OMPT.
-  int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
-
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
@@ -1873,9 +1908,6 @@ private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
 
-  /// Map of plugin device identifiers to the user device identifier.
-  llvm::DenseMap<int32_t, int32_t> UserDeviceIds;
-
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
   /// by its device id. A position with nullptr means that the corresponding
@@ -1893,6 +1925,10 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
+
+  /// The default plugin context returned by getDefaultContext, used by
+  /// libomptarget.
+  std::unique_ptr<PluginContextTy> DefaultContext;
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class

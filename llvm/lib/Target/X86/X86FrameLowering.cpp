@@ -123,9 +123,9 @@ bool X86FrameLowering::needsFrameIndexResolution(
 /// allocas or if frame pointer elimination is disabled.
 bool X86FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          TRI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken() || MFI.hasOpaqueSPAdjustment() ||
+  return (MF.disableFramePointerElim() || TRI->hasStackRealignment(MF) ||
+          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+          MFI.hasOpaqueSPAdjustment() ||
           MF.getInfo<X86MachineFunctionInfo>()->getForceFramePointer() ||
           MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall() ||
           MF.callsUnwindInit() || MF.hasEHFunclets() || MF.callsEHReturn() ||
@@ -688,7 +688,39 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   for (MCRegister Reg : GPRsToZero.set_bits())
     TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
-  // Zero out the remaining registers.
+  // Coalesce the aliasing XMM/YMM/ZMM views of each vector register so a lane
+  // is cleared only once, mirroring the GPR handling above.
+  auto getVectorClearReg = [&](MCRegister Reg) -> MCRegister {
+    if (!X86::VR128RegClass.contains(Reg) &&
+        !X86::VR128XRegClass.contains(Reg) &&
+        !X86::VR256RegClass.contains(Reg) &&
+        !X86::VR256XRegClass.contains(Reg) && !X86::VR512RegClass.contains(Reg))
+      return MCRegister();
+
+    // Clearing the XMM zeroes the whole lane. XMM0-15 use the compact VEX form;
+    // XMM16-31 are EVEX-only, reachable only via the ZMM form.
+    MCRegister Xmm = TRI->getSubReg(Reg, X86::sub_xmm);
+    if (!Xmm)
+      Xmm = Reg;
+    if (X86::VR128RegClass.contains(Xmm))
+      return Xmm;
+    MCRegister Zmm =
+        TRI->getMatchingSuperReg(Xmm, X86::sub_xmm, &X86::VR512RegClass);
+    assert(Zmm && "XMM16-31 must have an enclosing ZMM to clear through");
+    return Zmm;
+  };
+
+  BitVector VecRegsToZero(TRI->getNumRegs());
+  for (MCRegister Reg : RegsToZero.set_bits())
+    if (MCRegister Clear = getVectorClearReg(Reg)) {
+      VecRegsToZero.set(Clear.id());
+      RegsToZero.reset(Reg);
+    }
+
+  for (MCRegister Reg : VecRegsToZero.set_bits())
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
+
+  // Zero out the remaining registers (e.g. mask registers).
   for (MCRegister Reg : RegsToZero.set_bits())
     TII.buildClearRegister(Reg, MBB, MBBI, DL);
 }
@@ -1783,9 +1815,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // stack alignment.
   if (Fn.getCallingConv() == CallingConv::X86_INTR && Is64Bit &&
       Fn.arg_size() == 2) {
-    StackSize += 8;
-    MFI.setStackSize(StackSize);
-
     // Update the stack pointer by pushing a register. This is the instruction
     // emitted that would be end up being emitted by a call to `emitSPUpdate`.
     // Hard-coding the update to a push avoids emitting a second

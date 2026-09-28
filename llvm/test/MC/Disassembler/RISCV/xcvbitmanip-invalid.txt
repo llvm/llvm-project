@@ -1,0 +1,17 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+xcvbitmanip < %s 2>&1 | FileCheck %s
+
+[0x5b,0x85,0x05,0xa1]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cv.insert a0, a1, 16, 16
+
+[0x5b,0x85,0xf5,0x83]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cv.insert a0, a1, 1, 31
+
+[0x5b,0x85,0x15,0xbe]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cv.insert a0, a1, 31, 1
+
+[0x5b,0x85,0xf5,0xbf]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cv.insert a0, a1, 31, 31
