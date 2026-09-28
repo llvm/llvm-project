@@ -695,8 +695,8 @@ define i1 @ogt_and5_f32(float %a, float %b, float %c, float %d, float %e, float 
 ; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vcmpltss %xmm0, %xmm3, %xmm3
 ; AVX1-NEXT:    vcmpltss %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vandps %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vandps %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltss %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
@@ -709,9 +709,9 @@ define i1 @ogt_and5_f32(float %a, float %b, float %c, float %d, float %e, float 
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm4, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm3, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm2, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
@@ -752,8 +752,8 @@ define i1 @mixed_and5_f32(float %a, float %b, float %c, float %d, float %e, floa
 ; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vcmpeqss %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vcmpltss %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vandps %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vandps %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltss %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
@@ -766,9 +766,9 @@ define i1 @mixed_and5_f32(float %a, float %b, float %c, float %d, float %e, floa
 ; AVX512-NEXT:    vcmpneqss %xmm4, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpeqss %xmm3, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm2, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
@@ -809,8 +809,8 @@ define i1 @mixed_or5_f64(double %a, double %b, double %c, double %d, double %e, 
 ; AVX1-NEXT:    vorpd %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vcmpeqsd %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vcmpltsd %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vorpd %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vorpd %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vorpd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vorpd %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vorpd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
@@ -823,9 +823,9 @@ define i1 @mixed_or5_f64(double %a, double %b, double %c, double %d, double %e, 
 ; AVX512-NEXT:    vcmpneqsd %xmm4, %xmm0, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpeqsd %xmm3, %xmm0, %k1
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    korw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    korw %k1, %k0, %k0
+; AVX512-NEXT:    korw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm2, %xmm0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
@@ -867,7 +867,7 @@ define i1 @olt_icmp_ole_oge_and_f64(double %w, double %x, double %y, double %z, 
 ; AVX1-NEXT:    vcmplesd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vandpd %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vandpd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    andb %cl, %al
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -881,7 +881,7 @@ define i1 @olt_icmp_ole_oge_and_f64(double %w, double %x, double %y, double %z, 
 ; AVX512-NEXT:    vcmplesd %xmm3, %xmm2, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    andb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -968,8 +968,8 @@ define i1 @mixed_xor5_f32(float %a, float %b, float %c, float %d, float %e, floa
 ; AVX1-NEXT:    vxorps %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vcmpeqss %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vcmpltss %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vxorps %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vxorps %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vxorps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vxorps %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltss %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
@@ -982,9 +982,9 @@ define i1 @mixed_xor5_f32(float %a, float %b, float %c, float %d, float %e, floa
 ; AVX512-NEXT:    vcmpneqss %xmm4, %xmm0, %k1
 ; AVX512-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpeqss %xmm3, %xmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k0
+; AVX512-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm0, %xmm1, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k0
+; AVX512-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltss %xmm2, %xmm0, %k1
 ; AVX512-NEXT:    kxorw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
@@ -1049,7 +1049,7 @@ define i1 @olt_and10_f64(double %a, double %b0, double %b1, double %b2, double %
 ; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vandpd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vandpd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vandpd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm1, %ecx
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX1-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm1
@@ -1059,12 +1059,12 @@ define i1 @olt_and10_f64(double %a, double %b0, double %b1, double %b2, double %
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX1-NEXT:    vcmpltpd %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vcmpltsd %xmm7, %xmm0, %xmm3
-; AVX1-NEXT:    vandpd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vandpd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vandpd %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm6, %xmm0, %xmm2
 ; AVX1-NEXT:    vcmpltsd %xmm5, %xmm0, %xmm0
-; AVX1-NEXT:    vandpd %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vandpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vandpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    andl %ecx, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -1076,7 +1076,7 @@ define i1 @olt_and10_f64(double %a, double %b0, double %b1, double %b2, double %
 ; AVX512-NEXT:    vcmpltsd %xmm3, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm2, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %ecx
@@ -1085,12 +1085,12 @@ define i1 @olt_and10_f64(double %a, double %b0, double %b1, double %b2, double %
 ; AVX512-NEXT:    vcmpltsd {{[0-9]+}}(%rsp), %xmm0, %k2
 ; AVX512-NEXT:    kandw %k1, %k2, %k1
 ; AVX512-NEXT:    vcmpltsd {{[0-9]+}}(%rsp), %xmm0, %k2
-; AVX512-NEXT:    kandw %k2, %k1, %k1
-; AVX512-NEXT:    kandw %k0, %k1, %k0
+; AVX512-NEXT:    kandw %k1, %k2, %k1
+; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm6, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm5, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    andb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -1165,7 +1165,7 @@ define i1 @olt_and5_and5_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vandpd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vandpd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vandpd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX1-NEXT:    vcmpltpd %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
@@ -1174,13 +1174,13 @@ define i1 @olt_and5_and5_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX1-NEXT:    vcmpltpd %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vcmpltsd %xmm6, %xmm0, %xmm4
-; AVX1-NEXT:    vandpd %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vandpd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vandpd %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vandpd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vcmpltsd %xmm7, %xmm0, %xmm3
 ; AVX1-NEXT:    vmovd %xmm1, %ecx
 ; AVX1-NEXT:    vcmpltsd %xmm5, %xmm0, %xmm0
-; AVX1-NEXT:    vandpd %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    vandpd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vandpd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    andl %ecx, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -1192,7 +1192,7 @@ define i1 @olt_and5_and5_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX512-NEXT:    vcmpltsd %xmm3, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm2, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %ecx
@@ -1201,12 +1201,12 @@ define i1 @olt_and5_and5_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX512-NEXT:    vcmpltsd {{[0-9]+}}(%rsp), %xmm0, %k2
 ; AVX512-NEXT:    kandw %k1, %k2, %k1
 ; AVX512-NEXT:    vcmpltsd {{[0-9]+}}(%rsp), %xmm0, %k2
-; AVX512-NEXT:    kandw %k2, %k1, %k1
-; AVX512-NEXT:    kandw %k0, %k1, %k0
+; AVX512-NEXT:    kandw %k1, %k2, %k1
+; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm7, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm5, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    andb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -1277,15 +1277,15 @@ define i1 @olt_and8_icmp_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX1-NEXT:    vcmpltsd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vandpd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vandpd %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vandpd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm1, %ecx
 ; AVX1-NEXT:    andb %al, %cl
 ; AVX1-NEXT:    vcmpltsd %xmm7, %xmm0, %xmm1
 ; AVX1-NEXT:    vcmpltsd {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX1-NEXT:    vcmpltsd %xmm6, %xmm0, %xmm3
-; AVX1-NEXT:    vandpd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vandpd %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vcmpltsd %xmm5, %xmm0, %xmm0
-; AVX1-NEXT:    vandpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vandpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    andb %cl, %al
@@ -1300,7 +1300,7 @@ define i1 @olt_and8_icmp_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX512-NEXT:    vcmpltsd %xmm3, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    vcmpltsd %xmm2, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %ecx
@@ -1309,9 +1309,9 @@ define i1 @olt_and8_icmp_f64(double %a, double %b0, double %b1, double %b2, doub
 ; AVX512-NEXT:    vcmpltsd %xmm7, %xmm0, %k1
 ; AVX512-NEXT:    vcmpltsd {{[0-9]+}}(%rsp), %xmm0, %k2
 ; AVX512-NEXT:    kandw %k2, %k1, %k1
-; AVX512-NEXT:    kandw %k0, %k1, %k0
-; AVX512-NEXT:    vcmpltsd %xmm5, %xmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k0
+; AVX512-NEXT:    vcmpltsd %xmm5, %xmm0, %k1
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    andb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
