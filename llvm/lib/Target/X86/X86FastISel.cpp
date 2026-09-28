@@ -1617,7 +1617,9 @@ bool X86FastISel::X86SelectSExt(const Instruction *I) {
     // Negate the result to make an 8-bit sign extended value.
     ResultReg = createResultReg(&X86::GR8RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::NEG8r),
-            ResultReg).addReg(ZExtReg);
+            ResultReg)
+        .addReg(ZExtReg)
+        .setOperandDead(2);
 
     SrcVT = MVT::i8;
   }
