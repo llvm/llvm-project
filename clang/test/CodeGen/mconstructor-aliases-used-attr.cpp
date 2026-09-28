@@ -19,23 +19,50 @@
 // separate definitions and the normal path handles __attribute__((used)).
 // RUN: %clang_cc1 -O0 -emit-llvm %s -o - \
 // RUN:   -triple powerpc64-ibm-aix-xcoff \
-// RUN:   | FileCheck %s --check-prefixes=XCOFF,USED
+// RUN:   | FileCheck %s --check-prefixes=XCOFF-NOALIAS,USED
 
 struct Foo {
   __attribute__((used)) Foo() {}
   __attribute__((used)) ~Foo() {}
 };
-// All four variants must appear in llvm.used/llvm.compiler.used.
-// USED: @llvm{{(\.compiler)?}}.used = appending global [4 x ptr]
 
-// On XCOFF, C1/D1 are full definitions
-// XCOFF-DAG: define {{.*}}@_ZN3FooC1Ev
-// XCOFF-DAG: define {{.*}}@_ZN3FooC2Ev
-// XCOFF-DAG: define {{.*}}@_ZN3FooD1Ev
-// XCOFF-DAG: define {{.*}}@_ZN3FooD2Ev
+namespace {
+struct Bar {
+  __attribute__((used)) Bar() {}
+  __attribute__((used)) ~Bar() {}
+};
+}
 
-// On ELF, C1/D1 are aliases to C2/D2
+// All eight variants (four for Foo, four for Bar) must appear in
+// llvm.used/llvm.compiler.used.
+// USED: @llvm{{(\.compiler)?}}.used = appending global [8 x ptr]
+
+// On XCOFF, C1/D1 are full definitions for externally visible Foo,
+// while they are aliases to C2/D2 for internal-linkage Bar.
+// XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooC1Ev
+// XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooC2Ev
+// XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooD1Ev
+// XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooD2Ev
+// XCOFF-DAG: @_ZN12_GLOBAL__N_13BarC1Ev = internal {{.*}}alias{{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
+// XCOFF-DAG: @_ZN12_GLOBAL__N_13BarD1Ev = internal {{.*}}alias{{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
+// XCOFF-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
+// XCOFF-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
+
+// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooC1Ev
+// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooC2Ev
+// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooD1Ev
+// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooD2Ev
+// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC1Ev
+// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
+// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD1Ev
+// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
+
+// On ELF, C1/D1 are aliases to C2/D2 for both Foo and Bar.
 // ELF-DAG: @_ZN3FooC1Ev = {{.*}}alias{{.*}}@_ZN3FooC2Ev
 // ELF-DAG: @_ZN3FooD1Ev = {{.*}}alias{{.*}}@_ZN3FooD2Ev
 // ELF-DAG: define {{.*}}@_ZN3FooC2Ev
 // ELF-DAG: define {{.*}}@_ZN3FooD2Ev
+// ELF-DAG: @_ZN12_GLOBAL__N_13BarC1Ev = internal {{.*}}alias{{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
+// ELF-DAG: @_ZN12_GLOBAL__N_13BarD1Ev = internal {{.*}}alias{{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
+// ELF-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
+// ELF-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
