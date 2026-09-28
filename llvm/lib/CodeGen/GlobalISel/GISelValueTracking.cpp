@@ -326,6 +326,14 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = Known.trunc(BitWidth);
     break;
   }
+  case TargetOpcode::G_FREEZE: {
+    Register Src = MI.getOperand(1).getReg();
+    // freeze of undef/poison is an arbitrary noundef bit pattern, so the known
+    // bits of the source only carry over when it cannot be undef or poison.
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
+      computeKnownBitsImpl(Src, Known, DemandedElts, Depth + 1);
+    break;
+  }
   case TargetOpcode::COPY:
   case TargetOpcode::G_PHI:
   case TargetOpcode::PHI: {
@@ -494,6 +502,14 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
     Known = KnownBits::mulhs(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_CLMUL: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::clmul(Known, Known2);
     break;
   }
   case TargetOpcode::G_UAVGFLOOR: {
@@ -799,6 +815,24 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
     Known = Known.zextOrTrunc(BitWidth);
+    break;
+  }
+  case TargetOpcode::G_TRUNC_SSAT_S: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.truncSSat(BitWidth);
+    break;
+  }
+  case TargetOpcode::G_TRUNC_SSAT_U: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.truncSSatU(BitWidth);
+    break;
+  }
+  case TargetOpcode::G_TRUNC_USAT_U: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.truncUSat(BitWidth);
     break;
   }
   case TargetOpcode::G_ASSERT_ZEXT: {
@@ -1160,6 +1194,22 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       if (Known.isUnknown())
         break;
     }
+    break;
+  }
+  case TargetOpcode::G_VECTOR_COMPRESS: {
+    // Each result lane is either a lane of the source vector or the passthru,
+    // so the known bits are those shared by both.
+    Register Vec = MI.getOperand(1).getReg();
+    Register PassThru = MI.getOperand(3).getReg();
+    computeKnownBitsImpl(PassThru, Known, DemandedElts, Depth + 1);
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    // Compression can move any source lane to any result position, so all
+    // source lanes are demanded.
+    APInt DemandedSrcElts = APInt::getAllOnes(DemandedElts.getBitWidth());
+    computeKnownBitsImpl(Vec, Known2, DemandedSrcElts, Depth + 1);
+    Known = Known.intersectWith(Known2);
     break;
   }
   case TargetOpcode::G_ABS: {
@@ -2211,6 +2261,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
     break;
   }
+  case TargetOpcode::G_FREEZE: {
+    Register Src = MI.getOperand(1).getReg();
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1)) {
+      computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known,
+                          Depth + 1);
+    }
+    break;
+  }
   case TargetOpcode::COPY: {
     Register Src = MI.getOperand(1).getReg();
 
@@ -2429,6 +2487,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
 
     return 1;
+  }
+  case TargetOpcode::G_FREEZE: {
+    Register Src = MI.getOperand(1).getReg();
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
+      return computeNumSignBits(Src, DemandedElts, Depth + 1);
+    break;
   }
   case TargetOpcode::G_SEXT: {
     Register Src = MI.getOperand(1).getReg();
@@ -2770,6 +2834,22 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_VECTOR_COMPRESS: {
+    // Each result lane is either a lane of the source vector or the passthru,
+    // so the number of sign bits is the minimum of the two.
+    Register Vec = MI.getOperand(1).getReg();
+    Register PassThru = MI.getOperand(3).getReg();
+    unsigned Tmp = computeNumSignBits(PassThru, DemandedElts, Depth + 1);
+    // If passthru contributes nothing, fall back to the KnownBits refinement.
+    if (Tmp == 1)
+      break;
+    // Compression can move any source lane to any result position, so all
+    // source lanes are demanded.
+    APInt DemandedSrcElts = APInt::getAllOnes(DemandedElts.getBitWidth());
+    unsigned Tmp2 = computeNumSignBits(Vec, DemandedSrcElts, Depth + 1);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
+  }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
     Register InVec = Extract.getVectorReg();
@@ -2944,9 +3024,10 @@ GISelValueTrackingAnalysis::run(MachineFunction &MF,
   return Result(MF, MaxDepth);
 }
 
-PreservedAnalyses
-GISelValueTrackingPrinterPass::run(MachineFunction &MF,
-                                   MachineFunctionAnalysisManager &MFAM) {
+static PreservedAnalyses
+printGISelValueTracking(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM, raw_ostream &OS,
+                        bool PrintFPClass) {
   auto &VTA = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   const auto &MRI = MF.getRegInfo();
   OS << "name: ";
@@ -2961,13 +3042,36 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
         Register Reg = MO.getReg();
         if (!MRI.getType(Reg).isValid())
           continue;
-        KnownBits Known = VTA.getKnownBits(Reg);
-        unsigned SignedBits = VTA.computeNumSignBits(Reg);
-        bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
-        OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
-           << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
+        if (PrintFPClass) {
+          KnownFPClass FPKnown = VTA.computeKnownFPClass(Reg);
+          OS << "  " << MO << " FPClasses:" << FPKnown.getKnownFPClasses()
+             << " SignBitKnown:";
+          if (FPKnown.getSignBit())
+            OS << (*FPKnown.getSignBit() ? '1' : '0');
+          else
+            OS << '?';
+          OS << '\n';
+        } else {
+          KnownBits Known = VTA.getKnownBits(Reg);
+          unsigned SignedBits = VTA.computeNumSignBits(Reg);
+          bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
+          OS << "  " << MO << " KnownBits:" << Known
+             << " SignBits:" << SignedBits
+             << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
+        }
       };
     }
   }
   return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+GISelValueTrackingPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  return printGISelValueTracking(MF, MFAM, OS, false);
+}
+
+PreservedAnalyses GISelValueTrackingFPClassPrinterPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return printGISelValueTracking(MF, MFAM, OS, true);
 }

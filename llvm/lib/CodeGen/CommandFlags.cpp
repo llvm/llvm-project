@@ -727,6 +727,36 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
     }
   }
 
+  // Synthesize the "exception-model" module flag from the -exception-model
+  // option.
+  ExceptionHandling EH = getExceptionModel();
+  if (EH != ExceptionHandling::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("exception-model"))) {
+      // The module already records an exception model; -exception-model must
+      // not contradict it.
+      if (Existing->getString() != getExceptionModelName(EH)) {
+        reportFatalUsageError(
+            "-exception-model=" + getExceptionModelName(EH) +
+            " conflicts with the \"exception-model\" module flag \"" +
+            Existing->getString() + "\"");
+      }
+    } else {
+      M.addModuleFlag(Module::Error, "exception-model",
+                      MDString::get(M.getContext(), getExceptionModelName(EH)));
+    }
+  }
+
+  // Synthesize the "target-abi" module flag from the -target-abi option.
+  //
+  // FIXME: verifyOptionsConsistency validates consistency for target-abi. We
+  // should consistently handle all ABI module flags either here or there.
+  StringRef ABIName = mc::getABIName();
+  if (!ABIName.empty() && !M.getModuleFlag("target-abi")) {
+    M.addModuleFlag(Module::Error, "target-abi",
+                    MDString::get(M.getContext(), ABIName));
+  }
+
   for (Function &F : M)
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }

@@ -115,6 +115,30 @@ void callByval() {
 // An inherited constructor forwards its by-value parameter with no temporary
 // of its own, so the base constructor operates on the object the caller
 // destroys.
+struct NonTrivialPad {
+  char pad[17];
+  NonTrivialPad();
+  NonTrivialPad(const NonTrivialPad &);
+  ~NonTrivialPad();
+};
+
+union TailPadNoRegs {
+  NonTrivialPad n;
+  long l;
+  TailPadNoRegs();
+  TailPadNoRegs(const TailPadNoRegs &);
+  ~TailPadNoRegs();
+};
+
+// Nothing spans this union's 24 declared bytes, and its non-trivial member
+// keeps it out of registers, so it is indirect with no byval.
+void takeTailPadNoRegs(TailPadNoRegs u) {}
+
+// CIR-LABEL: cir.func {{.*}}@_Z17takeTailPadNoRegs13TailPadNoRegs
+// CIR-SAME:      %{{[^:]*}}: !cir.ptr<!rec_TailPadNoRegs> {llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef}
+
+// LLVM: define dso_local void @_Z17takeTailPadNoRegs13TailPadNoRegs(ptr nofreeobj noundef align 8 dereferenceable(24) %{{[^,]+}})
+
 struct Base { Base(WithDtor t); };
 struct Derived : Base { using Base::Base; };
 void callInheritedCtor(WithDtor t) { Derived d(t); }
