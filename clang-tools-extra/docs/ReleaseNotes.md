@@ -249,10 +249,6 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
-- Improved {doc}`performance-noexcept-move-constructor
-  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
-  false positives for implicitly declared `noexcept(false)`.
-
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
@@ -260,6 +256,10 @@ infrastructure are described first, followed by tool-specific sections.
   copied as written rather than with its parentheses stripped, and no fix is
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
+
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false positives for implicitly declared `noexcept(false)`.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
