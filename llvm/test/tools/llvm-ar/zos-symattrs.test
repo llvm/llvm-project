@@ -22,11 +22,7 @@
 ## 1. Check the attribute words written into the archive symbol table.
 ##    s_func: 0x6 (64-bit=0x4 + XPLink=0x2)
 ##    s_data: 0x3 (XPLink=0x2 + WSA=0x1)
-# RUN: %python -c " \
-# RUN:   d = open(r'%t.dir/test.a', 'rb').read(); \
-# RUN:   print(hex(int.from_bytes(d[76:80], 'big'))); \
-# RUN:   print(hex(int.from_bytes(d[84:88], 'big'))) \
-# RUN: " | FileCheck %s --check-prefix=ATTRS
+# RUN: %python %t.dir/print_symattrs.py %t.dir/test.a | FileCheck %s --check-prefix=ATTRS
 
 # ATTRS:      0x6
 # ATTRS-NEXT: 0x3
@@ -44,14 +40,16 @@
 # RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %t.dir/func2.ll -o %t.dir/func2.o
 # RUN: llvm-as %t.dir/mixed.ll -o %t.dir/mixed.bc
 # RUN: llvm-ar rcD --format=zos %t.dir/mixed.a %t.dir/func2.o %t.dir/mixed.bc
-# RUN: %python -c " \
-# RUN:   d = open(r'%t.dir/mixed.a', 'rb').read(); \
-# RUN:   print(hex(int.from_bytes(d[76:80], 'big'))); \
-# RUN:   print(hex(int.from_bytes(d[84:88], 'big'))) \
-# RUN: " | FileCheck %s --check-prefix=MIXED-ATTRS
+# RUN: %python %t.dir/print_symattrs.py %t.dir/mixed.a | FileCheck %s --check-prefix=MIXED-ATTRS
 
 # MIXED-ATTRS:      0x6
 # MIXED-ATTRS-NEXT: 0x0
+
+#--- print_symattrs.py
+import sys
+d = open(sys.argv[1], 'rb').read()
+print(hex(int.from_bytes(d[76:80], 'big')))
+print(hex(int.from_bytes(d[84:88], 'big')))
 
 #--- func.ll
 target triple = "s390x-ibm-zos"
