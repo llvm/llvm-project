@@ -595,10 +595,33 @@ static unsigned getXqciloWideOpcode(unsigned Opc) {
   }
 }
 
+int64_t RISCVRegisterInfo::getCSIFrameOffset(MachineFunction *MF) const {
+  uint64_t FirstSPAdjustAmount =
+      getFrameLowering(*MF)->getFirstSPAdjustAmount(*MF);
+  if (FirstSPAdjustAmount)
+    return getFrameLowering(*MF)->getStackSizeWithRVVPadding(*MF) -
+           FirstSPAdjustAmount;
+  return 0;
+}
+
+bool RISCVRegisterInfo::isCSIFrameIndex(MachineFunction *MF,
+                                        int FrameIndex) const {
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const auto &CSI =
+      getFrameLowering(*MF)->getUnmanagedCSI(*MF, MFI.getCalleeSavedInfo());
+  if (!CSI.empty()) {
+    int MinCSFI = CSI.front().getFrameIdx();
+    int MaxCSFI = CSI.back().getFrameIdx();
+    if (FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI)
+      return true;
+  }
+  return false;
+}
+
 bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
-  assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
+  // assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
 
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
@@ -606,12 +629,16 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = ST.getInstrInfo();
   bool Is64Bit = ST.is64Bit();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   Register FrameReg;
   StackOffset Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
+
+  Offset += StackOffset::getFixed(SPAdj);
+
   bool IsRVVSpill = RISCV::isRVVSpill(MI);
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());

@@ -31,6 +31,11 @@ public:
 
   uint64_t getStackSizeWithRVVPadding(const MachineFunction &MF) const;
 
+  SmallVector<CalleeSavedInfo, 8>
+  getUnmanagedCSI(const MachineFunction &MF,
+                  const std::vector<CalleeSavedInfo> &CSI,
+                  bool ReverseOrder = false) const;
+
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
@@ -92,6 +97,8 @@ public:
                      MachineInstr::MIFlag Flag) const;
 
   uint64_t getStackThreshold() const override;
+
+  bool enableCSRSaveRestorePointsSplit() const override;
 
 protected:
   const RISCVSubtarget &STI;
