@@ -36193,6 +36193,10 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case AArch64ISD::VASHR:
   case AArch64ISD::VLSHR:
   case AArch64ISD::VSHL:
+  case AArch64ISD::CSEL:
+  case AArch64ISD::CSNEG:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::CSINV:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
