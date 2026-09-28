@@ -23256,8 +23256,9 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   assert((!UseTrunc || !UseVector) &&
          "This optimization cannot emit a vector truncating store");
 
-  // Preserve the lowest-addressed store's IR order. Merge source locations for
-  // the new store only, leaving value construction unchanged.
+  // StoreDL merges the debug locations of the first NumStores stores for the
+  // new store. DL, used to build the stored value, is left unchanged. Both
+  // keep the IROrder of StoreNodes[0].
   SDLoc DL(StoreNodes[0].MemNode);
   SDLoc StoreDL = DL;
 
@@ -24184,11 +24185,12 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       continue;
     }
 
+    // Merge debug locations separately for the first NumElem loads and stores.
+    // LoadDL and StoreDL keep the IROrder of LoadNodes[0] and StoreNodes[0].
+    // ValueDL keeps LoadNodes[0]'s location for value nodes (the rotate below).
     SDLoc LoadDL(LoadNodes[0].MemNode);
     SDLoc StoreDL(StoreNodes[0].MemNode);
     SDLoc ValueDL = LoadDL;
-    // Merge loads and stores independently, preserving the IR order of each
-    // group's lowest-addressed operation. Exclude candidates left unmerged.
     for (unsigned I = 1; I != NumElem; ++I) {
       LoadDL.mergeDebugLoc(LoadNodes[I].MemNode->getDebugLoc());
       StoreDL.mergeDebugLoc(StoreNodes[I].MemNode->getDebugLoc());
