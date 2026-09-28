@@ -33074,8 +33074,16 @@ public:
         // the absorbed narrow shls are masked off before the widening.
         if (!NarrowedLeafShifts.empty()) {
           Type *WideTy = ReductionRoot->getType();
-          Type *NarrowTy = VectorizedRoot->getType()->getScalarType();
+          Type *NarrowTy = VL.front()->getType();
           unsigned VF = getNumElements(VectorizedRoot->getType());
+          // The root may be demoted and resized to the reduction bitwidth,
+          // which is computed for the wide reduction operations.
+          if (VectorizedRoot->getType()->getScalarType() != NarrowTy) {
+            VectorizedRoot = Builder.CreateIntCast(
+                VectorizedRoot, getWidenedType(NarrowTy, VF),
+                V.isSignedMinBitwidthRootNode());
+            ++NumVectorInstructions;
+          }
           SmallVector<Constant *> ShiftConsts(VF, ConstantInt::get(WideTy, 0));
           SmallVector<Constant *> MaskConsts(
               VF, Constant::getAllOnesValue(NarrowTy));
