@@ -8,7 +8,7 @@
 // CHECK:               %[[VAL_2:.*]] = arith.constant 1 : i32
 // CHECK:               %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
 // CHECK:               %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
-// CHECK:               %[[VAL_5:.*]] = fir.allocmem !fir.array<42xi32> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:               %[[VAL_5:.*]] = fir.allocmem !fir.array<42xi32> <{bindc_name = ".tmp.array", uniq_name = ""}>
 // CHECK:               %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_3]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<42xi32>>, !fir.heap<!fir.array<42xi32>>)
 // CHECK:               %[[VAL_7:.*]] = arith.constant true
 // CHECK:               %[[VAL_8:.*]] = arith.constant 1 : index

@@ -13,12 +13,10 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_offload.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #include "ubsan_diag.h"
 #include "ubsan_offload.h"
-#include "ubsan_offload_hsa.h"
-#include "ubsan_offload_rpc.h"
-#include "ubsan_offload_symbolize.h"
 
 #if !SANITIZER_LINUX
 #error "Offload UBSan reporting is supported on Linux only"
@@ -33,8 +31,6 @@ using namespace __ubsan;
 
 namespace __ubsan {
 
-Mutex UbsanOffloadMutex;
-
 static StaticSpinMutex InitMutex;
 static atomic_uint8_t Initialized;
 
@@ -45,9 +41,11 @@ void Initialize() {
   if (atomic_load(&Initialized, memory_order_relaxed))
     return;
   SanitizerToolName = "UndefinedBehaviorSanitizer";
-  __ubsan_set_offload_symbolize(SymbolizeOffloadPc);
-  Atexit(ForgetDeviceImages);
-  AddDieCallback(ForgetDeviceImages);
+  __ubsan_set_offload_symbolize(
+      [](uptr PC) { return Offload::Get().Symbolize(PC); });
+  Offload::Get().RegisterHandler(HandleOffloadReport);
+  Atexit([] { Offload::Get().UntrackImages(); });
+  AddDieCallback([] { Offload::Get().UntrackImages(); });
   atomic_store(&Initialized, 1, memory_order_release);
 }
 
@@ -66,7 +64,7 @@ void Initialize() {
 
 #define UBSAN_HSA_FORWARD(name, ...)                                           \
   UBSAN_HSA_ENTER(name);                                                       \
-  if (UNLIKELY(!GetHsa().Ready()))                                             \
+  if (UNLIKELY(!Offload::Get().Ready()))                                       \
     return REAL(name)(__VA_ARGS__);
 
 // PPC cannot transparently tail-call an indirect dlsym target for RTLD_NEXT.
@@ -90,7 +88,7 @@ static bool FromHsa(void *P) {
   Dl_info Info = {};
   if (!dladdr(P, &Info) || !Info.dli_fname)
     return false;
-  return internal_strstr(Info.dli_fname, UBSAN_HSA_LIBRARY);
+  return internal_strstr(Info.dli_fname, SANITIZER_HSA_LIBRARY);
 }
 
 static void BindRealDlsym();
@@ -120,7 +118,6 @@ static void BindRealDlsym() {
   if (LIKELY(REAL(dlsym)))
     return;
 #if SANITIZER_GLIBC
-  // Need to intercept through 'dlvsym' instead on some platforms.
   static const char *kVers[] = {"GLIBC_2.34", "GLIBC_2.17", "GLIBC_2.2.5",
                                 "GLIBC_2.0"};
   if (dlvsym) {
@@ -144,22 +141,14 @@ INTERCEPTOR(hsa_status_t, hsa_init, void) {
   if (Status != HSA_STATUS_SUCCESS)
     return Status;
 
-  Lock L(&UbsanOffloadMutex);
-  if (GetHsa().AddRef())
-    GetHsa().Init();
+  Offload::Get().Init();
   return Status;
 }
 
 INTERCEPTOR(hsa_status_t, hsa_shut_down, void) {
   UBSAN_HSA_ENTER(hsa_shut_down);
 
-  bool Last;
-  {
-    Lock L(&UbsanOffloadMutex);
-    Last = GetHsa().DropRef();
-  }
-  if (Last)
-    GetHsa().Shutdown();
+  Offload::Get().Shutdown();
   return REAL(hsa_shut_down)();
 }
 
@@ -168,25 +157,15 @@ INTERCEPTOR(hsa_status_t, hsa_executable_freeze, hsa_executable_t Executable,
   UBSAN_HSA_FORWARD(hsa_executable_freeze, Executable, Options);
 
   hsa_status_t Status = REAL(hsa_executable_freeze)(Executable, Options);
-  if (Status == HSA_STATUS_SUCCESS) {
-    {
-      Lock L(&UbsanOffloadMutex);
-      if (GetHsa().Ready())
-        GetHsa().RecordExecutable(Executable);
-    }
-    StartRpc(Executable);
-  }
+  if (Status == HSA_STATUS_SUCCESS)
+    Offload::Get().TrackExecutable(Executable);
   return Status;
 }
 
 INTERCEPTOR(hsa_status_t, hsa_executable_destroy, hsa_executable_t Executable) {
   UBSAN_HSA_FORWARD(hsa_executable_destroy, Executable);
 
-  FlushRpc();
-  {
-    Lock L(&UbsanOffloadMutex);
-    GetHsa().ForgetExecutable(Executable);
-  }
+  Offload::Get().UntrackExecutable(Executable);
   return REAL(hsa_executable_destroy)(Executable);
 }
 

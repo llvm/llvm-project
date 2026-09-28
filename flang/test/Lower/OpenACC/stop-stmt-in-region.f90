@@ -21,7 +21,7 @@ subroutine test_stop_in_region1()
 end
 
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region2() {
-! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_stop_in_region2Ex"}
+! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_stop_in_region2Ex"}>
 ! CHECK:         acc.parallel {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_2:.*]] = arith.constant false

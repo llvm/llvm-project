@@ -74,6 +74,8 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // TODO: Pass the expiry location and aliasing chain like
+  // reportUseAfterScope.
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
                                     const Expr *MovedExpr) {}

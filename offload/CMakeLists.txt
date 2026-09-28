@@ -348,11 +348,12 @@ add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
 add_subdirectory(docs)
 
+add_subdirectory(liboffload)
+
 if(BUILD_LIBOMPTARGET)
   add_subdirectory(libomptarget)
 endif()
 
-add_subdirectory(liboffload)
 add_subdirectory(languages)
 
 # Add tests.

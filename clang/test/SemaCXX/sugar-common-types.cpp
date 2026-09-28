@@ -219,11 +219,11 @@ namespace overflow_behavior_types {
     volatile ConstWrapX1 a = 0;
     const volatile WrapY1 b = 0;
     N ta = a;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'volatile ConstWrapX1' (aka '__ob_wrap X1 const volatile')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'volatile ConstWrapX1' (aka 'const volatile __ob_wrap X1')}}
     N tb = b;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile WrapY1' (aka '__ob_wrap Y1 const volatile')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile WrapY1' (aka 'const volatile __ob_wrap Y1')}}
     N tc = 0 ? a : b;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1 const volatile'}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile __ob_wrap B1'}}
   } // namespace balanced_qualifiers
 } // namespace overflow_behavior_types
 

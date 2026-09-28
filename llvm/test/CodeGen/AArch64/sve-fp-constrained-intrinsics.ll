@@ -330,6 +330,67 @@ define <vscale x 2 x double> @fma_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 
 }
 
 ;
+; constrained.fmul
+;
+
+define <vscale x 2 x half> @fmul_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: fmul_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.experimental.constrained.fmul(<vscale x 2 x half> %a, <vscale x 2 x half> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x half> %r
+}
+
+define <vscale x 4 x half> @fmul_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: fmul_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x half> @llvm.experimental.constrained.fmul(<vscale x 4 x half> %a, <vscale x 4 x half> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x half> %r
+}
+
+define <vscale x 8 x half> @fmul_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fmul_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x half> @llvm.experimental.constrained.fmul(<vscale x 8 x half> %a, <vscale x 8 x half> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x half> %r
+}
+
+define <vscale x 2 x float> @fmul_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: fmul_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.experimental.constrained.fmul(<vscale x 2 x float> %a, <vscale x 2 x float> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 4 x float> @fmul_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fmul_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x float> @llvm.experimental.constrained.fmul(<vscale x 4 x float> %a, <vscale x 4 x float> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x float> %r
+}
+
+define <vscale x 2 x double> @fmul_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fmul_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.experimental.constrained.fmul(<vscale x 2 x double> %a, <vscale x 2 x double> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x double> %r
+}
+
+;
 ; constrained.fmuladd
 ;
 
