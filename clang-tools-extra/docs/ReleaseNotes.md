@@ -326,6 +326,10 @@ infrastructure are described first, followed by tool-specific sections.
     synthesized for intermediate subobjects caused the trailing comma of the
     enclosing list to be incorrectly rewritten.
 
+  - Ignored preprocessor directives such as `#endif` that appear immediately
+    before an enum's closing brace, which previously produced a false positive
+    and a fix-it that inserted a comma after the directive.
+    
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
