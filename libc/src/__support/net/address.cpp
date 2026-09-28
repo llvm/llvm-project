@@ -22,8 +22,10 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/endian_internal.h"
+#include "src/__support/fixedvector.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/str_to_integer.h"
+#include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -67,104 +69,106 @@ namespace net {
   return true;
 }
 
-namespace {
-
-LIBC_INLINE constexpr bool is_hex_char(char c) {
-  return internal::isalnum(c) && internal::b36_char_to_int(c) < 16;
-}
-
-} // anonymous namespace
-
 [[nodiscard]] bool str_to_ipv6(cpp::string_view src, struct in6_addr &dst) {
   if (src.empty())
     return false;
 
-  uint8_t bytes[16] = {0};
-  size_t cur_byte = 0;
-  int double_colon_byte = -1;
+  bool has_double_colon = false;
+  FixedVector<uint16_t, 8> parts[2];
+  size_t part_idx = 0;
 
   if (src.starts_with("::")) {
-    double_colon_byte = 0;
+    has_double_colon = true;
+    part_idx = 1;
     src.remove_prefix(2);
     if (src.empty()) {
-      inline_memcpy(&dst.s6_addr, bytes, 16);
+      inline_bzero(&dst.s6_addr, 16);
       return true;
     }
-  } else if (src[0] == ':') {
+    if (src.starts_with(':'))
+      return false;
+  } else if (src.starts_with(':')) {
     return false;
   }
 
-  uint32_t val = 0;
-  size_t num_digits = 0;
-  size_t token_start = 0;
-
-  for (size_t i = 0; i < src.size(); ++i) {
-    char c = src[i];
-    if (is_hex_char(c)) {
-      if (++num_digits > 4)
+  while (!src.empty()) {
+    if (src.starts_with("::")) {
+      if (has_double_colon)
         return false;
-      if (num_digits == 1)
-        token_start = i;
-      val = (val << 4) | static_cast<uint32_t>(internal::b36_char_to_int(c));
-    } else if (c == ':') {
-      if (num_digits == 0) {
-        if (double_colon_byte != -1)
-          return false;
-        double_colon_byte = static_cast<int>(cur_byte);
-        continue;
-      }
-      if (i + 1 == src.size())
-        return false; // Trailing single colon
-
-      if (cur_byte + 2 > 16)
+      has_double_colon = true;
+      part_idx = 1;
+      src.remove_prefix(2);
+      if (src.empty())
+        break;
+      if (src.starts_with(':'))
         return false;
-
-      bytes[cur_byte++] = static_cast<uint8_t>(val >> 8);
-      bytes[cur_byte++] = static_cast<uint8_t>(val & 0xff);
-      val = 0;
-      num_digits = 0;
-    } else if (c == '.') {
-      if (num_digits == 0 || cur_byte + 4 > 16)
+    } else if (src.starts_with(':')) {
+      src.remove_prefix(1);
+      if (src.empty() || src.starts_with(':'))
         return false;
-
-      cpp::string_view ipv4_str = src.substr(token_start);
-      struct in_addr in4;
-      if (!str_to_ipv4(ipv4_str, in4))
-        return false;
-
-      inline_memcpy(&bytes[cur_byte], &in4.s_addr, 4);
-      cur_byte += 4;
-      num_digits = 0;
-      break;
-    } else {
-      return false;
     }
-  }
 
-  if (num_digits > 0) {
-    if (cur_byte + 2 > 16)
+    // Check if the current component is an embedded IPv4 address.
+    // In IPv6, an embedded IPv4 address can only appear at the very end.
+    size_t colon_pos = src.find_first_of(':');
+    cpp::string_view token =
+        (colon_pos == cpp::string_view::npos) ? src : src.substr(0, colon_pos);
+
+    if (token.find_first_of('.') != cpp::string_view::npos) {
+      if (colon_pos != cpp::string_view::npos)
+        return false;
+
+      struct in_addr in4;
+      if (!str_to_ipv4(src, in4))
+        return false;
+
+      uint16_t v4_words[2];
+      inline_memcpy(v4_words, &in4.s_addr, sizeof(v4_words));
+      if (!parts[part_idx].push_back(v4_words[0]) ||
+          !parts[part_idx].push_back(v4_words[1]))
+        return false;
+
+      src = cpp::string_view();
+      break;
+    }
+
+    if (internal::isspace(src[0]) || src[0] == '+' || src[0] == '-' ||
+        src.starts_with("0x") || src.starts_with("0X"))
       return false;
-    bytes[cur_byte++] = static_cast<uint8_t>(val >> 8);
-    bytes[cur_byte++] = static_cast<uint8_t>(val & 0xff);
-  }
 
-  if (double_colon_byte != -1) {
-    if (cur_byte >= 16)
+    auto result = internal::strtointeger<uint16_t>(src.data(), 16, src.size());
+    if (result.has_error() || result.parsed_len == 0 || result.parsed_len > 4)
       return false;
 
-    size_t bytes_after = cur_byte - static_cast<size_t>(double_colon_byte);
-    for (size_t k = bytes_after; k > 0; --k)
-      bytes[16 - bytes_after + (k - 1)] =
-          bytes[static_cast<size_t>(double_colon_byte) + (k - 1)];
+    if (!parts[part_idx].push_back(Endian::to_big_endian(result.value)))
+      return false;
 
-    size_t gap = 16 - cur_byte;
-    for (size_t k = 0; k < gap; ++k)
-      bytes[static_cast<size_t>(double_colon_byte) + k] = 0;
-  } else if (cur_byte != 16) {
-    return false;
+    src.remove_prefix(static_cast<size_t>(result.parsed_len));
+    if (!src.empty() && src[0] != ':')
+      return false;
   }
 
-  inline_memcpy(&dst.s6_addr, bytes, 16);
+  if (has_double_colon) {
+    if (parts[0].size() + parts[1].size() >= 8)
+      return false;
+
+    size_t num_zeroes = 8 - parts[0].size() - parts[1].size();
+    uint16_t *ptr = dst.s6_addr16;
+    if (!parts[0].empty()) {
+      inline_memcpy(ptr, parts[0].begin(), parts[0].size() * sizeof(uint16_t));
+      ptr += parts[0].size();
+    }
+    inline_bzero(ptr, num_zeroes * sizeof(uint16_t));
+    ptr += num_zeroes;
+    if (!parts[1].empty()) {
+      inline_memcpy(ptr, parts[1].begin(), parts[1].size() * sizeof(uint16_t));
+    }
+  } else {
+    if (parts[0].size() != 8)
+      return false;
+    inline_memcpy(dst.s6_addr16, parts[0].begin(), 8 * sizeof(uint16_t));
+  }
+
   return true;
 }
 

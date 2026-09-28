@@ -85,6 +85,7 @@ add_libc_test(
     libc.src.arpa.inet.inet_pton
     libc.src.__support.libc_errno
     libc.hdr.sys_socket_macros
+    libc.src.string.memory_utils.inline_memcmp
     libc.test.UnitTest.ErrnoCheckingTest
 )
 

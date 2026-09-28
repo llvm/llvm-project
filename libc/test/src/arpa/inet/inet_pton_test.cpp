@@ -18,6 +18,7 @@
 #include "src/__support/endian_internal.h"
 #include "src/__support/libc_errno.h"
 #include "src/arpa/inet/inet_pton.h"
+#include "src/string/memory_utils/inline_memcmp.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
@@ -94,15 +95,12 @@ TEST_F(LlvmLibcInetPtonTest, StrictPosixLeadingZeros) {
 static bool check_ipv6(const struct in6_addr &addr, uint16_t a, uint16_t b,
                        uint16_t c, uint16_t d, uint16_t e, uint16_t f,
                        uint16_t g, uint16_t h) {
-  uint16_t expected[8] = {a, b, c, d, e, f, g, h};
-  for (size_t i = 0; i < 8; ++i) {
-    uint16_t actual = static_cast<uint16_t>(
-        (static_cast<uint16_t>(addr.s6_addr[2 * i]) << 8) |
-        static_cast<uint16_t>(addr.s6_addr[2 * i + 1]));
-    if (actual != expected[i])
-      return false;
-  }
-  return true;
+  uint16_t words[8] = {a, b, c, d, e, f, g, h};
+  struct in6_addr expected;
+  for (size_t i = 0; i < 8; ++i)
+    expected.s6_addr16[i] = LIBC_NAMESPACE::Endian::to_big_endian(words[i]);
+  return LIBC_NAMESPACE::inline_memcmp(&addr, &expected,
+                                       sizeof(struct in6_addr)) == 0;
 }
 
 TEST_F(LlvmLibcInetPtonTest, ValidIPv6Addresses) {
@@ -229,6 +227,12 @@ TEST_F(LlvmLibcInetPtonTest, InvalidIPv6Formats) {
                                          &addr));
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6::192.168.1.1",
                                          &addr));
+
+  // Hex prefixes and signs
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "0x1234::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "+1234::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "-1234::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1234g::", &addr));
 
   // Whitespace
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, " ::1", &addr));
