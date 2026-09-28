@@ -13,6 +13,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -288,6 +289,12 @@ struct LoweringPreparePass
     }
     return guard;
   }
+
+  ///
+  /// AST related
+  /// -----------
+
+  clang::ASTContext *astCtx = nullptr;
 
   /// Target/ABI facts sourced from the module's own attributes.
   std::unique_ptr<cir::LowerModule> lowerModule;
@@ -571,6 +578,8 @@ struct LoweringPreparePass
 
     builder.createYield(loc); // Outermost IfOp
   }
+
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -3101,4 +3110,11 @@ void LoweringPreparePass::runOnOperation() {
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
   return std::make_unique<LoweringPreparePass>();
+}
+
+std::unique_ptr<Pass>
+mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
+  auto pass = std::make_unique<LoweringPreparePass>();
+  pass->setASTContext(astCtx);
+  return std::move(pass);
 }
