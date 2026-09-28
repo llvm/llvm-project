@@ -2046,25 +2046,41 @@ static bool handleFirstArgMinOrMax(
           MinOrMaxPhiR->getRecurrenceKind()))
     return false;
 
-  Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
-  // TODO: Support non (i.e., narrower than) canonical IV types.
-  // TODO: Emit remarks for failed transformations.
-  if (Ty != WideIV->getScalarType())
-    return false;
-
   auto *FindIVSelectR = cast<VPSingleDefRecipe>(
       FindLastIVPhiR->getBackedgeValue()->getDefiningRecipe());
   assert(
       match(FindIVSelectR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
       "backedge value must be a select");
-  if (FindIVSelectR->getOperand(1) != WideIV &&
-      FindIVSelectR->getOperand(2) != WideIV)
+  // Ensure intermediate trunc is supported when `narrowInductionTruncates`
+  // deems merging trunc with induction not profitable.
+  VPValue *Trunc = nullptr;
+  std::optional<unsigned> WideIVIdx;
+  for (auto [Idx, Op] : drop_begin(enumerate(FindIVSelectR->operands())))
+    if (match(Op, m_TruncOrSelf(m_Specific(WideIV)))) {
+      if (match(Op, m_Trunc(m_VPValue())))
+        Trunc = Op;
+      WideIVIdx = Idx;
+      break;
+    }
+  if (!WideIVIdx)
+    return false;
+
+  Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
+  Type *WideIVScalarTy =
+      Trunc ? Trunc->getScalarType() : WideIV->getScalarType();
+
+  // TODO: Support cases where the WideIV type is larger than the CanonicalIV
+  // type. This is rare in practice as `IndVarSimplify` almost always makes the
+  // CanonicalIV's type larger.
+  if (WideIVScalarTy->getScalarSizeInBits() > Ty->getScalarSizeInBits())
     return false;
 
   // If the original wide IV is not canonical, create a new one. The canonical
   // wide IV is guaranteed to not wrap for all lanes that are active in the
   // vector loop.
-  if (!WideIV->isCanonical()) {
+  bool IsNonCanonicalSelReduction =
+      !WideIV->isCanonical() || WideIVScalarTy != Ty;
+  if (IsNonCanonicalSelReduction) {
     VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
     VPIRValue *One = Plan.getConstantInt(Ty, 1);
     auto *WidenCanIV = new VPWidenIntOrFpInductionRecipe(
@@ -2074,9 +2090,38 @@ static bool handleFirstArgMinOrMax(
         WideIV->getDebugLoc());
     WidenCanIV->insertBefore(WideIV);
 
-    // Update the select to use the wide canonical IV.
-    FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
-                              WidenCanIV);
+    // The select's type might differ from the canonical IV's type. In that
+    // case rewrite the find-iv reduction chain to match the canonical
+    // IV type.
+    if (FindIVSelectR->getScalarType() != Ty) {
+      VPBuilder Builder(FindIVSelectR);
+      auto *CanonicalFindIVPhiR = FindLastIVPhiR->cloneWithOperands(
+          Plan.getPoison(Ty), Plan.getPoison(Ty));
+      CanonicalFindIVPhiR->insertAfter(FindLastIVPhiR);
+
+      VPValue *Cond = FindIVSelectR->getOperand(0);
+      VPValue *TrueVal, *FalseVal;
+      if (WideIVIdx.value() == 1) {
+        TrueVal = WidenCanIV;
+        FalseVal = CanonicalFindIVPhiR;
+      } else {
+        TrueVal = CanonicalFindIVPhiR;
+        FalseVal = WidenCanIV;
+      }
+      VPSingleDefRecipe *CanonicalSelectR =
+          Builder.createSelect(Cond, TrueVal, FalseVal);
+      CanonicalFindIVPhiR->setOperand(1, CanonicalSelectR);
+
+      // Erase the previous select reduction.
+      FindIVSelectR->replaceAllUsesWith(
+          Plan.getPoison(FindIVSelectR->getScalarType()));
+      FindIVSelectR->eraseFromParent();
+
+      FindIVSelectR = CanonicalSelectR;
+      FindLastIVPhiR = CanonicalFindIVPhiR;
+    } else {
+      FindIVSelectR->setOperand(WideIVIdx.value(), WidenCanIV);
+    }
   }
   FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
 
@@ -2134,25 +2179,34 @@ static bool handleFirstArgMinOrMax(
   VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
   auto *FinalMinOrMaxCmp =
       Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
-  VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
+  VPValue *LastIVExiting = FindIVSelectR;
   VPValue *MaxIV =
       Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
   auto *FinalIVSelect =
       Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxIV);
   VPIRFlags RdxFlags(RecurKind::UMin, false, false, FastMathFlags());
-  VPSingleDefRecipe *FinalCanIV = Builder.createNaryOp(
+  VPValue *FinalCanIV = Builder.createNaryOp(
       VPInstruction::ComputeReductionResult, {FinalIVSelect}, RdxFlags,
       FindIVRdxResult->getDebugLoc());
 
   // If we used a new wide canonical IV convert the reduction result back to the
   // original IV scale before the final select.
-  if (!WideIV->isCanonical()) {
+  if (IsNonCanonicalSelReduction) {
     auto *DerivedIVRecipe = new VPDerivedIVRecipe(
         InductionDescriptor::IK_IntInduction,
         nullptr, // No FPBinOp for integer induction
         WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
     DerivedIVRecipe->insertBefore(Builder.getRecipeAtInsertPoint());
-    FinalCanIV = DerivedIVRecipe;
+
+    // VPDerivedIVRecipe casts to the type of the provided step-value. That
+    // might not match the actual final type of the induction (i.e. it might be
+    // truncated afterwards). In that case add a manual cast to ensure result
+    // types match.
+    FinalCanIV = DerivedIVRecipe->getScalarType() != WideIVScalarTy
+                     ? cast<VPValue>(Builder.createScalarCast(
+                           Instruction::Trunc, DerivedIVRecipe, WideIVScalarTy,
+                           FindIVRdxResult->getDebugLoc()))
+                     : DerivedIVRecipe;
   }
 
   // If the final min/max value matches its start value, the condition in the
