@@ -230,7 +230,6 @@ private:
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectPtrAuthGlobalValue(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
-  bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
   void SelectTable(MachineInstr &I, MachineRegisterInfo &MRI, unsigned NumVecs,
@@ -487,6 +486,8 @@ private:
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
   template <unsigned Width>
   ComplexRendererFns selectCVTFixedPoint(MachineOperand &Root) const;
+  template <unsigned Width>
+  ComplexRendererFns selectCVTFixedPosRecipOperand(MachineOperand &Root) const;
   ComplexRendererFns selectCVTFixedPointBase(const MachineOperand &Root,
                                              unsigned width,
                                              bool isReciprocal = false) const;
@@ -6953,7 +6954,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     std::tie(PACConstDiscC, PACAddrDisc) =
         extractPtrauthBlendDiscriminators(PACDisc, MRI);
 
-    if (PACAddrDisc == AArch64::NoRegister)
+    if (!PACAddrDisc.isValid())
       PACAddrDisc = AArch64::XZR;
 
     MIB.buildCopy({AArch64::X17}, {ValReg});
@@ -8209,6 +8210,13 @@ template <unsigned Width>
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPoint(MachineOperand &Root) const {
   return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ false);
+}
+
+template <unsigned Width>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPosRecipOperand(
+    MachineOperand &Root) const {
+  return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ true);
 }
 
 InstructionSelector::ComplexRendererFns

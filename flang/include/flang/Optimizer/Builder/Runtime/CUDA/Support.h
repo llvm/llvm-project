@@ -11,6 +11,7 @@
 
 namespace mlir {
 class Location;
+class Value;
 } // namespace mlir
 
 namespace fir {

@@ -2093,7 +2093,16 @@ parser::CharBlock
 Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
   if (beginStmt)
     return stmtSourceLoc(*beginStmt);
-  return scope->sourceRange();
+  // Without a begin statement, e.g. for a main program with no program-stmt,
+  // the position comes from the scope. The scope source range may span an
+  // INCLUDE boundary, and such a range has no single provenance, so it maps to
+  // no source position at all. Narrow it to its first character, which does
+  // have a single provenance, so that the unit does not end up with an unknown
+  // location.
+  parser::CharBlock range{scope->sourceRange()};
+  if (range.empty())
+    return range;
+  return parser::CharBlock{range.begin(), 1};
 }
 
 //===----------------------------------------------------------------------===//

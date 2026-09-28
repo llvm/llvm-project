@@ -49,9 +49,14 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isExtern() const { return Pointee && Pointee->isExtern(); }
+  bool isVolatile() const {
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
+  bool canBeInitialized() const { return Pointee && Base > 0; }
   const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
@@ -349,17 +354,20 @@ struct BlockPointer {
 };
 
 struct IntPointer {
-  const Type *Ty;
+  llvm::PointerIntPair<const Type *, 1, bool> TypeAndIsNull;
   uint64_t Value;
 
   std::optional<IntPointer> atOffset(const Context &Ctx, unsigned Offset) const;
   IntPointer baseCast(const Context &Ctx, unsigned BaseOffset) const;
 
+  const Type *getType() const { return TypeAndIsNull.getPointer(); }
+  bool isNull() const { return TypeAndIsNull.getInt(); }
+
   QualType getPointeeType() const {
-    if (!Ty)
+    if (!getType())
       return QualType();
 
-    QualType QT(Ty, 0);
+    QualType QT(getType(), 0);
     if (QT->isPointerOrReferenceType())
       QT = QT->getPointeeType();
     else if (QT->isArrayType())
@@ -436,8 +444,10 @@ struct OpaquePointer {
   unsigned PathLength = 0;
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
+  bool hasDeclBase() const { return Base.isDecl(); }
   const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
+  bool hasValidBase() const;
 
   OpaquePointer
   withFieldType(const Type *FieldTy,
@@ -530,15 +540,17 @@ enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 /// \endverbatim
 class Pointer {
 public:
-  Pointer() : StorageKind(Storage::Int), Int{nullptr, 0} {}
+  Pointer() : StorageKind(Storage::Int), Int{{nullptr, true}, 0} {}
   Pointer(IntPointer &&IntPtr)
       : StorageKind(Storage::Int), Int(std::move(IntPtr)) {}
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
-  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Int), Int{Ty, Address} {}
+  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0,
+          std::optional<bool> IsNull = std::nullopt)
+      : Offset(Offset), StorageKind(Storage::Int),
+        Int{{Ty, IsNull.value_or(Address == 0)}, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Fn), Fn{F} {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
@@ -598,7 +610,7 @@ public:
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
     switch (StorageKind) {
     case Storage::Int:
-      return Pointer(Int.Value, Int.Ty, Idx);
+      return Pointer(Int.Value, Int.getType(), Idx);
     case Storage::Block:
       return Pointer(view().atIndex(Idx));
     case Storage::Fn:
@@ -641,7 +653,7 @@ public:
   bool isZero() const {
     switch (StorageKind) {
     case Storage::Int:
-      return Int.Value == 0 && Offset == 0;
+      return Int.isNull();
     case Storage::Block:
       return BS.Pointee == nullptr;
     case Storage::Fn:
@@ -864,7 +876,7 @@ public:
   /// Checks if the storage is extern.
   bool isExtern() const {
     if (isBlockPointer())
-      return BS.Pointee && BS.Pointee->isExtern();
+      return view().isExtern();
     return false;
   }
   /// Checks if the storage is static.
@@ -952,7 +964,7 @@ public:
   bool isVolatile() const {
     if (!isBlockPointer())
       return false;
-    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+    return view().isVolatile();
   }
 
   /// Returns the declaration ID.

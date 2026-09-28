@@ -326,10 +326,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
   if (Triple.getOS() == llvm::Triple::Linux ||
       Triple.getOS() == llvm::Triple::UnknownOS)
     this->MCountName =
-        (Opts.EABIVersion == llvm::EABI::GNU ||
-         (Opts.EABIVersion == llvm::EABI::Default && Triple.isGNUEnvironment()))
-            ? "llvm.arm.gnu.eabi.mcount"
-            : "\01mcount";
+        Triple.isGNUEnvironment() ? "llvm.arm.gnu.eabi.mcount" : "\01mcount";
 
   SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
 }

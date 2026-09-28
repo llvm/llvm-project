@@ -267,6 +267,9 @@ public:
   ///
   const X86RegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
+
   /// Returns the stack pointer adjustment that happens inside the frame
   /// setup..destroy sequence (e.g. by pushes, or inside the callee).
   int64_t getFrameAdjustment(const MachineInstr &I) const {
