@@ -896,6 +896,7 @@ static void eraseUsers(Operation *op) {
   while (!op->use_empty()) {
     Operation *user = *op->user_begin();
     eraseUsers(user);
+    LLVM_DEBUG(dbgs() << "[early-vect]+++++ erasing user:\n" << *user << "\n");
     user->erase();
   }
 }
