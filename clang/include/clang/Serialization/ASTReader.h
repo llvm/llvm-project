@@ -1474,7 +1474,6 @@ private:
   serialization::InputFileLoc getLoadedInputFileLoc(ModuleFile &F,
                                                     unsigned InputID);
 
-
 public:
   /// Get the buffer for resolving paths.
   SmallString<0> &getPathBuf() { return PathBuf; }
