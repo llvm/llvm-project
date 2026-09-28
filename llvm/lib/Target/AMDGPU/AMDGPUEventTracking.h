@@ -272,16 +272,6 @@ private:
     // but a waitcnt 8 for another. Not sure if we can exploit that though?
   };
 
-  CounterData &get(InstCounterType T) {
-    assert(Counters.size() > T && "T is out of range!");
-    return Counters[T];
-  }
-
-  const CounterData &get(InstCounterType T) const {
-    assert(Counters.size() > T && "T is out of range!");
-    return Counters[T];
-  }
-
   /// Clears the tracked data, used when entering a block.
   void clear();
 
