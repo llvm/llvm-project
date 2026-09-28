@@ -775,9 +775,23 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
 
   if (IsFunc) {
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    // A function pointer must point to a function descriptor. Trigger
-    // creation of a function descriptor in the ADA, for internal and external
-    // functions alike (a V-con would yield the entry point instead).
+    // A function pointer must point to a function descriptor (a V-con would
+    // yield the entry point instead), and it must compare equal to the address
+    // of the same function taken in code. For a function that is not internal,
+    // code loads the address of the descriptor from an ADA slot that refers to
+    // the indirect symbol; the binder resolves that reference to the function
+    // descriptor. Use the same reference here. The slot is shared with code
+    // taking the address and defines the indirect symbol.
+    const GlobalValue *FGV = GA ? static_cast<const GlobalValue *>(GA)
+                                : static_cast<const GlobalValue *>(FV);
+    if (!FGV->hasLocalLinkage()) {
+      ADATable.insert(Sym, SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
+      MCSymbol *Alias = OutContext.getOrCreateSymbol(
+          Twine(Sym->getName()).concat("@indirect"));
+      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
+                                     SystemZ::S_VCon, OutContext);
+    }
+    // Internal functions: function descriptor in the ADA.
     unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
     return MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(
