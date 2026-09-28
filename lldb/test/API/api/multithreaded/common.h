@@ -43,9 +43,9 @@ public:
     m_condition.notify_all();
   }
 
-  T pop(int timeout_seconds, bool &success) {
+  T pop(bool &success) {
     std::unique_lock<std::mutex> lock(m_mutex);
-    if (!m_condition.wait_for(lock, std::chrono::seconds(timeout_seconds),
+    if (!m_condition.wait_for(lock, std::chrono::seconds(5),
                               [&] { return !m_data.empty(); })) {
       success = false;
       return T();
