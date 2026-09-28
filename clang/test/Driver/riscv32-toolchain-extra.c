@@ -17,11 +17,13 @@
 // RUN: ln -s %S/Inputs/basic_riscv32_nogcc_tree/riscv32-unknown-elf %t/riscv32-nogcc/riscv32-unknown-elf
 // RUN: %t/riscv32-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%t/riscv32-nogcc/invalid \
+// RUN:    -resource-dir=%t/riscv32-nogcc/lib/clang \
 // RUN:    --target=riscv32-unknown-elf --rtlib=platform -fuse-ld=ld 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
 // RUN: %t/riscv32-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --sysroot=%t/riscv32-nogcc/bin/../riscv32-unknown-elf \
+// RUN:    -resource-dir=%t/riscv32-nogcc/lib/clang \
 // RUN:    --target=riscv32-unknown-elf --rtlib=platform -fuse-ld=ld 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
