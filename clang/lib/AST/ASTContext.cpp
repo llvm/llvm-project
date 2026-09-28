@@ -1533,8 +1533,11 @@ DiagnosticsEngine &ASTContext::getDiagnostics() const {
 }
 
 AttrVec& ASTContext::getDeclAttrs(const Decl *D) {
-  if (LastDeclAttrsDecl == D)
+  // 85% of lookups use the most recent D, so use a one-entry cache.
+  if (LastDeclAttrsDecl == D) {
+    assert(LastDeclAttrs != nullptr && LastDeclAttrs == DeclAttrs[D]);
     return *LastDeclAttrs;
+  }
 
   AttrVec *&Result = DeclAttrs[D];
   if (!Result) {
