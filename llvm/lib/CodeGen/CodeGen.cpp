@@ -146,6 +146,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeSelectOptimizePass(Registry);
   initializeShadowStackGCLoweringPass(Registry);
   initializeShrinkWrapLegacyPass(Registry);
+  initializeShrinkWrappingLegacyPass(Registry);
   initializeSjLjEHPreparePass(Registry);
   initializeSlotIndexesWrapperPassPass(Registry);
   initializeStackColoringLegacyPass(Registry);
