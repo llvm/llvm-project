@@ -1538,30 +1538,31 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
 }
 
-void VPlanTransforms::addMemoryRuntimeChecks(
-    VPlan &Plan, ArrayRef<RuntimePointerCheck> Checks, ScalarEvolution &SE,
-    DebugLoc DL, bool AddBranchWeights) {
-  assert(!Checks.empty() && "no checks to replace the pre-built block with");
+void VPlanTransforms::attachMemoryChecks(VPlan &Plan,
+                                         ArrayRef<RuntimePointerCheck> Checks,
+                                         ScalarEvolution &SE, DebugLoc DL,
+                                         bool AddBranchWeights) {
+  assert(!Checks.empty() && "no checks to generate");
 
   auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
   VPBuilder Builder(MemCheckVPBB);
   VPSCEVExpander Expander(Builder, SE, DL);
 
-  // Expand each group's bounds once and up front.
+  // Expand each group's bounds once so all checks reuse the same frozen values.
   SmallDenseMap<const RuntimeCheckingPtrGroup *,
                 std::pair<VPValue *, VPValue *>>
       GroupToBounds;
   for (const auto &[A, B] : Checks)
     for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
-      if (GroupToBounds.contains(CG))
+      auto &[Start, End] = GroupToBounds[CG];
+      if (Start)
         continue;
-      VPValue *Start = Expander.expand(CG->Low);
-      VPValue *End = Expander.expand(CG->High);
+      Start = Expander.expand(CG->Low);
+      End = Expander.expand(CG->High);
       if (CG->NeedsFreeze) {
         Start = Builder.createFreeze(Start, DL);
         End = Builder.createFreeze(End, DL);
       }
-      GroupToBounds.try_emplace(CG, Start, End);
     }
 
   VPValue *Cond = Plan.getFalse();

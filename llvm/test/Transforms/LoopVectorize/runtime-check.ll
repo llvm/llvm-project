@@ -345,11 +345,11 @@ define void @different_load_store_pairs(ptr %src.1, ptr %src.2, ptr %dst.1, ptr 
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META22:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD34:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8, !alias.scope [[META25:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD19:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8, !alias.scope [[META25:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nusw i32, ptr [[DST_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP6]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META29:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr nusw i64, ptr [[DST_2]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD34]], ptr [[TMP7]], align 8, !alias.scope [[META31:![0-9]+]], !noalias [[META32:![0-9]+]]
+; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD19]], ptr [[TMP7]], align 8, !alias.scope [[META31:![0-9]+]], !noalias [[META32:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
