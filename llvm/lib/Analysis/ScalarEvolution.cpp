@@ -5697,12 +5697,14 @@ getNoWrapFlagsForGEP(GEPOperator *GEP, const SCEV *Accum, ScalarEvolution &SE) {
 }
 
 /// technique for finding the AddRec expression.
-Value *canCreateSimpleAffineAddRec(PHINode *PN, Value *BEValueV,
-                                   Value *StartValueV, const DataLayout &DL,
-                                   AssumptionCache &AC, DominatorTree &DT,
-                                   LoopInfo &LI) {
+static Value *canCreateSimpleAffineAddRec(PHINode *PN, Value *BEValueV,
+                                          Value *StartValueV,
+                                          const DataLayout &DL,
+                                          AssumptionCache &AC,
+                                          DominatorTree &DT, LoopInfo &LI) {
   const Loop *L = LI.getLoopFor(PN->getParent());
-  assert(L && L->getHeader() == PN->getParent());
+  assert(L && L->getHeader() == PN->getParent() &&
+         "This query only makes sense for PHI nodes in a loop header");
   assert(BEValueV && StartValueV);
 
   if (auto BO = MatchBinaryOp(BEValueV, DL, AC, DT, PN)) {
@@ -5771,7 +5773,8 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN) {
     return nullptr;
 
   const Loop *L = LI.getLoopFor(PN->getParent());
-  assert(L && L->getHeader() == PN->getParent());
+  assert(L && L->getHeader() == PN->getParent() &&
+         "This query only makes sense for PHI nodes in a loop header");
 
   const SCEV *Accum = nullptr;
   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
@@ -7564,8 +7567,9 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
 }
 
 const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
-  // Worklist item with a Value and a bool indicating whether all operands have
-  // been visited already.
+  // Worklist item with a Value and an enum indicating the current state of
+  // that item. Most items go from Unvisited->Visited. PHI nodes with a complex
+  // backedge go from Unvisited->PHIInitialValue->PHIBackedge.
   enum class StackState {
     Unvisited,
     Visited,
