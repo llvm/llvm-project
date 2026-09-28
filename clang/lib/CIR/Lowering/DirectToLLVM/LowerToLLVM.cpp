@@ -57,7 +57,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
-#include "llvm/Transforms/Utils/Local.h"
 
 using namespace cir;
 using namespace llvm;
@@ -5936,18 +5935,8 @@ void expandAMDGPUDevicePrintf(llvm::Module &module) {
   llvm::SmallVector<llvm::User *, 8> users(marker->user_begin(),
                                            marker->user_end());
   for (llvm::User *u : users) {
-    auto *cb = llvm::cast<llvm::CallBase>(u);
-
-    // CIR emits an invoke rather than a call when the marker call site is
-    // inside a region that requires unwinding, even though the device printf
-    // sequence emitted below can never throw. Normalize those invokes to
-    // calls.
-    llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(cb);
-    if (!ci) {
-      assert(llvm::isa<llvm::InvokeInst>(cb) &&
-             "unexpected non-call user of printf marker");
-      ci = llvm::changeToCall(llvm::cast<llvm::InvokeInst>(cb));
-    }
+    // CIRGen marks the marker call nothrow, so it is never an invoke.
+    auto *ci = llvm::cast<llvm::CallInst>(u);
 
     // Buffered lowering splits the call site's block and build new control flow
     // of its own. It expects to be the one driving codegen for the rest of the

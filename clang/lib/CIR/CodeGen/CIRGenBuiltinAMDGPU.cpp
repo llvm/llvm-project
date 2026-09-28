@@ -1133,5 +1133,8 @@ CIRGenFunction::emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr) {
                                  builder.getSInt32Ty(),
                                  /*isVarArg=*/true);
   cir::FuncOp fn = cgm.createRuntimeFunction(fnTy, "__cir_amdgpu_printf");
-  return builder.createCallOp(loc, fn, callArgs).getResult();
+  cir::CallOp call = builder.createCallOp(loc, fn, callArgs);
+  // The sequence the marker expands into never unwinds.
+  call.setNothrowAttr(builder.getUnitAttr());
+  return call.getResult();
 }
