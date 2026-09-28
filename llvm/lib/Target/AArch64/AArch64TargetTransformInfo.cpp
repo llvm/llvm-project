@@ -4026,62 +4026,50 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // present.
     static const TypeConversionCostTblEntry ScalablePackUnpackTbl[] = {
         // SVE: to f16
-        {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i1, SVE_UNPACK_ONCE},
         {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, SVE_UNPACK_ONCE},
         {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1}, // uzp
         {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 2}, // 2 uzp
 
-        {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i1, SVE_UNPACK_ONCE},
         {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, SVE_UNPACK_ONCE},
         {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1}, // uzp
         {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 2}, // 2 uzp
         // SVE: to f32
-        {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i1, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_UNPACK_ONCE},
         {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1}, // uzp
 
-        {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i1, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_UNPACK_ONCE},
         {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1}, // uzp
         // SVE: to f64
-        {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i1, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_UNPACK_TWICE},
         {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_UNPACK_ONCE},
 
-        {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i1, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_UNPACK_TWICE},
         {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_UNPACK_ONCE},
         // SVE: from f16
         {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f16, SVE_UNPACK_TWICE},
         {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f16, SVE_UNPACK_ONCE},
-        {ISD::FP_TO_UINT, MVT::nxv8i1, MVT::nxv8f16, 1}, // uzp
         {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1}, // uzp
 
         {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f16, SVE_UNPACK_TWICE},
         {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f16, SVE_UNPACK_ONCE},
-        {ISD::FP_TO_SINT, MVT::nxv8i1, MVT::nxv8f16, 1}, // uzp
         {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1}, // uzp
         // SVE: from f32
         {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, SVE_UNPACK_ONCE},
-        {ISD::FP_TO_UINT, MVT::nxv4i1, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1}, // uzp
 
         {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, SVE_UNPACK_ONCE},
-        {ISD::FP_TO_SINT, MVT::nxv4i1, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1}, // uzp
         // SVE: from f64
-        {ISD::FP_TO_UINT, MVT::nxv2i1, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 2}, // 2 uzp
         {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1}, // uzp
 
-        {ISD::FP_TO_SINT, MVT::nxv2i1, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 2},  // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 2}, // 2 uzp
         {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1}, // uzp
