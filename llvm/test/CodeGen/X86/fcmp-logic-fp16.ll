@@ -55,9 +55,9 @@ define i1 @mixed_and5_f16(half %a, half %b, half %c, half %d, half %e, half %f) 
 ; VL-NEXT:    vcmpneqsh %xmm4, %xmm0, %k1
 ; VL-NEXT:    kandw %k0, %k1, %k0
 ; VL-NEXT:    vcmpeqsh %xmm3, %xmm0, %k1
-; VL-NEXT:    kandw %k1, %k0, %k0
+; VL-NEXT:    kandw %k0, %k1, %k0
 ; VL-NEXT:    vcmpltsh %xmm0, %xmm1, %k1
-; VL-NEXT:    kandw %k1, %k0, %k0
+; VL-NEXT:    kandw %k0, %k1, %k0
 ; VL-NEXT:    vcmpltsh %xmm2, %xmm0, %k1
 ; VL-NEXT:    kandw %k1, %k0, %k0
 ; VL-NEXT:    kmovd %k0, %eax
