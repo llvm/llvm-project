@@ -20583,15 +20583,16 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP;
   assert(IsSigned || IsUnsigned);
 
-  // Don't fold if the individual cast operations are already legal,
-  // as FTRUNC may have a more expensive custom expansion.
+  // Don't fold if the individual cast operations are already legal, or the
+  // target reports that its custom FTRUNC expansion is expensive.
   EVT IntVT = N->getOperand(0).getValueType();
   EVT LegalIntVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntVT);
   unsigned FPToIntOp = IsUnsigned ? ISD::FP_TO_UINT : ISD::FP_TO_SINT;
   unsigned IntToFPOp = N->getOpcode(); // UINT_TO_FP or SINT_TO_FP
   if (!TLI.isOperationLegal(ISD::FTRUNC, VT) &&
-      TLI.isOperationLegal(FPToIntOp, LegalIntVT) &&
-      TLI.isOperationLegal(IntToFPOp, VT))
+      ((TLI.isOperationLegal(FPToIntOp, LegalIntVT) &&
+        TLI.isOperationLegal(IntToFPOp, VT)) ||
+       !TLI.isCustomFTruncCheap(VT)))
     return SDValue();
 
   bool IsSignedZeroSafe = DAG.canIgnoreSignBitOfZero(SDValue(N, 0));

@@ -3814,6 +3814,13 @@ bool X86TargetLowering::isCtlzFast() const {
   return Subtarget.hasFastLZCNT();
 }
 
+bool X86TargetLowering::isCustomFTruncCheap(EVT VT) const {
+  // Without SSE41, FTRUNC is emulated with a conversion round trip plus a
+  // range check and select, which is more expensive than a plain
+  // fpto[us]i -> [us]itofp pair.
+  return false;
+}
+
 bool X86TargetLowering::preferZeroCompareBranch() const { return true; }
 
 bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(

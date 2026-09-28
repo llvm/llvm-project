@@ -238,6 +238,8 @@ namespace llvm {
 
     bool isCtlzFast() const override;
 
+    bool isCustomFTruncCheap(EVT VT) const override;
+
     bool preferZeroCompareBranch() const override;
 
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {

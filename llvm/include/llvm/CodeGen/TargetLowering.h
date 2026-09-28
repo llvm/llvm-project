@@ -3490,6 +3490,14 @@ public:
     return false;
   }
 
+  /// Return true if a custom lowered FTRUNC of type VT is cheap enough that it
+  /// is worthwhile to fold an fpto[us]i -> [us]itofp round trip into it. This
+  /// is only queried when FTRUNC is not legal for VT.
+  virtual bool isCustomFTruncCheap(EVT VT) const {
+    assert(VT.isFloatingPoint());
+    return true;
+  }
+
   /// Return true if an FMA operation is faster than a pair of fmul and fadd
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
   /// returns true, otherwise fmuladd is expanded to fmul + fadd.
