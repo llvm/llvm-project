@@ -173,7 +173,6 @@ void registerToLLVMTranslation() {
                                                       enableOpenMP);
         if (!llvmModule)
           return mlir::failure();
-        cir::direct::expandAMDGPUDevicePrintf(*llvmModule);
         llvmModule->renumberMetadataForAssembly();
         llvmModule->print(output, nullptr);
         return mlir::success();

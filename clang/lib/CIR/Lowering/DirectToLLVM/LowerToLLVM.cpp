@@ -5918,7 +5918,7 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP) {
 
 // Expand calls to the internal __cir_amdgpu_printf marker CIRGen emits for a
 // device-side printf into the real AMDGPU sequence.
-void expandAMDGPUDevicePrintf(llvm::Module &module) {
+static void expandAMDGPUDevicePrintf(llvm::Module &module) {
   llvm::Function *marker = module.getFunction("__cir_amdgpu_printf");
   if (!marker)
     return;
@@ -6006,6 +6006,8 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
     // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
   }
+
+  expandAMDGPUDevicePrintf(*llvmModule);
 
   return llvmModule;
 }
