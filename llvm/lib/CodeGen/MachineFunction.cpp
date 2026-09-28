@@ -63,7 +63,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -244,15 +243,6 @@ void MachineFunction::init() {
   if (isFuncletEHPersonality(classifyEHPersonality(
           F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr))) {
     WinEHInfo = new (Allocator) WinEHFuncInfo();
-  }
-
-  if (!Target.isCompatibleDataLayout(getDataLayout())) {
-    report_fatal_error(
-        formatv("Can't create a MachineFunction using a Module with a "
-                "Target-incompatible DataLayout attached\n  Target "
-                "DataLayout: {0}\n  Module DataLayout: {1}\n",
-                Target.createDataLayout().getStringRepresentation(),
-                getDataLayout().getStringRepresentation()));
   }
 
   PSVManager = std::make_unique<PseudoSourceValueManager>(getTarget());

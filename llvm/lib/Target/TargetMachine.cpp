@@ -37,15 +37,19 @@ cl::opt<bool> llvm::NoKernelInfoEndLTO(
 // TargetMachine Class
 //
 
-TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
-                             const Triple &TT, StringRef CPU, StringRef FS,
-                             const TargetOptions &Options)
-    : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
-      TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
-      MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
-      O0WantsFastISel(false), Options(Options) {}
+TargetMachine::TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                             StringRef FS, const TargetOptions &Options)
+    : TheTarget(T), TargetTriple(TT), TargetCPU(std::string(CPU)),
+      TargetFS(std::string(FS)), AsmInfo(nullptr), MRI(nullptr), MII(nullptr),
+      STI(nullptr), RequireStructuredCFG(false), O0WantsFastISel(false),
+      Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+DataLayout TargetMachine::createDataLayout() const {
+  return DataLayout(
+      TargetTriple.computeDataLayout(Options.MCOptions.getABIName()));
+}
 
 Expected<std::unique_ptr<MCStreamer>>
 TargetMachine::createMCStreamer(raw_pwrite_stream &Out,

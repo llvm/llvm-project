@@ -94,8 +94,7 @@ CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
     CodeGenOptLevel OL)
-    : TargetMachine(T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT,
-                    CPU, FS, Options) {
+    : TargetMachine(T, TT, CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;
   this->OptLevel = OL;
