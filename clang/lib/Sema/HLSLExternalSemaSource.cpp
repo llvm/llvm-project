@@ -33,6 +33,28 @@ using namespace llvm::hlsl;
 
 using clang::hlsl::BuiltinTypeDeclBuilder;
 
+static NamespaceDecl *createImplicitNamespace(Sema &S, StringRef Name,
+                                              DeclContext *DC) {
+  ASTContext &AST = S.getASTContext();
+  IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
+  LookupResult Result(S, &II, SourceLocation(), Sema::LookupNamespaceName);
+  NamespaceDecl *PrevDecl = nullptr;
+  if (S.LookupQualifiedName(Result, DC))
+    PrevDecl = Result.getAsSingle<NamespaceDecl>();
+
+  NamespaceDecl *NS =
+      NamespaceDecl::Create(AST, DC, /*Inline=*/false, SourceLocation(),
+                            SourceLocation(), &II, PrevDecl, /*Nested=*/false);
+  NS->setImplicit(true);
+  NS->setHasExternalLexicalStorage();
+  DC->addDecl(NS);
+
+  // Force external decls in the namespace to load from the PCH.
+  (void)NS->getCanonicalDecl()->decls_begin();
+
+  return NS;
+}
+
 void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   SemaPtr = &S;
   ASTContext &AST = SemaPtr->getASTContext();
@@ -40,21 +62,12 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   if (AST.getTranslationUnitDecl()->hasExternalLexicalStorage())
     (void)AST.getTranslationUnitDecl()->decls_begin();
 
-  IdentifierInfo &HLSL = AST.Idents.get("hlsl", tok::TokenKind::identifier);
-  LookupResult Result(S, &HLSL, SourceLocation(), Sema::LookupNamespaceName);
-  NamespaceDecl *PrevDecl = nullptr;
-  if (S.LookupQualifiedName(Result, AST.getTranslationUnitDecl()))
-    PrevDecl = Result.getAsSingle<NamespaceDecl>();
-  HLSLNamespace = NamespaceDecl::Create(
-      AST, AST.getTranslationUnitDecl(), /*Inline=*/false, SourceLocation(),
-      SourceLocation(), &HLSL, PrevDecl, /*Nested=*/false);
-  HLSLNamespace->setImplicit(true);
-  HLSLNamespace->setHasExternalLexicalStorage();
-  AST.getTranslationUnitDecl()->addDecl(HLSLNamespace);
+  HLSLNamespace = createImplicitNamespace(
+      S, "hlsl", cast<DeclContext>(AST.getTranslationUnitDecl()));
+  HLSLDetailNamespace = createImplicitNamespace(S, "__detail", HLSLNamespace);
 
-  // Force external decls in the HLSL namespace to load from the PCH.
-  (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
+  defineInternalHLSLTypes();
   defineHLSLTypesWithForwardDeclarations();
   defineHLSLAtomicIntrinsics();
 
@@ -233,6 +246,29 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
   defineHLSLMatrixAlias();
 }
 
+void HLSLExternalSemaSource::defineHeapResourceInfoTypes() {
+  ASTContext &AST = SemaPtr->getASTContext();
+  CXXRecordDecl *ResDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace,
+                                                  "heap_resource_info")
+                               .finalizeForwardDeclaration();
+  if (!ResDecl->isCompleteDefinition())
+    BuiltinTypeDeclBuilder(*SemaPtr, ResDecl)
+        .addMemberVariable("Index", AST.UnsignedIntTy, {})
+        .completeDefinition();
+
+  CXXRecordDecl *SampDecl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace, "heap_sampler_info")
+          .finalizeForwardDeclaration();
+  if (!SampDecl->isCompleteDefinition())
+    BuiltinTypeDeclBuilder(*SemaPtr, SampDecl)
+        .addMemberVariable("Index", AST.UnsignedIntTy, {})
+        .completeDefinition();
+}
+
+void HLSLExternalSemaSource::defineInternalHLSLTypes() {
+  defineHeapResourceInfoTypes();
+}
+
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, bool IsROV,
@@ -242,6 +278,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapResourceInfoConstructor(HasCounter)
       .addStaticInitializationFunctions(HasCounter);
 }
 
@@ -252,6 +289,7 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapSamplerInfoConstructor()
       .addStaticInitializationFunctions(false);
 }
 
@@ -382,6 +420,7 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
   B.addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapResourceInfoConstructor()
       .addStaticInitializationFunctions(false);
 
   if (T.has(TexCap::Load))
@@ -886,20 +925,30 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
 }
 
 // Synthesize the InterlockedFunc overload set: {int, uint, int64_t, uint64_t}
-// x {groupshared, device} x {2-arg, 3-arg}.
+// x {groupshared, device} x {2-arg, 3-arg}. Operations that always report the
+// previous value, such as InterlockedExchange, only get the 3-arg form.
+// InterlockedExchange also accepts float, which lowers to a bitwise exchange
+// of the 32-bit pattern.
 static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
-                                      StringRef FuncName,
-                                      StringRef BuiltinName) {
+                                      StringRef FuncName, StringRef BuiltinName,
+                                      bool RequiresOriginalValue = false,
+                                      bool SupportsFloat = false) {
   ASTContext &AST = S.getASTContext();
   // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
-  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
-                      AST.UnsignedLongTy};
+  SmallVector<QualType, 5> Elems = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                                    AST.UnsignedLongTy};
+  if (SupportsFloat)
+    Elems.push_back(AST.FloatTy);
   LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
 
   for (QualType ElemTy : Elems)
-    for (LangAS AS : AddrSpaces)
-      for (bool ThreeArg : {false, true})
-        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
+    for (LangAS AS : AddrSpaces) {
+      if (!RequiresOriginalValue)
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                            /*ThreeArg=*/false);
+      buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                          /*ThreeArg=*/true);
+    }
 }
 
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
@@ -907,6 +956,10 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_add");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAnd",
                             "__builtin_hlsl_interlocked_and");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedExchange",
+                            "__builtin_hlsl_interlocked_exchange",
+                            /*RequiresOriginalValue=*/true,
+                            /*SupportsFloat=*/true);
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMax",
                             "__builtin_hlsl_interlocked_max");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMin",

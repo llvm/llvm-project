@@ -20,7 +20,6 @@ class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 class PredicatedScalarEvolution;
-class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
@@ -44,9 +43,9 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(const VPValue *V,
-                                  PredicatedScalarEvolution &PSE,
-                                  const Loop *L = nullptr);
+LLVM_ABI_FOR_TEST const SCEV *
+getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
+                      const Loop *L = nullptr);
 
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
@@ -69,7 +68,7 @@ bool isSingleScalar(const VPValue *VPV);
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
-bool isUniformAcrossVFsAndUFs(const VPValue *V);
+LLVM_ABI_FOR_TEST bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
@@ -136,21 +135,10 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 /// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
-/// Extracts and returns NoWrap and FastMath flags from the induction binop in
-/// \p ID.
-inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
-  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return ID.getInductionBinOp()->getFastMathFlags();
-
-  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
-          ID.getInductionBinOp()))
-    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
-                                  OBO->hasNoSignedWrap());
-
-  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
-         "Expected int induction");
-  return VPIRFlags::WrapFlagsTy(false, false);
-}
+/// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
+/// ID.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
+                               const VPPhi *PhiR);
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.

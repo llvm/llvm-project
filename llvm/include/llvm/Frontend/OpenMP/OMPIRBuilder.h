@@ -3837,6 +3837,9 @@ public:
   ///        parent function, so it cannot be used for code emitted inside the
   ///        outlined function. If this is empty, such code is emitted without a
   ///        debug location.
+  /// \param RTLocOverride Optional runtime source-location identifier to report
+  ///        to the offload runtime for the kernel launch. When null, a default
+  ///        source-location identifier is used.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3853,7 +3856,7 @@ public:
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
           omp::OMPDynGroupprivateFallbackType::Abort,
-      DebugLoc OutlinedFnLoc = {});
+      DebugLoc OutlinedFnLoc = {}, Value *RTLocOverride = nullptr);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

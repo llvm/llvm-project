@@ -194,7 +194,7 @@ using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// The no-wrap flags to apply when creating a SCEV expression, to the
 /// expression and use respectively.
-struct SCEVFlags {
+struct SCEVFlagsPair {
   /// Flags applied directly to a SCEV expression, must be valid wherever the
   /// expression is valid.
   SCEVNoWrapFlags ExprFlags;
@@ -202,8 +202,8 @@ struct SCEVFlags {
   /// Flags only applied to a SCEVUse.
   SCEVNoWrapFlags UseFlags;
 
-  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagNone,
-                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagNone)
+  constexpr SCEVFlagsPair(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagNone,
+                          SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagNone)
       : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
 };
 
@@ -760,26 +760,26 @@ public:
   LLVM_ABI const SCEV *getAnyExtendExpr(SCEVUse Op, Type *Ty);
 
   LLVM_ABI SCEVUse getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                              SCEVFlags Flags = {}, unsigned Depth = 0);
-  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                              SCEVFlagsPair Flags = {}, unsigned Depth = 0);
+  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlagsPair Flags = {},
                      unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getAddExpr(Ops, Flags, Depth);
   }
   SCEVUse getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                     SCEVFlags Flags = {}, unsigned Depth = 0) {
+                     SCEVFlagsPair Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
   LLVM_ABI SCEVUse getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
-                              SCEVFlags Flags = {}, unsigned Depth = 0);
-  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                              SCEVFlagsPair Flags = {}, unsigned Depth = 0);
+  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlagsPair Flags = {},
                      unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getMulExpr(Ops, Flags, Depth);
   }
   SCEVUse getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                     SCEVFlags Flags = {}, unsigned Depth = 0) {
+                     SCEVFlagsPair Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
@@ -787,11 +787,11 @@ public:
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI SCEVUse getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
-                                 SCEVFlags Flags);
+                                 SCEVFlagsPair Flags);
   LLVM_ABI SCEVUse getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
-                                 const Loop *L, SCEVFlags Flags);
+                                 const Loop *L, SCEVFlagsPair Flags);
   SCEVUse getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands, const Loop *L,
-                        SCEVFlags Flags) {
+                        SCEVFlagsPair Flags) {
     SmallVector<SCEVUse, 4> NewOp(Operands.begin(), Operands.end());
     return getAddRecExpr(NewOp, L, Flags);
   }
@@ -970,8 +970,8 @@ public:
 
   /// This is a convenience function which does
   /// getSCEVAtExit(getSCEV(V), L, ExitingBlock).
-  LLVM_ABI SCEVUse getSCEVAtExit(Value *V, const Loop *L,
-                                 const BasicBlock *ExitingBlock) {
+  SCEVUse getSCEVAtExit(Value *V, const Loop *L,
+                        const BasicBlock *ExitingBlock) {
     return getSCEVAtExit(getSCEV(V), L, ExitingBlock);
   }
 

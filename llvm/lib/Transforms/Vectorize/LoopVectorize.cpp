@@ -629,15 +629,11 @@ struct EpilogueLoopVectorizationInfo {
   ElementCount MainLoopVF = ElementCount::getFixed(0);
   unsigned MainLoopUF = 0;
   ElementCount EpilogueVF = ElementCount::getFixed(0);
-  unsigned EpilogueUF = 0;
   Value *VectorTripCount = nullptr;
 
   EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
-                                ElementCount EVF, unsigned EUF)
-      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF), EpilogueUF(EUF) {
-    assert(EUF == 1 &&
-           "A high UF for the epilogue loop is likely not beneficial.");
-  }
+                                ElementCount EVF)
+      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
 };
 
 /// An extension of the inner loop vectorizer that creates a skeleton for a
@@ -707,7 +703,7 @@ public:
                                  VPlan &MainPlan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
                                        Checks, Plan, EPI.EpilogueVF,
-                                       EPI.EpilogueUF),
+                                       /*UnrollFactor=*/1),
         MainPlan(MainPlan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
@@ -1112,12 +1108,6 @@ public:
   /// optsize or a loop hint annotation).
   bool isEpilogueAllowed() const {
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
-  }
-
-  /// Returns true if tail-folding is preferred over an epilogue.
-  bool preferTailFoldedLoop() const {
-    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
-           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
@@ -3062,24 +3052,22 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
-    if (MaxPowerOf2RuntimeVF > 0u) {
-      // If we have a low-trip-count, and the fixed-width VF is known to divide
-      // the trip count but the scalable factor does not, use the fixed-width
-      // factor in preference to allow the generation of a non-predicated loop.
-      if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
-        LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
-                             "remain for any chosen VF.\n");
-        MaxFactors.ScalableVF = ElementCount::getScalable(0);
-        return MaxFactors;
-      }
+    // If we have a low-trip-count, and the fixed-width VF is known to divide
+    // the trip count the fixed-width factor in preference to allow the
+    // generation of a non-predicated loop.
+    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+        NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
+      LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
+                           "remain for any chosen VF.\n");
+      MaxFactors.ScalableVF = ElementCount::getScalable(0);
+      return MaxFactors;
     }
 
-    // Allow cases where the ExactTC == (VF * IC) or ExactTC == (VF * IC) + 1.
+    // Allow cases where the ExactTC == (VF * IC) + 1.
     //
-    // This produces at most 1 vector iteration, and at most 1 scalar iteration
-    // with no remainder. Later passes will eliminate the loop and leave
-    // straight-line code as the both iteration counts are statically known.
+    // This produces 1 vector iteration, and 1 scalar iteration with no
+    // remainder. Later passes will eliminate the loop and leave straight-line
+    // code as the both iteration counts are statically known.
     //
     // If a function is marked as minsize/optsize or OptForSize is set, do not
     // allow this form of transformation as this will increase CodeSize.
@@ -3088,7 +3076,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // enough to accurately determine if vectorization is beneficial.
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
     unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
-    if (TC.getFixedValue() - MaxVFForTC <= 1 && MaxVFForTC / EffectiveIC > 1 &&
+    if (TC.getFixedValue() - MaxVFForTC == 1 && MaxVFForTC / EffectiveIC > 1 &&
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
         !Config.OptForSize) {
       unsigned NumOfInstructions = llvm::sum_of(
@@ -3098,7 +3086,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       if (NumOfInstructions > LowTripCountLoopBodySizeLimit) {
         unsigned VF = MaxVFForTC / EffectiveIC;
         LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
-                          << " with at most 1 scalar iteration remaining.\n");
+                          << " with 1 scalar iteration remaining.\n");
         MaxFactors.FixedVF = ElementCount::getFixed(VF);
         MaxFactors.ScalableVF = ElementCount::getScalable(0);
         return MaxFactors;
@@ -5990,7 +5978,7 @@ void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
            << "Main Loop VF:" << EPI.MainLoopVF
            << ", Main Loop UF:" << EPI.MainLoopUF
            << ", Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
+           << ", Epilogue Loop UF:1\n";
   });
 }
 
@@ -6036,8 +6024,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
 void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
   LLVM_DEBUG({
     dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-           << "Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
+           << "Epilogue Loop VF:" << EPI.EpilogueVF << ", Epilogue Loop UF:1\n";
   });
 }
 
@@ -6499,9 +6486,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
             ? UncountableExitStyle::MaskedHandleExitInScalarLoop
             : UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
-                        OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle))
+                        ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
+                        EEStyle)) {
       return nullptr;
+    }
   } else {
     RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);
   }
@@ -7601,12 +7589,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   auto VScale = Config.getVScaleForTuning();
   unsigned MainLoopStep =
       estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-  unsigned EpilogueLoopStep =
-      estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
+  unsigned EpilogueLoopStep = estimateElementCount(EPI.EpilogueVF, VScale);
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
                  EPI.VectorTripCount, Plan.requiresScalarEpilogue(),
-                 EPI.EpilogueVF, EPI.EpilogueUF, MainLoopStep, EpilogueLoopStep,
-                 SE);
+                 EPI.EpilogueVF, MainLoopStep, EpilogueLoopStep, SE);
 
   return InstsToMove;
 }
@@ -7818,8 +7804,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // `CM_EpilogueNotAllowedLowTripLoop` prevents vectorizing loops
       // with runtime checks. It's more effective to let
       // `isOutsideLoopWorkProfitable` determine if vectorization is
-      // beneficial for the loop.
-      if (SEL != CM_EpilogueNotNeededFoldTail)
+      // beneficial for the loop. If the trip count is below the target's
+      // minimum for tail-folding, the tail cannot be folded, so treat it like
+      // any other low trip count loop.
+      if (SEL != CM_EpilogueNotNeededFoldTail ||
+          ExpectedTC->getFixedValue() <=
+              TTI->getMinTripCountTailFoldingThreshold())
         SEL = CM_EpilogueNotAllowedLowTripLoop;
     }
   }
@@ -7923,7 +7913,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
 
-    unsigned SelectedIC = std::max(IC, UserIC);
+    unsigned SelectedIC = UserIC > 0 ? UserIC : IC;
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
@@ -8131,11 +8121,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
     SmallVector<VPInstruction *> ResumeValues =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
-    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF, 1);
+    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
+    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0));
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
     RUN_VPLAN_PASS(
@@ -8164,7 +8154,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         *PSE.getSE(), ResumeValues);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LVP.executePlan(
-        EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV, DT,
+        EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
     connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,

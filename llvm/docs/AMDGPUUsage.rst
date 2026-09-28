@@ -956,8 +956,7 @@ Module Flags
 ------------
 
 AMDGPU-specific behaviour can be controlled via LLVM module flags (see
-`Module Flags Metadata
-<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+:ref:`Module Flags Metadata <module-flags-metadata>` in the language
 reference). These flags are set by frontends and are
 consumed by the AMDGPU backend during code generation.
 
