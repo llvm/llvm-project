@@ -2522,6 +2522,30 @@ bool SITargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
   return isTypeDesirableForOp(N->getOpcode(), VT);
 }
 
+bool SITargetLowering::isUniformLoad(const LoadSDNode *Load) const {
+  const MachineMemOperand *MMO = Load->getMemOperand();
+
+  // FIXME: We ought to able able to take the direct isDivergent result. We
+  // cannot rely on the MMO for a uniformity check, and should stop using
+  // it. This is a hack for 2 ways that the IR divergence analysis is superior
+  // to the DAG divergence: Recognizing shift-of-workitem-id as always
+  // uniform, and isSingleLaneExecution. These should be handled in the DAG
+  // version, and then this can be dropped.
+  if (Load->isDivergent() && !AMDGPU::isUniformMMO(MMO))
+    return false;
+
+  return MMO->getSize().hasValue() &&
+         Load->getAlign() >=
+             Align(std::min(MMO->getSize().getValue().getKnownMinValue(),
+                            uint64_t(4))) &&
+         (MMO->isInvariant() ||
+          (Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+           Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
+          (Load->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+           Load->isSimple() && Subtarget->getScalarizeGlobalBehavior() &&
+           isMemOpHasNoClobberedMemOperand(Load)));
+}
+
 MachinePointerInfo
 SITargetLowering::getKernargSegmentPtrInfo(MachineFunction &MF) const {
   // This isn't really a constant pool but close enough.
@@ -13624,9 +13648,10 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
     // to match subword load patterns.
+    // Only do this for loads that can use scalar subword load instructions.
     if (!MemVT.isVector() && MemVT.getSizeInBits() == 16 &&
         isTypeLegal(MemVT) && Subtarget->hasScalarSubwordLoads() &&
-        !Load->isDivergent() && AMDGPU::isUniformMMO(MMO)) {
+        isUniformLoad(Load)) {
       SDValue Chain = Load->getChain();
       SDValue BasePtr = Load->getBasePtr();
 

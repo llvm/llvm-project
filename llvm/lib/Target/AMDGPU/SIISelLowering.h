@@ -54,6 +54,8 @@ public:
 
   MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
 
+  bool isUniformLoad(const LoadSDNode *Load) const;
+
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
