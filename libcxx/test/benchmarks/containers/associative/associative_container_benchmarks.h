@@ -481,19 +481,17 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Value> large = make_value_types(generate_unique_keys(size + (size / 10)));
     auto skip_start          = bench_end_iter ? size : size / 2;
 
-    std::vector<Value> small;
-    small.reserve(size / 10);
+    Container c;
     { // Split the range
       std::vector<Value> tmp;
       tmp.reserve(size);
       std::copy_n(large.begin(), skip_start, std::back_inserter(tmp));
-      std::copy_n(large.begin() + skip_start, size / 10, std::back_inserter(small));
+      std::copy_n(large.begin() + skip_start, size / 10, std::inserter(c, c.end()));
       std::copy(large.begin() + skip_start + size / 10, large.end(), std::back_inserter(tmp));
 
       large = std::move(tmp);
     }
 
-    Container c(small.begin(), small.end());
     const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
@@ -519,11 +517,10 @@ void associative_container_benchmarks(std::string container) {
 
     // Populate a container that already contains half the elements we'll try inserting,
     // that's what our container will start with.
-    std::vector<Value> small;
+    Container c;
     for (std::size_t i = 0; i != size / 2; ++i) {
-      small.push_back(large.at(i * 2));
+      c.insert(large.at(i * 2));
     }
-    Container c(small.begin(), small.end());
     const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
