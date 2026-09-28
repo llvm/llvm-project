@@ -1,8 +1,5 @@
 # "Clang" CFE Internals Manual
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -116,6 +113,17 @@ Mapping to `Fatal` should only be used for diagnostics that are considered so
 severe that error recovery won't be able to recover sensibly from them (thus
 spewing a ton of bogus errors). One example of this class of error is failure
 to `#include` a file.
+
+##### Extension vs ExtWarn
+
+Deciding whether to use `Extension` or `ExtWarn` can be difficult. 
+`ExtWarn` should be used if one of the following applies (or another good reason is stated):
+- the extension is likely to be used incorrectly (e.g. `-Wvla`);
+- the diagnosed code is likely wrong (e.g. `-Wmain`);
+- the extension is likely surprising in some cases (e.g. `SFINAEFailure`);
+- the extension is deprecated (e.g. `-Wauto-storage-class`).
+
+`Extension` should be used in all other circumstances.
 
 #### Diagnostic Wording
 
@@ -2922,7 +2930,7 @@ allowing the programmer to pass semantic information along to the compiler for
 various uses. For example, attributes may be used to alter the code generation
 for a program construct, or to provide extra semantic information for static
 analysis. This document explains how to add a custom attribute to Clang.
-Documentation on existing attributes can be found [here](https://clang.llvm.org/docs/AttributeReference.html).
+Documentation on existing attributes can be found [here](AttributeReference.md).
 
 #### Attribute Basics
 

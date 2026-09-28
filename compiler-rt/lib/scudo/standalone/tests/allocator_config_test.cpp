@@ -138,6 +138,7 @@ TEST(ScudoAllocatorConfigTest, VerifyOptionalFlags) {
   EXPECT_EQ(CacheConfig::getQuarantineSize(), 0U);
   EXPECT_EQ(CacheConfig::getDefaultMaxEntriesCount(), 0U);
   EXPECT_EQ(CacheConfig::getDefaultMaxEntrySize(), 0U);
+  EXPECT_EQ(CacheConfig::getDefaultMaxCacheResidentBytes(), 0U);
   EXPECT_EQ(CacheConfig::getMinReleaseToOsIntervalMs(), INT32_MIN);
   EXPECT_EQ(CacheConfig::getMaxReleaseToOsIntervalMs(), INT32_MAX);
   EXPECT_EQ(CacheConfig::getDefaultReleaseToOsIntervalMs(), INT32_MIN);

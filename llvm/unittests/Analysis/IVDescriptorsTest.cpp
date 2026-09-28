@@ -10,9 +10,11 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -429,4 +431,253 @@ TEST(IVDescriptorsTest, InvariantStoreNoSCEV) {
                              RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
                          EXPECT_FALSE(IsRdxPhi);
                        });
+}
+
+static Instruction *getInstructionByName(Function &F, StringRef Name) {
+  for (auto &I : instructions(F))
+    if (I.getName() == Name)
+      return &I;
+  llvm_unreachable("Expected to find instruction!");
+}
+
+TEST(IVDescriptorsTest, ConditionalInductionIntVar) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(ptr %dst, i1 %cond, i32 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %for.inc ]
+  %conditional = phi i32 [ 0, %entry ], [ %conditional.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %inc = add nsw i32 %conditional, 1
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i32 %conditional
+  store i32 10, ptr %arrayidx, align 4
+  br label %for.inc
+
+for.inc:
+  %conditional.next = phi i32 [ %inc, %if.then ], [ %conditional, %for.body ]
+  %i.next = add i32 %i, 1
+  %exitcond.not = icmp eq i32 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+
+        Instruction *Induction = getInstructionByName(F, "i");
+        Instruction *Phi = getInstructionByName(F, "conditional");
+        Instruction *BackedgePhi = getInstructionByName(F, "conditional.next");
+        Instruction *StepInst = getInstructionByName(F, "inc");
+
+        // Check the conditional induction descriptor.
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_TRUE(IsConditionalInductionPhi);
+        EXPECT_EQ(Desc.getHeaderPHI(), Phi);
+        EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);
+        EXPECT_EQ(Desc.getStepInst(), StepInst);
+
+        // Check the wrap flags for %i (the normal induction) don't include NSW.
+        // Note: `Induction` has the same start/step as the conditional
+        // induction.
+        const SCEV *OrigInSCEV = SE.getSCEV(Induction);
+        auto *AR = cast<SCEVAddRecExpr>(OrigInSCEV);
+        EXPECT_EQ(AR->getNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+        // Check the expressions and wrap flags for the conditional induction.
+        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNSW);
+        EXPECT_EQ(Desc.getStartSCEV(), AR->getStart());
+        EXPECT_EQ(Desc.getStepSCEV(), AR->getStepRecurrence(SE));
+      });
+}
+
+TEST(IVDescriptorsTest, ConditionalInductionPtrVar) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(ptr %start, i1 %cond, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %conditional = phi ptr [ %start, %entry ], [ %conditional.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %inc = getelementptr inbounds i8, ptr %conditional, i32 4
+  br label %for.inc
+
+for.inc:
+  %conditional.next = phi ptr [ %inc, %if.then ], [ %conditional, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+
+        Instruction *Phi = getInstructionByName(F, "conditional");
+        Instruction *BackedgePhi = getInstructionByName(F, "conditional.next");
+        Instruction *StepInst = getInstructionByName(F, "inc");
+
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_TRUE(IsConditionalInductionPhi);
+
+        EXPECT_EQ(Desc.getHeaderPHI(), Phi);
+        EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);
+        EXPECT_EQ(Desc.getStepInst(), StepInst);
+        auto *StartSCEV = SE.getSCEV(F.getArg(0));
+        auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
+        EXPECT_EQ(Desc.getStartSCEV(), StartSCEV);
+        EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
+        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNUW);
+      });
+}
+
+TEST(IVDescriptorsTest, InvalidConditionalInductionExtraStep) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(ptr %dst, i1 %cond, i1 %cond2, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %conditional = phi i32 [ 0, %entry ], [ %conditional.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %inc = add nsw i32 %conditional, 1
+  %conditional.prom = sext i32 %conditional to i64
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %conditional.prom
+  store i32 10, ptr %arrayidx, align 4
+  br i1 %cond2, label %if.then1, label %for.inc
+if.then1:
+  %inc2 = add nsw i32 %conditional, 2
+  br label %for.inc
+for.inc:
+  %conditional.next = phi i32 [ %inc, %if.then ], [ %inc2, %if.then1 ], [ %conditional, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+
+        Instruction *Phi = getInstructionByName(F, "conditional");
+
+        // Check the conditional induction descriptor.
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_FALSE(IsConditionalInductionPhi);
+      });
+}
+
+TEST(IVDescriptorsTest, ConditionalInductionPhiNegativeStepPtrVar) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(ptr %start, i1 %cond, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %conditional = phi ptr [ %start, %entry ], [ %conditional.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %dec = getelementptr nusw i8, ptr %conditional, i32 -4
+  br label %for.inc
+
+for.inc:
+  %conditional.next = phi ptr [ %dec, %if.then ], [ %conditional, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+
+        Instruction *Phi = getInstructionByName(F, "conditional");
+        Instruction *BackedgePhi = getInstructionByName(F, "conditional.next");
+        Instruction *StepInst = getInstructionByName(F, "dec");
+
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_TRUE(IsConditionalInductionPhi);
+
+        EXPECT_EQ(Desc.getHeaderPHI(), Phi);
+        EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);
+        EXPECT_EQ(Desc.getStepInst(), StepInst);
+        auto *StartSCEV = SE.getSCEV(F.getArg(0));
+        auto *StepSCEV = SE.getConstant(StartSCEV->getType(), -4);
+        EXPECT_EQ(Desc.getStartSCEV(), StartSCEV);
+        EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
+
+        // Check we don't add `nuw` when we have a negative GEP step.
+        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNone);
+      });
 }

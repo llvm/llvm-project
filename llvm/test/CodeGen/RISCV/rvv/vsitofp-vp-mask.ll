@@ -5,12 +5,11 @@
 define <vscale x 2 x bfloat> @vsitofp_nxv2bf16_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv2bf16_nxv2i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    lui a0, 1048572
 ; CHECK-NEXT:    addi a0, a0, -128
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x bfloat> @llvm.vp.sitofp.nxv2bf16.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x bfloat> %v
@@ -19,12 +18,11 @@ define <vscale x 2 x bfloat> @vsitofp_nxv2bf16_nxv2i1(<vscale x 2 x i1> %va, <vs
 define <vscale x 2 x bfloat> @vsitofp_nxv2bf16_nxv2i1_unmasked(<vscale x 2 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv2bf16_nxv2i1_unmasked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    lui a0, 1048572
 ; CHECK-NEXT:    addi a0, a0, -128
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x bfloat> @llvm.vp.sitofp.nxv2bf16.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x bfloat> %v

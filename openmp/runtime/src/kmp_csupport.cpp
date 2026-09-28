@@ -2040,6 +2040,14 @@ void ompc_set_num_threads(int arg) {
   __kmp_set_num_threads(arg, __kmp_entry_gtid());
 }
 
+void kmpc_set_num_threads_8(kmp_int64 arg) {
+  if (arg > (kmp_int64)INT_MAX)
+    arg = INT_MAX;
+  else if (arg < (kmp_int64)INT_MIN)
+    arg = INT_MIN;
+  __kmp_set_num_threads((int)arg, __kmp_entry_gtid());
+}
+
 void ompc_set_dynamic(int flag) {
   kmp_info_t *thread;
 

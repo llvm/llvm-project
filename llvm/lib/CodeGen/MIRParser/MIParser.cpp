@@ -360,7 +360,7 @@ static void mapValueToSlot(const Value *V, ModuleSlotTracker &MST,
 /// Creates the mapping from slot numbers to function's unnamed IR values.
 static void initSlots2Values(const Function &F,
                              DenseMap<unsigned, const Value *> &Slots2Values) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  ModuleSlotTracker MST(F.getParent());
   MST.incorporateFunction(F);
   for (const auto &Arg : F.args())
     mapValueToSlot(&Arg, MST, Slots2Values);
@@ -1389,6 +1389,7 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_nusw) ||
          Token.is(MIToken::kw_samesign) ||
          Token.is(MIToken::kw_inbounds) ||
+         Token.is(MIToken::kw_nonnull) ||
          Token.is(MIToken::kw_lr_split)) {
     // clang-format on
     // Mine frame and fast math flags
@@ -1432,6 +1433,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::SameSign;
     if (Token.is(MIToken::kw_inbounds))
       Flags |= MachineInstr::InBounds;
+    if (Token.is(MIToken::kw_nonnull))
+      Flags |= MachineInstr::NonNull;
     if (Token.is(MIToken::kw_lr_split))
       Flags |= MachineInstr::LRSplit;
 
@@ -1962,8 +1965,9 @@ static bool verifyScalarSize(uint64_t Size) {
   return Size != 0 && isUInt<16>(Size);
 }
 
-static bool verifyVectorElementCount(uint64_t NumElts) {
-  return NumElts != 0 && isUInt<16>(NumElts);
+static bool verifyVectorElementCount(uint64_t NumElts, bool HasVScale) {
+  // A fixed-length vector needs at least two elements.
+  return NumElts != 0 && (HasVScale || NumElts != 1) && isUInt<16>(NumElts);
 }
 
 static bool verifyAddrSpace(uint64_t AddrSpace) {
@@ -2050,7 +2054,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return GetError();
   uint64_t NumElements = Token.integerValue().getZExtValue();
-  if (!verifyVectorElementCount(NumElements))
+  if (!verifyVectorElementCount(NumElements, HasVScale))
     return error("invalid number of vector elements");
 
   lex();
@@ -3813,7 +3817,7 @@ bool MIParser::parseMMRA(MDNode *&Node) {
 static void initSlots2BasicBlocks(
     const Function &F,
     DenseMap<unsigned, const BasicBlock *> &Slots2BasicBlocks) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  ModuleSlotTracker MST(F.getParent());
   MST.incorporateFunction(F);
   for (const auto &BB : F) {
     if (BB.hasName())

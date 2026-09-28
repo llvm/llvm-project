@@ -550,7 +550,8 @@ func.func private @_QPsetup3()
 // -----
 
 // Test 16: The tuple slot is read back in the host, so the group sinks past the
-// call but stays before the coordinate_of feeding that read.
+// call. A coordinate_of only computes the slot address, so the group stays
+// before the fir.load that consumes it.
 func.func @_QPtuple_slot_read() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
@@ -576,11 +577,47 @@ func.func private @_QPsetup4()
 // CHECK:         fir.coordinate_of
 // CHECK:         fir.embox
 // CHECK:         fir.call @_QPsetup4
+// CHECK:         fir.coordinate_of
 // CHECK:         cuf.alloc
 // CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
 // CHECK:         fir.declare
 // CHECK:         fir.store {{.*}} : !fir.llvm_ptr
+// CHECK:         fir.load
+// CHECK:         cuf.allocate
+// CHECK:         cuf.free
+
+// -----
+
+// Test 17: The same coordinate_of feeds both the host-association capture store
+// and a later load (as CSE can produce). The coordinate_of is not a real use.
+func.func @_QPshared_slot_addr() {
+  %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %c0_i32 = arith.constant 0 : i32
+  %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFshared_slot_addrEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFshared_slot_addrEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.call @_QPsetup5() : () -> ()
+  %5 = fir.load %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %6 = cuf.allocate %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+func.func private @_QPsetup5()
+
+// CHECK-LABEL: func.func @_QPshared_slot_addr
 // CHECK:         fir.coordinate_of
+// CHECK:         fir.embox
+// CHECK:         fir.call @_QPsetup5
+// CHECK:         cuf.alloc
+// CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
+// CHECK:         fir.declare
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr
 // CHECK:         fir.load
 // CHECK:         cuf.allocate
 // CHECK:         cuf.free
