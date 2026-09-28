@@ -871,8 +871,8 @@ llvm::json::Value toJSON(const SourceBreakpoint &SB) {
     result.insert({"condition", *SB.condition});
   if (SB.hitCondition)
     result.insert({"hitCondition", *SB.hitCondition});
-  if (SB.logMessage)
-    result.insert({"logMessage", *SB.logMessage});
+  if (!SB.logMessage.empty())
+    result.insert({"logMessage", SB.logMessage});
   if (SB.mode)
     result.insert({"mode", *SB.mode});
 

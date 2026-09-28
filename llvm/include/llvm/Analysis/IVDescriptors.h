@@ -30,6 +30,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
+enum class SCEVNoWrapFlags;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -482,20 +483,19 @@ private:
   SmallVector<const SCEVPredicate *, 2> NoWrapPredicates;
 };
 
-/// A struct for saving information about monotonic variables.
-/// Monotonic variable can be considered as a "conditional" induction variable:
-/// its update happens only on loop iterations for which a certain predicate is
-/// satisfied. The step of the monotonic variable must be loop-invariant.
-class MonotonicDescriptor {
+/// Describes a conditional induction variable: an induction variable that is
+/// updated only on loop iterations for which a certain predicate is satisfied.
+/// Its step must be loop-invariant.
+class ConditionalInductionDescriptor {
 public:
-  MonotonicDescriptor() = default;
+  ConditionalInductionDescriptor() = default;
 
-  /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
-  /// is monotonic, the monotonic descriptor \p D will contain the data
-  /// describing the PHI.
-  LLVM_ABI static bool isMonotonicPHI(PHINode *PN, const Loop *L,
-                                      MonotonicDescriptor &Desc,
-                                      ScalarEvolution &SE);
+  /// Returns true if \p PN is a conditional induction variable in the loop
+  /// \p L. If it is, \p Desc will contain the data describing the PHI.
+  LLVM_ABI static bool
+  isConditionalInductionPHI(PHINode *PN, const Loop *L,
+                            ConditionalInductionDescriptor &Desc,
+                            ScalarEvolution &SE);
 
   /// Returns the header PHI described by this descriptor.
   PHINode *getHeaderPHI() const { return HeaderPHI; }
@@ -503,27 +503,27 @@ public:
   /// Returns the backedge PHI that selects between StepInst and the HeaderPHI.
   PHINode *getBackedgePHI() const { return BackedgePHI; }
 
-  /// Returns the instruction that updates the value of the monotonic PHI.
+  /// Returns the instruction that updates the conditional induction PHI.
   Instruction *getStepInst() const { return StepInst; }
 
-  /// Returns a SCEV expression for the initial value of the monotonic PHI.
+  /// Returns a SCEV expression for the initial value of the conditional
+  /// induction PHI.
   const SCEV *getStartSCEV() const { return StartSCEV; }
 
-  /// Returns a SCEV expression for the step of the monotonic PHI. This is
-  /// the value the monotonic PHI increments by on loop iterations where the
-  /// predicate is satisfied.
+  /// Returns a SCEV expression for the step of the conditional induction PHI.
+  /// This is the value it increments by when the predicate is satisfied.
   const SCEV *getStepSCEV() const { return StepSCEV; }
 
   /// Returns the SCEV no-wrap flags that apply to StepInst.
-  unsigned getSCEVNoWrapFlags() const { return SCEVNoWrapFlags; }
+  SCEVNoWrapFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
 
 private:
-  MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
-                      Instruction *StepInst, const SCEV *StartSCEV,
-                      const SCEV *StepSCEV, unsigned SCEVNoWrapFlags)
+  ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
+                                 Instruction *StepInst, const SCEV *StartSCEV,
+                                 const SCEV *StepSCEV,
+                                 SCEVNoWrapFlags NoWrapFlags)
       : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
-        StartSCEV(StartSCEV), StepSCEV(StepSCEV),
-        SCEVNoWrapFlags(SCEVNoWrapFlags) {}
+        StartSCEV(StartSCEV), StepSCEV(StepSCEV), NoWrapFlags(NoWrapFlags) {}
 
   /// The header PHI (this is the PHI described by the descriptor).
   PHINode *HeaderPHI = nullptr;
@@ -531,17 +531,19 @@ private:
   /// The backedge PHI that selects between StepInst and the HeaderPHI.
   PHINode *BackedgePHI = nullptr;
 
-  /// The instruction that updates the value of the monotonic PHI.
+  /// The instruction that updates the conditional induction PHI.
   Instruction *StepInst = nullptr;
 
-  /// SCEV expression representing the start value for the monotonic PHI.
+  /// SCEV expression representing the start value for the conditional
+  /// induction PHI.
   const SCEV *StartSCEV = nullptr;
 
-  /// SCEV expression representing the step value for the monotonic PHI.
+  /// SCEV expression representing the step value for the conditional induction
+  /// PHI.
   const SCEV *StepSCEV = nullptr;
 
   /// The SCEV no-wrap flags that apply to StepInst.
-  unsigned SCEVNoWrapFlags = 0;
+  SCEVNoWrapFlags NoWrapFlags{};
 };
 
 } // end namespace llvm

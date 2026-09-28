@@ -8,7 +8,7 @@ function test_alloc_return_scalar
   allocate(test_alloc_return_scalar)
 end function test_alloc_return_scalar
 ! CHECK-LABEL:   func.func @_QPtest_alloc_return_scalar() -> !fir.box<!fir.heap<f32>> {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "test_alloc_return_scalar", uniq_name = "_QFtest_alloc_return_scalarEtest_alloc_return_scalar"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<f32>> <{bindc_name = "test_alloc_return_scalar", uniq_name = "_QFtest_alloc_return_scalarEtest_alloc_return_scalar"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_alloc_return_scalarEtest_alloc_return_scalar"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 ! CHECK:           fir.store %{{.*}} to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -20,7 +20,7 @@ function test_alloc_return_array
   allocate(test_alloc_return_array(7:8))
 end function test_alloc_return_array
 ! CHECK-LABEL:   func.func @_QPtest_alloc_return_array() -> !fir.box<!fir.heap<!fir.array<?xf32>>> {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "test_alloc_return_array", uniq_name = "_QFtest_alloc_return_arrayEtest_alloc_return_array"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "test_alloc_return_array", uniq_name = "_QFtest_alloc_return_arrayEtest_alloc_return_array"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_alloc_return_arrayEtest_alloc_return_array"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK:           fir.store %{{.*}} to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -35,7 +35,7 @@ function test_alloc_return_char_scalar
   allocate(test_alloc_return_char_scalar)
 end function test_alloc_return_char_scalar
 ! CHECK-LABEL:   func.func @_QPtest_alloc_return_char_scalar() -> !fir.box<!fir.heap<!fir.char<1,3>>> {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,3>>> {bindc_name = "test_alloc_return_char_scalar", uniq_name = "_QFtest_alloc_return_char_scalarEtest_alloc_return_char_scalar"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,3>>> <{bindc_name = "test_alloc_return_char_scalar", uniq_name = "_QFtest_alloc_return_char_scalarEtest_alloc_return_char_scalar"}>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_alloc_return_char_scalarEtest_alloc_return_char_scalar"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>)
 ! CHECK:           fir.store %{{.*}} to %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>
@@ -48,7 +48,7 @@ function test_alloc_return_char_array
   allocate(test_alloc_return_char_array(7:8))
 end function test_alloc_return_char_array
 ! CHECK-LABEL:   func.func @_QPtest_alloc_return_char_array() -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>> {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>> {bindc_name = "test_alloc_return_char_array", uniq_name = "_QFtest_alloc_return_char_arrayEtest_alloc_return_char_array"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>> <{bindc_name = "test_alloc_return_char_array", uniq_name = "_QFtest_alloc_return_char_arrayEtest_alloc_return_char_array"}>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_alloc_return_char_arrayEtest_alloc_return_char_array"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>>>)
 ! CHECK:           fir.store %{{.*}} to %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,3>>>>>
@@ -66,7 +66,7 @@ function test_alloc_return_poly_scalar
   allocate(t :: test_alloc_return_poly_scalar)
 end function test_alloc_return_poly_scalar
 ! CHECK-LABEL:   func.func @_QPtest_alloc_return_poly_scalar() -> !fir.class<!fir.heap<none>> {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "test_alloc_return_poly_scalar", uniq_name = "_QFtest_alloc_return_poly_scalarEtest_alloc_return_poly_scalar"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "test_alloc_return_poly_scalar", uniq_name = "_QFtest_alloc_return_poly_scalarEtest_alloc_return_poly_scalar"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_alloc_return_poly_scalarEtest_alloc_return_poly_scalar"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
 ! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK:           return %[[VAL_17]] : !fir.class<!fir.heap<none>>
@@ -79,7 +79,7 @@ function test_alloc_return_poly_array
   allocate(t :: test_alloc_return_poly_array(7:8))
 end function test_alloc_return_poly_array
 ! CHECK-LABEL:   func.func @_QPtest_alloc_return_poly_array() -> !fir.class<!fir.heap<!fir.array<?xnone>>> {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>> {bindc_name = "test_alloc_return_poly_array", uniq_name = "_QFtest_alloc_return_poly_arrayEtest_alloc_return_poly_array"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>> <{bindc_name = "test_alloc_return_poly_array", uniq_name = "_QFtest_alloc_return_poly_arrayEtest_alloc_return_poly_array"}>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_alloc_return_poly_arrayEtest_alloc_return_poly_array"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
 ! CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 ! CHECK:           %[[VAL_27:.*]] = arith.constant 1 : index

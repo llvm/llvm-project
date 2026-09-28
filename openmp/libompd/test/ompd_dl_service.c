@@ -1,4 +1,4 @@
-// RUN: %test_c_compiler %s %ompd-dl-src -I%ompd-dl-inc -ldl -o %t
+// RUN: %test_cxx_compiler %s %ompd-dl-src -I%ompd-dl-inc %ompd-llvm-flags -o %t
 // RUN: %t %ompd-lib | FileCheck %s
 // REQUIRES: linux
 

@@ -13,6 +13,7 @@ on:
     branches:
       - 'main'
     paths:
+      - 'bolt/docs/**'
       - 'llvm/docs/**'
       - 'clang/docs/**'
       - 'clang/include/clang/Basic/AttrDocs.td'
@@ -31,6 +32,7 @@ on:
       - '.github/workflows/docs.yml'
   pull_request:
     paths:
+      - 'bolts/docs/**'
       - 'llvm/docs/**'
       - 'clang/docs/**'
       - 'clang/include/clang/Basic/AttrDocs.td'
@@ -51,7 +53,7 @@ on:
 jobs:
   check-docs-build:
     name: "Test documentation build"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources

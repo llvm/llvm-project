@@ -2,7 +2,7 @@
 ! RUN: bbc -emit-hlfir -o - -fopenmp %s | FileCheck %s
 
 ! CHECK-LABEL:   func.func @_QQmain()
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "a", uniq_name = "_QFEa"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "a", uniq_name = "_QFEa"}>
 ! CHECK:           %[[VAL_1:.*]] = fir.zero_bits !fir.heap<i32>
 ! CHECK:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>

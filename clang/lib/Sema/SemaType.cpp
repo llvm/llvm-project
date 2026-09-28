@@ -1581,7 +1581,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   // Check for __ob_wrap and __ob_trap
   if (DS.isOverflowBehaviorSpecified() &&
       S.getLangOpts().OverflowBehaviorTypes) {
-    if (!Result->isIntegerType()) {
+    if (Result->isAtomicType()) {
+      SourceLocation Loc = DS.getOverflowBehaviorLoc();
+      StringRef SpecifierName =
+          DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
+      S.Diag(Loc, diag::err_overflow_behavior_atomic_type)
+          << SpecifierName << Result.getAsString() << 1;
+    } else if (!Result->isIntegerType()) {
       SourceLocation Loc = DS.getOverflowBehaviorLoc();
       StringRef SpecifierName =
           DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
@@ -2368,6 +2374,12 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
   return false;
 }
 
+// A bool vector is stored as an integer with one bit per element and can be
+// formed from any vector (e.g. by the conditional operator); the size bound
+// keeps the natural alignment within TypeInfo::Align.
+static constexpr uint64_t MaxVectorElements = llvm::IntegerType::MAX_INT_BITS;
+static constexpr uint64_t MaxVectorSizeInBits = 1ULL << 31;
+
 QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                SourceLocation AttrLoc) {
   // The base type must be integer (not Boolean or enumeration) or float, and
@@ -2408,8 +2420,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                           VectorKind::Generic);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize->isIntN(61)) {
-    // Bit size will overflow uint64.
+  if (VecSize->ugt(MaxVectorSizeInBits / 8)) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2429,7 +2440,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
-  if (VectorSizeBits / TypeSize > std::numeric_limits<uint32_t>::max()) {
+  if (VectorSizeBits / TypeSize > MaxVectorElements) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2477,17 +2488,24 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
       return QualType();
     }
 
-    if (!VecSize->isIntN(32)) {
+    // Unlike gcc's vector_size attribute, the size is specified as the
+    // number of elements, not the number of bytes.
+    if (VecSize->ugt(MaxVectorElements)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
-    // Unlike gcc's vector_size attribute, the size is specified as the
-    // number of elements, not the number of bytes.
     unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
     if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
+          << SizeExpr->getSourceRange() << "vector";
+      return QualType();
+    }
+
+    if (!T->isDependentType() &&
+        VectorSize * Context.getTypeSize(T) > MaxVectorSizeInBits) {
+      Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
@@ -6697,8 +6715,10 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
   } else {
     // The keyword-based type attributes imply which address space to use.
-    ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
-                                         : Attr.asOpenCLLangAS();
+    // The SYCL address space attributes are available in both SYCL host and
+    // device compilation.
+    ASIdx =
+        S.getLangOpts().isSYCL() ? Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
@@ -6731,6 +6751,14 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
         << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Verify we aren't dealing with an atomic type
+  if (Type->isAtomicType()) {
+    S.Diag(Attr.getLoc(), diag::err_overflow_behavior_atomic_type)
+        << Attr << Type.getAsString() << 0; // 0 for attribute
     Attr.setInvalid();
     return;
   }
@@ -9127,6 +9155,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_AddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
@@ -10419,6 +10452,9 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
     else if (getLangOpts().C23 && T->isUndeducedAutoType())
       // _Atomic auto is prohibited in C23
       DisallowedKind = 9;
+    else if (T->isOverflowBehaviorType())
+      // Overflow behavior types do not compose with _Atomic
+      DisallowedKind = 10;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;
