@@ -48,6 +48,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -73,6 +74,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/VNCoercion.h"
 #include <algorithm>
@@ -1970,6 +1972,49 @@ bool GVNPass::performLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   return true;
 }
 
+// Loop load PRE replaces an invariant-address load with a loop-carried PHI.
+// When its clobber is a conditional store through a varying pointer, this can
+// prevent vectorization that could otherwise disambiguate the accesses using
+// runtime checks. Keep the load in such loops until the vectorizer has run.
+static bool shouldPreserveLoadForVectorization(LoadInst *Load, const Loop *L,
+                                               BasicBlock *Clobber,
+                                               AAResults &AA) {
+  if (!L->isInnermost() || (hasVectorizeTransformation(L) & TM_Disable) ||
+      !VectorType::isValidElementType(Load->getType()))
+    return false;
+
+  // Do not penalize PRE in loops with calls or ordered memory operations,
+  // where runtime memory checks alone cannot enable vectorization.
+  for (BasicBlock *BB : L->blocks())
+    for (Instruction &I : *BB) {
+      if (isa<CallBase>(I))
+        return false;
+      if (auto *LI = dyn_cast<LoadInst>(&I); LI && !LI->isSimple())
+        return false;
+      if (I.mayWriteToMemory()) {
+        auto *SI = dyn_cast<StoreInst>(&I);
+        if (!SI || !SI->isSimple())
+          return false;
+      }
+    }
+
+  bool HasMayAliasStore = false;
+  for (Instruction &I : *Clobber) {
+    auto *SI = dyn_cast<StoreInst>(&I);
+    if (!SI)
+      continue;
+    AliasResult Alias =
+        AA.alias(MemoryLocation::get(Load), MemoryLocation::get(SI));
+    if (Alias == AliasResult::NoAlias)
+      continue;
+    if (Alias != AliasResult::MayAlias ||
+        L->isLoopInvariant(SI->getPointerOperand()))
+      return false;
+    HasMayAliasStore = true;
+  }
+  return HasMayAliasStore;
+}
+
 bool GVNPass::performLoopLoadPRE(LoadInst *Load,
                                  AvailValInBlkVect &ValuesPerBlock,
                                  UnavailBlkVect &UnavailableBlocks) {
@@ -2034,6 +2079,16 @@ bool GVNPass::performLoopLoadPRE(LoadInst *Load,
   // safely reload from it after clobber.
   if (LoadPtr->canBeFreed())
     return false;
+
+  if (shouldPreserveLoadForVectorization(Load, L, LoopBlock, *AA)) {
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE,
+                                        "PreserveLoadForVectorization", Load)
+             << "preserving loop-header load to avoid a loop-carried "
+                "dependency";
+    });
+    return false;
+  }
 
   // TODO: Support critical edge splitting if blocker has more than 1 successor.
   MapVector<BasicBlock *, Value *> AvailableLoads;
