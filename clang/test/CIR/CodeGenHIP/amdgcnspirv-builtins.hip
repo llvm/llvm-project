@@ -70,10 +70,13 @@ __device__ float test_logb(float x) {
 
 // LLVM-LABEL: define spir_func noundef float @_Z9test_logbf
 // LLVM: call{{.*}} @llvm.frexp.f32.i32
-// LLVM: add i32 %{{.*}}, -1
+// LLVM: add nsw i32 %{{.*}}, -1
+// LLVM: call{{.*}} @llvm.fabs.f32
+// LLVM: fcmp one float %{{.*}}, +inf
 
 // OGCG-LABEL: define spir_func noundef float @_Z9test_logbf
 // OGCG: call{{.*}} @llvm.frexp.f32.i32
 // OGCG: add nsw i32 %{{.*}}, -1
 // OGCG: load float, ptr addrspace(4) %{{.*}}
 // OGCG: call contract{{.*}} @llvm.fabs.f32
+// OGCG: fcmp contract one float %{{.*}}, +inf
