@@ -26260,7 +26260,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (!LN0 || !LN0->hasNUsesOfValue(1,0) || !LN0->isSimple())
     return SDValue();
 
-  // If Idx was -1 above, Elt is going to be -1, so just return undef.
+  // If Idx was -1 above, Elt is going to be -1, so just return poison.
   if (Elt == -1)
     return DAG.getPOISON(LVT);
 
