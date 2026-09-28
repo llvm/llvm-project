@@ -1876,10 +1876,8 @@ public:
     return G->getKind() == Kind::SpanTwoParamConstructor;
   }
 
-  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
-    const auto *CE = dyn_cast<CXXConstructExpr>(S);
-    if (!CE)
-      return false;
+  static bool matches(const CXXConstructExpr *CE, ASTContext &Ctx,
+                      MatchResult &Result) {
     const auto *CDecl = CE->getConstructor();
     const auto *CRecordDecl = CDecl->getParent();
     auto HasTwoParamSpanCtorDecl =
@@ -1894,9 +1892,12 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (!isa<CXXConstructExpr>(S) || ignoreUnsafeBufferInContainer(*S, Handler))
+    const auto *CE = dyn_cast<CXXConstructExpr>(S);
+    if (!CE)
       return false;
-    return matches(S, Ctx, Result);
+    if (ignoreUnsafeBufferInContainer(*S, Handler))
+      return false;
+    return matches(CE, Ctx, Result);
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1934,10 +1935,8 @@ public:
     return G->getKind() == Kind::StringViewTwoParamConstructor;
   }
 
-  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
-    const auto *CE = dyn_cast<CXXConstructExpr>(S);
-    if (!CE)
-      return false;
+  static bool matches(const CXXConstructExpr *CE, ASTContext &Ctx,
+                      MatchResult &Result) {
     const auto *CDecl = CE->getConstructor();
     const auto *CRecordDecl = CDecl->getParent();
 
@@ -1957,9 +1956,12 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (!isa<CXXConstructExpr>(S) || ignoreUnsafeBufferInContainer(*S, Handler))
+    const auto *CE = dyn_cast<CXXConstructExpr>(S);
+    if (!CE)
       return false;
-    return matches(S, Ctx, Result);
+    if (ignoreUnsafeBufferInContainer(*S, Handler))
+      return false;
+    return matches(CE, Ctx, Result);
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
