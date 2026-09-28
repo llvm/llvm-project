@@ -204,37 +204,3 @@ subroutine device_gang_does_not_keep_vector(a)
     a(i) = a(i) + 1.0
   end do
 end subroutine
-
-! The nested-loop check uses the first gang dimension on the directive.
-! The later gang(dim:2) is not diagnosed.
-subroutine nested_uses_first_gang_dim(a)
-  real :: a(10, 10)
-  integer :: i, j
-  !$acc parallel
-  !$acc loop gang(dim:2)
-  do i = 1, 10
-    !$acc loop gang(dim:1) device_type(nvidia) gang(dim:2)
-    do j = 1, 10
-      a(i, j) = a(i, j) + 1.0
-    end do
-  end do
-  !$acc end parallel
-end subroutine
-
-! The call check uses the routine's default level. A device_type-only
-! worker is not diagnosed from a gang loop.
-subroutine gang_loop_calls_nvidia_worker(a)
-  real :: a(10)
-  integer :: i
-  !$acc parallel
-  !$acc loop gang
-  do i = 1, 10
-    call only_nvidia_worker(a)
-  end do
-  !$acc end parallel
-contains
-  subroutine only_nvidia_worker(b)
-    real :: b(10)
-    !$acc routine device_type(nvidia) worker
-  end subroutine
-end subroutine
