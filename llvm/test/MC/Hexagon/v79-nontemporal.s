@@ -137,4 +137,4 @@
 # RAW-NP: if (!p0) memw(r2++#4):nt = r3
 # RAW-ZERO: dczeroa(r2):nt
 # RAW-FETCH: dcfetch(r2+#0):nt
-# V75-ERR: error: instruction requires: -mv79 or higher
+# V75-ERR: error: invalid instruction
