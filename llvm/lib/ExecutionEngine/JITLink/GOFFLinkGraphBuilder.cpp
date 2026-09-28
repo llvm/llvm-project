@@ -12,9 +12,6 @@
 
 #include "GOFFLinkGraphBuilder.h"
 #include "llvm/BinaryFormat/GOFF.h"
-#include "llvm/ExecutionEngine/JITLink/GOFF_systemz.h"
-#include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Object/GOFFObjectFile.h"
@@ -64,7 +61,7 @@ Expected<std::unique_ptr<LinkGraph>> GOFFLinkGraphBuilder::buildGraph() {
 Error GOFFLinkGraphBuilder::processSections() {
   LLVM_DEBUG(dbgs() << "Processing GOFF sections ...\n");
 
-  for (const object::SectionRef Sec : Obj.sections()) {
+  for (const object::SectionRef Sec : sections()) {
     Expected<StringRef> NameOrErr = Sec.getName();
     if (!NameOrErr) {
       return NameOrErr.takeError();
@@ -108,7 +105,7 @@ Error GOFFLinkGraphBuilder::processSections() {
       return make_error<JITLinkError>("MemProt should match");
 
     uint32_t SecIndex = Sec.getIndex();
-    if (SectionMap.contains(SecIndex))
+    if (getGraphBlock(SecIndex))
       return make_error<JITLinkError>("Index already exists");
 
     Expected<StringRef> ContentsOrErr = Sec.getContents();
@@ -122,7 +119,7 @@ Error GOFFLinkGraphBuilder::processSections() {
     Block *B = &G->createContentBlock(*GraphSec, Contents,
                                       orc::ExecutorAddr(SecAddress),
                                       Sec.getAlignment().value(), 0);
-    SectionMap[SecIndex] = {GraphSec, B, Sec};
+    setGraphBlock(SecIndex, GraphSec, B, Sec);
   }
 
   return Error::success();
@@ -148,8 +145,9 @@ Error GOFFLinkGraphBuilder::processSymbols() {
     uint32_t Flags = *SymFlagsOrErr;
     if (Flags & object::SymbolRef::SF_Undefined) {
       LLVM_DEBUG(dbgs() << "      created external symbol\n");
-      SymbolMap[SymEsdId] = &G->addExternalSymbol(
-          Name, Sym.getSize(), Flags & object::SymbolRef::SF_Weak);
+      Symbol &GSym = G->addExternalSymbol(Name, Sym.getSize(),
+                                          Flags & object::SymbolRef::SF_Weak);
+      setGraphSymbol(SymEsdId, GSym);
       continue;
     }
 
@@ -170,7 +168,7 @@ Error GOFFLinkGraphBuilder::processSymbols() {
       return OffsetOrErr.takeError();
 
     uint32_t SecIndex = SI->getIndex();
-    Block *B = SectionMap[SecIndex].Block;
+    Block *B = getGraphBlock(SecIndex);
     uint64_t Offset = *OffsetOrErr;
     Linkage L =
         (Flags & object::SymbolRef::SF_Weak) ? Linkage::Weak : Linkage::Strong;
@@ -187,86 +185,11 @@ Error GOFFLinkGraphBuilder::processSymbols() {
                       << ", B = " << format_hex(B->getAddress().getValue(), 16)
                       << (IsCallable ? " function" : " non-callable") << "\n");
 
-    SymbolMap[SymEsdId] = &G->addDefinedSymbol(*B, Offset, Name, Sym.getSize(),
-                                               L, S, IsCallable, true);
+    Symbol &GSym = G->addDefinedSymbol(*B, Offset, Name, Sym.getSize(), L, S,
+                                       IsCallable, true);
+    setGraphSymbol(SymEsdId, GSym);
   }
 
-  return Error::success();
-}
-
-static systemz::EdgeKind_systemz getRelEdgeKind(uint64_t RelType) {
-  GOFF::RLDReferenceType RldRefType = getRLDReferenceType(RelType);
-  GOFF::RLDAction RldAct = getRLDAction(RelType);
-  GOFF::RLDFetchStore RldFetch = getRLDFetchStore(RelType);
-  uint8_t RldLength = getRLDTargetLength(RelType);
-  uint8_t RldBitLength = getRLDBitLength(RelType);
-  uint8_t RldBitWidth = 8 * RldLength + RldBitLength;
-
-  switch (RldRefType) {
-  case GOFF::RLD_RT_RAddress:
-    switch (RldBitWidth) {
-    case 64:
-      if (RldFetch == GOFF::RLD_FS_Fetch)
-        return (RldAct == GOFF::RLD_ACT_Add ? systemz::Pointer64Add
-                                            : systemz::Pointer64Sub);
-      else
-        return systemz::Pointer64;
-      break;
-    case 32:
-      if (RldFetch == GOFF::RLD_FS_Fetch)
-        return (RldAct == GOFF::RLD_ACT_Add ? systemz::Pointer32Add
-                                            : systemz::Pointer32Sub);
-      else
-        return systemz::Pointer32;
-      break;
-    default:
-      llvm_unreachable("Unsuppoted rld reference type");
-    }
-    break;
-  default:
-    llvm_unreachable("Unsuppoted rld reference type");
-  }
-}
-
-Error GOFFLinkGraphBuilder::processRelocations() {
-  LLVM_DEBUG(dbgs() << "Processing GOFF relocations...\n");
-
-  for (const object::SectionRef Sec : Obj.sections()) {
-    uint32_t SecIndex = Sec.getIndex();
-    auto SectionName = Sec.getName();
-    if (!SectionName)
-      return SectionName.takeError();
-
-    LLVM_DEBUG(dbgs() << " Relocations for section " << *SectionName << "\n");
-
-    for (object::RelocationRef Relocation : Sec.relocations()) {
-      object::SymbolRef Sym = *Relocation.getSymbol();
-      auto TargetNameOrErr = Sym.getName();
-      if (!TargetNameOrErr) {
-        return TargetNameOrErr.takeError();
-      }
-
-      SmallString<16> RelTypeName;
-      Relocation.getTypeName(RelTypeName);
-      uint64_t RelType = Relocation.getType();
-      systemz::EdgeKind_systemz EK = getRelEdgeKind(RelType);
-      jitlink::Block *B = SectionMap[SecIndex].Block;
-      uint32_t TargetBlockOffset = Sec.getAddress() + Relocation.getOffset() -
-                                   B->getAddress().getValue();
-      uint32_t REsdId = Sym.getRawDataRefImpl().d.a;
-      jitlink::Symbol *S = SymbolMap[REsdId];
-
-      LLVM_DEBUG({
-        dbgs() << "    reloffset = " << format_hex(Relocation.getOffset(), 16)
-               << " typename =  " << RelTypeName << " idx =  " << REsdId
-               << " block = (" << B << ", "
-               << format_hex(B->getAddress().getValue(), 16) << ")"
-               << " targetname: " << *TargetNameOrErr << "\n";
-      });
-
-      B->addEdge(EK, TargetBlockOffset, *S, 0);
-    }
-  }
   return Error::success();
 }
 

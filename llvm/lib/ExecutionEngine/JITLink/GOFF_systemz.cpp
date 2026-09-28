@@ -49,6 +49,18 @@ private:
   }
 };
 
+class GOFFLinkGraphBuilder_systemz : public GOFFLinkGraphBuilder {
+private:
+  Error processRelocations() override;
+
+public:
+  GOFFLinkGraphBuilder_systemz(const object::GOFFObjectFile &Obj,
+                               std::shared_ptr<orc::SymbolStringPool> SSP,
+                               const Triple T, const SubtargetFeatures Features)
+      : GOFFLinkGraphBuilder(Obj, std::move(SSP), std::move(T),
+                             std::move(Features), systemz::getEdgeKindName) {}
+};
+
 Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromGOFFObject_systemz(
     MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
@@ -74,9 +86,9 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromGOFFObject_systemz(
     (*Features).print(dbgs());
   });
 
-  return GOFFLinkGraphBuilder(cast<object::GOFFObjectFile>(**GOFFObj),
-                              std::move(SSP), (*GOFFObj)->makeTriple(),
-                              std::move(*Features), systemz::getEdgeKindName)
+  return GOFFLinkGraphBuilder_systemz(cast<object::GOFFObjectFile>(**GOFFObj),
+                                      std::move(SSP), (*GOFFObj)->makeTriple(),
+                                      std::move(*Features))
       .buildGraph();
 }
 
@@ -94,6 +106,85 @@ void link_GOFF_systemz(std::unique_ptr<LinkGraph> G,
 
   GOFFJITLinker_systemz::link(std::move(Ctx), std::move(G), std::move(PassCfg));
   return;
+}
+
+static systemz::EdgeKind_systemz getRelEdgeKind(uint64_t RelType) {
+  GOFF::RLDReferenceType RldRefType = object::getRLDReferenceType(RelType);
+  GOFF::RLDAction RldAct = object::getRLDAction(RelType);
+  GOFF::RLDFetchStore RldFetch = object::getRLDFetchStore(RelType);
+  uint8_t RldLength = object::getRLDTargetLength(RelType);
+  uint8_t RldBitLength = object::getRLDBitLength(RelType);
+  uint8_t RldBitWidth = 8 * RldLength + RldBitLength;
+
+  switch (RldRefType) {
+  case GOFF::RLD_RT_RAddress:
+    switch (RldBitWidth) {
+    case 64:
+      if (RldFetch == GOFF::RLD_FS_Fetch)
+        return (RldAct == GOFF::RLD_ACT_Add ? systemz::Pointer64Add
+                                            : systemz::Pointer64Sub);
+      else
+        return systemz::Pointer64;
+      break;
+    case 32:
+      if (RldFetch == GOFF::RLD_FS_Fetch)
+        return (RldAct == GOFF::RLD_ACT_Add ? systemz::Pointer32Add
+                                            : systemz::Pointer32Sub);
+      else
+        return systemz::Pointer32;
+      break;
+    default:
+      llvm_unreachable("Unsuppoted rld reference type");
+    }
+    break;
+  default:
+    llvm_unreachable("Unsuppoted rld reference type");
+  }
+}
+
+Error GOFFLinkGraphBuilder_systemz::processRelocations() {
+  LLVM_DEBUG(dbgs() << "Processing GOFF relocations...\n");
+
+  for (const object::SectionRef Sec : sections()) {
+    uint32_t SecIndex = Sec.getIndex();
+    auto SectionName = Sec.getName();
+    if (!SectionName)
+      return SectionName.takeError();
+
+    LLVM_DEBUG(dbgs() << " Relocations for section " << *SectionName << "\n");
+
+    for (object::RelocationRef Relocation : Sec.relocations()) {
+      object::SymbolRef Sym = *Relocation.getSymbol();
+      auto TargetNameOrErr = Sym.getName();
+      if (!TargetNameOrErr) {
+        return TargetNameOrErr.takeError();
+      }
+
+      SmallString<16> RelTypeName;
+      Relocation.getTypeName(RelTypeName);
+      uint64_t RelType = Relocation.getType();
+      systemz::EdgeKind_systemz EK = getRelEdgeKind(RelType);
+      jitlink::Block *B = getGraphBlock(SecIndex);
+      assert(B && "Block not found");
+
+      uint32_t TargetBlockOffset = Sec.getAddress() + Relocation.getOffset() -
+                                   B->getAddress().getValue();
+      uint32_t REsdId = Sym.getRawDataRefImpl().d.a;
+      jitlink::Symbol *S = getGraphSymbol(REsdId);
+      assert(S && "Symbol not found");
+
+      LLVM_DEBUG({
+        dbgs() << "    reloffset = " << format_hex(Relocation.getOffset(), 16)
+               << " typename =  " << RelTypeName << " idx =  " << REsdId
+               << " block = (" << B << ", "
+               << format_hex(B->getAddress().getValue(), 16) << ")"
+               << " targetname: " << *TargetNameOrErr << "\n";
+      });
+
+      B->addEdge(EK, TargetBlockOffset, *S, 0);
+    }
+  }
+  return Error::success();
 }
 
 } // namespace jitlink

@@ -29,15 +29,15 @@ public:
   virtual ~GOFFLinkGraphBuilder() = default;
   Expected<std::unique_ptr<LinkGraph>> buildGraph();
 
-public:
+protected:
   GOFFLinkGraphBuilder(const object::GOFFObjectFile &Obj,
                        std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                        SubtargetFeatures Features,
                        LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
   LinkGraph &getGraph() const { return *G; }
+
   const object::GOFFObjectFile &getObject() const { return Obj; }
 
-private:
   // Process all sections in the GOFF file.
   Error processSections();
 
@@ -45,7 +45,37 @@ private:
   Error processSymbols();
 
   // Process all relocations for all sections.
-  Error processRelocations();
+  virtual Error processRelocations() = 0;
+
+  void setGraphSymbol(uint32_t SymIndex, Symbol &Sym) {
+    assert(!SymbolMap.contains(SymIndex) && "Duplicate symbol at index");
+    SymbolMap[SymIndex] = &Sym;
+  }
+
+  Symbol *getGraphSymbol(uint32_t SymIndex) const {
+    if (SymbolMap.contains(SymIndex))
+      return SymbolMap.at(SymIndex);
+
+    return nullptr;
+  }
+
+  void setGraphBlock(uint32_t SecIndex, Section *Section, Block *B,
+                     object::SectionRef SectionData) {
+    assert(!SectionMap.contains(SecIndex) &&
+           "Duplicate section block at index");
+    SectionMap[SecIndex] = {Section, B, SectionData};
+  }
+
+  Block *getGraphBlock(uint32_t SecIndex) const {
+    if (SectionMap.contains(SecIndex))
+      return SectionMap.at(SecIndex).Block;
+
+    return nullptr;
+  }
+
+  object::GOFFObjectFile::section_iterator_range sections() const {
+    return Obj.sections();
+  }
 
 private:
   const object::GOFFObjectFile &Obj;
