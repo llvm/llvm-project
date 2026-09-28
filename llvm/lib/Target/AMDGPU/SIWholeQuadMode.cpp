@@ -934,7 +934,8 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
   MachineInstr *ExecMaskMI =
       BuildMI(MBB, MI, DL, TII->get(LMC.AndN2Opc), LMC.ExecReg)
           .addReg(LMC.ExecReg)
-          .addReg(LMC.VccReg);
+          .addReg(LMC.VccReg)
+          .setOperandDead(3);
 
   assert(MBB.succ_size() == 1);
 
@@ -994,7 +995,8 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
       TmpReg = MRI->createVirtualRegister(TRI->getBoolRC());
       ComputeKilledMaskMI = BuildMI(MBB, MI, DL, TII->get(LMC.AndN2Opc), TmpReg)
                                 .addReg(LMC.ExecReg)
-                                .add(Op);
+                                .add(Op)
+                                .setOperandDead(3);
       MaskUpdateMI = BuildMI(MBB, MI, DL, TII->get(LMC.AndN2Opc), LiveMaskReg)
                          .addReg(LiveMaskReg)
                          .addReg(TmpReg);
@@ -1020,10 +1022,12 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
     // Demote - deactivate quads with only helper lanes
     LiveMaskWQM = MRI->createVirtualRegister(TRI->getBoolRC());
     WQMMaskMI = BuildMI(MBB, MI, DL, TII->get(LMC.WQMOpc), LiveMaskWQM)
-                    .addReg(LiveMaskReg);
+                    .addReg(LiveMaskReg)
+                    .setOperandDead(2);
     NewTerm = BuildMI(MBB, MI, DL, TII->get(LMC.AndOpc), LMC.ExecReg)
                   .addReg(LMC.ExecReg)
-                  .addReg(LiveMaskWQM);
+                  .addReg(LiveMaskWQM)
+                  .setOperandDead(3);
   } else {
     // Kill - deactivate lanes no longer in live mask
     if (Op.isImm()) {
@@ -1032,12 +1036,14 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
     } else if (!IsWQM) {
       NewTerm = BuildMI(MBB, &MI, DL, TII->get(LMC.AndOpc), LMC.ExecReg)
                     .addReg(LMC.ExecReg)
-                    .addReg(LiveMaskReg);
+                    .addReg(LiveMaskReg)
+                    .setOperandDead(3);
     } else {
       unsigned Opcode = KillVal ? LMC.AndN2Opc : LMC.AndOpc;
       NewTerm = BuildMI(MBB, &MI, DL, TII->get(Opcode), LMC.ExecReg)
                     .addReg(LMC.ExecReg)
-                    .add(Op);
+                    .add(Op)
+                    .setOperandDead(3);
     }
   }
 
