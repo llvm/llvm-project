@@ -1820,7 +1820,9 @@ public:
   }
   bool isMD5() const { return IsMD5; }
 
-  LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize);
+  /// If \p Filter is non-null, only names contained in it are added.
+  LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize,
+                                const DenseSet<StringRef> *Filter = nullptr);
   LLVM_ABI std::error_code write(raw_ostream &OS);
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
