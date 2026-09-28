@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
     @requireExpressionEvaluation

@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 @skipIfWasm  # assert() ends a WASI process, there is no signal to stop on
 class AssertingInferiorTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @expectedFailureAll(
         oslist=["windows"],
         debug_info=no_match(["pdb"]),

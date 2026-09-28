@@ -5,7 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    # The fix for this was reverted due to llvm.org/PR52257
+    # The fix for this was reverted due to llvm.org/PR52257. PDB names the type
+    # of the member with its qualified name, so it isn't affected.
     @expectedFailureAll(debug_info=no_match(["pdb"]))
     def test(self):
         self.build()

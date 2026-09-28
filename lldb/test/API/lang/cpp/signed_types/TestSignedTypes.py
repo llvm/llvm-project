@@ -10,6 +10,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class SignedTypesTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -20,7 +22,7 @@ class SignedTypesTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         debug_info=no_match(["pdb"]),
-        archs=["i[3-6]86", "aarch64"],
+        archs=["i[3-6]86", "x86_64"],
         bugnumber="llvm.org/pr24489",
     )
     def test(self):
