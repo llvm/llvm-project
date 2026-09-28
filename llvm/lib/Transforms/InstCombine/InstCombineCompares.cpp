@@ -1423,10 +1423,46 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   for (CondBrInst *BI : DC.conditionsFor(X)) {
     CmpPredicate DomPred;
     const APInt *DomC;
-    if (!match(BI->getCondition(),
-               m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))))
-      continue;
 
+    if (!match(BI->getCondition(),
+               m_ICmp(DomPred, m_Specific(X), m_APInt(DomC)))) {
+      // Handle an equality comparison contradicted by a dominating
+      // condition on an expression of X.
+      if (!Cmp.isEquality() || !isa<ConstantInt>(Y))
+        continue;
+
+      auto *DomCmp = dyn_cast<ICmpInst>(BI->getCondition());
+      if (!DomCmp || !isa<ConstantInt>(DomCmp->getOperand(1)))
+        continue;
+
+      // Find which edge of the branch dominates the current comparison.
+      bool DomCondIsTrue;
+      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+
+      if (DT.dominates(Edge0, Cmp.getParent())) {
+        DomCondIsTrue = true;
+      } else {
+        BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+        if (!DT.dominates(Edge1, Cmp.getParent()))
+          continue;
+        DomCondIsTrue = false;
+      }
+
+      // Assume X == Y and simplify the dominating condition.
+      Value *SimplifiedCond =
+          simplifyWithOpReplaced(DomCmp, X, Y, SQ.getWithInstruction(&Cmp),
+                                 /*AllowRefinement=*/false);
+
+      auto *CondC = dyn_cast_or_null<ConstantInt>(SimplifiedCond);
+      if (CondC && CondC->isOne() != DomCondIsTrue)
+        return replaceInstUsesWith(Cmp, Pred == ICmpInst::ICMP_EQ
+                                            ? Builder.getFalse()
+                                            : Builder.getTrue());
+
+      continue;
+    }
+
+    // Original handling for a dominating comparison directly on X.
     BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
     if (DT.dominates(Edge0, Cmp.getParent())) {
       if (auto *V = handleDomCond(DomPred, DomC))
@@ -1442,7 +1478,6 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
 
   return nullptr;
 }
-
 /// Fold icmp (trunc X), C.
 Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                                                      TruncInst *Trunc,

@@ -1782,14 +1782,12 @@ define i1 @phi_knownnonzero_ne_multiuse_andicmp(i32 %n, i32 %s, ptr %P, i32 %val
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SEL]], [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ANDPHI:%.*]] = and i32 [[PHI]], [[VAL:%.*]]
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[ANDPHI]], 0
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label [[CLEANUP:%.*]], label [[NEXT:%.*]]
+; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp ne i32 [[ANDPHI]], 0
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label [[NEXT:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[BOOL2:%.*]] = icmp ne i32 [[PHI]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ false, [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
-; CHECK-NEXT:    ret i1 [[FINAL]]
+; CHECK-NEXT:    ret i1 [[CMP1_NOT]]
 ;
 entry:
   %tobool = icmp slt  i32 %n, %s
