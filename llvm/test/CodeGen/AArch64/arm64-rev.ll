@@ -463,11 +463,8 @@ define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
 define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp {
 ; CHECK-SD-LABEL: test_vrev64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    mov h1, v0[6]
-; CHECK-SD-NEXT:    umov.h w8, v0[5]
-; CHECK-SD-NEXT:    mov.s v1[1], w8
-; CHECK-SD-NEXT:    xtn.4h v0, v1
+; CHECK-SD-NEXT:    ldr d0, [x0, #8]
+; CHECK-SD-NEXT:    mov.h v0[0], v0[2]
 ; CHECK-SD-NEXT:    str s0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;

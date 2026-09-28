@@ -211,8 +211,6 @@ define void @v32i16_v32i8(<32 x i16> %a, ptr %result) {
 define void @extract_v2i16_v8i16(<8 x i16> %a, ptr %p) {
 ; CHECK-LABEL: extract_v2i16_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v0.8h, v0.8h, v0.8h
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> poison, <2 x i32> <i32 0, i32 1>

@@ -2260,7 +2260,7 @@ define void @trunc_splat_zero(ptr %ptr) {
 define void @trunc_splat(ptr %ptr) {
 ; CHECK-LABEL: trunc_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.8h, #42
+; CHECK-NEXT:    movi v0.4h, #42
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   store <2 x i16> <i16 42, i16 42>, ptr %ptr, align 4
