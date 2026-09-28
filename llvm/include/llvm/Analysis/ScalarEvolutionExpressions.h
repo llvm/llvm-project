@@ -228,7 +228,6 @@ public:
            S->getSCEVType() == scSequentialUMinExpr ||
            S->getSCEVType() == scAddRecExpr;
   }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node is the base class for n'ary commutative operators.
@@ -273,7 +272,6 @@ class SCEVAddExpr : public SCEVCommutativeExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scAddExpr; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node represents multiplication of some number of SCEVs.
@@ -286,7 +284,6 @@ class SCEVMulExpr : public SCEVCommutativeExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scMulExpr; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a binary unsigned division operation.
@@ -539,7 +536,6 @@ public:
   static bool classof(const SCEV *S) {
     return isSequentialMinMaxType(S->getSCEVType());
   }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a sequential/in-order unsigned minimum selection.
