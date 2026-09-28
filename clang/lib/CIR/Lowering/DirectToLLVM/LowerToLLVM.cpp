@@ -5924,10 +5924,11 @@ void expandAMDGPUDevicePrintf(llvm::Module &module) {
   if (!marker)
     return;
 
-  // CIR records the requested lowering as a module flag.
+  // CIR records the requested lowering as a module flag. The flag is stored
+  // under the LLVM-side name (see amendModule in LowerToLLVMIR.cpp), not the
+  // CIR attribute name.
   bool isBuffered = false;
-  if (llvm::Metadata *md =
-          module.getModuleFlag(cir::CIRDialect::getAMDGPUPrintfKindAttrName()))
+  if (llvm::Metadata *md = module.getModuleFlag("amdgpu_printf_kind"))
     if (auto *mdStr = llvm::dyn_cast<llvm::MDString>(md))
       isBuffered = mdStr->getString() == "buffered";
 
@@ -5948,9 +5949,24 @@ void expandAMDGPUDevicePrintf(llvm::Module &module) {
       ci = llvm::changeToCall(llvm::cast<llvm::InvokeInst>(cb));
     }
 
-    llvm::IRBuilder<> irb(ci);
+    // Buffered lowering splits the call site's block and build new control flow
+    // of its own. It expects to be the one driving codegen for the rest of the
+    // block, as it would if called from normal frontend codegen. Since we're
+    // expanding a marker call after the fact, split off everything that
+    // was already emitted after it into its own block first, then
+    // reconnect to that block once the real printf sequence has been
+    // built.
+    llvm::BasicBlock *originalBB = ci->getParent();
     llvm::SmallVector<llvm::Value *, 8> args(ci->args());
+    llvm::BasicBlock *continuation =
+        originalBB->splitBasicBlock(ci->getNextNode());
+    originalBB->getTerminator()->eraseFromParent();
+
+    llvm::IRBuilder<> irb(originalBB);
+    irb.SetCurrentDebugLocation(ci->getDebugLoc());
     llvm::Value *res = llvm::emitAMDGPUPrintfCall(irb, args, isBuffered);
+    irb.CreateBr(continuation);
+
     if (res && !ci->use_empty())
       ci->replaceAllUsesWith(res);
     ci->eraseFromParent();
