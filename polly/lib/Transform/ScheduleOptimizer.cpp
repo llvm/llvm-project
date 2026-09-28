@@ -246,6 +246,7 @@ namespace {
 struct OptimizerAdditionalInfoTy {
   const llvm::TargetTransformInfo *TTI;
   const Dependences *D;
+  const Scop &S;
   bool PatternOpts;
   bool Postopts;
   bool Prevect;
@@ -400,9 +401,11 @@ private:
   ///
   /// @param Node The innermost band to distribute, typically the point band of
   ///             a tiling.
+  /// @param S    The SCoP.
   /// @param D    The dependences of the SCoP.
   /// @return The node at the position of @p Node.
   static isl::schedule_node distributeInnermostLoop(isl::schedule_node Node,
+                                                    const Scop &S,
                                                     const Dependences *D);
 
   /// Apply prevectorization on the bands in the schedule tree.
@@ -576,46 +579,43 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
   return Node;
 }
 
-isl::schedule_node
-ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
-                                               const Dependences *D) {
-  // This runs within a quota of isl operations. Every isl result that is used
-  // in a condition, iterated over or dereferenced is checked for an error
-  // first; in that case the band is left as it is.
+isl::schedule_node ScheduleTreeOptimizer::distributeInnermostLoop(
+    isl::schedule_node Node, const Scop &S, const Dependences *D) {
+  // This runs within a quota of isl operations. A failed isl operation returns
+  // a null object, which the following isl operations propagate; it is checked
+  // where a result is used in a condition, iterated over or dereferenced, and
+  // the band is left as it is then.
   if (Node.is_null() || !isSimpleInnermostBand(Node))
     return Node;
 
   isl::union_set Domain = Node.get_domain();
-  if (Domain.is_null())
-    return Node;
   isl::set_list DomainList = Domain.get_set_list();
   if (DomainList.is_null())
     return Node;
-  SmallVector<std::pair<ScopStmt *, isl::set>, 8> Stmts;
+  DenseMap<const ScopStmt *, isl::set> StmtDomains;
   for (isl::set Set : DomainList) {
-    isl::id Id = Set.get_tuple_id();
-    if (Id.is_null())
-      return Node;
-    auto *Stmt = static_cast<ScopStmt *>(Id.get_user());
+    auto *Stmt = static_cast<const ScopStmt *>(Set.get_tuple_id().get_user());
     if (!Stmt)
       return Node;
-    Stmts.push_back({Stmt, Set});
+    StmtDomains[Stmt] = Set;
   }
-  unsigned NumStmts = Stmts.size();
-  if (NumStmts < 2)
+  if (StmtDomains.size() < 2)
     return Node;
 
-  // Number the statements in the order of Scop::Stmts, so that the result does
-  // not depend on the order in which isl lists them.
-  DenseMap<const ScopStmt *, unsigned> ScopOrder;
-  for (const ScopStmt &Stmt : *Stmts.front().first->getParent())
-    ScopOrder.insert({&Stmt, ScopOrder.size()});
-  llvm::sort(Stmts, [&](const auto &A, const auto &B) {
-    return ScopOrder.lookup(A.first) < ScopOrder.lookup(B.first);
-  });
+  // Number the statements of the band in the order of Scop::Stmts, so that the
+  // result does not depend on the order in which isl lists them.
+  SmallVector<isl::set, 8> Stmts;
   DenseMap<const ScopStmt *, unsigned> StmtIndex;
-  for (auto [Idx, Stmt] : enumerate(Stmts))
-    StmtIndex[Stmt.first] = Idx;
+  for (const ScopStmt &Stmt : S) {
+    auto It = StmtDomains.find(&Stmt);
+    if (It == StmtDomains.end())
+      continue;
+    StmtIndex[&Stmt] = Stmts.size();
+    Stmts.push_back(It->second);
+  }
+  unsigned NumStmts = Stmts.size();
+  if (NumStmts != StmtDomains.size())
+    return Node;
 
   isl::schedule_node_band Band = Node.as<isl::schedule_node_band>();
   isl::size NumMembers = Band.n_member();
@@ -641,8 +641,6 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
   // dependences in UMap; false if an isl operation failed.
   using EdgeList = SmallVector<std::pair<unsigned, unsigned>, 16>;
   auto collectEdges = [&](const isl::union_map &UMap, EdgeList &Edges) {
-    if (UMap.is_null())
-      return false;
     isl::map_list List = UMap.get_map_list();
     if (List.is_null())
       return false;
@@ -652,12 +650,10 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
         return false;
       if (IsEmpty.is_true())
         continue;
-      isl::id Src = Dep.get_tuple_id(isl::dim::in);
-      isl::id Dst = Dep.get_tuple_id(isl::dim::out);
-      if (Src.is_null() || Dst.is_null())
-        return false;
-      auto SrcIt = StmtIndex.find(static_cast<ScopStmt *>(Src.get_user()));
-      auto DstIt = StmtIndex.find(static_cast<ScopStmt *>(Dst.get_user()));
+      auto SrcIt = StmtIndex.find(static_cast<const ScopStmt *>(
+          Dep.get_tuple_id(isl::dim::in).get_user()));
+      auto DstIt = StmtIndex.find(static_cast<const ScopStmt *>(
+          Dep.get_tuple_id(isl::dim::out).get_user()));
       if (SrcIt == StmtIndex.end() || DstIt == StmtIndex.end())
         return false;
       Edges.push_back({SrcIt->second, DstIt->second});
@@ -720,7 +716,7 @@ ScheduleTreeOptimizer::distributeInnermostLoop(isl::schedule_node Node,
     isl::union_set Filter = isl::union_set::empty(Node.ctx());
     for (unsigned Stmt : seq(NumStmts))
       if (GroupOf[Stmt] == Group)
-        Filter = Filter.unite(Stmts[Stmt].second);
+        Filter = Filter.unite(Stmts[Stmt]);
     Filters = Filters.add(Filter);
   }
 
@@ -779,7 +775,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
     isl::schedule_node Distributed;
     {
       IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
-      Distributed = distributeInnermostLoop(Node, OAI->D);
+      Distributed = distributeInnermostLoop(Node, OAI->S, OAI->D);
       // Leave the band as it is if the analysis exceeds the quota. Also reset
       // the error: if no other quota scope follows, runIslScheduleOptimizer
       // would otherwise see it and discard all optimizations of the SCoP.
@@ -1094,6 +1090,7 @@ static void runIslScheduleOptimizerImpl(
   const OptimizerAdditionalInfoTy OAI = {
       TTI,
       const_cast<Dependences *>(&D),
+      S,
       /*PatternOpts=*/!HasUserTransformation && PMBasedOpts,
       /*Postopts=*/!HasUserTransformation && EnablePostopts,
       /*Prevect=*/PollyVectorizerChoice != VECTORIZER_NONE,
