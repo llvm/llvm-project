@@ -89,6 +89,7 @@ def main(argv):
                         '-j1', '--test-output=failed',
                         '--param', f'compiler={args.compiler}',
                         '--param', f'libstdcxx_compiler={args.gcc}',
+                        '--param', 'enable_werror=False', # don't fail on warnings when running with libstdc++
                         *lit_options,
                         build_dir / 'libcxx/test/benchmarks'])
         end_time = datetime.datetime.now(datetime.timezone.utc)

@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       libstdcxx-version:
-        description: 'The version of libstdc++ to benchmark. This is the version of GCC being installed to get libstdc++.'
+        description: 'The version of libstdc++ to benchmark. This is the major version of GCC being installed to get libstdc++ (e.g. 16).'
         required: true
         type: string
       lnt-machine:
