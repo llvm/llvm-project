@@ -71,12 +71,23 @@ define bfloat @v_mad_mixlo_bf16_bf16lo_bf16lo_f32(bfloat %src0, bfloat %src1, fl
 }
 
 define bfloat @v_mad_mixlo_bf16_f16lo_bf16lo_f32(half %src0, bfloat %src1, float %src2) #0 {
-; GFX1250-LABEL: v_mad_mixlo_bf16_f16lo_bf16lo_f32:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[0,1,0]
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: v_mad_mixlo_bf16_f16lo_bf16lo_f32:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[0,1,0]
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: v_mad_mixlo_bf16_f16lo_bf16lo_f32:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[0,1,0]
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2)
@@ -85,12 +96,23 @@ define bfloat @v_mad_mixlo_bf16_f16lo_bf16lo_f32(half %src0, bfloat %src1, float
 }
 
 define bfloat @v_mad_mixlo_bf16_bf16lo_f16lo_f32(bfloat %src0, half %src1, float %src2) #0 {
-; GFX1250-LABEL: v_mad_mixlo_bf16_bf16lo_f16lo_f32:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,0,0]
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: v_mad_mixlo_bf16_bf16lo_f16lo_f32:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,0,0]
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: v_mad_mixlo_bf16_bf16lo_f16lo_f32:
+; GFX1250-REAL16:       ; %bb.0:
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,0,0]
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext half %src1 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2)
@@ -613,12 +635,23 @@ define bfloat @mixlo_fptrunc_neg_src_mod(float %a, float %b) #0 {
 }
 
 define bfloat @mixlo_fptrunc_f16_src(half %a, float %b) #0 {
-; GFX1250-LABEL: mixlo_fptrunc_f16_src:
-; GFX1250:       ; %bb.0: ; %.entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, neg(0)
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-FAKE16-LABEL: mixlo_fptrunc_f16_src:
+; GFX1250-FAKE16:       ; %bb.0: ; %.entry
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, neg(0)
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: mixlo_fptrunc_f16_src:
+; GFX1250-REAL16:       ; %bb.0: ; %.entry
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, neg(0)
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %a.ext = fpext half %a to float
   %mul = fmul float %a.ext, %b

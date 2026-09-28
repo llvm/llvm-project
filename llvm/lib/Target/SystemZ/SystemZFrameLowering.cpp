@@ -64,8 +64,7 @@ SystemZFrameLowering::SystemZFrameLowering(StackDirection D, Align StackAl,
 
 std::unique_ptr<SystemZFrameLowering>
 SystemZFrameLowering::create(const SystemZSubtarget &STI) {
-  unsigned PtrSz =
-      STI.getTargetLowering()->getTargetMachine().getPointerSize(0);
+  unsigned PtrSz = 8;
   if (STI.isTargetXPLINK64())
     return std::make_unique<SystemZXPLINKFrameLowering>(PtrSz);
   return std::make_unique<SystemZELFFrameLowering>(PtrSz);
@@ -801,9 +800,12 @@ void SystemZELFFrameLowering::inlineStackProbe(
     MachineMemOperand *MMO = MF.getMachineMemOperand(MachinePointerInfo(),
       MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad, 8, Align(1));
     BuildMI(InsMBB, InsPt, DL, ZII->get(SystemZ::CG))
-      .addReg(SystemZ::R0D, RegState::Undef)
-      .addReg(SystemZ::R15D).addImm(Size - 8).addReg(0)
-      .addMemOperand(MMO);
+        .addReg(SystemZ::R0D, RegState::Undef)
+        .addReg(SystemZ::R15D)
+        .addImm(Size - 8)
+        .addReg(0)
+        .setOperandDead(4)
+        .addMemOperand(MMO);
   };
 
   bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
