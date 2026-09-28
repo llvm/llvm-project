@@ -279,10 +279,10 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   return Extract;
 }
 
-Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+Value *VPTransformState::get(const VPValue *Def, bool NeedsSingleScalar) {
   assert(!isa<VPRegionValue>(Def) &&
          "VPRegionValue must be materialized before VPTransformState::get");
-  if (NeedsScalar) {
+  if (NeedsSingleScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
@@ -350,12 +350,12 @@ void VPTransformState::fixupHeaderPhis() {
 
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
+      bool NeedsSingleScalar =
           isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
                                cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-      Value *Phi = get(PhiR, NeedsScalar);
-      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      Value *Phi = get(PhiR, NeedsSingleScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
@@ -423,19 +423,28 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
-      // Branches to VPIRBasicBlocks must have the same successors in VPlan as
-      // in the original IR, except when the predecessor is the entry block.
-      // This enables including SCEV and memory runtime check blocks in VPlan.
-      // TODO: Remove exception by modeling the terminator of entry block using
+      // Generated successors are redirected, as for the entry block and for
+      // blocks bypassing both vector loops during epilogue vectorization. Edges
+      // already present in the generated IR need no update; this happens during
+      // epilogue vectorization, where the plan models blocks generated for the
+      // main vector loop.
+      // TODO: Remove the exception by modeling those terminators using
       // BranchOnCond.
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       auto *TermBr = cast<CondBrInst>(PredBBTerminator);
-      assert((!TermBr->getSuccessor(idx) ||
-              (isa<VPIRBasicBlock>(this) &&
-               (TermBr->getSuccessor(idx) == NewBB ||
-                PredVPBlock == getPlan()->getEntry()))) &&
-             "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, NewBB);
+      if (TermBr->getSuccessor(0) != NewBB &&
+          TermBr->getSuccessor(1) != NewBB) {
+        unsigned Idx = PredVPSuccessors.front() == this ? 0 : 1;
+        BasicBlock *ReplacedSucc = TermBr->getSuccessor(Idx);
+        assert(
+            (!ReplacedSucc || isa<VPIRBasicBlock>(PredVPBB)) &&
+            "only VPIRBasicBlock predecessors may have an existing successor "
+            "redirected");
+        if (ReplacedSucc)
+          ReplacedSucc->removePredecessor(PredBB, /*KeepOneInputPHIs=*/true);
+        TermBr->setSuccessor(Idx, NewBB);
+        if (ReplacedSucc)
+          CFG.DTU.applyUpdates({{DominatorTree::Delete, PredBB, ReplacedSucc}});
+      }
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
@@ -1622,19 +1631,6 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   return "<badref>";
 }
 
-VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
-                                               VPValue *TrueVal,
-                                               VPValue *FalseVal, DebugLoc DL) {
-  assert(ChainOp->getScalarType()->isIntegerTy(1) &&
-         "ChainOp must be i1 for AnyOf reduction");
-  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
-                  FastMathFlags());
-  auto *OrReduce =
-      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
-  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
-  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
-}
-
 bool LoopVectorizationPlanner::getDecisionAndClampRange(
     const std::function<bool(ElementCount)> &Predicate, VFRange &Range) {
   assert(!Range.isEmpty() && "Trying to test an empty VF range.");
@@ -1647,27 +1643,6 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
     }
 
   return PredicateAtRangeStart;
-}
-
-VPSingleDefRecipe *
-VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
-                                          bool Reverse, DebugLoc DL) {
-  VPlan &Plan = getPlan();
-  GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
-  if (Reverse) {
-    // When folding the tail, we may compute an address that we don't in the
-    // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
-    // preserve existing flags without no-unsigned-wrap, as we will emit
-    // negative indices.
-    GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
-                                      ? GEPNoWrapFlags::none()
-                                      : Flags.withoutNoUnsignedWrap();
-    return tryInsertInstruction(new VPVectorEndPointerRecipe(
-        Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
-  }
-  Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-  VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
-  return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
 }
 
 VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
@@ -1950,13 +1925,9 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                       ID);
 }
 
-uint64_t VPCostContext::getReplicateRegionCostDivisor(
-    const VPRegionBlock *Region) const {
-  if (CostKind == TTI::TCK_CodeSize)
-    return 1;
-  std::optional<VPExecutionFrequency> Freq =
-      Region->getEntryBranchOnMask()->getExecutionFrequency();
-  if (!Freq)
+uint64_t
+VPCostContext::getCostDivisor(std::optional<VPExecutionFrequency> Freq) const {
+  if (CostKind == TTI::TCK_CodeSize || !Freq)
     return 1;
   // A recorded frequency is neither zero nor always-executing, so the
   // probability is non-zero and the division below is safe.

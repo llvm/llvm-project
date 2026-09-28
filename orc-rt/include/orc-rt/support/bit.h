@@ -110,19 +110,15 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 
 /// Calculates the number of leading zeros.
 template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] constexpr int countl_zero(T Val) noexcept {
-  if (!Val)
-    return std::numeric_limits<T>::digits;
+[[nodiscard]] constexpr int countl_zero(T Value) noexcept {
+  size_t LeadingZeros = std::numeric_limits<T>::digits;
 
-  unsigned ZeroBits = 0;
-  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-    T Tmp = Val >> Shift;
-    if (Tmp)
-      Val = Tmp;
-    else
-      ZeroBits |= Shift;
+  while (Value) {
+    --LeadingZeros;
+    Value >>= 1;
   }
-  return ZeroBits;
+
+  return LeadingZeros;
 }
 
 /// Returns the number of bits needed to represent Value if Value is nonzero.
@@ -131,14 +127,7 @@ template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
 /// Ex. bit_width(5) == 3.
 template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
 [[nodiscard]] constexpr int bit_width(T Value) noexcept {
-  int Width = 0;
-
-  while (Value != 0) {
-    Value >>= 1;
-    ++Width;
-  }
-
-  return Width;
+  return std::numeric_limits<T>::digits - countl_zero(Value);
 }
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>

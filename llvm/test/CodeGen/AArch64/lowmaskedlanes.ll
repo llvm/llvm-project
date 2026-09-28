@@ -245,3 +245,14 @@ define void @store_low4_nxv8i16(ptr %p, <vscale x 8 x i16> %a) {
   tail call void @llvm.masked.store(<vscale x 8 x i16> %a, ptr align 1 %p, <vscale x 8 x i1> %m)
   ret void
 }
+
+define void @store_low1_nxv8f16_splat(ptr %0) {
+; CHECK-LABEL: store_low1_nxv8f16_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, #1.00000000
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    ret
+  %2 = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 0, i32 1)
+  tail call void @llvm.masked.store.nxv8f16.p0(<vscale x 8 x half> splat (half 0xH3C00), ptr align 2 %0, <vscale x 8 x i1> %2)
+  ret void
+}

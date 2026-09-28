@@ -179,6 +179,81 @@ struct StoppedEventBody {
 };
 llvm::json::Value toJSON(const StoppedEventBody &);
 
+/// The event signals that a long running operation is about to start and
+/// provides additional information for the client to set up a corresponding
+/// progress and cancellation UI.
+///
+/// The client is free to delay the showing of the UI in order to reduce
+/// flicker.
+///
+/// This event should only be sent if the corresponding capability
+/// `supportsProgressReporting` is true
+struct ProgressStartEventBody {
+  /// An ID that can be used in subsequent `progressUpdate` and `progressEnd`
+  /// events to make them refer to the same progress reporting. IDs must be
+  /// unique within a debug session.
+  String progressId;
+
+  /// Short title of the progress reporting. Shown in the UI to describe the
+  /// long running operation.
+  String title;
+
+  /// More detailed progress message.
+  std::optional<String> message;
+
+  /// The request ID that this progress report is related to. If specified a
+  /// debug adapter is expected to emit progress events for the long running
+  /// request until the request has been either completed or cancelled.  If the
+  /// request ID is omitted, the progress report is assumed to be related to
+  /// some general activity of the debug adapter.
+  std::optional<uint32_t> requestId;
+
+  /// Progress percentage to display (value range: 0 to 100). If omitted no
+  /// percentage is shown.
+  std::optional<uint32_t> percentage;
+
+  /// If true, the request that reports progress may be cancelled with a
+  /// `cancel` request.
+  std::optional<bool> cancellable;
+};
+llvm::json::Value toJSON(const ProgressStartEventBody &);
+
+/// The event signals that the progress reporting needs to be updated with a new
+/// message and/or percentage.
+///
+/// The client does not have to update the UI immediately, but the clients needs
+/// to keep track of the message and/or percentage values.
+///
+/// This event should only be sent if the corresponding capability
+/// `supportsProgressReporting` is true.
+struct ProgressUpdateEventBody {
+  /// The ID that was introduced in the initial `ProgressStartEventBody` event.
+  String progressId;
+
+  /// More detailed progress message. If omitted, the previous message (if any)
+  /// is used.
+  std::optional<String> message;
+
+  /// Progress percentage to display (value range: 0 to 100). If omitted no
+  /// percentage is shown.
+  std::optional<uint32_t> percentage;
+};
+llvm::json::Value toJSON(const ProgressUpdateEventBody &);
+
+/// The event signals the end of the progress reporting with a final message.
+///
+/// This event should only be sent if the corresponding capability
+/// `supportsProgressReporting` is true.
+struct ProgressEndEventBody {
+  /// The ID that was introduced in the initial `ProgressStartEventBody` event.
+  String progressId;
+
+  /// More detailed progress message. If omitted, the previous message (if any)
+  /// is used.
+  std::optional<String> message;
+};
+llvm::json::Value toJSON(const ProgressEndEventBody &);
+
 } // end namespace lldb_dap::protocol
 
 #endif
