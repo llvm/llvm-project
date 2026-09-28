@@ -302,6 +302,21 @@ Block *StackFrame::GetFrameBlock() {
   return nullptr;
 }
 
+bool StackFrame::IsAddressInFrameScope(const Address &addr) {
+  Block *frame_block = GetFrameBlock();
+  Block *addr_block = addr.CalculateSymbolContextBlock();
+  if (!frame_block || !addr_block)
+    return false;
+  // Do they same the same concrete function?
+  if (addr_block->CalculateSymbolContextFunction() !=
+      frame_block->CalculateSymbolContextFunction())
+    return false;
+
+  // Do they represent the same inlined function?
+  return addr_block->GetContainingInlinedBlock() ==
+         frame_block->GetContainingInlinedBlock();
+}
+
 // Get the symbol context if we already haven't done so by resolving the
 // PC address as much as possible. This way when we pass around a
 // StackFrame object, everyone will have as much information as possible and no
