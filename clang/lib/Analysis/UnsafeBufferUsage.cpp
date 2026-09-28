@@ -503,8 +503,8 @@ static const Expr *getSubExprInSizeOfExpr(const Expr &E) {
 // Providing that `Ptr` is a pointer and `Size` is an unsigned-integral
 // expression, returns true iff they follow one of the following safe
 // patterns:
-//  1. Ptr is `DRE.data()` and Size is `DRE.size()`, where DRE is a hardened
-//     container or view;
+//  1. Ptr is `DRE.data()` and Size is `DRE.size()` (or `DRE.size_bytes()` for
+//     char pointers), called on the same container or view object `DRE`;
 //
 //  2. Ptr is `a` and Size is `n`, where `a` is of an array-of-T with constant
 //     size `n`;
@@ -530,30 +530,24 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
       // 'b.size()' otherwise we do not know they match:
       if (DREOfPtr->getDecl() != DREOfSize->getDecl())
         return false;
-      if (MCEPtr->getMethodDecl()->getName() != "data")
+      const auto *MDData = MCEPtr->getMethodDecl();
+      const auto *MDSize = MCESize->getMethodDecl();
+      if (!MDData || !MDSize)
         return false;
-      // `MCEPtr->getRecordDecl()` must be non-null as `DREOfPtr` is non-null:
-      if (!MCEPtr->getRecordDecl()->isInStdNamespace())
-        return false;
-
-      auto *ObjII = MCEPtr->getRecordDecl()->getIdentifier();
-
-      if (!ObjII)
+      if (MDData->getName() != "data")
         return false;
 
       bool AcceptSizeBytes = Ptr->getType()->getPointeeType()->isCharType();
 
-      if (!((AcceptSizeBytes &&
-             MCESize->getMethodDecl()->getName() == "size_bytes") ||
+      if (!((AcceptSizeBytes && MDSize->getName() == "size_bytes") ||
             // Note here the pointer must be a pointer-to-char type unless there
             // is explicit casting.  If there is explicit casting, this branch
             // is unreachable. Thus, at this branch "size" and "size_bytes" are
             // equivalent as the pointer is a char pointer:
-            MCESize->getMethodDecl()->getName() == "size"))
+            MDSize->getName() == "size"))
         return false;
 
-      return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
-                                ObjII->getName());
+      return true;
     }
 
   Expr::EvalResult ER;
@@ -583,24 +577,25 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
   return false;
 }
 
-// Given a two-param std::span construct call, matches iff the call has the
-// following forms:
-//   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
-//   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
+// Given the two arguments `(Arg0, Arg1)` of a container/view constructor or
+// factory function call, returns true iff the arguments match one of the
+// following safe forms:
+//   1. `(new T[n], n)`, where `n` is a literal or a DRE
+//   2. `(new T, 1)`
+//   3. `((char *)f(args), args[N] * args[M])`, where
 //       `f` is a function with attribute `alloc_size(N, M)`;
 //       `args` represents the list of arguments;
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
-//   4. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
-//      SIZED_CONTAINER_OR_VIEW_LIST.
-//   5. `isPtrBufferSafe` returns true for the two arguments of the span
-//      constructor
-static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
-                                        ASTContext &Ctx) {
+//   4. `(x.begin(), x.end())` where `begin()` and `end()` are called on the
+//      same container/view object `x`.
+//   5. `isPtrBufferSafe` returns true for the two arguments.
+template <typename CallOrConstructExpr>
+static bool isSafeTwoParamContainerConstruct(const CallOrConstructExpr &Node,
+                                             ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
-         "expecting a two-parameter std::span constructor");
+         "expecting a two-parameter container constructor or factory call");
   const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
   const Expr *Arg1 = Node.getArg(1)->IgnoreParenImpCasts();
   auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
@@ -674,14 +669,8 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
     if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
       const auto *MD = MC->getMethodDecl();
-      const auto *RD = MC->getRecordDecl();
-
-      if (RD && MD)
-        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
-            II && RD->isInStdNamespace())
-          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
-                                    II->getName()) &&
-                 MD->getName() == MethodName;
+      if (MD && MD->getName() == MethodName)
+        return true;
     }
     return false;
   };
@@ -1883,7 +1872,7 @@ public:
     auto HasTwoParamSpanCtorDecl =
         CRecordDecl->isInStdNamespace() &&
         CDecl->getDeclName().getAsString() == "span" && CE->getNumArgs() == 2;
-    if (!HasTwoParamSpanCtorDecl || isSafeSpanTwoParamConstruct(*CE, Ctx))
+    if (!HasTwoParamSpanCtorDecl || isSafeTwoParamContainerConstruct(*CE, Ctx))
       return false;
     Result.addNode(SpanTwoParamConstructorTag, DynTypedNode::create(*CE));
     return true;
@@ -1979,6 +1968,99 @@ public:
       if (isa<VarDecl>(DRE->getDecl()))
         return {DRE};
     }
+    return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
+/// A call of a constructor or factory function annotated with
+/// `[[clang::unsafe_buffer_usage("container")]]` (or
+/// `[[clang::unsafe_buffer_usage_in_container]]`). Evaluates whether the
+/// arguments are safe via `isSafeTwoParamContainerConstruct` and emits a
+/// diagnostic under `-Wunsafe-buffer-usage-in-container` when unsafe.
+class UnsafeBufferUsageContainerAttrGadget : public WarningGadget {
+  constexpr static const char *const OpTag = "container_attr_expr";
+  const Expr *Op;
+
+public:
+  UnsafeBufferUsageContainerAttrGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UnsafeBufferUsageContainerAttr),
+        Op(Result.getNodeAs<Expr>(OpTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UnsafeBufferUsageContainerAttr;
+  }
+
+  // Returns true iff `Callee` is annotated with
+  // `[[clang::unsafe_buffer_usage("container")]]` and the arguments of `Node`
+  // are not provably safe.
+  template <typename CallOrConstructExpr>
+  static bool isUnsafeContainerConstruction(const Decl *Callee,
+                                            const CallOrConstructExpr &Node,
+                                            ASTContext &Ctx) {
+    if (!Callee)
+      return false;
+    const auto *Attr = Callee->getAttr<UnsafeBufferUsageAttr>();
+    if (!Attr || Attr->getCategory() != "container")
+      return false;
+    return Node.getNumArgs() != 2 ||
+           !isSafeTwoParamContainerConstruct(Node, Ctx);
+  }
+
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeBufferInContainer(*S, Handler))
+      return false;
+
+    // S is a constructor call.
+    if (const auto *CE = dyn_cast<CXXConstructExpr>(S)) {
+      // std::span(ptr, size) ctor is handled by SpanTwoParamConstructorGadget.
+      MatchResult Tmp;
+      if (SpanTwoParamConstructorGadget::matches(CE, Ctx, Tmp))
+        return false;
+
+      if (!isUnsafeContainerConstruction(CE->getConstructor(), *CE, Ctx))
+        return false;
+
+      Result.addNode(OpTag, DynTypedNode::create(*CE));
+      return true;
+    }
+    // S is a factory function call.
+    if (const auto *Call = dyn_cast<CallExpr>(S)) {
+      if (!isUnsafeContainerConstruction(Call->getDirectCallee(), *Call, Ctx))
+        return false;
+
+      Result.addNode(OpTag, DynTypedNode::create(*Call));
+      return true;
+    }
+    return false;
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeOperationInContainer(Op, IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    const Expr *Arg0 = nullptr;
+
+    if (const auto *CE = dyn_cast<CXXConstructExpr>(Op);
+        CE && CE->getNumArgs() > 0)
+      Arg0 = CE->getArg(0);
+    else if (const auto *Call = dyn_cast<CallExpr>(Op);
+             Call && Call->getNumArgs() > 0)
+      Arg0 = Call->getArg(0);
+
+    if (Arg0)
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg0->IgnoreParenImpCasts()))
+        if (isa<VarDecl>(DRE->getDecl()))
+          return {DRE};
+
     return {};
   }
 
@@ -2190,16 +2272,25 @@ public:
   static bool matches(const Stmt *S, const ASTContext &Ctx,
                       MatchResult &Result) {
     if (auto *CE = dyn_cast<CallExpr>(S)) {
-      if (CE->getDirectCallee() &&
-          CE->getDirectCallee()->hasAttr<UnsafeBufferUsageAttr>()) {
-        Result.addNode(OpTag, DynTypedNode::create(*CE));
-        return true;
+      if (const auto *Callee = CE->getDirectCallee()) {
+        if (const auto *Attr = Callee->getAttr<UnsafeBufferUsageAttr>()) {
+          // Skip if this is annotated with
+          // `[[clang::unsafe_buffer_usage("container")]]` as that case is
+          // handled by UnsafeBufferUsageContainerAttrGadget.
+          if (Attr->getCategory() == "container")
+            return false;
+          Result.addNode(OpTag, DynTypedNode::create(*CE));
+          return true;
+        }
       }
     }
     if (auto *ME = dyn_cast<MemberExpr>(S)) {
       if (!isa<FieldDecl>(ME->getMemberDecl()))
         return false;
-      if (ME->getMemberDecl()->hasAttr<UnsafeBufferUsageAttr>()) {
+      if (const auto *Attr =
+              ME->getMemberDecl()->getAttr<UnsafeBufferUsageAttr>()) {
+        if (Attr->getCategory() == "container")
+          return false;
         Result.addNode(OpTag, DynTypedNode::create(*ME));
         return true;
       }
@@ -2237,7 +2328,13 @@ public:
 
   static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
     const auto *CE = dyn_cast<CXXConstructExpr>(S);
-    if (!CE || !CE->getConstructor()->hasAttr<UnsafeBufferUsageAttr>())
+    if (!CE)
+      return false;
+    const auto *Attr = CE->getConstructor()->getAttr<UnsafeBufferUsageAttr>();
+    // Skip if this is annotated with
+    // `[[clang::unsafe_buffer_usage("container")]]` as that case is
+    // handled by UnsafeBufferUsageContainerAttrGadget.
+    if (!Attr || Attr->getCategory() == "container")
       return false;
     // std::span(ptr, size) ctor is handled by SpanTwoParamConstructorGadget.
     MatchResult Tmp;

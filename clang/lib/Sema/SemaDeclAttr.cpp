@@ -7226,9 +7226,22 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(Attr::Create(S.Context, Argument, AL));
 }
 
-template<typename Attr>
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(Attr::Create(S.Context, AL));
+  StringRef Category;
+  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "container";
+  } else if (AL.getNumArgs() != 0) {
+    SourceLocation Loc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
+      return;
+    if (Category != "container") {
+      S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
+      return;
+    }
+  }
+  D->addAttr(UnsafeBufferUsageAttr::Create(S.Context, Category, AL));
 }
 
 static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8454,7 +8467,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UnsafeBufferUsage:
-    handleUnsafeBufferUsage<UnsafeBufferUsageAttr>(S, D, AL);
+    handleUnsafeBufferUsage(S, D, AL);
     break;
 
   case ParsedAttr::AT_UseHandle:
