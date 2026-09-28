@@ -2124,9 +2124,8 @@ static VPExecutionFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
 
 void VPIRMetadata::setExecutionFrequency(
     std::optional<VPExecutionFrequency> Freq, LLVMContext &Ctx) {
-  // A recipe that never or always executes needs no annotation.
-  if (!Freq || Freq->Freq.getFrequency() == 0 ||
-      Freq->Freq.getFrequency() == vputils::AlwaysExecutesFreq)
+  // A recipe that always executes needs no annotation.
+  if (!Freq || Freq->Freq.getFrequency() == vputils::AlwaysExecutesFreq)
     return;
   SmallVector<llvm::Metadata *, 2> Ops = {ConstantAsMetadata::get(
       ConstantInt::get(Type::getInt64Ty(Ctx), Freq->Freq.getFrequency()))};

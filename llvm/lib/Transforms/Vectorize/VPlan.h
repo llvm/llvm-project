@@ -1171,7 +1171,9 @@ struct VPExecutionFrequency {
   const bool IsEstimated;
 
   VPExecutionFrequency(BlockFrequency Freq, bool IsEstimated)
-      : Freq(Freq), IsEstimated(IsEstimated) {}
+      : Freq(Freq), IsEstimated(IsEstimated) {
+    assert(Freq > BlockFrequency() && "execution frequency must be non-zero");
+  }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that

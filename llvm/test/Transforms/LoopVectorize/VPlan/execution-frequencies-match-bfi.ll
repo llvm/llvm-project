@@ -78,8 +78,6 @@ define void @single_pred_zero_weight(ptr noalias %a, ptr noalias %b, ptr noalias
 ;   %if.then 2^-31 ~ 4.66e-10
 ;   %latch      1 =        1
 ;
-; TODO: VPlan currently records a frequency of 0 for %if.then.
-;
 ; BFI-LABEL: block-frequency-info: single_pred_zero_weight
 ; BFI-NEXT:   - entry: float = 1.0,
 ; BFI-NEXT:   - loop: float = 1000.0,
@@ -99,8 +97,8 @@ define void @single_pred_zero_weight(ptr noalias %a, ptr noalias %b, ptr noalias
 ; VPLAN-NEXT:  Successor(s): if.then, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>{{$}}
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a>{{$}}
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 4294967296 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -143,8 +141,6 @@ define void @single_pred_zero_weight_sibling(ptr noalias %a, ptr noalias %b, ptr
 ;   %if.then 1 - 2^-31 ~ 1 - 4.66e-10
 ;   %latch           1 =          1
 ;
-; TODO: VPlan currently records %if.then as always executing.
-;
 ; BFI-LABEL: block-frequency-info: single_pred_zero_weight_sibling
 ; BFI-NEXT:   - entry: float = 1.0,
 ; BFI-NEXT:   - loop: float = 1000.0, int = 18014398509481984
@@ -164,8 +160,8 @@ define void @single_pred_zero_weight_sibling(ptr noalias %a, ptr noalias %b, ptr
 ; VPLAN-NEXT:  Successor(s): if.then, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>{{$}}
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a>{{$}}
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -459,13 +455,13 @@ define void @switch_common_dest(ptr noalias %a, ptr noalias %b, ptr noalias %c, 
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 3458764513820540928 (37.5%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 3458764513820540928 (37.5%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 3458764514357411840 (37.5%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 3458764514357411840 (37.5%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  default:
-; VPLAN-NEXT:    EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv> (!vplan.execution.frequency 4611686018427387904 (50%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.c> (!vplan.execution.frequency 4611686018427387904 (50%))
+; VPLAN-NEXT:    EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv> (!vplan.execution.frequency 4611686017890516992 (50%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.c> (!vplan.execution.frequency 4611686017890516992 (50%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -1093,9 +1089,6 @@ define void @switch_join_always(ptr noalias %a, ptr noalias %idx) {
 ;   %join     1 =   1
 ;   %latch    1 =   1
 ;
-; TODO: %join and %latch are currently recorded as executing slightly less
-; often, as the rounded probabilities do not add up to 1.
-;
 ; BFI-LABEL: block-frequency-info: switch_join_always
 ; BFI-NEXT:   - entry: float = 1.0,
 ; BFI-NEXT:   - loop: float = 1000.0,
@@ -1111,18 +1104,18 @@ define void @switch_join_always(ptr noalias %a, ptr noalias %idx) {
 ; VPLAN-NEXT:  Successor(s): join
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  case.1:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1317624575466405888 (14.29%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1317624575670928140 (14.29%))
 ; VPLAN-NEXT:  Successor(s): join
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  join:
-; VPLAN-NEXT:    EMIT ir<%add> = add ir<%i>, ir<10> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT store ir<%add>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT ir<%add> = add ir<%i>, ir<10>{{$}}
+; VPLAN-NEXT:    EMIT store ir<%add>, ir<%gep.a>{{$}}
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
-; VPLAN-NEXT:    EMIT ir<%iv.next> = add ir<%iv>, ir<1> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1024> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%ec> (!prof {1, 999}, !vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT ir<%iv.next> = add ir<%iv>, ir<1>{{$}}
+; VPLAN-NEXT:    EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1024>{{$}}
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%ec> (!prof {1, 999}){{$}}
 ; VPLAN-NEXT:  Successor(s): middle.block, loop
 ;
 entry:
@@ -1306,9 +1299,6 @@ define void @rarely_executed_chain(ptr noalias %a, ptr noalias %idx) {
 ;   %if.e 2^-64 ~ 5.42e-20  (clamped up from 2^-65)
 ;   %latch    1 =        1
 ;
-; TODO: %if.a and the blocks it reaches are currently recorded as never
-; executing.
-;
 ; BFI-LABEL: block-frequency-info: rarely_executed_chain
 ; BFI-NEXT:   - entry: float = 1.0,
 ; BFI-NEXT:   - loop: float = 1000.0,
@@ -1322,28 +1312,28 @@ define void @rarely_executed_chain(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'rarely_executed_chain'
 ; VPLAN:       if.a:
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10>{{$}}
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}){{$}}
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}, !vplan.execution.frequency 4294967296 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch, if.b
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.b:
-; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20>{{$}}
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 1}){{$}}
+; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 2 (2.168E-17%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 1}, !vplan.execution.frequency 2 (2.168E-17%))
 ; VPLAN-NEXT:  Successor(s): if.c, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.c:
-; VPLAN-NEXT:    EMIT ir<%c.3> = icmp sgt ir<%i>, ir<30>{{$}}
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.3> (!prof {1, 1}){{$}}
+; VPLAN-NEXT:    EMIT ir<%c.3> = icmp sgt ir<%i>, ir<30> (!vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.3> (!prof {1, 1}, !vplan.execution.frequency 1 (1.084E-17%))
 ; VPLAN-NEXT:  Successor(s): latch, if.d
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.d:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a>{{$}}
-; VPLAN-NEXT:    EMIT ir<%c.4> = icmp sgt ir<%i>, ir<40>{{$}}
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.4> (!prof {1, 1}){{$}}
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT ir<%c.4> = icmp sgt ir<%i>, ir<40> (!vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.4> (!prof {1, 1}, !vplan.execution.frequency 1 (1.084E-17%))
 ; VPLAN-NEXT:  Successor(s): if.e, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.e:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a>{{$}}
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 1 (1.084E-17%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -1397,8 +1387,6 @@ define void @nested_zero_weight_siblings(ptr noalias %a, ptr noalias %idx) {
 ;   %then.2 (1 - 2^-31)^3 ~ 1 - 1.40e-9
 ;   %latch              1 =             1
 ;
-; TODO: %then.0, %then.1 and %then.2 are currently recorded as always executing.
-;
 ; BFI-LABEL: block-frequency-info: nested_zero_weight_siblings
 ; BFI-NEXT:   - entry: float = 1.0,
 ; BFI-NEXT:   - loop: float = 1000.0, int = 18014398509481984
@@ -1410,19 +1398,19 @@ define void @nested_zero_weight_siblings(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'nested_zero_weight_siblings'
 ; VPLAN:       then.0:
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.a>{{$}}
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10>{{$}}
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}){{$}}
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}, !vplan.execution.frequency 9223372032559808512 (100%))
 ; VPLAN-NEXT:  Successor(s): then.1, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  then.1:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a>{{$}}
-; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20>{{$}}
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1000, 0}){{$}}
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 9223372028264841218 (100%))
+; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 9223372028264841218 (100%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1000, 0}, !vplan.execution.frequency 9223372028264841218 (100%))
 ; VPLAN-NEXT:  Successor(s): then.2, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  then.2:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a>{{$}}
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 9223372023969873925 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
