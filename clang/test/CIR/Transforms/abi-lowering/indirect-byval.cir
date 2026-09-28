@@ -301,7 +301,7 @@ module attributes {
     %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
     cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
-    %f = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+    %f = cir.fadd %a, %b : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
     %r = cir.call @takes_big(%v) : (!rec_Big) -> !s32i
     cir.return %r : !s32i
   }
@@ -309,7 +309,7 @@ module attributes {
   // CHECK:      cir.func{{.*}} @caller_byval_fenv_between(%[[S:[^:]+]]: !rec_Big, %[[A:[^:]+]]: !cir.float, %[[B:[^:]+]]: !cir.float)
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK-NEXT:   %{{.*}} = cir.fadd %[[A]], %[[B]] : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+  // CHECK-NEXT:   %{{.*}} = cir.fadd %[[A]], %[[B]] : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
   // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[TMP]]) :
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
 
