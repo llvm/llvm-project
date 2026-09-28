@@ -32,6 +32,13 @@ declare i16 @llvm.nvvm.min.us(i16, i16)
 declare i32 @llvm.nvvm.min.ui(i32, i32)
 declare i64 @llvm.nvvm.min.ull(i64, i64)
 
+declare i16 @llvm.nvvm.mulhi.s(i16, i16)
+declare i32 @llvm.nvvm.mulhi.i(i32, i32)
+declare i64 @llvm.nvvm.mulhi.ll(i64, i64)
+declare i16 @llvm.nvvm.mulhi.us(i16, i16)
+declare i32 @llvm.nvvm.mulhi.ui(i32, i32)
+declare i64 @llvm.nvvm.mulhi.ull(i64, i64)
+
 declare i32 @llvm.nvvm.bitcast.f2i(float)
 declare float @llvm.nvvm.bitcast.i2f(i32)
 declare i64 @llvm.nvvm.bitcast.d2ll(double)
@@ -277,6 +284,29 @@ define void @min_max(i16 %a1, i16 %a2, i32 %b1, i32 %b2, i64 %c1, i64 %c2) {
 
 ; CHECK: %r12 = call i64 @llvm.umin.i64(i64 %c1, i64 %c2)
   %r12 = call i64 @llvm.nvvm.min.ull(i64 %c1, i64 %c2)
+
+  ret void
+}
+
+; CHECK-LABEL: @mulhi
+define void @mulhi(i16 %a1, i16 %a2, i32 %b1, i32 %b2, i64 %c1, i64 %c2) {
+; CHECK: %r1 = call i16 @llvm.smulh.i16(i16 %a1, i16 %a2)
+  %r1 = call i16 @llvm.nvvm.mulhi.s(i16 %a1, i16 %a2)
+
+; CHECK: %r2 = call i32 @llvm.smulh.i32(i32 %b1, i32 %b2)
+  %r2 = call i32 @llvm.nvvm.mulhi.i(i32 %b1, i32 %b2)
+
+; CHECK: %r3 = call i64 @llvm.smulh.i64(i64 %c1, i64 %c2)
+  %r3 = call i64 @llvm.nvvm.mulhi.ll(i64 %c1, i64 %c2)
+
+; CHECK: %r4 = call i16 @llvm.umulh.i16(i16 %a1, i16 %a2)
+  %r4 = call i16 @llvm.nvvm.mulhi.us(i16 %a1, i16 %a2)
+
+; CHECK: %r5 = call i32 @llvm.umulh.i32(i32 %b1, i32 %b2)
+  %r5 = call i32 @llvm.nvvm.mulhi.ui(i32 %b1, i32 %b2)
+
+; CHECK: %r6 = call i64 @llvm.umulh.i64(i64 %c1, i64 %c2)
+  %r6 = call i64 @llvm.nvvm.mulhi.ull(i64 %c1, i64 %c2)
 
   ret void
 }

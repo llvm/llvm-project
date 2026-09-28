@@ -39055,7 +39055,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(X86::OR32ri), NewCW)
         .addReg(OldCW, RegState::Kill)
-        .addImm(0x300);
+        .addImm(0x300)
+        .setOperandDead(3);
 
     // Extract to 16 bits.
     Register NewCW16 =
@@ -39123,7 +39124,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // OR 0b11 into bit 10 and 11. 0b11 is the encoding for round toward zero.
     Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(X86::OR32ri), NewCW)
-      .addReg(OldCW, RegState::Kill).addImm(0xC00);
+        .addReg(OldCW, RegState::Kill)
+        .addImm(0xC00)
+        .setOperandDead(3);
 
     // Extract to 16 bits.
     Register NewCW16 =
