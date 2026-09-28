@@ -1817,14 +1817,6 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
 
 llvm::Expected<SourceLocation::UIntTy>
 ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
-  Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(F, Index);
-  if (!MaybeInfo)
-    return MaybeInfo.takeError();
-  return MaybeInfo->Offset;
-}
-
-llvm::Expected<ASTReader::SLocEntryInfo>
-ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
   BitstreamCursor &Cursor = F->SLocEntryCursor;
   SavedStreamPosition SavedPosition(Cursor);
   if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
@@ -1853,14 +1845,9 @@ ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
         std::errc::illegal_byte_sequence,
         "incorrectly-formatted source location entry in AST file");
   case SM_SLOC_FILE_ENTRY:
-    return SLocEntryInfo{
-        static_cast<SourceLocation::UIntTy>(F->SLocEntryBaseOffset + Record[0]),
-        static_cast<unsigned>(Record[4])};
   case SM_SLOC_BUFFER_ENTRY:
   case SM_SLOC_EXPANSION_ENTRY:
-    return SLocEntryInfo{
-        static_cast<SourceLocation::UIntTy>(F->SLocEntryBaseOffset + Record[0]),
-        0};
+    return F->SLocEntryBaseOffset + Record[0];
   }
 }
 
@@ -1877,57 +1864,54 @@ void ASTReader::buildLoadedInputFiles() {
       // path, so its path and size cannot identify matching contents.
       if (FI.Overridden)
         continue;
-      auto Filename =
-          ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilename, F);
-      // Canonicalize both paths before comparing them.
-      SmallString<128> Key(*Filename);
-      FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
-      LoadedInputFiles[Key].push_back({FI.StoredSize, &F, I + 1});
+      LoadedInputFiles[FI.StoredSize].push_back({&F, I + 1});
     }
   }
 }
 
 InputFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F, unsigned InputID) {
-  if (!F.InputFileLocsLoadedBuilt) {
-    F.InputFileLocsLoadedBuilt = true;
-    F.InputFileLocsLoaded.resize(F.InputFilesLoaded.size());
-    for (unsigned I = 0; I != F.LocalNumSLocEntries; ++I) {
-      Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(&F, I);
-      if (!MaybeInfo) {
-        // Failing to find an entry only prevents a redirect, so leave the file
-        // local rather than failing the write.
-        consumeError(MaybeInfo.takeError());
-        continue;
-      }
-      if (!MaybeInfo->InputID ||
-          MaybeInfo->InputID > F.InputFileLocsLoaded.size())
-        continue;
-      // A module writes its entries in order, so the first entry naming an
-      // input file is the one we want.
-      InputFileLoc &Loc = F.InputFileLocsLoaded[MaybeInfo->InputID - 1];
-      if (Loc.FID.isInvalid())
-        Loc = {FileID::get(F.SLocEntryBaseID + I), MaybeInfo->Offset};
-    }
-  }
-
-  if (InputID == 0 || InputID > F.InputFileLocsLoaded.size())
+  InputFileInfo FI = getInputFileInfo(F, InputID);
+  // A module file records no entry index for an input file it redirected
+  // elsewhere, so it has no copy to offer.
+  if (!FI.SLocIndex)
     return InputFileLoc();
-  return F.InputFileLocsLoaded[InputID - 1];
+  return {FileID::get(F.SLocEntryBaseID + FI.SLocIndex),
+          F.SLocEntryBaseOffset + FI.SLocOffset};
 }
 
 InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   if (!LoadedInputFilesBuilt)
     buildLoadedInputFiles();
 
-  SmallString<128> Key(Path);
-  FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
-  auto Known = LoadedInputFiles.find(Key);
+  auto Known = LoadedInputFiles.find(Size);
   if (Known == LoadedInputFiles.end())
     return InputFileLoc();
 
+  StringRef WantedName = llvm::sys::path::filename(Path);
+  SmallString<128> Wanted;
+
   for (const LoadedInputModuleFile &In : Known->second) {
-    if (In.Size != Size)
+    InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
+
+    StringRef Unresolved = FI.UnresolvedImportedFilename;
+    if (llvm::sys::path::filename(Unresolved) != WantedName)
       continue;
+
+    // Two directories can hold files that agree on name and on size, so the
+    // whole path decides.
+    if (Wanted.empty()) {
+      Wanted = Path;
+      FileMgr.makeAbsolutePath(Wanted, /*Canonicalize=*/true);
+    }
+    SmallString<128> Candidate;
+    {
+      auto Filename = ResolveImportedPath(PathBuf, Unresolved, *In.F);
+      Candidate = *Filename;
+    }
+    FileMgr.makeAbsolutePath(Candidate, /*Canonicalize=*/true);
+    if (StringRef(Candidate) != StringRef(Wanted))
+      continue;
+
     // An input file may have no source location entries, leaving no copy to
     // redirect to.
     InputFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
@@ -2856,7 +2840,7 @@ bool ASTReader::shouldDisableValidationForFile(
 static std::pair<StringRef, StringRef>
 getUnresolvedInputFilenames(const ASTReader::RecordData &Record,
                             const StringRef InputBlob) {
-  uint16_t AsRequestedLength = Record[7];
+  uint16_t AsRequestedLength = Record[9];
   return {InputBlob.substr(0, AsRequestedLength),
           InputBlob.substr(AsRequestedLength)};
 }
@@ -2904,6 +2888,8 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevel = static_cast<bool>(Record[5]);
   R.ModuleMap = static_cast<bool>(Record[6]);
+  R.SLocIndex = static_cast<unsigned>(Record[7]);
+  R.SLocOffset = static_cast<uint32_t>(Record[8]);
   auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
       getUnresolvedInputFilenames(Record, Blob);
   R.UnresolvedImportedFilenameAsRequested = UnresolvedFilenameAsRequested;

@@ -1457,31 +1457,23 @@ private:
   /// An input file recorded by a loaded module file. \c Size is the size
   /// recorded by the module, and \c InputID is the file's ID within the
   /// module's input file table.
+  /// An input file recorded by a loaded module file. \c InputID is the file's
+  /// ID within the module's input file table.
   struct LoadedInputModuleFile {
-    off_t Size;
     ModuleFile *F;
     unsigned InputID;
   };
 
-  /// Input files of loaded modules, keyed by resolved path. Built on first use.
-  llvm::StringMap<SmallVector<LoadedInputModuleFile, 1>> LoadedInputFiles;
+  /// Input files of loaded modules, keyed by the size the module recorded for
+  /// them. Built on first use. A size does not identify a file, so a lookup
+  /// confirms a match by name and by path.
+  llvm::DenseMap<off_t, SmallVector<LoadedInputModuleFile, 1>> LoadedInputFiles;
   bool LoadedInputFilesBuilt = false;
 
   void buildLoadedInputFiles();
   serialization::InputFileLoc getLoadedInputFileLoc(ModuleFile &F,
                                                     unsigned InputID);
 
-  /// The offset of an SLoc entry and the input file it names. \c InputID is
-  /// zero for entries that are not files.
-  struct SLocEntryInfo {
-    SourceLocation::UIntTy Offset = 0;
-    unsigned InputID = 0;
-  };
-
-  /// Reads the offset and input file index from the SLoc entry at local index
-  /// \p Index in \p F.
-  llvm::Expected<SLocEntryInfo> readSLocFileEntry(ModuleFile *F,
-                                                  unsigned Index);
 
 public:
   /// Get the buffer for resolving paths.

@@ -1790,6 +1790,11 @@ struct InputFileEntry {
   bool IsModuleMap;
   uint32_t ContentHash[2];
 
+  /// The first source location entry written for the file, and the offset that
+  /// entry starts at. \c SLocIndex is zero when no entries were written.
+  unsigned SLocIndex = 0;
+  uint32_t SLocOffset = 0;
+
   InputFileEntry(FileEntryRef File) : File(File) {}
 
   void trySetContentHash(
@@ -1845,6 +1850,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Transient
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Top-level
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Module map
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SLoc index
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32));  // SLoc offset
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // Name as req. len
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name as req. + name
   unsigned IFAbbrevCode = Stream.EmitAbbrev(std::move(IFAbbrev));
@@ -1889,6 +1896,14 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     Entry.trySetContentHash(*PP, [&] { return Cache->getBufferIfLoaded(); });
+
+    // Entries come in order, so the first one naming a file is the one to
+    // record. These are the adjusted values a reader sees, since entries left
+    // out earlier in the table shift both.
+    if (IsSLocAffecting[I]) {
+      Entry.SLocIndex = getAdjustedFileID(FileID::get(I)).ID;
+      Entry.SLocOffset = getAdjustedOffset(SLoc->getOffset()) - 2;
+    }
 
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
@@ -1964,6 +1979,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
           Entry.IsTransient,
           Entry.IsTopLevel,
           Entry.IsModuleMap,
+          Entry.SLocIndex,
+          Entry.SLocOffset,
           NameAsRequested.size()};
 
       Stream.EmitRecordWithBlob(IFAbbrevCode, Record,

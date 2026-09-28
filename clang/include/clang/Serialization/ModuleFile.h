@@ -74,6 +74,12 @@ struct InputFileInfo {
   bool TopLevel;
   bool ModuleMap;
 
+  /// The first source location entry this module file wrote for the file, and
+  /// the offset that entry starts at. \c SLocIndex is zero when it wrote
+  /// none.
+  unsigned SLocIndex;
+  uint32_t SLocOffset;
+
   bool isValid() const {
     return !UnresolvedImportedFilenameAsRequested.empty();
   }
@@ -311,11 +317,6 @@ public:
 
   /// The input file infos that have been loaded from this AST file.
   std::vector<InputFileInfo> InputFileInfosLoaded;
-
-  /// Where this module file keeps each input file. Built from source location
-  /// entries on first use.
-  std::vector<InputFileLoc> InputFileLocsLoaded;
-  bool InputFileLocsLoadedBuilt = false;
 
   // All user input files reside at the index range [0, NumUserInputFiles), and
   // system input files reside at [NumUserInputFiles, InputFilesLoaded.size()).
