@@ -27,10 +27,10 @@ LLVM_LIBC_FUNCTION(int, getgrouplist,
                     int *ngroups)) {
   LIBC_CRASH_ON_NULLPTR(user);
   LIBC_CRASH_ON_NULLPTR(ngroups);
-  if (ngroups && *ngroups > 0)
+  if (*ngroups > 0)
     LIBC_CRASH_ON_NULLPTR(groups);
 
-  if (!user || !ngroups || *ngroups < 0 || (*ngroups > 0 && !groups)) {
+  if (*ngroups < 0) {
     libc_errno = EINVAL;
     return -1;
   }
@@ -42,14 +42,14 @@ LLVM_LIBC_FUNCTION(int, getgrouplist,
     return -1;
   }
 
-  const size_t total = res.value();
+  const int total = static_cast<int>(res.value());
   const int requested = *ngroups;
-  *ngroups = static_cast<int>(total);
+  *ngroups = total;
 
-  if (requested < static_cast<int>(total))
+  if (requested < total)
     return -1;
 
-  return static_cast<int>(total);
+  return total;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -29,6 +29,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/pwd/dynamic_buffer.h"
 #include "src/__support/pwd/field_tokenizer.h"
 #include "src/__support/pwd/flat_file_db.h"
@@ -240,7 +241,8 @@ public:
 
   [[nodiscard]] LIBC_INLINE bool push_back(gid_t gid) {
     if (count == cap) {
-      if (cap > cpp::numeric_limits<size_t>::max() / (2 * sizeof(gid_t)))
+      if (LIBC_UNLIKELY(cap > cpp::numeric_limits<size_t>::max() /
+                                  (2 * sizeof(gid_t))))
         return false;
       size_t new_cap = cap * 2;
       void *new_buf = nullptr;

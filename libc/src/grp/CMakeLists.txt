@@ -156,6 +156,7 @@ add_object_library(
     libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.src.__support.pwd.dynamic_buffer
     libc.src.__support.pwd.field_tokenizer
     libc.src.__support.pwd.flat_file_db

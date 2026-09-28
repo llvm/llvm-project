@@ -52,7 +52,7 @@ functions:
       - type: struct group **
   - name: getgrouplist
     standards:
-      - bsd
+      - gnu
     return_type: int
     arguments:
       - type: const char *
