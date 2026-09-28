@@ -9,7 +9,7 @@ define void @not_xor_add_not_selectlike(i32 %n, i1 %c, i1 %v, i32 %a, i32 %b) {
 ; CHECK:       outer:
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[NC:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[SH:%.*]] = lshr i1 [[V:%.*]], 0
+; CHECK-NEXT:    [[SH:%.*]] = lshr i1 [[V:%.*]], false
 ; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], i32 [[A:%.*]], i32 [[B:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i1 [[NC]], [[SH]]
 ; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C]], i32 [[A]], i32 [[B]]
@@ -47,7 +47,7 @@ define void @not_xor_sub_not_selectlike(i32 %n, i1 %c, i1 %v, i32 %a, i32 %b) {
 ; CHECK-LABEL: @not_xor_sub_not_selectlike(
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[NC:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[SH:%.*]] = lshr i1 [[V:%.*]], 0
+; CHECK-NEXT:    [[SH:%.*]] = lshr i1 [[V:%.*]], false
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i1 [[SH]], [[NC]]
 ; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], i32 [[A:%.*]], i32 [[B:%.*]]
 ; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C]], i32 [[A]], i32 [[B]]
