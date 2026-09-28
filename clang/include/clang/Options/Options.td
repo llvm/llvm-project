@@ -2121,12 +2121,11 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
-defm experimental_lifetime_safety_c : BoolFOption<
-    "experimental-lifetime-safety-c",
-    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
-    PosFlag<SetTrue, [], [CC1Option], "Enable">,
-    NegFlag<SetFalse, [], [CC1Option], "Disable">,
-    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
+defm lifetime_safety_c : BoolFOption<
+    "lifetime-safety-c",
+    LangOpts<"EnableLifetimeSafetyInC">, DefaultTrue,
+    NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
+    PosFlag<SetTrue, [], [ClangOption], "Enable lifetime safety analysis for C">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -5089,10 +5088,10 @@ defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-
   NegFlag<SetFalse>>;
 defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names",
   CodeGenOpts<"UniqueInternalLinkageNames">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Uniqueify Internal Linkage Symbol Names by appending"
             " the MD5 hash of the module path">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption]>>;
 defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],

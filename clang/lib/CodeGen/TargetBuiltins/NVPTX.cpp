@@ -446,6 +446,14 @@ static Value *MakeFAdd(unsigned IntrinsicID, APFloat::roundingMode RM,
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E) {
   switch (BuiltinID) {
+  case NVPTX::BI__nvvm_mulhi_i:
+  case NVPTX::BI__nvvm_mulhi_ui:
+  case NVPTX::BI__nvvm_mulhi_ll:
+  case NVPTX::BI__nvvm_mulhi_ull:
+    return Builder.CreateBinaryIntrinsic(
+        E->getType()->hasSignedIntegerRepresentation() ? Intrinsic::smulh
+                                                       : Intrinsic::umulh,
+        EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)));
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:

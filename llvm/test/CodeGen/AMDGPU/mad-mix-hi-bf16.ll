@@ -238,10 +238,9 @@ define <2 x bfloat> @mixhi_fptrunc_fadd(float %a, float %b, bfloat %lo) #0 {
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-REAL16-NEXT:    v_perm_b32 v0, v1, v2, 0x5040100
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %add = fadd float %a, %b
@@ -267,10 +266,9 @@ define <2 x bfloat> @mixhi_fptrunc_fadd_f16_src(half %a, float %b, bfloat %lo) #
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_fma_mix_f32 v0, v0, 1.0, v1 op_sel_hi:[1,1,0]
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-REAL16-NEXT:    v_perm_b32 v0, v1, v2, 0x5040100
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %a.ext = fpext half %a to float
@@ -297,10 +295,9 @@ define <2 x bfloat> @mixhi_fptrunc_fsub(float %a, float %b, bfloat %lo) #0 {
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-REAL16-NEXT:    v_perm_b32 v0, v1, v2, 0x5040100
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %sub = fsub float %a, %b

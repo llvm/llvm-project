@@ -5466,7 +5466,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return isa<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;
@@ -7855,6 +7855,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
           getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
       if (equivalentType.isNull())
         return QualType();
+    }
+
+    if (SemaRef.getLangOpts().HLSL) {
+      if (oldType->getAttrKind() == attr::HLSLRowMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::RowMajor);
+      else if (oldType->getAttrKind() == attr::HLSLColumnMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::ColumnMajor);
     }
 
     // Check whether we can add nullability; it is only represented as
