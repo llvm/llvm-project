@@ -37,7 +37,7 @@ private:
                   const ast_matchers::DeclarationMatcher &AppendMethodDecl,
                   StringRef AppendCallName, ast_matchers::MatchFinder *Finder);
   const std::vector<StringRef> VectorLikeClasses;
-  const std::vector<StringRef> RangeLikeClasses;
+  const std::vector<StringRef> ForRangeLoopClasses;
 
   // If true, also check inefficient operations for proto repeated fields.
   bool EnableProto;

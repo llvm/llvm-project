@@ -259,8 +259,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
-  {option}`RangeLikeClasses` to configure container classes that can be used as
-  sources in range-based for loops.
+  {option}`ForRangeLoopClasses` to configure container classes that can be used
+  as sources in range-based for loops.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by

@@ -2,7 +2,7 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  {performance-inefficient-vector-operation.VectorLikeClasses: \
 // RUN:   "VectorLikeInheritedPushBack;VectorLikeDirectPushBack;VectorLikeInheritedEmplaceBack", \
-// RUN:   performance-inefficient-vector-operation.RangeLikeClasses: \
+// RUN:   performance-inefficient-vector-operation.ForRangeLoopClasses: \
 // RUN:   "RangeLike"}}'
 
 class VectorLikePushBackBase {

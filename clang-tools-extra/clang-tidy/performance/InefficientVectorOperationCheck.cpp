@@ -76,8 +76,8 @@ InefficientVectorOperationCheck::InefficientVectorOperationCheck(
     : ClangTidyCheck(Name, Context),
       VectorLikeClasses(utils::options::parseStringList(
           Options.get("VectorLikeClasses", "::std::vector"))),
-      RangeLikeClasses(utils::options::parseStringList(Options.get(
-          "RangeLikeClasses",
+      ForRangeLoopClasses(utils::options::parseStringList(Options.get(
+          "ForRangeLoopClasses",
           "::std::vector;::std::set;::std::unordered_set;::std::map;"
           "::std::unordered_map;::std::array;::std::deque"))),
       EnableProto(Options.get("EnableProto", false)) {}
@@ -86,8 +86,8 @@ void InefficientVectorOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "VectorLikeClasses",
                 utils::options::serializeStringList(VectorLikeClasses));
-  Options.store(Opts, "RangeLikeClasses",
-                utils::options::serializeStringList(RangeLikeClasses));
+  Options.store(Opts, "ForRangeLoopClasses",
+                utils::options::serializeStringList(ForRangeLoopClasses));
   Options.store(Opts, "EnableProto", EnableProto);
 }
 
@@ -152,9 +152,9 @@ void InefficientVectorOperationCheck::addMatcher(
   Finder->addMatcher(
       cxxForRangeStmt(
           hasRangeInit(anyOf(
-              declRefExpr(supportedContainerTypesMatcher(RangeLikeClasses)),
+              declRefExpr(supportedContainerTypesMatcher(ForRangeLoopClasses)),
               memberExpr(hasObjectExpression(unless(hasSideEffects())),
-                         supportedContainerTypesMatcher(RangeLikeClasses)))),
+                         supportedContainerTypesMatcher(ForRangeLoopClasses)))),
           HasInterestingLoopBody, InInterestingCompoundStmt)
           .bind(RangeLoopName),
       this);
