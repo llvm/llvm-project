@@ -5,15 +5,11 @@
 ; Test splitting when the call graph contains a cycle (foo -> call_foo -> foo),
 ; verifying that cycle members land in the same partition.
 
-; CHECK0-DAG: declare void @foo()
 ; CHECK0-DAG: define void @bar()
-; CHECK0-DAG: declare void @call_foo()
 ; CHECK0-DAG: define void @call_bar()
 
 ; CHECK1-DAG: define void @foo()
-; CHECK1-DAG: declare void @bar()
 ; CHECK1-DAG: define void @call_foo()
-; CHECK1-DAG: declare void @call_bar()
 
 define void @foo() {
 entry:

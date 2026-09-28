@@ -80,7 +80,7 @@ static cl::opt<std::string>
          cl::value_desc("cpu"), cl::cat(SplitCategory));
 
 static cl::opt<bool> EnableCallGraphSplitModule(
-    "enable-call-graph-split-module", cl::Prefix, cl::init(false),
+    "enable-call-graph-split-module", cl::init(false),
     cl::desc("Split module using call graph"), cl::cat(SplitCategory));
 
 enum class SplitByCategoryType {
@@ -354,7 +354,9 @@ int main(int argc, char **argv) {
 
     llvm::lto::Config Config;
     SplitModuleCG SplitModuleCG(*M, NumOutputs);
-    SplitModuleCG.SplitModule(HandleModulePartCG, Config);
+    SplitModuleCG.splitModule(
+        HandleModulePartCG,
+        [&] { return std::make_unique<llvm::lto::LTOLLVMContext>(Config); });
     return 0;
   }
 

@@ -5,14 +5,11 @@
 ; Test basic call graph based module splitting — functions are grouped into
 ; partitions by their call relationships.
 
-; CHECK0-DAG: declare dso_local void @foo()
 ; CHECK0-DAG: define void @bar()
-; CHECK0-DAG: declare void @func_a()
 ; CHECK0-DAG: define void @func_b()
 ; CHECK1-DAG: define internal void @foo()
 ; CHECK1-DAG: define available_externally void @bar()
 ; CHECK1-DAG: define void @func_a()
-; CHECK1-DAG: declare void @func_b()
 
 define internal void @foo() {
 entry:
