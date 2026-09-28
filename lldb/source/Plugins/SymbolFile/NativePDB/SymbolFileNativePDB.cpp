@@ -3105,28 +3105,6 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
 }
 
 std::optional<llvm::StringRef>
-SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
-  const CompilandIndexItem *cci =
-      m_index->compilands().GetCompiland(func_id.modi);
-  if (!cci)
-    return std::nullopt;
-
-  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(func_id.offset);
-  if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
-    return std::nullopt;
-
-  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
-  if (auto err = SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Failed to deserialize ProcSym record: {0}");
-    return std::nullopt;
-  }
-
-  return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset),
-                           proc.FunctionType);
-}
-
-std::optional<llvm::StringRef>
 SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so,
                                        TypeIndex function_type) {
   auto symbol = m_index->publics().findByAddress(m_index->symrecords(),

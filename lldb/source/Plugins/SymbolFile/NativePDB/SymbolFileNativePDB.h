@@ -140,12 +140,6 @@ public:
 
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
-  /// Find the mangled name for a function
-  ///
-  /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
-  /// \returns The mangled name of the function (if available)
-  std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
-
   /// Build the asm label for the declaration of a function so that calls to it
   /// are routed through ResolveFunctionCallLabel.
   ///
