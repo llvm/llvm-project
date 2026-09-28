@@ -1001,6 +1001,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
+  FDIVActions.widenScalarFor({BF16}, changeElementTo(0, F32));
 
   if (ST.hasAnyPackedFP32Ops()) {
     FPOpActions.legalFor({V2F32});
