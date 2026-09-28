@@ -2789,7 +2789,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-        NumLoads++;
         Loads.push_back(Ld);
         DepChecker->addAccess(Ld);
         if (EnableMemAccessVersioningOfLoop)
@@ -2813,7 +2812,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-        NumStores++;
         Stores.push_back(St);
         DepChecker->addAccess(St);
         if (EnableMemAccessVersioningOfLoop)
