@@ -2776,8 +2776,8 @@ body:             |
     $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
-# A 4-pass producer writing exactly the srcC register asks nothing and must not
-# end the search: the 8-pass XDL result 2 away needs 9, 10 on gfx950.
+# The 16x16 writes exactly the srcC register, with a window of 5 (6 on gfx950),
+# but must not hide the 32x32 with a window of 9 (10) and leaves 8 (9) to pad.
 
 # GCN-LABEL: name: mfma_full_srcc_producer_does_not_hide_partial
 # GCN:      V_MFMA_F32_16X16X16F16
