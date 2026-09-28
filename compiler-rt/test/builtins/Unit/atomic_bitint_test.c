@@ -110,11 +110,70 @@ static void test_orderings(void) {
   assert((S37)a == 14);
 }
 
+static void test_compare_exchange_padding(void) {
+  union {
+    _Atomic(S37) a;
+    uint64_t bits;
+  } s;
+  s.bits = ((uint64_t)1 << 40) | 5;
+  S37 expected = 5;
+  assert(__c11_atomic_compare_exchange_strong(
+      &s.a, &expected, 9, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+  assert((S37)s.a == 9);
+  s.bits = ((uint64_t)1 << 40) | 5;
+  expected = 4;
+  assert(!__c11_atomic_compare_exchange_strong(
+      &s.a, &expected, 9, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+  assert(expected == 5 && s.bits == (((uint64_t)1 << 40) | 5));
+
+  union {
+    _Atomic(S200) a;
+    unsigned _BitInt(256) bits;
+  } w;
+  w.bits = ((unsigned _BitInt(256))1 << 240) | 5;
+  S200 wide_expected = 5;
+  assert(__c11_atomic_compare_exchange_strong(
+      &w.a, &wide_expected, 9, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+  assert((S200)w.a == 9);
+  w.bits = ((unsigned _BitInt(256))1 << 240) | 5;
+  wide_expected = 4;
+  assert(!__c11_atomic_compare_exchange_strong(
+      &w.a, &wide_expected, 9, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+  assert(wide_expected == 5);
+  assert(w.bits == (((unsigned _BitInt(256))1 << 240) | 5));
+}
+
+static void test_operator_loops(void) {
+  union {
+    _Atomic(S37) a;
+    uint64_t bits;
+  } s;
+  s.bits = ((uint64_t)1 << 37) - 3;
+  s.a *= 3;
+  assert((S37)s.a == -9);
+  S37 old = s.a++;
+  assert(old == -9 && (S37)s.a == -8);
+}
+
+static void test_unsigned_increment_wraparound(void) {
+  union {
+    _Atomic(U37) a;
+    uint64_t bits;
+  } u;
+  u.bits = ((uint64_t)1 << 37) - 1;
+  ++u.a;
+  assert((U37)u.a == 0);
+  assert((u.bits >> 37) == 0);
+}
+
 int main(void) {
   test_ops();
   test_dirty_padding();
   test_returns_new();
   test_orderings();
+  test_compare_exchange_padding();
+  test_operator_loops();
+  test_unsigned_increment_wraparound();
   printf("PASS\n");
   return 0;
 }

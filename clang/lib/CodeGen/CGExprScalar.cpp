@@ -69,6 +69,14 @@ extern cl::opt<bool> EnableSingleByteCoverage;
 
 namespace {
 
+bool needsBitIntAtomicLoop(QualType Ty, const ASTContext &Ctx) {
+  const auto *BIT = Ty->getAs<BitIntType>();
+  if (!BIT)
+    return false;
+  uint64_t StorageBits = Ctx.getTypeSize(Ty);
+  return BIT->getNumBits() != StorageBits || !llvm::isPowerOf2_64(StorageBits);
+}
+
 /// Determine whether the given binary operation may overflow.
 /// Sets \p Result to the value of the operation for BO_Add, BO_Sub, BO_Mul,
 /// and signed BO_{Div,Rem}. For these opcodes, and for unsigned BO_{Div,Rem},
@@ -3349,6 +3357,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // atomicrmw instructions.  We skip this if we want to be doing overflow
     // checking, and fall into the slow path with the atomic cmpxchg loop.
     if (!type->isBooleanType() && type->isIntegerType() &&
+        !needsBitIntAtomicLoop(type, CGF.getContext()) &&
         !(type->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
@@ -3381,17 +3390,27 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
         return isPre ? Builder.CreateBinOp(op, old, amt) : old;
       }
     }
-    value = EmitLoadOfLValue(LV, E->getExprLoc());
-    input = value;
+    if (type->isBitIntType()) {
+      value = CGF.EmitAtomicLoadRaw(
+          LV, llvm::AtomicOrdering::SequentiallyConsistent,
+          LV.isVolatileQualified());
+      input = CGF.EmitFromMemory(value, type);
+    } else {
+      value = EmitLoadOfLValue(LV, E->getExprLoc());
+      input = value;
+      value = CGF.EmitToMemory(value, type);
+    }
     // For every other atomic operation, we need to emit a load-op-cmpxchg loop
     llvm::BasicBlock *startBB = Builder.GetInsertBlock();
     llvm::BasicBlock *opBB = CGF.createBasicBlock("atomic_op", CGF.CurFn);
-    value = CGF.EmitToMemory(value, type);
     Builder.CreateBr(opBB);
     Builder.SetInsertPoint(opBB);
     atomicPHI = Builder.CreatePHI(value->getType(), 2);
     atomicPHI->addIncoming(value, startBB);
-    value = atomicPHI;
+    value =
+        type->isBitIntType() ? CGF.EmitFromMemory(atomicPHI, type) : atomicPHI;
+    if (type->isBitIntType())
+      input = value;
   } else {
     value = EmitLoadOfLValue(LV, E->getExprLoc());
     input = value;
@@ -3627,9 +3646,15 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
-    auto Pair = CGF.EmitAtomicCompareExchange(
-        LV, RValue::get(atomicPHI), RValue::get(value), E->getExprLoc());
-    llvm::Value *old = CGF.EmitToMemory(Pair.first.getScalarVal(), type);
+    auto Pair = type->isBitIntType()
+                    ? CGF.EmitAtomicCompareExchangeRaw(
+                          LV, atomicPHI, CGF.EmitToMemory(value, type))
+                    : CGF.EmitAtomicCompareExchange(LV, RValue::get(atomicPHI),
+                                                    RValue::get(value),
+                                                    E->getExprLoc());
+    llvm::Value *old = type->isBitIntType()
+                           ? Pair.first.getScalarVal()
+                           : CGF.EmitToMemory(Pair.first.getScalarVal(), type);
     llvm::Value *success = Pair.second;
     atomicPHI->addIncoming(old, curBlock);
     Builder.CreateCondBr(success, contBB, atomicPHI->getParent());
@@ -4101,6 +4126,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     } else {
       CanEmitAtomicRMW =
           !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+          !needsBitIntAtomicLoop(AtomicValueTy, CGF.getContext()) &&
           ResultTy->isIntegerType() &&
           !(AtomicValueTy->isUnsignedIntegerType() &&
             CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
@@ -4174,13 +4200,21 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     // floating point environment in the loop.
     llvm::BasicBlock *startBB = Builder.GetInsertBlock();
     llvm::BasicBlock *opBB = CGF.createBasicBlock("atomic_op", CGF.CurFn);
-    OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
-    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, AtomicValueTy);
+    bool RawBitInt = AtomicValueTy->isBitIntType();
+    if (RawBitInt)
+      OpInfo.LHS = CGF.EmitAtomicLoadRaw(
+          LHSLV, llvm::AtomicOrdering::SequentiallyConsistent,
+          LHSLV.isVolatileQualified());
+    else {
+      OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
+      OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, AtomicValueTy);
+    }
     Builder.CreateBr(opBB);
     Builder.SetInsertPoint(opBB);
     atomicPHI = Builder.CreatePHI(OpInfo.LHS->getType(), 2);
     atomicPHI->addIncoming(OpInfo.LHS, startBB);
-    OpInfo.LHS = atomicPHI;
+    OpInfo.LHS =
+        RawBitInt ? CGF.EmitFromMemory(atomicPHI, AtomicValueTy) : atomicPHI;
   }
   else
     OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
@@ -4217,9 +4251,18 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
-    auto Pair = CGF.EmitAtomicCompareExchange(
-        LHSLV, RValue::get(atomicPHI), RValue::get(Result), E->getExprLoc());
-    llvm::Value *old = CGF.EmitToMemory(Pair.first.getScalarVal(), LHSTy);
+    QualType AtomicValueTy = LHSTy->castAs<AtomicType>()->getValueType();
+    bool RawBitInt = AtomicValueTy->isBitIntType();
+    auto Pair =
+        RawBitInt
+            ? CGF.EmitAtomicCompareExchangeRaw(
+                  LHSLV, atomicPHI, CGF.EmitToMemory(Result, AtomicValueTy))
+            : CGF.EmitAtomicCompareExchange(LHSLV, RValue::get(atomicPHI),
+                                            RValue::get(Result),
+                                            E->getExprLoc());
+    llvm::Value *old = RawBitInt
+                           ? Pair.first.getScalarVal()
+                           : CGF.EmitToMemory(Pair.first.getScalarVal(), LHSTy);
     llvm::Value *success = Pair.second;
     atomicPHI->addIncoming(old, curBlock);
     Builder.CreateCondBr(success, contBB, atomicPHI->getParent());

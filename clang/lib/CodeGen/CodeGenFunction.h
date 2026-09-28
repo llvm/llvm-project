@@ -4404,6 +4404,9 @@ public:
                         llvm::AtomicOrdering AO, bool IsVolatile = false,
                         AggValueSlot slot = AggValueSlot::ignored());
 
+  llvm::Value *EmitAtomicLoadRaw(LValue LVal, llvm::AtomicOrdering AO,
+                                 bool IsVolatile);
+
   void EmitAtomicStore(RValue rvalue, LValue lvalue, bool isInit);
 
   void EmitAtomicStore(RValue rvalue, LValue lvalue, llvm::AtomicOrdering AO,
@@ -4416,6 +4419,10 @@ public:
       llvm::AtomicOrdering Failure =
           llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
+
+  std::pair<RValue, llvm::Value *>
+  EmitAtomicCompareExchangeRaw(LValue Obj, llvm::Value *Expected,
+                               llvm::Value *Desired);
 
   /// Emit an atomicrmw instruction, and applying relevant metadata when
   /// applicable.

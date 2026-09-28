@@ -6986,6 +6986,14 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
                                                 llvm::AtomicOrdering AO,
                                                 bool IsXLHSInRHSPart) {
   ASTContext &Context = CGF.getContext();
+  QualType XTy = X.getType();
+  if (const auto *AT = XTy->getAs<AtomicType>())
+    XTy = AT->getValueType();
+  if (const auto *BIT = XTy->getAs<BitIntType>()) {
+    uint64_t StorageBits = Context.getTypeSize(XTy);
+    if (BIT->getNumBits() != StorageBits || !llvm::isPowerOf2_64(StorageBits))
+      return std::make_pair(false, RValue::get(nullptr));
+  }
   // Allow atomicrmw only if 'x' and 'update' are integer values, lvalue for 'x'
   // expression is simple and atomic is allowed for the given type for the
   // target platform.

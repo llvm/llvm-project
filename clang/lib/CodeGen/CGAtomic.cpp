@@ -222,6 +222,7 @@ namespace {
     RValue EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
                           bool AsValue, llvm::AtomicOrdering AO,
                           bool IsVolatile);
+    llvm::Value *EmitAtomicLoadRaw(llvm::AtomicOrdering AO, bool IsVolatile);
 
     /// Emits atomic compare-and-exchange sequence.
     /// \param Expected Expected value.
@@ -237,7 +238,8 @@ namespace {
                                   llvm::AtomicOrdering::SequentiallyConsistent,
                               llvm::AtomicOrdering Failure =
                                   llvm::AtomicOrdering::SequentiallyConsistent,
-                              bool IsWeak = false);
+                              bool IsWeak = false,
+                              bool PreservePadding = false);
 
     /// Emits atomic update.
     /// \param AO Atomic ordering.
@@ -386,8 +388,21 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
   llvm::Value *Expected = CGF.Builder.CreateLoad(Val1);
   llvm::Value *Desired = CGF.Builder.CreateLoad(Val2);
 
+  const auto *BIT = E->getValueType()->getAs<BitIntType>();
+  bool PaddedBitInt = BIT && BIT->getNumBits() < Size * 8;
+  llvm::PHINode *ExpectedPHI = nullptr;
+  if (PaddedBitInt) {
+    auto *StartBB = CGF.Builder.GetInsertBlock();
+    auto *RetryBB = CGF.createBasicBlock("cmpxchg.retry", CGF.CurFn);
+    CGF.Builder.CreateBr(RetryBB);
+    CGF.Builder.SetInsertPoint(RetryBB);
+    ExpectedPHI = CGF.Builder.CreatePHI(Expected->getType(), 2);
+    ExpectedPHI->addIncoming(Expected, StartBB);
+  }
+
+  llvm::Value *AttemptExpected = ExpectedPHI ? ExpectedPHI : Expected;
   llvm::AtomicCmpXchgInst *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      Ptr, Expected, Desired, SuccessOrder, FailureOrder, Scope);
+      Ptr, AttemptExpected, Desired, SuccessOrder, FailureOrder, Scope);
   Pair->setVolatile(E->isVolatile());
   Pair->setWeak(IsWeak);
   CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Pair, E);
@@ -396,6 +411,21 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
   // false on failure.
   llvm::Value *Old = CGF.Builder.CreateExtractValue(Pair, 0);
   llvm::Value *Cmp = CGF.Builder.CreateExtractValue(Pair, 1);
+
+  if (PaddedBitInt) {
+    auto *ValueTy = CGF.Builder.getIntNTy(BIT->getNumBits());
+    auto *SameValue =
+        CGF.Builder.CreateICmpEQ(CGF.Builder.CreateTrunc(Old, ValueTy),
+                                 CGF.Builder.CreateTrunc(Expected, ValueTy));
+    auto *DifferentPadding = CGF.Builder.CreateICmpNE(Old, AttemptExpected);
+    auto *Retry = CGF.Builder.CreateAnd(
+        CGF.Builder.CreateNot(Cmp),
+        CGF.Builder.CreateAnd(SameValue, DifferentPadding));
+    ExpectedPHI->addIncoming(Old, CGF.Builder.GetInsertBlock());
+    auto *DoneBB = CGF.createBasicBlock("cmpxchg.done", CGF.CurFn);
+    CGF.Builder.CreateCondBr(Retry, ExpectedPHI->getParent(), DoneBB);
+    CGF.Builder.SetInsertPoint(DoneBB);
+  }
 
   // This basic block is used to hold the store instruction if the operation
   // failed.
@@ -1378,6 +1408,24 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   //
   // See: https://llvm.org/docs/Atomics.html#libcalls-atomic
   if (UseLibcall) {
+    Address UserExpected = Val1;
+    llvm::Value *ExpectedBits = nullptr;
+    llvm::BasicBlock *RetryBB = nullptr;
+    if (E->isCmpXChg() && hasBitIntPadding(MemTy, getContext())) {
+      auto *BIT = MemTy->castAs<BitIntType>();
+      auto *ValueTy = Builder.getIntNTy(BIT->getNumBits());
+      ExpectedBits = Builder.CreateTrunc(Builder.CreateLoad(Val1), ValueTy);
+      Val1 = Atomics.castToAtomicIntPointer(
+          CreateMemTempWithoutCast(AtomicTy, "cmpxchg.expected"));
+      Builder.CreateMemCpy(Val1, UserExpected, Size, false);
+      RetryBB = createBasicBlock("cmpxchg.retry", CurFn);
+      Builder.CreateBr(RetryBB);
+      Builder.SetInsertPoint(RetryBB);
+    }
+
+    llvm::Value *AttemptExpected = nullptr;
+    if (ExpectedBits)
+      AttemptExpected = Builder.CreateLoad(Val1);
     CallArgList Args;
     // For non-optimized library calls, the size is the first parameter.
     Args.add(RValue::get(llvm::ConstantInt::get(SizeTy, Size)),
@@ -1568,6 +1616,27 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
 
     RValue Res = emitAtomicLibcall(*this, LibCallName, RetTy, Args);
     // The value is returned directly from the libcall.
+    if (ExpectedBits) {
+      auto *BIT = MemTy->castAs<BitIntType>();
+      auto *Observed = Builder.CreateLoad(Val1);
+      auto *SameValue = Builder.CreateICmpEQ(
+          Builder.CreateTrunc(Observed, Builder.getIntNTy(BIT->getNumBits())),
+          ExpectedBits);
+      auto *DifferentPadding = Builder.CreateICmpNE(Observed, AttemptExpected);
+      auto *Retry =
+          Builder.CreateAnd(Builder.CreateNot(Res.getScalarVal()),
+                            Builder.CreateAnd(SameValue, DifferentPadding));
+      auto *DoneBB = createBasicBlock("cmpxchg.done", CurFn);
+      Builder.CreateCondBr(Retry, RetryBB, DoneBB);
+      Builder.SetInsertPoint(DoneBB);
+      auto *StoreBB = createBasicBlock("cmpxchg.store_expected", CurFn);
+      auto *ContBB = createBasicBlock("cmpxchg.continue", CurFn);
+      Builder.CreateCondBr(Res.getScalarVal(), ContBB, StoreBB);
+      Builder.SetInsertPoint(StoreBB);
+      Builder.CreateMemCpy(UserExpected, Val1, Size, false);
+      Builder.CreateBr(ContBB);
+      Builder.SetInsertPoint(ContBB);
+    }
     if (E->isCmpXChg())
       return Res;
 
@@ -1900,6 +1969,17 @@ RValue AtomicInfo::EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
   return ConvertToValueOrAtomic(Load, ResultSlot, Loc, AsValue);
 }
 
+llvm::Value *AtomicInfo::EmitAtomicLoadRaw(llvm::AtomicOrdering AO,
+                                           bool IsVolatile) {
+  assert(LVal.isSimple() && ValueTy->isBitIntType());
+  if (shouldUseLibcall()) {
+    Address Temp = CreateTempAlloca();
+    EmitAtomicLoadLibcall(Temp.emitRawPointer(CGF), AO, IsVolatile);
+    return CGF.Builder.CreateLoad(castToAtomicIntPointer(Temp));
+  }
+  return EmitAtomicLoadOp(AO, IsVolatile, /*CmpXchg=*/true);
+}
+
 /// Emit a load from an l-value of atomic type.  Note that the r-value
 /// we produce is an r-value of the atomic *value* type.
 RValue CodeGenFunction::EmitAtomicLoad(LValue src, SourceLocation loc,
@@ -1908,6 +1988,13 @@ RValue CodeGenFunction::EmitAtomicLoad(LValue src, SourceLocation loc,
   AtomicInfo Atomics(*this, src);
   return Atomics.EmitAtomicLoad(resultSlot, loc, /*AsValue=*/true, AO,
                                 IsVolatile);
+}
+
+llvm::Value *CodeGenFunction::EmitAtomicLoadRaw(LValue LVal,
+                                                llvm::AtomicOrdering AO,
+                                                bool IsVolatile) {
+  AtomicInfo Atomics(*this, LVal);
+  return Atomics.EmitAtomicLoadRaw(AO, IsVolatile);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
@@ -2033,15 +2120,50 @@ AtomicInfo::EmitAtomicCompareExchangeLibcall(llvm::Value *ExpectedAddr,
 
 std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
     RValue Expected, RValue Desired, llvm::AtomicOrdering Success,
-    llvm::AtomicOrdering Failure, bool IsWeak) {
+    llvm::AtomicOrdering Failure, bool IsWeak, bool PreservePadding) {
+  const auto *BIT = ValueTy->getAs<BitIntType>();
+  bool PaddedBitInt = BIT && hasBitIntPadding(ValueTy, CGF.getContext());
   // Check whether we should use a library call.
   if (shouldUseLibcall()) {
     // Produce a source address.
     Address ExpectedAddr = materializeRValue(Expected);
     llvm::Value *ExpectedPtr = ExpectedAddr.emitRawPointer(CGF);
     llvm::Value *DesiredPtr = materializeRValue(Desired).emitRawPointer(CGF);
+    llvm::Value *ExpectedBits = nullptr;
+    if (PaddedBitInt && !PreservePadding) {
+      auto *Raw = CGF.Builder.CreateLoad(castToAtomicIntPointer(ExpectedAddr));
+      ExpectedBits = CGF.Builder.CreateTrunc(
+          Raw, CGF.Builder.getIntNTy(BIT->getNumBits()));
+      auto *LoopBB = CGF.createBasicBlock("cmpxchg.retry", CGF.CurFn);
+      CGF.Builder.CreateBr(LoopBB);
+      CGF.Builder.SetInsertPoint(LoopBB);
+    }
+    llvm::Value *AttemptExpected = nullptr;
+    if (ExpectedBits)
+      AttemptExpected =
+          CGF.Builder.CreateLoad(castToAtomicIntPointer(ExpectedAddr));
     auto *Res = EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr,
                                                  Success, Failure);
+    if (ExpectedBits) {
+      auto *Observed =
+          CGF.Builder.CreateLoad(castToAtomicIntPointer(ExpectedAddr));
+      auto *SameValue = CGF.Builder.CreateICmpEQ(
+          CGF.Builder.CreateTrunc(Observed,
+                                  CGF.Builder.getIntNTy(BIT->getNumBits())),
+          ExpectedBits);
+      auto *DifferentPadding =
+          CGF.Builder.CreateICmpNE(Observed, AttemptExpected);
+      auto *Retry = CGF.Builder.CreateAnd(
+          CGF.Builder.CreateNot(Res),
+          CGF.Builder.CreateAnd(SameValue, DifferentPadding));
+      auto *DoneBB = CGF.createBasicBlock("cmpxchg.done", CGF.CurFn);
+      CGF.Builder.CreateCondBr(Retry, CGF.Builder.GetInsertBlock(), DoneBB);
+      CGF.Builder.SetInsertPoint(DoneBB);
+    }
+    if (PreservePadding)
+      return std::make_pair(RValue::get(CGF.Builder.CreateLoad(
+                                castToAtomicIntPointer(ExpectedAddr))),
+                            Res);
     return std::make_pair(
         convertAtomicTempToRValue(ExpectedAddr, AggValueSlot::ignored(),
                                   SourceLocation(), /*AsValue=*/false),
@@ -2052,8 +2174,34 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
   // through memory.
   auto *ExpectedVal = convertRValueToInt(Expected, /*CmpXchg=*/true);
   auto *DesiredVal = convertRValueToInt(Desired, /*CmpXchg=*/true);
-  auto Res = EmitAtomicCompareExchangeOp(ExpectedVal, DesiredVal, Success,
-                                         Failure, IsWeak);
+  llvm::PHINode *ExpectedPHI = nullptr;
+  if (PaddedBitInt && !PreservePadding) {
+    auto *StartBB = CGF.Builder.GetInsertBlock();
+    auto *RetryBB = CGF.createBasicBlock("cmpxchg.retry", CGF.CurFn);
+    CGF.Builder.CreateBr(RetryBB);
+    CGF.Builder.SetInsertPoint(RetryBB);
+    ExpectedPHI = CGF.Builder.CreatePHI(ExpectedVal->getType(), 2);
+    ExpectedPHI->addIncoming(ExpectedVal, StartBB);
+  }
+  auto Res =
+      EmitAtomicCompareExchangeOp(ExpectedPHI ? ExpectedPHI : ExpectedVal,
+                                  DesiredVal, Success, Failure, IsWeak);
+  if (ExpectedPHI) {
+    auto *ValueTy = CGF.Builder.getIntNTy(BIT->getNumBits());
+    auto *SameValue =
+        CGF.Builder.CreateICmpEQ(CGF.Builder.CreateTrunc(Res.first, ValueTy),
+                                 CGF.Builder.CreateTrunc(ExpectedVal, ValueTy));
+    auto *DifferentPadding = CGF.Builder.CreateICmpNE(Res.first, ExpectedPHI);
+    auto *Retry = CGF.Builder.CreateAnd(
+        CGF.Builder.CreateNot(Res.second),
+        CGF.Builder.CreateAnd(SameValue, DifferentPadding));
+    ExpectedPHI->addIncoming(Res.first, CGF.Builder.GetInsertBlock());
+    auto *DoneBB = CGF.createBasicBlock("cmpxchg.done", CGF.CurFn);
+    CGF.Builder.CreateCondBr(Retry, ExpectedPHI->getParent(), DoneBB);
+    CGF.Builder.SetInsertPoint(DoneBB);
+  }
+  if (PreservePadding)
+    return std::make_pair(RValue::get(Res.first), Res.second);
   return std::make_pair(
       ConvertToValueOrAtomic(Res.first, AggValueSlot::ignored(),
                              SourceLocation(), /*AsValue=*/false,
@@ -2389,6 +2537,17 @@ std::pair<RValue, llvm::Value *> CodeGenFunction::EmitAtomicCompareExchange(
 
   return Atomics.EmitAtomicCompareExchange(Expected, Desired, Success, Failure,
                                            IsWeak);
+}
+
+std::pair<RValue, llvm::Value *>
+CodeGenFunction::EmitAtomicCompareExchangeRaw(LValue Obj, llvm::Value *Expected,
+                                              llvm::Value *Desired) {
+  AtomicInfo Atomics(*this, Obj);
+  return Atomics.EmitAtomicCompareExchange(
+      RValue::get(Expected), RValue::get(Desired),
+      llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::AtomicOrdering::SequentiallyConsistent, /*IsWeak=*/false,
+      /*PreservePadding=*/true);
 }
 
 llvm::AtomicRMWInst *

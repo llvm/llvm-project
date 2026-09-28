@@ -11,6 +11,8 @@
 #define HEADER
 
 _Bool bv, bx;
+unsigned _BitInt(37) bitint_atomic;
+_Atomic(unsigned _BitInt(37)) atomic_bitint_atomic;
 char cv, cx;
 unsigned char ucv, ucx;
 short sv, sx;
@@ -861,6 +863,35 @@ int main(void) {
 // CHECK: br i1 %{{.+}}, label %[[EXIT:.+]], label %[[CONT]]
   #pragma omp atomic update
   cpx += 1;
+
+// CHECK-NOT: atomicrmw {{.*}} @bitint_atomic
+// CHECK: load atomic i64, ptr @bitint_atomic
+// CHECK-NOT: atomicrmw {{.*}} @bitint_atomic
+// CHECK: [[BITINT_RAW:%.*]] = phi i64
+// CHECK: [[BITINT_VALUE:%.*]] = trunc i64 [[BITINT_RAW]] to i37
+// CHECK: [[BITINT_NEW:%.*]] = add i37 [[BITINT_VALUE]], 1
+// CHECK: [[BITINT_DESIRED:%.*]] = zext i37 [[BITINT_NEW]] to i64
+// CHECK: store i64 [[BITINT_DESIRED]], ptr [[BITINT_TEMP:%.*]]
+// CHECK: [[BITINT_CAS_DESIRED:%.*]] = load i64, ptr [[BITINT_TEMP]]
+// CHECK-NOT: atomicrmw {{.*}} @bitint_atomic
+// CHECK: cmpxchg ptr @bitint_atomic, i64 [[BITINT_RAW]], i64 [[BITINT_CAS_DESIRED]]
+  #pragma omp atomic update
+  bitint_atomic += 1;
+
+// CHECK-NOT: atomicrmw {{.*}} @atomic_bitint_atomic
+// CHECK: load atomic i64, ptr @atomic_bitint_atomic
+// CHECK-NOT: atomicrmw {{.*}} @atomic_bitint_atomic
+// CHECK: [[ATOMIC_BITINT_RAW:%.*]] = phi i64
+// CHECK: [[ATOMIC_BITINT_VALUE:%.*]] = trunc i64 [[ATOMIC_BITINT_RAW]] to i37
+// CHECK: [[ATOMIC_BITINT_NEW:%.*]] = add i37 [[ATOMIC_BITINT_VALUE]], 1
+// CHECK: [[ATOMIC_BITINT_DESIRED:%.*]] = zext i37 [[ATOMIC_BITINT_NEW]] to i64
+// CHECK: store atomic i64 [[ATOMIC_BITINT_DESIRED]], ptr [[ATOMIC_BITINT_TEMP:%.*]] seq_cst
+// CHECK: [[ATOMIC_BITINT_CAS_DESIRED:%.*]] = load i64, ptr [[ATOMIC_BITINT_TEMP]]
+// CHECK-NOT: atomicrmw {{.*}} @atomic_bitint_atomic
+// CHECK: cmpxchg ptr @atomic_bitint_atomic, i64 [[ATOMIC_BITINT_RAW]], i64 [[ATOMIC_BITINT_CAS_DESIRED]]
+// CHECK-NOT: atomicrmw {{.*}} @atomic_bitint_atomic
+  #pragma omp atomic update
+  atomic_bitint_atomic += 1;
 
   return 0;
 }
