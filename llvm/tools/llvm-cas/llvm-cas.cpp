@@ -10,6 +10,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -122,9 +124,7 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
 static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
 static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
-static int validateIfNeeded(StringRef Path, bool CheckHash, bool Force,
-                            bool AllowRecovery, bool InProcess,
-                            const char *Argv0);
+static int validateIfNeeded(const CommandOptions &Opts, const char *Argv0);
 static int prune(cas::ObjectStore &CAS);
 
 static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
@@ -184,8 +184,7 @@ int main(int Argc, char **Argv) {
   auto Opts = ExitOnErr(parseOptions(Argc, Argv));
 
   if (Opts.Command == CommandKind::ValidateIfNeeded)
-    return validateIfNeeded(Opts.CASPath, Opts.CheckHash, Opts.Force,
-                            Opts.AllowRecovery, Opts.InProcess, Argv[0]);
+    return validateIfNeeded(Opts, Argv[0]);
 
   auto [CAS, AC] = ExitOnErr(createOnDiskUnifiedCASDatabases(Opts.CASPath));
   assert(CAS);
@@ -361,28 +360,70 @@ int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash) {
   return 0;
 }
 
-int validateIfNeeded(StringRef Path, bool CheckHash, bool Force,
-                     bool AllowRecovery, bool InProcess, const char *Argv0) {
+/// Validates the CAS in this process and prints the result.
+static Error validateInProcess(const CommandOptions &Opts) {
+  ValidationResult Result;
+  if (Error E = validateOnDiskUnifiedCASDatabasesIfNeeded(
+                    Opts.CASPath, Opts.CheckHash, Opts.Force)
+                    .moveInto(Result))
+    return E;
+  outs() << (Result == ValidationResult::Skipped ? "validation skipped\n"
+                                                 : "validated successfully\n");
+  return Error::success();
+}
+
+/// Validates the CAS by re-executing llvm-cas with --in-process, which
+/// protects against crashes during validation. The output of the child process
+/// is forwarded.
+///
+/// \returns false if validation failed or crashed.
+static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
+                                           const char *Argv0) {
+  std::string Exec =
+      sys::fs::getMainExecutable(Argv0, (void *)validateOutOfProcess);
+  SmallVector<StringRef> Args{Exec, "--cas", Opts.CASPath,
+                              "--validate-if-needed", "--in-process"};
+  if (Opts.CheckHash)
+    Args.push_back("--check-hash");
+  if (Opts.Force)
+    Args.push_back("--force");
+
+  outs().flush();
+  std::string ErrMsg;
+  int Result = sys::ExecuteAndWait(Exec, Args, /*Env=*/std::nullopt,
+                                   /*Redirects=*/{}, /*SecondsToWait=*/120,
+                                   /*MemoryLimit=*/0, &ErrMsg);
+  if (Result == -1)
+    return createStringError("failed to exec " + join(Args, " ") + ": " +
+                             ErrMsg);
+  if (Result == -2)
+    errs() << "llvm-cas: validate-if-needed: validation crashed: " << ErrMsg
+           << "\n";
+  return Result == 0;
+}
+
+int validateIfNeeded(const CommandOptions &Opts, const char *Argv0) {
   ExitOnError ExitOnErr("llvm-cas: validate-if-needed: ");
-  std::string ExecStorage;
-  std::optional<StringRef> Exec;
-  if (!InProcess) {
-    ExecStorage = sys::fs::getMainExecutable(Argv0, (void *)validateIfNeeded);
-    Exec = ExecStorage;
+  if (Opts.InProcess) {
+    Error E = validateInProcess(Opts);
+    if (!E)
+      return 0;
+    if (!Opts.AllowRecovery)
+      ExitOnErr(std::move(E));
+    errs() << "llvm-cas: validate-if-needed: " << toString(std::move(E))
+           << "\n";
+  } else {
+    if (ExitOnErr(validateOutOfProcess(Opts, Argv0)))
+      return 0;
+    if (!Opts.AllowRecovery)
+      ExitOnErr(createStringError("cas contents invalid"));
   }
-  ValidationResult Result = ExitOnErr(validateOnDiskUnifiedCASDatabasesIfNeeded(
-      Path, CheckHash, AllowRecovery, Force, Exec));
-  switch (Result) {
-  case ValidationResult::Valid:
-    outs() << "validated successfully\n";
-    break;
-  case ValidationResult::Recovered:
-    outs() << "recovered from invalid data\n";
-    break;
-  case ValidationResult::Skipped:
-    outs() << "validation skipped\n";
-    break;
-  }
+
+  ValidationResult Result =
+      ExitOnErr(recoverOnDiskUnifiedCASDatabases(Opts.CASPath));
+  outs() << (Result == ValidationResult::Skipped
+                 ? "recovery skipped\n"
+                 : "recovered from invalid data\n");
   return 0;
 }
 
