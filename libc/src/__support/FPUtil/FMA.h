@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename OutType, typename InType>
-LIBC_INLINE OutType fma(InType x, InType y, InType z) {
+LIBC_INLINE constexpr OutType fma(InType x, InType y, InType z) {
   return generic::fma<OutType>(x, y, z);
 }
 
