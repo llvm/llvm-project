@@ -417,14 +417,16 @@ static void printSignalDetails(int Sig, const siginfo_t *Info) {
   *Out++ = ')';
   if (Info) {
 #if defined(__APPLE__)
-    // Darwin may report a sent signal with a fault-specific si_code.
-    const bool IsDarwinSentSignal = Info->si_pid != 0;
+    // Darwin may report a sent signal with a fault-specific si_code. A sender
+    // PID identifies some sent signals, but arm64 SIGSEGV lacks it even for
+    // raise().
+    const bool HasDarwinSenderPid = Info->si_pid != 0;
 #else
-    const bool IsDarwinSentSignal = false;
+    const bool HasDarwinSenderPid = false;
 #endif
     Out = appendSignalText(Out, ", code: ");
     const char *CodeName =
-        IsDarwinSentSignal ? nullptr : getSignalCodeName(Sig, Info->si_code);
+        HasDarwinSenderPid ? nullptr : getSignalCodeName(Sig, Info->si_code);
     if (CodeName) {
       Out = appendSignalText(Out, CodeName);
       *Out++ = ' ';
@@ -435,7 +437,7 @@ static void printSignalDetails(int Sig, const siginfo_t *Info) {
       Out = appendSignalSigned(Out, Info->si_code);
     }
 
-    if (!IsDarwinSentSignal && hasFaultAddress(Sig, Info->si_code)) {
+    if (!HasDarwinSenderPid && hasFaultAddress(Sig, Info->si_code)) {
       Out = appendSignalText(Out, ", fault address: ");
       Out = appendSignalHex(Out, reinterpret_cast<uintptr_t>(Info->si_addr));
     }

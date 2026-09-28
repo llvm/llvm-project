@@ -149,8 +149,12 @@ TEST(SignalsTest, PrintsFatalSignalDetails) {
     } else if (StringRef(Mode) == "sent-segv") {
       EXPECT_THAT(Output, HasSubstr("Fatal signal: SIGSEGV (" +
                                     std::to_string(SIGSEGV) + "), code: "));
+      // Darwin arm64 reports raise(SIGSEGV) with fault-specific siginfo fields,
+      // so a sent signal cannot be distinguished from a fault here.
+#if !defined(__APPLE__) || !defined(__aarch64__)
       EXPECT_THAT(Output, Not(HasSubstr("SEGV_")));
       EXPECT_THAT(Output, Not(HasSubstr("fault address:")));
+#endif
     } else {
 #ifdef __linux__
       EXPECT_THAT(Output, HasSubstr("Fatal signal: SIGSEGV (" +
