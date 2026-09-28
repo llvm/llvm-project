@@ -4271,6 +4271,15 @@ inline const char *Registers_hexagon::getRegisterName(int regNum) {
 /// Registers_riscv holds the register state of a thread in a RISC-V
 /// process.
 
+class _LIBUNWIND_HIDDEN Registers_riscv;
+extern "C" void __libunwind_Registers_riscv_jumpto(Registers_riscv *);
+
+#if defined(_LIBUNWIND_USE_ZICFISS)
+extern "C" void *__libunwind_shstk_get_jump_target() {
+  return reinterpret_cast<void *>(&__libunwind_Registers_riscv_jumpto);
+}
+#endif
+
 // This check makes it safe when LIBUNWIND_ENABLE_CROSS_UNWINDING enabled.
 # ifdef __riscv
 #  if __riscv_xlen == 32
@@ -4321,7 +4330,7 @@ public:
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
-  void        jumpto();
+  void        jumpto() { __libunwind_Registers_riscv_jumpto(this); }
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_RISCV;
   }

@@ -35,6 +35,23 @@
   } while (0)
 #endif
 
+// On RISC-V we use _LIBUNWIND_USE_ZICFISS to indicate that Zicfiss shadow
+// stack is supported. The SSP CSR is adjusted directly to pop stale entries.
+#if defined(_LIBUNWIND_TARGET_RISCV) && defined(__riscv_shadow_stack)
+#define _LIBUNWIND_USE_ZICFISS 1
+
+#define _LIBUNWIND_POP_SHSTK_SSP(x)                                            \
+  do {                                                                         \
+    unsigned long ssp;                                                         \
+    __asm__ volatile("ssrdp %0" : "=r"(ssp));                                  \
+    if (ssp != 0) {                                                            \
+      unsigned long _pop_n = (x);                                              \
+      ssp += _pop_n * (__riscv_xlen / 8);                                      \
+      __asm__ volatile("csrw ssp, %0" :: "r"(ssp));                            \
+    }                                                                          \
+  } while (0)
+#endif
+
 // On AArch64 we use _LIBUNWIND_USE_GCS to indicate that GCS is supported. We
 // need to guard any use of GCS instructions with __chkfeat though, as GCS may
 // not be enabled.

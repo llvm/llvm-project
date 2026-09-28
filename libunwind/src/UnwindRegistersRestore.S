@@ -1264,7 +1264,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_sparc6jumptoEv)
 //  thread_state pointer is in a0
 //
   .p2align 2
-DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
+DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_riscv_jumpto)
 # if defined(__riscv_flen)
   .irp i,FROM_0_TO_31
     FLOAD f\i, (RISCV_FOFFSET + RISCV_FSIZE * \i)(a0)

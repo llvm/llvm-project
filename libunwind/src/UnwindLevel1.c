@@ -47,7 +47,8 @@
 // instructions, so for these architectures, normal function calls should be
 // avoided when invoking the `jumpto()` function. To do this, we use inline
 // assemblies to "goto" the `jumpto()` for these architectures.
-#if !defined(_LIBUNWIND_USE_CET) && !defined(_LIBUNWIND_USE_GCS)
+#if !defined(_LIBUNWIND_USE_CET) && !defined(_LIBUNWIND_USE_GCS) &&            \
+    !defined(_LIBUNWIND_USE_ZICFISS)
 #define __unw_phase2_resume(cursor, payload)                                   \
   do {                                                                         \
     __unw_resume_with_frames_walked((cursor), (payload));                      \
@@ -87,6 +88,23 @@
                      :                                                         \
                      : "r"(shstkRegContext), "r"(shstkJumpAddress)             \
                      : "x0", "x1");                                            \
+  } while (0)
+#elif defined(_LIBUNWIND_TARGET_RISCV) && defined(_LIBUNWIND_USE_ZICFISS)
+#if __riscv_xlen == 32
+#define __shstk_step_size (4)
+#else
+#define __shstk_step_size (8)
+#endif
+#define __unw_phase2_resume(cursor, payload)                                   \
+  do {                                                                         \
+    _LIBUNWIND_POP_SHSTK_SSP((payload));                                       \
+    void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
+    void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
+    __asm__ volatile("mv a0, %0\n\t"                                           \
+                     "jr %1\n\t"                                               \
+                     :                                                         \
+                     : "r"(shstkRegContext), "r"(shstkJumpAddress)             \
+                     : "a0");                                                  \
   } while (0)
 #endif
 
@@ -224,6 +242,9 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
   unsigned long shadowStackTop = 0;
   if (__chkfeat(_CHKFEAT_GCS))
     shadowStackTop = (unsigned long)__gcspr();
+#elif defined(_LIBUNWIND_USE_ZICFISS)
+  unsigned long shadowStackTop;
+  __asm__ volatile("ssrdp %0" : "=r"(shadowStackTop));
 #endif
   // Walk each frame until we reach where search phase said to stop.
   while (true) {
@@ -280,7 +301,8 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
 // stack against return address stored in shadow stack, if the 2 addresses don't
 // match, it means return address in normal stack has been corrupted, we return
 // _URC_FATAL_PHASE2_ERROR.
-#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS) ||              \
+    defined(_LIBUNWIND_USE_ZICFISS)
     if (shadowStackTop != 0) {
       unw_word_t retInNormalStack;
       __unw_get_reg(cursor, UNW_REG_IP, &retInNormalStack);
