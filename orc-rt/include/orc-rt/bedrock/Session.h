@@ -72,9 +72,9 @@ private:
 
 public:
   using ErrorReporterFn = move_only_function<void(Error) noexcept>;
-  using OnDisconnectFn = move_only_function<void(Error)>;
-  using OnDetachFn = move_only_function<void()>;
-  using OnShutdownFn = move_only_function<void()>;
+  using OnDisconnectFn = move_only_function<void(Error) noexcept>;
+  using OnDetachFn = move_only_function<void() noexcept>;
+  using OnShutdownFn = move_only_function<void() noexcept>;
 
   /// Return value callback used to return results from callController.
   using OnControllerCallReturnFn =

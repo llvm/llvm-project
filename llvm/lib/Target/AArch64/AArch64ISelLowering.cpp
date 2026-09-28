@@ -1991,6 +1991,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
 
+    // Direct patterns exist for quad broadcasts.
+    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64,
+                    MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Legal);
+
+    // VECTOR_REPEAT to legal unpacked SVE types require explicit unpacking to
+    // add spacing between elements.
+    for (auto VT : {MVT::nxv4f16, MVT::nxv2f32, MVT::nxv4bf16})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
+
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
@@ -8873,6 +8883,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
+  case ISD::VECTOR_REPEAT:
+    return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
@@ -17835,6 +17847,22 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   }
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_REPEAT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+  assert(Src.getValueType().is64BitVector() && "Expected 64bit source!");
+
+  // Repeat into a packed container before extracting the low lanes, which
+  // places the result elements at the spacing required by the unpacked type.
+  SDValue SrcAsScalar =
+      DAG.getExtractVectorElt(DL, MVT::i64, DAG.getBitcast(MVT::v1i64, Src), 0);
+  SDValue Splat = DAG.getSplat(MVT::nxv2i64, DL, SrcAsScalar);
+  EVT PackedVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  return DAG.getExtractSubvector(DL, VT, DAG.getBitcast(PackedVT, Splat), 0);
 }
 
 SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,

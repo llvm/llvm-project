@@ -20,7 +20,6 @@ class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 class PredicatedScalarEvolution;
-class VPBuilder;
 } // namespace llvm
 
 namespace llvm {

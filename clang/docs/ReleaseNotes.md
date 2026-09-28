@@ -382,6 +382,9 @@ features cannot lower the translation-unit ABI level;
   };
   ```
 
+- Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
+  flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
+
 - Improved `-Wassign-enum` performance by caching enum enumerator values. (#GH176454)
 
 - Fixed a false negative in `-Warray-bounds` where the warning was suppressed
@@ -540,6 +543,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion caused by Microsoft integer literals exceeding the maximum value. (#GH212504)
 - Fixed an assertion failure when a value of a Unicode character type (`char8_t`, `char16_t`, `char32_t`) was implicitly splatted to a vector of the same element type, e.g. when comparing an `ext_vector_type` of `char32_t` with one of its elements. (#GH202317)
 - Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
+- Fixed an assertion failure when a global variable in a non-default address space, such as one declared with `__seg_gs`, is mapped into an OpenMP `target` region. (#GH140069)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
