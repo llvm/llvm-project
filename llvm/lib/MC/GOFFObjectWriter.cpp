@@ -599,9 +599,7 @@ void GOFFWriter::writeRelocations() {
   for (auto &RelocEntry : Relocations) {
     auto GetRptr = [](const MCSymbolGOFF *Sym) -> uint32_t {
       if (Sym->isTemporary())
-        return static_cast<MCSectionGOFF &>(Sym->getSection())
-            .getBeginSymbol()
-            ->getIndex();
+        return static_cast<MCSectionGOFF &>(Sym->getSection()).getOrdinal();
       return Sym->getIndex();
     };
 
