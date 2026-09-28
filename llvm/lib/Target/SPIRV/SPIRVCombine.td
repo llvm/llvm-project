@@ -29,6 +29,15 @@ def vector_select_to_faceforward_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
 >;
 
+def ldexp_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+
+def fmul_exp2_to_ldexp_lowering : GICombineRule <
+  (defs root:$root, ldexp_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FMUL):$root,
+          [{ return Helper.matchFMulToLdexp(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applySPIRVLdexp(*${root}, ${matchinfo}); }])
+>;
+
 def matrix_transpose_lowering
     : GICombineRule<
           (defs root:$root),
@@ -50,6 +59,7 @@ def SPIRVPreLegalizerCombiner
                  [vector_length_sub_to_distance_lowering,
                   vector_fdiv_length_to_normalize_lowering,
                   vector_select_to_faceforward_lowering,
-                  matrix_transpose_lowering, matrix_multiply_lowering]> {
+                  fmul_exp2_to_ldexp_lowering, matrix_transpose_lowering,
+                  matrix_multiply_lowering]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
