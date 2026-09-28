@@ -25,7 +25,7 @@ static constexpr unsigned CounterLimit = 12;
 // We do not need to test every single counter accurately, that is the job
 // of the IR/MIR tests in tests/CodeGen/AMDGPU. We just need enough here
 // to validate that the EventTracker works.
-std::array<CounterInfo, 4> GFX12CounterInfos = {{
+static constexpr std::array<CounterInfo, 4> GFX12CounterInfos = {{
     {LOAD_CNT, HWEvents::VMEM_READ_ACCESS, CounterLimit},
     {DS_CNT, HWEvents::LDS_ACCESS, CounterLimit},
     {EXP_CNT, HWEvents::EXP_GPR_LOCK, CounterLimit},
@@ -35,7 +35,7 @@ std::array<CounterInfo, 4> GFX12CounterInfos = {{
 
 class AMDGPUGFX12EventTrackingTest : public AMDGPUCodeGenTestBase {
 public:
-  void SetUp() override { setUpImpl("amdgpu12.00-amd-amdhsa", "gfx1200", ""); }
+  void SetUp() override { setUpImpl("amdgpu12.00-amd-amdhsa", "", ""); }
 };
 
 namespace {

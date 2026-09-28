@@ -53,14 +53,14 @@ void EventTrackerRecord::print(raw_ostream &OS, bool PrintMI,
   if (PrintMI && MI)
     OS << *MI;
   else
-    OS << "MI@" << (void *)MI << "\n";
+    OS << "MI@" << (void *)MI << '\n';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void EventTrackerRecord::dump() const {
-  dbgs() << "\n";
+  dbgs() << '\n';
   print(dbgs(), /*PrintMI=*/true);
-  dbgs() << "\n";
+  dbgs() << '\n';
 }
 #endif
 
@@ -73,7 +73,7 @@ EventTracker::EventTracker(MachineBasicBlock &MBB, EventTrackingContext &ETC)
 
 void EventTracker::enterBlock() {
   LLVM_DEBUG(dbgs() << "\n[EventTracker] Entering ";
-             MBB->printAsOperand(dbgs()); dbgs() << "\n");
+             MBB->printAsOperand(dbgs()); dbgs() << '\n');
 
   // FIXME: This is a bit hacky, but we need to save the old state in case the
   // MBB is also its own predecessor. Revisit when the design and clients of
@@ -103,7 +103,7 @@ void EventTracker::enterBlock() {
 
 void EventTracker::leaveBlock() {
   LLVM_DEBUG(dbgs() << "[EventTracker] Leaving "; MBB->printAsOperand(dbgs());
-             dbgs() << "\n");
+             dbgs() << '\n');
 }
 
 void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
@@ -111,7 +111,7 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
 
   EventTrackerRecord Rec = EventTrackerRecord(*Ctx, &MI, Event);
   [[maybe_unused]] bool FoundMatch = false;
-  for (auto &CD : Counters) {
+  for (CounterData &CD : Counters) {
     if (!CD.CI->Events.contains(Event))
       continue;
 
@@ -153,9 +153,9 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
 }
 
 void EventTracker::wait(InstCounterType T, unsigned N) {
-  auto &CD = get(T);
+  CounterData &CD = Counters[T];
   LLVM_DEBUG(dbgs() << "[EventTracker] Wait on " << getInstCounterName(T)
-                    << " for " << N << "\n");
+                    << " for " << N << '\n');
 
   // Fast path for clearing the counter
   if (N == 0) {
@@ -181,7 +181,7 @@ void EventTracker::wait(InstCounterType T, unsigned N) {
     CD.LiveRecords.erase(RmIt, CD.LiveRecords.end());
   }
 
-  LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << "\n");
+  LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
 
 #ifndef NDEBUG
   LLVM_DEBUG(if (EventTrackerPrintAll) {
@@ -194,7 +194,7 @@ void EventTracker::wait(InstCounterType T, unsigned N) {
 void EventTracker::markIndeterminate(InstCounterType T) {
   LLVM_DEBUG(dbgs() << "[EventTracker] Marking " << getInstCounterName(T)
                     << " as indeterminate!\n");
-  auto &CD = get(T);
+  CounterData &CD = Counters[T];
   CD.IsIndeterminate = true;
   markOutOfOrder(T);
 }
@@ -202,29 +202,29 @@ void EventTracker::markIndeterminate(InstCounterType T) {
 void EventTracker::markOutOfOrder(InstCounterType T) {
   LLVM_DEBUG(dbgs() << "[EventTracker] Marking " << getInstCounterName(T)
                     << " as out-of-order!\n");
-  auto &CD = get(T);
+  CounterData &CD = Counters[T];
   CD.IsOutOfOrder = true;
   for (auto &Rec : CD.LiveRecords)
     Rec.setScore(0);
 }
 
 std::optional<unsigned> EventTracker::count(InstCounterType T) const {
-  auto &CD = get(T);
+  const CounterData &CD = Counters[T];
   if (CD.IsIndeterminate)
     return std::nullopt;
-  return get(T).Count;
+  return Counters[T].Count;
 }
 
 bool EventTracker::isIndeterminate(InstCounterType T) const {
-  return get(T).IsIndeterminate;
+  return Counters[T].IsIndeterminate;
 }
 
 bool EventTracker::isOutOfOrder(InstCounterType T) const {
-  return get(T).IsOutOfOrder;
+  return Counters[T].IsOutOfOrder;
 }
 
 HWEvents EventTracker::getPendingEvents(InstCounterType T) const {
-  const auto &CD = get(T);
+  const CounterData &CD = Counters[T];
   if (CD.IsIndeterminate)
     return CD.CI->Events; // return all events
 
@@ -232,18 +232,18 @@ HWEvents EventTracker::getPendingEvents(InstCounterType T) const {
     return CD.LegacyPendingEvents;
 
   HWEvents Res;
-  for (const auto &E : get(T).LiveRecords)
+  for (const auto &E : Counters[T].LiveRecords)
     Res |= E.getKind();
   return Res;
 }
 
 ArrayRef<EventTrackerRecord>
 EventTracker::getLiveRecords(InstCounterType T) const {
-  return get(T).LiveRecords;
+  return Counters[T].LiveRecords;
 }
 
 void EventTracker::print(raw_ostream &OS, InstCounterType T) const {
-  print(OS, get(T));
+  print(OS, Counters[T]);
 }
 
 bool EventTracker::mimicsLegacyTracking() { return MimicLegacyTracking; }
@@ -252,7 +252,7 @@ bool EventTracker::mimicsLegacyTracking() { return MimicLegacyTracking; }
 void EventTracker::verify() const {
   assert(MBB && Ctx && "Invalid internal state!");
 
-  for (auto &C : Counters) {
+  for (const CounterData &C : Counters) {
     const auto OnError = [&]() {
       dbgs() << "EventTracker verification error\n";
       print(dbgs(), C);
@@ -261,7 +261,7 @@ void EventTracker::verify() const {
     if (C.IsIndeterminate) {
       if (!C.IsOutOfOrder) {
         OnError();
-        assert(false && "IsIndeterminate but not IsOutOfOrder");
+        llvm_unreachable("IsIndeterminate but not IsOutOfOrder");
       }
       continue;
     }
@@ -269,30 +269,30 @@ void EventTracker::verify() const {
     if (C.IsOutOfOrder) {
       if (!all_of(C.LiveRecords, [](auto &R) { return R.getScore() == 0; })) {
         OnError();
-        assert(false &&
-               "IsOutOfOrder but some records do not have a score of 0!");
+        llvm_unreachable(
+            "IsOutOfOrder but some records do not have a score of 0!");
       }
     }
 
     if (C.Count > C.LiveRecords.size() && !mimicsLegacyTracking()) {
       OnError();
-      assert(false &&
-             "'Count' is inconsistent with the number of live records");
+      llvm_unreachable(
+          "'Count' is inconsistent with the number of live records");
     }
 
-    for (auto &E : C.LiveRecords) {
+    for (const EventTrackerRecord &E : C.LiveRecords) {
       if (E.getScore() > C.Count) {
         OnError();
         dbgs() << "Concerning Record:";
         E.print(dbgs());
-        assert(false && "record score is out of range");
+        llvm_unreachable("record score is out of range");
       }
     }
 
     // Check live records are sorted
     if (!is_sorted(C.LiveRecords, greaterThan)) {
       OnError();
-      assert(false && "live records are not sorted!");
+      llvm_unreachable("live records are not sorted!");
     }
   }
 }
@@ -302,16 +302,16 @@ void EventTracker::print(raw_ostream &OS, bool IgnoreEmpty,
                          unsigned Indent) const {
   OS.indent(Indent) << "EventTracker for ";
   MBB->printAsOperand(OS);
-  OS << ":";
+  OS << ':';
   if (IgnoreEmpty) {
-    if (all_of(Counters, [](const auto &CD) { return CD.Count == 0; })) {
+    if (all_of(Counters, [](const CounterData &CD) { return CD.Count == 0; })) {
       OS << " (empty)\n";
       return;
     }
   }
 
-  OS << "\n";
-  for (auto &C : Counters) {
+  OS << '\n';
+  for (const CounterData &C : Counters) {
     if (IgnoreEmpty && C.Count == 0)
       continue;
     print(dbgs(), C, Indent + 2);
@@ -320,14 +320,14 @@ void EventTracker::print(raw_ostream &OS, bool IgnoreEmpty,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void EventTracker::dump() const {
-  dbgs() << "\n";
+  dbgs() << '\n';
   print(dbgs());
-  dbgs() << "\n";
+  dbgs() << '\n';
 }
 #endif
 
 void EventTracker::clear() {
-  for (auto &C : Counters) {
+  for (CounterData &C : Counters) {
     C.LiveRecords.clear();
     C.Count = 0;
     C.IsIndeterminate = false;
@@ -346,7 +346,7 @@ void EventTracker::recordIncomings(EventTrackingContext &ETC,
   });
 
   /// Iterate over all counters that are available to us.
-  for (auto &CI : ETC.counters()) {
+  for (const CounterInfo &CI : ETC.counters()) {
     auto &CData = Counters[CI.CounterT];
     assert(CData.LiveRecords.empty());
 
@@ -407,7 +407,7 @@ void EventTracker::print(raw_ostream &OS, const CounterData &CD,
                     << ", LiveRecords=" << CD.LiveRecords.size()
                     << ", IsOutOfOrder=" << CD.IsOutOfOrder
                     << ", IsIndeterminate=" << CD.IsIndeterminate << ")\n";
-  for (const auto &E : CD.LiveRecords) {
+  for (const EventTrackerRecord &E : CD.LiveRecords) {
     OS.indent(Indent + 2);
     E.print(OS);
   }
@@ -417,7 +417,7 @@ EventTrackingContext::EventTrackingContext(MachineFunction &MF,
                                            ArrayRef<CounterInfo> Counters)
     : CounterInfos(Counters) {
   LLVM_DEBUG(dbgs() << "\n[EventTrackingContext] CounterInfos for "
-                    << MF.getName() << "\n";
+                    << MF.getName() << '\n';
              for (const auto &CI
                   : CounterInfos) {
                dbgs().indent(2)
@@ -425,7 +425,7 @@ EventTrackingContext::EventTrackingContext(MachineFunction &MF,
                if (CI.Events.none()) {
                  dbgs() << " (unused - no HWEvents assigned)\n";
                } else {
-                 dbgs() << "(Limit=" << CI.Limit << ") " << CI.Events << "\n";
+                 dbgs() << "(Limit=" << CI.Limit << ") " << CI.Events << '\n';
                }
              });
 
@@ -465,9 +465,9 @@ void EventTrackingContext::print(raw_ostream &OS) const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void EventTrackingContext::dump() const {
-  dbgs() << "\n";
+  dbgs() << '\n';
   print(dbgs());
-  dbgs() << "\n";
+  dbgs() << '\n';
 }
 #endif
 
