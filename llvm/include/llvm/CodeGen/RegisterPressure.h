@@ -187,19 +187,19 @@ public:
   /// Use liveness information to find dead defs at \p MI's dead slot not marked
   /// with a dead flag and move them to the DeadDefs vector. This only considers
   /// the merged live interval for defs, not the per-lane sub-ranges.
-  LLVM_ABI void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS,
+  LLVM_ABI void detectDeadDefs(const MachineInstr &MI, LiveIntervals &LIS,
                                const MachineRegisterInfo &MRI);
 
   /// Use liveness information to find out which uses/defs are partially
   /// undefined/dead at \p Pos and adjust the VRegMaskOrUnits accordingly.
-  LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
+  LLVM_ABI void adjustLaneLiveness(LiveIntervals &LIS,
                                    const MachineRegisterInfo &MRI,
                                    SlotIndex Pos);
 
   /// Use liveness information to find out which uses/defs are partially
   /// undefined/dead at the \p MI's position and adjust the VRegMaskOrUnits
   /// accordingly. Missing read-undef and dead flags are added to \p MI.
-  LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
+  LLVM_ABI void adjustLaneLiveness(LiveIntervals &LIS,
                                    const MachineRegisterInfo &MRI,
                                    MachineInstr &MI);
 
@@ -211,7 +211,7 @@ private:
   VRegMaskOrUnit *adjustDef(VRegMaskOrUnit &Def, LaneBitmask LiveAfterDef);
 
   /// Use liveness information at \p Pos to adjust the lanemask of all uses.
-  void adjustUses(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+  void adjustUses(LiveIntervals &LIS, const MachineRegisterInfo &MRI,
                   SlotIndex Pos);
 };
 
@@ -382,7 +382,7 @@ class RegPressureTracker {
   const TargetRegisterInfo *TRI = nullptr;
   const RegisterClassInfo *RCI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
-  const LiveIntervals *LIS = nullptr;
+  LiveIntervals *LIS = nullptr;
 
   /// We currently only allow pressure tracking within a block.
   const MachineBasicBlock *MBB = nullptr;
@@ -423,7 +423,7 @@ public:
   LLVM_ABI void reset();
 
   LLVM_ABI void init(const MachineFunction *mf, const RegisterClassInfo *rci,
-                     const LiveIntervals *lis, const MachineBasicBlock *mbb,
+                     LiveIntervals *lis, const MachineBasicBlock *mbb,
                      MachineBasicBlock::const_iterator pos, bool TrackLaneMasks,
                      bool TrackUntiedDefs);
 
