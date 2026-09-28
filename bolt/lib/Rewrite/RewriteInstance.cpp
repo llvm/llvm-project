@@ -172,15 +172,13 @@ FunctionNamesFile("funcs-file",
 
 static cl::list<std::string> ForceFunctionNamesNR(
     "funcs-no-regex", cl::CommaSeparated,
-    cl::desc("limit optimizations to functions from the list (non-regex, "
-             "ignoring BOLT-added name suffixes)"),
+    cl::desc("limit optimizations to functions from the list (non-regex)"),
     cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<std::string> FunctionNamesFileNR(
     "funcs-file-no-regex",
-    cl::desc("file with list of functions to optimize (non-regex, ignoring "
-             "BOLT-added name suffixes)"),
-    cl::Hidden, cl::cat(BoltCategory));
+    cl::desc("file with list of functions to optimize (non-regex)"), cl::Hidden,
+    cl::cat(BoltCategory));
 
 cl::opt<bool>
 KeepTmp("keep-tmp",
@@ -265,14 +263,12 @@ SkipFunctionNamesFile("skip-funcs-file",
 
 static cl::list<std::string> SkipFunctionNamesNR(
     "skip-funcs-no-regex", cl::CommaSeparated,
-    cl::desc("list of functions to skip (non-regex, ignoring BOLT-added "
-             "name suffixes)"),
+    cl::desc("list of functions to skip (non-regex)"),
     cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<std::string> SkipFunctionNamesFileNR(
     "skip-funcs-file-no-regex",
-    cl::desc("file with list of functions to skip (non-regex, ignoring "
-             "BOLT-added name suffixes)"),
+    cl::desc("file with list of functions to skip (non-regex)"),
     cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool> TrapOldCode(
@@ -3761,12 +3757,9 @@ Error RewriteInstance::selectFunctionsToProcess() {
     if (opts::MaxFunctions.getNumOccurrences() &&
         NumFunctionsToProcess >= opts::MaxFunctions)
       return true;
-    // Check explicit names first; checking regexes is costly.
-    // Check restored names too, so "foo" also skips BOLT-disambiguated names
-    // such as "foo/1" and "foo/2".
+    // Check explicit binary function names first; checking regexes is costly.
     for (const StringRef Name : Function.getNames())
-      if (SkipFunctionsNR.contains(Name) ||
-          SkipFunctionsNR.contains(NameResolver::restore(Name)))
+      if (SkipFunctionsNR.contains(Name))
         return true;
 
     // Check regexes only after explicit names.
@@ -3788,12 +3781,9 @@ Error RewriteInstance::selectFunctionsToProcess() {
 
     // If the list is not empty, only process functions from the list.
     if (!opts::ForceFunctionNames.empty() || !ForceFunctionsNR.empty()) {
-      // Check explicit names first; checking regexes is costly.
-      // Check restored names too, so "foo" also selects BOLT-disambiguated
-      // names such as "foo/1" and "foo/2".
+      // Check explicit binary function names first; checking regexes is costly.
       for (const StringRef Name : Function.getNames())
-        if (ForceFunctionsNR.contains(Name) ||
-            ForceFunctionsNR.contains(NameResolver::restore(Name)))
+        if (ForceFunctionsNR.contains(Name))
           return true;
 
       // Regex check (-funcs and -funcs-file options).

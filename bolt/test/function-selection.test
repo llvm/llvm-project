@@ -57,16 +57,28 @@
 # RUN:     --implicit-check-not="skipping processing foo per user request"
 # FORCE-FOO: BOLT-INFO: skipping processing foobar per user request
 
-## Exact matching ignores suffixes BOLT adds to disambiguate local symbols.
-# RUN: llvm-bolt %t.exe -o %t.skip-local --lite=0 -v=1 \
+## Exact matching uses BOLT-disambiguated binary-function names literally.
+# RUN: llvm-bolt %t.exe -o %t.skip-local-base --lite=0 -v=1 \
 # RUN:   --skip-funcs-no-regex=localfoo 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=SKIP-LOCAL
-# RUN: llvm-bolt %t.exe -o %t.force-local --lite=0 -v=1 \
-# RUN:   --funcs-no-regex=localfoo 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=FORCE-LOCAL \
+# RUN:   | FileCheck %s --check-prefix=SKIP-LOCAL-BASE \
 # RUN:     --implicit-check-not="skipping processing localfoo/"
-# SKIP-LOCAL: BOLT-INFO: skipping processing localfoo/{{[0-9]+.*}} per user request
-# FORCE-LOCAL: BOLT-INFO: skipping processing foo per user request
+# SKIP-LOCAL-BASE: BOLT-INFO: writing section header for .note.bolt_info
+
+# RUN: llvm-bolt %t.exe -o %t.skip-local-suffix --lite=0 -v=1 \
+# RUN:   --skip-funcs-no-regex=localfoo/1 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-LOCAL-SUFFIX
+# SKIP-LOCAL-SUFFIX: BOLT-INFO: skipping processing localfoo/1{{.*}} per user request
+
+# RUN: llvm-bolt %t.exe -o %t.force-local-base --lite=0 -v=1 \
+# RUN:   --funcs-no-regex=localfoo 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-LOCAL-BASE
+# FORCE-LOCAL-BASE: BOLT-INFO: skipping processing localfoo/1{{.*}} per user request
+
+# RUN: llvm-bolt %t.exe -o %t.force-local-suffix --lite=0 -v=1 \
+# RUN:   --funcs-no-regex=localfoo/1 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-LOCAL-SUFFIX \
+# RUN:     --implicit-check-not="skipping processing localfoo/"
+# FORCE-LOCAL-SUFFIX: BOLT-INFO: skipping processing foo per user request
 
 ## Processing and skipping selectors cannot be combined.
 # RUN: not llvm-bolt %t.exe -o %t.error --lite=0 \
@@ -78,7 +90,7 @@
 __attribute__((noinline)) int foo(void) { return 1; }
 __attribute__((noinline)) int foobar(void) { return 2; }
 // Local symbols receive BOLT's /N suffix, allowing the test to verify that
-// exact selectors also match the restored base name.
+// exact selectors require the disambiguated binary-function name.
 static __attribute__((noinline, used)) int localfoo(void) { return 3; }
 
 int main(void) { return foo() + foobar() + localfoo(); }

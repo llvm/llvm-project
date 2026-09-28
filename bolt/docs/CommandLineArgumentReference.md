@@ -219,11 +219,11 @@
 
 - `--funcs-file-no-regex=<string>`
 
-  File with list of functions to optimize (non-regex, ignoring BOLT-added name suffixes)
+  File with list of functions to optimize (non-regex)
 
 - `--funcs-no-regex=<func1,func2,func3,...>`
 
-  Limit optimizations to functions from the list (non-regex, ignoring BOLT-added name suffixes)
+  Limit optimizations to functions from the list (non-regex)
 
 - `--hot-data`
 
@@ -342,11 +342,11 @@
 
 - `--skip-funcs-file-no-regex=<string>`
 
-  File with list of functions to skip (non-regex, ignoring BOLT-added name suffixes)
+  File with list of functions to skip (non-regex)
 
 - `--skip-funcs-no-regex=<func1,func2,func3,...>`
 
-  List of functions to skip (non-regex, ignoring BOLT-added name suffixes)
+  List of functions to skip (non-regex)
 
 - `--strict`
 
