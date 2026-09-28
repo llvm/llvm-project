@@ -2123,6 +2123,47 @@ let isConvergent = 1, SubtargetPredicate = HasWaveMatchInsts in {
   defm V_WAVE_MATCH_B32 : VOP3Inst<"v_wave_match_b32", VOP_WAVE_MATCH_B32>;
 }
 
+class VOP_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f = VOP3_REGULAR> : VOP3_Profile<p, f> {
+  let HasExtVOP3DPP = 0;
+}
+
+class VOP_EXCLUSIVE_SCAN_t16<VOPProfile p, VOP3Features f = VOP3_OPSEL_ONLY> : VOP3_Profile_True16<p, f> {
+  let HasExtVOP3DPP = 0;
+}
+
+class VOP_EXCLUSIVE_SCAN_fake16<VOPProfile p, VOP3Features f = VOP3_OPSEL_ONLY> : VOP3_Profile_Fake16<p, f> {
+  let HasExtVOP3DPP = 0;
+}
+
+// Derives the asm name from the record name.
+multiclass V_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f = VOP3_REGULAR> {
+  defm NAME : VOP3Inst<!tolower(NAME), VOP_EXCLUSIVE_SCAN<p, f>>;
+}
+
+// Generates _t16 and _fake16 variants with correctly suffixed asm/PseudoInstr names.
+multiclass V_EXCLUSIVE_SCAN_t16<VOPProfile p, VOP3Features f = VOP3_OPSEL_ONLY> {
+  let True16Predicate = UseRealTrue16Insts in
+    defm _t16   : VOP3Inst<!tolower(NAME#"_t16"),   VOP_EXCLUSIVE_SCAN_t16<p, f>>;
+  let True16Predicate = UseFakeTrue16Insts in
+    defm _fake16 : VOP3Inst<!tolower(NAME#"_fake16"), VOP_EXCLUSIVE_SCAN_fake16<p, f>>;
+}
+
+let isConvergent = 1, SubtargetPredicate = HasExclusiveScanInsts in {
+  defm V_EXCLUSIVE_SCAN_SUM_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, VOP3_CLAMP>;
+  defm V_EXCLUSIVE_SCAN_SUM_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, VOP3_CLAMP>;
+  defm V_EXCLUSIVE_SCAN_XOR_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_OR_B32  : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_AND_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_MIN_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
+  defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
+  defm V_EXCLUSIVE_SCAN_MIN_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
+  defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
+  defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
 //===----------------------------------------------------------------------===//
@@ -2199,6 +2240,19 @@ defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x268,0x268, "
 defm V_MAXMIN_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x269, 0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
 defm V_MINMAX_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26a, 0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;
 defm V_MAXMIN_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26b, 0x26b, "v_maxmin_num_f16", "V_MAXMIN_F16", "v_maxmin_f16">;
+defm V_EXCLUSIVE_SCAN_SUM_I32 : VOP3Only_Real_Base_gfx13<0x242>;
+defm V_EXCLUSIVE_SCAN_SUM_U32 : VOP3Only_Real_Base_gfx13<0x243>;
+defm V_EXCLUSIVE_SCAN_XOR_B32 : VOP3Only_Real_Base_gfx13<0x244>;
+defm V_EXCLUSIVE_SCAN_OR_B32  : VOP3Only_Real_Base_gfx13<0x245>;
+defm V_EXCLUSIVE_SCAN_AND_B32 : VOP3Only_Real_Base_gfx13<0x246>;
+defm V_EXCLUSIVE_SCAN_MIN_I32 : VOP3Only_Real_Base_gfx13<0x247>;
+defm V_EXCLUSIVE_SCAN_MIN_I16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x248>;
+defm V_EXCLUSIVE_SCAN_MAX_I32 : VOP3Only_Real_Base_gfx13<0x249>;
+defm V_EXCLUSIVE_SCAN_MAX_I16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x24a>;
+defm V_EXCLUSIVE_SCAN_MIN_U32 : VOP3Only_Real_Base_gfx13<0x24b>;
+defm V_EXCLUSIVE_SCAN_MIN_U16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x24c>;
+defm V_EXCLUSIVE_SCAN_MAX_U32 : VOP3Only_Real_Base_gfx13<0x24d>;
+defm V_EXCLUSIVE_SCAN_MAX_U16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x24e>;
 
 // Define regular and "no inline constant" variant (for gfx12) of a
 // F16 pseudo-scalar transcendental instruction.
