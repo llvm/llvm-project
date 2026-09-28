@@ -17,9 +17,7 @@
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
-#ifdef ORC_RT_HAS_SOCKET_CONNECTOR
 #include "orc-rt/bedrock/SocketConnector.h"
-#endif
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "orc-rt/bedrock/sps/AllSPSCI.h"
 
