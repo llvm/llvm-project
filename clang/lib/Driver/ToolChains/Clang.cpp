@@ -6402,13 +6402,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
      CmdArgs.push_back("-funwind-tables=1");
 
   // Forward the loadtime-comment vars option to cc1 only on targets that
-  // support it.
+  // support it. Every occurrence is forwarded; cc1 combines the lists.
   if (Arg *A = Args.getLastArg(options::OPT_mloadtime_comment_vars_EQ)) {
     if (Triple.isOSAIX())
-      A->render(Args, CmdArgs);
+      Args.AddAllArgs(CmdArgs, options::OPT_mloadtime_comment_vars_EQ);
     else
       D.Diag(diag::warn_drv_unsupported_option_for_target)
-          << A->getAsString(Args) << TripleStr;
+          << A->getSpelling() << TripleStr;
   }
 
   // Sframe unwind tables are independent of the other types. Although also

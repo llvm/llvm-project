@@ -6573,6 +6573,8 @@ Syntax:
 -mloadtime-comment-vars=<var1>[,<var2>,...]
 ```
 
+The option can be repeated; the names from all occurrences are combined.
+
 In C, variable names are not mangled, so the mangled name is identical to the source
 identifier (for example, `sccsid`). In C++, the mangled name follows the
 Itanium C++ ABI, so a namespace-scoped or internal-linkage variable (for
@@ -6627,16 +6629,18 @@ initializer is silently skipped. Names that match no variable defined in the
 translation unit are also silently ignored, since the option is typically
 given to every compilation of a build.
 
-For C++20 modules, a named variable defined in a module unit is processed when
-the module unit itself is compiled, and the option must be present on that
-compilation -- in a two-phase build, the step that produces the module
-interface file. Giving the option to an importing translation unit has no
-effect on variables owned by the module. An `inline` variable is preserved in
-the module unit and in every importing translation unit that re-emits it. A
-variable attached to a named module is matched by its module-attached mangled
-name (for example, `export char ver[];` in module `M` is `_ZW1M3ver`). The
-same applies to a precompiled header: the option must be present when the PCH
-is built.
+For C++20 modules, a named variable defined in a module unit is processed
+using the option as specified when the module unit itself is compiled -- in a
+two-phase build, when the module interface file is produced. Giving the option
+to an importing translation unit has no effect on variables owned by the
+module. Retention of a variable to load time depends on the linker retaining
+function definitions from the translation unit that was compiled to preserve
+it, since those functions carry the references that keep the string alive. An
+`inline` variable is preserved in the object files for the module unit and for
+every importing translation unit that re-emits it. A variable attached to a
+named module is matched by its module-attached mangled name (for example,
+`export char ver[];` in module `M` is `_ZW1M3ver`). The same applies to a
+precompiled header: the option must be present when the PCH is built.
 
 Example:
 
