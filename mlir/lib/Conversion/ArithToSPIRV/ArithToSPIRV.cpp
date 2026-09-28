@@ -731,6 +731,14 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
     // Check if the source integer type was widened during type conversion.
     unsigned originalBitwidth =
         getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
+
+    if (!srcType ||
+        !(isa<IntegerType, FloatType>(getElementTypeOrSelf(srcType)) ||
+          isa<mlir::VectorType>(srcType))) {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported type for uitofp/sitofp");
+    }
+
     unsigned convertedBitwidth =
         getElementTypeOrSelf(srcType).getIntOrFloatBitWidth();
 
