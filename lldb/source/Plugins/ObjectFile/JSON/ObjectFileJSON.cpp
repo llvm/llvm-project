@@ -27,7 +27,7 @@ LLDB_PLUGIN_DEFINE(ObjectFileJSON)
 
 char ObjectFileJSON::ID;
 
-/// Returns the JSON text in the buffer, which is not NULL terminated and may
+/// Returns the JSON text in the buffer, which is not null-terminated and may
 /// be zero padded past the end of the file.
 static StringRef GetText(const lldb_private::DataExtractor &data) {
   StringRef text = toStringRef(data.GetData());

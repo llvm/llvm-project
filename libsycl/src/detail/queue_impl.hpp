@@ -64,6 +64,10 @@ public:
   /// \return the context implementation object this queue is associated with.
   ContextImpl &getContext() { return *MContext; }
 
+  /// \return a weak pointer to the context implementation object this queue is
+  /// associated with.
+  std::weak_ptr<ContextImpl> getContextWeakPtr() const { return MContext; }
+
   /// \return the device implementation object this queue is associated with.
   DeviceImpl &getDevice() { return MDevice; }
 
@@ -114,7 +118,8 @@ public:
   void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
                              const ol_kernel_launch_size_args_t &Range);
 
-  /// \return the async_handler associated with this queue.
+  /// \return the async_handler associated with this queue, empty if the queue
+  /// was constructed without one and its context has none either.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
   /// Submits a memory copy operation from one USM or host pointer to another.
