@@ -8124,7 +8124,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Do not vectorize or interleaving the loop.
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LV_NAME, VecDiagMsg.first,
-                                      P L->getStartLoc(), L->getHeader())
+                                      L->getStartLoc(), L->getHeader())
              << VecDiagMsg.second;
     });
     ORE->emit([&]() {
