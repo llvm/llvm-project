@@ -16,6 +16,15 @@ void d3(void) {
     int; // expected-error {{expected expression}}
 }
 
+// The statement expression has type void, not the type of '1'. The failing
+// assertion checks that it is evaluated at all; it used to be dropped.
+#define IS_SAME(LHS, RHS) _Generic(typeof(LHS), RHS : 1, default : 0)
+void d4(void) {
+  _Static_assert(IS_SAME(({1; int;}), void), ""); // expected-warning {{declaration does not declare anything}}
+  _Static_assert(IS_SAME(({1; int;}), int), "");  // expected-warning {{declaration does not declare anything}} \
+                                                   // expected-error {{static assertion failed}}
+}
+
 // Reproducer from the issue; the unclosed '({' makes recovery run to EOF.
 #define c(a, b)                                                                \
   {;__typeof__(b);}

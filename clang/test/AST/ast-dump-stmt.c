@@ -410,3 +410,16 @@ void TestMiscStmts(void) {
   // CHECK-NEXT: NullStmt
   // CHECK-NEXT: NullStmt
 }
+
+// A declaration that declares nothing is represented by a null statement.
+void TestEmptyDeclaration(void) {
+  int;
+  // CHECK: FunctionDecl{{.*}}TestEmptyDeclaration
+  // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: NullStmt 0x{{[^ ]*}} <line:[[@LINE-3]]:6>
+  ({1; int;});
+  // CHECK-NEXT: StmtExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'void'
+  // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:5> 'int' 1
+  // CHECK-NEXT: NullStmt 0x{{[^ ]*}} <col:11>
+}
