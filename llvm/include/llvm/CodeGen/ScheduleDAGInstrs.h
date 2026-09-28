@@ -44,7 +44,7 @@ namespace llvm {
   class PressureDiffs;
   class PseudoSourceValue;
   class RegPressureTracker;
-  class ScheduleDependencyBuilder;
+  class ScheduleDAGDependencyBuilder;
   class UndefValue;
   class Value;
 
@@ -169,7 +169,7 @@ namespace llvm {
 
     SmallVector<ClusterInfo> Clusters;
 
-    friend class ScheduleDependencyBuilder;
+    friend class ScheduleDAGDependencyBuilder;
 
   public:
     /// The direction that should be used to dump the scheduled Sequence.

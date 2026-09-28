@@ -599,7 +599,7 @@ void ScheduleDAGInstrs::initSUnits() {
 
 namespace {
 /// A list of SUnits, used in Value2SUsMap, during DAG construction.
-/// Note: to gain speed it might be worth investigating an optimized
+/// FIXME: to gain speed it might be worth investigating an optimized
 /// implementation of this data structure, such as a singly linked list
 /// with a memory pool (SmallVector was tried but slow and SparseSet is not
 /// applicable).
@@ -672,28 +672,30 @@ public:
     return TrueMemOrderLatency;
   }
 
-  void dump() {
-    for (const auto &[ValType, SUs] : *this) {
-      if (isa<const Value *>(ValType)) {
-        const Value *V = cast<const Value *>(ValType);
-        if (isa<UndefValue>(V))
-          dbgs() << "Unknown";
-        else
-          V->printAsOperand(dbgs());
-      } else if (isa<const PseudoSourceValue *>(ValType))
-        dbgs() << cast<const PseudoSourceValue *>(ValType);
-      else
-        llvm_unreachable("Unknown Value type.");
-
-      dbgs() << " : ";
-      dumpSUList(SUs);
-    }
-  }
+  void dump();
 };
+
+void Value2SUsMap::dump() {
+  for (const auto &[ValType, SUs] : *this) {
+    if (isa<const Value *>(ValType)) {
+      const Value *V = cast<const Value *>(ValType);
+      if (isa<UndefValue>(V))
+        dbgs() << "Unknown";
+      else
+        V->printAsOperand(dbgs());
+    } else if (isa<const PseudoSourceValue *>(ValType))
+      dbgs() << cast<const PseudoSourceValue *>(ValType);
+    else
+      llvm_unreachable("Unknown Value type.");
+
+    dbgs() << " : ";
+    dumpSUList(SUs);
+  }
+}
 } // end anonymous namespace
 
 namespace llvm {
-class ScheduleDependencyBuilder {
+class ScheduleDAGDependencyBuilder {
 private:
   ScheduleDAGInstrs &DAG;
 
@@ -729,9 +731,9 @@ private:
   unsigned MemOpsProcessed = 0;
 
 public:
-  ScheduleDependencyBuilder(ScheduleDAGInstrs &DAG, BatchAAResults *AA,
-                            RegPressureTracker *RPTracker,
-                            PressureDiffs *PDiffs, LiveIntervals *LIS)
+  ScheduleDAGDependencyBuilder(ScheduleDAGInstrs &DAG, BatchAAResults *AA,
+                               RegPressureTracker *RPTracker,
+                               PressureDiffs *PDiffs, LiveIntervals *LIS)
       : DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs), LIS(LIS),
         Stores(), Loads(1), FPExceptions(),
         UnknownValue(UndefValue::get(
@@ -740,50 +742,61 @@ public:
 private:
   /// Adds a chain edge between SUa and SUb, but only if both
   /// AAResults and Target fail to deny the dependency.
-  void addChainDependency(SUnit *SUa, SUnit *SUb, unsigned Latency = 0) {
-    if (SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), UseTBAA)) {
-      SDep Dep(SUa, SDep::MayAliasMem);
-      Dep.setLatency(Latency);
-      SUb->addPred(Dep);
-    }
-  }
+  void addChainDependency(SUnit *SUa, SUnit *SUb, unsigned Latency = 0);
 
   /// Adds dependencies as needed from all SUs in list to SU.
-  void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency) {
-    for (SUnit *Entry : SUs)
-      addChainDependency(SU, Entry, Latency);
-  }
+  void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency);
+  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap);
+  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap, ValueType V);
 
-  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap) {
-    for (auto &I : Val2SUsMap)
-      addChainDependencies(SU, I.second, Val2SUsMap.getTrueMemOrderLatency());
-  }
-
-  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap, ValueType V) {
-    Value2SUsMap::iterator Itr = Val2SUsMap.find(V);
-    if (Itr != Val2SUsMap.end())
-      addChainDependencies(SU, Itr->second,
-                           Val2SUsMap.getTrueMemOrderLatency());
-  }
-
-  void addBarrierChain(Value2SUsMap &map) {
-    assert(BarrierChain != nullptr);
-
-    for (auto &[V, SUs] : map) {
-      (void)V;
-      for (auto *SU : SUs)
-        SU->addPredBarrier(BarrierChain);
-    }
-
-    map.clear();
-  }
+  void addBarrierChain(Value2SUsMap &map);
 
 public:
   void buildDeps();
 };
 } // end namespace llvm
 
-void ScheduleDependencyBuilder::buildDeps() {
+void ScheduleDAGDependencyBuilder::addChainDependency(SUnit *SUa, SUnit *SUb,
+                                                      unsigned Latency) {
+  if (SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), UseTBAA)) {
+    SDep Dep(SUa, SDep::MayAliasMem);
+    Dep.setLatency(Latency);
+    SUb->addPred(Dep);
+  }
+}
+
+void ScheduleDAGDependencyBuilder::addChainDependencies(SUnit *SU, SUList &SUs,
+                                                        unsigned Latency) {
+  for (SUnit *Entry : SUs)
+    addChainDependency(SU, Entry, Latency);
+}
+
+void ScheduleDAGDependencyBuilder::addChainDependencies(
+    SUnit *SU, Value2SUsMap &Val2SUsMap) {
+  for (auto &I : Val2SUsMap)
+    addChainDependencies(SU, I.second, Val2SUsMap.getTrueMemOrderLatency());
+}
+
+void ScheduleDAGDependencyBuilder::addChainDependencies(
+    SUnit *SU, Value2SUsMap &Val2SUsMap, ValueType V) {
+  Value2SUsMap::iterator Itr = Val2SUsMap.find(V);
+  if (Itr != Val2SUsMap.end())
+    addChainDependencies(SU, Itr->second, Val2SUsMap.getTrueMemOrderLatency());
+}
+
+void ScheduleDAGDependencyBuilder::addBarrierChain(Value2SUsMap &map) {
+  assert(BarrierChain != nullptr);
+
+  for (auto &[V, SUs] : map) {
+    (void)V;
+    for (auto *SU : SUs)
+      SU->addPredBarrier(BarrierChain);
+  }
+
+  map.clear();
+}
+
+void ScheduleDAGDependencyBuilder::buildDeps() {
   const TargetSubtargetInfo &ST = DAG.MF.getSubtarget();
 
   // We build scheduling units by walking a block's instruction list
@@ -1043,7 +1056,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   if (UseAA && AA)
     BatchAA.emplace(*AA);
 
-  ScheduleDependencyBuilder DepBuilder(
+  ScheduleDAGDependencyBuilder DepBuilder(
       *this, BatchAA.has_value() ? &BatchAA.value() : nullptr, RPTracker,
       PDiffs, LIS);
   DepBuilder.buildDeps();
