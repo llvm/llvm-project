@@ -1174,11 +1174,6 @@ public:
   /// Return a POISON node. POISON does not have a useful SDLoc.
   SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
 
-  SDValue getUNDEFOrPOISON(SDValue V) {
-    assert(V.isUndef() && "UNDEF/POISON node expected");
-    return getNode(V.getOpcode(), SDLoc(), V.getValueType());
-  }
-
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   LLVM_ABI SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm);
 
