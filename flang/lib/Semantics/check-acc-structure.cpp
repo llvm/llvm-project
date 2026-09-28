@@ -456,24 +456,126 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
   }
 }
 
+struct RoutineParallelism {
+  bool isGang{false};
+  bool isWorker{false};
+  bool isVector{false};
+  bool isSeq{false};
+  // Set only for a gang routine. An omitted dim is dimension 1.
+  unsigned gangDim{0};
+  std::string name;
+  Fortran::common::OpenACCDeviceType deviceType{
+      Fortran::common::OpenACCDeviceType::None};
+};
+
+static const std::vector<OpenACCRoutineInfo> *getRoutineInfos(
+    const Symbol &sym) {
+  if (const auto *subp{sym.detailsIf<SubprogramDetails>()}) {
+    return &subp->openACCRoutineInfos();
+  }
+  if (const auto *proc{sym.detailsIf<ProcEntityDetails>()}) {
+    return &proc->openACCRoutineInfos();
+  }
+  return nullptr;
+}
+
+static RoutineParallelism parallelismFromDeviceInfo(
+    const OpenACCRoutineDeviceTypeInfo &info) {
+  RoutineParallelism result;
+  result.deviceType = info.dType();
+  if (info.isGang()) {
+    result.isGang = true;
+    if (unsigned gangDim{info.gangDim()}) {
+      result.gangDim = gangDim;
+      result.name = "GANG(" + std::to_string(gangDim) + ")";
+    } else {
+      result.gangDim = 1;
+      result.name = "GANG";
+    }
+  } else if (info.isWorker()) {
+    result.isWorker = true;
+    result.name = "WORKER";
+  } else if (info.isVector()) {
+    result.isVector = true;
+    result.name = "VECTOR";
+  } else if (info.isSeq()) {
+    result.isSeq = true;
+    result.name = "SEQ";
+  }
+  return result;
+}
+
+// Default clauses only. A later routine directive replaces an earlier one.
+static RoutineParallelism routineParallelismFromInfos(
+    const std::vector<OpenACCRoutineInfo> &infos) {
+  RoutineParallelism result;
+  for (const OpenACCRoutineInfo &ri : infos) {
+    RoutineParallelism next{parallelismFromDeviceInfo(ri)};
+    if (!next.name.empty()) {
+      result = std::move(next);
+    }
+  }
+  return result;
+}
+
+// The default level plus every device-specific level. The warning uses all
+// of them: a clause is reported if it is illegal for any of those levels.
+static void collectRoutineParallelism(
+    const std::vector<OpenACCRoutineInfo> &infos,
+    std::vector<RoutineParallelism> &levels) {
+  for (const OpenACCRoutineInfo &ri : infos) {
+    RoutineParallelism base{parallelismFromDeviceInfo(ri)};
+    if (!base.name.empty()) {
+      levels.push_back(std::move(base));
+    }
+    for (const OpenACCRoutineDeviceTypeInfo &dinfo : ri.deviceTypeInfos()) {
+      RoutineParallelism specific{parallelismFromDeviceInfo(dinfo)};
+      if (!specific.name.empty()) {
+        levels.push_back(std::move(specific));
+      }
+    }
+  }
+}
+
+static void collectEnclosingRoutineParallelism(SemanticsContext &context,
+    const parser::CharBlock &source, std::vector<RoutineParallelism> &levels) {
+  const Scope &progUnit{GetProgramUnitContaining(context.FindScope(source))};
+  const Symbol *symbol{progUnit.symbol()};
+  if (!symbol) {
+    return;
+  }
+  const std::vector<OpenACCRoutineInfo> *infos{getRoutineInfos(*symbol)};
+  if (!infos || infos->empty()) {
+    return;
+  }
+  collectRoutineParallelism(*infos, levels);
+}
+
+// True when `clause` is above `routine` in the OpenACC parallelism order.
+static bool clauseExceedsRoutine(llvm::acc::Clause clause,
+    std::optional<std::int64_t> gangDim, const RoutineParallelism &routine) {
+  const bool isGangClause{clause == llvm::acc::Clause::ACCC_gang};
+  const bool isWorkerClause{clause == llvm::acc::Clause::ACCC_worker};
+  if (routine.isSeq) {
+    return true;
+  }
+  if (routine.isVector) {
+    return isGangClause || isWorkerClause;
+  }
+  if (routine.isWorker) {
+    return isGangClause;
+  }
+  if (routine.isGang && isGangClause) {
+    const std::int64_t loopDim{gangDim.value_or(1)};
+    return loopDim > static_cast<std::int64_t>(routine.gangDim);
+  }
+  return false;
+}
+
 void AccStructureChecker::CheckRoutineCallInLoop(const Symbol &symbol) {
   if (dirContext_.empty()) {
     return;
   }
-  // OpenACC routine information can be attached either to a SubprogramDetails
-  // (a normal function/subroutine) or to a ProcEntityDetails (a procedure
-  // pointer or dummy procedure).
-  auto getRoutineInfos =
-      [](const Symbol &sym) -> const std::vector<OpenACCRoutineInfo> * {
-    if (const auto *subp{sym.detailsIf<SubprogramDetails>()}) {
-      return &subp->openACCRoutineInfos();
-    }
-    if (const auto *proc{sym.detailsIf<ProcEntityDetails>()}) {
-      return &proc->openACCRoutineInfos();
-    }
-    return nullptr;
-  };
-
   const Symbol &ult{symbol.GetUltimate()};
   const std::vector<OpenACCRoutineInfo> *infos{getRoutineInfos(ult)};
   // For a call made through a procedure pointer or binding whose routine level
@@ -487,25 +589,9 @@ void AccStructureChecker::CheckRoutineCallInLoop(const Symbol &symbol) {
   if (!infos || infos->empty()) {
     return;
   }
-  std::string routineParDim;
-  unsigned routineGangDim = 0;
-  for (const OpenACCRoutineInfo &ri : *infos) {
-    if (ri.isGang()) {
-      if (unsigned gangDim = ri.gangDim()) {
-        routineGangDim = gangDim;
-        routineParDim = "GANG(" + std::to_string(gangDim) + ")";
-      } else {
-        routineGangDim = 1;
-        routineParDim = "GANG";
-      }
-    } else if (ri.isWorker()) {
-      routineParDim = "WORKER";
-    } else if (ri.isVector()) {
-      routineParDim = "VECTOR";
-    } else if (ri.isSeq()) {
-      routineParDim = "SEQ";
-    }
-  }
+  const RoutineParallelism routine{routineParallelismFromInfos(*infos)};
+  const std::string &routineParDim{routine.name};
+  const unsigned routineGangDim{routine.gangDim};
 
   DirectiveContext &inner{dirContext_.back()};
   for (llvm::acc::Clause cl : inner.actualClauses) {
@@ -1135,6 +1221,7 @@ void AccStructureChecker::Enter(const parser::AccClause::Vector &g) {
     CheckLoopLevelClauseValue(
         parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
   }
+  WarnIfLoopLevelExceedsRoutine(crtClause);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
@@ -1151,12 +1238,55 @@ void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
     CheckLoopLevelClauseValue(
         parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
   }
+  WarnIfLoopLevelExceedsRoutine(crtClause);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Tile &g) {
   CheckAllowed(llvm::acc::Clause::ACCC_tile);
   CheckAllowedOncePerGroup(
       llvm::acc::Clause::ACCC_tile, llvm::acc::Clause::ACCC_device_type);
+}
+
+void AccStructureChecker::WarnIfLoopLevelExceedsRoutine(
+    llvm::acc::Clause clause, std::optional<std::int64_t> gangDim) {
+  if (!IsLoopConstruct(GetContext().directive)) {
+    return;
+  }
+  // OpenACC 3.4 2.15.1. A routine may parent a loop at its own level or
+  // below. Warn if the clause is above any routine level, including a
+  // device_type level, without matching that device_type to the clause.
+  std::vector<RoutineParallelism> levels;
+  collectEnclosingRoutineParallelism(
+      context_, GetContext().clauseSource, levels);
+  const RoutineParallelism *routine{nullptr};
+  for (const RoutineParallelism &level : levels) {
+    if (clauseExceedsRoutine(clause, gangDim, level)) {
+      routine = &level;
+      break;
+    }
+  }
+  if (!routine) {
+    return;
+  }
+  std::string clauseName{
+      parser::ToUpperCaseLetters(getClauseName(clause).str())};
+  if (clause == llvm::acc::Clause::ACCC_gang && gangDim) {
+    clauseName += "(" + std::to_string(*gangDim) + ")";
+  }
+  if (routine->deviceType == Fortran::common::OpenACCDeviceType::None) {
+    context_.Warn(common::UsageWarning::OpenAccUsage, GetContext().clauseSource,
+        "%s clause ignored in ACC ROUTINE %s procedure"_warn_en_US, clauseName,
+        routine->name);
+    return;
+  }
+  const std::string deviceName{
+      routine->deviceType == Fortran::common::OpenACCDeviceType::Star
+          ? std::string{"*"}
+          : parser::ToUpperCaseLetters(
+                common::EnumToString(routine->deviceType))};
+  context_.Warn(common::UsageWarning::OpenAccUsage, GetContext().clauseSource,
+      "%s clause ignored in ACC ROUTINE %s procedure for DEVICE_TYPE(%s)"_warn_en_US,
+      clauseName, routine->name, deviceName);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
@@ -1209,6 +1339,7 @@ void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
           parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
     }
   }
+  WarnIfLoopLevelExceedsRoutine(crtClause, getGangDimensionSize(GetContext()));
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {

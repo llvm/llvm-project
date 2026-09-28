@@ -120,6 +120,11 @@ private:
   void CheckLoopLevelClauseValue(llvm::StringRef clauseName);
   void CheckLoopLevelClauseKernelsConflicts();
   void CheckRoutineCallInLoop(const Symbol &);
+  // OpenACC 3.4 2.9 / 2.15.1: a loop parallelism level above the enclosing
+  // routine is ignored. `gangDim` is the loop gang dimension when `clause`
+  // is gang and a dim argument was written.
+  void WarnIfLoopLevelExceedsRoutine(llvm::acc::Clause clause,
+      std::optional<std::int64_t> gangDim = std::nullopt);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(
