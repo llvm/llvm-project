@@ -97,6 +97,12 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
+//   * llvm.nvvm.mulhi.s             --> llvm.smulh.i16
+//   * llvm.nvvm.mulhi.i             --> llvm.smulh.i32
+//   * llvm.nvvm.mulhi.ll            --> llvm.smulh.i64
+//   * llvm.nvvm.mulhi.us            --> llvm.umulh.i16
+//   * llvm.nvvm.mulhi.ui            --> llvm.umulh.i32
+//   * llvm.nvvm.mulhi.ull           --> llvm.umulh.i64
 //   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
 //   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
@@ -1667,15 +1673,6 @@ let TargetPrefix = "nvvm" in {
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative, 
                         IntrNoCreateUndefOrPoison] in {
     foreach sign = ["", "u"] in {
-      def int_nvvm_mulhi_ # sign # s : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty]>;
-
-      def int_nvvm_mulhi_ # sign # i : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
-
-      def int_nvvm_mulhi_ # sign # ll : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]>;
-
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
