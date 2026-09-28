@@ -1199,7 +1199,7 @@ private:
     return true;
   }
 
-  using AffineLoadKey = std::tuple<Type *, const SCEV *, const SCEV *>;
+  using AffineLoadKey = std::tuple<const SCEV *, const SCEV *>;
 
   std::optional<AffineLoadKey> getAffineLoadKey(const FusionCandidate &FC,
                                                 Instruction &I) {
@@ -1212,8 +1212,7 @@ private:
     if (!AR || AR->getLoop() != FC.L || !AR->isAffine())
       return std::nullopt;
 
-    return AffineLoadKey{Load->getType(), AR->getStart(),
-                         AR->getStepRecurrence(SE)};
+    return AffineLoadKey{AR->getStart(), AR->getStepRecurrence(SE)};
   }
 
   /// Collect distinct read-read addresses reused at corresponding iterations.

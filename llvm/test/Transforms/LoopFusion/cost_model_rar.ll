@@ -3,7 +3,7 @@
 ; CHECK: [exact_affine_rar]{{.*}}Loops fused
 ; CHECK: [shifted_start]{{.*}}found 0 cross-loop reused values
 ; CHECK: [different_stride]{{.*}}found 0 cross-loop reused values
-; CHECK: [different_type]{{.*}}found 0 cross-loop reused values
+; CHECK: [different_type]{{.*}}Loops fused
 ; CHECK: [non_affine]{{.*}}found 0 cross-loop reused values
 
 ; Equal load types, starts, and strides form an exact affine RAR match.
@@ -107,8 +107,8 @@ exit:
   ret void
 }
 
-; Equal byte addresses with different loaded types do not represent reuse of
-; the same value.
+; Equal affine byte addresses represent memory locality even when load widths
+; differ.
 define void @different_type(ptr noalias %src, ptr noalias %dst1,
                             ptr noalias %dst2, i64 %n) {
 entry:
@@ -129,10 +129,10 @@ loop2.preheader:
 
 loop2:
   %i2 = phi i64 [ 0, %loop2.preheader ], [ %i2.next, %loop2 ]
-  %src.gep2 = getelementptr inbounds float, ptr %src, i64 %i2
-  %value2 = load float, ptr %src.gep2, align 4
-  %dst.gep2 = getelementptr inbounds float, ptr %dst2, i64 %i2
-  store float %value2, ptr %dst.gep2, align 4
+  %src.gep2 = getelementptr inbounds i32, ptr %src, i64 %i2
+  %value2 = load i16, ptr %src.gep2, align 2
+  %dst.gep2 = getelementptr inbounds i16, ptr %dst2, i64 %i2
+  store i16 %value2, ptr %dst.gep2, align 2
   %i2.next = add nuw nsw i64 %i2, 1
   %cmp2 = icmp ult i64 %i2.next, %n
   br i1 %cmp2, label %loop2, label %exit
