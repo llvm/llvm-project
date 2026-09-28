@@ -247,10 +247,6 @@ Makes programs 10x faster by doing Special New Thing.
   * `llvm.amdgcn.icmp`
   * `llvm.amdgcn.fcmp`
 
-* Added the `llvm.amdgcn.wave.match.b32` intrinsic (and matching
-  `__builtin_amdgcn_wave_match_b32` clang builtin) providing direct access to the
-  `v_wave_match_b32` instruction.
-
 ### Changes to the ARM Backend
 
 * Using the hard-float procedure call standard without floating-point registers
