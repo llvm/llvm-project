@@ -78,14 +78,15 @@ define void @t1(ptr nocapture %C) nounwind {
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    .save {r7, lr}
 ; CHECK-T1-NEXT:    push {r7, lr}
-; CHECK-T1-NEXT:    ldr r1, .LCPI1_0
+; CHECK-T1-NEXT:    adr r1, .LCPI1_0
 ; CHECK-T1-NEXT:    movs r2, #31
 ; CHECK-T1-NEXT:    bl __aeabi_memcpy
 ; CHECK-T1-NEXT:    pop {r7, pc}
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:  .LCPI1_0:
-; CHECK-T1-NEXT:    .long .L.str1
+; CHECK-T1-NEXT:  .L.str1:
+; CHECK-T1-NEXT:    .asciz  "DHRYSTONE PROGRAM, SOME STRING\000"
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str1, i64 31, i1 false)
   ret void
@@ -111,14 +112,15 @@ define void @t2(ptr nocapture %C) nounwind {
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    .save {r7, lr}
 ; CHECK-T1-NEXT:    push {r7, lr}
-; CHECK-T1-NEXT:    ldr r1, .LCPI2_0
+; CHECK-T1-NEXT:    adr r1, .LCPI2_0
 ; CHECK-T1-NEXT:    movs r2, #36
 ; CHECK-T1-NEXT:    bl __aeabi_memcpy
 ; CHECK-T1-NEXT:    pop {r7, pc}
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:  .LCPI2_0:
-; CHECK-T1-NEXT:    .long .L.str2
+; CHECK-T1-NEXT:  .L.str2:
+; CHECK-T1-NEXT:    .asciz  "DHRYSTONE PROGRAM, SOME STRING BLAH"
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str2, i64 36, i1 false)
   ret void
@@ -141,14 +143,15 @@ define void @t3(ptr nocapture %C) nounwind {
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    .save {r7, lr}
 ; CHECK-T1-NEXT:    push {r7, lr}
-; CHECK-T1-NEXT:    ldr r1, .LCPI3_0
+; CHECK-T1-NEXT:    adr r1, .LCPI3_0
 ; CHECK-T1-NEXT:    movs r2, #24
 ; CHECK-T1-NEXT:    bl __aeabi_memcpy
 ; CHECK-T1-NEXT:    pop {r7, pc}
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:  .LCPI3_0:
-; CHECK-T1-NEXT:    .long .L.str3
+; CHECK-T1-NEXT:  .L.str3:
+; CHECK-T1-NEXT:    .asciz  "DHRYSTONE PROGRAM, SOME"
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str3, i64 24, i1 false)
   ret void
@@ -171,14 +174,16 @@ define void @t4(ptr nocapture %C) nounwind {
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    .save {r7, lr}
 ; CHECK-T1-NEXT:    push {r7, lr}
-; CHECK-T1-NEXT:    ldr r1, .LCPI4_0
+; CHECK-T1-NEXT:    adr r1, .LCPI4_0
 ; CHECK-T1-NEXT:    movs r2, #18
 ; CHECK-T1-NEXT:    bl __aeabi_memcpy
 ; CHECK-T1-NEXT:    pop {r7, pc}
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:  .LCPI4_0:
-; CHECK-T1-NEXT:    .long .L.str4
+; CHECK-T1-NEXT:  .L.str4:
+; CHECK-T1-NEXT:    .asciz  "DHRYSTONE PROGR  \000\000"
+
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str4, i64 18, i1 false)
   ret void
@@ -199,14 +204,15 @@ define void @t5(ptr nocapture %C) nounwind {
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    .save {r7, lr}
 ; CHECK-T1-NEXT:    push {r7, lr}
-; CHECK-T1-NEXT:    ldr r1, .LCPI5_0
+; CHECK-T1-NEXT:    adr r1, .LCPI5_0
 ; CHECK-T1-NEXT:    movs r2, #7
 ; CHECK-T1-NEXT:    bl __aeabi_memcpy
 ; CHECK-T1-NEXT:    pop {r7, pc}
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:  .LCPI5_0:
-; CHECK-T1-NEXT:    .long .L.str5
+; CHECK-T1-NEXT:  .L.str5:
+; CHECK-T1-NEXT:    .asciz  "DHRYST\000"
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str5, i64 7, i1 false)
   ret void
