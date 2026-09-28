@@ -27,6 +27,7 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 #include "bedrock/SocketTestUtils.h"
 
 #include "orc-rt-internal/support/Endian.h"
@@ -43,6 +44,8 @@
 
 using namespace orc_rt;
 using namespace orc_rt::test;
+
+using ::testing::HasSubstr;
 
 namespace orc_rt {
 
@@ -280,6 +283,19 @@ void outOfBandErrorWrapper(orc_rt_SessionRef S,
 }
 
 } // namespace
+
+TEST_F(SimpleRemoteCAOverSocketTest, RejectsANonStreamSocket) {
+  // The framing reads a message in as many parts as the stream delivers it, so
+  // a socket that preserves message boundaries would truncate one.
+  auto H = makeNativeNonStreamSocket();
+  ASSERT_TRUE(H.has_value()) << "could not create a socket for the test";
+
+  EXPECT_THAT_EXPECTED(
+      createSimpleRemoteCAOverSocket(S, SocketHandle(*H)),
+      FailedWithMessage(HasSubstr("requires a stream socket")));
+  EXPECT_FALSE(isNativeSocketOpen(*H))
+      << "a rejected socket is still owned, and must be closed";
+}
 
 TEST_F(SimpleRemoteCAOverSocketTest, SetupIsSentOnConnect) {
   ASSERT_FALSE(!!attachOverSocket());
