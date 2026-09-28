@@ -3381,21 +3381,17 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
                 return llvm::is_contained(OldAbiTagAttr->tags(), NewTag);
               });
         if (Diff) {
-          Diag(NewAbiTagAttr->getLocation(),
+          Diag(OldAbiTagAttr->getLocation(),
                diag::warn_abi_tag_ignored_different)
-              << llvm::join(NewAbiTagAttr->tags(), ", ") << true
-              << llvm::join(OldAbiTagAttr->tags(), ", ");
-          Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
+              << true << llvm::join(OldAbiTagAttr->tags(), ", ")
+              << llvm::join(NewAbiTagAttr->tags(), ", ");
+          Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
         }
       } else {
-        Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored_different)
-            << llvm::join(NewAbiTagAttr->tags(), ", ") << false;
-        Diag(ComparedOld->getLocation(), diag::note_previous_declaration);
+        Diag(ComparedOld->getLocation(), diag::warn_abi_tag_ignored_different)
+            << false << "" << llvm::join(NewAbiTagAttr->tags(), ", ");
+        Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
       }
-    } else if (const auto *OldAbiTagAttr = ComparedOld->getAttr<AbiTagAttr>()) {
-      Diag(New->getLocation(), diag::warn_abi_tag_ignored_missing)
-          << llvm::join(OldAbiTagAttr->tags(), ", ");
-      Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
     }
   } else {
     // Re-declaration cannot add abi_tag's.
@@ -3403,15 +3399,9 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
       if (const auto *OldAbiTagAttr = Old->getAttr<AbiTagAttr>()) {
         for (const auto &NewTag : NewAbiTagAttr->tags()) {
           if (!llvm::is_contained(OldAbiTagAttr->tags(), NewTag)) {
-            if (isa<NamespaceDecl>(New)) {
-              Diag(NewAbiTagAttr->getLocation(),
-                   diag::warn_abi_tag_ignored_different)
-                  << NewTag << true << llvm::join(OldAbiTagAttr->tags(), ", ");
-            } else {
-              Diag(NewAbiTagAttr->getLocation(),
-                   diag::err_new_abi_tag_on_redeclaration)
-                  << NewTag;
-            }
+            Diag(NewAbiTagAttr->getLocation(),
+                 diag::err_new_abi_tag_on_redeclaration)
+                << NewTag;
             Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
           }
         }
