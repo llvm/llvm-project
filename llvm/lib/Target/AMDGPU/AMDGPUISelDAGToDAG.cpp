@@ -4287,7 +4287,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   SelectVOP3ModsImpl(In, Src, Mods);
 
   bool IsExtractHigh = false;
-  if (Src.getOpcode() == ISD::FP_EXTEND) {
+  if (Src.getOpcode() == ISD::FP_EXTEND &&
+      Src.getOperand(0).getValueType() == VT) {
     Src = Src.getOperand(0);
   } else if (VT == MVT::bf16) {
     SDValue B16 = matchBF16FPExtendLike(Src, IsExtractHigh);

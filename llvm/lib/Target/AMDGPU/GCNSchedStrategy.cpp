@@ -103,25 +103,18 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
-namespace {
+bool VGPRThresholdParser::parse(cl::Option &O, StringRef ArgName, StringRef Arg,
+                                unsigned &Value) {
+  if (Arg.getAsInteger(0, Value))
+    return O.error("'" + Arg + "' value invalid for uint argument!");
 
-struct VGPRThresholdParser : public cl::parser<unsigned> {
-  VGPRThresholdParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+  if (Value > 100)
+    return O.error("'" + Arg + "' value must be in the range [0, 100]!");
 
-  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
-    if (Arg.getAsInteger(0, Value))
-      return O.error("'" + Arg + "' value invalid for uint argument!");
+  return false;
+}
 
-    if (Value > 100)
-      return O.error("'" + Arg + "' value must be in the range [0, 100]!");
-
-    return false;
-  }
-};
-
-} // end anonymous namespace
-
-static cl::opt<unsigned, false, VGPRThresholdParser> VGPRThresholdPercentOpt(
+cl::opt<unsigned, false, VGPRThresholdParser> llvm::VGPRThresholdPercentOpt(
     "amdgpu-vgpr-threshold-percent", cl::Hidden,
     cl::desc("Percent of VGPR limits that we should use as RP threshold "
              "during scheduling. We have two limits relevant to scheduling: "
@@ -137,6 +130,7 @@ GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
       DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
   if (GCNTrackers.getNumOccurrences() > 0)
     GCNTrackersOverride = GCNTrackers;
+  VGPRThresholdPercent = VGPRThresholdPercentOpt;
 }
 
 void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
@@ -188,14 +182,13 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   AGPRCriticalLimit = std::min(VGPRCriticalLimit, AGPRExcessLimit);
 
   // Apply VGPR excess threshold percentage if specified.
-  if (VGPRThresholdPercentOpt > 0) {
+  if (VGPRThresholdPercent > 0) {
     [[maybe_unused]] unsigned OriginalVGPRExcessLimit = VGPRExcessLimit;
     [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
-    VGPRExcessLimit = (VGPRThresholdPercentOpt * VGPRExcessLimit + 99) / 100;
-    VGPRCriticalLimit =
-        (VGPRThresholdPercentOpt * VGPRCriticalLimit + 99) / 100;
+    VGPRExcessLimit = (VGPRThresholdPercent * VGPRExcessLimit + 99) / 100;
+    VGPRCriticalLimit = (VGPRThresholdPercent * VGPRCriticalLimit + 99) / 100;
     LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
-                      << VGPRThresholdPercentOpt << "%, VGPRExcessLimit: "
+                      << VGPRThresholdPercent << "%, VGPRExcessLimit: "
                       << OriginalVGPRExcessLimit << " -> " << VGPRExcessLimit
                       << ". VGPRCriticalLimit: " << OriginalVGPRCriticalLimit
                       << " -> " << VGPRCriticalLimit << '\n');
@@ -284,42 +277,6 @@ void GCNSchedStrategy::getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
       NewPressure.getArchVGPRNum();
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
-}
-
-unsigned GCNSchedStrategy::getStructuralStallCycles(SchedBoundary &Zone,
-                                                    SUnit *SU) const {
-  // Only implemented for top-down scheduling currently.
-  if (!Zone.isTop() || !SU)
-    return 0;
-
-  MachineInstr *MI = SU->getInstr();
-  unsigned CurrCycle = Zone.getCurrCycle();
-  unsigned Stall = 0;
-
-  // Query SchedModel for resource stalls (unbuffered resources).
-  if (SchedModel->hasInstrSchedModel() && SU->hasReservedResource) {
-    const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
-    for (const MCWriteProcResEntry &PE :
-         make_range(SchedModel->getWriteProcResBegin(SC),
-                    SchedModel->getWriteProcResEnd(SC))) {
-      unsigned NextAvail =
-          Zone.getNextResourceCycle(SC, PE.ProcResourceIdx, PE.ReleaseAtCycle,
-                                    PE.AcquireAtCycle)
-              .first;
-      if (NextAvail > CurrCycle)
-        Stall = std::max(Stall, NextAvail - CurrCycle);
-    }
-  }
-
-  // Query HazardRecognizer for sequence-dependent hazard penalties.
-  // AMDGPUCoExecSchedStrategy installs a GCNHazardRecognizer in both
-  // pre-RA (PreRA mode) and post-RA configurations.
-  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
-    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
-    Stall = std::max(Stall, HR->getHazardWaitStates(MI));
-  }
-
-  return Stall;
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -1091,6 +1048,8 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
   case GCNSchedStageID::MemoryClauseInitialSchedule:
     return std::make_unique<MemoryClauseInitialScheduleStage>(SchedStageID,
                                                               *this);
+  case GCNSchedStageID::LiveIntervalRPReschedule:
+    return std::make_unique<LiveIntervalRPStage>(SchedStageID, *this);
   }
 
   llvm_unreachable("Unknown SchedStageID.");
@@ -1332,6 +1291,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
     break;
   case GCNSchedStageID::MemoryClauseInitialSchedule:
     OS << "Max memory clause Initial Schedule";
+    break;
+  case GCNSchedStageID::LiveIntervalRPReschedule:
+    OS << "Live Interval RP Reschedule";
     break;
   }
 
@@ -1575,7 +1537,12 @@ bool PreRARematStage::initGCNSchedStage() {
   // Collect candidates. We have more restrictions on what we can track here
   // compared to the rematerializer.
   SmallVector<ScoredRemat, 8> Candidates;
-  SmallVector<unsigned> CandidateOrder;
+  // Map registers to candidate indices. Use ~0u as null value
+  // since 0 is a valid index.
+  IndexedMap<unsigned, VirtReg2IndexFunctor> DefRegToCandIdx(~0u);
+  DefRegToCandIdx.resize(DAG.MRI.getNumVirtRegs());
+  const unsigned NumRegions = DAG.Regions.size();
+
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
 
@@ -1629,12 +1596,41 @@ bool PreRARematStage::initGCNSchedStage() {
                      }))
       continue;
 
-    MarkedRegs.insert(CandReg.getDefReg());
-    ScoredRemat &Cand = Candidates.emplace_back();
-    Cand.init(RegIdx, FreqInfo, Remater, DAG);
+    Register DefReg = CandReg.getDefReg();
+    MarkedRegs.insert(DefReg);
+    DefRegToCandIdx[DefReg] = Candidates.size();
+    Candidates.emplace_back(RegIdx, NumRegions);
+  }
+
+  // Initialize the LiveIn and LiveOut sets of all candidates.
+  // Iterating all regions and their live regs once is considerably
+  // more efficient than querying those structures for each candidate
+  // separately in ScoredRemat::init.
+  for (unsigned I = 0; I < NumRegions; ++I) {
+    for (const auto &[Reg, Mask] : DAG.LiveIns[I]) {
+      if (!Register::isVirtualRegister(Reg))
+        continue;
+      unsigned CandIdx = DefRegToCandIdx[Reg];
+      if (CandIdx != ~0u)
+        Candidates[CandIdx].LiveIn.set(I);
+    }
+    for (const auto &[Reg, Mask] :
+         DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)) {
+      if (!Register::isVirtualRegister(Reg))
+        continue;
+      unsigned CandIdx = DefRegToCandIdx[Reg];
+      if (CandIdx != ~0u)
+        Candidates[CandIdx].LiveOut.set(I);
+    }
+  }
+
+  // Finish initializing candidates.
+  SmallVector<unsigned> CandidateOrder;
+  for (auto [CandIdx, Cand] : enumerate(Candidates)) {
+    Cand.init(FreqInfo, Remater, DAG);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
     if (!Cand.hasNullScore())
-      CandidateOrder.push_back(Candidates.size() - 1);
+      CandidateOrder.push_back(CandIdx);
   }
 
   if (TargetOcc) {
@@ -2269,6 +2265,101 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
     unsigned WavesAfter) {
   return mayCauseSpilling(WavesAfter);
+}
+
+static cl::opt<bool> EnableLiveIntervalRPReschedule(
+    "amdgpu-lirp-reschedule", cl::Hidden,
+    cl::desc("Enable live interval RP reschedule stage"), cl::init(true));
+
+static cl::opt<unsigned> LiveIntervalRPThreshold(
+    "amdgpu-lirp-threshold", cl::Hidden,
+    cl::desc("Percent increase of live interval RP over instant pressure to "
+             "trigger rescheduling"),
+    cl::init(10));
+
+static cl::opt<unsigned> LiveIntervalRPVGPRReduction(
+    "amdgpu-lirp-vgpr-reduction", cl::Hidden,
+    cl::desc(
+        "Reduction factor (percent) for VGPR threshold during live interval RP "
+        "reschedule stage"),
+    cl::init(90));
+
+static cl::opt<unsigned> LiveIntervalRPInstantLowerBound(
+    "amdgpu-lirp-instant-lower-bound", cl::Hidden,
+    cl::desc("Lower bound (percent of the VGPR excess limit) on instant RP, "
+             "below which a region is skipped"),
+    cl::init(10));
+
+bool LiveIntervalRPStage::initGCNSchedStage() {
+  if (!EnableLiveIntervalRPReschedule)
+    return false;
+
+  if (!GCNSchedStage::initGCNSchedStage())
+    return false;
+
+  if (!S.VGPRThresholdPercent) {
+    LLVM_DEBUG(dbgs() << "LIRP: expected VGPRThresholdPercent to be enabled, "
+                         "not using live interval RP reschedule stage\n");
+    return false;
+  }
+
+  return true;
+}
+
+bool LiveIntervalRPStage::initGCNRegion() {
+  unsigned InstantRP = DAG.Pressure[RegionIdx].getArchVGPRNum();
+  auto [RegionBegin, RegionEnd] = DAG.Regions[RegionIdx];
+  if (RegionBegin == RegionEnd)
+    return false;
+
+  unsigned LIRP = estimateGreedyVGPRPressure(
+      RegionBegin, RegionEnd, DAG.LiveIns[RegionIdx], *DAG.getLIS(),
+      DAG.MF.getRegInfo(), static_cast<const SIRegisterInfo &>(*DAG.TRI));
+
+  unsigned NewVGPRThresholdPercent =
+      (S.VGPRThresholdPercent * LiveIntervalRPVGPRReduction + 99) / 100;
+
+  LLVM_DEBUG(dbgs() << "LIRP: Region " << RegionIdx
+                    << ", VGPRThresholdPercent: " << S.VGPRThresholdPercent
+                    << " -> " << NewVGPRThresholdPercent
+                    << ", VGPRExcessLimit=" << S.VGPRExcessLimit
+                    << ", VGPRCriticalLimit=" << S.VGPRCriticalLimit
+                    << ", InstantRP=" << InstantRP << ", LIRP=" << LIRP);
+
+  bool DoRescheduling = false;
+  // Lower bound on InstantRP to skip over tiny regions.
+  unsigned InstantRPLowerBound =
+      S.VGPRExcessLimit * LiveIntervalRPInstantLowerBound / 100;
+  if (LIRP > S.VGPRExcessLimit) {
+    LLVM_DEBUG(dbgs() << " [LIRP exceeds the limit (" << S.VGPRExcessLimit
+                      << "), rescheduling]");
+    DoRescheduling = true;
+  } else if (LIRP > InstantRP && InstantRP > InstantRPLowerBound) {
+    unsigned IncreasePercent = ((LIRP - InstantRP) * 100) / InstantRP;
+    if (IncreasePercent > LiveIntervalRPThreshold) {
+      LLVM_DEBUG(dbgs() << " [" << IncreasePercent << "% > "
+                        << LiveIntervalRPThreshold << "%, rescheduling]");
+      DoRescheduling = true;
+    }
+  }
+  LLVM_DEBUG(dbgs() << '\n');
+
+  if (DoRescheduling && GCNSchedStage::initGCNRegion()) {
+    SavedVGPRExcessLimit = S.VGPRExcessLimit;
+    SavedVGPRCriticalLimit = S.VGPRCriticalLimit;
+    SavedVGPRThresholdPercent = S.VGPRThresholdPercent;
+    S.VGPRThresholdPercent = NewVGPRThresholdPercent;
+    return true;
+  }
+
+  return false;
+}
+
+void LiveIntervalRPStage::finalizeGCNRegion() {
+  S.VGPRExcessLimit = SavedVGPRExcessLimit;
+  S.VGPRCriticalLimit = SavedVGPRCriticalLimit;
+  S.VGPRThresholdPercent = SavedVGPRThresholdPercent;
+  GCNSchedStage::finalizeGCNRegion();
 }
 
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
@@ -3089,36 +3180,23 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   }
 }
 
-void PreRARematStage::ScoredRemat::init(RegisterIdx RegIdx,
-                                        const FreqInfo &Freq,
+void PreRARematStage::ScoredRemat::init(const FreqInfo &Freq,
                                         const Rematerializer &Remater,
                                         GCNScheduleDAGMILive &DAG) {
-  this->RegIdx = RegIdx;
-  const unsigned NumRegions = DAG.Regions.size();
-  LiveIn.resize(NumRegions);
-  LiveOut.resize(NumRegions);
-  Live.resize(NumRegions);
-  UnpredictableRPSave.resize(NumRegions);
-
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
   Register DefReg = Reg.getDefReg();
   assert(Reg.Uses.size() == 1 && "expected users in single region");
   const unsigned UseRegion = Reg.Uses.begin()->first;
 
-  // Mark regions in which the rematerializable register is live.
-  for (unsigned I = 0, E = NumRegions; I != E; ++I) {
-    if (DAG.LiveIns[I].contains(DefReg))
-      LiveIn.set(I);
-    if (DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).contains(DefReg))
-      LiveOut.set(I);
+  Live |= LiveIn;
+  Live |= LiveOut;
 
+  for (unsigned I : Live.set_bits()) {
     // If the register is both unused and live-through in the region, the
     // latter's RP is guaranteed to decrease.
     if (!LiveIn[I] || !LiveOut[I] || I == UseRegion)
       UnpredictableRPSave.set(I);
   }
-  Live |= LiveIn;
-  Live |= LiveOut;
   RPSave.inc(DefReg, LaneBitmask::getNone(), Reg.Mask, DAG.MRI);
 
   // Get frequencies of defining and using regions. A rematerialization from the
