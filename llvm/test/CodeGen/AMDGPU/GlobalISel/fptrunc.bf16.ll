@@ -686,12 +686,6 @@ define amdgpu_ps <2 x bfloat> @fptrunc_v2f32_to_v2bf16_v(<2 x float> %a) {
 }
 
 define amdgpu_ps <3 x bfloat> @fptrunc_v3f32_to_v3bf16(<3 x float> %a) {
-; GFX9-LABEL: fptrunc_v3f32_to_v3bf16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GFX9-NEXT:    v_cvt_pk_bf16_f32 v1, v2, v2
-; GFX9-NEXT:    ; return to shader part epilog
-;
 ; GFX11-FAKE16-LABEL: fptrunc_v3f32_to_v3bf16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    v_bfe_u32 v3, v0, 16, 1

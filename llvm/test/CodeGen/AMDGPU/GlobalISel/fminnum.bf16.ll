@@ -132,18 +132,6 @@ define amdgpu_ps <2 x bfloat> @fmax_v2bf16_vl(<2 x bfloat> %a) {
 }
 
 define amdgpu_ps <3 x bfloat> @fmin_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) {
-; GFX9-LABEL: fmin_v3bf16_vv:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_pk_min_num_bf16 v0, v0, v2
-; GFX9-NEXT:    v_pk_min_num_bf16 v1, v1, v3
-; GFX9-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: fmin_v3bf16_vv:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_pk_min_num_bf16 v0, v0, v2
-; GFX12-NEXT:    v_pk_min_num_bf16 v1, v1, v3
-; GFX12-NEXT:    ; return to shader part epilog
-;
 ; GFX1250-LABEL: fmin_v3bf16_vv:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -158,18 +146,6 @@ define amdgpu_ps <3 x bfloat> @fmin_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) 
 }
 
 define amdgpu_ps <3 x bfloat> @fmax_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) {
-; GFX9-LABEL: fmax_v3bf16_vv:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_pk_max_num_bf16 v0, v0, v2
-; GFX9-NEXT:    v_pk_max_num_bf16 v1, v1, v3
-; GFX9-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: fmax_v3bf16_vv:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_pk_max_num_bf16 v0, v0, v2
-; GFX12-NEXT:    v_pk_max_num_bf16 v1, v1, v3
-; GFX12-NEXT:    ; return to shader part epilog
-;
 ; GFX1250-LABEL: fmax_v3bf16_vv:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
