@@ -924,8 +924,9 @@ redo_gep:
       uint64_t S = GTI.getSequentialElementStride(DL);
       for (;;) {
         if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
-          // Constant-offset addressing.
-          Disp += CI->getSExtValue() * S;
+          // Constant-offset addressing. The index may be wider than 64 bits;
+          // it is truncated to the pointer width like any other GEP index.
+          Disp += CI->getValue().sextOrTrunc(64).getSExtValue() * S;
           break;
         }
         if (canFoldAddIntoGEP(U, Op)) {
@@ -1616,7 +1617,9 @@ bool X86FastISel::X86SelectSExt(const Instruction *I) {
     // Negate the result to make an 8-bit sign extended value.
     ResultReg = createResultReg(&X86::GR8RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::NEG8r),
-            ResultReg).addReg(ZExtReg);
+            ResultReg)
+        .addReg(ZExtReg)
+        .setOperandDead(2);
 
     SrcVT = MVT::i8;
   }
@@ -1863,7 +1866,8 @@ bool X86FastISel::X86SelectShift(const Instruction *I) {
 
   Register ResultReg = createResultReg(RC);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(OpReg), ResultReg)
-    .addReg(Op0Reg);
+      .addReg(Op0Reg)
+      .setOperandDead(2); // EFLAGS
   updateValueMap(I, ResultReg);
   return true;
 }
@@ -1992,9 +1996,6 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       }
     }
   }
-  // Generate the DIV/IDIV instruction.
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(OpEntry.OpDivRem)).addReg(Op1Reg);
   // For i8 remainder, we can't reference ah directly, as we'll end
   // up with bogus copies like %r9b = COPY %ah. Reference ax
   // instead to prevent ah references in a rex instruction.
@@ -2003,10 +2004,19 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
   // won't generate explicit references to the GR8_NOREX registers. If
   // the allocator and/or the backend get enhanced to be more robust in
   // that regard, this can be, and should be, removed.
+  bool UseAXForRem = (I->getOpcode() == Instruction::SRem ||
+                      I->getOpcode() == Instruction::URem) &&
+                     OpEntry.DivRemResultReg == X86::AH && Subtarget->is64Bit();
+
+  // Generate the DIV/IDIV instruction.
+  Register UsedReg =
+      UseAXForRem ? Register(X86::AX) : Register(OpEntry.DivRemResultReg);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(OpEntry.OpDivRem))
+      .addReg(Op1Reg)
+      ->setPhysRegsDeadExcept(UsedReg, TRI);
+
   Register ResultReg;
-  if ((I->getOpcode() == Instruction::SRem ||
-       I->getOpcode() == Instruction::URem) &&
-      OpEntry.DivRemResultReg == X86::AH && Subtarget->is64Bit()) {
+  if (UseAXForRem) {
     Register SourceSuperReg = createResultReg(&X86::GR16RegClass);
     Register ResultSuperReg = createResultReg(&X86::GR16RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
@@ -2014,7 +2024,10 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
 
     // Shift AX right by 8 bits instead of using AH.
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::SHR16ri),
-            ResultSuperReg).addReg(SourceSuperReg).addImm(8);
+            ResultSuperReg)
+        .addReg(SourceSuperReg)
+        .addImm(8)
+        .setOperandDead(3);
 
     // Now reference the 8-bit subreg of the result.
     ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultSuperReg,
@@ -3356,7 +3369,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackDown))
-    .addImm(NumBytes).addImm(0).addImm(0);
+      .addImm(NumBytes)
+      .addImm(0)
+      .addImm(0)
+      .setOperandDead(4); // eflags
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
@@ -3586,7 +3602,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
           : computeBytesPoppedByCalleeForSRet(Subtarget, CC, CLI.CB);
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
-    .addImm(NumBytes).addImm(NumBytesForCalleeToPop);
+      .addImm(NumBytes)
+      .addImm(NumBytesForCalleeToPop)
+      .setOperandDead(3); // eflags
 
   // Now handle call return values.
   SmallVector<CCValAssign, 16> RVLocs;
