@@ -6383,20 +6383,18 @@ bool VPlanTransforms::handleCompressingPatterns(
     // Replace all "compressed" loads and stores with expandload and
     // compressstore respectively.
     for (VPInstruction *&VPI : MemOps) {
-      auto *CompressedMemOp = RecipeBuilder.widenIfCompressedLoadOrStore(
-          VPI, ConditionalInductionPhi);
-      if (!CompressedMemOp)
+      if (!RecipeBuilder.isCompressedLoadOrStore(VPI, ConditionalInductionPhi))
         continue;
-
-      Builder.setInsertPoint(VPI);
-      Builder.insert(CompressedMemOp);
 
       // Bail out if the mask for the memory op does not match the condition
       // used to update the conditional induction.
-      VPValue *MemOpMask = CompressedMemOp->getMask();
-      if (MemOpMask != Mask)
+      if (!VPI->getMask() || VPI->getMask() != Mask)
         return false;
 
+      Builder.setInsertPoint(VPI);
+      auto *CompressedMemOp = RecipeBuilder.handleCompressedLoadOrStore(VPI);
+
+      Builder.insert(CompressedMemOp);
       if (VPI->getOpcode() == Instruction::Load)
         VPI->replaceAllUsesWith(CompressedMemOp->getVPSingleValue());
       VPI->eraseFromParent();
