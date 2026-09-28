@@ -109,19 +109,19 @@ static void printSourceMemoryAccessAttribute(
     std::optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
     std::optional<uint32_t> alignmentAttrValue = std::nullopt) {
 
-  printer << ", ";
-
   // Print optional memory access attribute.
-  if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
-                                              : memoryOp.getMemoryAccess())) {
+  if (auto memAccess =
+          (memoryAccessAtrrValue ? memoryAccessAtrrValue
+                                 : memoryOp.getSourceMemoryAccess())) {
     elidedAttrs.push_back(memoryOp.getSourceMemoryAccessAttrName());
 
-    printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
+    printer << ", [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
     if (spirv::bitEnumContainsAll(*memAccess, spirv::MemoryAccess::Aligned)) {
       // Print integer alignment attribute.
-      if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
-                                               : memoryOp.getAlignment())) {
+      if (auto alignment =
+              (alignmentAttrValue ? alignmentAttrValue
+                                  : memoryOp.getSourceAlignment())) {
         elidedAttrs.push_back(memoryOp.getSourceAlignmentAttrName());
         printer << ", " << *alignment;
       }
@@ -208,10 +208,16 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
 
   // MakePointerVisible applies to reads through the pointer, so it is invalid
   // for Store and for the Target operand of CopyMemory, both of which only
-  // write through it.
+  // write through it. A CopyMemory mask is Target-only when a Source mask
+  // follows it, otherwise it applies to both operands.
   if constexpr (std::is_same_v<MemoryOpTy, StoreOp> ||
                 std::is_same_v<MemoryOpTy, CopyMemoryOp>) {
-    if (spirv::bitEnumContainsAll(memAccess.getValue(),
+    bool writeOnly = true;
+    if constexpr (std::is_same_v<MemoryOpTy, CopyMemoryOp>)
+      writeOnly = memoryOp.getSourceMemoryAccess().has_value();
+
+    if (writeOnly &&
+        spirv::bitEnumContainsAll(memAccess.getValue(),
                                   spirv::MemoryAccess::MakePointerVisible)) {
       return memoryOp.emitOpError(
           "not compatible with memory operand 'MakePointerVisible'");
