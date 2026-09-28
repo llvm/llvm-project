@@ -74,6 +74,7 @@ Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
+Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll
 Transforms/LowerAtomic/atomic-load.ll
 Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll
