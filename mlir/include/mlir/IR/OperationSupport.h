@@ -69,6 +69,14 @@ namespace detail {
 void appendAttributeProperty(llvm::SmallVectorImpl<NamedAttribute> &attrs,
                              StringRef name, Attribute attr);
 
+/// Route legacy builder attributes to either the operation's properties or
+/// its discardable attribute dictionary. The callback handles conversion and
+/// diagnostics for the operation-specific properties.
+void splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties);
+
 /// Assign a generated attribute-backed property after checking its type.
 /// Keep the conversion out of each operation's generated property setter.
 template <typename AttrT>
@@ -1031,12 +1039,10 @@ struct OperationState {
 
 private:
   /// The deleter and setter are non-null whenever `properties` is, and are
-  /// only called after checking it. Coverity misses this invariant and flags
-  /// the empty `function_ref`s as uninitialized.
-  // coverity[uninit_member]
+  /// only called after checking it.
   PropertyRef properties;
-  llvm::function_ref<void(PropertyRef)> propertiesDeleter;
-  llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
+  void (*propertiesDeleter)(PropertyRef) = nullptr;
+  void (*propertiesSetter)(PropertyRef, const PropertyRef) = nullptr;
   friend class Operation;
 
 public:
