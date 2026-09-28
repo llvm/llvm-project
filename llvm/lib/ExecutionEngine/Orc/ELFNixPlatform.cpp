@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
@@ -25,6 +26,16 @@
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
+
+// Controller-interface descriptors for the ELFNix platform runtime's SPS
+// wrapper calls.
+namespace llvm::orc::elfnix_sps_ci {
+struct CreatePThreadKey {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_elfnix_create_pthread_key");
+  using SPSSig = SPSExpected<uint64_t>();
+};
+} // namespace llvm::orc::elfnix_sps_ci
 
 namespace {
 
@@ -233,9 +244,10 @@ ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
 
   {
     // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
     auto Exports = buildSimpleReexportsAliasMap(
         ES.getBootstrapJITDylib(),
-        {{ES.intern(rt::DispatchName), ES.intern(rt::DispatchCtxName)}});
+        {{Mangle(rt::DispatchName), Mangle(rt::DispatchCtxName)}});
     if (!Exports)
       return Exports.takeError();
     if (auto Err =
@@ -726,11 +738,12 @@ Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
         "not been loaded yet",
         inconvertibleErrorCode());
 
-  Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          CreatePThreadKey.Addr, Result))
-    return std::move(Err);
-  return Result;
+  using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
+  CreatePThreadKeyProxy CreateKey(
+      sps::ProxySpec<CreatePThreadKeyProxy,
+                     elfnix_sps_ci::CreatePThreadKey>::dispatch,
+      CreatePThreadKey.Addr);
+  return CreateKey(ES);
 }
 
 void ELFNixPlatform::ELFNixPlatformPlugin::modifyPassConfig(

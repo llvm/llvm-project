@@ -142,9 +142,7 @@ def FastMathFlags : I32BitEnumAttr<
 }
 
 def Arith_FastMathAttr :
-    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
 // Arith_IntegerOverflowFlags
@@ -165,9 +163,7 @@ def Arith_IntegerOverflowFlags : I32BitEnumAttr<
 }
 
 def Arith_IntegerOverflowAttr :
-    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow">;
 
 //===----------------------------------------------------------------------===//
 // Arith_RoundingMode

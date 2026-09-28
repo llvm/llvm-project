@@ -256,6 +256,11 @@
 #define _POSIX_HOST_NAME_MAX 255
 #endif
 
+#ifndef SEM_VALUE_MAX
+/// The maximum value a semaphore may hold.
+#define SEM_VALUE_MAX INT_MAX
+#endif
+
 #ifdef __linux__
 
 #ifndef PATH_MAX
@@ -286,5 +291,9 @@
 #define SSIZE_MAX __PTRDIFF_MAX__
 #endif
 #endif
+
+#ifndef NZERO
+#define NZERO 20
+#endif // NZERO
 
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

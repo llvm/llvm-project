@@ -50,6 +50,15 @@
 #include <cmath>
 #include <optional>
 
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+static int SkipLeakCheck;
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
+static void skipLeakCheck() { SkipLeakCheck = 1; }
+#else
+static void skipLeakCheck() {}
+#endif
+
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
@@ -237,6 +246,16 @@ static cl::opt<bool> SplitLayout(
     cl::desc("Split the profile to two sections with one containing sample "
              "profiles with inlined functions and the other without (only "
              "meaningful for -extbinary)"));
+static cl::opt<bool>
+    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
+                        cl::sub(MergeSubcommand),
+                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
+                                 "64-bit MD5 hashes in Eytzinger layout"));
+static cl::opt<bool> WriteMD5IndexedTables(
+    "md5-indexed-tables", cl::init(false), cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Write MD5-based indexed NameTable and parallel "
+             "FuncOffsetTable in Eytzinger layout (only meaningful for "
+             "-extbinary)"));
 static cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -346,14 +365,20 @@ static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
 
-static cl::opt<bool>
-    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
-                                 cl::Hidden, cl::sub(MergeSubcommand),
-                                 cl::desc("Generate random hotness values"));
-static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
-    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+static cl::opt<bool> MemprofGenerateRandomHotness(
+    "memprof-random-hotness", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
-    cl::desc("Random hotness seed to use (0 to generate new seed)"));
+    cl::desc("Generate random hotness values. Use -random-seed to set the seed "
+             "value, otherwise the constant default seed is used"));
+static cl::opt<unsigned>
+    RandomSeed("random-seed", cl::init(0), cl::Hidden, cl::sub(MergeSubcommand),
+               cl::desc("Seed for the random number generator used by "
+                        "-memprof-random-hotness and temporal profile "
+                        "reservoir sampling"));
+static cl::alias MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::Hidden,
+    cl::desc("Alias for -random-seed. Deprecated, please use -random-seed"),
+    cl::aliasopt(RandomSeed));
 
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -469,6 +494,10 @@ static cl::opt<bool> ShowSectionInfoOnly(
              "The flag is only usable when the sample profile is in "
              "extbinary format"),
     cl::sub(ShowSubcommand));
+static cl::opt<bool> ShowCompositeInfoOnly(
+    "show-composite-info-only", cl::init(false),
+    cl::desc("Show type IDs and payload sizes in a composite sample profile"),
+    cl::sub(ShowSubcommand));
 static cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
                                    cl::desc("Show binary ids in the profile. "),
                                    cl::sub(ShowSubcommand));
@@ -523,6 +552,10 @@ static void exitWithError(Twine Message, StringRef Whence = "",
   errs() << Message << "\n";
   if (!Hint.empty())
     WithColor::note() << Hint << "\n";
+  // exit() terminates without unwinding the stack or running destructors, and
+  // there is no guaranty that pointers to allocations will be preserved, so
+  // LSan reports in-flight heap allocations as leaks at atexit.
+  skipLeakCheck();
   ::exit(1);
 }
 
@@ -659,7 +692,7 @@ struct WriterContext {
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
-               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
+               MemprofGenerateRandomHotness, RandomSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -1492,6 +1525,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
   Result.setFunction(Remapper(Samples.getFunction()));
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
+  Result.reserveBodySamples(Samples.getBodySamples().size());
   for (const auto &BodySample : Samples.getBodySamples()) {
     uint32_t MaskedDiscriminator =
         BodySample.first.Discriminator & getDiscriminatorMask();
@@ -1587,6 +1621,18 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
     else
       Writer.setPartialProfile();
   }
+  if (WriteMD5ProfSymList) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-prof-sym-list is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5ProfileSymbolList();
+  }
+  if (WriteMD5IndexedTables) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-indexed-tables is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5IndexedTables();
+  }
 }
 
 static void mergeSampleProfile(const WeightedFileVector &Inputs,
@@ -1620,6 +1666,13 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       Readers.pop_back();
       continue;
     }
+
+    // Merging cannot preserve payloads that this reader does not understand,
+    // so make the otherwise intentional forward-compatible skip visible.
+    if (Reader->hasUnknownProfileTypes())
+      warn("unknown composite profile blocks were ignored and will not be "
+           "preserved",
+           Input.Filename);
 
     SampleProfileMap &Profiles = Reader->getProfiles();
     if (ProfileIsProbeBased &&
@@ -3238,6 +3291,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
 static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
+  if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
+    exitWithError("-show-sec-info-only and "
+                  "-show-composite-info-only cannot be used together");
+
   using namespace sampleprof;
   LLVMContext Context;
   auto FS = vfs::getRealFileSystem();
@@ -3249,6 +3306,18 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
+    return 0;
+  }
+
+  if (ShowCompositeInfoOnly) {
+    if (!Reader->hasCompositeProfileSection()) {
+      WithColor::warning() << "no composite profile section; nothing to show\n";
+      return 0;
+    }
+    if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
+      OS.flush();
+      exitWithErrorCode(EC, Filename);
+    }
     return 0;
   }
 

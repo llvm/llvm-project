@@ -479,7 +479,7 @@ class LldbGdbServerTestCase(
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
     @expectedFailureDarwin
-    @requireNotWindows  # no SIGSEGV support
+    @requireSignals
     @expectedFailureNetBSD
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()

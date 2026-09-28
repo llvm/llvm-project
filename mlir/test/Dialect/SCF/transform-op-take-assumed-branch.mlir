@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics --allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics | FileCheck %s
 
 func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   scf.if %cond {
-    "some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()
+    "test.some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()
     scf.yield
   }
   return
@@ -24,7 +24,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: if_no_else
 func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   scf.if %cond {
-    "some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()
+    "test.some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()
     scf.yield
   }
   return
@@ -34,7 +34,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %if = transform.structured.match ops{["scf.if"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %some_op = transform.structured.match ops{["some_op"]} in %arg1
+    %some_op = transform.structured.match ops{["test.some_op"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
 
     transform.scf.take_assumed_branch %if : (!transform.any_op) -> ()

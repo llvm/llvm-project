@@ -74,6 +74,6 @@ end subroutine target_adjustable_array
 ! GPU-STACK-NEXT:  %[[C0:.*]] = arith.constant 0 : index 
 ! GPU-STACK-NEXT:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]] : (![[DESC_TYPE]], index) -> (index, index, index)
 ! GPU-STACK-NOT:   %[[PRIVATE_MEM:.*]] = fir.allocmem
-! GPU-STACK:       %[[ALLOCA_ADDR:.*]] = fir.alloca !fir.array<?xi32>, %[[BOX_DIMS]]#1 {[[NAME_ATTR:.*]]}
+! GPU-STACK:       %[[ALLOCA_ADDR:.*]] = fir.alloca !fir.array<?xi32>, %[[BOX_DIMS]]#1 <{bindc_name = ".tmp"}>
 ! GPU-STACK:      omp.yield(%[[PRIV_ALLOC]] : ![[TYPE]])
 

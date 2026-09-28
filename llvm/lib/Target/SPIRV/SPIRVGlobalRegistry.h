@@ -477,10 +477,15 @@ private:
   SPIRVTypeInst getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
                                SPIRV::FPEncoding::FPEncoding FPEncode);
 
-  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
+  SPIRVTypeInst getOpTypeVectorImpl(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                    MachineIRBuilder &MIRBuilder,
+                                    bool IsLongVectorEXT = false);
 
   SPIRVTypeInst getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                 MachineIRBuilder &MIRBuilder);
+
+  SPIRVTypeInst getOpTypeVectorIdEXT(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                     MachineIRBuilder &MIRBuilder);
 
   SPIRVTypeInst getOpTypeArray(uint32_t NumElems, SPIRVTypeInst ElemType,
                                MachineIRBuilder &MIRBuilder,
@@ -630,6 +635,7 @@ public:
                                            unsigned NumElements,
                                            MachineInstr &I,
                                            const SPIRVInstrInfo &TII);
+  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. The base type will be translated to a SPIR-V type, and the
@@ -733,7 +739,8 @@ public:
   // mappings.
   void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
 
-  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg,
+                       bool CanUseAnyVectorRank);
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };

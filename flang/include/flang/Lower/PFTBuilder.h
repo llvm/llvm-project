@@ -377,6 +377,9 @@ struct Evaluation : EvaluationVariant {
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
   bool activeConstruct{false}; // temporarily set for some constructs
+  // The enclosing evaluation-list traversal should skip this evaluation once
+  // because directive lowering already consumed it.
+  bool skipNextLowering{false};
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
@@ -882,8 +885,10 @@ void visitAllSymbols(const Evaluation &eval,
                      std::function<void(const semantics::Symbol &)> callBack);
 
 /// Return true when \p eval is an unstructured DO or IF construct that can
-/// folded into a self-contained scf.execute_region.
-bool isWrappableConstruct(const Evaluation &eval);
+/// folded into a self-contained scf.execute_region. \p semaCtx is needed to
+/// determine how many loops a directive applies to.
+bool isWrappableConstruct(const Evaluation &eval,
+                          const semantics::SemanticsContext &semaCtx);
 
 } // namespace Fortran::lower::pft
 

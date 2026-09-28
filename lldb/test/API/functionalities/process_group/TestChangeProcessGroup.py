@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireNotWasm  # no fork()/setpgid() on WebAssembly
+@requireNotWasm("no fork()/setpgid() on WebAssembly")
 class ChangeProcessGroupTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

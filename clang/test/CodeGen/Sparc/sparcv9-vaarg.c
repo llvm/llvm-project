@@ -149,7 +149,7 @@ __int128 get_int128(va_list *args) {
 
 _Complex char complex_char_sink;
 
-// FIXME: _Complex char should be passed in the right-most bytes of the slot, using a getelementptr with a value of 6.
+// _Complex char is passed in the right-most bytes of the slot, note the getelementptr with a value of 6.
 // CHECK-LABEL: define dso_local void @get_complex_char(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -159,12 +159,13 @@ _Complex char complex_char_sink;
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 8
-// CHECK-NEXT:    [[ARGP_CUR_REALP:%.*]] = getelementptr inbounds nuw { i8, i8 }, ptr [[ARGP_CUR]], i32 0, i32 0
-// CHECK-NEXT:    [[ARGP_CUR_REAL:%.*]] = load i8, ptr [[ARGP_CUR_REALP]], align 8
-// CHECK-NEXT:    [[ARGP_CUR_IMAGP:%.*]] = getelementptr inbounds nuw { i8, i8 }, ptr [[ARGP_CUR]], i32 0, i32 1
-// CHECK-NEXT:    [[ARGP_CUR_IMAG:%.*]] = load i8, ptr [[ARGP_CUR_IMAGP]], align 1
-// CHECK-NEXT:    store i8 [[ARGP_CUR_REAL]], ptr @complex_char_sink, align 1
-// CHECK-NEXT:    store i8 [[ARGP_CUR_IMAG]], ptr getelementptr inbounds nuw (i8, ptr @complex_char_sink, i64 1), align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 6
+// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { i8, i8 }, ptr [[TMP1]], i32 0, i32 0
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load i8, ptr [[DOTREALP]], align 2
+// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { i8, i8 }, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load i8, ptr [[DOTIMAGP]], align 1
+// CHECK-NEXT:    store i8 [[DOTREAL]], ptr @complex_char_sink, align 1
+// CHECK-NEXT:    store i8 [[DOTIMAG]], ptr getelementptr inbounds nuw (i8, ptr @complex_char_sink, i64 1), align 1
 // CHECK-NEXT:    ret void
 //
 void get_complex_char(va_list *args) {

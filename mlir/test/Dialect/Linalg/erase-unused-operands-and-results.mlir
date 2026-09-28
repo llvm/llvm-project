@@ -520,3 +520,45 @@ func.func @remove_unnecessary_input(%a: tensor<?xf32>, %b: tensor<?xf32>)
   } -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// Keep an out operand whose block argument is yielded by a nested op.
+
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0, d1) -> (d0)>
+#map2 = affine_map<(d0) -> (d0)>
+func.func @keep_result_used_by_nested_op(%arg0 : tensor<1x1xi32>, %arg1 : tensor<1xi32>,
+    %arg2 : memref<1xi1>) {
+  %c0 = arith.constant 0 : index
+  %false = arith.constant false
+  %cst = arith.constant 42 : i32
+  %0 = linalg.generic {
+      indexing_maps = [#map0, #map1],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%arg0 : tensor<1x1xi32>)
+      outs(%arg1 : tensor<1xi32>) {
+    ^bb0(%b0 : i32, %b1 : i32) :
+      %1 = linalg.generic {
+          indexing_maps = [#map2],
+          iterator_types = ["parallel"]}
+          outs(%arg1 : tensor<1xi32>) {
+        ^bb0(%b2 : i32) :
+          memref.store %false, %arg2[%c0] : memref<1xi1>
+          linalg.yield %b1 : i32
+        } -> tensor<1xi32>
+      linalg.yield %cst : i32
+    } -> tensor<1xi32>
+  return
+}
+
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (d0)>
+//      CHECK: func @keep_result_used_by_nested_op(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<1x1xi32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<1xi32>
+//      CHECK:   linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:       outs(%[[ARG1]] :
+// CHECK-NEXT:   ^bb0(%{{.+}}: i32, %[[B1:.+]]: i32)
+//      CHECK:     linalg.yield %[[B1]]

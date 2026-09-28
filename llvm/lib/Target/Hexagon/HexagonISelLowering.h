@@ -107,9 +107,6 @@ public:
   SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerSIGN_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
@@ -121,7 +118,6 @@ public:
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
   LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -186,14 +182,16 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override {
     return Hexagon::R0;
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override {
     return Hexagon::R1;
   }
 
@@ -499,6 +497,14 @@ private:
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinMax(SDValue Op, unsigned PairwiseOpc,
+                                   bool IgnoreNaN, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMin(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMax(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinimum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMaximum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMinNum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMaxNum(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
