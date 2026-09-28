@@ -307,6 +307,7 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *&FBB,
                                     SmallVectorImpl<MachineOperand> &Cond,
                                     bool AllowModify) const {
+#ifdef SH_ENABLE_BRANCH_FOLDING
   auto UncondBranch =
       std::pair<MachineBasicBlock::reverse_iterator, MachineBasicBlock *>{
           MBB.rend(), nullptr};
@@ -434,6 +435,9 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   }
 
   return false;
+#else
+  return true;
+#endif
 }
 
 unsigned SuperHInstrInfo::insertBranch(
