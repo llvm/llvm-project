@@ -9,13 +9,13 @@
 import pathlib, functools
 
 libcxx_root = pathlib.Path(__file__).resolve().parent.parent.parent
-libcxx_include = libcxx_root / "include"
 assert libcxx_root.exists()
 
 def _is_header_file(file):
     """Returns whether the given file is a header file, i.e. not a directory or the modulemap file."""
     return not file.is_dir() and not file.name in [
         "module.modulemap.in",
+        "target.modulemap",
         "CMakeLists.txt",
         "libcxx.imp",
         "__config_site.in",
@@ -102,13 +102,6 @@ class Header:
 
     def is_in_modulemap(self) -> bool:
         """Returns whether a header should be listed in the modulemap."""
-        # TODO: Should `__config_site` be in the modulemap?
-        if self._name == "__config_site":
-            return False
-
-        if self._name == "__assertion_handler":
-            return False
-
         # exclude libc++abi files
         if self._name in ["cxxabi.h", "__cxxabi_config.h"]:
             return False
@@ -151,6 +144,7 @@ class Header:
 
 
 # Commonly-used sets of headers
+libcxx_include = libcxx_root / "include"
 all_headers = [Header(p.relative_to(libcxx_include).as_posix()) for p in libcxx_include.rglob("[_a-z]*") if _is_header_file(p)]
 all_headers += [Header("__config_site"), Header("__assertion_handler")] # Headers generated during the build process
 public_headers = [h for h in all_headers if h.is_public()]

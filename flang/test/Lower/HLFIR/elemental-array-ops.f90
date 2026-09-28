@@ -157,8 +157,8 @@ end subroutine char_return
 ! CHECK-LABEL:   func.func @_QPchar_return(
 ! CHECK-SAME:                              %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.char<1,3>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                              %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.char<1,3>>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1,3> {bindc_name = ".result"}
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> {bindc_name = "l", uniq_name = "_QFchar_returnEl"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1,3> <{bindc_name = ".result"}>
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> <{bindc_name = "l", uniq_name = "_QFchar_returnEl"}>
 ! CHECK:           %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.logical<4>>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>

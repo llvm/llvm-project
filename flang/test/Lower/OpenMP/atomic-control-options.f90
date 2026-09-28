@@ -8,18 +8,18 @@ program test
     threads = 128
     A = 0
     B = 0
-    !UNSAFE-FP-ATOMICS: } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true>}
-    !IGNORE-DENORMAL: } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true>}
-    !FINE-GRAINED-MEMORY: } {atomic_control = #omp.atomic_control<fine_grained_memory = true>}
-    !REMOTE-MEMORY: } {atomic_control = #omp.atomic_control<remote_memory = true>}
+    !UNSAFE-FP-ATOMICS: } atomic_control <ignore_denormal_mode = true>
+    !IGNORE-DENORMAL: } atomic_control <ignore_denormal_mode = true>
+    !FINE-GRAINED-MEMORY: } atomic_control <fine_grained_memory = true>
+    !REMOTE-MEMORY: } atomic_control <remote_memory = true>
     !$omp target parallel num_threads(threads)
     !$omp atomic
     A =  A + 1
     !$omp end target parallel
-    !UNSAFE-FP-ATOMICS: } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true>}
-    !IGNORE-DENORMAL: } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true>}
-    !FINE-GRAINED-MEMORY: } {atomic_control = #omp.atomic_control<fine_grained_memory = true>}
-    !REMOTE-MEMORY: } {atomic_control = #omp.atomic_control<remote_memory = true>}
+    !UNSAFE-FP-ATOMICS: } atomic_control <ignore_denormal_mode = true>
+    !IGNORE-DENORMAL: } atomic_control <ignore_denormal_mode = true>
+    !FINE-GRAINED-MEMORY: } atomic_control <fine_grained_memory = true>
+    !REMOTE-MEMORY: } atomic_control <remote_memory = true>
     !$omp target parallel num_threads(threads)
     !$omp atomic capture
         A = A + B

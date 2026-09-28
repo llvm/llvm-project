@@ -195,7 +195,7 @@ entry:
 
 %struct.bar = type { i16, i8, [5 x i8] }
 
-define arm_aapcs_vfpcc void @fn1(ptr nocapture %a) {
+define void @fn1(ptr nocapture %a) {
 ; CHECK-MVE-LABEL: fn1:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    ldr r2, [r0, #4]

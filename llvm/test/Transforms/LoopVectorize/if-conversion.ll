@@ -25,8 +25,8 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK-NEXT:    br i1 [[CMP16]], label %[[FOR_BODY_LR_PH:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_LR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[START]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[END]], [[START]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[END]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[START]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
@@ -48,7 +48,7 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -153,7 +153,7 @@ define i32 @reduction_func(ptr nocapture %A, i32 %n) readonly {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -245,14 +245,14 @@ define void @PR34523(ptr %p, i16 %val) {
 ; CHECK-NEXT:  [[BB1:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[VAL]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP0]], i16 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i16 [[SMAX]], [[VAL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[TMP7]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 [[TMP7]], [[VAL]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP4]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP4]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[VAL]], [[DOTCAST]]

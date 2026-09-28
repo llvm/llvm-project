@@ -17,6 +17,7 @@
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
+#include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
@@ -1009,11 +1010,9 @@ void HexagonAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
   // Emit the KCFI check sequence.
   //
-  // Packet 1: Load the type hash and materialize the expected hash together.
-  // The load offset fits in the native instruction field for any
-  // patchable-function-prefix count, so it never requires a constant
-  // extender.  This lets the extender for ##hash share the same packet,
-  // saving one packet compared to emitting them separately.
+  // Packet 1: load the type hash and materialize the expected hash together.
+  // The load offset only leaves its field for an implausible
+  // patchable-function-prefix, but extend it rather than truncate.
   //   { r_load = memw(r_addr + #offset); r_type = ##expected_hash }
   MCInst *LoadInst = OutContext.createMCInst();
   LoadInst->setOpcode(Hexagon::L2_loadri_io);
@@ -1030,12 +1029,35 @@ void HexagonAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   HexagonMCInstrInfo::setMustExtend(*TypeExpr, true);
   TypeInst->addOperand(MCOperand::createExpr(TypeExpr));
 
+  // setMustExtend() only records that an operand needs an extender; the
+  // extender still has to be inserted, and slot assignment has to place it
+  // ahead of what it extends.  HexagonLowerToMC()/emitInstruction() do both
+  // for the MachineInstr stream; packets built here get neither.
+  const MCInstrInfo &MCII = *Subtarget->getInstrInfo();
+
+  // Slot assignment is required for correctness, not just density: an extender
+  // encoded after its instruction is not a legal packet.  Passing a checker
+  // (rather than nullptr) is what makes the assert meaningful.
+  auto EmitPacket = [&](MCInst &MCB) {
+    HexagonMCChecker Checker(OutContext, MCII, *Subtarget, MCB,
+                             *OutContext.getRegisterInfo(),
+                             /*ReportErrors=*/false);
+    [[maybe_unused]] bool Ok = HexagonMCInstrInfo::canonicalizePacket(
+        MCII, *Subtarget, OutContext, MCB, &Checker);
+    assert(Ok && "KCFI packet failed MC canonicalization");
+    EmitToStreamer(*OutStreamer, MCB);
+  };
+
   MCInst LoadTypePacket;
   LoadTypePacket.setOpcode(Hexagon::BUNDLE);
   LoadTypePacket.addOperand(MCOperand::createImm(0));
+  HexagonMCInstrInfo::extendIfNeeded(OutContext, MCII, LoadTypePacket,
+                                     *LoadInst);
   LoadTypePacket.addOperand(MCOperand::createInst(LoadInst));
+  HexagonMCInstrInfo::extendIfNeeded(OutContext, MCII, LoadTypePacket,
+                                     *TypeInst);
   LoadTypePacket.addOperand(MCOperand::createInst(TypeInst));
-  EmitToStreamer(*OutStreamer, LoadTypePacket);
+  EmitPacket(LoadTypePacket);
 
   // Packet 3: Compare and branch if equal.
   //   { p0 = cmp.eq(r_load, r_type); if (p0.new) jump:t .Lpass }
@@ -1058,7 +1080,7 @@ void HexagonAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   CmpJmpPacket.addOperand(MCOperand::createImm(0));
   CmpJmpPacket.addOperand(MCOperand::createInst(CmpInst));
   CmpJmpPacket.addOperand(MCOperand::createInst(JumpInst));
-  EmitToStreamer(*OutStreamer, CmpJmpPacket);
+  EmitPacket(CmpJmpPacket);
 
   // Packet 4: Crash on mismatch via misaligned load.
   // Use the same mechanism as llvm.trap (PS_crash): a doubleword load from
@@ -1079,8 +1101,9 @@ void HexagonAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   MCInst CrashPacket;
   CrashPacket.setOpcode(Hexagon::BUNDLE);
   CrashPacket.addOperand(MCOperand::createImm(0));
+  HexagonMCInstrInfo::extendIfNeeded(OutContext, MCII, CrashPacket, *CrashInst);
   CrashPacket.addOperand(MCOperand::createInst(CrashInst));
-  EmitToStreamer(*OutStreamer, CrashPacket);
+  EmitPacket(CrashPacket);
 
   emitKCFITrapEntry(*MI.getMF(), TrapLabel);
   OutStreamer->emitLabel(Pass);

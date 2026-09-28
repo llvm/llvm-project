@@ -133,7 +133,6 @@ add_mlir_library(MLIRTilingInterface
 
   DEPENDS
   MLIRTilingInterfaceIncGen
-  MLIRDialectUtils
 
   LINK_LIBS PUBLIC
   MLIRIR

@@ -67,7 +67,7 @@ def mif_NumImagesOp : mif_Op<"num_images", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins Optional<AnyInteger>:$team_number,
-                       Optional<AnyRefOrBoxType>:$team);
+                       Optional<AnyReferenceLike>:$team);
   let results = (outs I32:$res);
 
   let builders = [OpBuilder<(ins CArg<"mlir::Value", "{}">:$teamArg)>];
@@ -108,7 +108,7 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins Optional<AnyType>:$coarray, Optional<AnyInteger>:$dim,
-      Optional<AnyRefOrBoxType>:$team);
+      Optional<AnyReferenceLike>:$team);
   let results = (outs AnyType:$res);
 
   let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$dim,
@@ -151,7 +151,7 @@ def mif_ImageIndexOp : mif_Op<"image_index", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins AnyType:$coarray, fir_BoxType:$sub,
-      Optional<AnyRefOrBoxType>:$team, Optional<AnyInteger>:$team_number);
+      Optional<AnyReferenceLike>:$team, Optional<AnyInteger>:$team_number);
   let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$sub,
       "mlir::Value":$team)>];
 
@@ -292,7 +292,7 @@ def mif_SyncMemoryOp : mif_Op<"sync_memory", [AttrSizedOperandSegments]> {
 def mif_SyncTeamOp : mif_Op<"sync_team", [AttrSizedOperandSegments]> {
   let summary = "Performs a synchronization of the team, identified by `team`";
 
-  let arguments = (ins AnyRefOrBoxType:$team, Optional<AnyReferenceLike>:$stat,
+  let arguments = (ins AnyReferenceLike:$team, Optional<AnyReferenceLike>:$stat,
       Optional<AnyRefOrBoxType>:$errmsg);
   let assemblyFormat = [{
     $team (`stat` $stat^ )?
@@ -418,7 +418,7 @@ def mif_FormTeamOp : mif_Op<"form_team", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins AnyIntegerType:$team_number,
-      Arg<fir_BoxType, "", [MemWrite]>:$team_var,
+      Arg<AnyReferenceLike, "", [MemWrite]>:$team_var,
       Optional<AnyIntegerType>:$new_index,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
@@ -471,7 +471,7 @@ def mif_ChangeTeamOp : region_Op<"change_team", [AttrSizedOperandSegments]> {
       }
   }];
 
-  let arguments = (ins AnyRefOrBoxType:$team,
+  let arguments = (ins AnyReferenceLike:$team,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
@@ -511,7 +511,7 @@ def mif_GetTeamOp : mif_Op<"get_team", []> {
   }];
 
   let arguments = (ins Optional<AnyIntegerType>:$level);
-  let results = (outs fir_BoxType:$team);
+  let results = (outs AnyType:$team);
 
   let assemblyFormat = [{
     (`level` $level^ )?
@@ -527,7 +527,7 @@ def mif_TeamNumberOp : mif_Op<"team_number", []> {
     If `team` is absent, the team specified is the current team.
   }];
 
-  let arguments = (ins Optional<AnyRefOrBoxType>:$team);
+  let arguments = (ins Optional<AnyReferenceLike>:$team);
   let results = (outs I64);
 
   let assemblyFormat = [{

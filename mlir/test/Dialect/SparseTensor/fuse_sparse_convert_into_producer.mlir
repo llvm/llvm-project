@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map  | FileCheck %s --check-prefix=CHECK-FOLD
 // RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map --sparsification | FileCheck %s
 
+
 #trait = {
   indexing_maps = [
       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>,

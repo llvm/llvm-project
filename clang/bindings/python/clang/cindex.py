@@ -71,6 +71,7 @@ from ctypes import (
     byref,
     c_char_p,
     c_int,
+    c_long,
     c_longlong,
     c_uint,
     c_ulong,
@@ -82,6 +83,7 @@ from ctypes import (
 )
 
 import os
+import platform
 import sys
 from enum import Enum
 import warnings
@@ -1261,8 +1263,8 @@ class CursorKind(BaseEnumeration):
     # Windows Structured Exception Handling's leave statement.
     SEH_LEAVE_STMT = 247
 
-    # OpenMP ordered directive.
-    OMP_ORDERED_DIRECTIVE = 248
+    # OpenMP ordered-standalone directive.
+    OMP_ORDERED_STANDALONE_DIRECTIVE = 248
 
     # OpenMP atomic directive.
     OMP_ATOMIC_DIRECTIVE = 249
@@ -1455,6 +1457,12 @@ class CursorKind(BaseEnumeration):
 
     # OpenMP split directive.
     OMP_SPLIT_DIRECTIVE = 312
+
+    # OpenMP ordered-blockassoc directive.
+    OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
+
+    # OpenMP flatten directive.
+    OMP_FLATTEN_DIRECTIVE = 314
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
@@ -2144,6 +2152,7 @@ class Cursor(Structure):
             if underlying_type.kind == TypeKind.ENUM:
                 underlying_type = underlying_type.get_declaration().enum_type
             if underlying_type.kind in (
+                TypeKind.BOOL,
                 TypeKind.CHAR_U,
                 TypeKind.UCHAR,
                 TypeKind.CHAR16,
@@ -4114,8 +4123,16 @@ class PrintingPolicy(ClangObject):
 translation_unit_includes_callback = CFUNCTYPE(
     None, c_object_p, POINTER(SourceLocation), c_uint, py_object
 )
-cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
-fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
+# On s390x the visitor callbacks must return a full register word (c_long)
+# rather than c_int. ctypes does not sign/zero-extend a narrow closure return
+# to the full 64-bit return register the s390x ELF ABI requires, leaving
+# garbage in the high bytes. libclang reads the full register and faults with
+# a SIGFPE.
+# TODO: Remove once the ctypes fix (https://github.com/python/cpython/issues/156933)
+# has propagated.
+_visitor_result = c_long if platform.machine() == "s390x" else c_int
+cursor_visit_callback = CFUNCTYPE(_visitor_result, Cursor, Cursor, py_object)
+fields_visit_callback = CFUNCTYPE(_visitor_result, Cursor, py_object)
 
 # Functions strictly alphabetical order.
 FUNCTION_LIST: list[LibFunc] = [

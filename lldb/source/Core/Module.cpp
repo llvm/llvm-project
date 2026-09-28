@@ -96,10 +96,7 @@ static ModuleCollection &GetModuleCollection() {
   // it for now.  If we decide this is a big problem we can introduce a
   // Finalize method that will tear everything down in a predictable order.
 
-  static ModuleCollection *g_module_collection = nullptr;
-  if (g_module_collection == nullptr)
-    g_module_collection = new ModuleCollection();
-
+  static ModuleCollection *g_module_collection = new ModuleCollection();
   return *g_module_collection;
 }
 
@@ -109,9 +106,8 @@ std::recursive_mutex &Module::GetAllocationModuleCollectionMutex() {
   // will tear itself down before the "g_module_collection_mutex" below will.
   // So we leak a Mutex object below to safeguard against that
 
-  static std::recursive_mutex *g_module_collection_mutex = nullptr;
-  if (g_module_collection_mutex == nullptr)
-    g_module_collection_mutex = new std::recursive_mutex; // NOTE: known leak
+  static std::recursive_mutex *g_module_collection_mutex =
+      new std::recursive_mutex; // NOTE: known leak
   return *g_module_collection_mutex;
 }
 
@@ -626,10 +622,13 @@ Module::LookupInfo::LookupInfo(const LookupInfo &lookup_info,
       m_language(lookup_info.GetLanguageType()),
       m_name_type_mask(lookup_info.GetNameTypeMask()) {}
 
-Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
+Module::LookupInfo::LookupInfo(ConstString name,
+                               ConstString lookup_name_override,
                                FunctionNameType name_type_mask,
                                LanguageType lang_type)
-    : m_name(name), m_lookup_name(lookup_name), m_language(lang_type) {
+    : m_name(name),
+      m_lookup_name(lookup_name_override ? lookup_name_override : name),
+      m_language(lang_type) {
   std::optional<ConstString> basename;
   Language *lang = Language::FindPlugin(lang_type);
 
@@ -670,7 +669,7 @@ Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
     }
   }
 
-  if (basename) {
+  if (basename && !lookup_name_override) {
     // The name supplied was incomplete for lookup purposes. For example, in C++
     // we may have gotten something like "a::count". In this case, we want to do
     // a lookup on the basename "count" and then make sure any matching results
@@ -701,12 +700,11 @@ std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
       lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
   }
 
-  ConstString lookup_name = lookup_name_override ? lookup_name_override : name;
-
   std::vector<Module::LookupInfo> infos;
   infos.reserve(lang_types.size());
   for (LanguageType lang_type : lang_types) {
-    Module::LookupInfo info(name, lookup_name, name_type_mask, lang_type);
+    Module::LookupInfo info(name, lookup_name_override, name_type_mask,
+                            lang_type);
     infos.push_back(info);
   }
   return infos;

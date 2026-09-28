@@ -15,6 +15,7 @@
 // This file should only be included by files that implement a
 // specialization of the relvant templates. Currently these are:
 // - UniformityAnalysis.cpp
+// - MachineUniformityAnalysis.cpp
 //
 // Note: The DEBUG_TYPE macro should be defined before using this
 // file so that any use of LLVM_DEBUG is associated with the
@@ -242,7 +243,7 @@ template <typename> class DivergencePropagator;
 //         x3 = phi
 //
 // The blocks D and F contain phi nodes and are thus each reachable
-// by two disjoins paths from A.
+// by two disjoint paths from A.
 //
 // -- Remarks --
 // * In case of cycle exits we need to check for temporal divergence.
@@ -256,7 +257,7 @@ template <typename> class DivergencePropagator;
 //   may have been produced by a nested irreducible cycle.
 //
 // * Note that SyncDependenceAnalysis is not concerned with the points
-//   of convergence in an irreducible cycle. It's only purpose is to
+//   of convergence in an irreducible cycle. Its only purpose is to
 //   identify join blocks. The "diverged entry" criterion is
 //   separately applied on join blocks to determine if an entire
 //   irreducible cycle is assumed to be divergent.
@@ -404,6 +405,10 @@ public:
     return DivergentTermBlocks.contains(&B);
   }
 
+  /// Call before erasing \p V, or a later instruction reusing its address
+  /// may be misclassified as uniform.
+  void forgetValue(ConstValueRefT V) { UniformValues.erase(V); }
+
   void print(raw_ostream &Out) const;
 
   /// Print divergent arguments and return true if any were found.
@@ -525,7 +530,7 @@ public:
   const ContextT &Context;
 
   // Track blocks that receive a new label. Every time we relabel a
-  // cycle header, we another pass over the modified post-order in
+  // cycle header, we make another pass over the modified post-order in
   // order to propagate the header label. The bit vector also allows
   // us to skip labels that have not changed.
   SparseBitVector<> FreshLabels;
@@ -682,7 +687,7 @@ public:
         break;
 
       const auto *Block = CyclePOT[BlockIdx];
-      // If no irreducible cycle, stop if freshLable.count() = 1 and Block
+      // If no irreducible cycle, stop if freshLabels.count() == 1 and Block
       // is the IPD. If it is in any irreducible cycle, continue propagation.
       if (FreshLabels.count() == 1 &&
           (!IrreducibleAncestor || !CI.contains(IrreducibleAncestor, Block)))
@@ -727,8 +732,8 @@ public:
         for (auto *BlockCycleExit : BlockCycleExits) {
           if (BranchIsInside)
             visitCycleExitEdge(*BlockCycleExit, *Label);
-          else
-            visitEdge(*BlockCycleExit, *Label);
+          // Propagate the label to the exit block.
+          visitEdge(*BlockCycleExit, *Label);
         }
       } else {
         for (const auto *SuccBlock : successors(Block))
@@ -1315,6 +1320,12 @@ bool GenericUniformityInfo<ContextT>::isDivergentAtUse(const UseT &U) const {
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
   return DA && DA->hasDivergentTerminator(B);
+}
+
+template <typename ContextT>
+void GenericUniformityInfo<ContextT>::forgetValue(ConstValueRefT V) {
+  if (DA)
+    DA->forgetValue(V);
 }
 
 /// \brief T helper function for printing.

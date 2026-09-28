@@ -91,31 +91,21 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
       continue;
 
     DWARFRegNum Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
-    // TODO: this should be `undefined` instead of `same_value`, but because
-    // initial frame state doesn't have any directives about callee saved
-    // registers, every register is tracked. After initial frame state is
-    // corrected, this should be changed.
-    State.update(MCCFIInstruction::createSameValue(nullptr, Reg));
+    // Based on dwarf documentation, the default rule for all columns before
+    // interpretation of the initial instructions is the undefined rule.
+
+    // For now, this tool depends on the user to write a prologue that
+    // establishes the rules required for proper validation of the rest of the
+    // function.
+    State.update(MCCFIInstruction::createUndefined(nullptr, Reg));
   }
 
-  // TODO: Ignoring PC should be in the initial frame state.
   State.update(MCCFIInstruction::createUndefined(
       nullptr, MCRI->getDwarfRegNum(MCRI->getProgramCounter(), IsEH)));
 
   for (auto &&InitialFrameStateCFIDirective :
        Context->getAsmInfo().getInitialFrameState())
     State.update(InitialFrameStateCFIDirective);
-
-  auto MaybeCurrentRow = State.getCurrentUnwindRow();
-  assert(MaybeCurrentRow && "there should be at least one row");
-  auto MaybeCFA = getCFARegOffsetInfo(*MaybeCurrentRow);
-  assert(MaybeCFA &&
-         "the CFA information should be describable in [reg + offset] in here");
-  auto CFA = *MaybeCFA;
-
-  // TODO: CFA register callee value is CFA's value, this should be in initial
-  // frame state.
-  State.update(MCCFIInstruction::createOffset(nullptr, CFA.Reg, 0));
 
   // Applying the prologue after default assumptions to overwrite them.
   for (auto &&Directive : Prologue)

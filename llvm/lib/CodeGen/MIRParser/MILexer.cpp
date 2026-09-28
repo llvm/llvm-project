@@ -218,6 +218,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("disjoint", MIToken::kw_disjoint)
       .Case("samesign", MIToken::kw_samesign)
       .Case("inbounds", MIToken::kw_inbounds)
+      .Case("nonnull", MIToken::kw_nonnull)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -341,6 +342,23 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
   if (C.peek() == '.') {
     C.advance(); // Skip '.'
     ++StringOffset;
+    // The name is quoted if it is not a plain identifier.
+    if (C.peek() == '"') {
+      Cursor R = lexStringConstant(C, ErrorCallback);
+      if (!R) {
+        ErrorCallback(C.location(),
+                      "unable to parse quoted string from opening quote");
+        Token.reset(MIToken::Error, Range.remaining());
+        return Range;
+      }
+      MIToken::TokenKind Kind = IsReference ? MIToken::MachineBasicBlock
+                                            : MIToken::MachineBasicBlockLabel;
+      Token.reset(Kind, Range.upto(R))
+          .setIntegerValue(APSInt(Number))
+          .setOwnedStringValue(
+              unescapeQuotedString(Range.upto(R).drop_front(StringOffset)));
+      return R;
+    }
     while (isIdentifierChar(C.peek()))
       C.advance();
   }
@@ -642,6 +660,7 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Case("!alias.scope", MIToken::md_alias_scope)
       .Case("!noalias", MIToken::md_noalias)
       .Case("!range", MIToken::md_range)
+      .Case("!mem.cache_hint", MIToken::md_mem_cache_hint)
       .Case("!DIExpression", MIToken::md_diexpr)
       .Case("!DILocation", MIToken::md_dilocation)
       .Case("!noalias.addrspace", MIToken::md_noalias_addrspace)

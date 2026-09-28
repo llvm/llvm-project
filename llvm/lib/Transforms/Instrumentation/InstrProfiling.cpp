@@ -23,7 +23,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -982,7 +981,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   if (Options.UseBFIInPromotion) {
     std::unique_ptr<BranchProbabilityInfo> BPI;
     BPI.reset(new BranchProbabilityInfo(*F, CI, &GetTLI(*F)));
-    BFI.reset(new BlockFrequencyInfo(*F, *BPI, LI));
+    BFI.reset(new BlockFrequencyInfo(*F, *BPI, CI));
   }
 
   for (const auto &LoadStore : PromotionCandidates) {

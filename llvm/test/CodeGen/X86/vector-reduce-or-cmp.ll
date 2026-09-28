@@ -1489,14 +1489,23 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ;
 
 define i1 @trunc_v2i64(<2 x i64> %a0) {
-; SSE2-LABEL: trunc_v2i64:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    testw %ax, %ax
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: trunc_v2i64:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    por %xmm0, %xmm1
+; X86-SSE2-NEXT:    movd %xmm1, %eax
+; X86-SSE2-NEXT:    testw %ax, %ax
+; X86-SSE2-NEXT:    sete %al
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE2-LABEL: trunc_v2i64:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-SSE2-NEXT:    por %xmm0, %xmm1
+; X64-SSE2-NEXT:    movq %xmm1, %rax
+; X64-SSE2-NEXT:    testw %ax, %ax
+; X64-SSE2-NEXT:    sete %al
+; X64-SSE2-NEXT:    retq
 ;
 ; X86-SSE4-LABEL: trunc_v2i64:
 ; X86-SSE4:       # %bb.0:

@@ -1003,6 +1003,7 @@ class NonvolatileLoad<SDPatternOperator load>
 def nonvolatile_anyextloadi8  : NonvolatileLoad<anyextloadi8>;
 def nonvolatile_anyextloadi16 : NonvolatileLoad<anyextloadi16>;
 def nonvolatile_anyextloadi32 : NonvolatileLoad<anyextloadi32>;
+def nonvolatile_load : NonvolatileLoad<load>;
 
 // Non-volatile stores.
 class NonvolatileStore<SDPatternOperator store>
@@ -1013,6 +1014,7 @@ class NonvolatileStore<SDPatternOperator store>
 def nonvolatile_truncstorei8  : NonvolatileStore<truncstorei8>;
 def nonvolatile_truncstorei16 : NonvolatileStore<truncstorei16>;
 def nonvolatile_truncstorei32 : NonvolatileStore<truncstorei32>;
+def nonvolatile_store : NonvolatileStore<store>;
 
 // A store of a load that can be implemented using MVC.
 def mvc_store : PatFrag<(ops node:$value, node:$addr),

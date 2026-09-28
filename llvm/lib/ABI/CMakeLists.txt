@@ -2,7 +2,9 @@ add_llvm_component_library(LLVMABI
   Types.cpp
   FunctionInfo.cpp
   TargetInfo.cpp
+  DefaultTargetInfo.cpp
   IRTypeMapper.cpp
+  Targets/AArch64.cpp
   Targets/BPF.cpp
   Targets/X86.cpp
 

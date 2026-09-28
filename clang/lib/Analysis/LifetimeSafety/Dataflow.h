@@ -47,6 +47,9 @@ using ProgramPoint = const Fact *;
 ///   lifetime-relevant `Fact` transforms the lattice state. Only overloads
 ///   for facts relevant to the analysis need to be implemented.
 ///
+/// It may additionally override `Lattice transferAtBlockExit(Lattice);` to
+/// drop state that is not visible outside the block it was computed in.
+///
 /// \tparam Derived The CRTP derived class that implements the specific
 /// analysis.
 /// \tparam LatticeType The dataflow lattice used by the analysis.
@@ -157,7 +160,7 @@ private:
         State = transferFact(State, F);
       }
     }
-    return State;
+    return static_cast<Derived *>(this)->transferAtBlockExit(State);
   }
 
   Lattice transferFact(Lattice In, const Fact *F) {
@@ -187,6 +190,8 @@ private:
   }
 
 public:
+  Lattice transferAtBlockExit(Lattice In) { return In; }
+
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const OriginFlowFact &) { return In; }

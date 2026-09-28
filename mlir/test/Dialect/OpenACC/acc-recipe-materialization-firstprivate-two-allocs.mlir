@@ -27,7 +27,7 @@ acc.firstprivate.recipe @firstprivatization_two_allocs : memref<i32> init {
 
 func.func @firstpriv_two_allocs() {
   %alloc = memref.alloca() : memref<i32>
-  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_two_allocs) -> memref<i32> {name = "t"}
+  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_two_allocs) name("t") -> memref<i32>
   acc.parallel firstprivate(%fp : memref<i32>) {
     acc.yield
   }
@@ -44,7 +44,7 @@ func.func @firstpriv_two_allocs() {
 
 func.func @firstpriv_two_allocs_no_name() {
   %alloc = memref.alloca() : memref<i32>
-  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_two_allocs) -> memref<i32> {name = ""}
+  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_two_allocs) name("") -> memref<i32>
   acc.parallel firstprivate(%fp : memref<i32>) {
     acc.yield
   }

@@ -12,7 +12,9 @@ add_mlir_unittest(MLIRIRTests
   IRMapping.cpp
   InterfaceAttachmentTest.cpp
   LocationTest.cpp
+  MLIRContextResetTest.cpp
   MemrefLayoutTest.cpp
+  OpImplementationTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp
   RemarkTest.cpp  

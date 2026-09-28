@@ -13,9 +13,13 @@ define fastcc i1 @test(ptr %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = sdiv i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], [[TMP2]]
+; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> [[TMP64]], i64 [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> <i64 poison, i64 1>, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP65:%.*]] = add <2 x i64> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP65]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], [[TMP1]]
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[TMP65]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP19]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[TMP2]], i64 1

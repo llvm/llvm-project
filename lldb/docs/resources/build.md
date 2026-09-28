@@ -50,7 +50,6 @@ CMake configuration error.
 | -------- | ---------------------------------------------------------- | --------------------- |
 | Editline | Generic line editing, history, Emacs and Vi bindings       | `LLDB_ENABLE_LIBEDIT` |
 | Curses   | Text user interface                                        | `LLDB_ENABLE_CURSES`  |
-| LZMA     | Lossless data compression                                  | `LLDB_ENABLE_LZMA`    |
 | Libxml2  | XML                                                        | `LLDB_ENABLE_LIBXML2` |
 | Python   | Python scripting. 3.8 or later (3.11 or later on Windows). | `LLDB_ENABLE_PYTHON`  |
 | Lua      | Lua scripting. Lua 5.3 and 5.4 are supported.              | `LLDB_ENABLE_LUA`     |
@@ -262,6 +261,12 @@ $ cmake -G Ninja \
     -DLLDB_TEST_COMPILER=<path to C compiler> \
     <path to root of llvm source tree>
 ```
+
+:::{note}
+`LLDB_TEST_COMPILER` points to a single compiler. It is expected that this is
+the C compiler and that the C++ compiler's name can be inferred from the name
+of the C compiler.
+:::
 
 It is strongly recommend to use a release build for the compiler to speed up
 test execution.

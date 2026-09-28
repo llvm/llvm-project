@@ -34,6 +34,19 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder) != Args.end();
 }
 
+AST_MATCHER(Decl, isInStdOrPosixNamespace) {
+  for (const auto *DC = dyn_cast<DeclContext>(&Node); DC;
+       DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
+        NS && NS->getName() == "posix" && NS->getParent()->isTranslationUnit())
+      return true;
+  }
+  return false;
+}
+
 } // namespace
 
 namespace clang::tidy::bugprone {
@@ -43,10 +56,11 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
+  // FIXME: Investigate why lambda closure declarations can be absent from the
+  // AST parent map.
   const auto UserDefinedDecl =
       namedDecl(anyOf(classTemplateDecl(), tagDecl()),
-                hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
-                                          unless(hasParent(namespaceDecl())))));
+                hasDeclContext(isInStdOrPosixNamespace()));
   const auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
       tagType(unless(hasDeclaration(UserDefinedDecl))),
       templateSpecializationType(unless(hasDeclaration(UserDefinedDecl))))));

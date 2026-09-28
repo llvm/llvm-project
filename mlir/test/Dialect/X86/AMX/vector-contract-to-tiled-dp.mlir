@@ -164,6 +164,66 @@ module attributes {transform.with_named_sequence} {
 
 !vecA = vector<1x16x16x2xbf16>
 !vecB = vector<1x16x16x2xbf16>
+!vecC = vector<16x16xf32>
+!memrefA = memref<1x32x16x2xbf16>
+!memrefB = memref<1x16x32x2xbf16>
+!memrefC = memref<32x32xf32>
+!memrefO = memref<32x32xbf16>
+#map = affine_map<(d0, d4, d1, d2, d3) -> (d0, d1, d3, d4)>
+#map1 = affine_map<(d0, d4, d1, d2, d3) -> (d0, d3, d2, d4)>
+#map2 = affine_map<(d0, d4, d1, d2, d3) -> (d1, d2)>
+func.func @brgemm_bf16_epilogue(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC, %arg3: !memrefO) -> !memrefO
+{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<0.000000e+00> : vector<16x16xbf16>
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefB, !vecB
+
+  %3 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} : !memrefC, !vecC
+
+  %4 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %3 : !vecA, !vecB into !vecC
+
+  %5 = arith.truncf %4 : vector<16x16xf32> to vector<16x16xbf16>
+  %6 = arith.cmpf ugt, %5, %cst : vector<16x16xbf16>
+  %7 = arith.select %6, %5, %cst : vector<16x16xi1>, vector<16x16xbf16>
+  vector.transfer_write %7, %arg3[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xbf16>, !memrefO
+
+  return %arg3 : !memrefO
+}
+
+// CHECK-LABEL: @brgemm_bf16_epilogue
+// CHECK: x86.amx.tile_load {{.*}} !x86.amx.tile<16x32xbf16>
+// CHECK: x86.amx.tile_load {{.*}} !x86.amx.tile<16x32xbf16>
+// CHECK: x86.amx.tile_load {{.*}} !x86.amx.tile<16x16xf32>
+// CHECK: x86.amx.tile_mulf
+// CHECK: x86.amx.tile_store {{.*}} !x86.amx.tile<16x16xf32>
+// CHECK: arith.select
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x16x16x2xbf16>
+!vecB = vector<1x16x16x2xbf16>
 !vecC = vector<1x16x16xf32>
 !memrefA = memref<1x32x16x2xbf16>
 !memrefB = memref<1x16x32x2xbf16>
