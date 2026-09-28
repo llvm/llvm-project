@@ -11,6 +11,8 @@ define void @caller() {
 
 declare void @bar_Struct(i32 %Arg)
 
-; CHECK: ERROR: Missing extension attribute of passed value in call to function:
-; CHECK: Callee:  void @bar_Struct(i32)
-; CHECK: Caller:  void @caller()
+; CHECK: ERROR:  (C ABI violiation) missing extension attribute on arg 0.
+; CHECK: Callee: void @bar_Struct(i32)
+; CHECK: Caller: void @caller()
+; CHECK:         call void @bar_Struct(i32 123)
+; CHECK: UNREACHABLE executed

@@ -4,11 +4,17 @@
 ;
 ; Test detection of missing extension of an i16 return value.
 
-define i16 @callee_MissingRetAttr() {
+define internal i16 @callee_MissingRetAttr() {
   ret i16 -1
 }
 
-; CHECK: ERROR: Missing extension attribute of returned value from function:
-; CHECK: i16 @callee_MissingRetAttr()
+declare void @ExtFun(ptr %FunPtr)
+define void @foo() {
+  call void @ExtFun(ptr @callee_MissingRetAttr)
+  ret void
+}
+
+; CHECK: ERROR:  (C ABI violiation) missing extension attribute on arg 0.
+; CHECK: Returning from function: i16 @callee_MissingRetAttr()
 ; CHECK: UNREACHABLE executed
 
