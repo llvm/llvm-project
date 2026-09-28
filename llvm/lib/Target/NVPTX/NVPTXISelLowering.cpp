@@ -6907,10 +6907,9 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
 
   // Match logical shifts where the shift amount in the guard matches the shift
   // amount in the operation.
-  auto LogicalShift =
-      m_AllOf(m_Value(ShiftOp),
-              m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
-                      m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+  auto LogicalShift = m_Value(
+      ShiftOp, m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+                       m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
 
   // shift_amt > BitWidth-1 ? 0 : shift_op
   bool MatchedUGT =
