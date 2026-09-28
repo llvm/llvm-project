@@ -132,8 +132,11 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
 
   // If the flag is set to force any use of scalable vectors, override the loop
   // hints.
-  if (ForceScalableVectorization.getValue() !=
-      LoopVectorizeHints::SK_Unspecified)
+  // However: A preference must not turn a UserVF of 1, used by e.g.
+  // vectorize(disable) pragmas, into a vscale x 1 VF.
+  if (ForceScalableVectorization.getValue() != SK_Unspecified &&
+      (Width.Value != 1 ||
+       ForceScalableVectorization.getValue() != SK_PreferScalable))
     Scalable = ForceScalableVectorization.getValue();
 
   // If force-vector-width is scalable, force scalable vectorization.
