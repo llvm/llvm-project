@@ -576,12 +576,7 @@ Interpreter::Parse(llvm::StringRef Code) {
 
     DeviceParser->RegisterPTU(*DeviceTU);
 
-    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
-    if (!PTX)
-      return PTX.takeError();
-
-    llvm::Error Err = DeviceParser->GenerateFatbinary();
-    if (Err)
+    if (llvm::Error Err = DeviceParser->GenerateOffloadBinary())
       return std::move(Err);
   }
 
