@@ -106,7 +106,10 @@ opt::InputArgList ELFOptTable::parse(Ctx &ctx, ArrayRef<const char *> argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  cl::ExpandResponseFiles(ctx.saver, getQuotingStyle(ctx, args), vec);
+  cl::ExpansionContext ectx(ctx.saver.getAllocator(),
+                            getQuotingStyle(ctx, args), ctx.fs.get());
+  if (Error e = ectx.expandResponseFiles(vec))
+    ErrAlways(ctx) << toString(std::move(e));
   concatLTOPluginOptions(ctx, vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
@@ -139,15 +142,15 @@ void elf::printHelp(Ctx &ctx) {
   outs << ctx.arg.progName << ": supported targets: elf\n";
 }
 
-static std::string rewritePath(StringRef s) {
-  if (fs::exists(s))
-    return relativeToRoot(s);
+static std::string rewritePath(Ctx &ctx, StringRef s) {
+  if (ctx.fs->exists(s))
+    return relativeToRoot(s, *ctx.fs);
   return std::string(s);
 }
 
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
-std::string elf::createResponseFile(const opt::InputArgList &args) {
+std::string elf::createResponseFile(Ctx &ctx, const opt::InputArgList &args) {
   SmallString<0> data;
   raw_svector_ostream os(data);
   os << "--chroot .\n";
@@ -158,7 +161,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
     case OPT_reproduce:
       break;
     case OPT_INPUT:
-      os << quote(rewritePath(arg->getValue())) << "\n";
+      os << quote(rewritePath(ctx, arg->getValue())) << "\n";
       break;
     case OPT_o:
     case OPT_Map:
@@ -175,7 +178,8 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << quote(path::filename(arg->getValue())) << '\n';
       break;
     case OPT_lto_sample_profile:
-      os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
+      os << arg->getSpelling() << quote(rewritePath(ctx, arg->getValue()))
+         << "\n";
       break;
     case OPT_call_graph_ordering_file:
     case OPT_default_script:
@@ -190,8 +194,8 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
     case OPT_symbol_ordering_file:
     case OPT_sysroot:
     case OPT_version_script:
-      os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))
-         << "\n";
+      os << arg->getSpelling() << " "
+         << quote(rewritePath(ctx, arg->getValue())) << "\n";
       break;
     default:
       os << toString(*arg) << "\n";
@@ -210,7 +214,7 @@ static std::optional<std::string> findFile(Ctx &ctx, StringRef path1,
   else
     path::append(s, path1, path2);
 
-  if (fs::exists(s))
+  if (ctx.fs->exists(s))
     return std::string(s);
   return std::nullopt;
 }
@@ -249,7 +253,7 @@ std::optional<std::string> elf::searchLibrary(Ctx &ctx, StringRef name) {
 // look for the script in the '-L' search paths. This matches the behaviour of
 // '-T', --version-script=, and linker script INPUT() command in ld.bfd.
 std::optional<std::string> elf::searchScript(Ctx &ctx, StringRef name) {
-  if (fs::exists(name))
+  if (ctx.fs->exists(name))
     return name.str();
   return findFromSearchPaths(ctx, name);
 }

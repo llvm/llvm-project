@@ -53,7 +53,8 @@ extern bool inTestOutputDisabled;
 // LLD-as-lib scenarios.
 int unsafeLldMain(llvm::ArrayRef<const char *> args,
                   llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS,
-                  llvm::ArrayRef<DriverDef> drivers, bool exitEarly);
+                  llvm::ArrayRef<DriverDef> drivers, bool exitEarly,
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs = nullptr);
 } // namespace lld
 
 // When in lit tests, tells how many times the LLD tool should re-execute the

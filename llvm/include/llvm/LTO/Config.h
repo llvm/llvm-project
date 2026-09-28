@@ -23,6 +23,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
@@ -47,6 +48,12 @@ struct Config {
   };
   // Note: when adding fields here, consider whether they need to be added to
   // computeLTOCacheKey in LTO.cpp.
+  /// Filesystem for IR-level profiles and imported modules. Must be non-null
+  /// and support concurrent reads when using parallel backends.
+  /// Output files, the on-disk cache, and machine-code profiles use the real
+  /// filesystem.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem();
+
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;

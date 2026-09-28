@@ -153,14 +153,21 @@ static bool isI386Target(const opt::InputArgList &args,
 namespace lld {
 namespace coff {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput,
+          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
 }
 
 namespace mingw {
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput,
+          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) {
+  if (fs) {
+    stderrOS << "lld: error: a virtual filesystem is only supported by the ELF "
+                "driver\n";
+    return false;
+  }
   auto *ctx = new CommonLinkerContext;
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
 
@@ -614,7 +621,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   // The context will be re-created in the COFF driver.
   lld::CommonLinkerContext::destroy();
 
-  return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput);
+  return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput, fs);
 }
 } // namespace mingw
 } // namespace lld

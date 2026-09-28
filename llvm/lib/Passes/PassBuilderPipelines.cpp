@@ -2077,9 +2077,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
-                                        PGOOpt->ProfileRemappingFile,
-                                        ThinOrFullLTOPhase::FullLTOPostLink));
+    MPM.addPass(SampleProfileLoaderPass(
+        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
+        ThinOrFullLTOPhase::FullLTOPostLink, FS));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());

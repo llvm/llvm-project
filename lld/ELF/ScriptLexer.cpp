@@ -44,7 +44,8 @@ ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
     return;
   StringRef path = filename;
   for (; !path.empty(); path = sys::path::parent_path(path)) {
-    if (!sys::fs::equivalent(ctx.arg.sysroot, path))
+    auto equivalent = ctx.fs->equivalent(ctx.arg.sysroot, path);
+    if (!equivalent || !*equivalent)
       continue;
     isUnderSysroot = true;
     return;

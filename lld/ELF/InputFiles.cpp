@@ -245,18 +245,22 @@ std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
   Log(ctx) << path;
   ctx.arg.dependencyFiles.insert(llvm::CachedHashString(path));
 
-  auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,
-                                       /*RequiresNullTerminator=*/false);
+  auto mbOrErr =
+      ctx.fs->getBufferForFile(path, /*FileSize=*/-1,
+                               /*RequiresNullTerminator=*/false,
+                               /*IsVolatile=*/false, /*IsText=*/false);
   if (auto ec = mbOrErr.getError()) {
     ErrAlways(ctx) << "cannot open " << path << ": " << ec.message();
     return std::nullopt;
   }
 
-  MemoryBufferRef mbref = (*mbOrErr)->getMemBufferRef();
+  // A VFS buffer's identifier need not be the requested filename. Preserve the
+  // logical path for diagnostics and for resolving script and archive members.
+  MemoryBufferRef mbref((*mbOrErr)->getBuffer(), ctx.saver.save(path));
   ctx.memoryBuffers.push_back(std::move(*mbOrErr)); // take MB ownership
 
   if (ctx.tar)
-    ctx.tar->append(relativeToRoot(path), mbref.getBuffer());
+    ctx.tar->append(relativeToRoot(path, *ctx.fs), mbref.getBuffer());
   return mbref;
 }
 
@@ -385,7 +389,7 @@ static void addDependentLibrary(Ctx &ctx, StringRef specifier,
     ctx.driver.addFile(ctx.saver.save(*s), /*withLOption=*/true);
   else if (std::optional<std::string> s = findFromSearchPaths(ctx, specifier))
     ctx.driver.addFile(ctx.saver.save(*s), /*withLOption=*/true);
-  else if (fs::exists(specifier))
+  else if (ctx.fs->exists(specifier))
     ctx.driver.addFile(specifier, /*withLOption=*/false);
   else
     ErrAlways(ctx)

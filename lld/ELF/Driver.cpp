@@ -95,7 +95,8 @@ ELFSyncStream elf::InternalErr(Ctx &ctx, const uint8_t *buf) {
   return s;
 }
 
-Ctx::Ctx() : driver(*this) {}
+Ctx::Ctx(IntrusiveRefCntPtr<vfs::FileSystem> fs)
+    : fs(fs ? std::move(fs) : vfs::getRealFileSystem()), driver(*this) {}
 
 llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
                                             std::error_code &ec) {
@@ -127,9 +128,10 @@ static void initContext(Ctx &ctx, LinkerScript &script, StringRef arg0) {
 namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput,
+          IntrusiveRefCntPtr<vfs::FileSystem> fs) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *context = new Ctx;
+  auto *context = new Ctx(std::move(fs));
   Ctx &ctx = *context;
   LinkerScript script(ctx);
   ctx.e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
@@ -203,21 +205,37 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
   Error err = Error::success();
   bool addToTar = file->isThin() && ctx.tar;
   for (const Archive::Child &c : file->children(err)) {
+    auto getMember = [&]() -> Expected<MemoryBufferRef> {
+      if (!file->isThin())
+        return c.getMemoryBufferRef();
+      Expected<std::string> name = c.getFullName();
+      if (!name)
+        return name.takeError();
+      auto buffer = ctx.fs->getBufferForFile(*name, /*FileSize=*/-1,
+                                             /*RequiresNullTerminator=*/false,
+                                             /*IsVolatile=*/false,
+                                             /*IsText=*/false);
+      if (!buffer)
+        return createFileError(*name, buffer.getError());
+      Expected<StringRef> memberName = c.getName();
+      if (!memberName)
+        return memberName.takeError();
+      MemoryBufferRef ref((*buffer)->getBuffer(), *memberName);
+      job.thinBufs.push_back(std::move(*buffer));
+      return ref;
+    };
     MemoryBufferRef mbref =
-        CHECK(c.getMemoryBufferRef(),
+        CHECK(getMember(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      job.tarEntries.emplace_back(relativeToRoot(check(c.getFullName())),
-                                  mbref.getBuffer());
+      job.tarEntries.emplace_back(
+          relativeToRoot(check(c.getFullName()), *ctx.fs), mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
     Fatal(ctx) << mb.getBufferIdentifier()
                << ": Archive::children failed: " << std::move(err);
-
-  // Take ownership of memory buffers created for members of thin archives.
-  job.thinBufs = file->takeThinBuffers();
 
   return v;
 }
@@ -689,7 +707,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         TarWriter::create(path, path::stem(path));
     if (errOrWriter) {
       ctx.tar = std::move(*errOrWriter);
-      ctx.tar->append("response.txt", createResponseFile(args));
+      ctx.tar->append("response.txt", createResponseFile(ctx, args));
       ctx.tar->append("version.txt", getLLDVersion() + "\n");
       StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
       if (!ltoSampleProfile.empty())
@@ -3247,7 +3265,7 @@ static void postParseObjectFile(ELFFileBase *file) {
 // relocatable ELF file to embed in an ELF Dynamic Debugging section in the
 // output. See llvm/docs/DynamicDebugging.md for more details.
 template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
-  Ctx dctx;
+  Ctx dctx(ctx.fs);
   LinkerScript script(dctx);
   dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
                     ctx.e.disableOutput);

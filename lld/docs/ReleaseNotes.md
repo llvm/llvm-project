@@ -29,7 +29,16 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* Library callers can supply an `llvm::vfs::FileSystem` to `lld::lldMain` for
+  ELF input files, including archives, scripts, response files, and IR-level LTO
+  profiles.
+  Output files continue to use the real filesystem.
+
 ### Breaking changes
+
+* The `lld::Driver` callback takes an additional
+  `llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>` argument. Callers using
+  `LLD_HAS_DRIVER` receive the updated declarations automatically.
 
 ### COFF Improvements
 

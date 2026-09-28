@@ -126,7 +126,13 @@ static bool hasZOption(opt::InputArgList &args, StringRef key) {
 } // anonymous namespace
 
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput,
+          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) {
+  if (fs) {
+    stderrOS << "lld: error: a virtual filesystem is only supported by the ELF "
+                "driver\n";
+    return false;
+  }
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *context = new CommonLinkerContext;
 

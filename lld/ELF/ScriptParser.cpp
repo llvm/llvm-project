@@ -320,7 +320,7 @@ void ScriptParser::addFile(StringRef s) {
   if (curBuf.isUnderSysroot && s.starts_with("/")) {
     SmallString<128> pathData;
     StringRef path = (ctx.arg.sysroot + s).toStringRef(pathData);
-    if (sys::fs::exists(path))
+    if (ctx.fs->exists(path))
       ctx.driver.addFile(ctx.saver.save(path), /*withLOption=*/false);
     else
       setError("cannot find " + s + " inside " + ctx.arg.sysroot);
@@ -346,13 +346,13 @@ void ScriptParser::addFile(StringRef s) {
     if (!directory.empty()) {
       SmallString<0> path(directory);
       sys::path::append(path, s);
-      if (sys::fs::exists(path)) {
+      if (ctx.fs->exists(path)) {
         ctx.driver.addFile(ctx.saver.save(path.str()), /*withLOption=*/false);
         return;
       }
     }
     // Then search in the current working directory.
-    if (sys::fs::exists(s)) {
+    if (ctx.fs->exists(s)) {
       ctx.driver.addFile(s, /*withLOption=*/false);
     } else {
       // Finally, search in the list of library paths.

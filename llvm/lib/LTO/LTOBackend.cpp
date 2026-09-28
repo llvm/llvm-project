@@ -294,7 +294,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC, Conf.FS);
 
   RegisterPassPlugins(Conf, PB);
 
@@ -747,13 +747,18 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     }
 
     ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
-        llvm::MemoryBuffer::getFile(Identifier);
+        Conf.FS->getBufferForFile(Identifier, /*FileSize=*/-1,
+                                  /*RequiresNullTerminator=*/true,
+                                  /*IsVolatile=*/false, /*IsText=*/false);
     if (!MBOrErr)
       return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
           Twine("Error loading imported file ") + Identifier + " : ",
           MBOrErr.getError()));
 
-    Expected<BitcodeModule> BMOrErr = findThinLTOModule(**MBOrErr);
+    // VFS buffers may have a different identifier from the module path in the
+    // combined index. Keep that path for summary lookup and local promotion.
+    Expected<BitcodeModule> BMOrErr =
+        findThinLTOModule(MemoryBufferRef((*MBOrErr)->getBuffer(), Identifier));
     if (!BMOrErr)
       return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
           Twine("Error loading imported file ") + Identifier + " : " +

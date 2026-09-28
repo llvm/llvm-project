@@ -137,7 +137,7 @@ MODULE_PASS("openmp-opt-postlink",
 MODULE_PASS("partial-inliner", PartialInlinerPass())
 MODULE_PASS("pgo-icall-prom", PGOIndirectCallPromotion())
 MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
-MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
+MODULE_PASS("pgo-instr-use", PGOInstrumentationUse("", "", false, FS))
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass(TM))
 MODULE_PASS("print", PrintModulePass(errs()))
 MODULE_PASS("print-callgraph", CallGraphPrinterPass(errs()))
@@ -164,7 +164,8 @@ MODULE_PASS("rewrite-statepoints-for-gc", RewriteStatepointsForGC())
 MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
 MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
 MODULE_PASS("rtsan", RealtimeSanitizerPass())
-MODULE_PASS("sample-profile", SampleProfileLoaderPass())
+MODULE_PASS("sample-profile",
+            SampleProfileLoaderPass("", "", ThinOrFullLTOPhase::None, FS))
 MODULE_PASS("sancov-module", SanitizerCoveragePass())
 MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
 // TODO: Rename (or parameterize by optimization level)
@@ -248,7 +249,7 @@ MODULE_PASS_WITH_PARAMS(
     parseIPSCCPOptions, "no-func-spec;func-spec")
 MODULE_PASS_WITH_PARAMS(
     "memprof-use", "MemProfUsePass",
-    [](std::string Opts) { return MemProfUsePass(Opts); },
+    [this](std::string Opts) { return MemProfUsePass(Opts, FS); },
     parseMemProfUsePassOptions, "profile-filename=S")
 MODULE_PASS_WITH_PARAMS(
     "msan", "MemorySanitizerPass",
