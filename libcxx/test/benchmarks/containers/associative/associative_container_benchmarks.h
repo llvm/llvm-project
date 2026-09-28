@@ -494,7 +494,7 @@ void associative_container_benchmarks(std::string container) {
     }
 
     Container c(small.begin(), small.end());
-    Container const copy = c;
+    const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
       c.insert(large.begin(), large.end());
@@ -524,7 +524,7 @@ void associative_container_benchmarks(std::string container) {
       small.push_back(large.at(i * 2));
     }
     Container c(small.begin(), small.end());
-    Container const copy = c;
+    const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
       c.insert(large.begin(), large.end());
@@ -671,7 +671,7 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
 
     Container c(in.begin(), in.end());
-    Container const copy = c;
+    const Container copy = c;
     auto first           = std::next(c.begin(), c.size() / 4);
     auto last            = std::next(first, c.size() / 2);
     for ([[maybe_unused]] auto _ : st) {
@@ -693,7 +693,7 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
 
     Container c(in.begin(), in.end());
-    Container const copy = c;
+    const Container copy = c;
 
     for ([[maybe_unused]] auto _ : st) {
       c.clear();
