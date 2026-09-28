@@ -167,13 +167,13 @@ cir.func @ptr_stride_dynamic_offset(%n: !s32i) {
 cir.func @get_member_distinct_allocas() {
   %s1 = cir.alloca "s1" align(4) : !cir.ptr<!rec_S> {test.ptr = "s1"}
   %s2 = cir.alloca "s2" align(4) : !cir.ptr<!rec_S> {test.ptr = "s2"}
-  %m1_0 = cir.get_member %s1[0] {name = "x", test.ptr = "m1_0"}
+  %m1_0 = cir.get_member %s1[0] {name = "x"} {test.ptr = "m1_0"}
           : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-  %m1_1 = cir.get_member %s1[1] {name = "y", test.ptr = "m1_1"}
+  %m1_1 = cir.get_member %s1[1] {name = "y"} {test.ptr = "m1_1"}
           : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-  %m2_0 = cir.get_member %s2[0] {name = "x", test.ptr = "m2_0"}
+  %m2_0 = cir.get_member %s2[0] {name = "x"} {test.ptr = "m2_0"}
           : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-  %m2_1 = cir.get_member %s2[1] {name = "y", test.ptr = "m2_1"}
+  %m2_1 = cir.get_member %s2[1] {name = "y"} {test.ptr = "m2_1"}
           : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
   cir.return
 }
@@ -197,13 +197,13 @@ cir.func @get_member_distinct_allocas() {
 !rec_Outer = !cir.struct<"Outer" {data !rec_Inner, data !s32i}>
 cir.func @get_member_nested_records() {
   %o = cir.alloca "o" align(4) : !cir.ptr<!rec_Outer> {test.ptr = "o"}
-  %inner = cir.get_member %o[0] {name = "inner", test.ptr = "inner"}
+  %inner = cir.get_member %o[0] {name = "inner"} {test.ptr = "inner"}
            : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Inner>
-  %i0 = cir.get_member %inner[0] {name = "x", test.ptr = "i0"}
+  %i0 = cir.get_member %inner[0] {name = "x"} {test.ptr = "i0"}
         : !cir.ptr<!rec_Inner> -> !cir.ptr<!s32i>
-  %i1 = cir.get_member %inner[1] {name = "y", test.ptr = "i1"}
+  %i1 = cir.get_member %inner[1] {name = "y"} {test.ptr = "i1"}
         : !cir.ptr<!rec_Inner> -> !cir.ptr<!s32i>
-  %z = cir.get_member %o[1] {name = "z", test.ptr = "z"}
+  %z = cir.get_member %o[1] {name = "z"} {test.ptr = "z"}
        : !cir.ptr<!rec_Outer> -> !cir.ptr<!s32i>
   cir.return
 }
@@ -220,9 +220,9 @@ cir.func @get_member_nested_records() {
 !rec_U = !cir.union<"U" {data !s32i, data !u8i}>
 cir.func @get_member_union() {
   %u = cir.alloca "u" align(4) : !cir.ptr<!rec_U> {test.ptr = "u"}
-  %m_int = cir.get_member %u[0] {name = "i", test.ptr = "m_int"}
+  %m_int = cir.get_member %u[0] {name = "i"} {test.ptr = "m_int"}
            : !cir.ptr<!rec_U> -> !cir.ptr<!s32i>
-  %m_char = cir.get_member %u[1] {name = "c", test.ptr = "m_char"}
+  %m_char = cir.get_member %u[1] {name = "c"} {test.ptr = "m_char"}
             : !cir.ptr<!rec_U> -> !cir.ptr<!u8i>
   cir.return
 }
@@ -287,9 +287,9 @@ cir.func @get_element_of_records() {
         : !cir.ptr<!cir.array<!rec_P x 2>> -> !cir.ptr<!rec_P>
   %e1 = cir.get_element %arr[%one : !s32i] {test.ptr = "e1"}
         : !cir.ptr<!cir.array<!rec_P x 2>> -> !cir.ptr<!rec_P>
-  %e0_y = cir.get_member %e0[1] {name = "y", test.ptr = "e0_y"}
+  %e0_y = cir.get_member %e0[1] {name = "y"} {test.ptr = "e0_y"}
           : !cir.ptr<!rec_P> -> !cir.ptr<!s32i>
-  %e1_y = cir.get_member %e1[1] {name = "y", test.ptr = "e1_y"}
+  %e1_y = cir.get_member %e1[1] {name = "y"} {test.ptr = "e1_y"}
           : !cir.ptr<!rec_P> -> !cir.ptr<!s32i>
   cir.return
 }
@@ -342,9 +342,9 @@ cir.func @base_and_derived_class_addr(%d: !cir.ptr<!rec_Derived>)
              -> !cir.ptr<!rec_Base> {test.ptr = "base"}
   %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> nonnull [4]
              -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
-  %first = cir.get_member %d[0] {name = "x", test.ptr = "first"}
+  %first = cir.get_member %d[0] {name = "x"} {test.ptr = "first"}
            : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
-  %basedata = cir.get_member %base[0] {name = "b", test.ptr = "basedata"}
+  %basedata = cir.get_member %base[0] {name = "b"} {test.ptr = "basedata"}
               : !cir.ptr<!rec_Base> -> !cir.ptr<!u8i>
   cir.return
 }
@@ -373,9 +373,9 @@ cir.func @base_and_derived_class_maybe_null(%d: !cir.ptr<!rec_Derived>)
              -> !cir.ptr<!rec_Base> {test.ptr = "base"}
   %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> [4]
              -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
-  %first = cir.get_member %d[0] {name = "x", test.ptr = "first"}
+  %first = cir.get_member %d[0] {name = "x"} {test.ptr = "first"}
            : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
-  %basedata = cir.get_member %base[0] {name = "b", test.ptr = "basedata"}
+  %basedata = cir.get_member %base[0] {name = "b"} {test.ptr = "basedata"}
               : !cir.ptr<!rec_Base> -> !cir.ptr<!u8i>
   cir.return
 }
@@ -431,9 +431,9 @@ cir.func @complex_parts_distinct_allocas() {
 !rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
 cir.func @unknown_access_size() {
   %s = cir.alloca "s" align(4) : !cir.ptr<!rec_S> {test.ptr = "s"}
-  %m0 = cir.get_member %s[0] {name = "x", test.ptr = "m0"}
+  %m0 = cir.get_member %s[0] {name = "x"} {test.ptr = "m0"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-  %m1 = cir.get_member %s[1] {name = "y", test.ptr = "m1"}
+  %m1 = cir.get_member %s[1] {name = "y"} {test.ptr = "m1"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
   %vp = cir.cast bitcast %m1 : !cir.ptr<!s32i> -> !cir.ptr<!cir.void>
           {test.ptr = "vp"}
@@ -451,9 +451,9 @@ cir.func @unknown_access_size() {
 !rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
 cir.func @offsets_from_pointer_argument(%s: !cir.ptr<!rec_S>)
     attributes {test.ptr = "func"} {
-  %px = cir.get_member %s[0] {name = "x", test.ptr = "px"}
+  %px = cir.get_member %s[0] {name = "x"} {test.ptr = "px"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-  %py = cir.get_member %s[1] {name = "y", test.ptr = "py"}
+  %py = cir.get_member %s[1] {name = "y"} {test.ptr = "py"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
   cir.return
 }
@@ -482,9 +482,9 @@ cir.func @offsets_from_pointer_argument(%s: !cir.ptr<!rec_S>)
 !rec_S = !cir.struct<"S" {data !cir.int<s, 19, bitint>, data !cir.int<s, 19, bitint>}>
 cir.func @bitint_struct_elements(%s: !cir.ptr<!rec_S>)
     attributes {test.ptr = "func"} {
-  %px = cir.get_member %s[0] {name = "x", test.ptr = "px"}
+  %px = cir.get_member %s[0] {name = "x"} {test.ptr = "px"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!cir.int<s, 19, bitint>>
-  %py = cir.get_member %s[1] {name = "y", test.ptr = "py"}
+  %py = cir.get_member %s[1] {name = "y"} {test.ptr = "py"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!cir.int<s, 19, bitint>>
   %one  = cir.const #cir.int<1> : !s32i
   %px_plus_one = cir.ptr_stride %px, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i)
