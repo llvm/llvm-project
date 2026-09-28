@@ -73,6 +73,13 @@ clang::QualType borrowedType(clang::QualType T);
 /// \returns true if a value of type \p T is a pointer/reference/view.
 bool isView(const clang::QualType T);
 
+/// \returns true if \p Class declares reference semantics structurally: it is
+/// annotated [[gsl::Pointer]] (explicitly, or by Sema's inference for
+/// standard types), derives from std::ranges::view_interface, is a standard
+/// iterator adaptor, or is nested inside such a class, as the iterators of
+/// standard views are.
+bool isStdView(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
 

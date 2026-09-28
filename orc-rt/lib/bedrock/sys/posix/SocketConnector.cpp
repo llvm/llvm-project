@@ -13,16 +13,19 @@
 #include "orc-rt/bedrock/SocketConnector.h"
 
 #include "orc-rt-internal/support/StringExtras.h"
+#include "orc-rt-internal/support/sys/Errno.h"
 #include "orc-rt/bedrock/sps/SimpleRemoteCAOverSocket.h"
 
+#include <cerrno>
 #include <charconv>
+#include <sys/socket.h>
 
 using namespace orc_rt;
 
 namespace {
 
-Error socketConnector(ConnectorRegistry::GetAttachInfoFn GetAttachInfo,
-                      const ConnectionSpec &CS) noexcept {
+Error socketConnector(const ConnectionSpec &CS, Session &S,
+                      BootstrapInfo BI) noexcept {
   auto BadCS = [&](const std::string &Reason) noexcept {
     return make_error<StringError>((StringOutputStream()
                                     << "Invalid connection spec \"" << CS.str()
@@ -46,14 +49,22 @@ Error socketConnector(ConnectorRegistry::GetAttachInfoFn GetAttachInfo,
   if (FD < 0)
     return BadCS("file descriptor " + std::string(FDStr) + " is negative");
 
-  auto AI = GetAttachInfo();
-  if (!AI)
-    return AI.takeError();
-  auto CA = createSimpleRemoteCAOverSocket(AI->S, SocketHandle(FD));
+  // A descriptor that is not a socket is not ours to close, so it is checked
+  // before being wrapped. One that is a socket is ours from here on, and is
+  // closed if anything below fails.
+  int Type;
+  socklen_t TypeLen = sizeof(Type);
+  if (::getsockopt(FD, SOL_SOCKET, SO_TYPE, &Type, &TypeLen) != 0) {
+    int ErrNum = errno;
+    return BadCS("file descriptor " + std::string(FDStr) +
+                 " is not a socket (" + sys::strError(ErrNum) + ")");
+  }
+
+  auto CA = createSimpleRemoteCAOverSocket(S, SocketHandle(FD));
   if (!CA)
     return CA.takeError();
 
-  AI->S.attach(std::move(*CA), std::move(AI->BI));
+  S.attach(std::move(*CA), std::move(BI));
   return Error::success();
 }
 
