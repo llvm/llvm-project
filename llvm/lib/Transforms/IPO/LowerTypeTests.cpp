@@ -1172,8 +1172,9 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        DL, NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs,
+        GEPNoWrapFlags::inBounds());
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
         GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
@@ -2096,10 +2097,10 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     Function *F = cast<Function>(Functions[I]->getGlobal());
     bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        JumpTableType, JumpTable,
-        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                             ConstantInt::get(IntPtrTy, I)});
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        F->getDataLayout(), JumpTableType, JumpTable,
+        {ConstantInt::get(IntPtrTy, 0), ConstantInt::get(IntPtrTy, I)},
+        GEPNoWrapFlags::inBounds());
 
     const bool IsExported = Functions[I]->isExported();
     if (!IsJumpTableCanonical) {
@@ -2490,6 +2491,38 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
+    // For internal linkage cfiFunction defs/decls, we only needed the alias
+    // through the linker. We can replace those aliases with the aliased
+    // function here.
+    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
+    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
+      if (A.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
+          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
+        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
+          if (F->hasExternalLinkage()) {
+            // The original internal linkage function was independently promoted
+            // by thinlink. While, pre-link, all static references to it
+            // (implicitly, module-internal) were replaced with references to
+            // the alias, thinlink might decide to promote it because (for
+            // example) it turns out to be a hot indirect call target in a
+            // different module.
+            // In that case, we need to remember its thinlink-promoted name
+            // because it's potentially referenced elsewhere, and make sure
+            // there's an alias to it.
+            PromotedFuncs.emplace_back(F, F->getName());
+          } else {
+            F->setLinkage(GlobalValue::ExternalLinkage);
+            F->setVisibility(GlobalValue::HiddenVisibility);
+          }
+          A.replaceAllUsesWith(F);
+          F->takeName(&A);
+          A.eraseFromParent();
+        }
+      }
+    }
+
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2510,6 +2543,9 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
+    // Add an alias with the thinlink promotion name.
+    for (auto &[F, Name] : PromotedFuncs)
+      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }

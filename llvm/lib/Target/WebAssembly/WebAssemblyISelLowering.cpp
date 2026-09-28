@@ -867,7 +867,8 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     }
   }
 
-  for (auto Use : CallParams.uses())
+  // Avoid duplicating the implicit operands.
+  for (auto Use : CallParams.explicit_uses())
     MIB.add(Use);
 
   BB->insert(CallResults.getIterator(), MIB);

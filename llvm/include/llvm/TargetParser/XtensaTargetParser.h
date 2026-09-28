@@ -71,9 +71,6 @@ enum XtensaFeatureKind : uint64_t {
 
 LLVM_ABI CPUKind parseCPUKind(StringRef CPU);
 LLVM_ABI StringRef getBaseName(StringRef CPU);
-LLVM_ABI void getCPUFeatures(StringRef CPU,
-                             SmallVectorImpl<StringRef> &Features);
-LLVM_ABI void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
 
 } // namespace Xtensa
 } // namespace llvm
