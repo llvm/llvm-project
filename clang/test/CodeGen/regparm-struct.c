@@ -223,3 +223,28 @@ struct s18 {
 };
 __attribute__((regparm(3))) void pass_struct_singleton_array_float(struct s18 a, int b, int c, int d) {}
 // CHECK-LABEL: define{{.*}} void @pass_struct_singleton_array_float(ptr noundef byval(%struct.s18) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+// Unions are passed like integers.
+union u1 {
+  float x1;
+};
+__attribute__((regparm(3))) void pass_union_float(union u1 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_union_float(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+
+union u2 {
+  struct s5 x1;
+};
+__attribute__((regparm(3))) void pass_union_struct_float(union u2 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_union_struct_float(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)
+
+union u3 {
+  _Complex float x1;
+};
+__attribute__((regparm(3))) void pass_union_complex_float(union u3 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_union_complex_float(i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg noundef %b, i32 noundef %c, i32 noundef %d)
+
+struct s19 {
+  union u1 x1;
+};
+__attribute__((regparm(3))) void pass_nested_union_float(struct s19 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_nested_union_float(i32 inreg %a.coerce, i32 inreg noundef %b, i32 inreg noundef %c, i32 noundef %d)

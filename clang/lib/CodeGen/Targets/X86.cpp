@@ -690,7 +690,11 @@ static const Type *getSingleFieldType(QualType T, ASTContext &Context) {
 }
 
 X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
-  while (Ty->getAsRecordDecl()) {
+  while (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    // Unions are always passed as integers.
+    if (RD->isUnion())
+      return Integer;
+
     const Type *FT = getSingleFieldType(Ty, getContext());
 
     // Pick integer for zero-sized types. They will be ignored down the line.
