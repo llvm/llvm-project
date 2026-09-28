@@ -1993,9 +1993,6 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       }
     }
   }
-  // Generate the DIV/IDIV instruction.
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(OpEntry.OpDivRem)).addReg(Op1Reg);
   // For i8 remainder, we can't reference ah directly, as we'll end
   // up with bogus copies like %r9b = COPY %ah. Reference ax
   // instead to prevent ah references in a rex instruction.
@@ -2004,10 +2001,19 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
   // won't generate explicit references to the GR8_NOREX registers. If
   // the allocator and/or the backend get enhanced to be more robust in
   // that regard, this can be, and should be, removed.
+  bool UseAXForRem = (I->getOpcode() == Instruction::SRem ||
+                      I->getOpcode() == Instruction::URem) &&
+                     OpEntry.DivRemResultReg == X86::AH && Subtarget->is64Bit();
+
+  // Generate the DIV/IDIV instruction.
+  Register UsedReg =
+      UseAXForRem ? Register(X86::AX) : Register(OpEntry.DivRemResultReg);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(OpEntry.OpDivRem))
+      .addReg(Op1Reg)
+      ->setPhysRegsDeadExcept(UsedReg, TRI);
+
   Register ResultReg;
-  if ((I->getOpcode() == Instruction::SRem ||
-       I->getOpcode() == Instruction::URem) &&
-      OpEntry.DivRemResultReg == X86::AH && Subtarget->is64Bit()) {
+  if (UseAXForRem) {
     Register SourceSuperReg = createResultReg(&X86::GR16RegClass);
     Register ResultSuperReg = createResultReg(&X86::GR16RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
@@ -2015,7 +2021,10 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
 
     // Shift AX right by 8 bits instead of using AH.
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::SHR16ri),
-            ResultSuperReg).addReg(SourceSuperReg).addImm(8);
+            ResultSuperReg)
+        .addReg(SourceSuperReg)
+        .addImm(8)
+        .setOperandDead(3);
 
     // Now reference the 8-bit subreg of the result.
     ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultSuperReg,
