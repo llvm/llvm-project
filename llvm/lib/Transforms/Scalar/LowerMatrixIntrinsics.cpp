@@ -1107,6 +1107,144 @@ public:
     return false;
   }
 
+  /// Transpose the \p OpNIdx operand of the \p II call from a 1xN to a (Nx1)^T.
+  /// Note that this doesn't update the ShapeInfo and relies on it being called
+  /// before shape propagation.
+  Instruction *transposeOperand(IntrinsicInst &II, unsigned OpNIdx,
+                                unsigned NumRows, unsigned NumColumns) {
+    Value *OpN = II.getArgOperand(OpNIdx);
+    // Don't add a transpose if the operand is already transposed.
+    if (match(OpN, m_Intrinsic<Intrinsic::matrix_transpose>()))
+      return nullptr;
+    // Check if the operand is a row vector: 1xN (RxM shape).
+    if (NumRows != 1)
+      return nullptr;
+    IRBuilder<> IB(&II);
+    MatrixBuilder MBuilder(IB);
+    // Transpose the operand so that the lowering pass sees it as a transposed
+    // column vector.
+    Instruction *T = MBuilder.CreateMatrixTranspose(OpN, NumColumns, NumRows);
+    return T;
+  }
+
+  /// If an operand is transposed from a Nx1 to a 1xN, drop the
+  /// transpose and update the shape: (1xN)^T -> Nx1.
+  /// Note that this doesn't update the ShapeInfo and relies on it being called
+  /// before shape propagation.
+  Instruction *untransposeOperand(IntrinsicInst &II, unsigned OpNIdx,
+                                  unsigned NumRows, unsigned NumColumns) {
+    Value *OpN = II.getArgOperand(OpNIdx);
+    Instruction *N = nullptr;
+    // Look for the transpose.
+    if (!match(OpN, m_Intrinsic<Intrinsic::matrix_transpose>(
+                        m_Instruction(N), m_Value(), m_Value())))
+      return nullptr;
+    // If it's not a row vector, leave it as is.
+    if (NumColumns != 1)
+      return nullptr;
+
+    return N;
+  }
+
+  /// When lowering an NN matrix multiply A * B, where A is a row vector matrix
+  /// in a column-major setting (1xM * MxC), we currently operate on the columns
+  /// of the matrix which results in scalar code instead of vectorized dot
+  /// products.
+  ///
+  /// In order to vectorize this properly, we want to treat A as a column
+  /// vector, which has the same memory layout as row vector. To do
+  /// that, we use a combine to insert a transpose on the operand that is a
+  /// row vector, which ends up being a free operation for a 1xM matrix given
+  /// the memory layout. Example:
+  ///
+  ///  1x3 * 3x4 -> (3x1)^T * 3x4
+  ///
+  /// (RxM * MxC -> (MxR)^T * MxC)
+  ///
+  /// This has the effect of triggering the TN (or NT) optimized lowering in
+  /// the matrix lowering pass which avoids scalarizing the entire operation.
+  ///
+  /// The goal is to have as few row vectors as possible, so if an operand is
+  /// already transposed to become a row vector, remove the transpose to make it
+  /// a column vector, which we can easily vectorize.
+  ///
+  /// Return true if II was changed.
+  bool transposeRowVectorOperands(IntrinsicInst &II, unsigned R, unsigned M,
+                                  unsigned C) {
+    bool A_t =
+        match(II.getArgOperand(0), m_Intrinsic<Intrinsic::matrix_transpose>());
+    bool B_t =
+        match(II.getArgOperand(1), m_Intrinsic<Intrinsic::matrix_transpose>());
+    if (!A_t && !B_t && R == 1 && C == 1)
+      return false;
+    assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
+           "Optimization only supports column-major layout!");
+    // 1xM * MxC -> (Mx1)^T * MxC
+    // TN lowering -> vector loads + inner product
+    if (Instruction *T = transposeOperand(II, 0, R, M)) {
+      II.setOperand(0, T);
+      return true;
+    }
+
+    // (1xM)^T * 1xC -> Mx1 * 1xC
+    if (Instruction *N = untransposeOperand(II, 0, R, M)) {
+      auto *OldOp = cast<Instruction>(II.getOperand(0));
+      II.setOperand(0, N);
+      if (OldOp->use_empty())
+        OldOp->eraseFromParent();
+      return true;
+    }
+
+    // Rx1 * 1xC -> Rx1 * (Cx1)^T
+    // NT lowering -> vector loads + outer product
+    if (Instruction *T = transposeOperand(II, 1, M, C)) {
+      II.setOperand(1, T);
+      return true;
+    }
+
+    // RxM * (1xM)^T -> RxM * Mx1
+    if (Instruction *N = untransposeOperand(II, 1, M, C)) {
+      auto *OldOp = cast<Instruction>(II.getOperand(1));
+      II.setOperand(1, N);
+      if (OldOp->use_empty())
+        OldOp->eraseFromParent();
+      return true;
+    }
+    return false;
+  }
+
+  /// Perform inst-combine-like transformations on matrix operations.
+  /// Note that this doesn't update the ShapeInfo and relies on it being called
+  /// before shape propagation.
+  void combineMatrixOps() {
+    // Only do this for column major.
+    if (MatrixLayout != MatrixLayoutTy::ColumnMajor)
+      return;
+    // Try to transpose all row vectors to column vectors if they are matrix
+    // multiply operands.
+    for (BasicBlock &BB : Func) {
+      BasicBlock::iterator Next;
+      for (auto It = BB.begin(); It != BB.end(); It = Next) {
+        Instruction &I = *It;
+        Next = std::next(It);
+
+        Value *A, *B;
+        ConstantInt *R, *M, *C;
+        if (!match(&I, m_Intrinsic<Intrinsic::matrix_multiply>(
+                           m_Value(A), m_Value(B), m_ConstantInt(R),
+                           m_ConstantInt(M), m_ConstantInt(C))))
+          continue;
+        auto &II = cast<IntrinsicInst>(I);
+        if (transposeRowVectorOperands(II, R->getZExtValue(), M->getZExtValue(),
+                                       C->getZExtValue())) {
+          // Re-process the changed instruction.
+          Next = It;
+          continue;
+        }
+      }
+    }
+  }
+
   /// Try moving transposes in order to fold them away or into multiplies.
   bool optimizeTransposes() {
     bool Changed = false;
@@ -1190,6 +1328,8 @@ public:
         }
       }
     }
+
+    combineMatrixOps();
 
     // Propagate shapes until nothing changes any longer.
     while (!WorkList.empty()) {
