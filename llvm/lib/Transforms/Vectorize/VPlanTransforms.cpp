@@ -3537,7 +3537,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
       VPValue *NewIncoming = IncomingVal;
       if (!isa<VPIRValue>(IncomingVal)) {
         // Add phis so IncomingVal is defined on all paths to the latch.
-        assert(IncomingVal->hasDefiningRecipe() &&
+        assert(IncomingVal->getDefiningRecipe() &&
                "Non-live-in IncomingVal without a recipe?");
         VPBasicBlock *DefVPBB = IncomingVal->getDefiningRecipe()->getParent();
         assert(VPDT.dominates(HeaderVPBB, DefVPBB) &&

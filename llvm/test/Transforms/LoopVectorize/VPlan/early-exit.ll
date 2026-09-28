@@ -44,7 +44,7 @@ define i64 @single_exit_in_conditional_block(ptr dereferenceable(64) %a, ptr der
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit:
-; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%iv>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.end>
 ; CHECK-EMPTY:
