@@ -30,15 +30,15 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
-# %{jit} runs JIT'd code under ogre, with llvm-jitlink as the controller. Tests
-# that use it must be gated on the llvm-jitlink feature.
+# %{obj-jit} runs JIT-loaded object files under ogre, with llvm-jitlink as the
+# controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
 config.substitutions.append(("%{ogre}", ogre))
 llvm_jitlink = llvm_config.use_llvm_tool("llvm-jitlink")
 if llvm_jitlink:
     config.available_features.add("llvm-jitlink")
     config.substitutions.append(
-        ("%{jit}", "{} -oop-launch={}".format(llvm_jitlink, ogre))
+        ("%{obj-jit}", "{} -oop-launch={}".format(llvm_jitlink, ogre))
     )
 
 
