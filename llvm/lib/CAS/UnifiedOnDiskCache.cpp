@@ -246,8 +246,9 @@ static uint64_t getCachedBootTime() {
 namespace {
 /// The validation file records the state of validation for the data:
 /// - empty: never validated.
-/// - \c ValidationPending: a validation started but did not succeed, i.e. it
-///   failed or crashed, and the data has not been recovered since.
+/// - \c ValidationPending: a validation started but did not yet succeed, i.e.
+///   it is in progress, failed, or crashed, and the data has not been
+///   recovered since.
 /// - a boot time: the data was validated or recovered during that boot.
 ///
 /// While this object is alive it holds an exclusive lock on the file, which
@@ -376,31 +377,26 @@ static Error markAllDBDirsCorrupt(StringRef RootPath) {
   for (StringRef DBDir : *DBDirs) {
     sys::path::remove_filename(PathBuf);
     sys::path::append(PathBuf, DBDir);
-    std::error_code EC;
+    // Pick the first name not taken by earlier recoveries. Checking the error
+    // of the rename is not enough since Windows reports permission denied when
+    // the destination directory exists. The name cannot be taken concurrently
+    // since only garbage collection touches these directories, and it only
+    // removes them.
     int Attempt = 0, MaxAttempts = 100;
     SmallString<128> GCPath;
     for (; Attempt < MaxAttempts; ++Attempt) {
       GCPath.assign(RootPath);
       sys::path::append(GCPath,
                         CorruptPrefix + std::to_string(Attempt) + "." + DBDir);
-      // Skip names that are taken by earlier recoveries. Checking the error of
-      // the rename is not enough since Windows reports permission denied when
-      // the destination directory exists. Only garbage collection removes
-      // these directories concurrently, and it never creates them.
-      if (sys::fs::exists(GCPath)) {
-        EC = errc::file_exists;
-        continue;
-      }
-      EC = sys::fs::rename(PathBuf, GCPath);
-      // Darwin uses ENOTEMPTY. Linux may return either ENOTEMPTY or EEXIST.
-      if (EC != errc::directory_not_empty && EC != errc::file_exists)
+      if (!sys::fs::exists(GCPath))
         break;
     }
     if (Attempt == MaxAttempts)
       return createStringError(
-          EC, "rename " + PathBuf +
-                  " failed: too many CAS directories awaiting pruning");
-    if (EC)
+          errc::file_exists,
+          "rename " + PathBuf +
+              " failed: too many CAS directories awaiting pruning");
+    if (std::error_code EC = sys::fs::rename(PathBuf, GCPath))
       return createStringError(EC, "rename " + PathBuf + " to " + GCPath +
                                        " failed: " + EC.message());
   }

@@ -300,6 +300,16 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
       return UnifiedOnDiskCache::recover(Temp.path());
     });
     EXPECT_EQ(Counts[ValidationResult::Recovered], 1u);
+    EXPECT_EQ(Counts[ValidationResult::Recovered] +
+                  Counts[ValidationResult::Skipped] +
+                  Counts[ValidationResult::Valid],
+              NumTasks);
+    // The other tasks either skip recovery after a failed validation, or
+    // validate after the recovery. The latter is skipped unless forced or the
+    // boot time is not known, in which case the split depends on the
+    // interleaving.
+    if (!Force && BootTimeKnown)
+      EXPECT_EQ(Counts[ValidationResult::Skipped], NumTasks - 1);
     EXPECT_EQ(countCorruptDirs(Temp.path()), 1u);
 
     // Recovery counts as validation for this boot.
