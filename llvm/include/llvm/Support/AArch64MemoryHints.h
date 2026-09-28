@@ -11,24 +11,24 @@
 
 namespace llvm {
 enum class AArch64MemoryHint {
-  HINT_NONE = 0,
-  HINT_STSHH_KEEP = 1,
-  HINT_STSHH_STRM = 2,
+  NONE = 0,
+  STSHH_KEEP = 1,
+  STSHH_STRM = 2,
 };
 
 template <typename Int> inline bool isValidAArch64MemoryHintValue(Int I) {
-  return (Int)AArch64MemoryHint::HINT_STSHH_KEEP <= I &&
-         I <= (Int)AArch64MemoryHint::HINT_STSHH_STRM;
+  return (Int)AArch64MemoryHint::STSHH_KEEP <= I &&
+         I <= (Int)AArch64MemoryHint::STSHH_STRM;
 }
 
 template <typename Int> inline AArch64MemoryHint toAArch64MemoryHint(Int I) {
   switch (I) {
   case 0:
-    return AArch64MemoryHint::HINT_STSHH_KEEP;
+    return AArch64MemoryHint::STSHH_KEEP;
   case 1:
-    return AArch64MemoryHint::HINT_STSHH_STRM;
+    return AArch64MemoryHint::STSHH_STRM;
   default:
-    return AArch64MemoryHint::HINT_NONE;
+    return AArch64MemoryHint::NONE;
   }
 }
 } // namespace llvm
