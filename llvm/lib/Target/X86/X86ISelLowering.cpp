@@ -28,7 +28,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1113,6 +1112,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL,                MVT::v8i16, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v16i8, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
+    setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
 
     setOperationAction(ISD::SMULO,              MVT::v16i8, Custom);
     setOperationAction(ISD::UMULO,              MVT::v16i8, Custom);
@@ -1341,11 +1341,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSUB,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FMUL,        MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
-
-    if (!Subtarget.hasSSSE3()) {
-      setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
-      setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::v4i32, Custom);
-    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasGFNI()) {
@@ -29729,11 +29724,8 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   if (VT.is512BitVector() && !Subtarget.hasBWI())
     return splitVectorIntUnary(Op, DAG, DL);
 
-  if (VT == MVT::v4i32 && Subtarget.hasSSE2() && !Subtarget.hasSSSE3()) {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    if (SDValue New = TLI.expandCTLZWithFP(Op.getNode(), DAG))
-      return New;
-  }
+  if (VT == MVT::v4i32 && !Subtarget.hasSSSE3())
+    return DAG.getTargetLoweringInfo().expandCTLZWithFP(Op.getNode(), DAG);
 
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
