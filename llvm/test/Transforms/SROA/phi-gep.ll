@@ -540,7 +540,6 @@ define i64 @test_phi_idx_mem2reg_const(i1 %arg) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i64 [ 2, [[BB1]] ], [ 3, [[BB2]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
 ; CHECK-NEXT:    ret i64 [[PHI_SROA_PHI_SROA_SPECULATED]]
 ;
 bb:
@@ -653,7 +652,6 @@ define i1 @test_phi_mem2reg_entry_block_alloca_not_at_beginning(i1 %arg) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[BB:%.*]] ], [ [[PHI_SROA_GEP1]], [[BB2]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 1, [[BB]] ], [ 2, [[BB2]] ]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr [[PHI_SROA_PHI]], null
 ; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
@@ -783,26 +781,13 @@ merge:
 define i32 @test_phi_fold_split_addrspace(i1 %cond) {
 ; CHECK-LABEL: @test_phi_fold_split_addrspace(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 16
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 16
-; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
-; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
-; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[ALLOC0]], [[IF_THEN]] ], [ [[ALLOC1]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 1
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ 3, [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
 entry:
@@ -826,27 +811,13 @@ if.end:
 define i32 @test_phi_fold_split_cast_multiple(i1 %cond) {
 ; CHECK-LABEL: @test_phi_fold_split_cast_multiple(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 8
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 8
-; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
-; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
-; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[ALLOC0]], [[IF_THEN]] ], [ [[ALLOC1]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[CAST0:%.*]] = bitcast ptr [[ADDR]] to ptr
-; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[CAST0]] to ptr addrspace(5)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST1]], i32 0, i32 1
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ 3, [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
 entry:
@@ -871,29 +842,26 @@ if.end:
 define i32 @test_phi_fold_split_implicit_gep(i1 %cond) {
 ; CHECK-LABEL: @test_phi_fold_split_implicit_gep(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 8
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 8
-; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR:%.*]], align 8
 ; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
 ; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[ADDR_SROA_GEP3:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    [[ADDR_SROA_GEP3_CAST:%.*]] = addrspacecast ptr [[ADDR_SROA_GEP3]] to ptr addrspace(5)
+; CHECK-NEXT:    [[ADDR_SROA_GEP6:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    [[ADDR_SROA_GEP6_CAST:%.*]] = addrspacecast ptr [[ADDR_SROA_GEP6]] to ptr addrspace(5)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[ADDR_SROA_PHI4_SROA_SPECULATE_LOAD_IF_ELSE:%.*]] = load i32, ptr addrspace(5) [[ADDR_SROA_GEP6_CAST]], align 4
+; CHECK-NEXT:    [[ADDR_SROA_PHI_SROA_SPECULATE_LOAD_IF_ELSE:%.*]] = load i32, ptr addrspace(5) [[ADDR_SROA_GEP3_CAST]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[ALLOC0]], [[IF_THEN]] ], [ [[ALLOC1]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
-; CHECK-NEXT:    [[VAL_FCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 0
-; CHECK-NEXT:    [[VAL_FCA_0_LOAD:%.*]] = load i32, ptr addrspace(5) [[VAL_FCA_0_GEP]], align 4
+; CHECK-NEXT:    [[VAL_FCA_0_LOAD:%.*]] = phi i32 [ 0, [[IF_THEN]] ], [ [[ADDR_SROA_PHI_SROA_SPECULATE_LOAD_IF_ELSE]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[VAL_FCA_1_LOAD:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[ADDR_SROA_PHI4_SROA_SPECULATE_LOAD_IF_ELSE]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[VAL_FCA_0_INSERT:%.*]] = insertvalue [[PAIR]] poison, i32 [[VAL_FCA_0_LOAD]], 0
-; CHECK-NEXT:    [[VAL_FCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 1
-; CHECK-NEXT:    [[VAL_FCA_1_LOAD:%.*]] = load i32, ptr addrspace(5) [[VAL_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[VAL_FCA_1_INSERT:%.*]] = insertvalue [[PAIR]] [[VAL_FCA_0_INSERT]], i32 [[VAL_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractvalue [[PAIR]] [[VAL_FCA_1_INSERT]], 1
 ; CHECK-NEXT:    ret i32 [[ELEM]]
@@ -943,7 +911,6 @@ define i32 @test_phi_fold_split_gep_chain_split(i1 %cond) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADDR_SROA_PHI:%.*]] = phi ptr [ [[ADDR_SROA_GEP]], [[IF_THEN]] ], [ [[ADDR_SROA_GEP1]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[ALLOC0]], [[IF_THEN]] ], [ [[ALLOC1]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[ADDR_SROA_PHI]], i32 1
 ; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[GEP1]] to ptr addrspace(5)
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[CAST1]], i32 1

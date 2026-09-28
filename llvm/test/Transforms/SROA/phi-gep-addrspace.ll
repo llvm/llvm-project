@@ -11,26 +11,13 @@ target datalayout = "e-p:64:64-p5:32:32"
 define i32 @phi_gep_addrspace_widths(i1 %cond) {
 ; CHECK-LABEL: @phi_gep_addrspace_widths(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 8
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 8
-; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 1
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
-; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
-; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOC0]], [[LEFT]] ], [ [[ALLOC1]], [[RIGHT]] ]
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[PHI]] to ptr addrspace(5)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 1
-; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; CHECK-NEXT:    [[VALUE:%.*]] = phi i32 [ 1, [[LEFT]] ], [ 3, [[RIGHT]] ]
 ; CHECK-NEXT:    ret i32 [[VALUE]]
 ;
 entry:
