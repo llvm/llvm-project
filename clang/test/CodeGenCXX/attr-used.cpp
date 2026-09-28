@@ -58,8 +58,11 @@ struct Bar {
 } // namespace
 
 
-// On XCOFF, C1/D1 are full definitions for externally visible Foo,
-// while they are aliases to C2/D2 for internal-linkage Bar.
+// On XCOFF, Foo's constructors/destructors have linkonce_odr linkage. C1/D1
+// are emitted as full definitions since linkonce_odr does not guarantee that
+// an alias and its target will be retained from the same translation unit.
+// Bar's C1/D1 have internal linkage, so they are confined to the translation
+// unit and can safely be aliases to C2/D2.
 // XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooC1Ev
 // XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooC2Ev
 // XCOFF-DAG: define linkonce_odr {{.*}}@_ZN3FooD1Ev
