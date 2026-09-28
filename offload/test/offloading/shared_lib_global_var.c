@@ -8,6 +8,7 @@
 //
 // REQUIRES: gpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda
 // clang-format on
 
 // Checks that a target region in the main program can access a declare target
