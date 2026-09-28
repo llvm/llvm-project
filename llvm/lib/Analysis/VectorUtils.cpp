@@ -123,6 +123,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::clmul:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
     return true;
   default:
     return false;
@@ -1290,7 +1292,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const DenseMap<Value *, const SCEV *> &Strides,
+    const SymbolicStrideMap &Strides,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = TheLoop->getHeader()->getDataLayout();
 

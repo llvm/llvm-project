@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILLexer.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -24,10 +25,14 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::ampamp:
     return "ampamp";
+  case Kind::ampequal:
+    return "ampequal";
   case Kind::arrow:
     return "arrow";
   case Kind::caret:
     return "caret";
+  case Kind::caretequal:
+    return "caretequal";
   case Kind::colon:
     return "colon";
   case Kind::coloncolon:
@@ -50,6 +55,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "greaterequal";
   case Kind::greatergreater:
     return "greatergreater";
+  case Kind::greatergreaterequal:
+    return "greatergreaterequal";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -68,6 +75,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "lessequal";
   case Kind::lessless:
     return "lessless";
+  case Kind::lesslessequal:
+    return "lesslessequal";
   case Kind::minus:
     return "minus";
   case Kind::minusequal:
@@ -76,10 +85,14 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minusminus";
   case Token::percent:
     return "percent";
+  case Token::percentequal:
+    return "percentequal";
   case Kind::period:
     return "period";
   case Kind::pipe:
     return "pipe";
+  case Kind::pipeequal:
+    return "pipeequal";
   case Kind::pipepipe:
     return "pipepipe";
   case Kind::plus:
@@ -96,8 +109,12 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "r_square";
   case Token::slash:
     return "slash";
+  case Token::slashequal:
+    return "slashequal";
   case Token::star:
     return "star";
+  case Token::starequal:
+    return "starequal";
   case Token::tilde:
     return "tilde";
   }
@@ -187,11 +204,19 @@ llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
   do {
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
       Token token = *t;
-      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode))
+      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode)) {
+        LLDB_LOG(GetLog(LLDBLog::Expressions),
+                 "[DILLexer::Create] DIL mode restriction:\n{0}",
+                 llvm::toStringWithoutConsuming(error));
         return error;
+      }
       tokens.push_back(std::move(token));
     } else {
-      return t.takeError();
+      auto error = t.takeError();
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "[DILLexer::Create] DIL lexer failed:\n{0}",
+               llvm::toStringWithoutConsuming(error));
+      return error;
     }
   } while (tokens.back().GetKind() != Token::eof);
   return DILLexer(expr, std::move(tokens));
@@ -228,8 +253,12 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   // be ordered longest-to-shortest in the list below. E.g. '::' must come
   // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
+      {Token::greatergreaterequal, ">>="},
+      {Token::lesslessequal, "<<="},
       {Token::ampamp, "&&"},
+      {Token::ampequal, "&="},
       {Token::arrow, "->"},
+      {Token::caretequal, "^="},
       {Token::coloncolon, "::"},
       {Token::equalequal, "=="},
       {Token::exclaimequal, "!="},
@@ -239,9 +268,13 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::lessless, "<<"},
       {Token::minusequal, "-="},
       {Token::minusminus, "--"},
+      {Token::percentequal, "%="},
+      {Token::pipeequal, "|="},
       {Token::pipepipe, "||"},
       {Token::plusequal, "+="},
       {Token::plusplus, "++"},
+      {Token::slashequal, "/="},
+      {Token::starequal, "*="},
       {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},

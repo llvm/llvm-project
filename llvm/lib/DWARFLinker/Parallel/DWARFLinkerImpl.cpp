@@ -652,7 +652,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
             // registerModuleReferences doesn't do any new work, but it
             // will collect top-level errors, which are suppressed. Module
             // warnings were already displayed in the first iteration.
-            if (registerModuleReference(
+            //
+            // Runs concurrently, so it must stay a no-op: it may only be
+            // entered when the serial pass in addObjectFile() has already
+            // populated the module map.
+            if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+                registerModuleReference(
                     CU.getOrigUnit().getUnitDIE(), nullptr,
                     [](const DWARFUnit &) {}, 0))
               CU.setStage(CompileUnit::Stage::PatchesUpdated);

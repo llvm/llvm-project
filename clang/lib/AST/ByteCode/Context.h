@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_CONTEXT_H
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
+#include "FrameAllocator.h"
 #include "InterpStack.h"
 #include "clang/AST/ASTContext.h"
 
@@ -67,6 +68,7 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
+  void registerRedecl(const VarDecl *VD, const APValue &V);
 
   /// Evaluates the destruction of a variable.
   bool evaluateDestruction(State &Parent, const VarDecl *VD, APValue Value);
@@ -95,7 +97,7 @@ public:
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
-                                                unsigned Kind);
+                                                unsigned Kind, bool IsDynamic);
 
   std::optional<bool> evaluateWithSubstitution(State &Parent,
                                                const FunctionDecl *Callee,
@@ -200,6 +202,8 @@ private:
   ASTContext &Ctx;
   /// Interpreter stack, shared across invocations.
   InterpStack Stk;
+  /// (Function) frame allocator, also shared.
+  FrameAllocator FrameAlloc;
   /// Constexpr program.
   std::unique_ptr<Program> P;
   /// ID identifying an evaluation.

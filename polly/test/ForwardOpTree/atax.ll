@@ -87,7 +87,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_for_body3[i0] -> MemRef1__phi[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   store double 0.000000e+00, ptr %arrayidx5, align 8, !tbaa !2
+; CHECK-NEXT:                   store double 0.000000e+00, ptr %arrayidx5, align 8, !tbaa !13
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_body8
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
@@ -105,11 +105,11 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 ; CHECK-NEXT:                 { Stmt_for_body8[i0, i1] -> MemRef_add[] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %0 = phi double [ 0.000000e+00, %for.body3 ], [ %add, %for.body8 ]
-; CHECK-NEXT:                   %1 = load double, ptr %arrayidx14, align 8, !tbaa !2
-; CHECK-NEXT:                   %2 = load double, ptr %arrayidx16, align 8, !tbaa !2
+; CHECK-NEXT:                   %1 = load double, ptr %arrayidx14, align 8, !tbaa !13
+; CHECK-NEXT:                   %2 = load double, ptr %arrayidx16, align 8, !tbaa !13
 ; CHECK-NEXT:                   %mul = fmul double %1, %2
 ; CHECK-NEXT:                   %add = fadd double %0, %mul
-; CHECK-NEXT:                   store double %add, ptr %arrayidx5, align 8, !tbaa !2
+; CHECK-NEXT:                   store double %add, ptr %arrayidx5, align 8, !tbaa !13
 ; CHECK-NEXT:                   %exitcond = icmp eq i64 %indvars.iv.next, 2
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_end21
@@ -131,11 +131,11 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 ; CHECK-NEXT:                 { Stmt_for_body24[i0, i1] -> MemRef_y[i1] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %3 = phi double [ %add, %for.end21 ], [ %.pre, %for.body24.for.body24_crit_edge ]
-; CHECK-NEXT:                   %4 = load double, ptr %arrayidx26, align 8, !tbaa !2
-; CHECK-NEXT:                   %5 = load double, ptr %arrayidx30, align 8, !tbaa !2
+; CHECK-NEXT:                   %4 = load double, ptr %arrayidx26, align 8, !tbaa !13
+; CHECK-NEXT:                   %5 = load double, ptr %arrayidx30, align 8, !tbaa !13
 ; CHECK-NEXT:                   %mul33 = fmul double %5, %3
 ; CHECK-NEXT:                   %add34 = fadd double %4, %mul33
-; CHECK-NEXT:                   store double %add34, ptr %arrayidx26, align 8, !tbaa !2
+; CHECK-NEXT:                   store double %add34, ptr %arrayidx26, align 8, !tbaa !13
 ; CHECK-NEXT:                   %exitcond7 = icmp eq i64 %indvars.iv.next6, 2
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_body24_for_body24_crit_edge
@@ -144,6 +144,6 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 { Stmt_for_body24_for_body24_crit_edge[i0, i1] -> MemRef_tmp[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %.pre = load double, ptr %arrayidx5, align 8, !tbaa !2
+; CHECK-NEXT:                   %.pre = load double, ptr %arrayidx5, align 8, !tbaa !13
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

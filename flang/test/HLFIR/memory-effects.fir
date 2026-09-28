@@ -212,21 +212,21 @@ func.func @char_extremum(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.
   return
 }
 
-func.func @copy_in(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %is_present: i1) {
+func.func @copy_in(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>, %is_present: i1) {
 // expected-remark@+3 {{found an instance of 'allocate' on resource '<Default>'}}
 // expected-remark@+2 {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
 // expected-remark@+1 {{found an instance of 'write' on op operand 1, on resource '<Default>'}}
-  %0:2 = hlfir.copy_in %box to %temp : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.box<!fir.array<?xf64>>, i1)
+  %0:3 = hlfir.copy_in %box to %temp : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   return
 }
 
-func.func @copy_out(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %was_copied: i1) {
+func.func @copy_out(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>, %was_copied: i1, %must_free: i1) {
 // expected-remark@+2 {{found an instance of 'free' on resource '<Default>'}}
 // expected-remark@+1 {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
-  hlfir.copy_out %temp, %was_copied : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1) -> ()
+  hlfir.copy_out %temp, %was_copied, %must_free : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1) -> ()
 // expected-remark@+3 {{found an instance of 'free' on resource '<Default>'}}
 // expected-remark@+2 {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
-// expected-remark@+1 {{found an instance of 'write' on op operand 2, on resource '<Default>'}}
-  hlfir.copy_out %temp, %was_copied to %box : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1, !fir.box<!fir.array<?xf64>>) -> ()
+// expected-remark@+1 {{found an instance of 'write' on op operand 3, on resource '<Default>'}}
+  hlfir.copy_out %temp, %was_copied, %must_free to %box : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1, !fir.box<!fir.array<?xf64>>) -> ()
   return
 }

@@ -117,12 +117,13 @@ public:
     return selectShiftMask(N, Size, ShAmt);
   }
 
-  bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);
-  bool selectSETNE(SDValue N, SDValue &Val) {
-    return selectSETCC(N, ISD::SETNE, Val);
+  bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val,
+                   bool OneUse);
+  template <bool OneUse = false> bool selectSETNE(SDValue N, SDValue &Val) {
+    return selectSETCC(N, ISD::SETNE, Val, OneUse);
   }
-  bool selectSETEQ(SDValue N, SDValue &Val) {
-    return selectSETCC(N, ISD::SETEQ, Val);
+  template <bool OneUse = false> bool selectSETEQ(SDValue N, SDValue &Val) {
+    return selectSETCC(N, ISD::SETEQ, Val, OneUse);
   }
 
   bool selectSExtBits(SDValue N, unsigned Bits, SDValue &Val);

@@ -235,6 +235,9 @@ namespace llvm {
                                                    unsigned &Read,
                                                    const SlotMapping *Slots);
 
+    LLVM_ABI bool parseMetadataDefinitions(SlotMapping &Slots,
+                                           ArrayRef<SMLoc> DefinitionEnds);
+
     LLVMContext &getContext() { return Context; }
 
   private:
@@ -694,6 +697,8 @@ namespace llvm {
     bool parseExtractElement(Instruction *&Inst, PerFunctionState &PFS);
     bool parseInsertElement(Instruction *&Inst, PerFunctionState &PFS);
     bool parseShuffleVector(Instruction *&Inst, PerFunctionState &PFS);
+    bool parseBitExtract(Instruction *&Inst, PerFunctionState &PFS);
+    bool parseBitInsert(Instruction *&Inst, PerFunctionState &PFS);
     int parsePHI(Instruction *&Inst, PerFunctionState &PFS);
     bool parseLandingPad(Instruction *&Inst, PerFunctionState &PFS);
     bool parseCall(Instruction *&Inst, PerFunctionState &PFS,

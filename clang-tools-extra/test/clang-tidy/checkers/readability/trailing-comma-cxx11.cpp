@@ -67,3 +67,13 @@ enum class color_t : unsigned {
   LAST = BLUE,
 #endif
 };
+
+struct WithDefault { int foo = 1; };
+void takesTwo(WithDefault, int);
+
+void emptyInitListWithDefaultMember() {
+  takesTwo(WithDefault{}, 1);
+  int a[] = {1,};
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES: int a[] = {1};
+}

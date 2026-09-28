@@ -52,6 +52,11 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &Hexagon::IntRegsRegClass;
+  }
+
   bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
   bool hasQFPInstrs(const MachineFunction &MF) const;
 
@@ -86,6 +91,8 @@ public:
   bool hasStoreToStackSlot(
       const MachineInstr &MI,
       SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
+
+  using TargetInstrInfo::analyzeBranch;
 
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't

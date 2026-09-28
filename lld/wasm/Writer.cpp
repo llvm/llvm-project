@@ -121,7 +121,8 @@ private:
   std::unique_ptr<FileOutputBuffer> buffer;
 
   std::vector<OutputSegment *> segments;
-  llvm::SmallDenseMap<StringRef, OutputSegment *> segmentMap;
+  using SegmentKey = std::pair<StringRef, uint32_t>;
+  llvm::SmallDenseMap<SegmentKey, OutputSegment *> segmentMap;
 };
 
 void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
@@ -1120,6 +1121,15 @@ void Writer::allocateCommonSymbols() {
 }
 
 void Writer::createOutputSegments() {
+  // In relocatable mode, segments with differing flags must not be coalesced
+  // into the same output segment; otherwise chunks would inherit flags from
+  // other chunks sharing the same name (e.g. non-STRINGS strings inheriting
+  // STRINGS and being corrupted by splitStrings, or non-RETAIN data inheriting
+  // RETAIN and preventing dead-code elimination).
+  auto getSegmentKey = [&](StringRef name, uint32_t flags) {
+    return SegmentKey(name, ctx.arg.relocatable ? flags : 0);
+  };
+
   for (ObjFile *file : ctx.objectFiles) {
     for (InputChunk *segment : file->segments) {
       if (!segment->live)
@@ -1132,9 +1142,10 @@ void Writer::createOutputSegments() {
       if (ctx.arg.relocatable && !segment->getComdatName().empty()) {
         s = createOutputSegment(name);
       } else {
-        if (!segmentMap.contains(name))
-          segmentMap[name] = createOutputSegment(name);
-        s = segmentMap[name];
+        auto key = getSegmentKey(name, segment->flags);
+        if (!segmentMap.contains(key))
+          segmentMap[key] = createOutputSegment(name);
+        s = segmentMap[key];
       }
       s->addInputSegment(segment);
     }
@@ -1146,9 +1157,10 @@ void Writer::createOutputSegments() {
       continue;
     StringRef name = getOutputDataSegmentName(*segment);
     OutputSegment *s = nullptr;
-    if (!segmentMap.contains(name))
-      segmentMap[name] = createOutputSegment(name);
-    s = segmentMap[name];
+    auto key = getSegmentKey(name, segment->flags);
+    if (!segmentMap.contains(key))
+      segmentMap[key] = createOutputSegment(name);
+    s = segmentMap[key];
     s->addInputSegment(segment);
   }
 

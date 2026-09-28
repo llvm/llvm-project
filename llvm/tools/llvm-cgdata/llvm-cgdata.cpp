@@ -21,7 +21,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -51,25 +51,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
-class CGDataOptTable : public opt::GenericOptTable {
+class CGDataOptTable : public opt::OptTable {
 public:
-  CGDataOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  CGDataOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 

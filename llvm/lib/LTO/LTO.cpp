@@ -43,7 +43,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -1130,7 +1129,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
       NewIA += " " + llvm::join(NonPrevailingAsmSymbols, ", ");
     }
     NewIA += "\n";
-    M.prependModuleInlineAsm(NewIA);
+    M.prependModuleInlineAsm({NewIA, M.getModuleInlineAsm().front().Props});
   }
 
   assert(MsymI == MsymE);

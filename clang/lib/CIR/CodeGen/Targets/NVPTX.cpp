@@ -110,10 +110,11 @@ public:
   }
 
   mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {
-    // On the device side, surface reference is represented as an object handle
-    // in 64-bit integer.
-    return cir::IntType::get(&getABIInfo().cgt.getMLIRContext(), 64,
-                             /*isSigned=*/true);
+    return cir::CUDADeviceSurfaceType::get(&getABIInfo().cgt.getMLIRContext());
+  }
+
+  mlir::Type getCUDADeviceBuiltinTextureDeviceType() const override {
+    return cir::CUDADeviceTextureType::get(&getABIInfo().cgt.getMLIRContext());
   }
 };
 
