@@ -49018,6 +49018,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
 
     if (F16LHS && CondRoot.getOpcode() != ISD::SETCC &&
         CondRoot.getOpcode() != X86ISD::SETCC) {
+      // With FP16, f16 is legal and lowers to a masked VMOVSH.
+      if (Subtarget.hasFP16())
+        return DAG.getBitcast(
+            VT, DAG.getSelect(DL, MVT::f16, Cond, F16LHS, F16RHS));
       // Currently blend in v8i16 (not v8f16) since a v8f16 VSELECT can fail to
       // select on some subtargets
       SDValue Mask =

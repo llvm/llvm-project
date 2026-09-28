@@ -2080,13 +2080,11 @@ define bfloat @PR115710(fp128 %0) nounwind {
 define bfloat @select_bf16(i1 %cond, bfloat %a, bfloat %b) nounwind {
 ; X86-LABEL: select_bf16:
 ; X86:       # %bb.0:
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovnel %eax, %ecx
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    vmovw %eax, %xmm2
-; X86-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: select_bf16:
@@ -2109,10 +2107,9 @@ define bfloat @select_bf16(i1 %cond, bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512FP16-LABEL: select_bf16:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    andl $1, %edi
-; AVX512FP16-NEXT:    negl %edi
-; AVX512FP16-NEXT:    vmovw %edi, %xmm2
-; AVX512FP16-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX512FP16-NEXT:    kmovd %edi, %k1
+; AVX512FP16-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512FP16-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512FP16-NEXT:    retq
 ;
 ; AVXNC-LABEL: select_bf16:
@@ -2242,15 +2239,11 @@ define bfloat @select_ogt_bf16(bfloat %a, bfloat %b) nounwind {
 define i16 @select_bf16_from_gpr(i1 %cond, i16 %a, i16 %b) nounwind {
 ; X86-LABEL: select_bf16_from_gpr:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    vmovw %eax, %xmm2
-; X86-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vmovw %xmm0, %eax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovnel %eax, %ecx
+; X86-NEXT:    movzwl (%ecx), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select_bf16_from_gpr:
@@ -2272,15 +2265,11 @@ define i16 @select_bf16_from_gpr(i1 %cond, i16 %a, i16 %b) nounwind {
 define i16 @select_i16_of_bf16(i1 %cond, bfloat %a, bfloat %b) nounwind {
 ; X86-LABEL: select_i16_of_bf16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    negl %eax
-; X86-NEXT:    vmovw %eax, %xmm2
-; X86-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovw %xmm0, %eax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovnel %eax, %ecx
+; X86-NEXT:    movzwl (%ecx), %eax
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: select_i16_of_bf16:
@@ -2307,11 +2296,9 @@ define i16 @select_i16_of_bf16(i1 %cond, bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512FP16-LABEL: select_i16_of_bf16:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    andl $1, %edi
-; AVX512FP16-NEXT:    negl %edi
-; AVX512FP16-NEXT:    vmovw %edi, %xmm2
-; AVX512FP16-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX512FP16-NEXT:    vmovw %xmm0, %eax
+; AVX512FP16-NEXT:    kmovd %edi, %k1
+; AVX512FP16-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512FP16-NEXT:    vmovw %xmm1, %eax
 ; AVX512FP16-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512FP16-NEXT:    retq
 ;
