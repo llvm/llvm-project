@@ -3040,16 +3040,6 @@ private:
       return S.getMatchingMainOpOrAltOp(I);
     }
 
-    /// Chooses the correct key for scheduling data. If \p Op has the same (or
-    /// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is
-    /// \p OpValue.
-    Value *isOneOf(Value *Op) const {
-      auto *I = dyn_cast<Instruction>(Op);
-      if (I && getMatchingMainOpOrAltOp(I))
-        return Op;
-      return S.getMainOp();
-    }
-
     void setOperations(const InstructionsState &S) {
       assert(S && "InstructionsState is invalid.");
       this->S = S;
@@ -3823,9 +3813,9 @@ private:
   /// uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
 
-  /// Replacements emitted for the external uses without users, consumed after
-  /// the tree vectorization; must not be collected as dead operands of the
-  /// erased scalars.
+  /// Externally used values and replacements emitted for the external uses
+  /// without users, consumed after the tree vectorization; must not be
+  /// collected as dead operands of the erased scalars.
   SmallPtrSet<Value *, 4> ExternalUseReplacements;
 
   /// Values used only by @llvm.assume calls.
@@ -4237,20 +4227,6 @@ private:
           SchedulingRegionID(BlockSchedulingRegionID), Bundle(Bundle) {}
     static bool classof(const ScheduleEntity *Entity) {
       return Entity->getKind() == Kind::ScheduleCopyableData;
-    }
-
-    /// Verify basic self consistency properties
-    void verify() {
-      if (hasValidDependencies()) {
-        assert(UnscheduledDeps <= Dependencies && "invariant");
-      } else {
-        assert(UnscheduledDeps == Dependencies && "invariant");
-      }
-
-      if (IsScheduled) {
-        assert(hasValidDependencies() && UnscheduledDeps == 0 &&
-               "unexpected scheduled state");
-      }
     }
 
     /// Returns true if the dependency information has been calculated.
@@ -4710,6 +4686,81 @@ private:
             CD);
       }
       return *CD;
+    }
+
+    /// Unregisters \p Bundle from its instructions and removes its copyable
+    /// data. The caller must destroy the bundle and recalculate the
+    /// dependencies.
+    void cancelScheduling(ScheduleBundle &Bundle) {
+      for (ScheduleEntity *SE : Bundle.getBundle()) {
+        Instruction *I = SE->getInst();
+        auto *CD = dyn_cast<ScheduleCopyableData>(SE);
+        if (!CD) {
+          llvm::erase(ScheduledBundles.find(I)->getSecond(), &Bundle);
+          continue;
+        }
+        const EdgeInfo EI = CD->getEdgeInfo();
+        llvm::erase(ScheduleCopyableDataMapByInst.find(I)->getSecond(), CD);
+        ScheduleCopyableDataMapByUsers[I].remove(CD);
+        if (EI.UserTE) {
+          ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
+          const auto *It = find(Op, I);
+          assert(It != Op.end() && "Lane not set");
+          SmallPtrSet<Instruction *, 4> Visited;
+          bool HadSelfUse = false;
+          do {
+            int Lane = std::distance(Op.begin(), It);
+            assert(Lane >= 0 && "Lane not set");
+            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+                !EI.UserTE->ReorderIndices.empty())
+              Lane = EI.UserTE->ReorderIndices[Lane];
+            assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
+                   "Couldn't find extract lane");
+            auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
+            if (!Visited.insert(In).second) {
+              It = find(make_range(std::next(It), Op.end()), I);
+              continue;
+            }
+            HadSelfUse |= In == I;
+            auto ByUserIt = ScheduleCopyableDataMapByInstUser.find(
+                std::make_pair(std::make_pair(In, EI.EdgeIdx), I));
+            assert(ByUserIt != ScheduleCopyableDataMapByInstUser.end() &&
+                   is_contained(ByUserIt->getSecond(), CD) &&
+                   "copyable data is not registered for the user");
+            llvm::erase(ByUserIt->getSecond(), CD);
+            It = find(make_range(std::next(It), Op.end()), I);
+          } while (It != Op.end());
+          // Restore the parent-edge copyable data as a user of I only if the
+          // cancelled data displaced it at creation (chained copyable
+          // self-use); otherwise the extra user dependency is never released.
+          if (HadSelfUse) {
+            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
+            if (ScheduleCopyableData *UserCD =
+                    getScheduleCopyableData(UserEI, I))
+              ScheduleCopyableDataMapByUsers[I].insert(UserCD);
+          }
+        }
+        if (ScheduleCopyableDataMapByUsers[I].empty())
+          ScheduleCopyableDataMapByUsers.erase(I);
+        ScheduleCopyableDataMap.erase(std::make_pair(EI, I));
+      }
+    }
+
+    /// Clears the dependencies of all schedule data in the scheduling region.
+    void clearDependencies() {
+      for_each(ScheduleDataMap, [&](auto &P) {
+        if (BB != P.first->getParent())
+          return;
+        ScheduleData *SD = P.second;
+        if (isInSchedulingRegion(*SD))
+          SD->clearDependencies();
+      });
+      for_each(ScheduleCopyableDataMapByInst, [&](auto &P) {
+        for_each(P.second, [&](ScheduleCopyableData *SD) {
+          if (isInSchedulingRegion(*SD))
+            SD->clearDependencies();
+        });
+      });
     }
 
     ArrayRef<ScheduleBundle *> getScheduleBundles(Value *V) const {
@@ -14198,6 +14249,22 @@ void BoUpSLP::transformNodes() {
     });
   };
 
+  // The reduction root gather feeds only the commutative reduction, which
+  // maps the reduced values to the lanes by the root scalars. Put the distinct
+  // sub-fields of the same wider scalar in the natural order to emit them
+  // without a permutation.
+  if (UserIgnoreList && getRootNode().isGather() &&
+      getRootNode().ReuseShuffleIndices.empty())
+    if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+            matchGatheredExtractedFields(getRootNode().Scalars, *DL)) {
+      auto &[Src, FieldWidth, Mask] = *Fields;
+      SmallVector<int> SortedMask(Mask);
+      sort(SortedMask);
+      if (equal(SortedMask,
+                seq<int>(Src->getType()->getIntegerBitWidth() / FieldWidth)))
+        reorderScalars(getRootNode().Scalars, Mask);
+    }
+
   // Try to reorder gather nodes for better vectorization opportunities.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
@@ -20975,6 +21042,15 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         GatherNodes.push_back(E);
       }
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
+               E && !TEUserNeedsEmitFirst &&
+               TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
+               E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
+               !E->UserTreeIndex.UserTE->isGather()) {
+      // Regular gathers reuse only perfectly matched transformed nodes of the
+      // same user. Gathers, emitted before their user, cannot reuse transformed
+      // nodes, which are emitted with the user.
+      GatherNodes.push_back(E);
     }
     for (const TreeEntry *TEPtr : GatherNodes) {
       if (TEPtr == TE || TEPtr->Idx == 0 || DeletedNodes.contains(TEPtr))
@@ -22583,6 +22659,14 @@ public:
     if (auto *I = dyn_cast<Instruction>(Vec)) {
       R.GatherShuffleExtractSeq.insert(I);
       R.CSEBlocks.insert(I->getParent());
+      // A vectorized source scalar is erased; extract it for the bitcast.
+      ArrayRef<TreeEntry *> TEs = R.getTreeEntries(Src);
+      const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
+        return R.TransformedToGatherNodes.contains(TE) ||
+               R.DeletedNodes.contains(TE);
+      });
+      if (It != TEs.end())
+        R.ExternalUses.emplace_back(Src, I, **It, (*It)->findLaneForValue(Src));
     }
     Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
     // The extracted fields are unsigned.
@@ -22724,20 +22808,6 @@ std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
   Value *Src = std::get<0>(*ExtractedFields);
   unsigned FieldWidth = std::get<1>(*ExtractedFields);
   SmallVector<int> &Mask = std::get<2>(*ExtractedFields);
-  unsigned NumFields = Src->getType()->getIntegerBitWidth() / FieldWidth;
-  // The vector of the reduction root gather feeds only the commutative
-  // reduction; other users of the gathered scalars keep using the scalars,
-  // so the lane order is unobservable. Emit the fields in the natural order
-  // and skip the permutation when each lane holds a distinct field.
-  if (!E->UserTreeIndex && UserIgnoreList && Mask.size() == NumFields) {
-    SmallVector<int> SortedMask(Mask);
-    sort(SortedMask);
-    // Each field is held at most once; poison lanes are ignored.
-    if (adjacent_find(SortedMask, [](int A, int B) {
-          return A != PoisonMaskElem && A == B;
-        }) == SortedMask.end())
-      std::iota(Mask.begin(), Mask.end(), 0);
-  }
   return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask, *E);
 }
 
@@ -26540,6 +26610,16 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
     }
   }
+  // Externally used values, which are not operands of the reduction ops (e.g.
+  // gathered narrowed reduction leaves), may lose all users once the tree
+  // scalars are erased; keep them alive for the reduction epilogue. Too many
+  // users - keep conservatively.
+  if (UserIgnoreList)
+    for (Instruction *I : make_isa_range<Instruction>(ExternallyUsedValues))
+      if (I->hasNUsesOrMore(UsesLimit) || none_of(I->users(), [&](User *U) {
+            return UserIgnoreList->contains(U);
+          }))
+        ExternalUseReplacements.insert(I);
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
   // cache correctness.
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
@@ -27079,19 +27159,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // It is seldom that this needs to be done a second time after adding the
     // initial bundle to the region.
     if (OldScheduleEnd && ScheduleEnd != OldScheduleEnd) {
-      for_each(ScheduleDataMap, [&](auto &P) {
-        if (BB != P.first->getParent())
-          return;
-        ScheduleData *SD = P.second;
-        if (isInSchedulingRegion(*SD))
-          SD->clearDependencies();
-      });
-      for_each(ScheduleCopyableDataMapByInst, [&](auto &P) {
-        for_each(P.second, [&](ScheduleCopyableData *SD) {
-          if (isInSchedulingRegion(*SD))
-            SD->clearDependencies();
-        });
-      });
+      clearDependencies();
       ReSchedule = true;
     }
     SmallPtrSet<Value *, 4> ExpandedOps;
@@ -27207,6 +27275,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             ReadyInsts.insert(B);
       }
     }
+    cancelScheduling(Bundle);
     ScheduledBundlesList.pop_back();
     SmallVector<ScheduleData *> ControlDependentMembers;
     for (Value *V : VL) {
@@ -27223,52 +27292,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         }
       }
       if (S.isCopyableElement(I)) {
-        // Remove the copyable data from the scheduling region and restore
-        // previous mappings.
-        auto KV = std::make_pair(EI, I);
-        assert(ScheduleCopyableDataMap.contains(KV) &&
-               "no ScheduleCopyableData for copyable element");
-        ScheduleCopyableData *SD =
-            ScheduleCopyableDataMapByInst.find(I)->getSecond().pop_back_val();
-        ScheduleCopyableDataMapByUsers[I].remove(SD);
-        if (EI.UserTE) {
-          ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
-          const auto *It = find(Op, I);
-          assert(It != Op.end() && "Lane not set");
-          SmallPtrSet<Instruction *, 4> Visited;
-          bool HadSelfUse = false;
-          do {
-            int Lane = std::distance(Op.begin(), It);
-            assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
-                !EI.UserTE->ReorderIndices.empty())
-              Lane = EI.UserTE->ReorderIndices[Lane];
-            assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
-                   "Couldn't find extract lane");
-            auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
-            if (!Visited.insert(In).second) {
-              It = find(make_range(std::next(It), Op.end()), I);
-              continue;
-            }
-            HadSelfUse |= In == I;
-            ScheduleCopyableDataMapByInstUser
-                [std::make_pair(std::make_pair(In, EI.EdgeIdx), I)]
-                    .pop_back();
-            It = find(make_range(std::next(It), Op.end()), I);
-          } while (It != Op.end());
-          // Restore the parent-edge copyable data as a user of I only if the
-          // cancelled data displaced it at creation (chained copyable
-          // self-use); otherwise the extra user dependency is never released.
-          if (HadSelfUse) {
-            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
-            if (ScheduleCopyableData *UserCD =
-                    getScheduleCopyableData(UserEI, I))
-              ScheduleCopyableDataMapByUsers[I].insert(UserCD);
-          }
-        }
-        if (ScheduleCopyableDataMapByUsers[I].empty())
-          ScheduleCopyableDataMapByUsers.erase(I);
-        ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data, even
         // if they were already cleared by the failed bundle scheduling attempt.
         if (ScheduleData *OpSD = getScheduleData(I)) {
@@ -27286,9 +27309,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             }
           }
         }
-        continue;
       }
-      ScheduledBundles.find(I)->getSecond().pop_back();
     }
     if (!ControlDependentMembers.empty()) {
       ScheduleBundle Invalid = ScheduleBundle::invalid();
@@ -27827,6 +27848,31 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
 
   LLVM_DEBUG(dbgs() << "SLP: schedule block " << BS->BB->getName() << "\n");
 
+  // The scalars of the trimmed nodes are not vectorized and must not be
+  // grouped as bundles. Cancel their bundles, recalculate all the dependencies
+  // and schedule the scalars as separate instructions: they keep their
+  // original order and stay close to their users.
+  auto IsTrimmed = [&](const TreeEntry *TE) {
+    return DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE);
+  };
+  const size_t NumBundles = BS->ScheduledBundlesList.size();
+  SmallPtrSet<const ScheduleData *, 16> TrimmedSDs;
+  erase_if(BS->ScheduledBundlesList,
+           [&](const std::unique_ptr<ScheduleBundle> &Bundle) {
+             const TreeEntry *TE = Bundle->getTreeEntry();
+             if (!IsTrimmed(TE))
+               return false;
+             LLVM_DEBUG(dbgs() << "SLP: cancel scheduling of the trimmed node "
+                               << TE->Idx << " bundle " << *Bundle << "\n");
+             for (ScheduleEntity *SE : Bundle->getBundle())
+               if (auto *SD = dyn_cast<ScheduleData>(SE))
+                 TrimmedSDs.insert(SD);
+             BS->cancelScheduling(*Bundle);
+             return true;
+           });
+  if (BS->ScheduledBundlesList.size() != NumBundles)
+    BS->clearDependencies();
+
   // A key point - if we got here, pre-scheduling was able to find a valid
   // scheduling of the sub-graph of the scheduling window which consists
   // of all vector bundles and their transitive users.  As such, we do not
@@ -27905,13 +27951,16 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     SmallVector<ScheduleCopyableData *> CopyableData =
         BS->getScheduleCopyableDataUsers(I);
     if (ScheduleData *SD = BS->getScheduleData(I)) {
+      // The bundles of the trimmed nodes are cancelled, check the first
+      // remaining node only.
       [[maybe_unused]] ArrayRef<TreeEntry *> SDTEs = getTreeEntries(I);
-      assert((isVectorLikeInstWithConstOps(SD->getInst()) || SDTEs.empty() ||
-              SDTEs.front()->doesNotNeedToSchedule() ||
+      [[maybe_unused]] const auto *SDTEIt = find_if_not(SDTEs, IsTrimmed);
+      assert((isVectorLikeInstWithConstOps(SD->getInst()) ||
+              SDTEIt == SDTEs.end() || (*SDTEIt)->doesNotNeedToSchedule() ||
               doesNotNeedToBeScheduled(I)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
-      if (!CopyableData.empty() ||
+      if (TrimmedSDs.contains(SD) || !CopyableData.empty() ||
           any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
             assert(TE->isGather() && "expected gather node");
             return TE->hasState() && TE->hasCopyableElements() &&
@@ -30696,17 +30745,6 @@ private:
     return isCmpSelMinMax(I) ? 3 : (I->isUnaryOp() ? 1 : 2);
   }
 
-  /// Checks if the instruction is in basic block \p BB.
-  /// For a cmp+sel min/max reduction check that both ops are in \p BB.
-  static bool hasSameParent(Instruction *I, BasicBlock *BB) {
-    if (isCmpSelMinMax(I) || isBoolLogicOp(I)) {
-      auto *Sel = cast<SelectInst>(I);
-      auto *Cmp = dyn_cast<Instruction>(Sel->getCondition());
-      return Sel->getParent() == BB && Cmp && Cmp->getParent() == BB;
-    }
-    return I->getParent() == BB;
-  }
-
   /// Expected number of uses for reduction operations/reduced values.
   static bool hasRequiredNumberOfUses(bool IsCmpSelMinMax, Instruction *I) {
     if (IsCmpSelMinMax) {
@@ -32662,9 +32700,9 @@ public:
             RdxVal = It->second;
           if (!Visited.insert(RdxVal).second)
             continue;
-          // Check if the scalar was vectorized as part of the vectorization
-          // tree but not the top node.
-          if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
+          // Scalars not reduced by the top node may be used by the reduction
+          // epilogue, even if not vectorized as part of the tree.
+          if (!VLScalars.contains(RdxVal)) {
             LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }

@@ -1304,6 +1304,91 @@ exit:
   ret void
 }
 
+; Predicated store where the condition has a zero taken weight. As in
+; BlockFrequencyInfo, a zero weight marks the edge as cold, not as never taken,
+; so the replicate region branches must still get (very unlikely) weights.
+define void @predicated_store_zero_taken_weight(ptr %a, i32 %n) {
+; VF4IC1-LABEL: define void @predicated_store_zero_taken_weight(
+; VF4IC1-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
+; VF4IC1:  [[ENTRY:.*:]]
+; VF4IC1:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; VF4IC1:  [[VECTOR_PH]]:
+; VF4IC1:  [[VECTOR_BODY:.*]]:
+; VF4IC1:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF4IC1:  [[PRED_STORE_IF]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE]]:
+; VF4IC1:    br i1 [[TMP4:%.*]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; VF4IC1:  [[PRED_STORE_IF1]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE2]]:
+; VF4IC1:    br i1 [[TMP7:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; VF4IC1:  [[PRED_STORE_IF3]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE4]]:
+; VF4IC1:    br i1 [[TMP10:%.*]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; VF4IC1:  [[PRED_STORE_IF5]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE6]]:
+; VF4IC1:    br i1 [[TMP13:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP50:![0-9]+]]
+; VF4IC1:  [[MIDDLE_BLOCK]]:
+; VF4IC1:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF7]]
+; VF4IC1:  [[SCALAR_PH]]:
+; VF4IC1:  [[LOOP:.*]]:
+; VF4IC1:    br i1 [[C:%.*]], label %[[IF_THEN:.*]], label %[[LATCH:.*]], !prof [[PROF51:![0-9]+]]
+; VF4IC1:  [[IF_THEN]]:
+; VF4IC1:  [[LATCH]]:
+; VF4IC1:    br i1 [[EXITCOND:%.*]], label %[[EXIT]], label %[[LOOP]], !prof [[PROF8]], !llvm.loop [[LOOP52:![0-9]+]]
+; VF4IC1:  [[EXIT]]:
+;
+; VF2IC2-LABEL: define void @predicated_store_zero_taken_weight(
+; VF2IC2-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
+; VF2IC2:  [[ENTRY:.*:]]
+; VF2IC2:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; VF2IC2:  [[VECTOR_PH]]:
+; VF2IC2:  [[VECTOR_BODY:.*]]:
+; VF2IC2:    br i1 [[TMP5:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF2IC2:  [[PRED_STORE_IF]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE]]:
+; VF2IC2:    br i1 [[TMP6:%.*]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
+; VF2IC2:  [[PRED_STORE_IF2]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE3]]:
+; VF2IC2:    br i1 [[TMP9:%.*]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
+; VF2IC2:  [[PRED_STORE_IF4]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE5]]:
+; VF2IC2:    br i1 [[TMP12:%.*]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
+; VF2IC2:  [[PRED_STORE_IF6]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE7]]:
+; VF2IC2:    br i1 [[TMP15:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP50:![0-9]+]]
+; VF2IC2:  [[MIDDLE_BLOCK]]:
+; VF2IC2:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF7]]
+; VF2IC2:  [[SCALAR_PH]]:
+; VF2IC2:  [[LOOP:.*]]:
+; VF2IC2:    br i1 [[C:%.*]], label %[[IF_THEN:.*]], label %[[LATCH:.*]], !prof [[PROF51:![0-9]+]]
+; VF2IC2:  [[IF_THEN]]:
+; VF2IC2:  [[LATCH]]:
+; VF2IC2:    br i1 [[EXITCOND:%.*]], label %[[EXIT]], label %[[LOOP]], !prof [[PROF8]], !llvm.loop [[LOOP52:![0-9]+]]
+; VF2IC2:  [[EXIT]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep = getelementptr inbounds i32, ptr %a, i32 %iv
+  %val = load i32, ptr %gep, align 4
+  %c = icmp sgt i32 %val, 0
+  br i1 %c, label %if.then, label %latch, !prof !10
+
+if.then:
+  store i32 0, ptr %gep, align 4
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop, !prof !0
+
+exit:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1, i32 1000}
 !1 = !{!"branch_weights", i32 1, i32 7}
 !2 = !{!"branch_weights", i32 1, i32 1}
@@ -1314,6 +1399,7 @@ exit:
 !7 = !{!"branch_weights", i32 4, i32 1, i32 2, i32 1}
 !8 = !{!"branch_weights", i32 4294967295, i32 1}
 !9 = !{!"branch_weights", i32 1, i32 0}
+!10 = !{!"branch_weights", i32 0, i32 1000}
 ;.
 ; VF4IC1: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; VF4IC1: [[PROF1]] = !{!"branch_weights", i32 1, i32 7}
@@ -1365,6 +1451,9 @@ exit:
 ; VF4IC1: [[LOOP47]] = distinct !{[[LOOP47]], [[META5]], [[META4]], [[META10]]}
 ; VF4IC1: [[LOOP48]] = distinct !{[[LOOP48]], [[META4]], [[META5]], [[META6]]}
 ; VF4IC1: [[LOOP49]] = distinct !{[[LOOP49]], [[META5]], [[META4]], [[META10]]}
+; VF4IC1: [[LOOP50]] = distinct !{[[LOOP50]], [[META4]], [[META5]], [[META6]]}
+; VF4IC1: [[PROF51]] = !{!"branch_weights", i32 0, i32 1000}
+; VF4IC1: [[LOOP52]] = distinct !{[[LOOP52]], [[META5]], [[META4]], [[META10]]}
 ;.
 ; VF2IC2: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; VF2IC2: [[PROF1]] = !{!"branch_weights", i32 1, i32 7}
@@ -1416,4 +1505,7 @@ exit:
 ; VF2IC2: [[LOOP47]] = distinct !{[[LOOP47]], [[META5]], [[META4]], [[META10]]}
 ; VF2IC2: [[LOOP48]] = distinct !{[[LOOP48]], [[META4]], [[META5]], [[META6]]}
 ; VF2IC2: [[LOOP49]] = distinct !{[[LOOP49]], [[META5]], [[META4]], [[META10]]}
+; VF2IC2: [[LOOP50]] = distinct !{[[LOOP50]], [[META4]], [[META5]], [[META6]]}
+; VF2IC2: [[PROF51]] = !{!"branch_weights", i32 0, i32 1000}
+; VF2IC2: [[LOOP52]] = distinct !{[[LOOP52]], [[META5]], [[META4]], [[META10]]}
 ;.
