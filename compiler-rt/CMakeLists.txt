@@ -194,6 +194,8 @@ else()
 endif()
 
 option(COMPILER_RT_DEBUG "Build runtimes with full debug info" OFF)
+option(COMPILER_RT_GPU_THIN_LTO
+  "Build GPU runtimes with -flto=thin instead of -flto" OFF)
 option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
@@ -397,7 +399,11 @@ if(COMPILER_RT_GPU_BUILD)
   append_list_if(UBSAN_COMMON_SUPPORTED_ARCH -ffreestanding SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_NOSTDLIBINC_FLAG -nostdlibinc SANITIZER_COMMON_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
+  if(COMPILER_RT_GPU_THIN_LTO)
+    append_list_if(COMPILER_RT_HAS_FLTO_THIN_FLAG -flto=thin SANITIZER_COMMON_CFLAGS)
+  else()
+    append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
+  endif()
   if(COMPILER_RT_TARGET_AMDGPU)
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                    "SHELL:-Xclang -mcode-object-version=none" SANITIZER_COMMON_CFLAGS)
