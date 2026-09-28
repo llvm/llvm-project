@@ -4,6 +4,10 @@
 ; RUN: llvm-profdata merge %t/wave.raw -o %t/wave.profdata
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -S %t/input.ll -o %t/used.ll
 ; RUN: FileCheck %s --check-prefixes=WAVE,COUNTS < %t/used.ll
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -pgo-wave-metadata=true -S %t/input.ll -o %t/enabled.ll
+; RUN: diff %t/used.ll %t/enabled.ll
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -pgo-wave-metadata=false -S %t/input.ll | FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -pgo-wave-metadata=false -S %t/used.ll | FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -S %t/used.ll | FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile
 ; RUN: %python %t/raw.py lane > %t/lane.raw
 ; RUN: llvm-profdata merge %t/lane.raw -o %t/lane.profdata
@@ -14,6 +18,8 @@
 ; RUN: FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile < %t/bad-wave.ll
 ; RUN: %python %t/raw.py zero > %t/zero.raw
 ; RUN: llvm-profdata merge %t/zero.raw -o %t/zero.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/zero.profdata -pgo-wave-metadata=false -S %t/input.ll | FileCheck %s --check-prefix=ZERO-OFF --implicit-check-not=wave.profile
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/zero.profdata -pgo-wave-metadata=false -S %t/used.ll | FileCheck %s --check-prefix=ZERO-OFF --implicit-check-not=wave.profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/zero.profdata -S %t/input.ll | FileCheck %s --check-prefix=ZERO
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/zero.profdata -S %t/used.ll | FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile
 ; RUN: %python %t/raw.py no-entry > %t/no-entry.raw
@@ -22,9 +28,11 @@
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/no-entry.profdata -S %t/used.ll | FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile
 ; RUN: %python %t/raw.py missing > %t/missing.raw
 ; RUN: llvm-profdata merge %t/missing.raw -o %t/missing.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/missing.profdata -pgo-wave-metadata=false -S %t/used.ll | FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/missing.profdata -S %t/used.ll | FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile
 ; RUN: %python %t/raw.py hash > %t/hash.raw
 ; RUN: llvm-profdata merge %t/hash.raw -o %t/hash.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/hash.profdata -pgo-wave-metadata=false -S %t/used.ll | FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/hash.profdata -S %t/used.ll -o %t/hash.ll 2>&1 | FileCheck %s --check-prefix=MISMATCH
 ; RUN: FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile < %t/hash.ll
 ; RUN: %python %t/raw.py bad-lane > %t/bad-lane.raw
@@ -50,6 +58,15 @@
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/skew-lane.profdata -S %t/input.ll -o %t/skew-lane.ll
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/skew.profdata -S %t/skew-lane.ll | FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile
 
+; RUN: %python %t/raw.py uniform-wave > %t/uniform.raw
+; RUN: llvm-profdata merge %t/uniform.raw -o %t/uniform.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/uniform.profdata -S %t/input.ll -o %t/uniform.ll
+; RUN: FileCheck %s --check-prefixes=UNIFORM-WAVE,COUNTS < %t/uniform.ll
+; RUN: FileCheck %s --check-prefix=UNIFORM < %t/uniform.ll
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/uniform.profdata -pgo-wave-metadata=false -S %t/input.ll -o %t/uniform-no-wave.ll
+; RUN: FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile < %t/uniform-no-wave.ll
+; RUN: FileCheck %s --check-prefix=UNIFORM < %t/uniform-no-wave.ll
+
 ; Wave slots follow instrumentation indices, not IR block order. Only entry and
 ; b have block counters. The trailing select counter must not make exit measured.
 ; Generation checks keep the raw fixture aligned with the actual producer.
@@ -65,6 +82,7 @@
 ; no measurements remain unavailable. Replacing a profile clears stale metadata
 ; for absent, incompatible, lane-only, and unsupported-target records.
 ; NONE: define void @diamond
+; UNIFORM-WAVE: define void @diamond{{.*}}!wave.profile
 ; WAVE-LABEL: define void @diamond
 ; WAVE-SAME: !wave.profile ![[WAVES:[0-9]+]]
 ; WAVE: br i1 %cond, label %a, label %b, !prof ![[WEIGHTS:[0-9]+]]{{.*}}!wave.profile.block ![[ENTRY:[0-9]+]]
@@ -76,6 +94,8 @@
 ; WAVE-DAG: ![[A]] = !{i64 2, i64 [[FID]], i64 1, i64 0, i64 3}
 ; WAVE-DAG: ![[B]] = !{i64 2, i64 [[FID]], i64 2, i64 1, i64 3}
 ; WAVE-DAG: ![[EXIT]] = !{i64 2, i64 [[FID]], i64 3, i64 0}
+; UNIFORM-WAVE-DAG: !{i64 2, i64 {{-?[0-9]+}}, i64 100, i64 0, i64 50, i64 0}
+; COUNTS-DAG: !{!"function_entry_count", i64 6400}
 ; COUNTS-DAG: !{!"branch_weights", i32 3200, i32 3200}
 ; COUNTS-DAG: !{!"branch_weights", i32 1600, i32 4800}
 ; ZERO-LABEL: define void @diamond
@@ -89,6 +109,16 @@
 ; ZERO-DAG: ![[A]] = !{i64 2, i64 [[FID]], i64 1, i64 0, i64 3}
 ; ZERO-DAG: ![[B]] = !{i64 2, i64 [[FID]], i64 2, i64 1, i64 3}
 ; ZERO-DAG: ![[EXIT]] = !{i64 2, i64 [[FID]], i64 3, i64 0}
+; ZERO-OFF: define void @diamond
+; ZERO-OFF: !{!"function_entry_count", i64 0}
+
+; The wave metadata switch leaves function, block and branch uniformity hints
+; available, together with the ordinary entry, branch and select counts.
+; UNIFORM: define void @diamond({{.*}}!uniformity.profile
+; UNIFORM: br i1 %cond, {{.*}}!block.uniformity.profile{{.*}}!branch.uniformity.profile
+; UNIFORM: b:
+; UNIFORM: br label %exit, {{.*}}!block.uniformity.profile
+
 ; WARN: Inconsistent number of wave counts in diamond; ignoring wave profile
 ; MISMATCH: function control flow change detected (hash mismatch) diamond
 ; BAD-LANE: Inconsistent number of counts in diamond
@@ -176,6 +206,8 @@ if mode == "hash":
     func_hash += 1
 lanes = [6400, 3200, 1600]
 waves = [100, 100, 100]
+if mode == "uniform-wave":
+    waves[1] = 50
 if mode == "critical":
     func_hash = 784007059655560962
     lanes = [6400, 800]
@@ -206,7 +238,8 @@ header = [0xff6c70726f667281, version, 0, 1, 0, num_counters, 0,
 record = struct.pack("<7QI4HII4x", name_ref, func_hash, counter_delta,
                      uniform_delta, 0, 0, 0, num_counters, 0, 0, 0, 64, 0,
                      len(waves))
-counts = lanes + waves + [0] * len(lanes)
+uniform = lanes if mode == "uniform-wave" else [0] * len(lanes)
+counts = lanes + waves + uniform
 sys.stdout.buffer.write(struct.pack("<19Q", *header) + record +
                         struct.pack("<" + "Q" * len(counts), *counts) +
                         names + bytes((-len(names)) % 8))
