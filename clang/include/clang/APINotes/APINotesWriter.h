@@ -80,20 +80,12 @@ public:
                      bool IsInstanceMethod, const ObjCMethodInfo &Info,
                      llvm::VersionTuple SwiftVersion);
 
-  /// Add information about a specific C++ method.
-  ///
-  /// \param CtxID The context in which this method resides, i.e. a C++ tag.
-  /// \param Name The name of the method.
-  /// \param Info Information about this method.
+  /// Add information about a C++ method. Omitted selector components use the
+  /// broad name-based key. An empty parameter selector uses an exact
+  /// zero-parameter key.
   void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                    const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
-
-  /// Add information about a C++ method with an exact parameter selector. An
-  /// empty parameter list uses an exact zero-parameter key, and a non-empty
-  /// list uses an exact ordered parameter key.
-  void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                    llvm::ArrayRef<llvm::StringRef> Parameters,
-                    const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
+                    const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion,
+                    const FunctionSelector &Selector = FunctionSelector());
 
   /// Add information about a specific C record field.
   ///
@@ -111,21 +103,13 @@ public:
                          const GlobalVariableInfo &Info,
                          llvm::VersionTuple SwiftVersion);
 
-  /// Add information about a global function.
-  ///
-  /// \param Name The name of this global function.
-  /// \param Info Information about this global function.
+  /// Add information about a global function. Omitted selector components use
+  /// the broad name-based key. An empty parameter selector uses an exact
+  /// zero-parameter key.
   void addGlobalFunction(std::optional<Context> Ctx, llvm::StringRef Name,
                          const GlobalFunctionInfo &Info,
-                         llvm::VersionTuple SwiftVersion);
-
-  /// Add information about a global function with an exact parameter selector.
-  /// An empty parameter list uses an exact zero-parameter key, and a non-empty
-  /// list uses an exact ordered parameter key.
-  void addGlobalFunction(std::optional<Context> Ctx, llvm::StringRef Name,
-                         llvm::ArrayRef<llvm::StringRef> Parameters,
-                         const GlobalFunctionInfo &Info,
-                         llvm::VersionTuple SwiftVersion);
+                         llvm::VersionTuple SwiftVersion,
+                         const FunctionSelector &Selector = FunctionSelector());
 
   /// Add information about an enumerator.
   ///
