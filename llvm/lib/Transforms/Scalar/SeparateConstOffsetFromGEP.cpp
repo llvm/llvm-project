@@ -300,15 +300,20 @@ private:
                     GetElementPtrInst *GEP, Value *Idx);
 
   /// Analyze a xor expression, and identify the bits in the constant operand
-  /// that are disjoint from the base operand's known set bits. For these
+  /// that are disjoint from the other operands' known set bits. For these
   /// disjoint bits, a xor is equivalent to an addition, which allows us to
   /// extract them as constant offsets that can be folded into the immediate
   /// field of addressing operations. The transformation is the following one:
   ///
   ///   Base ^ Const  becomes  (Base ^ NonDisjointBits) + DisjointBits
   ///
-  /// where DisjointBits = Const & KnownZeros(Base) and
+  /// where DisjointBits = Const & KnownOnes(Base ^ Const) and
   ///       NonDisjointBits = Const & ~DisjointBits.
+  ///
+  /// A constant bit is known-one in the expression exactly when every other
+  /// operand contributes a zero to it, so for a plain xor this is equivalent to
+  /// Const & KnownZeros(Base). Taking it over the whole expression also covers
+  /// a constant buried under a chain of value xors, e.g. ((Base ^ C) ^ X) ^ Y.
   ///
   /// Example with ptr having known-zero low bit:
   ///   Original: `xor %ptr, 3`    ; 3 = 0b11
@@ -862,8 +867,11 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   // When rewriting xor(TheOther, NextInChain) expressions, the original
   // constant operand is replaced with the non-disjoints bits, which are the
   // non-extractable bits, i.e., those that must remain in the xor (the other
-  // bits have already compounded the GEP offset).
-  if (BO->getOpcode() == Instruction::Xor) {
+  // bits have already compounded the GEP offset). Only the innermost xor of a
+  // chain owns the constant leaf; outer xor nodes rebuild normally around their
+  // value operands.
+  if (BO->getOpcode() == Instruction::Xor &&
+      isa<ConstantInt>(UserChain[ChainIndex - 1])) {
     // The non-disjoint bits are cached in NonDisjointXorConstantBits, which is
     // always up-to-date.
     assert(NonDisjointXorConstantBits &&
@@ -907,26 +915,50 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   return NewBO;
 }
 
+// Descend a chain of value xors, following the xor operand at each step, to the
+// single constant leaf that may be buried under value operands, e.g.
+// ((base ^ C) ^ num0) ^ num1. Records the visited nodes top-down in \p
+// ChainNodes. Returns the constant leaf, or null on a dead end or an ambiguous
+// fork (both operands are xors), in which case nothing is extracted.
+static ConstantInt *
+traceXorConstantLeaf(BinaryOperator *Xor,
+                     SmallVectorImpl<BinaryOperator *> &ChainNodes) {
+  ChainNodes.push_back(Xor);
+  Value *Op0 = Xor->getOperand(0), *Op1 = Xor->getOperand(1);
+  if (auto *CI = dyn_cast<ConstantInt>(Op1))
+    return CI;
+  if (auto *CI = dyn_cast<ConstantInt>(Op0))
+    return CI;
+
+  auto AsXor = [](Value *V) -> BinaryOperator * {
+    auto *BO = dyn_cast<BinaryOperator>(V);
+    return BO && BO->getOpcode() == Instruction::Xor ? BO : nullptr;
+  };
+  BinaryOperator *Xor0 = AsXor(Op0), *Xor1 = AsXor(Op1);
+  if (static_cast<bool>(Xor0) == static_cast<bool>(Xor1))
+    return nullptr;
+  return traceXorConstantLeaf(Xor0 ? Xor0 : Xor1, ChainNodes);
+}
+
 APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
     BinaryOperator *XorInst) {
   assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
          "Expected XOR instruction");
 
   unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
-  Value *BaseOp;
-  ConstantInt *XorConstantOp;
 
-  if (!match(XorInst, m_Xor(m_Value(BaseOp), m_ConstantInt(XorConstantOp))))
+  SmallVector<BinaryOperator *, 8> ChainNodes;
+  ConstantInt *XorConstantOp = traceXorConstantLeaf(XorInst, ChainNodes);
+  if (!XorConstantOp)
     return APInt::getZero(BitWidth);
-
-  const KnownBits BaseKnownBits = computeKnownBits(BaseOp, SQ);
   const APInt &ConstantValue = XorConstantOp->getValue();
 
-  // Compute the disjoint bits, i.e., those bits of the constant operand that
-  // are known-zero in the base. These disjoint bits will contribute to the
-  // final GEP offset. If there are no disjoint bits, there isn't any offset to
-  // extract from the xor.
-  const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
+  // A constant bit is extractable as an additive offset only where it is
+  // known-one in the whole expression: there every value operand of the chain
+  // contributes a zero, so the xor behaves like an addition for that bit. (For
+  // a plain xor(base, C) this reduces to C & KnownZeros(base).) If there are no
+  // such bits, there is no offset to extract from the xor.
+  const APInt DisjointBits = ConstantValue & computeKnownBits(XorInst, SQ).One;
   if (DisjointBits.isZero())
     return DisjointBits;
 
@@ -940,12 +972,14 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   NonDisjointXorConstantBits =
       ConstantInt::get(XorInst->getContext(), NonDisjointBits);
 
-  // UserChain maintains a path from the constant up to the GEP index. Push the
-  // xor constant operand, which is the constant leaf of the chain (which is
-  // also what `distributeCastsAndCloneChain` expects). Such a chained operand
-  // is the one to be replaced with the non-disjoint bits, while rebuilding the
-  // xor afterwards. The xor instruction itself is pushed upon returning.
+  // UserChain maintains a path from the constant leaf up to the GEP index. Push
+  // the constant leaf, then the traced xor nodes from innermost outward,
+  // excluding the top node which find() pushes upon returning. For a single xor
+  // this pushes only the constant, matching the non-chained case.
   UserChain.push_back(XorConstantOp);
+  for (BinaryOperator *Node : llvm::reverse(ChainNodes))
+    if (Node != XorInst)
+      UserChain.push_back(Node);
 
   return DisjointBits;
 }
