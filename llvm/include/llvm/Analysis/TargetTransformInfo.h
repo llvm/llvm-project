@@ -150,22 +150,29 @@ class MemIntrinsicCostAttributes {
   /// Alignment of single element.
   Align Alignment;
 
+  const Value *StrideVal;
+
 public:
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
                              bool VariableMask, Align Alignment,
-                             const Instruction *I = nullptr)
+                             const Instruction *I = nullptr,
+                             const Value *StrideVal = nullptr)
+
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
-        Alignment(Alignment) {}
+        Alignment(Alignment), StrideVal(StrideVal) {}
 
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
-                             unsigned AddressSpace = 0)
+                             unsigned AddressSpace = 0,
+                             const Value *StrideVal = nullptr)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
-        Alignment(Alignment) {}
+        Alignment(Alignment), StrideVal(StrideVal) {}
 
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, bool VariableMask,
-                             Align Alignment, const Instruction *I = nullptr)
+                             Align Alignment, const Instruction *I = nullptr,
+                             const Value *StrideVal = nullptr)
+
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
-        Alignment(Alignment) {}
+        Alignment(Alignment), StrideVal(StrideVal) {}
 
   Intrinsic::ID getID() const { return IID; }
   const Instruction *getInst() const { return I; }
@@ -174,6 +181,7 @@ public:
   bool getVariableMask() const { return VariableMask; }
   unsigned getAddressSpace() const { return AddressSpace; }
   Align getAlignment() const { return Alignment; }
+  const Value *getStrideVal() const { return StrideVal; }
 };
 
 /// Represents a hint about the context in which a vector instruction or
@@ -932,6 +940,12 @@ public:
   LLVM_ABI bool
   isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
                     MaskKind MaskKind = VariableOrConstantMask) const;
+
+  /// Return true if the target supports speculatively loading \p DataType from
+  /// address space \p AddressSpace, i.e. @llvm.can.load.speculatively can
+  /// return true for the store size of \p DataType.
+  LLVM_ABI bool isLegalSpeculativeLoad(Type *DataType,
+                                       unsigned AddressSpace) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
