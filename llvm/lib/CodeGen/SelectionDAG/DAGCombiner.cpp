@@ -17970,8 +17970,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
-  if (!LegalTypes ||
-      TLI.isTypeDesirableForOp(N0.getOpcode(), VT, N0.getNode())) {
+  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getNode(), VT)) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 

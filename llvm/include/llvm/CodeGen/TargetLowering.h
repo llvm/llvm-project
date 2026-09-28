@@ -4845,10 +4845,9 @@ public:
     return isTypeLegal(VT);
   }
 
-  /// Overload that provides context about the specific node being optimized.
-  /// By default, calls the version without the node parameter.
-  virtual bool isTypeDesirableForOp(unsigned Opc, EVT VT, SDNode *N) const {
-    return isTypeDesirableForOp(Opc, VT);
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating

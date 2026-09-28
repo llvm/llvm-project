@@ -2505,14 +2505,13 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
-bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT,
-                                            SDNode *N) const {
+bool SITargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
   // Do not convert uniform i32 loads to 16-bit.
   // Uniform 16-bit loads are legalized to i16 = trunc (zextload i16->i32)
   // to match subword load patterns.  Allowing conversion back to a 16-bit
   // load would create an infinite loop.
-  if (Subtarget->hasScalarSubwordLoads() && Op == ISD::LOAD && !VT.isVector() &&
-      VT.getSizeInBits() == 16) {
+  if (Subtarget->hasScalarSubwordLoads() && N->getOpcode() == ISD::LOAD &&
+      !VT.isVector() && VT.getSizeInBits() == 16) {
     auto *Load = dyn_cast<LoadSDNode>(N);
     if (Load && Load->getValueType(0) == MVT::i32 && !Load->isDivergent() &&
         AMDGPU::isUniformMMO(Load->getMemOperand())) {
@@ -2520,7 +2519,7 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT,
     }
   }
 
-  return isTypeDesirableForOp(Op, VT);
+  return isTypeDesirableForOp(N->getOpcode(), VT);
 }
 
 MachinePointerInfo
