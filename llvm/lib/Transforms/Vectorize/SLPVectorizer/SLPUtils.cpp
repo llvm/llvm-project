@@ -1166,8 +1166,11 @@ matchExtractedField(Value *V) {
     if (match(Val, m_Trunc(m_Shr(m_Value(Src), m_APInt(Amt)))) ||
         match(Val, m_Shr(m_Value(Src), m_APInt(Amt)))) {
       if (std::optional<unsigned> Offset = GetFieldOffset(
-              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth))
+              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth)) {
+        // The truncation of the shifted value keeps the field, look through it.
+        match(Src, m_Trunc(m_Value(Src)));
         return std::make_pair(Src, *Offset);
+      }
       return std::nullopt;
     }
     if (match(Val, m_Trunc(m_Value(Src))) &&
