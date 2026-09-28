@@ -169,9 +169,9 @@ for var in ("ORC_RT_LOG", "ORC_RT_LOG_OUTPUT"):
     config.environment.pop(var, None)
 
 if platform.system() == "Darwin":
-    config.substitutions.append(("%macos-product-version", platform.mac_ver()[0]))
+    config.substitutions.append(("%host-os-version", platform.mac_ver()[0]))
 else:
-    config.substitutions.append(("%macos-product-version", ""))
+    config.substitutions.append(("%host-os-version", ""))
 
 config.substitutions.append(("%target_triple", config.target_triple))
 
