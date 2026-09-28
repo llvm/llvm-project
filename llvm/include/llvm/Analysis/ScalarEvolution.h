@@ -970,8 +970,8 @@ public:
 
   /// This is a convenience function which does
   /// getSCEVAtExit(getSCEV(V), L, ExitingBlock).
-  LLVM_ABI SCEVUse getSCEVAtExit(Value *V, const Loop *L,
-                                 const BasicBlock *ExitingBlock) {
+  SCEVUse getSCEVAtExit(Value *V, const Loop *L,
+                        const BasicBlock *ExitingBlock) {
     return getSCEVAtExit(getSCEV(V), L, ExitingBlock);
   }
 
