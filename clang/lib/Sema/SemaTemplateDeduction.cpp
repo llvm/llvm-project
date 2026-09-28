@@ -497,17 +497,6 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
   if (auto *Expansion = dyn_cast<PackExpansionType>(ParamType))
     ParamType = Expansion->getPattern();
 
-  // FIXME: It's not clear how deduction of a parameter of reference
-  // type from an argument (of non-reference type) should be performed.
-  // For now, we just make the argument have same reference type as the
-  // parameter.
-  if (ParamType->isReferenceType() && !ValueType->isReferenceType()) {
-    if (ParamType->isRValueReferenceType())
-      ValueType = S.Context.getRValueReferenceType(ValueType);
-    else
-      ValueType = S.Context.getLValueReferenceType(ValueType);
-  }
-
   return DeduceTemplateArgumentsByTypeMatch(
       S, TemplateParams, ParamType, ValueType, Info, Deduced,
       TDF_SkipNonDependent | TDF_IgnoreQualifiers,
@@ -2564,6 +2553,20 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
   llvm_unreachable("Invalid Type Class!");
 }
 
+/// C++26 [temp.deduct.type]p13:
+///   When the value of the argument corresponding to a constant template
+///   parameter P that is declared with a dependent type is deduced from an
+///   expression, the template parameters in the type of P are deduced from the
+///   type of the value.
+static QualType getTypeOfTemplateArgumentValue(TemplateDeductionInfo &Info,
+                                               const TemplateArgument &A) {
+  const Expr *E = A.getAsExpr();
+  if (NonTypeOrVarTemplateParmDecl NTTP =
+          getDeducedNTTParameterFromExpr(E, Info.getDeducedDepth()))
+    return NTTP.getType();
+  return unwrapExpressionForDeduction(E)->getType();
+}
+
 static TemplateDeductionResult
 DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
                         const TemplateArgument &P, TemplateArgument A,
@@ -2648,11 +2651,10 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
             getDeducedNTTParameterFromExpr(Info, P.getAsExpr())) {
       switch (A.getKind()) {
       case TemplateArgument::Expression: {
-        // The type of the value is the type of the expression as written.
         return DeduceNonTypeTemplateArgument(
             S, TemplateParams, NTTP, DeducedTemplateArgument(A),
-            A.getAsExpr()->IgnoreImplicitAsWritten()->getType(), Info,
-            PartialOrdering, Deduced, HasDeducedAnyParam);
+            getTypeOfTemplateArgumentValue(Info, A), Info, PartialOrdering,
+            Deduced, HasDeducedAnyParam);
       }
       case TemplateArgument::Integral:
       case TemplateArgument::StructuralValue:

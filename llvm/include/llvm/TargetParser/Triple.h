@@ -932,6 +932,9 @@ public:
     return Version < VersionTuple(Major);
   }
 
+  /// Tests whether the environment is mlibc.
+  bool isMlibc() const { return getEnvironment() == Triple::Mlibc; }
+
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
     return getEnvironment() == Triple::Musl ||

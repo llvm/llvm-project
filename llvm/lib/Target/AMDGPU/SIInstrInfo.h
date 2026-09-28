@@ -273,6 +273,13 @@ public:
     return RI;
   }
 
+  // FIXME: This is inaccurate and needs to account for use context. Normal asm
+  // constraints should use 64-bit pointers.
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AMDGPU::VGPR_32RegClass;
+  }
+
   const GCNSubtarget &getSubtarget() const {
     return ST;
   }
@@ -1759,6 +1766,8 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getBlockingCycles(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
