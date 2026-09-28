@@ -11,7 +11,8 @@
 namespace clang::clangd {
 namespace {
 
-/// A standalone tweak registered directly via REGISTER_TWEAK without a FeatureModule.
+/// A standalone tweak registered directly via REGISTER_TWEAK without a
+/// FeatureModule.
 class StandaloneTweak final : public Tweak {
 public:
   const char *id() const override;
