@@ -1,0 +1,149 @@
+# Check if DBG_VALUE is set to undef if it doesn't support an updated
+# register class.
+# Input was generated from compiler-rt/lib/builtins/adddf3.c.
+
+# RUN: llc -mtriple i386-apple-macosx10.7.0 -run-pass=register-coalescer %s -o - | FileCheck %s
+
+# CHECK-NOT: DBG_VALUE.*sub_8bit
+# CHECK: DBG_VALUE $noreg
+# CHECK-NOT: DBG_VALUE.*sub_8bit
+
+--- |
+  target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128"
+  target triple = "i386-apple-macosx10.7.0"
+  
+  define i32 @foo(i1 %i) {
+  entry:
+    %shl = or i32 0, 1
+    br i1 %i, label %if.then, label %if.end
+  
+  if.then:                                     ; preds = %entry
+    %cmp = icmp ne i32 %shl, 0
+      #dbg_value(i1 %cmp, !4, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), !12)
+    %conv127.i = zext i1 %cmp to i32
+    %or = or i32 %shl, %conv127.i
+    br label %if.end
+  
+  if.end:                                      ; preds = %if.then, %entry
+    %res = phi i32 [ %or, %if.then ], [ 1, %entry ]
+    ret i32 %res
+  }
+  
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, producer: "clang version 21.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !3, retainedTypes: !3)
+  !2 = !DIFile(filename: "foo.c", directory: "/")
+  !3 = !{}
+  !4 = !DILocalVariable(name: "sticky", scope: !5, file: !6, line: 136, type: !10)
+  !5 = distinct !DILexicalBlock(scope: !7, file: !6, line: 132, column: 23)
+  !6 = !DIFile(filename: "bar.inc", directory: "/")
+  !7 = distinct !DILexicalBlock(scope: !8, file: !6, line: 132, column: 7)
+  !8 = distinct !DISubprogram(name: "bar", scope: !6, file: !6, line: 17, type: !9, scopeLine: 17, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !3)
+  !9 = distinct !DISubroutineType(types: !3)
+  !10 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !11)
+  !11 = !DIBasicType(name: "_Bool", size: 8, encoding: DW_ATE_boolean)
+  !12 = !DILocation(line: 0, scope: !5, inlinedAt: !13)
+  !13 = distinct !DILocation(line: 16, column: 59, scope: !14)
+  !14 = distinct !DISubprogram(name: "foo", scope: !2, file: !2, line: 16, type: !15, scopeLine: 16, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !3)
+  !15 = !DISubroutineType(types: !3)
+...
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gr32_abcd, preferred-register: '', flags: [  ] }
+  - { id: 2, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 4, class: gr8, preferred-register: '', flags: [  ] }
+  - { id: 5, class: gr32_abcd, preferred-register: '', flags: [  ] }
+  - { id: 6, class: gr32_abcd, preferred-register: '', flags: [  ] }
+  - { id: 7, class: gr32, preferred-register: '', flags: [  ] }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 1, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  
+    %3:gr32 = MOV32ri 1
+    TEST8mi %fixed-stack.0, 1, $noreg, 0, $noreg, 1, implicit-def $eflags :: (load (s8) from %fixed-stack.0, align 16)
+    JCC_1 %bb.1, 5, implicit killed $eflags
+  
+  bb.3:
+    successors: %bb.2(0x80000000)
+  
+    %7:gr32 = COPY killed %3
+    JMP_1 %bb.2
+  
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+  
+    %6:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST32rr %3, %3, implicit-def $eflags
+    %4:gr8 = SETCCr 5, implicit killed $eflags
+    DBG_VALUE %4, $noreg, !4, !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value),  debug-location !12
+    %5:gr32_abcd = COPY killed %6
+    %5.sub_8bit:gr32_abcd = COPY killed %4
+    %1:gr32_abcd = COPY killed %5
+    %1:gr32_abcd = OR32rr %1, killed %3, implicit-def dead $eflags
+    %7:gr32 = COPY killed %1
+  
+  bb.2.if.end:
+    %2:gr32 = COPY killed %7
+    $eax = COPY killed %2
+    RET 0, killed $eax
+...
