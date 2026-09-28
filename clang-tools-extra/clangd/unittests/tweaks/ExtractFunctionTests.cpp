@@ -924,6 +924,34 @@ TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
               HasSubstr("extracted(int *const &p)"));
 }
 
+TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
+  Context = File;
+  // A reference bound to a conditional expression could alias either
+  // branch at runtime, so both must be marked non-const -- getting only
+  // one (or neither) would let the other stay const while still being
+  // reachable through the reference, producing code that doesn't compile.
+  EXPECT_THAT(apply(R"cpp(
+    void f(bool cond, int c, int d) {
+      [[int &a = cond ? c : d;
+      a = 5;]]
+    }
+  )cpp"),
+              HasSubstr("extracted(const bool &cond, int &c, int &d)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
+  Context = File;
+  // A static operator() (or operator[], since C++23) has no implicit
+  // object at all, so calling it through `s(...)` syntax doesn't touch
+  // `s` regardless of the operator's own constness.
+  ExtraArgs.push_back("-std=c++23");
+  EXPECT_THAT(apply(R"cpp(
+    struct S { static void operator()(int); };
+    void f(S s, int x) { [[s(x);]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, const int &x)"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

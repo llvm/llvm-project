@@ -24,8 +24,9 @@
 //
 // - Only extract statements
 // - Extracts from non-templated free functions only.
-// - Parameters are const only if the declaration was const
-//   - Always passed by l-value reference
+// - Parameters that are never (conservatively) mutated in the extracted
+//   code become const references.
+// - Always passed by l-value reference
 // - Void return type
 // - Cannot extract declarations that will be needed in the original function
 //   after extraction.
@@ -763,6 +764,18 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
         DeclInfo->IsPossiblyMutated = true;
     }
     void markPossiblyMutated(const Expr *E) {
+      if (!E)
+        return;
+      // A reference bound to (or a mutation reaching through) a conditional
+      // expression could end up aliasing either branch at runtime, so both
+      // have to be marked -- underlyingDecl() only follows a single lvalue
+      // path and can't express that.
+      if (const auto *CO =
+              dyn_cast<AbstractConditionalOperator>(E->IgnoreParenCasts())) {
+        markPossiblyMutated(CO->getTrueExpr());
+        markPossiblyMutated(CO->getFalseExpr());
+        return;
+      }
       markPossiblyMutated(underlyingDecl(E));
     }
 
@@ -788,10 +801,12 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
     }
 
     // Marks the object a non-const member function is (or may be) called
-    // on, whether through `.`, `->`, or an overloaded operator.
+    // on, whether through `.`, `->`, or an overloaded operator. A static
+    // method (possible since C++23 for operator() and operator[]) has no
+    // `this` at all, so it never touches Object regardless of constness.
     void markPossiblyMutatedCallee(const Expr *Object,
                                    const CXXMethodDecl *Method) {
-      if (Method && !Method->isConst())
+      if (Method && !Method->isStatic() && !Method->isConst())
         markPossiblyMutated(Object);
     }
 
@@ -993,6 +1008,7 @@ bool createParameters(NewFunction &ExtractedFunc,
     // argument is common and easy to miss conservatively, so we don't try.
     if (!DeclInfo.IsPossiblyMutated && !TypeInfo->isArrayType())
       TypeInfo.addConst();
+    // FIXME: check if parameter will be a non l-value reference.
     bool IsPassedByReference = true;
     // We use the index of declaration as the ordering priority for parameters.
     ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
