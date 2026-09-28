@@ -52,11 +52,26 @@ define void @declared_scope_of_disjoint_domain_unused(ptr %ptr0, ptr %ptr1) {
   ret void
 }
 
+define void @scope_used_by_every_list_of_disjoint_domain(ptr %ptr0, ptr %ptr1) {
+; CHECK-LABEL: define void @scope_used_by_every_list_of_disjoint_domain(
+; CHECK-SAME: ptr [[PTR0:%.*]], ptr [[PTR1:%.*]]) {
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3]])
+; CHECK-NEXT:    store i8 42, ptr [[PTR0]], align 1, !alias.scope [[META8:![0-9]+]]
+; CHECK-NEXT:    store i8 43, ptr [[PTR1]], align 1, !alias.scope [[META9:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.noalias.scope.decl(metadata !0)
+  call void @llvm.experimental.noalias.scope.decl(metadata !3)
+  store i8 42, ptr %ptr0, !alias.scope !13
+  store i8 43, ptr %ptr1, !alias.scope !14
+  ret void
+}
+
 define void @two_scopes_of_plain_domain_used(ptr %ptr0, ptr %ptr1) {
 ; CHECK-LABEL: define void @two_scopes_of_plain_domain_used(
 ; CHECK-SAME: ptr [[PTR0:%.*]], ptr [[PTR1:%.*]]) {
-; CHECK-NEXT:    store i8 42, ptr [[PTR0]], align 1, !alias.scope [[META8:![0-9]+]]
-; CHECK-NEXT:    store i8 43, ptr [[PTR1]], align 1, !alias.scope [[META9:![0-9]+]]
+; CHECK-NEXT:    store i8 42, ptr [[PTR0]], align 1, !alias.scope [[META11:![0-9]+]]
+; CHECK-NEXT:    store i8 43, ptr [[PTR1]], align 1, !alias.scope [[META12:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.experimental.noalias.scope.decl(metadata !10)
@@ -80,6 +95,9 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !10 = !{!6}
 !11 = !{!12}
 !12 = distinct !{!12, !7}
+!13 = !{!1, !4}
+!14 = !{!1, !15}
+!15 = distinct !{!15, !2}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
@@ -89,7 +107,10 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; CHECK: [[META5]] = !{[[META1]], [[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], i1 false}
-; CHECK: [[META8]] = !{[[META6]]}
-; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
-; CHECK: [[META10]] = distinct !{[[META10]], [[META7]]}
+; CHECK: [[META8]] = !{[[META1]], [[META4]]}
+; CHECK: [[META9]] = !{[[META1]], [[META10:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]], [[META2]]}
+; CHECK: [[META11]] = !{[[META6]]}
+; CHECK: [[META12]] = !{[[META13:![0-9]+]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META7]]}
 ;.

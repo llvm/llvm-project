@@ -1156,19 +1156,7 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                               StringRef Ext, LLVMContext &Context) {
   MDBuilder MDB(Context);
 
-  // A cloned scope has to go into a clone of its domain if that domain has
-  // disjoint scopes: the copies of a duplicated access are in the same memory
-  // region, so they must not become implicitly noalias with each other.
   DenseMap<const MDNode *, MDNode *> ClonedDomains;
-  auto GetClonedDomain = [&](const MDNode *Domain) {
-    if (!Domain || !AliasScopeDomainNode(Domain).hasDisjointScopes())
-      return const_cast<MDNode *>(Domain);
-    MDNode *&ClonedDomain = ClonedDomains[Domain];
-    if (!ClonedDomain)
-      ClonedDomain = MDB.createAnonymousAliasScopeDomain(
-          AliasScopeDomainNode(Domain).getName(), /*DisjointScopes=*/true);
-    return ClonedDomain;
-  };
 
   for (MDNode *ScopeList : NoAliasDeclScopes) {
     for (const MDOperand &MDOp : ScopeList->operands()) {
@@ -1182,8 +1170,22 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
         else
           Name = std::string(Ext);
 
-        MDNode *NewScope = MDB.createAnonymousAliasScope(
-            GetClonedDomain(SNANode.getDomain()), Name);
+        // A cloned scope has to go into a clone of its domain if that domain
+        // has disjoint scopes: the copies of a duplicated access are in the
+        // same memory region, so they must not become implicitly noalias with
+        // each other.
+        const MDNode *Domain = SNANode.getDomain();
+        MDNode *NewDomain = const_cast<MDNode *>(Domain);
+        if (AliasScopeDomainNode(Domain).hasDisjointScopes()) {
+          MDNode *&ClonedDomain = ClonedDomains[Domain];
+          if (!ClonedDomain)
+            ClonedDomain = MDB.createAnonymousAliasScopeDomain(
+                AliasScopeDomainNode(Domain).getDescription(),
+                /*DisjointScopes=*/true);
+          NewDomain = ClonedDomain;
+        }
+
+        MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
         ClonedScopes.insert(std::make_pair(MD, NewScope));
       }
     }

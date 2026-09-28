@@ -1621,7 +1621,9 @@ public:
   /// Get the MDNode for this AliasScopeDomainNode.
   const MDNode *getNode() const { return Node; }
 
-  StringRef getName() const {
+  /// Get the optional human-readable description of this domain or the empty
+  /// string otherwise.
+  StringRef getDescription() const {
     if (Node->getNumOperands() > 2)
       if (MDString *N = dyn_cast_or_null<MDString>(Node->getOperand(2)))
         return N->getString();
