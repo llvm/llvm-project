@@ -49,7 +49,7 @@ subroutine trailing_cycle(a, n)
   ! CHECK:       15 CycleStmt! -> 17: cycle outer
   ! CHECK:       16 ^EndDoStmt -> 13: end do
   ! CHECK:     <<End DoConstruct!>>
-  ! CHECK:     17 ^EndDoStmt -> 12: end do outer
+  ! CHECK:     17 ^EndDoStmt -> 12 <- 15: end do outer
   ! CHECK:   <<End DoConstruct>>
   outer: do i = 1, n
     do j = 1, n
@@ -67,7 +67,7 @@ subroutine trailing_cycle(a, n)
   ! CHECK:       21 EndIfStmt
   ! CHECK:     <<End IfConstruct>>
   ! CHECK:     23 CycleStmt! -> 24: 10 cycle
-  ! CHECK:     24 ^EndDoStmt -> 18: end do
+  ! CHECK:     24 ^EndDoStmt -> 18 <- 23: end do
   ! CHECK:   <<End DoConstruct!>>
   do i = 1, n
     if (a(i) > 0.0) goto 10
@@ -80,7 +80,7 @@ subroutine trailing_cycle(a, n)
   ! CHECK:     25 ^NonLabelDoStmt -> 28: do i = 1, n
   ! CHECK:     26 ^CycleStmt! -> 28: cycle
   ! CHECK:     27 ^AssignmentStmt: a(i) = 5.0
-  ! CHECK:     28 ^EndDoStmt -> 25: end do
+  ! CHECK:     28 ^EndDoStmt -> 25 <- 26: end do
   ! CHECK:   <<End DoConstruct!>>
   do i = 1, n
     cycle
