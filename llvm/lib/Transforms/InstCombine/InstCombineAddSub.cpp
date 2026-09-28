@@ -1758,6 +1758,14 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
+  // (A ^ sext(B)) + zext(B) --> B ? -A : A
+  if (match(&I, m_c_Add(m_OneUse(m_c_Xor(m_Value(A), m_SExt(m_Value(B)))),
+                        m_ZExt(m_Deferred(B)))) &&
+      B->getType()->isIntOrIntVectorTy(1)) {
+    Value *NegA = Builder.CreateNeg(A, "", I.hasNoSignedWrap());
+    return SelectInst::Create(B, NegA, A);
+  }
+
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
   CmpPredicate LTPred, GTPred;
   if (match(&I,
