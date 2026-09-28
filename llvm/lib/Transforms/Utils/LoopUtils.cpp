@@ -2528,9 +2528,14 @@ bool llvm::collectCompressedPtrs(
     if (!Seen.insert(U).second)
       continue;
 
-    // Always allow uses outside the loop or by the backedge update.
     auto *I = cast<Instruction>(U->getUser());
-    if (I == CondID.getBackedgePHI() || !L.contains(I))
+    // Disallow out of loop users. TODO: This could be relaxed if the loop
+    // vectorizer could handle liveout users of the conditional induction.
+    if (!L.contains(I))
+      return false;
+
+    // Always allow uses by the backedge update.
+    if (I == CondID.getBackedgePHI())
       continue;
 
     Value *CurrentVal = U->get();
@@ -2541,10 +2546,10 @@ bool llvm::collectCompressedPtrs(
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(I);
-      const SCEV *PrtSCEV = GetCompressedPtrSCEV(Ptr, getLoadStoreType(I));
-      if (!PrtSCEV)
+      const SCEV *PtrSCEV = GetCompressedPtrSCEV(Ptr, getLoadStoreType(I));
+      if (!PtrSCEV)
         return false;
-      CompressedPtrs.insert({Ptr, PrtSCEV});
+      CompressedPtrs.insert({Ptr, PtrSCEV});
       continue;
     }
 

@@ -267,3 +267,70 @@ for.inc:
 exit:
   ret void
 }
+
+; CHECK: the cost-model indicates that vectorization is not beneficial
+
+; Negative test: Lowering unpredicated loads/stores to compresstore/expandload is not supported yet.
+define void @unpredicated_load_of_conditional_induction(ptr noalias %tab, ptr noalias %cond, ptr noalias %out, ptr noalias %flag, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %tab.ptr = getelementptr inbounds i32, ptr %tab, i64 %idx
+  %tab.val = load i32, ptr %tab.ptr, align 4
+  %out.ptr = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %tab.val, ptr %out.ptr, align 4
+  %cond.ptr = getelementptr inbounds i32, ptr %cond, i64 %iv
+  %cond.val = load i32, ptr %cond.ptr, align 4
+  %cmp = icmp ne i32 %cond.val, 0
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %flag.ptr = getelementptr inbounds i8, ptr %flag, i64 %iv
+  store i8 1, ptr %flag.ptr, align 1
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized
+
+; Negative test: Live outs derived from the conditional induction are phi are not support yet.
+define ptr @compress_store_derived_liveout(ptr noalias %dst, ptr noalias %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 8
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  %dst.ptr.lcssa = phi ptr [ %dst.ptr, %for.inc ]
+  ret ptr %dst.ptr.lcssa
+}

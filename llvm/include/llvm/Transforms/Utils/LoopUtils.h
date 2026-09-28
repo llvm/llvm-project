@@ -708,7 +708,7 @@ hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 /// from the monotonic PHI described by \p MD. The pointer operands and
 /// approximate SCEV expressions (assuming the monotonic PHI always increments)
 /// for the pointers are placed in \p CompressedPtrs. Returns true if all
-/// in-loop users of the conditional induction are loads/stores.
+/// users of the conditional induction are in-loop loads/stores.
 LLVM_ABI bool collectCompressedPtrs(
     DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
     const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE);
