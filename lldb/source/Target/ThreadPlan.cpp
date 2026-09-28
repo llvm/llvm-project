@@ -8,8 +8,11 @@
 
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -292,4 +295,54 @@ lldb::StateType ThreadPlanNull::GetPlanRunState() {
             LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return eStateRunning;
+}
+
+llvm::Expected<std::vector<addr_t>>
+lldb_private::GetStepUntilAddresses(StackFrame &frame, const FileSpec &file,
+                                    llvm::ArrayRef<uint32_t> lines,
+                                    llvm::ArrayRef<addr_t> addresses) {
+  const SymbolContext &frame_sc =
+      frame.GetSymbolContext(eSymbolContextCompUnit | eSymbolContextFunction);
+  TargetSP target_sp = frame.CalculateTarget();
+  if (!frame_sc.comp_unit || !frame_sc.function || !target_sp)
+    return llvm::createStringError("frame has no function debug information");
+
+  std::vector<addr_t> until_addrs;
+  bool found_target = !addresses.empty();
+  auto add_if_in_scope = [&](const Address &addr) {
+    addr_t load_addr = addr.GetLoadAddress(target_sp.get());
+    AddressRange unused;
+    if (load_addr != LLDB_INVALID_ADDRESS &&
+        frame_sc.function->GetRangeContainingLoadAddress(load_addr, *target_sp,
+                                                         unused))
+      until_addrs.push_back(load_addr);
+  };
+
+  for (uint32_t line : lines) {
+    LineEntry line_entry;
+    uint32_t idx = frame_sc.comp_unit->FindLineEntry(
+        0, line, &file, /*exact=*/false, &line_entry);
+    if (idx == UINT32_MAX)
+      continue;
+    found_target = true;
+    const uint32_t found_line = line_entry.line;
+    while (idx != UINT32_MAX) {
+      add_if_in_scope(line_entry.range.GetBaseAddress());
+      idx = frame_sc.comp_unit->FindLineEntry(idx + 1, found_line, &file,
+                                              /*exact=*/true, &line_entry);
+    }
+  }
+
+  for (addr_t address : addresses) {
+    Address addr;
+    if (target_sp->ResolveLoadAddress(address, addr))
+      add_if_in_scope(addr);
+  }
+
+  if (!until_addrs.empty())
+    return until_addrs;
+  if (found_target)
+    return llvm::createStringError(
+        "Until target outside of the current function");
+  return llvm::createStringError("No line entries matching until target");
 }
