@@ -140,8 +140,8 @@ static TypeSize getMinimalExtentFrom(const Value &V,
 }
 
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size. Bails out early unless the root object is passed as the first
-/// parameter.
+/// the minimal extent accessed from OtherV with size OtherSize. Bails out early
+/// unless the root object is passed as the first parameter.
 static bool isObjectSmallerThan(const Value *V, const Value &OtherV,
                                 LocationSize OtherSize, const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
