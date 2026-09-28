@@ -1927,15 +1927,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      ArrayRef<uint8_t> Compressed = llvm::arrayRefFromStringRef(Blob);
-      if (const char *Reason =
-              llvm::compression::getReasonIfUnsupported(Compressed)) {
-        Error(Reason);
-        return nullptr;
-      }
       SmallVector<uint8_t, 0> Decompressed;
       if (llvm::Error E = llvm::compression::decompress(
-              Compressed, Decompressed, Record[0])) {
+              llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
