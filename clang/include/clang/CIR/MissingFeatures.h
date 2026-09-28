@@ -94,6 +94,7 @@ struct MissingFeatures {
   static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
+  static bool opCallInvokeAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }
@@ -226,7 +227,6 @@ struct MissingFeatures {
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool dynamicExceptionSpec() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }

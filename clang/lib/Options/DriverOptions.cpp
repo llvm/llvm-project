@@ -13,41 +13,18 @@
 using namespace clang::options;
 using namespace llvm::opt;
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 #define OPTTABLE_VALUES_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_VALUES_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+#define OPTTABLE_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_UNION_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_PREFIXES_UNION_CODE
-
-#define OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "clang/Options/Options.inc"
-#undef OPTION
-};
 
 namespace {
 
-class DriverOptTable : public PrecomputedOptTable {
+class DriverOptTable : public OptTable {
 public:
-  DriverOptTable()
-      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion) {
+  DriverOptTable() : OptTable(optionTables()) {
     setValuesCodeFn(getOptionValuesCode);
-    setHelpTextVariantsTable(OptionHelpTextVariantsTable);
   }
 };
 } // anonymous namespace
