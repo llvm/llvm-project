@@ -516,10 +516,12 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
           Address storeAddr = expectedResult.withElementType(
               builder, cmpxchg.getOld().getType());
           builder.createStore(loc, cmpxchg.getOld(), storeAddr);
+          assert(!MissingFeatures::generateDebugInfo());
         } else {
           Address oldTmp = cgf.createTempAlloca(
               cmpxchg.getOld().getType(), ptr.getAlignment(), loc, "old.tmp");
           builder.createStore(loc, cmpxchg.getOld(), oldTmp);
+          assert(!MissingFeatures::generateDebugInfo());
 
           Address oldTmpVoid = oldTmp.withElementType(builder, cgf.cgm.voidTy);
           Address expectedVoid =
