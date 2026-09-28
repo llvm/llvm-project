@@ -549,6 +549,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// wasting space in the Decl class.
   llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
 
+  /// One-entry cache for getDeclAttrs().
+  const Decl *LastDeclAttrsDecl = nullptr;
+  AttrVec *LastDeclAttrs = nullptr;
+
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
   /// merged into.

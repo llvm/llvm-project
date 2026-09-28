@@ -988,6 +988,7 @@ void ASTContext::cleanup() {
        A != AEnd; ++A)
     A->second->~AttrVec();
   DeclAttrs.clear();
+  LastDeclAttrsDecl = nullptr;
 
   CtorClosureDefaultArgs.clear();
 
@@ -1532,12 +1533,20 @@ DiagnosticsEngine &ASTContext::getDiagnostics() const {
 }
 
 AttrVec& ASTContext::getDeclAttrs(const Decl *D) {
+  // 85% of lookups use the most recent D, so use a one-entry cache.
+  if (LastDeclAttrsDecl == D) {
+    assert(LastDeclAttrs != nullptr && LastDeclAttrs == DeclAttrs[D]);
+    return *LastDeclAttrs;
+  }
+
   AttrVec *&Result = DeclAttrs[D];
   if (!Result) {
     void *Mem = Allocate(sizeof(AttrVec));
     Result = new (Mem) AttrVec;
   }
 
+  LastDeclAttrsDecl = D;
+  LastDeclAttrs = Result;
   return *Result;
 }
 
@@ -1548,6 +1557,8 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+  if (LastDeclAttrsDecl == D)
+    LastDeclAttrsDecl = nullptr;
 }
 
 ArrayRef<CXXDefaultArgExpr *>
