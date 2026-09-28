@@ -30,7 +30,7 @@ else:
 define ptr @test_hoist_int_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_hoist_int_attrs2
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @foo(ptr dereferenceable(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call ptr @foo(ptr dereferenceable(50) dereferenceable_or_null(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret ptr [[R]]
@@ -49,10 +49,33 @@ else:
   ret ptr %r2
 }
 
+define ptr @test_hoist_int_attrs3(i1 %c, ptr %p, ptr %p2, i64 %x) {
+; CHECK-LABEL: define {{[^@]+}}@test_hoist_int_attrs3
+; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @foo2(ptr align 32 dereferenceable_or_null(100) [[P]], ptr align 32 dereferenceable_or_null(100) [[P2]], i64 range(i64 10, 100000) [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret ptr [[R]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @side.effect()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  br i1 %c, label %if, label %else
+if:
+  %r = call ptr @foo2(ptr align 64 dereferenceable(100) %p, ptr dereferenceable(500) align 64 %p2, i64 range(i64 10, 1000) %x) memory(read)
+  ret ptr %r
+
+else:
+  %r2 = call ptr @foo2(ptr align 32 dereferenceable_or_null(200) %p, ptr dereferenceable_or_null(100) align 32 %p2, i64 range(i64 10000, 100000) %x) memory(write)
+  call void @side.effect()
+  ret ptr %r2
+}
+
+
 define ptr @test_hoist_bool_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_hoist_bool_attrs2
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call noundef ptr @foo(ptr nonnull [[P]], i64 noundef [[X]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call noundef ptr @foo(ptr nonnull readonly [[P]], i64 noundef [[X]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret ptr [[R]]
