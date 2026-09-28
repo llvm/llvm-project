@@ -101,7 +101,7 @@ class AMDGPUBreakLoadClusterDepsImpl {
   bool findReplaceRegisterOperand(MachineInstr &MI, unsigned OpNum,
                                   const BitVector &BannedRegs,
                                   bool MIMustBeKiller = false);
-  
+
   // The VGPR destination of a VMEM load is `vdst` (FLAT/global/scratch) or
   // `vdata` (MUBUF/MTBUF).  Return its operand index, or -1 if there is none.
   static int getLoadDestIdx(const MachineInstr &MI) {
@@ -157,7 +157,8 @@ public:
 
 // Return the set of 32-bit VGPR lanes covered by physical VGPR `Reg` (any
 // width), indexed by (lane - AMDGPU::VGPR0).
-BitVector AMDGPUBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
+BitVector
+AMDGPUBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
   BitVector ToReturn(NumVGPR32);
   if (!TRI->isVGPR(*MRI, Reg))
     return ToReturn;
@@ -188,10 +189,8 @@ AMDGPUBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   return ToReturn;
 }
 
-Register AMDGPUBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI,
-                                                             Register SubReg,
-                                                             bool Defs,
-                                                             bool Uses) {
+Register AMDGPUBreakLoadClusterDepsImpl::promoteToSuperRegister(
+    MachineInstr &MI, Register SubReg, bool Defs, bool Uses) {
   for (MachineOperand &Operand : MI.operands())
     if (Operand.isReg() && (Defs || Operand.isUse()) &&
         (Uses || Operand.isDef()) &&
@@ -202,8 +201,8 @@ Register AMDGPUBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI
 }
 
 Register AMDGPUBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
-                                                     Register ToReg,
-                                                     Register RenameReg) {
+                                                        Register ToReg,
+                                                        Register RenameReg) {
   if (RenameReg == FromReg)
     return ToReg;
   if (unsigned Idx =
@@ -238,7 +237,7 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
            ++It) {
         if (It->isDebugInstr())
           continue;
-        
+
         auto Subregs = getUsesAndDefsFor(*It);
         if (Subregs.second.anyCommon(OldRegClobbers))
           NewKiller = &*It;
@@ -587,7 +586,7 @@ bool AMDGPUBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
               DynamicBlockSize),
           DynamicBlockSize) -
       AGPRs;
-  
+
   // The occupancy-derived budget above can exceed the function's own VGPR
   // limit (e.g. an "amdgpu-num-vgpr" attribute).  Cap it so a rename never
   // introduces a register beyond what the function is allowed to use.
@@ -600,7 +599,8 @@ bool AMDGPUBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
   return ToReturn;
 }
 
-bool AMDGPUBreakLoadClusterDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUBreakLoadClusterDepsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   return AMDGPUBreakLoadClusterDepsImpl().run(MF);
@@ -608,7 +608,7 @@ bool AMDGPUBreakLoadClusterDepsLegacy::runOnMachineFunction(MachineFunction &MF)
 
 PreservedAnalyses
 AMDGPUBreakLoadClusterDepsPass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
+                                    MachineFunctionAnalysisManager &MFAM) {
   if (!AMDGPUBreakLoadClusterDepsImpl().run(MF))
     return PreservedAnalyses::all();
 
