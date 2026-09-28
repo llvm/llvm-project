@@ -176,6 +176,10 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
                                            cl::Hidden,
                                            cl::desc("Disable Value Profiling"));
 
+static cl::opt<bool> PGOUniformityMetadata(
+    "pgo-uniformity-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Enable uniformity profile metadata during PGO use"));
+
 // Command line option to set the maximum number of VP annotations to write to
 // the metadata for a single indirect call callsite.
 static cl::opt<unsigned> MaxNumAnnotations(
@@ -2293,6 +2297,16 @@ static bool annotateAllFunctions(
 
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
+    if (!PGOUniformityMetadata) {
+      // Also remove existing annotations when the replacement profile has no
+      // usable record for this function.
+      F.setMetadata(LLVMContext::MD_uniformity_profile, nullptr);
+      for (BasicBlock &BB : F) {
+        Instruction *TI = BB.getTerminator();
+        TI->setMetadata(LLVMContext::MD_block_uniformity_profile, nullptr);
+        TI->setMetadata(LLVMContext::MD_branch_uniformity_profile, nullptr);
+      }
+    }
     if (skipPGOUse(F))
       continue;
     TargetLibraryInfo &TLI = LookupTLI(F);
@@ -2341,7 +2355,8 @@ static bool annotateAllFunctions(
     Func.setBranchWeights();
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
-    Func.setBlockUniformityAttribute();
+    if (PGOUniformityMetadata)
+      Func.setBlockUniformityAttribute();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);
