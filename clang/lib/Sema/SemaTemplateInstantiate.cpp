@@ -2074,7 +2074,7 @@ TemplateInstantiator::TransformFirstQualifierInScope(NamedDecl *D,
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
       if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(), TTP->getIndex())) {
         IsIncomplete = true;
-        return BailOutOnIncomplete ? nullptr : D;
+        return cast_or_null<NamedDecl>(TransformDecl(Loc, D));
       }
 
       // FIXME: This needs testing w/ member access expressions.
