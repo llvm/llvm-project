@@ -935,8 +935,8 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
   if (!PostIncStart)
     return IsWideIVInc() ? WideIV : nullptr;
 
-  // (start + C) + IV * Step stays affine for any constant C, including the step,
-  // so it can be folded into the start value.
+  // (start + C) + IV * Step stays affine for any constant C, including the
+  // step, so it can be folded into the start value.
   const APInt *C;
   APInt Offset;
   if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
