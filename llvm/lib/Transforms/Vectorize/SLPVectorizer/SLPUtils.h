@@ -389,12 +389,10 @@ bool isOnceUsedSeed(const Instruction *I);
 bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
                                     const LoopInfo &LI, bool ReVec);
 
-/// Returns true if each value in \p VL is an in-loop index computation ending
-/// at a getelementptr accepted by \p IsCandidate, used only by scalar accesses
-/// and computing an affine recurrence of that loop.
-bool isGEPCandidateIndexBundle(
-    ArrayRef<Value *> VL, ScalarEvolution &SE, const LoopInfo &LI, bool ReVec,
-    function_ref<bool(GetElementPtrInst *)> IsCandidate);
+/// Returns true if \p I starts a short chain of single-use arithmetic that
+/// computes the index of a getelementptr accepted by \p IsCandidate.
+bool isGEPCandidateIndex(Instruction *I,
+                         function_ref<bool(GetElementPtrInst *)> IsCandidate);
 
 /// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip
 /// back to the type of \p V, returns the fptrunc; the round-trip source is its

@@ -36295,7 +36295,7 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
         R.hasResolvedUser(&I))
       continue;
     // Index chains of collected GEPs are handled by vectorizeGEPIndices.
-    if (isGEPCandidateIndexBundle({&I}, *SE, *LI, SLPReVec, [&](auto *GEP) {
+    if (!GEPs.empty() && isGEPCandidateIndex(&I, [&](auto *GEP) {
           auto It = GEPs.find(GEP->getPointerOperand());
           return It != GEPs.end() && It->second.size() >= 2 &&
                  is_contained(It->second, GEP);
