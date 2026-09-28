@@ -10,6 +10,8 @@
 #define _LLVM_LIBC_SUBDIR_TEST_H
 
 #include "../__llvm-libc-common.h"
+#include "../llvm-libc-types/struct_type_b.h"
+#include "../llvm-libc-types/struct_type_c.h"
 #include "../llvm-libc-types/type_a.h"
 #include "../llvm-libc-types/type_b.h"
 
@@ -19,7 +21,7 @@ type_a func(type_b) __NOEXCEPT;
 
 void gnufunc(type_a) __NOEXCEPT;
 
-int *ptrfunc(void) __NOEXCEPT;
+int *ptrfunc(int (*)(const struct type_b **, const struct type_c **)) __NOEXCEPT;
 
 __END_C_DECLS
 
