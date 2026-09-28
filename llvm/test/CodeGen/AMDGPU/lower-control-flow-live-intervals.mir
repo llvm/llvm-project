@@ -24,7 +24,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, %3, implicit-def dead $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, %3, implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -33,7 +33,7 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 [[S_XOR_B32_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = bb-prolog S_OR_SAVEEXEC_B32 [[S_XOR_B32_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, [[S_OR_SAVEEXEC_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
@@ -53,7 +53,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.1:
-    SI_END_CF killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
   bb.2:
@@ -100,7 +100,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[S_OR_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[S_OR_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
@@ -121,7 +121,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF killed %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -158,7 +158,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[COPY1]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[COPY1]], implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x40000000), %bb.4(0x40000000)
@@ -183,10 +183,10 @@ body:             |
   bb.3:
     successors: %bb.4(0x80000000)
 
-    SI_END_CF killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
-    SI_END_CF killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -233,7 +233,7 @@ body:             |
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[COPY1]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[COPY1]], implicit-def dead $scc
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
@@ -293,7 +293,7 @@ body:             |
   bb.3:
     successors: %bb.5(0x80000000)
 
-    SI_END_CF killed %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 
   bb.4:
@@ -302,7 +302,7 @@ body:             |
   bb.5:
     successors: %bb.4(0x80000000)
 
-    SI_END_CF killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.6:

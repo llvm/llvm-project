@@ -1390,7 +1390,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_samesign) ||
          Token.is(MIToken::kw_inbounds) ||
          Token.is(MIToken::kw_nonnull) ||
-         Token.is(MIToken::kw_lr_split)) {
+         Token.is(MIToken::kw_lr_split) ||
+         Token.is(MIToken::kw_bb_prolog)) {
     // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
@@ -1437,6 +1438,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NonNull;
     if (Token.is(MIToken::kw_lr_split))
       Flags |= MachineInstr::LRSplit;
+    if (Token.is(MIToken::kw_bb_prolog))
+      Flags |= MachineInstr::BBProlog;
 
     lex();
   }

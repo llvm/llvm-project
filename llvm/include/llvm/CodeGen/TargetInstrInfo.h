@@ -2190,15 +2190,6 @@ public:
     return Inst.isReturn() && Inst.isCall();
   }
 
-  /// True if the instruction is bound to the top of its basic block and no
-  /// other instructions shall be inserted before it. This can be implemented
-  /// to prevent register allocator to insert spills for \p Reg before such
-  /// instructions.
-  virtual bool isBasicBlockPrologue(const MachineInstr &MI,
-                                    Register Reg = Register()) const {
-    return false;
-  }
-
   /// Allows targets to use appropriate copy instruction while spilitting live
   /// range of a register in register allocation.
   virtual unsigned getLiveRangeSplitOpcode(Register Reg,

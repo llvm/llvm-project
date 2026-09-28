@@ -788,6 +788,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     // call instructions. We need copy it form old instruction.
     NewMI->cloneInstrSymbols(MF, MI);
 
+    // NewMI replaces MI.
+    if (MI.getFlag(MachineInstr::BBProlog))
+      NewMI->setFlag(MachineInstr::BBProlog);
+
     return NewMI;
   }
 
@@ -801,6 +805,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
 
   const MachineOperand &MO = MI.getOperand(1 - Ops[0]);
   MachineBasicBlock::iterator Pos = MI;
+  MachineInstrSpan MIS(Pos, MBB);
   if (Flags == MachineMemOperand::MOStore) {
     if (MO.isUndef()) {
       // If this is an undef copy, we do not need to bother we inserting spill
@@ -812,6 +817,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     }
   } else
     loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, Register());
+  MBB->inheritBBProlog(MIS.begin(), Pos);
 
   return &*--Pos;
 }

@@ -457,7 +457,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
   if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
+    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
   else {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
     assert(DefMI && "Defining instruction disappeared");
@@ -500,6 +500,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
                           MRI.getRegClass(SrcReg), Register());
+  MBB->inheritBBProlog(MIS.begin(), MII);
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
@@ -1252,6 +1253,7 @@ void InlineSpiller::insertReload(Register NewVReg,
   MachineInstrSpan MIS(MI, &MBB);
   TII.loadRegFromStackSlot(MBB, MI, NewVReg, StackSlot,
                            MRI.getRegClass(NewVReg), Register());
+  MBB.inheritBBProlog(MIS.begin(), MI);
 
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
 
@@ -1297,6 +1299,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
         .addReg(NewVReg, getKillRegState(isKill));
 
   MachineBasicBlock::iterator Spill = std::next(MI);
+  MBB.inheritBBProlog(Spill, MIS.end());
   LIS.InsertMachineInstrRangeInMaps(Spill, MIS.end());
   for (const MachineInstr &MI : make_range(Spill, MIS.end()))
     getVDefInterval(MI, LIS);
@@ -1868,6 +1871,7 @@ void HoistSpillHelper::hoistAllSpills() {
       MachineInstrSpan MIS(MII, BB);
       TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
                               MRI.getRegClass(LiveReg), Register());
+      BB->inheritBBProlog(MIS.begin(), MII);
       LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
       for (const MachineInstr &MI : make_range(MIS.begin(), MII))
         getVDefInterval(MI, LIS);

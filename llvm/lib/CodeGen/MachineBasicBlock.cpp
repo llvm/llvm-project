@@ -210,13 +210,22 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
   return I;
 }
 
+void MachineBasicBlock::inheritBBProlog(iterator Begin, iterator End) {
+  iterator Next = End;
+  while (Next != end() && (Next->isDebugOrPseudoInstr() || Next->isPosition()))
+    ++Next;
+  if (Next == end() || !Next->getFlag(MachineInstr::BBProlog))
+    return;
+  for (MachineInstr &MI : make_range(Begin, End))
+    if (!MI.isDebugOrPseudoInstr() && !MI.isPosition())
+      MI.setFlag(MachineInstr::BBProlog);
+}
+
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
-  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition() ||
-                    TII->isBasicBlockPrologue(*I)))
+  while (I != E &&
+         (I->isPHI() || I->isPosition() || I->getFlag(MachineInstr::BBProlog)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels
   // inside the bundle.
@@ -227,13 +236,11 @@ MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I,
-                                          Register Reg, bool SkipPseudoOp) {
-  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-
+                                          bool SkipPseudoOp) {
   iterator E = end();
   while (I != E && (I->isPHI() || I->isPosition() || I->isDebugInstr() ||
                     (SkipPseudoOp && I->isPseudoProbe()) ||
-                    TII->isBasicBlockPrologue(*I, Reg)))
+                    I->getFlag(MachineInstr::BBProlog)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.

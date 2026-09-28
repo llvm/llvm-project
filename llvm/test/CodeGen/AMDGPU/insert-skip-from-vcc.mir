@@ -167,7 +167,7 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: and_execz_mov_exec_vccz
-# GCN:      $exec = S_MOV_B64 -1
+# GCN:      $exec = bb-prolog S_MOV_B64 -1
 # GCN-NEXT: S_ENDPGM 0
 name:            and_execz_mov_exec_vccz
 body:             |
@@ -178,14 +178,14 @@ body:             |
     S_NOP 0
 
   bb.2:
-    $exec = S_MOV_B64 -1
+    $exec = bb-prolog S_MOV_B64 -1
     $vcc = S_AND_B64 $exec, $exec, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
     S_ENDPGM 0
 ...
 ---
 # GCN-LABEL: name: and_execz_mov_exec_vccnz
-# GCN:      $exec = S_MOV_B64 -1
+# GCN:      $exec = bb-prolog S_MOV_B64 -1
 # GCN-NEXT: S_BRANCH %bb.1{{$}}
 name:            and_execz_mov_exec_vccnz
 body:             |
@@ -196,7 +196,7 @@ body:             |
     S_NOP 0
 
   bb.2:
-    $exec = S_MOV_B64 -1
+    $exec = bb-prolog S_MOV_B64 -1
     $vcc = S_AND_B64 $exec, $exec, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
     S_ENDPGM 0
@@ -626,7 +626,7 @@ body:             |
     S_NOP 0
 
   bb.2:
-    V_CMPX_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit-def $exec, implicit $exec
+    bb-prolog V_CMPX_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit-def $exec, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
     S_ENDPGM 0

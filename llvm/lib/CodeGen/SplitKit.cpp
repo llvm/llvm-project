@@ -672,6 +672,7 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
   }
 
   SlotIndex Def;
+  MachineInstrSpan MIS(I, &MBB);
   if (LaneMask.none()) {
     const MCInstrDesc &Desc = TII.get(TargetOpcode::IMPLICIT_DEF);
     MachineInstr *ImplicitDef = BuildMI(MBB, I, DebugLoc(), Desc, Reg);
@@ -681,6 +682,7 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     ++NumCopies;
     Def = buildCopy(Edit->getReg(), Reg, LaneMask, MBB, I, Late, RegIdx);
   }
+  MBB.inheritBBProlog(MIS.begin(), I);
 
   // Define the value in Reg.
   return defValue(RegIdx, ParentVNI, Def, false);
@@ -851,9 +853,8 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   }
 
   unsigned RegIdx = 0;
-  Register Reg = LIS.getInterval(Edit->get(RegIdx)).reg();
   VNInfo *VNI = defFromParent(RegIdx, ParentVNI, Start, MBB,
-                              MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Reg));
+                              MBB.SkipPHIsLabelsAndDebug(MBB.begin()));
   RegAssign.insert(Start, VNI->def, OpenIdx);
   LLVM_DEBUG(dump());
   return VNI->def;

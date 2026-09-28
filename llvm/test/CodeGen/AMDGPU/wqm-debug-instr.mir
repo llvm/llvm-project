@@ -67,7 +67,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = bb-prolog ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2

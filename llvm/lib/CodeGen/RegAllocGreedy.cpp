@@ -844,8 +844,7 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
       return false;
 
     // Interference for the live-in value.
-    Register Reg = SA->getParent().reg();
-    auto InsertPt = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), Reg);
+    auto InsertPt = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
     SlotIndex InsertIdx = InsertPt == MBB->end()
                               ? Indexes->getMBBEndIdx(MBB)
                               : LIS->getInstructionIndex(*InsertPt);

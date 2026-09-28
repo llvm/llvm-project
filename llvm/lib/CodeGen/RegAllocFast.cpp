@@ -616,7 +616,9 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
   LLVM_DEBUG(dbgs() << " to stack slot #" << FI << '\n');
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+  MachineInstrSpan MIS(Before, MBB);
   TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, VirtReg);
+  MBB->inheritBBProlog(MIS.begin(), Before);
   ++NumStores;
 
   MachineBasicBlock::iterator FirstTerm = MBB->getFirstTerminator();
@@ -673,7 +675,9 @@ void RegAllocFastImpl::reload(MachineBasicBlock::iterator Before,
                     << printReg(PhysReg, TRI) << '\n');
   int FI = getStackSpaceFor(VirtReg);
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+  MachineInstrSpan MIS(Before, MBB);
   TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, VirtReg);
+  MBB->inheritBBProlog(MIS.begin(), Before);
   ++NumLoads;
 }
 
@@ -691,7 +695,7 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     }
 
     // Skip prologues and inlineasm_br spills to place reloads afterwards.
-    if (!TII->isBasicBlockPrologue(*I) && !mayBeSpillFromInlineAsmBr(*I))
+    if (!I->getFlag(MachineInstr::BBProlog) && !mayBeSpillFromInlineAsmBr(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -1104,9 +1108,10 @@ bool RegAllocFastImpl::defineLiveThroughVirtReg(MachineInstr &MI,
           std::next((MachineBasicBlock::iterator)MI.getIterator());
       LLVM_DEBUG(dbgs() << "Copy " << printReg(LRI->PhysReg, TRI) << " to "
                         << printReg(PrevReg, TRI) << '\n');
-      BuildMI(*MBB, InsertBefore, MI.getDebugLoc(),
-              TII->get(TargetOpcode::COPY), PrevReg)
-          .addReg(LRI->PhysReg, llvm::RegState::Kill);
+      MachineInstr *Copy = BuildMI(*MBB, InsertBefore, MI.getDebugLoc(),
+                                   TII->get(TargetOpcode::COPY), PrevReg)
+                               .addReg(LRI->PhysReg, llvm::RegState::Kill);
+      MBB->inheritBBProlog(Copy->getIterator(), InsertBefore);
     }
     MachineOperand &MO = MI.getOperand(OpNum);
     if (MO.getSubReg() && !MO.isUndef()) {
@@ -1171,8 +1176,11 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
         for (MachineOperand &MO : MI.operands()) {
           if (MO.isMBB()) {
             MachineBasicBlock *Succ = MO.getMBB();
-            TII->storeRegToStackSlot(*Succ, Succ->begin(), PhysReg, Kill, FI,
-                                     &RC, VirtReg);
+            MachineBasicBlock::iterator SuccBegin = Succ->begin();
+            MachineInstrSpan MIS(SuccBegin, Succ);
+            TII->storeRegToStackSlot(*Succ, SuccBegin, PhysReg, Kill, FI, &RC,
+                                     VirtReg);
+            Succ->inheritBBProlog(MIS.begin(), SuccBegin);
             ++NumStores;
             Succ->addLiveIn(PhysReg);
           }
