@@ -1810,6 +1810,10 @@ def UnborrowedLocalVarsChecker : Checker<"UnborrowedLocalVarsChecker">,
   HelpText<"Check local variables holding a loan on a CanBorrow object that is not guarded by a Borrow.">,
   Documentation<HasDocumentation>;
 
+def UnborrowedLambdaCapturesChecker : Checker<"UnborrowedLambdaCapturesChecker">,
+  HelpText<"Check lambda captures holding a loan on a CanBorrow object that is not guarded by a Borrow.">,
+  Documentation<HasDocumentation>;
+
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
   HelpText<"Check for correct use of RetainPtr/OSObjectPtr constructor, adoptNS, adoptCF, and adoptOSObject">,
   Documentation<HasDocumentation>;
