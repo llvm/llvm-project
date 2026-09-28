@@ -1788,8 +1788,8 @@ body:             |
     $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
-# A producer writing exactly the srcC register needs nothing and must not hide a
-# farther partial overlap: the 16x16 needs 8 from 1 away.
+# The first 4x4 writes exactly the srcC register, with no window, but must not
+# hide the 16x16 one instruction back: its window of 8 leaves 7 to pad.
 
 # GCN-LABEL: name: smfma_full_srcc_producer_does_not_hide_partial
 # GCN:      V_MFMA_F32_4X4X1F32
