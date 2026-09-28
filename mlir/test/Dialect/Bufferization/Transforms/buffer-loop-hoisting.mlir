@@ -567,3 +567,344 @@ func.func @loop_unreachable_parent() {
   }
   return
 }
+
+// -----
+
+// An exit alias, invariant extent and unrelated carried buffer permit hoisting.
+// CHECK-LABEL: func @while_exit_alias(
+// CHECK-SAME: %{{.*}}: index, %[[SIZE:.*]]: index,
+//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[SIZE]])
+// CHECK-NEXT: %[[LAST:.*]]:2 = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+//      CHECK: scf.condition{{.*}} %[[ALLOC]], %{{.*}}
+//      CHECK: ^bb0(%[[CURRENT:.*]]: memref<?xindex>, %[[KEEP:.*]]: memref<1xindex>):
+// CHECK-NEXT: %{{.*}} = memref.load %[[CURRENT]]
+//      CHECK: scf.yield %{{.*}}, %[[KEEP]]
+//      CHECK: %[[VIEW:.*]] = memref.subview %[[LAST]]#0
+//      CHECK: %[[CAST:.*]] = memref.cast %[[VIEW]]
+//      CHECK: memref.load %[[CAST]]
+func.func @while_exit_alias(%n: index, %size: index, %other: memref<1xindex>) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %last:2 = scf.while (%i = %c0, %keep = %other)
+      : (index, memref<1xindex>) -> (memref<?xindex>, memref<1xindex>) {
+    %buffer = memref.alloc(%size) : memref<?xindex>
+    memref.store %i, %buffer[%c0] : memref<?xindex>
+    %continue = arith.cmpi slt, %i, %n : index
+    scf.condition(%continue) %buffer, %keep : memref<?xindex>, memref<1xindex>
+  } do {
+  ^bb0(%current: memref<?xindex>, %keep: memref<1xindex>):
+    %value = memref.load %current[%c0] : memref<?xindex>
+    %next = arith.addi %value, %c1 : index
+    scf.yield %next, %keep : index, memref<1xindex>
+  }
+  %view = memref.subview %last#0[0] [1] [1] : memref<?xindex> to memref<1xindex>
+  %cast = memref.cast %view : memref<1xindex> to memref<?xindex>
+  %result = memref.load %cast[%c0] : memref<?xindex>
+  return %result : index
+}
+
+// -----
+
+// A view passed back to the allocation region prevents hoisting.
+// CHECK-LABEL: func @no_hoist_while_carried_view(
+//  CHECK-NOT: memref.alloc
+//      CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+//      CHECK: scf.condition{{.*}} %{{.*}}, %[[ALLOC]]
+//      CHECK: ^bb0(%{{.*}}: index, %[[CURRENT:.*]]: memref<1xindex>):
+//      CHECK: %[[CAST:.*]] = memref.cast %[[CURRENT]]
+//      CHECK: %[[VIEW:.*]] = memref.subview %[[CAST]]
+//      CHECK: scf.yield %{{.*}}, %[[VIEW]]
+func.func @no_hoist_while_carried_view(%n: index, %seed: memref<1xindex>) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %result:2 = scf.while (%i = %c0, %old = %seed)
+      : (index, memref<1xindex>) -> (index, memref<1xindex>) {
+    %fresh = memref.alloc() : memref<1xindex>
+    memref.store %i, %fresh[%c0] : memref<1xindex>
+    %previous = memref.load %old[%c0] : memref<1xindex>
+    %continue = arith.cmpi slt, %i, %n : index
+    scf.condition(%continue) %previous, %fresh : index, memref<1xindex>
+  } do {
+  ^bb0(%previous: index, %current: memref<1xindex>):
+    %value = memref.load %current[%c0] : memref<1xindex>
+    %next = arith.addi %value, %c1 : index
+    %cast = memref.cast %current : memref<1xindex> to memref<?xindex>
+    %view = memref.subview %cast[0] [1] [1] : memref<?xindex> to memref<1xindex>
+    scf.yield %next, %view : index, memref<1xindex>
+  }
+  return %result#0 : index
+}
+
+// -----
+
+// Uses of the loop result must also be checked for capture.
+// CHECK-LABEL: func @no_hoist_while_exit_capture(
+//  CHECK-NOT: memref.alloc
+//      CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: call @capture(%[[LAST]])
+func.func private @capture(memref<1xindex>)
+func.func @no_hoist_while_exit_capture(%condition: i1) {
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    scf.condition(%condition) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
+  func.call @capture(%last) : (memref<1xindex>) -> ()
+  return
+}
+
+// -----
+
+// Hoisting would require the loaded value to be invariant across iterations.
+// CHECK-LABEL: func @no_hoist_while_invariant_load(
+//  CHECK-NOT: memref.alloc
+//      CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: ^bb0(%[[CURRENT:.*]]: memref<1xindex>):
+//      CHECK: memref.load %[[CURRENT]]{{.*}} invariant(true)
+func.func @no_hoist_while_invariant_load(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %last = scf.while (%i = %c0) : (index) -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %i, %buffer[%c0] : memref<1xindex>
+    %continue = arith.cmpi slt, %i, %n : index
+    scf.condition(%continue) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    %value = memref.load %current[%c0] invariant(true) : memref<1xindex>
+    %next = arith.addi %value, %c1 : index
+    scf.yield %next : index
+  }
+  return
+}
+
+// -----
+
+// An allocation freed in the loop cannot be reused by later iterations.
+// CHECK-LABEL: func @no_hoist_while_dealloc(
+//  CHECK-NOT: memref.alloc
+//      CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: ^bb0(%[[CURRENT:.*]]: memref<1xindex>):
+// CHECK-NEXT: memref.dealloc %[[CURRENT]]
+func.func @no_hoist_while_dealloc(%condition: i1) {
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    scf.condition(%condition) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    memref.dealloc %current : memref<1xindex>
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+// Stop at an unreachable enclosing block without querying its dominator node.
+// CHECK-LABEL: func @while_unreachable_parent(
+//      CHECK: return
+//      CHECK: ^bb1:
+//      CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: memref.load %[[LAST]]
+func.func @while_unreachable_parent() -> index {
+  %zero = arith.constant 0 : index
+  return %zero : index
+^dead:
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %false = arith.constant false
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %c1, %buffer[%c0] : memref<1xindex>
+    scf.condition(%false) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
+  %result = memref.load %last[%c0] : memref<1xindex>
+  return %result : index
+}
+
+// -----
+
+// A memory-effect-free pointer observation can expose allocation identity.
+func.func @pointer_escape(%addresses: memref<2xindex>) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %last = scf.while (%i = %c0) : (index) -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %i, %buffer[%c0] : memref<1xindex>
+    %address = memref.extract_aligned_pointer_as_index %buffer : memref<1xindex> -> index
+    memref.store %address, %addresses[%i] : memref<2xindex>
+    %continue = arith.cmpi slt, %i, %c1 : index
+    scf.condition(%continue) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    %value = memref.load %current[%c0] : memref<1xindex>
+    %next = arith.addi %value, %c1 : index
+    scf.yield %next : index
+  }
+  %result = memref.load %last[%c0] : memref<1xindex>
+  return %result : index
+}
+
+// CHECK-LABEL: func.func @pointer_escape
+// CHECK-NOT: memref.alloc
+// CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[BUF:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[BUF]]
+// CHECK-NEXT: %[[ADDRESS:.*]] = memref.extract_aligned_pointer_as_index %[[BUF]]
+// CHECK-NEXT: memref.store %[[ADDRESS]]
+
+// -----
+
+// Hoisting into acc.loop would allow a subsequent hoist to share the allocation
+// between parallel iterations. Keep it inside scf.while.
+// CHECK-LABEL: func @no_hoist_while_parallel_acc_parent(
+//  CHECK-NOT: memref.alloc
+//      CHECK: acc.parallel
+// CHECK-NEXT: acc.loop
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: memref.load %[[LAST]]
+func.func @no_hoist_while_parallel_acc_parent(%out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %false = arith.constant false
+  acc.parallel {
+    acc.loop gang vector control(%i : index) = (%c0 : index)
+        to (%c2 : index) step (%c1 : index) {
+      %last = scf.while () : () -> memref<1xindex> {
+        %buffer = memref.alloc() : memref<1xindex>
+        memref.store %i, %buffer[%c0] : memref<1xindex>
+        scf.condition(%false) %buffer : memref<1xindex>
+      } do {
+      ^bb0(%current: memref<1xindex>):
+        scf.yield
+      }
+      %value = memref.load %last[%c0] : memref<1xindex>
+      memref.store %value, %out[%i] : memref<2xindex>
+      acc.yield
+    } independent
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Hoisting with exit aliases requires a loop directly in a function body,
+// even when the enclosing loop is sequential.
+// CHECK-LABEL: func @no_hoist_while_nested_for(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.for
+// CHECK-NOT: memref.alloc
+// CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+func.func @no_hoist_while_nested_for(%n: index, %condition: i1, %out: memref<?xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %n step %c1 {
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %value = memref.load %last[%c0] : memref<1xindex>
+    memref.store %value, %out[%i] : memref<?xindex>
+  }
+  return
+}
+
+// -----
+
+// A loop-variant allocation extent prevents hoisting even if the result only
+// leaves through an exit edge.
+// CHECK-LABEL: func @no_hoist_while_dynamic_size(
+// CHECK-NOT: memref.alloc
+// CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[SIZE:.*]] = arith.addi
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc(%[[SIZE]])
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+func.func @no_hoist_while_dynamic_size(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %last = scf.while (%i = %c0) : (index) -> memref<?xindex> {
+    %size = arith.addi %i, %c1 : index
+    %buffer = memref.alloc(%size) : memref<?xindex>
+    memref.store %i, %buffer[%c0] : memref<?xindex>
+    %continue = arith.cmpi slt, %i, %n : index
+    scf.condition(%continue) %buffer : memref<?xindex>
+  } do {
+  ^bb0(%current: memref<?xindex>):
+    %value = memref.load %current[%c0] : memref<?xindex>
+    %next = arith.addi %value, %c1 : index
+    scf.yield %next : index
+  }
+  %value = memref.load %last[%c0] : memref<?xindex>
+  return %value : index
+}
+
+// -----
+
+// A write to another buffer does not prevent the dominator-based hoist.
+// CHECK-LABEL: func @hoist_with_unrelated_loop_effect(
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: test.store_with_a_loop_region
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+func.func @hoist_with_unrelated_loop_effect(%out: memref<f32>, %value: f32) {
+  test.store_with_a_loop_region %out attributes {store_before_region = true} {
+    %buffer = memref.alloc() : memref<f32>
+    memref.store %value, %buffer[] : memref<f32>
+    %loaded = memref.load %buffer[] : memref<f32>
+    memref.store %loaded, %out[] : memref<f32>
+    test.store_with_a_region_terminator
+  } : memref<f32>
+  return
+}
+
+// -----
+
+// Preserve dominator-based hoisting from sequential OpenACC loops.
+// CHECK-LABEL: func @hoist_sequential_acc_loop(
+//      CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: acc.loop
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+func.func @hoist_sequential_acc_loop(%n: index, %out: memref<?xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  acc.loop control(%i : index) = (%c0 : index) to (%n : index) step (%c1 : index) {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %i, %buffer[%c0] : memref<1xindex>
+    %value = memref.load %buffer[%c0] : memref<1xindex>
+    memref.store %value, %out[%i] : memref<?xindex>
+    acc.yield
+  } seq
+  return
+}

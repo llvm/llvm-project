@@ -305,6 +305,13 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let description = [{
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
+
+    `memref.alloc` operations may be hoisted from multi-region loops even when
+    their buffers are forwarded through loop results. This extension is limited
+    to loops directly in an isolated function body, with single-block SSA regions
+    and complete operand forwarding through `RegionBranchOpInterface`. The
+    allocation's region must execute on entry, its aliases must not reach that
+    region through a backedge, and their uses must permit reusing the allocation.
   }];
 }
 
