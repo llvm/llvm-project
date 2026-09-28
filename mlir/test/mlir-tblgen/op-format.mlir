@@ -40,11 +40,11 @@ test.format_opt_symbol_name_attr_op
 test.format_opt_symbol_ref_attr_op @foo {test.unit}
 test.format_opt_symbol_ref_attr_op {test.unit}
 
-// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
-test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
+// CHECK: test.format_attr_dict_w_keyword <attr = 10>
+test.format_attr_dict_w_keyword <attr = 10>
 
-// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
-test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
+// CHECK: test.format_attr_dict_w_keyword <attr = 10, opt_attr = 10> attributes {tag = "test"}
+test.format_attr_dict_w_keyword <attr = 10, opt_attr = 10> attributes {tag = "test"}
 
 // CHECK: test.format_buildable_type_op %[[I64]]
 %ignored = test.format_buildable_type_op %i64
@@ -296,13 +296,13 @@ test.format_optional_prop_dict <{a = [], b = 1 : i32}>
 // CHECK: test.format_optional_prop_dict{{$}}
 test.format_optional_prop_dict <{}>
 
-// CHECK: test.format_optional_prop_dict <{a = ["foo"]}>
+// CHECK: test.format_optional_prop_dict <a = "foo">
 test.format_optional_prop_dict <{a = ["foo"]}>
 
-// CHECK: test.format_optional_prop_dict <{b = 2 : i32}>
+// CHECK: test.format_optional_prop_dict <b = 2>
 test.format_optional_prop_dict <{b = 2 : i32}>
 
-// CHECK: test.format_optional_prop_dict <{a = ["foo"], b = 2 : i32}>
+// CHECK: test.format_optional_prop_dict <a = "foo", b = 2>
 test.format_optional_prop_dict <{a = ["foo"], b = 2 : i32}>
 
 //===----------------------------------------------------------------------===//
@@ -531,15 +531,15 @@ test.format_optional_operand_type(%i64) : i64
 // CHECK: test.format_infer_type_variadic_operands(%[[I32]], %[[I32]] : i32, i32) (%[[I64]], %[[I64]] : i64, i64)
 %ignored_res13:4 = test.format_infer_type_variadic_operands(%i32, %i32 : i32, i32) (%i64, %i64 : i64, i64)
 
-// CHECK: test.with_properties_and_attr 16 <{rhs = 16 : i64}>
+// CHECK: test.with_properties_and_attr 16 <rhs = 16>
 test.with_properties_and_attr 16 <{rhs = 16 : i64}>
 
-// CHECK: test.with_properties_and_inferred_type 16 <{packed, rhs = 16 : i64}>
+// CHECK: test.with_properties_and_inferred_type 16 <rhs = 16, packed>
 %should_be_i32 = test.with_properties_and_inferred_type 16 <{packed, rhs = 16 : i64}>
 // Assert through the verifier that its inferred as i32.
 test.format_all_types_match_var %should_be_i32, %i32 : i32
 
-// CHECK: test.using_property_in_custom_and_other [1, 4, 20] <{other = 16 : i64}>
+// CHECK: test.using_property_in_custom_and_other [1, 4, 20] <other = 16>
 test.using_property_in_custom_and_other [1, 4, 20] <{other = 16 : i64}>
 
 //===----------------------------------------------------------------------===//

@@ -18,6 +18,7 @@ class ScriptedProcess(metaclass=ABCMeta):
     loaded_images: Optional[list[dict]] = None
     threads: Optional[dict[int, "lldb.plugins.scripted_process.ScriptedThread"]] = None
     metadata: Optional[dict[str, Any]] = None
+    addressable_bits: Optional[dict[str, int]] = None
 
     target: lldb.SBTarget
     args: lldb.SBStructuredData
@@ -50,6 +51,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         self.loaded_images = []
         self.metadata = {}
         self.capabilities = {}
+        self.addressable_bits = {}
         self.pid = 42
 
     def get_capabilities(self) -> dict[str, bool]:
@@ -61,6 +63,24 @@ class ScriptedProcess(metaclass=ABCMeta):
             The dictionary can be empty.
         """
         return self.capabilities
+
+    def get_addressable_bits(self) -> dict[str, int]:
+        """Get the number of bits this process uses for addressing.
+
+        LLDB strips the remaining bits off every code and data address, the
+        way the `LC_NOTE "addrable bits"` corefile note and the `qHostInfo`
+        `addressing_bits` key do for corefiles and live processes.
+
+        This is queried before the first stop is reported, so the threads and
+        backtraces built from that stop already have the mask applied.
+
+        Returns:
+            Dict[str:int]: A dictionary with optional "lowmem" and "highmem"
+            keys, holding the number of bits used for addressing in low and
+            high memory. "highmem" defaults to "lowmem" when it is missing.
+            The dictionary can be empty, in which case no bits are stripped.
+        """
+        return self.addressable_bits
 
     def get_memory_region_containing_address(
         self, addr: int
@@ -517,6 +537,15 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return None
 
+    def get_cfa(self) -> int:
+        """Get the Call Frame Address for this frame.
+        By default pass the ID of this frame so the CFA's and the
+        ID's order the same way on this stop.  This won't support
+        step-in and step-out, for those the frames have to have a
+        stable CFA.
+        """
+        return self.get_id()
+
     def get_symbol_context(self) -> Optional[lldb.SBSymbolContext]:
         """Get the scripted frame symbol context.
 
@@ -629,6 +658,22 @@ class ScriptedFrame(metaclass=ABCMeta):
             str: A byte representing all register's value.
         """
         pass
+
+    # def get_plan_spec_for_step_type(self, step_type : lldb.StepType):
+    #    """Optional method.  If this ScriptedFrame can produce a ThreadPlan
+    #    that implements the given step_type, then it should return a Python
+    #    dictionary with the `class_name` key giving the name of a class that
+    #    implements the step plan, and an optional extra_args dictionary that
+    #    will be passed to the constructor of your step-plan class.  If the
+    #    class name is an empty string, that means use the standard stepping
+    #    algorithms for this step.
+    #    The body below tells lldb to fall back to the standard stepping
+    #    algorithm.  However, the method is commented out in the base class,
+    #    since if you really don't intend to provide stepping support,
+    #    it's simpler to just not implement this API."""
+    #
+    # dict = {"class_name" : "", extra_args : {"step_type" : str(step_type)}
+    #    return dict
 
 class PassthroughScriptedProcess(ScriptedProcess):
     """A reference `ScriptedProcess` subclass that forwards every request to

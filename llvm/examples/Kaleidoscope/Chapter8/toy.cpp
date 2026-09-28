@@ -1246,7 +1246,8 @@ int main() {
   auto TheTargetMachine = Target->createTargetMachine(
       Triple(TargetTriple), CPU, Features, opt, Reloc::PIC_);
 
-  TheModule->setDataLayout(TheTargetMachine->createDataLayout());
+  TheModule->setDataLayout(
+      TheTargetMachine->getTargetTriple().computeDataLayout());
 
   auto Filename = "output.o";
   std::error_code EC;

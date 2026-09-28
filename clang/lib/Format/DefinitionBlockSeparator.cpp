@@ -66,6 +66,10 @@ void DefinitionBlockSeparator::separateBlocks(
   };
   unsigned NewlineCount =
       (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always ? 1 : 0) + 1;
+
+  Style.MaxEmptyLinesToKeep =
+      std::max(Style.MaxEmptyLinesToKeep, NewlineCount - 1);
+
   WhitespaceManager Whitespaces(
       Env.getSourceManager(), Style,
       Style.LineEnding > FormatStyle::LE_CRLF

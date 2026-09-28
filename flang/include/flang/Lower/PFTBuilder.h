@@ -377,6 +377,9 @@ struct Evaluation : EvaluationVariant {
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
   bool activeConstruct{false}; // temporarily set for some constructs
+  // The enclosing evaluation-list traversal should skip this evaluation once
+  // because directive lowering already consumed it.
+  bool skipNextLowering{false};
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
@@ -730,6 +733,11 @@ struct FunctionLikeUnit : public ProgramUnit {
   const semantics::Scope *scope;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
+  /// Evaluations that branch to a given evaluation. A construct transferring
+  /// control between its own statements is not a branch (F2023 11.2.1 p1), so
+  /// the control successors analyzeBranches sets for CASE, ELSE IF, ELSE,
+  /// SELECT RANK and a DO statement and its EndDoStmt are not recorded here.
+  IncomingBranchMap incomingBranches;
   ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
   /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0

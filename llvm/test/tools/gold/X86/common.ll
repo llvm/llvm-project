@@ -1,3 +1,7 @@
+; REQUIRES: gold_linker
+; ld.bfd does not handle the mixed case correctly.
+; https://sourceware.org/bugzilla/show_bug.cgi?id=34570
+
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: llvm-as %p/Inputs/common.ll -o %t2.o
 ; RUN: llvm-as %p/Inputs/common2.ll -o %t2b.o

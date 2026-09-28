@@ -147,6 +147,8 @@ static std::vector<Desc> getSubOpDescriptions() {
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
   Descriptions[DW_OP_LLVM_select_bit_piece] =
       Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_NVIDIA_mux] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::NvidiaMuxArg);
   return Descriptions;
 }
 
@@ -220,6 +222,16 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
     case Operation::BaseTypeRef:
       Operands[Operand] = Data.getULEB128(&Offset);
       break;
+    case Operation::NvidiaMuxArg:
+      assert(Operand == 1);
+      Operands[Operand] = Data.getULEB128(&Offset);
+      // The selector names an NVIDIA specific operation, and the number and
+      // type of the operands that follow it are implied by that operation.
+      // No NVIDIA operation is known here, so where this operation ends is
+      // unknown and anything after it would be parsed from the wrong offset.
+      // Refuse to decode rather than mis-parse the rest of the expression.
+      // A build that knows a selector can decode its operands here.
+      return false;
     case Operation::WasmLocationArg:
       assert(Operand == 1);
       switch (Operands[0]) {
