@@ -14249,6 +14249,22 @@ void BoUpSLP::transformNodes() {
     });
   };
 
+  // The reduction root gather feeds only the commutative reduction, which
+  // maps the reduced values to the lanes by the root scalars. Put the distinct
+  // sub-fields of the same wider scalar in the natural order to emit them
+  // without a permutation.
+  if (UserIgnoreList && getRootNode().isGather() &&
+      getRootNode().ReuseShuffleIndices.empty())
+    if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+            matchGatheredExtractedFields(getRootNode().Scalars, *DL)) {
+      auto &[Src, FieldWidth, Mask] = *Fields;
+      SmallVector<int> SortedMask(Mask);
+      sort(SortedMask);
+      if (equal(SortedMask,
+                seq<int>(Src->getType()->getIntegerBitWidth() / FieldWidth)))
+        reorderScalars(getRootNode().Scalars, Mask);
+    }
+
   // Try to reorder gather nodes for better vectorization opportunities.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
@@ -22792,20 +22808,6 @@ std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
   Value *Src = std::get<0>(*ExtractedFields);
   unsigned FieldWidth = std::get<1>(*ExtractedFields);
   SmallVector<int> &Mask = std::get<2>(*ExtractedFields);
-  unsigned NumFields = Src->getType()->getIntegerBitWidth() / FieldWidth;
-  // The vector of the reduction root gather feeds only the commutative
-  // reduction; other users of the gathered scalars keep using the scalars,
-  // so the lane order is unobservable. Emit the fields in the natural order
-  // and skip the permutation when each lane holds a distinct field.
-  if (!E->UserTreeIndex && UserIgnoreList && Mask.size() == NumFields) {
-    SmallVector<int> SortedMask(Mask);
-    sort(SortedMask);
-    // Each field is held at most once; poison lanes are ignored.
-    if (adjacent_find(SortedMask, [](int A, int B) {
-          return A != PoisonMaskElem && A == B;
-        }) == SortedMask.end())
-      std::iota(Mask.begin(), Mask.end(), 0);
-  }
   return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask, *E);
 }
 
