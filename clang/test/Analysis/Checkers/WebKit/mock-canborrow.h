@@ -217,4 +217,72 @@ private:
   unsigned m_size { 0 };
 };
 
+class Element {
+public:
+  void mutate();
+  void inspect() const;
+};
+
+namespace detail {
+class CallableBase {
+public:
+  virtual ~CallableBase() {}
+  virtual void call() = 0;
+};
+
+template <typename F> class Callable : public CallableBase {
+public:
+  Callable(F f) : m_f(f) {}
+  void call() override { m_f(); }
+
+private:
+  F m_f;
+};
+} // namespace detail
+
+class Function {
+public:
+  template <typename F>
+  Function(F f) : m_impl(new detail::Callable<F>(f)) {}
+  ~Function() { delete m_impl; }
+
+  void operator()() const { m_impl->call(); }
+
+private:
+  detail::CallableBase *m_impl { nullptr };
+};
+
+void callEscaping(const Function &);
+void callNoEscape([[clang::noescape]] const Function &);
+
+namespace std {
+inline namespace __1 {
+using size_t = decltype(sizeof(0));
+
+namespace ranges {
+template <typename Derived> class view_interface {};
+} // namespace ranges
+
+template <typename Iterator> class reverse_iterator {
+public:
+  reverse_iterator(Iterator);
+  auto &operator*() const { return *m_it; }
+  reverse_iterator &operator++();
+  bool operator!=(const reverse_iterator &) const;
+
+private:
+  Iterator m_it;
+};
+
+template <typename A, typename B> struct pair {
+  A first;
+  B second;
+};
+
+template <size_t I, typename A, typename B> A &get(pair<A, B> &);
+
+template <typename T> T *data(Vector<T> &);
+} // namespace __1
+} // namespace std
+
 #endif

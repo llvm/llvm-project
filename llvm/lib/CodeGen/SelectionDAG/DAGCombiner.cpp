@@ -4660,26 +4660,26 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // smax(a,b) - smin(a,b) --> abds(a,b)
   if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
-      sd_match(N0, &DAG, m_SMaxLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_SMinLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_SMaxLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_SMinLike(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
   // smin(a,b) - smax(a,b) --> neg(abds(a,b))
   if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
-      sd_match(N0, &DAG, m_SMinLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_SMaxLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_SMinLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_SMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDS, DL, VT, A, B), DL, VT);
 
   // umax(a,b) - umin(a,b) --> abdu(a,b)
   if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
-      sd_match(N0, &DAG, m_UMaxLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_UMinLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_UMaxLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_UMinLike(m_Specific(A), m_Specific(B))))
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
 
   // umin(a,b) - umax(a,b) --> neg(abdu(a,b))
   if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
-      sd_match(N0, &DAG, m_UMinLike(m_Value(A), m_Value(B))) &&
-      sd_match(N1, &DAG, m_UMaxLike(m_Specific(A), m_Specific(B))))
+      sd_match(N0, m_UMinLike(m_Value(A), m_Value(B))) &&
+      sd_match(N1, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
 
   return SDValue();
@@ -25914,7 +25914,10 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   SDValue Index = N->getOperand(1);
   EVT ScalarVT = N->getValueType(0);
   EVT VecVT = VecOp.getValueType();
-  if (VecOp.isUndef())
+  if (VecOp.getOpcode() == ISD::POISON)
+    return DAG.getPOISON(ScalarVT);
+
+  if (VecOp.getOpcode() == ISD::UNDEF)
     return DAG.getUNDEF(ScalarVT);
 
   // extract_vector_elt (insert_vector_elt vec, val, idx), idx) -> val
@@ -26063,9 +26066,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // Find the new index to extract from.
     int OrigElt = Shuf->getMaskElt(IndexC->getZExtValue());
 
-    // Extracting an undef index is undef.
+    // Extracting an undef index is poison.
     if (OrigElt == -1)
-      return DAG.getUNDEF(ScalarVT);
+      return DAG.getPOISON(ScalarVT);
 
     // Select the right vector half to extract from.
     SDValue SVInVec;
@@ -26260,9 +26263,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (!LN0 || !LN0->hasNUsesOfValue(1,0) || !LN0->isSimple())
     return SDValue();
 
-  // If Idx was -1 above, Elt is going to be -1, so just return undef.
+  // If Idx was -1 above, Elt is going to be -1, so just return poison.
   if (Elt == -1)
-    return DAG.getUNDEF(LVT);
+    return DAG.getPOISON(LVT);
 
   if (SDValue Scalarized =
           TLI.scalarizeExtractedVectorLoad(LVT, DL, VecVT, Index, LN0, DAG)) {
