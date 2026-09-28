@@ -802,6 +802,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when a method or function definition follows an
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
+- Fixed `annotate` attributes being dropped from the `this`-adjusting thunks of
+  annotated virtual functions. The deferred-annotation map kept a `StringRef`
+  into the caller's stack buffer, so the lookup at the end of the translation
+  unit read a dangling key.
 
 ### OpenACC Specific Changes
 
