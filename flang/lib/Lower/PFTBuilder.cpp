@@ -527,11 +527,39 @@ private:
     return true;
   }
 
+  /// Record every label ASSIGNed in the unit, before branches are analyzed.
+  ///
+  /// An assigned GO TO reaches the labels ASSIGNed to its variable anywhere in
+  /// the unit, including in statements that follow it. Collecting them up front
+  /// lets analyzeBranches mark all of those targets rather than only the ones
+  /// the walk has already passed.
+  void collectAssignedLabels(lower::pft::EvaluationList &evaluationList) {
+    for (lower::pft::Evaluation &eval : evaluationList) {
+      if (const auto *s = eval.getIf<parser::AssignStmt>()) {
+        parser::Label label = std::get<parser::Label>(s->t);
+        if (const semantics::Symbol *sym =
+                std::get<parser::Name>(s->t).symbol) {
+          auto iter = assignSymbolLabelMap->find(*sym);
+          if (iter == assignSymbolLabelMap->end()) {
+            lower::pft::LabelSet labelSet{};
+            labelSet.insert(label);
+            assignSymbolLabelMap->try_emplace(*sym, labelSet);
+          } else {
+            iter->second.insert(label);
+          }
+        }
+      }
+      if (eval.evaluationList)
+        collectAssignedLabels(*eval.evaluationList);
+    }
+  }
+
   void exitFunction() {
     lower::pft::FunctionLikeUnit *exitingUnit = currentFunctionUnit;
     currentFunctionUnit = nullptr; // Clear when exiting function
     rewriteIfGotos();
     endFunctionBody();
+    collectAssignedLabels(*evaluationListStack.back());
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
 
     // Branch analysis is complete, so the incoming-branch map is too.
@@ -1139,9 +1167,9 @@ private:
             };
             for (const auto &label : std::get<std::list<parser::Label>>(s.t))
               markIfBranchTarget(label);
-            // TODO: This may miss assignments that appear later in program
-            // order, but it matches the information available at this point in
-            // the walk.
+            // collectAssignedLabels filled this map before the walk started,
+            // so it names every label ASSIGNed to the variable, including by
+            // statements this GO TO has not reached yet.
             if (const auto *sym = std::get<parser::Name>(s.t).symbol) {
               auto iter = assignSymbolLabelMap->find(*sym);
               if (iter != assignSymbolLabelMap->end())
@@ -2882,10 +2910,6 @@ static bool isStructurableWithUnstructuredInternals(
         isInfiniteDo(e.getIf<parser::DoConstruct>()) ||
         startsExitFreeGotoCycle(e))
       return false;
-
-    if (const auto *g = e.getIf<parser::AssignedGotoStmt>())
-      if (std::get<std::list<parser::Label>>(g->t).empty())
-        return false;
 
     // Condition 1: nothing leaves the body, CYCLE excepted.
     if (e.controlSuccessor && targetEscapes(e.controlSuccessor))
