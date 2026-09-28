@@ -50,6 +50,15 @@ functions:
       - type: char *
       - type: size_t
       - type: struct group **
+  - name: getgrouplist
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: gid_t
+      - type: gid_t *
+      - type: int *
   - name: setgrent
     standards:
       - posix
