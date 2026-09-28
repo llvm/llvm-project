@@ -413,8 +413,8 @@ createPluginCASDatabases(
 /// calling the plugin's \c llcas_cas_validate_if_needed. The plugin decides
 /// whether validation is needed.
 ///
-/// Validation can crash on invalid data. Clients that want to be resilient to
-/// that should call this from a separate process (e.g. via
+/// Clients that want to be resilient to unexpected crashes during validation
+/// may call this from a separate process (e.g. via
 /// \c llvm-cas -validate-if-needed) and call \c recoverPluginCASDatabases if
 /// it fails.
 ///

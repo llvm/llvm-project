@@ -165,9 +165,9 @@ LLCAS_PUBLIC bool llcas_cas_validate(llcas_cas_t, bool check_hash,
  * \c llcas_cas_recover_ondisk_data, e.g. by recording that validation is
  * pending before validating and only clearing it once validation succeeds.
  *
- * Validation may crash on invalid data, so clients may call this from a
- * separate process and call \c llcas_cas_recover_ondisk_data if it fails or
- * crashes.
+ * Clients that want to be resilient to unexpected crashes during validation
+ * may call this from a separate process and call
+ * \c llcas_cas_recover_ondisk_data if it fails or crashes.
  *
  * \param check_hash if true, the hash of each object is recomputed and compared
  * against the one it is stored under.

@@ -620,7 +620,13 @@ static Expected<ValidationResult> callPluginValidationFunction(
   case LLCAS_VALIDATION_RESULT_ERROR:
     return PluginCASContext::errorAndDispose(c_err, Functions);
   }
-  llvm_unreachable("unknown llcas_validation_result_t value");
+  // The plugin is outside of our control, so an unknown result is an error
+  // rather than unreachable.
+  if (c_err)
+    Functions.string_dispose(c_err);
+  return createStringError("unknown validation result " +
+                           Twine(static_cast<int>(Result)) + " from '" +
+                           PluginPath + "'");
 }
 
 Expected<ValidationResult> cas::validatePluginCASDatabasesIfNeeded(
