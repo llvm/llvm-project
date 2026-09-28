@@ -58,7 +58,7 @@ define void @mixed_i64_i32_accesses(ptr noalias %x, ptr noalias %y, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 16 x i32> [[TMP30]], ptr [[TMP18]], align 4
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -152,7 +152,7 @@ define void @mixed_i32_more_frequent_than_i64(ptr noalias %x, ptr noalias %y, pt
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 16 x i32> [[TMP43]], ptr [[TMP31]], align 4
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP44:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP44]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP44]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -219,7 +219,7 @@ define void @first_order_recurrence_i64_scaled_load_and_store(ptr noalias %src, 
 ; UNMASKED-SVE2P1-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP16]], align 8
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; UNMASKED-SVE2P1-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -273,7 +273,7 @@ define i64 @i64_sum_reduction_scaled_partial_reduce(ptr noalias %a, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    [[TMP11]] = add <vscale x 2 x i64> [[VEC_PHI3]], [[TMP7]]
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -329,10 +329,10 @@ define i64 @find_last_i64_scaled_load(i64 %n, ptr noalias %data, i64 %threshold)
 ; UNMASKED-SVE2P1-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i64> [[BROADCAST_SPLAT]], [[TMP10]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP15:%.*]] = freeze <vscale x 2 x i1> [[TMP11]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP16:%.*]] = freeze <vscale x 2 x i1> [[TMP12]]
-; UNMASKED-SVE2P1-NEXT:    [[TMP17:%.*]] = or <vscale x 2 x i1> [[TMP15]], [[TMP16]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP18:%.*]] = freeze <vscale x 2 x i1> [[TMP13]]
-; UNMASKED-SVE2P1-NEXT:    [[TMP19:%.*]] = or <vscale x 2 x i1> [[TMP17]], [[TMP18]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP20:%.*]] = freeze <vscale x 2 x i1> [[TMP14]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP32:%.*]] = or <vscale x 2 x i1> [[TMP15]], [[TMP16]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP19:%.*]] = or <vscale x 2 x i1> [[TMP32]], [[TMP18]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP21:%.*]] = or <vscale x 2 x i1> [[TMP19]], [[TMP20]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP22:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP21]])
 ; UNMASKED-SVE2P1-NEXT:    [[TMP23]] = select i1 [[TMP22]], <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i1> [[TMP2]]
@@ -345,7 +345,7 @@ define i64 @find_last_i64_scaled_load(i64 %n, ptr noalias %data, i64 %threshold)
 ; UNMASKED-SVE2P1-NEXT:    [[TMP30]] = select i1 [[TMP22]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -414,7 +414,7 @@ define void @extending_load(ptr noalias %dst, ptr %src, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 8 x i64> [[TMP22]], ptr [[TMP18]], align 8
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -500,7 +500,7 @@ define void @reverse_stride(ptr noalias %c, ptr noalias  %a, ptr noalias %b, i64
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 4 x i32> [[TMP24]], ptr [[TMP32]], align 4
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -544,16 +544,13 @@ define void @gather_nxv4i32_stride2(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; UNMASKED-SVE2P1-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 0
-; UNMASKED-SVE2P1-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 1
+; UNMASKED-SVE2P1-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP2]], 1
 ; UNMASKED-SVE2P1-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], [[TMP6]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP2]], 1
-; UNMASKED-SVE2P1-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 0
-; UNMASKED-SVE2P1-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 1
+; UNMASKED-SVE2P1-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP8]], 1
 ; UNMASKED-SVE2P1-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP10]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP2]], 3
-; UNMASKED-SVE2P1-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], 0
-; UNMASKED-SVE2P1-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 1
+; UNMASKED-SVE2P1-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP12]], 1
 ; UNMASKED-SVE2P1-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], [[TMP14]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP16:%.*]] = shl i64 [[INDEX]], 1
 ; UNMASKED-SVE2P1-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP7]], 1
@@ -583,7 +580,7 @@ define void @gather_nxv4i32_stride2(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 16 x float> [[TMP32]], ptr [[TMP28]], align 4
 ; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP33]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP33]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -622,38 +619,54 @@ define void @store_address(ptr noalias %x, ptr noalias %y, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
-; UNMASKED-SVE2P1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; UNMASKED-SVE2P1-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
-; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]]
-; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[VEC_IND]]
+; UNMASKED-SVE2P1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG26:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG26]]
+; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]], !dbg [[DBG26]]
+; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]], !dbg [[DBG26]]
+; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]], !dbg [[DBG26]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[VEC_IND]], !dbg [[DBG30:![0-9]+]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 2 x ptr> [[WIDE_GEP]], i64 0
-; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]]
-; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP2:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_2]]
-; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_3]]
-; UNMASKED-SVE2P1-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> poison, <vscale x 2 x ptr> [[WIDE_GEP]], i64 0)
-; UNMASKED-SVE2P1-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP6]], <vscale x 2 x ptr> [[WIDE_GEP1]], i64 2)
-; UNMASKED-SVE2P1-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP7]], <vscale x 2 x ptr> [[WIDE_GEP2]], i64 4)
-; UNMASKED-SVE2P1-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP8]], <vscale x 2 x ptr> [[WIDE_GEP3]], i64 6)
-; UNMASKED-SVE2P1-NEXT:    store <vscale x 8 x ptr> [[TMP9]], ptr [[TMP5]], align 8
-; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; UNMASKED-SVE2P1-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
-; UNMASKED-SVE2P1-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]], !dbg [[DBG30]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP2:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_2]], !dbg [[DBG30]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_3]], !dbg [[DBG30]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> poison, <vscale x 2 x ptr> [[WIDE_GEP]], i64 0), !dbg [[DBG31:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP6]], <vscale x 2 x ptr> [[WIDE_GEP1]], i64 2), !dbg [[DBG31]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP7]], <vscale x 2 x ptr> [[WIDE_GEP2]], i64 4), !dbg [[DBG31]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP8]], <vscale x 2 x ptr> [[WIDE_GEP3]], i64 6), !dbg [[DBG31]]
+; UNMASKED-SVE2P1-NEXT:    store <vscale x 8 x ptr> [[TMP9]], ptr [[TMP5]], align 8, !dbg [[DBG31]]
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]], !dbg [[DBG26]]
+; UNMASKED-SVE2P1-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]], !dbg [[DBG26]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG32:![0-9]+]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG32]], !llvm.loop [[LOOP33:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
 ;
 entry:
   br label %loop
 
 loop:
-  %iv = phi i64 [ 0, %entry ], [ %next, %loop ]
-  %px = getelementptr inbounds i64, ptr %x, i64 %iv
-  store ptr %px, ptr %px, align 8
-  %next = add nuw i64 %iv, 1
-  %cmp = icmp ult i64 %next, %n
-  br i1 %cmp, label %loop, label %exit
+  %iv = phi i64 [ 0, %entry ], [ %next, %loop ], !dbg !3
+  %px = getelementptr inbounds i64, ptr %x, i64 %iv, !dbg !4
+  store ptr %px, ptr %px, align 8, !dbg !5
+  %next = add nuw i64 %iv, 1, !dbg !6
+  %cmp = icmp ult i64 %next, %n, !dbg !7
+  br i1 %cmp, label %loop, label %exit, !dbg !8
 
 exit:
   ret void
 }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 24.0.0git")
+!1 = !DIFile(filename: "test.cpp", directory: "/")
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !DILocation(line: 4, scope: !9)
+!4 = !DILocation(line: 5, scope: !9)
+!5 = !DILocation(line: 6, scope: !9)
+!6 = !DILocation(line: 7, scope: !9)
+!7 = !DILocation(line: 8, scope: !9)
+!8 = !DILocation(line: 9, scope: !9)
+!9 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 11, type: !10, unit: !0, retainedNodes: !11)
+!10 = distinct !DISubroutineType(types: !11)
+!11 = !{}
