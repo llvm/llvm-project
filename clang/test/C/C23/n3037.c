@@ -957,12 +957,6 @@ void GH173477_1(enum GH173477_E1 e); // both-warning {{ISO C forbids forward ref
 enum GH173477_E1 { GH173477_A };
 void GH173477_1(enum GH173477_E1 e) {} // both-error {{conflicting types for 'GH173477_1'}}
 
-void GH173477_2(enum GH173477_E2 *e); // both-warning {{ISO C forbids forward references to 'enum' types}} \
-                                         both-warning {{declaration of 'enum GH173477_E2' will not be visible outside of this function}} \
-                                         both-note {{previous declaration is here}}
-enum GH173477_E2 { GH173477_B };
-void GH173477_2(enum GH173477_E2 *e) {} // both-error {{conflicting types for 'GH173477_2'}}
-
 // A complete one is compatible in C23.
 void GH173477_3(enum GH173477_E3 { GH173477_C } e); // c17-warning {{declaration of 'enum GH173477_E3' will not be visible outside of this function}} \
                                                        c17-note {{previous declaration is here}}
@@ -992,3 +986,22 @@ void GH173477_6_test(void) {
   enum GH173477_E6 : short;
   void GH173477_6(enum GH173477_E6 e); // both-error {{conflicting types for 'GH173477_6'}}
 }
+
+// The enumeration defined in the second definition completes the one referenced
+// in the first, so both members have the same type.
+struct GH173477_S1 { // c17-note {{previous definition is here}}
+  enum GH173477_E7 *ptr; // both-warning {{ISO C forbids forward references to 'enum' types}}
+};
+struct GH173477_S1 { // c17-error {{redefinition of 'GH173477_S1'}}
+  enum GH173477_E7 { GH173477_E7_One } *ptr;
+};
+
+// The enumeration in the parameter list is not visible, so both definitions use
+// the file scope enumeration.
+void GH173477_7(enum GH173477_E8 { GH173477_E8_Zero } e); // c17-warning {{declaration of 'enum GH173477_E8' will not be visible outside of this function}}
+struct GH173477_S2 { // c17-note {{previous definition is here}}
+  enum GH173477_E8 { GH173477_E8_One, GH173477_E8_Two } val;
+};
+struct GH173477_S2 { // c17-error {{redefinition of 'GH173477_S2'}}
+  enum GH173477_E8 val;
+};
