@@ -113,6 +113,20 @@ bool hasUnwindExceptions(const LangOptions &LangOpts) {
 bool isAAPCS(const TargetInfo &TargetInfo) {
   return TargetInfo.getABI().starts_with("aapcs");
 }
+
+LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
+                                     const TargetInfo &Target) {
+  if (LangOpts.OpenCL)
+    return LangAS::opencl_constant;
+  if (LangOpts.SYCLIsDevice)
+    return LangAS::sycl_global;
+  if (LangOpts.HIP && LangOpts.CUDAIsDevice && Target.getTriple().isSPIRV())
+    return LangAS::cuda_device;
+  if (auto AS = Target.getConstantAddressSpace())
+    return *AS;
+  return LangAS::Default;
+}
+
 bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
   const Type *BaseType = BaseInit->getBaseClass();
   return BaseType->castAsCXXRecordDecl()->isDynamicClass();

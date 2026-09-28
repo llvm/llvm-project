@@ -2366,17 +2366,14 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
 }
 
 LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
-  if (langOpts.OpenCL)
-    return LangAS::opencl_constant;
-  if (langOpts.SYCLIsDevice) {
+  LangAS as =
+      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
+  // CIR cannot represent SYCL address spaces yet.
+  if (as == LangAS::sycl_global) {
     errorNYI("SYCL global constant address space");
     return LangAS::Default;
   }
-  if (langOpts.HIP && langOpts.CUDAIsDevice && getTriple().isSPIRV())
-    return LangAS::cuda_device;
-  if (std::optional<LangAS> constAS = getTarget().getConstantAddressSpace())
-    return *constAS;
-  return LangAS::Default;
+  return as;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
