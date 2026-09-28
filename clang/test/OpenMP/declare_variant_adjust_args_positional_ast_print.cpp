@@ -44,24 +44,18 @@ void pos(int *A, int *B, int *C, int *D);
 // A list item may be a parameter range 'lb:ub'.
 // PRINT: #pragma omp declare variant(v_range) match(construct={dispatch}) adjust_args(need_device_ptr:1:3)
 // DUMP: FunctionDecl{{.*}}range 'void (int *, int *, int *, int *)'
-// DUMP: OMPArgumentRangeExpr{{.*}}'void'
-// DUMP-NEXT: IntegerLiteral{{.*}}'int' 1
+// DUMP: IntegerLiteral{{.*}}'int' 1
 // DUMP-NEXT: IntegerLiteral{{.*}}'int' 3
 #pragma omp declare variant(v_range) match(construct={dispatch}) \
   adjust_args(need_device_ptr: 1:3)
 void range(int *A, int *B, int *C, int *D);
 
-// 'omp_num_args' is spelled only as a range bound, optionally with a logical
-// offset. The offset is a constant expression, hence the ConstantExpr wrapper.
+// 'omp_num_args' is spelled only as a range bound, optionally with a constant
+// logical offset.
 // PRINT: #pragma omp declare variant(v_variadic) match(construct={dispatch}) adjust_args(need_device_ptr:1:3,5,omp_num_args-1:omp_num_args)
 // DUMP: FunctionDecl{{.*}}variadic 'void (int *, int *, int *, int *, ...)'
 // DUMP: IntegerLiteral{{.*}}'int' 5
-// DUMP-NEXT: OMPArgumentRangeExpr{{.*}}'void'
-// DUMP-NEXT: OMPNumArgsExpr{{.*}}'int' '-'
-// DUMP-NEXT: ConstantExpr{{.*}}'int'
-// DUMP: IntegerLiteral{{.*}}'int' 1
-// DUMP-NEXT: OMPNumArgsExpr{{.*}}'int'
-// DUMP-NEXT: <<<NULL>>>
+// DUMP-NEXT: IntegerLiteral{{.*}}'int' 1
 #pragma omp declare variant(v_variadic) match(construct={dispatch}) \
   adjust_args(need_device_ptr: 1:3, 5, omp_num_args-1:omp_num_args)
 void variadic(int *A, int *B, int *C, int *D, ...);
@@ -70,7 +64,8 @@ void variadic(int *A, int *B, int *C, int *D, ...);
 // the parameter list is ignored rather than diagnosed, per OpenMP 6.0 [9.6.2].
 // PRINT: #pragma omp declare variant(v_offset) match(construct={dispatch}) adjust_args(nothing:omp_num_args-2:omp_num_args,omp_num_args+1:)
 // DUMP: FunctionDecl{{.*}}offset 'void (int *, int *, int *, ...)'
-// DUMP: OMPNumArgsExpr{{.*}}'int' '+'
+// DUMP: IntegerLiteral{{.*}}'int' 2
+// DUMP-NEXT: IntegerLiteral{{.*}}'int' 1
 #pragma omp declare variant(v_offset) match(construct={dispatch}) \
   adjust_args(nothing: omp_num_args-2:omp_num_args, omp_num_args+1:)
 void offset(int *A, int *B, int *C, ...);
@@ -80,9 +75,7 @@ void offset(int *A, int *B, int *C, ...);
 // lex as a single '::' and the printed clause would not parse back.
 // PRINT: #pragma omp declare variant(v_lb) match(construct={dispatch}) adjust_args(need_device_ptr: :2)
 // DUMP: FunctionDecl{{.*}}lb 'void (int *, int *)'
-// DUMP: OMPArgumentRangeExpr{{.*}}'void'
-// DUMP-NEXT: <<<NULL>>>
-// DUMP-NEXT: IntegerLiteral{{.*}}'int' 2
+// DUMP: IntegerLiteral{{.*}}'int' 2
 #pragma omp declare variant(v_lb) match(construct={dispatch}) \
   adjust_args(need_device_ptr: :2)
 void lb(int *A, int *B);
@@ -90,9 +83,7 @@ void lb(int *A, int *B);
 // An omitted 'ub' stands for 'omp_num_args'.
 // PRINT: #pragma omp declare variant(v_ub) match(construct={dispatch}) adjust_args(need_device_ptr:1:)
 // DUMP: FunctionDecl{{.*}}ub 'void (int *, int *)'
-// DUMP: OMPArgumentRangeExpr{{.*}}'void'
-// DUMP-NEXT: IntegerLiteral{{.*}}'int' 1
-// DUMP-NEXT: <<<NULL>>>
+// DUMP: IntegerLiteral{{.*}}'int' 1
 #pragma omp declare variant(v_ub) match(construct={dispatch}) \
   adjust_args(need_device_ptr: 1:)
 void ub(int *A, int *B);
@@ -101,9 +92,7 @@ void ub(int *A, int *B);
 // 1:omp_num_args, that is every parameter.
 // PRINT: #pragma omp declare variant(v_both) match(construct={dispatch}) adjust_args(need_device_ptr: :)
 // DUMP: FunctionDecl{{.*}}both 'void (int *, int *)'
-// DUMP: OMPArgumentRangeExpr{{.*}}'void'
-// DUMP-NEXT: <<<NULL>>>
-// DUMP-NEXT: <<<NULL>>>
+// DUMP: OMPDeclareVariantAttr{{.*}}need_device_ptr
 #pragma omp declare variant(v_both) match(construct={dispatch}) \
   adjust_args(need_device_ptr: :)
 void both(int *A, int *B);
@@ -121,7 +110,8 @@ void named(int *A, int *B);
 // PRINT: #pragma omp declare variant(v_mixed) match(construct={dispatch}) adjust_args(need_device_ptr:A,2:2)
 // DUMP: FunctionDecl{{.*}}mixed 'void (int *, int *)'
 // DUMP: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}}'A' 'int *'
-// DUMP-NEXT: OMPArgumentRangeExpr{{.*}}'void'
+// DUMP-NEXT: IntegerLiteral{{.*}}'int' 2
+// DUMP-NEXT: IntegerLiteral{{.*}}'int' 2
 #pragma omp declare variant(v_mixed) match(construct={dispatch}) \
   adjust_args(need_device_ptr: A, 2:2)
 void mixed(int *A, int *B);
@@ -135,8 +125,8 @@ void mixed(int *A, int *B);
   adjust_args(need_device_ptr: 1 ? 2 : 3)
 void cond(int *A, int *B, int *C);
 
-// A range does not name a parameter, so the 'need_device_addr' reference-type
-// restriction of OpenMP 6.0 [9.6.2] does not apply to it.
+// The 'need_device_addr' reference-type restriction applies to every declared
+// parameter position identified by a range.
 // PRINT: #pragma omp declare variant(v_addr) match(construct={dispatch}) adjust_args(need_device_addr:1:2)
 #pragma omp declare variant(v_addr) match(construct={dispatch}) \
   adjust_args(need_device_addr: 1:2)
@@ -153,16 +143,12 @@ void tmpl(int *A, int *B, int *C, ...);
 // The instantiation is dumped before the pattern it came from, so its checks
 // come first. Substituting N=2 makes the logical offset a constant expression.
 // DUMP: FunctionDecl{{.*}}tmpl 'void (int *, int *, int *, ...)' explicit_instantiation_definition
-// DUMP: OMPArgumentRangeExpr{{.*}}'void'
-// DUMP-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'int'
+// DUMP: SubstNonTypeTemplateParmExpr{{.*}}'int'
 // DUMP: BinaryOperator{{.*}}'int' '+'
-// DUMP: OMPNumArgsExpr{{.*}}'int' '-'
-// DUMP-NEXT: ConstantExpr{{.*}}'int'
-// DUMP-NEXT: value: Int 2
+// DUMP: SubstNonTypeTemplateParmExpr{{.*}}'int'
 //
-// In the pattern the offset stays dependent, so it is not wrapped.
-// DUMP: OMPNumArgsExpr{{.*}}'int' '-'
-// DUMP-NEXT: DeclRefExpr{{.*}}'int' NonTypeTemplateParm{{.*}}'N' 'int'
+// In the pattern the offset stays dependent.
+// DUMP: DeclRefExpr{{.*}}'int' NonTypeTemplateParm{{.*}}'N' 'int'
 //
 // PRINT: #pragma omp declare variant(tmpl_v<N>) match(construct={dispatch}) adjust_args(need_device_ptr:N:N + 1,omp_num_args-N:omp_num_args)
 #pragma omp declare variant(tmpl_v<N>) match(construct={dispatch}) \

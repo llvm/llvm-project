@@ -3831,8 +3831,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ArraySectionExprClass:
   case OMPArrayShapingExprClass:
   case OMPIteratorExprClass:
-  case OMPNumArgsExprClass:
-  case OMPArgumentRangeExprClass:
   case MemberExprClass:
   case ConditionalOperatorClass:
   case BinaryConditionalOperatorClass:

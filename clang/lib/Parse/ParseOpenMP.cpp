@@ -1371,9 +1371,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
       Actions.OpenMP().getOMPTraitInfoForSurroundingScope();
   ASTContext &ASTCtx = Actions.getASTContext();
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
-  SmallVector<Expr *, 6> AdjustNothing;
-  SmallVector<Expr *, 6> AdjustNeedDevicePtr;
-  SmallVector<Expr *, 6> AdjustNeedDeviceAddr;
+  SmallVector<OMPAdjustArgsClause, 3> AdjustArgs;
   SmallVector<OMPInteropInfo, 3> AppendArgs;
   SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
@@ -1404,22 +1402,24 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         ConsumeToken();
         SemaOpenMP::OpenMPVarListDataTy Data;
         SmallVector<Expr *> Vars;
+        SmallVector<OMPAdjustArgsItem> Items;
         IsError = ParseOpenMPVarList(OMPD_declare_variant, OMPC_adjust_args,
-                                     Vars, Data);
+                                     Vars, Data, &Items);
         if (!IsError) {
-          switch (Data.ExtraModifier) {
-          case OMPC_ADJUST_ARGS_nothing:
-            llvm::append_range(AdjustNothing, Vars);
-            break;
-          case OMPC_ADJUST_ARGS_need_device_ptr:
-            llvm::append_range(AdjustNeedDevicePtr, Vars);
-            break;
-          case OMPC_ADJUST_ARGS_need_device_addr:
-            llvm::append_range(AdjustNeedDeviceAddr, Vars);
-            break;
-          default:
-            llvm_unreachable("Unexpected 'adjust_args' clause modifier.");
+          for (Expr *E : Vars) {
+            OMPAdjustArgsItem Item;
+            Item.E = E;
+            Items.push_back(Item);
           }
+          OMPAdjustArgsClause Clause;
+          Clause.AdjustOp =
+              static_cast<OpenMPAdjustArgsOpKind>(Data.ExtraModifier);
+          if (Data.NeedDevicePtrModifierLoc.isValid())
+            Clause.NeedDevicePtrModifier =
+                static_cast<OpenMPNeedDevicePtrModifier>(
+                    Data.NeedDevicePtrModifier);
+          Clause.Items = std::move(Items);
+          AdjustArgs.push_back(std::move(Clause));
         }
         break;
       }
@@ -1459,9 +1459,8 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
 
   if (DeclVarData && !TI.Sets.empty())
     Actions.OpenMP().ActOnOpenMPDeclareVariantDirective(
-        DeclVarData->first, DeclVarData->second, TI, AdjustNothing,
-        AdjustNeedDevicePtr, AdjustNeedDeviceAddr, AppendArgs, AdjustArgsLoc,
-        AppendArgsLoc, SourceRange(Loc, Tok.getLocation()));
+        DeclVarData->first, DeclVarData->second, TI, AdjustArgs, AppendArgs,
+        AdjustArgsLoc, AppendArgsLoc, SourceRange(Loc, Tok.getLocation()));
 
   // Skip the last annot_pragma_openmp_end.
   (void)ConsumeAnnotationToken();
@@ -4805,44 +4804,51 @@ bool Parser::ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
   return false;
 }
 
-ExprResult Parser::ParseOpenMPAdjustArgsBound() {
+bool Parser::ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound) {
   // 'omp_num_args' is recognised by spelling: OpenMP 6.0 [5.2.1] gives it no
   // declaration, so it is never looked up.
   if (Tok.isNot(tok::identifier) ||
-      !Tok.getIdentifierInfo()->isStr("omp_num_args"))
-    return ParseAssignmentExpression();
+      !Tok.getIdentifierInfo()->isStr("omp_num_args")) {
+    ExprResult E = ParseAssignmentExpression();
+    if (E.isInvalid())
+      return true;
+    Bound.Kind = OMPAdjustArgsItem::Bound::Expression;
+    Bound.E = E.get();
+    return false;
+  }
 
-  SourceLocation NumArgsLoc = ConsumeToken();
-  SourceLocation OpLoc;
-  bool IsSubtraction = false;
-  ExprResult Offset;
+  Bound.Kind = OMPAdjustArgsItem::Bound::NumArgs;
+  ConsumeToken();
   if (Tok.isOneOf(tok::plus, tok::minus)) {
-    IsSubtraction = Tok.is(tok::minus);
-    OpLoc = ConsumeToken();
+    Bound.IsSubtraction = Tok.is(tok::minus);
+    ConsumeToken();
     // OpenMP 6.0 [5.2.1]: the logical offset is a constant expression.
-    Offset = ParseConstantExpression();
+    ExprResult Offset = ParseConstantExpression();
     if (Offset.isInvalid())
-      return ExprError();
+      return true;
+    Bound.E = Offset.get();
   }
   // 'omp_num_args' is a whole bound, not an operand of a larger expression, so
   // nothing else may follow it.
   if (!Tok.isOneOf(tok::colon, tok::comma, tok::r_paren,
                    tok::annot_pragma_openmp_end)) {
     Diag(Tok, diag::err_omp_num_args_invalid_form) << 1;
-    return ExprError();
+    return true;
   }
-  return Actions.OpenMP().ActOnOMPNumArgsExpr(NumArgsLoc, OpLoc, IsSubtraction,
-                                              Offset.get());
+  return false;
 }
 
-bool Parser::ParseOpenMPAdjustArgsList(SmallVectorImpl<Expr *> &Vars) {
+bool Parser::ParseOpenMPAdjustArgsList(
+    SmallVectorImpl<OMPAdjustArgsItem> &Items) {
   bool IsError = false;
   while (true) {
+    SourceLocation ItemLoc = Tok.getLocation();
     // An omitted lower bound stands for 1, and is written as a leading ':'.
-    ExprResult LowerBound;
+    OMPAdjustArgsItem::Bound LowerBound;
+    bool ItemError = false;
     if (Tok.isNot(tok::colon)) {
-      LowerBound = ParseOpenMPAdjustArgsBound();
-      if (!LowerBound.isUsable()) {
+      ItemError = ParseOpenMPAdjustArgsBound(LowerBound);
+      if (ItemError) {
         IsError = true;
         SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                   StopBeforeMatch);
@@ -4850,32 +4856,36 @@ bool Parser::ParseOpenMPAdjustArgsList(SmallVectorImpl<Expr *> &Vars) {
     }
 
     if (Tok.is(tok::colon)) {
-      SourceLocation ColonLoc = ConsumeToken();
+      ConsumeToken();
       // An omitted upper bound stands for 'omp_num_args'.
-      ExprResult UpperBound;
+      OMPAdjustArgsItem::Bound UpperBound;
       if (!Tok.isOneOf(tok::comma, tok::r_paren,
                        tok::annot_pragma_openmp_end)) {
-        UpperBound = ParseOpenMPAdjustArgsBound();
-        if (!UpperBound.isUsable()) {
+        if (ParseOpenMPAdjustArgsBound(UpperBound)) {
+          ItemError = true;
           IsError = true;
           SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                     StopBeforeMatch);
         }
       }
-      Vars.push_back(Actions.OpenMP()
-                         .ActOnOMPArgumentRangeExpr(LowerBound.get(), ColonLoc,
-                                                    UpperBound.get())
-                         .get());
-    } else if (LowerBound.isUsable()) {
+      if (!ItemError) {
+        OMPAdjustArgsItem Item;
+        Item.Kind = OMPAdjustArgsItem::Range;
+        Item.Lower = LowerBound;
+        Item.Upper = UpperBound;
+        Items.push_back(Item);
+      }
+    } else if (!ItemError &&
+               LowerBound.Kind != OMPAdjustArgsItem::Bound::Omitted) {
       // Without a colon the item is a parameter name or a position, and is
-      // pushed unchanged so that pre-6.0 lists keep their exact AST shape.
-      if (isa<OMPNumArgsExpr>(LowerBound.get())) {
-        Diag(LowerBound.get()->getBeginLoc(),
-             diag::err_omp_num_args_invalid_form)
-            << 0;
+      // stored as a regular expression.
+      if (LowerBound.Kind == OMPAdjustArgsItem::Bound::NumArgs) {
+        Diag(ItemLoc, diag::err_omp_num_args_invalid_form) << 0;
         IsError = true;
       } else {
-        Vars.push_back(LowerBound.get());
+        OMPAdjustArgsItem Item;
+        Item.E = LowerBound.E;
+        Items.push_back(Item);
       }
     }
 
@@ -5005,7 +5015,9 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
 bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                                 OpenMPClauseKind Kind,
                                 SmallVectorImpl<Expr *> &Vars,
-                                SemaOpenMP::OpenMPVarListDataTy &Data) {
+                                SemaOpenMP::OpenMPVarListDataTy &Data,
+                                SmallVectorImpl<OMPAdjustArgsItem>
+                                    *AdjustArgsItems) {
   UnqualifiedId UnqualifiedReductionId;
   bool InvalidReductionId = false;
   bool IsInvalidMapperModifier = false;
@@ -5413,8 +5425,11 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       // colon terminates it.
       if (getLangOpts().OpenMP >= 60 &&
           Data.ExtraModifier != OMPC_ADJUST_ARGS_unknown) {
+        assert(AdjustArgsItems &&
+               "expected storage for OpenMP 6.0 adjust_args items");
         ParsedAdjustArgsList = true;
-        InvalidAdjustArgsList = ParseOpenMPAdjustArgsList(Vars);
+        InvalidAdjustArgsList =
+            ParseOpenMPAdjustArgsList(*AdjustArgsItems);
       }
     }
   } else if (Kind == OMPC_use_device_ptr) {
@@ -5638,7 +5653,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   if (HasIterator)
     ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_doacross && Kind != OMPC_map &&
-          Vars.empty()) ||
+          Vars.empty() &&
+          (!AdjustArgsItems || AdjustArgsItems->empty())) ||
          (MustHaveTail && !Data.DepModOrTailExpr && StepFound) ||
          InvalidReductionId || IsInvalidMapperModifier || InvalidIterator ||
          InvalidAdjustArgsList;

@@ -325,6 +325,35 @@ struct OMPInteropInfo final {
   llvm::SmallVector<OMPInteropPref, 4> Prefs;
 };
 
+/// One item in an OpenMP 'adjust_args' parameter list.
+struct OMPAdjustArgsItem final {
+  /// One bound of a parameter range.
+  struct Bound final {
+    enum BoundKind : uint8_t { Omitted, Expression, NumArgs };
+
+    BoundKind Kind = Omitted;
+    /// The bound expression, or the logical offset for a NumArgs bound.
+    Expr *E = nullptr;
+    bool IsSubtraction = false;
+  };
+
+  enum ItemKind : uint8_t { Single, Range };
+
+  ItemKind Kind = Single;
+  /// A named parameter or positional expression for a Single item.
+  Expr *E = nullptr;
+  Bound Lower;
+  Bound Upper;
+};
+
+/// The source-level contents of one OpenMP 'adjust_args' clause.
+struct OMPAdjustArgsClause final {
+  OpenMPAdjustArgsOpKind AdjustOp = OMPC_ADJUST_ARGS_unknown;
+  OpenMPNeedDevicePtrModifier NeedDevicePtrModifier =
+      OMPC_NEED_DEVICE_PTR_unknown;
+  llvm::SmallVector<OMPAdjustArgsItem, 4> Items;
+};
+
 OpenMPDefaultClauseVariableCategory
 getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts);
 const char *getOpenMPDefaultVariableCategoryName(unsigned VC);

@@ -458,14 +458,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_OMPIteratorExpr;
     break;
 
-  case Stmt::OMPNumArgsExprClass:
-    K = CXCursor_OMPNumArgsExpr;
-    break;
-
-  case Stmt::OMPArgumentRangeExprClass:
-    K = CXCursor_OMPArgumentRangeExpr;
-    break;
-
   case Stmt::BinaryOperatorClass:
     K = CXCursor_BinaryOperator;
     break;

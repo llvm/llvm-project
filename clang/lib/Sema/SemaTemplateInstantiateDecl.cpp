@@ -554,28 +554,32 @@ static void instantiateOMPDeclareVariantAttr(
     }
   }
 
-  SmallVector<Expr *, 8> NothingExprs;
-  SmallVector<Expr *, 8> NeedDevicePtrExprs;
-  SmallVector<Expr *, 8> NeedDeviceAddrExprs;
+  SmallVector<OMPAdjustArgsClause, 4> AdjustArgs;
   SmallVector<OMPInteropInfo, 4> AppendArgs;
 
-  for (Expr *E : Attr.adjustArgsNothing()) {
+  auto SubstAdjustArgsExpr = [&](Expr *&E) {
+    if (!E)
+      return false;
     ExprResult ER = Subst(E);
     if (ER.isInvalid())
-      continue;
-    NothingExprs.push_back(ER.get());
-  }
-  for (Expr *E : Attr.adjustArgsNeedDevicePtr()) {
-    ExprResult ER = Subst(E);
-    if (ER.isInvalid())
-      continue;
-    NeedDevicePtrExprs.push_back(ER.get());
-  }
-  for (Expr *E : Attr.adjustArgsNeedDeviceAddr()) {
-    ExprResult ER = Subst(E);
-    if (ER.isInvalid())
-      continue;
-    NeedDeviceAddrExprs.push_back(ER.get());
+      return true;
+    E = ER.get();
+    return false;
+  };
+  for (const OMPAdjustArgsClause &Clause : Attr.adjustArgs()) {
+    OMPAdjustArgsClause NewClause;
+    NewClause.AdjustOp = Clause.AdjustOp;
+    NewClause.NeedDevicePtrModifier = Clause.NeedDevicePtrModifier;
+    for (const OMPAdjustArgsItem &Item : Clause.Items) {
+      OMPAdjustArgsItem NewItem = Item;
+      if (SubstAdjustArgsExpr(NewItem.E) ||
+          SubstAdjustArgsExpr(NewItem.Lower.E) ||
+          SubstAdjustArgsExpr(NewItem.Upper.E))
+        continue;
+      NewClause.Items.push_back(NewItem);
+    }
+    if (!NewClause.Items.empty())
+      AdjustArgs.push_back(std::move(NewClause));
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
@@ -600,8 +604,8 @@ static void instantiateOMPDeclareVariantAttr(
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
-      FD, E, TI, NothingExprs, NeedDevicePtrExprs, NeedDeviceAddrExprs,
-      AppendArgs, SourceLocation(), SourceLocation(), Attr.getRange());
+      FD, E, TI, AdjustArgs, AppendArgs, SourceLocation(), SourceLocation(),
+      Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(

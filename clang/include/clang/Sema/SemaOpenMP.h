@@ -859,17 +859,14 @@ public:
   /// \param VariantRef Expression that references the variant function, which
   /// must be used instead of the original one, specified in \p DG.
   /// \param TI The context traits associated with the function variant.
-  /// \param AdjustArgsNothing The list of 'nothing' arguments.
-  /// \param AdjustArgsNeedDevicePtr The list of 'need_device_ptr' arguments.
+  /// \param AdjustArgs The list of 'adjust_args' clauses.
   /// \param AppendArgs The list of 'append_args' arguments.
   /// \param AdjustArgsLoc The Location of an 'adjust_args' clause.
   /// \param AppendArgsLoc The Location of an 'append_args' clause.
   /// \param SR The SourceRange of the 'declare variant' directive.
   void ActOnOpenMPDeclareVariantDirective(
       FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
-      ArrayRef<Expr *> AdjustArgsNothing,
-      ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
-      ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
+      ArrayRef<OMPAdjustArgsClause> AdjustArgs,
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
@@ -1490,20 +1487,6 @@ public:
   ExprResult ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
                                   SourceLocation LLoc, SourceLocation RLoc,
                                   ArrayRef<OMPIteratorData> Data);
-
-  /// Called on a well-formed 'omp_num_args' expression appearing as a bound of
-  /// an 'adjust_args' parameter range. \a Offset is null if no logical offset
-  /// was written, in which case \a OpLoc is invalid.
-  ExprResult ActOnOMPNumArgsExpr(SourceLocation NumArgsLoc,
-                                 SourceLocation OpLoc, bool IsSubtraction,
-                                 Expr *Offset);
-
-  /// Called on a well-formed 'adjust_args' parameter range 'lb:ub'. Either
-  /// bound may be null, meaning 1 for \a LowerBound and 'omp_num_args' for
-  /// \a UpperBound.
-  ExprResult ActOnOMPArgumentRangeExpr(Expr *LowerBound,
-                                       SourceLocation ColonLoc,
-                                       Expr *UpperBound);
 
   ExprResult ActOnOpenMPDimsModifier(OpenMPClauseKind Kind, int Modifier,
                                      Expr *ModifierExpr,

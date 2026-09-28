@@ -126,6 +126,12 @@ void f17(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: omp_num_args, 2)
 void f18(int *aaa, int *bbb, ...);
 
+// Mismatched nested parentheses must not cause the inner colon to be accepted
+// as the range delimiter.
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: ((1 + 1):3) // expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}}
+void f19(int *aaa, int *bbb, ...);
+
 // OpenMP 6.0 [5.2.1]: a position has the positive property.
 // expected-error@+2 {{argument to 'adjust_args' clause must be a strictly positive integer value}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
