@@ -8878,7 +8878,7 @@ ASTContext::getInlineVariableDefinitionKind(const VarDecl *VD) const {
   return InlineVariableDefinitionKind::WeakUnknown;
 }
 
-static std::string charUnitsToString(const CharUnits &CU) {
+static std::string charUnitsToString(CharUnits CU) {
   return llvm::itostr(CU.getQuantity());
 }
 
