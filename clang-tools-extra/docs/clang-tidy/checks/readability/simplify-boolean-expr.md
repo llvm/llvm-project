@@ -84,16 +84,16 @@ Default is `false`.
 
 ```{option} ChainedConditionalReturn
 If `true`, conditional boolean return statements at the end of an
-`if/else if` chain will be transformed. Default is `false`.
+`if`/`else if` chain will be transformed. Default is `false`.
 ```
 
 ```{option} ChainedConditionalAssignment
-If `true`, conditional boolean assignments at the end of an `if/else
-if` chain will be transformed. Default is `false`.
+If `true`, conditional boolean assignments at the end of an `if`/`else if`
+chain will be transformed. Default is `false`.
 ```
 
 ```{option} SimplifyDeMorgan
-If `true`, DeMorgan's Theorem will be applied to simplify negated
+If `true`, De Morgan's theorem will be applied to simplify negated
 conjunctions and disjunctions. Default is `true`.
 ```
 
@@ -105,14 +105,14 @@ Default is `false`.
 
 When enabled:
 
-```
+```c++
 bool X = !(A && B)
 bool Y = !(A || B)
 ```
 
 Would be transformed to:
 
-```
+```c++
 bool X = !A || !B
 bool Y = !A && !B
 ```
