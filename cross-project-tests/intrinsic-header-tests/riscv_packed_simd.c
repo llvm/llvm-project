@@ -2697,12 +2697,12 @@ int8x4_t test_pncvth_i8x4(int16x4_t rs1) { return __riscv_pncvth_i8x4(rs1); }
 uint8x4_t test_pncvth_u8x4(uint16x4_t rs1) { return __riscv_pncvth_u8x4(rs1); }
 
 // CHECK-LABEL: test_pncvth_i16x2:
-// RV32:        pncvth.h
+// RV32:        ppairo.h
 // RV64:        pncvth.wh
 int16x2_t test_pncvth_i16x2(int32x2_t rs1) { return __riscv_pncvth_i16x2(rs1); }
 
 // CHECK-LABEL: test_pncvth_u16x2:
-// RV32:        pncvth.h
+// RV32:        ppairo.h
 // RV64:        pncvth.wh
 uint16x2_t test_pncvth_u16x2(uint32x2_t rs1) {
   return __riscv_pncvth_u16x2(rs1);
@@ -3362,14 +3362,14 @@ uint8x4_t test_ppairo_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
 }
 
 // CHECK-LABEL: test_ppaire_i16x2:
-// RV32:        pncvt.h
+// RV32:        pack
 // RV64:        zip16p
 int16x2_t test_ppaire_i16x2(int16x2_t rs1, int16x2_t rs2) {
   return __riscv_ppaire_i16x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_ppaire_u16x2:
-// RV32:        pncvt.h
+// RV32:        pack
 // RV64:        zip16p
 uint16x2_t test_ppaire_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
   return __riscv_ppaire_u16x2(rs1, rs2);
@@ -3400,14 +3400,14 @@ uint16x2_t test_ppairoe_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
 }
 
 // CHECK-LABEL: test_ppairo_i16x2:
-// RV32:        pncvth.h
+// RV32:        ppairo.h
 // RV64:        ppairo.h
 int16x2_t test_ppairo_i16x2(int16x2_t rs1, int16x2_t rs2) {
   return __riscv_ppairo_i16x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_ppairo_u16x2:
-// RV32:        pncvth.h
+// RV32:        ppairo.h
 // RV64:        ppairo.h
 uint16x2_t test_ppairo_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
   return __riscv_ppairo_u16x2(rs1, rs2);
@@ -3687,22 +3687,22 @@ uint8x4_t test_punzipe_u8x4(uint8x8_t a) { return __riscv_punzipe_u8x4(a); }
 uint8x4_t test_punzipo_u8x4(uint8x8_t a) { return __riscv_punzipo_u8x4(a); }
 
 // CHECK-LABEL: test_punzipe_i16x2:
-// RV32:        pncvt.h
+// RV32:        pack
 // RV64:        pncvt.wh
 int16x2_t test_punzipe_i16x2(int16x4_t a) { return __riscv_punzipe_i16x2(a); }
 
 // CHECK-LABEL: test_punzipo_i16x2:
-// RV32:        pncvth.h
+// RV32:        ppairo.h
 // RV64:        pncvth.wh
 int16x2_t test_punzipo_i16x2(int16x4_t a) { return __riscv_punzipo_i16x2(a); }
 
 // CHECK-LABEL: test_punzipe_u16x2:
-// RV32:        pncvt.h
+// RV32:        pack
 // RV64:        pncvt.wh
 uint16x2_t test_punzipe_u16x2(uint16x4_t a) { return __riscv_punzipe_u16x2(a); }
 
 // CHECK-LABEL: test_punzipo_u16x2:
-// RV32:        pncvth.h
+// RV32:        ppairo.h
 // RV64:        pncvth.wh
 uint16x2_t test_punzipo_u16x2(uint16x4_t a) { return __riscv_punzipo_u16x2(a); }
 
