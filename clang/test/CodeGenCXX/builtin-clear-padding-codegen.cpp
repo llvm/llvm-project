@@ -4792,6 +4792,74 @@ extern "C" void testBitfieldOversizedAligned(BitfieldOversizedAligned *s) {
   __builtin_clear_padding(s);
 }
 
+// `bool : 16` stores true as 00000001 in the first byte on both endians.
+// clear_padding treats only that value bit as occupied (getIntWidth == 1).
+// The other seven bits of the first byte, and the whole second byte, are
+// cleared.
+struct BitfieldOversizedBool {
+  bool value : 16;
+};
+
+// ITANIUM64-LE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// ITANIUM64-LE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ITANIUM64-LE-NEXT:  [[ENTRY:.*:]]
+// ITANIUM64-LE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// ITANIUM64-LE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// ITANIUM64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// ITANIUM64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ITANIUM64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// ITANIUM64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ITANIUM64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// ITANIUM64-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ITANIUM64-LE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ITANIUM64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// ARM-LE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// ARM-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// ARM-BE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedBool(
+// AARCH64-BE-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// AARCH64-BE-NEXT:    ret void
+//
+extern "C" void testBitfieldOversizedBool(BitfieldOversizedBool *s) {
+  __builtin_clear_padding(s);
+}
+
 // Eight value bits occupy the first byte. The rest of the allocation is padding.
 struct BitfieldOversizedBeyondBoundary {
   unsigned char value : 17;

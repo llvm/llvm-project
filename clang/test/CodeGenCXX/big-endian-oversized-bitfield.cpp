@@ -26,6 +26,14 @@ struct S {
 // IR: @global = global { i8, i8 } { i8 -85, i8 undef }, align 2
 S global = {0xAB};
 
+// `bool : 16 = true` is 00000001 in the first byte. The value bit is the
+// low bit of that byte; the second byte is padding.
+// IR: @bglobal = global { i8, i8 } { i8 1, i8 undef }, align 2
+struct B {
+  bool value : 16;
+};
+B bglobal = {true};
+
 // IR-LABEL: define {{.*}} @_Z3getPK1S(
 // IR: [[P:%.*]] = load ptr, ptr %p.addr
 // IR: [[LOAD:%.*]] = load i16, ptr [[P]]
@@ -47,5 +55,29 @@ unsigned char get(const S *p) {
 // IR-NEXT: [[MERGED:%.*]] = or i16 [[KEPT]], [[SHIFTED]]
 // IR-NEXT: store i16 [[MERGED]], ptr [[PTR]]
 void set(S *p, unsigned char v) {
+  p->value = v;
+}
+
+// LAYOUT: BitFields:[
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:8 Size:8 IsSigned:0 StorageSize:16 StorageOffset:0
+// LAYOUT-NEXT: ]>
+
+// IR-LABEL: define {{.*}} @_Z3getPK1B(
+// IR: [[BP:%.*]] = load ptr, ptr %p.addr
+// IR: [[BLOAD:%.*]] = load i16, ptr [[BP]]
+// IR-NEXT: [[BSHL:%.*]] = lshr i16 [[BLOAD]], 8
+// IR-NEXT: trunc i16 [[BSHL]] to i1
+bool get(const B *p) {
+  return p->value;
+}
+
+// IR-LABEL: define {{.*}} @_Z3setP1Bb(
+// IR: [[BEXT:%.*]] = zext i1 {{.*}} to i16
+// IR: [[BOLD:%.*]] = load i16, ptr %{{.*}}
+// IR-NEXT: [[BSHIFT:%.*]] = shl i16 [[BEXT]], 8
+// IR-NEXT: [[BKEPT:%.*]] = and i16 [[BOLD]], 255
+// IR-NEXT: [[BMERGED:%.*]] = or i16 [[BKEPT]], [[BSHIFT]]
+// IR-NEXT: store i16 [[BMERGED]], ptr %{{.*}}
+void set(B *p, bool v) {
   p->value = v;
 }
