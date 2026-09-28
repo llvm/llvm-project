@@ -1,7 +1,6 @@
 header: pwd.h
 standards:
   - posix
-  - gnu
 types:
   - type_name: struct_passwd
   - type_name: gid_t
