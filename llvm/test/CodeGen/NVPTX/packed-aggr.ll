@@ -35,7 +35,7 @@ declare void @func()
 ; CHECK-SAME:   0xFF(generic(p)+3), 0xFF00(generic(p)+3), 0xFF0000(generic(p)+3), 0xFF000000(generic(p)+3),
 ; CHECK64-SAME: 0xFF00000000(generic(p)+3), 0xFF0000000000(generic(p)+3), 0xFF000000000000(generic(p)+3), 0xFF00000000000000(generic(p)+3),
     i32 56 }>, align 1
-; CHECK-SAME:   56, 0, 0, 0};
+; CHECK-SAME:   56};
 
 ;; Test a case than an unaligned pointer is in a nested struct.
 
@@ -51,7 +51,7 @@ declare void @func()
 ; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func),
     i32 34}
 ; CHECK-SAME:   0, 0, 0,
-; CHECK-SAME:   34, 0, 0, 0};
+; CHECK-SAME:   34};
 
 ;; Test that a packed struct which size is not multiple of the pointer size
 ;; is printed in bytes and uses the mask() operator for pointers even though
@@ -76,7 +76,7 @@ declare void @func()
     ptr @func,
 ; CHECK-SAME:   func,
     i64 15}>, align 1
-; CHECK32-SAME: 15, 0};
+; CHECK32-SAME: 15};
 ; CHECK64-SAME: 15};
 
 ;; Test that a packed struct with unaligned pointers inside an array is handled.
@@ -85,14 +85,14 @@ declare void @func()
 @a5 = addrspace(1) global [2 x %t5] [%t5 <{ ptr @func, i16 5 }>, %t5 <{ ptr @func, i16 9 }> ]
 ; CHECK32: .global .align 8 .u8 a5[12] = {
 ; CHECK32-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func), 5, 0,
-; CHECK32-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func), 9, 0};
+; CHECK32-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func), 9};
 ; CHECK64: .global .align 8 .u8 a5[20] = {
 ; CHECK64-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func),
 ; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func),
 ; CHECK64-SAME: 5, 0,
 ; CHECK64-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func),
 ; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func),
-; CHECK64-SAME: 9, 0};
+; CHECK64-SAME: 9};
 
 ;; Test that self-referential packed aggregates also use masked relocations
 ;; when the aggregate size is not a multiple of the pointer size.
@@ -108,3 +108,14 @@ declare void @func()
 ; CHECK64-SAME: 0xFF00000000(generic(self_packed)+3), 0xFF0000000000(generic(self_packed)+3), 0xFF000000000000(generic(self_packed)+3), 0xFF00000000000000(generic(self_packed)+3), 7};
   ptr addrspacecast (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @self_packed, i32 3) to ptr),
   i8 7 }>, align 1
+
+;; Test that a symbol followed only by zeros is not mistaken for its zero-filled
+;; placeholder when trimming an unaligned aggregate initializer.
+
+%t7 = type <{ i8, ptr, [3 x i8] }>
+@s7 = addrspace(1) global %t7 <{ i8 1, ptr @func, [3 x i8] zeroinitializer }>, align 1
+; CHECK32: .global .align 1 .u8 s7[8] = {1,
+; CHECK32-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func)};
+; CHECK64: .global .align 1 .u8 s7[12] = {1,
+; CHECK64-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func),
+; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func)};

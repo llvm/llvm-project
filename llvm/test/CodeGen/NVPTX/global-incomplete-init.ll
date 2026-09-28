@@ -17,6 +17,6 @@
 
 ; initializer with a symbol, the last 0 could be default initialized
 ; CHECK-DAG: .u8 e = 1;
-; CHECK-DAG: .u64 D[4] = {e, 0, e, 0};
+; CHECK-DAG: .u64 D[4] = {e, 0, e};
 @e = addrspace(1) global i8 1
 @D = addrspace(1) global [4 x ptr addrspace(1)] [ptr addrspace(1) @e, ptr addrspace(1) null, ptr addrspace(1) @e, ptr addrspace(1) null]

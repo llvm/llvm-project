@@ -208,6 +208,7 @@ class NVPTXAsmPrinter : public AsmPrinter {
     void printWords(raw_ostream &os);
 
   private:
+    unsigned getInitializerSize(unsigned PtrSize) const;
     void printSymbol(unsigned nSym, raw_ostream &os);
   };
 
@@ -1690,18 +1691,28 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
     llvm_unreachable("symbol type unknown");
 }
 
-void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI.getCodePointerSize();
+unsigned NVPTXAsmPrinter::AggBuffer::getInitializerSize(unsigned PtrSize) const {
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
-  unsigned int InitializerCount = Size;
-  // TODO: symbols make this harder, but it would still be good to trim trailing
-  // 0s for aggs with symbols as well.
-  if (numSymbols() == 0)
-    while (InitializerCount >= 1 && !buffer[InitializerCount - 1])
-      InitializerCount--;
+  //
+  // Symbols are represented by zero-filled placeholders in the buffer, so do
+  // not trim into the final symbol even if it is followed only by zeros.
+  unsigned MinimumSize = symbolPosInBuffer.empty()
+                             ? 0
+                             : symbolPosInBuffer.back() + PtrSize;
+  assert(MinimumSize <= Size);
+
+  unsigned InitializerSize = Size;
+  while (InitializerSize > MinimumSize && !buffer[InitializerSize - 1])
+    --InitializerSize;
+  return InitializerSize;
+}
+
+void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
+  unsigned int InitializerCount = getInitializerSize(ptrSize);
 
   symbolPosInBuffer.push_back(InitializerCount);
   unsigned int nSym = 0;
@@ -1734,11 +1745,13 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI.getCodePointerSize();
-  symbolPosInBuffer.push_back(Size);
+  unsigned int InitializerSize =
+      alignTo(getInitializerSize(ptrSize), ptrSize);
+  symbolPosInBuffer.push_back(InitializerSize);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
   assert(nextSymbolPos % ptrSize == 0);
-  for (unsigned int pos = 0; pos < Size; pos += ptrSize) {
+  for (unsigned int pos = 0; pos < InitializerSize; pos += ptrSize) {
     if (pos)
       os << ", ";
     if (pos == nextSymbolPos) {
