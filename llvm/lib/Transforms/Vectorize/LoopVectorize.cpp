@@ -6554,8 +6554,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1(
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
   if (IsInnerLoop) {
     RUN_VPLAN_PASS(VPlanTransforms::recordExecutionFrequencies, *VPlan0);
-    assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, EnabledCM) &&
-           "execution frequencies do not match the loop's block frequencies");
+    assert(
+        verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, EnabledCM) &&
+        "execution frequencies do not match the loop's block frequencies");
   }
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
@@ -7150,14 +7151,18 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
-    ElementCount MinProfitableTripCount) const {
+    ElementCount MinProfitableTripCount, bool TailFoldedEpilogue) const {
   const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
           : nullptr;
+  // If either the main vector loop or the epilogue vector loop is tail-folded,
+  // it can handle any trip count, so the min iter check never needs
+  // to branch to the scalar loop.
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
                  MinProfitableTripCount, Plan.requiresScalarEpilogue(),
-                 Plan.hasTailFolded(), OrigLoop, BranchWeights,
+                 Plan.hasTailFolded() || TailFoldedEpilogue, OrigLoop,
+                 BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
 }
@@ -7739,6 +7744,8 @@ fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, VPlan &BestEpiPlan,
     for (auto [ResumeV, HeaderPhi] :
          zip(ResumeValues, BestEpiPlan.getScalarHeader()->phis())) {
       auto *HeaderPhiR = cast<VPIRPhi>(&HeaderPhi);
+      // With a tail-folded epilogue, the epilogue's middle block never branches
+      // to the scalar preheader, so some incoming values are just 0, not phis.
       if (!isa<PHINode>(HeaderPhiR->getIRPhi().getIncomingValueForBlock(PH)))
         continue;
       auto *EpiResumePhi =
@@ -7758,11 +7765,9 @@ fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, VPlan &BestEpiPlan,
 /// InstsToMove contains instructions that need to be moved to the preheader of
 /// the epilogue vector loop.
 static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
-                                      GeneratedRTChecks &Checks,
                                       VPIRBasicBlock *VecEpilogueIterCheckVPBB,
                                       ArrayRef<Instruction *> InstsToMove,
-                                      ArrayRef<VPInstruction *> ResumeValues,
-                                      bool IsEpilogueTfEnabled) {
+                                      ArrayRef<VPInstruction *> ResumeValues) {
   ArrayRef<VPBlockBase *> Preds = VecEpilogueIterCheckVPBB->getPredecessors();
   BasicBlock *MainLoopIterationCountCheck =
       cast<VPIRBasicBlock>(Preds.front())->getIRBasicBlock();
@@ -7780,36 +7785,6 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
                     {DominatorTree::Insert, MainLoopIterationCountCheck,
                      VecEpiloguePreHeader}});
 
-  BasicBlock *ScalarPH =
-      cast<VPIRBasicBlock>(EpiPlan.getScalarPreheader())->getIRBasicBlock();
-  BasicBlock *SCEVCheckBlock = Checks.getSCEVChecks().second;
-  BasicBlock *MemCheckBlock = Checks.getMemRuntimeChecks().second;
-  // The epilogue plan's entry wraps the main loop's iteration count check
-  // (iter.check), which was redirected to the scalar preheader when executing
-  // the epilogue plan.
-  BasicBlock *EpilogueIterationCountCheck =
-      cast<VPIRBasicBlock>(EpiPlan.getEntry())->getIRBasicBlock();
-  bool JumpToScalarPH =
-      (!IsEpilogueTfEnabled || SCEVCheckBlock || MemCheckBlock);
-  // With tail-folding, the epilogue vector loop itself safely handles any
-  // trip count (including one smaller than the epilogue VF), so there's no
-  // need for a scalar remainder and we can jump straight to the epilogue
-  // preheader. The exception is when a SCEV or memory runtime check is
-  // present: those can fail at runtime regardless of tail-folding, so the
-  // scalar loop must still be kept as a fallback.
-  if (!JumpToScalarPH) {
-    assert(is_contained(successors(EpilogueIterationCountCheck), ScalarPH) &&
-           "expected iter.check to branch to the scalar preheader");
-    ScalarPH->removePredecessor(EpilogueIterationCountCheck,
-                                /*KeepOneInputPHIs=*/true);
-    EpilogueIterationCountCheck->getTerminator()->replaceSuccessorWith(
-        ScalarPH, VecEpiloguePreHeader);
-    DTU.applyUpdates(
-        {{DominatorTree::Delete, EpilogueIterationCountCheck, ScalarPH},
-         {DominatorTree::Insert, EpilogueIterationCountCheck,
-          VecEpiloguePreHeader}});
-  }
-
   // The vec.epilog.iter.check block may contain Phi nodes from inductions
   // or reductions which merge control-flow from the latch block and the
   // middle block. Update the incoming values here and move the Phi into the
@@ -7822,18 +7797,6 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
     Phi->replaceIncomingBlockWith(
         VecEpilogueIterationCountCheck->getSinglePredecessor(),
         VecEpilogueIterationCountCheck);
-    // When the epilogue is tail-folded, EpilogueIterationCountCheck
-    // (iter.check) is redirected to branch straight into the vector epilogue
-    // preheader (see the IsEpilogueTfEnabled redirect above), so it is now a
-    // genuine predecessor. Like MainLoopIterationCountCheck, it bypasses the
-    // main vector loop, so re-use the incoming value from that edge.
-    // TODO: revisit for reduction phis, whose resume value on this bypass
-    // edge may need dedicated handling rather than reusing the value already
-    // present here.
-    if (!JumpToScalarPH)
-      Phi->addIncoming(
-          Phi->getIncomingValueForBlock(MainLoopIterationCountCheck),
-          EpilogueIterationCountCheck);
   }
 
   auto IP = VecEpiloguePreHeader->getFirstNonPHIIt();
@@ -8290,7 +8253,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
     LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
-                                 ElementCount::getFixed(0));
+                                 ElementCount::getFixed(0),
+                                 BestEpiPlan.hasTailFolded());
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
     RUN_VPLAN_PASS(
         VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
@@ -8317,20 +8281,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
         *PSE.getSE(), ResumeValues);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
-    // Save the status of epilogue tail-folding:
-    const bool IsTailFolded = BestEpiPlan.hasTailFolded();
     LVP.executePlan(
         EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
-    connectEpilogueVectorLoop(BestEpiPlan, DT, Checks,
+    connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,
-                              InstsToMove, ResumeValues, IsTailFolded);
+                              InstsToMove, ResumeValues);
     ++LoopsEpilogueVectorized;
   } else {
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
                            BestPlan);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
-                                 VF.MinProfitableTripCount);
+                                 VF.MinProfitableTripCount,
+                                 /*TailFoldedEpilogue=*/false);
     LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
 
     if (!IsInnerLoop)
