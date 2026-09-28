@@ -5541,6 +5541,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return loadVec3BuiltinInputID(SPIRV::BuiltIn::NumWorkgroups, ResVReg,
                                   ResType, I);
   case Intrinsic::spv_subgroup_size:
+  case Intrinsic::spv_wave_get_lane_count:
     return loadBuiltinInputID(SPIRV::BuiltIn::SubgroupSize, ResVReg, ResType,
                               I);
   case Intrinsic::spv_num_subgroups:
