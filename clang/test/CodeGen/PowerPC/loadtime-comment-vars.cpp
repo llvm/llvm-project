@@ -37,6 +37,7 @@
 //   not_string    not_string               int: unsupported type: diagnosed, not emitted
 //   cver          cver                     preserved (C linkage, not mangled)
 //   anon          _ZN12_GLOBAL__N_14anonE  preserved (unnamed namespace)
+//   version       asmid                    preserved (asm label)
 //   sccsid_ce     _ZL9sccsid_ce            preserved (static constexpr, internal)
 //   sccsid_ci     sccsid_ci                preserved (constinit; needs -std=c++20)
 //   sccsid_inl    sccsid_inl               preserved (inline variable, linkonce_odr)
@@ -55,7 +56,7 @@
 //   g()::fn       _ZZ1gvE2fn       function-local static: diagnosed, no metadata
 
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var \
-// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE \
+// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE,asmid \
 // RUN:   -emit-llvm -disable-llvm-passes -o %t.ll %s
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT < %t.ll
@@ -148,31 +149,35 @@ namespace {
 char anon[] = "@(#) anon";
 } // namespace
 
+// 13. An asm label replaces the mangled name in the object file, so the
+//     variable is listed by its label.
+char version[] asm("asmid") = "@(#) asm label";
+
 // ===========================================================================
 // Storage-duration filtering (STORAGE)
 // ===========================================================================
 
-// 13. A file-scope pointer with static storage duration is preserved.
+// 14. A file-scope pointer with static storage duration is preserved.
 const char *keep = "@(#) keep";
 
 namespace S {
-// 14. A thread_local variable (N renamed to S to avoid redefinition) is
+// 15. A thread_local variable (N renamed to S to avoid redefinition) is
 //     diagnosed and receives no metadata.
 thread_local const char *tl = "@(#) tl";
 } // namespace S
 
-// 15. The 'static' specifier changes linkage only; the storage duration is
+// 16. The 'static' specifier changes linkage only; the storage duration is
 //     still thread, so this is diagnosed as well.
 static thread_local const char *stl = "@(#) stl";
 
-// 16. A thread_local static data member (A renamed to T) is diagnosed and
+// 17. A thread_local static data member (A renamed to T) is diagnosed and
 //     receives no metadata.
 struct T {
   static thread_local const char *tm;
 };
 thread_local const char *T::tm = "@(#) tm";
 
-// 17. Function-local static (f renamed to g) — name-matched, so diagnosed by
+// 18. Function-local static (f renamed to g) — name-matched, so diagnosed by
 //     Sema (see the Sema tests); receives no metadata either way.
 void g() { static const char *fn = "@(#) fn"; (void)fn; }
 
@@ -180,7 +185,7 @@ void g() { static const char *fn = "@(#) fn"; (void)fn; }
 // Sources — list-parsing edge cases (SPACE, DUP)
 // ===========================================================================
 
-// 18. Simple arrays used only by the SPACE/DUP checks.
+// 19. Simple arrays used only by the SPACE/DUP checks.
 char foo[] = "@(#) foo";
 char bar[] = "@(#) bar";
 
@@ -210,6 +215,7 @@ char bar[] = "@(#) bar";
 
 // CHECK-DAG: @cver = global [15 x i8] c"@(#) c linkage\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 // CHECK-DAG: @_ZN12_GLOBAL__N_14anonE = internal global [10 x i8] c"@(#) anon\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
+// CHECK-DAG: @asmid = global [15 x i8] c"@(#) asm label\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 
 // Eligible C++ forms: static constexpr (internal, constant), constinit
 // (external), and inline (linkonce_odr) are all preserved.
@@ -221,9 +227,9 @@ char bar[] = "@(#) bar";
 // CHECK-DAG: @[[INL_STR]] = private unnamed_addr constant [12 x i8] c"@(#) inline\00", align {{[0-9]+}}
 // CHECK-DAG: @_ZDC1a1b1cE = internal constant [3 x i8] c"ab\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 
-// The nine supported matched globals are preserved in llvm.compiler.used;
+// The ten supported matched globals are preserved in llvm.compiler.used;
 // the two static data members are not.
-// CHECK: @llvm.compiler.used = appending global [9 x ptr]
+// CHECK: @llvm.compiler.used = appending global [10 x ptr]
 // CHECK-SAME: @x
 // CHECK-SAME: @_ZN1N1xE
 // CHECK-SAME: @_ZN1NL3ptrE
@@ -233,6 +239,7 @@ char bar[] = "@(#) bar";
 // CHECK-SAME: @_ZDC1a1b1cE
 // CHECK-SAME: @cver
 // CHECK-SAME: @_ZN12_GLOBAL__N_14anonE
+// CHECK-SAME: @asmid
 // CHECK-SAME: section "llvm.metadata"
 
 // ===========================================================================

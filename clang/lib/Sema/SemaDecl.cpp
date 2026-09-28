@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -63,6 +64,7 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -15495,6 +15497,21 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
                      : AT ? AT->getElementType()
                           : QualType();
 
+  // Mangling is comparatively expensive, so first check cheaply whether the
+  // source identifier appears in any listed name at all: both the Itanium
+  // mangling and an unmangled C name embed the identifier verbatim. A
+  // declaration without an identifier (a structured binding) has no such
+  // shortcut and is mangled directly; nor does a variable with an assembler
+  // label, since the label replaces the identifier in the object-file name.
+  if (const IdentifierInfo *II = VD->getIdentifier()) {
+    if (!VD->hasAttr<AsmLabelAttr>()) {
+      StringRef Name = II->getName();
+      if (llvm::none_of(
+              S.getLangOpts().LoadTimeCommentVars,
+              [Name](StringRef Listed) { return Listed.contains(Name); }))
+        return;
+    }
+  }
   // Names are matched against the mangled name, as it appears in the object
   // file. For plain C file-scope variables this is the source identifier; for
   // C++ variables it is the mangled symbol.

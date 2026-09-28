@@ -6594,7 +6594,8 @@ is named by its identifier. A variable in an unnamed namespace is mangled with
 the unnamed-namespace marker, for example `namespace { char anon[]; }` is
 `_ZN12_GLOBAL__N_14anonE`. Names are matched exactly against the mangled name;
 surrounding whitespace is not trimmed, so `-mloadtime-comment-vars=foo, bar`
-names `foo` and ` bar`.
+names `foo` and ` bar`. A variable given an assembler label with `asm("label")`
+is named by that label.
 
 Valid variable types:
 
