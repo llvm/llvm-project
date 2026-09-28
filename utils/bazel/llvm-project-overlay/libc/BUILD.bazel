@@ -1106,10 +1106,7 @@ libc_support_library(
     name = "types_atexithandler_t",
     hdrs = ["hdr/types/atexithandler_t.h"],
     # Only compatible with full build mode. atexit is not available in overlay mode.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
 )
 
 libc_support_library(
@@ -1450,8 +1447,9 @@ libc_support_library(
 libc_support_library(
     name = "types_struct___pthread_cleanup_frame",
     hdrs = ["hdr/types/struct___pthread_cleanup_frame.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [":llvm_libc_types_struct___pthread_cleanup_frame"],
@@ -4246,8 +4244,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread_attributes",
     hdrs = ["src/__support/threads/thread_attributes.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -4402,8 +4401,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_tcb",
     hdrs = ["src/__support/threads/tcb.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     textual_hdrs = select({
@@ -4429,8 +4429,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread_headers",
     hdrs = ["src/__support/threads/thread.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -4452,8 +4453,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread",
     srcs = ["src/__support/threads/thread.cpp"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -4474,9 +4476,13 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_linux_thread",
     srcs = ["src/__support/threads/linux/thread.cpp"],
-    copt_sets = ["threading"],
+    copts = [
+        "-fno-omit-frame-pointer",
+        "-Wno-frame-address",
+    ],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -15258,10 +15264,7 @@ libc_support_library(
     name = "stdlib_exit_handler",
     hdrs = ["src/stdlib/exit_handler.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_blockstore",
         ":__support_common",
@@ -15278,10 +15281,7 @@ libc_function(
     srcs = ["src/stdlib/_Exit.cpp"],
     hdrs = ["src/stdlib/_Exit.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_common",
         ":__support_macros_config",
@@ -15294,10 +15294,7 @@ libc_function(
     srcs = ["src/stdlib/atexit.cpp"],
     hdrs = ["src/stdlib/atexit.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_common",
         ":__support_macros_attributes",
@@ -15312,10 +15309,7 @@ libc_function(
     srcs = ["src/stdlib/exit.cpp"],
     hdrs = ["src/stdlib/exit.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_common",
         ":__support_macros_config",
@@ -15472,9 +15466,10 @@ libc_support_library(
 libc_support_library(
     name = "stdlib_linux_abort_utils",
     hdrs = ["src/stdlib/linux/abort_utils.h"],
+    full_build_only = True,
     # Full-build only, as overlay mode must use the host libc's cleanup.
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -15493,10 +15488,7 @@ libc_function(
     srcs = ["src/stdlib/abort.cpp"],
     hdrs = ["src/stdlib/abort.h"],
     # Full-build only, as overlay mode must use the host libc's abort.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_macros_config",
         ":stdlib_abort_utils",
@@ -16722,8 +16714,9 @@ libc_function(
     name = "fork",
     srcs = ["src/unistd/linux/fork.cpp"],
     hdrs = ["src/unistd/fork.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -16773,10 +16766,11 @@ libc_support_library(
 libc_support_library(
     name = "__signal_utils",
     hdrs = ["src/signal/linux/signal_utils.h"],
+    full_build_only = True,
     # Only compatible with full build mode on Linux. Overlay mode has header
     # conflicts with system headers (e.g. sa_handler macro in glibc).
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -17174,8 +17168,9 @@ libc_function(
     name = "sysconf",
     srcs = ["src/unistd/linux/sysconf.cpp"],
     hdrs = ["src/unistd/sysconf.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
