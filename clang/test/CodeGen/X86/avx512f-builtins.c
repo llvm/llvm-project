@@ -1329,7 +1329,6 @@ __mmask16 test_mm512_cmpeq_epi32_mask(__m512i __a, __m512i __b) {
   return (__mmask16)_mm512_cmpeq_epi32_mask(__a, __b);
 }
 
-//cmpeq
 TEST_CONSTEXPR(_mm512_cmpeq_epi32_mask(
     ((__m512i)(__v16si){ 0, 1, -1, 0x7FFFFFFF,
                          0x12345678, 42, -42, (int)0x80000000,
@@ -1361,7 +1360,6 @@ __mmask8 test_mm512_cmpeq_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpeq_epi64_mask(__a, __b);
 }
-//cmpeq
 TEST_CONSTEXPR(_mm512_cmpeq_epi64_mask(
     ((__m512i)(__v8di){ 0LL, 1LL, -1LL, 0x7FFFFFFFFFFFFFFFLL,
                         0x123456789ABCDEF0LL, 42LL, (long long)0x8000000000000000ULL,
@@ -1376,7 +1374,6 @@ __mmask16 test_mm512_cmpgt_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp sgt <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpgt_epi32_mask(__a, __b);
 }
-//cmpgt
 TEST_CONSTEXPR(_mm512_cmpgt_epi32_mask(
     ((__m512i)(__v16si){
                                     9,           2,           9,           4,           9,           6,           9,           8,
@@ -1405,7 +1402,6 @@ __mmask8 test_mm512_cmpgt_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp sgt <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpgt_epi64_mask(__a, __b);
 }
-//cmpgt
 TEST_CONSTEXPR(_mm512_cmpgt_epi64_mask(
     ((__m512i)(__v8di){ 0x0000000000000000ull, 0x7fffffffffffffffull,
                         -1ll,                  0x0000000100000000ull,
@@ -2576,7 +2572,6 @@ __mmask16 test_mm512_cmpeq_epu32_mask(__m512i __a, __m512i __b) {
   return (__mmask16)_mm512_cmpeq_epu32_mask(__a, __b);
 }
 
-//cmpeq
 TEST_CONSTEXPR(_mm512_cmpeq_epu32_mask(
     ((__m512i)(__v16su){
                                    1u,          2u,          3u,          4u,          5u,          6u,          7u,          8u,
@@ -2598,7 +2593,6 @@ __mmask8 test_mm512_cmpeq_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpeq_epu64_mask(__a, __b);
 }
-//cmpeq
 TEST_CONSTEXPR(_mm512_cmpeq_epu64_mask(
     ((__m512i)(__v8du){
                         0x1111111111111111ull, 0x2222222222222222ull,
@@ -2625,7 +2619,6 @@ __mmask16 test_mm512_cmpge_epi32_mask(__m512i __a, __m512i __b) {
   return (__mmask16)_mm512_cmpge_epi32_mask(__a, __b);
 }
 
-//cmpge
 TEST_CONSTEXPR(_mm512_cmpge_epi32_mask(
     ((__m512i)(__v16si){
                                     9,           2,           9,           4,           9,           6,           9,           8,
@@ -2648,7 +2641,6 @@ __mmask8 test_mm512_cmpge_epi64_mask(__m512i __a, __m512i __b) {
   return (__mmask8)_mm512_cmpge_epi64_mask(__a, __b);
 }
 
-//cmpge
 TEST_CONSTEXPR(_mm512_cmpge_epi64_mask(
     ((__m512i)(__v8di){ 0x0000000000000000ull, 0x7fffffffffffffffull,
                         -1ll,                  0x0000000100000000ull,
@@ -2674,7 +2666,6 @@ __mmask16 test_mm512_cmpge_epu32_mask(__m512i __a, __m512i __b) {
   return (__mmask16)_mm512_cmpge_epu32_mask(__a, __b);
 }
 
-//cmpge
 TEST_CONSTEXPR(_mm512_cmpge_epu32_mask(
     ((__m512i)(__v16su){ 0x00000000u, 0x7fffffffu, 0x80000000u, 0x80000000u,
                          0xffffffffu, 0xffffffffu, 0x7fffffffu, 0x00000000u,
@@ -2698,7 +2689,6 @@ __mmask8 test_mm512_cmpge_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp uge <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpge_epu64_mask(__a, __b);
 }
-//cmpge
 TEST_CONSTEXPR(_mm512_cmpge_epu64_mask(
     ((__m512i)(__v8du){
                         0x0000000000000002ull, 0x8000000000000000ull,
@@ -2724,7 +2714,6 @@ __mmask16 test_mm512_cmpgt_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ugt <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpgt_epu32_mask(__a, __b);
 }
-//cmpgt
 TEST_CONSTEXPR(_mm512_cmpgt_epu32_mask(
     ((__m512i)(__v16su){ 0x00000000u, 0x7fffffffu, 0x80000000u, 0x80000000u,
                          0xffffffffu, 0xffffffffu, 0x7fffffffu, 0x00000000u,
@@ -2749,7 +2738,6 @@ __mmask8 test_mm512_cmpgt_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ugt <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpgt_epu64_mask(__a, __b);
 }
-//cmpgt
 TEST_CONSTEXPR(_mm512_cmpgt_epu64_mask(
     ((__m512i)(__v8du){
                         0x0000000000000002ull, 0x8000000000000000ull,
@@ -2775,7 +2763,6 @@ __mmask16 test_mm512_cmple_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp sle <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmple_epi32_mask(__a, __b);
 }
-//cmple
 TEST_CONSTEXPR(_mm512_cmple_epi32_mask(
     ((__m512i)(__v16si){
                                     9,           2,           9,           4,           9,           6,           9,           8,
@@ -2798,7 +2785,6 @@ __mmask8 test_mm512_cmple_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp sle <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmple_epi64_mask(__a, __b);
 }
-//cmple
 TEST_CONSTEXPR(_mm512_cmple_epi64_mask(
     ((__m512i)(__v8di){ 0x0000000000000000ull, 0x7fffffffffffffffull,
                         -1ll,                  0x0000000100000000ull,
@@ -2822,7 +2808,6 @@ __mmask16 test_mm512_cmple_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ule <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmple_epu32_mask(__a, __b);
 }
-//cmple
 TEST_CONSTEXPR(_mm512_cmple_epu32_mask(
     ((__m512i)(__v16su){ 0x00000000u, 0x7fffffffu, 0x80000000u, 0x80000000u,
                          0xffffffffu, 0xffffffffu, 0x7fffffffu, 0x00000000u,
@@ -2873,7 +2858,6 @@ __mmask16 test_mm512_cmplt_epi32_mask(__m512i __a, __m512i __b) {
   return (__mmask16)_mm512_cmplt_epi32_mask(__a, __b);
 }
 
-//cmplt
 TEST_CONSTEXPR(_mm512_cmplt_epi32_mask(
     ((__m512i)(__v16si){
                                     9,           2,           9,           4,           9,           6,           9,           8,
@@ -2896,7 +2880,6 @@ __mmask8 test_mm512_cmplt_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp slt <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmplt_epi64_mask(__a, __b);
 }
-//cmplt
 TEST_CONSTEXPR(_mm512_cmplt_epi64_mask(
     ((__m512i)(__v8di){ 0x0000000000000000ull, 0x7fffffffffffffffull,
                         -1ll,                  0x0000000100000000ull,
@@ -2920,7 +2903,6 @@ __mmask16 test_mm512_cmplt_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ult <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmplt_epu32_mask(__a, __b);
 }
-//cmplt
 TEST_CONSTEXPR(_mm512_cmplt_epu32_mask(
     ((__m512i)(__v16su){ 0x00000000u, 0x7fffffffu, 0x80000000u, 0x80000000u,
                          0xffffffffu, 0xffffffffu, 0x7fffffffu, 0x00000000u,
@@ -2944,7 +2926,6 @@ __mmask8 test_mm512_cmplt_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ult <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmplt_epu64_mask(__a, __b);
 }
-//cmplt
 TEST_CONSTEXPR(_mm512_cmplt_epu64_mask(
     ((__m512i)(__v8du){
                         0x0000000000000002ull, 0x8000000000000000ull,
@@ -2970,7 +2951,6 @@ __mmask16 test_mm512_cmpneq_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpneq_epi32_mask(__a, __b);
 }
-//cmpneq
 TEST_CONSTEXPR(_mm512_cmpneq_epi32_mask(
     ((__m512i)(__v16si){
                                     1,           2,           3,           4,           5,           6,           7,           8,
@@ -2994,7 +2974,6 @@ __mmask8 test_mm512_cmpneq_epi64_mask(__m512i __a, __m512i __b) {
   return (__mmask8)_mm512_cmpneq_epi64_mask(__a, __b);
 }
 
-//cmpneq
 TEST_CONSTEXPR(_mm512_cmpneq_epi64_mask(
     ((__m512i)(__v8di){ 0x0000000000000000ull, 0x7fffffffffffffffull,
                         -1ll,                  0x0000000100000000ull,
@@ -3018,7 +2997,6 @@ __mmask16 test_mm512_cmpneq_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpneq_epu32_mask(__a, __b);
 }
-//cmpneq
 TEST_CONSTEXPR(_mm512_cmpneq_epu32_mask(
     ((__m512i)(__v16su){ 0x00000000u, 0x7fffffffu, 0x80000000u, 0x80000000u,
                          0xffffffffu, 0xffffffffu, 0x7fffffffu, 0x00000000u,
@@ -3042,7 +3020,6 @@ __mmask8 test_mm512_cmpneq_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpneq_epu64_mask(__a, __b);
 }
-//cmpneq
 TEST_CONSTEXPR(_mm512_cmpneq_epu64_mask(
     ((__m512i)(__v8du){
                         0x1111111111111111ull, 0x2222222222222222ull,
