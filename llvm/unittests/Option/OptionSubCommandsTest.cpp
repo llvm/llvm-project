@@ -184,6 +184,44 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
               ErrMsg.find("Unregistered positionals passed"));
     EXPECT_NE(std::string::npos, ErrMsg.find("input"));
   }
+
+  {
+    // Test case 8: Check that with AllowSubCommandNamesAsPositionals, later
+    // positional arguments that match a subcommand name are positionals.
+    ErrMsg.clear();
+    const char *Args[] = {"-uppercase", "foo", "foo", "bar"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals,
+        /*AllowSubCommandNamesAsPositionals=*/true);
+    EXPECT_EQ(SC, "foo");
+    EXPECT_EQ(ErrMsg, "Unregistered positionals passed\n\nfoo\nbar");
+  }
+
+  {
+    // Test case 9: Check that with AllowSubCommandNamesAsPositionals, the
+    // subcommand does not need to be the first positional argument.
+    ErrMsg.clear();
+    const char *Args[] = {"input", "bar", "foo"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals,
+        /*AllowSubCommandNamesAsPositionals=*/true);
+    EXPECT_EQ(SC, "bar");
+    EXPECT_EQ(ErrMsg, "Unregistered positionals passed\n\ninput\nfoo");
+  }
+
+  {
+    // Test case 10: Check that without AllowSubCommandNamesAsPositionals, a
+    // repeated subcommand is still an error.
+    ErrMsg.clear();
+    const char *Args[] = {"foo", "foo"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    EXPECT_TRUE(SC.empty());
+    EXPECT_NE(std::string::npos, ErrMsg.find("Multiple subcommands passed"));
+  }
 }
 
 TYPED_TEST(OptSubCommandTableTest, SubCommandHelp) {
