@@ -2544,7 +2544,8 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target, root);
     target.addLegalOp<UnrealizedConversionCastOp>();
-    (void)applyPartialConversion(root, target, std::move(patterns));
+    if (failed(applyPartialConversion(root, target, std::move(patterns))))
+      return signalPassFailure();
   }
   // Fold cancelling cast chains and erase dead casts.
   xegpu::cleanupUnrealizedConversionCasts(root, existingCasts);
