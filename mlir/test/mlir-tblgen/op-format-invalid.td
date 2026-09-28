@@ -8,8 +8,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def TestDialect : Dialect {
   let name = "test";
-  // Exercise the legacy assembly format behavior.
-  let useStrictPropertiesInAssemblyFormat = 0;
 }
 def TestStrictPropertiesDialect : Dialect {
   let name = "test_strict_properties";
