@@ -304,6 +304,10 @@ static bool IsPlainScalar(const Symbol &symbol) {
       !ultimate.owner().IsDerivedType() && !IsAllocatableOrPointer(ultimate);
 }
 
+// [[maybe_unused]] works around a -Wunused-template false positive: this
+// overload is only reached through the if-constexpr-dispatched recursion in
+// ActionStmtChecker::WhyNotOk, a pattern Clang's use-tracking misses (see
+// llvm/llvm-project#218429). Remove once that is fixed upstream.
 template <typename A>
 [[maybe_unused]] static MaybeMsg CheckUnwrappedExpr(
     SemanticsContext &context, const A &x, bool allowHostCallees = false) {
