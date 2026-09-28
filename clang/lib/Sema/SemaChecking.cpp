@@ -17530,7 +17530,7 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
 bool Sema::CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx) {
   assert(TheCall->getNumArgs() >= ArgIdx + 1);
   Expr *Stride = TheCall->getArg(ArgIdx);
-  if (convertArgumentToType(*this, Stride, Context.getSizeType())) {
+  if (convertArgumentToType(Stride, Context.getSizeType())) {
     Diag(Stride->getExprLoc(), diag::err_coop_mat_stride_type);
     return true;
   }
