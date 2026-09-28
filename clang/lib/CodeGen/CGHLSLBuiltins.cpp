@@ -1287,9 +1287,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
-      unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
-      assert(N == Rows && "vector length must match matrix row count");
+      assert(N == MatTy->getNumRows() &&
+             "vector length must match matrix row count");
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
@@ -1304,10 +1304,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
     unsigned Rows0 = MatTy0->getNumRows();
-    unsigned Rows1 = MatTy1->getNumRows();
     unsigned Cols0 = MatTy0->getNumColumns();
     unsigned Cols1 = MatTy1->getNumColumns();
-    assert(Cols0 == Rows1 &&
+    assert(Cols0 == MatTy1->getNumRows() &&
            "inner matrix dimensions must match for multiplication");
     return MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
   }
