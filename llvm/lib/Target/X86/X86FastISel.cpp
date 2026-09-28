@@ -113,6 +113,8 @@ private:
 
   bool X86SelectShift(const Instruction *I);
 
+  bool X86SelectMul(const Instruction *I);
+
   bool X86SelectDivRem(const Instruction *I);
 
   bool X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I);
@@ -1891,6 +1893,24 @@ bool X86FastISel::X86SelectShift(const Instruction *I) {
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(OpReg), ResultReg)
       .addReg(Op0Reg)
       .setOperandDead(2); // EFLAGS
+  updateValueMap(I, ResultReg);
+  return true;
+}
+
+bool X86FastISel::X86SelectMul(const Instruction *I) {
+  if (!I->getType()->isIntegerTy(8))
+    return false;
+
+  Register LHSReg = getRegForValue(I->getOperand(0));
+  if (!LHSReg)
+    return false;
+
+  Register RHSReg = getRegForValue(I->getOperand(1));
+  if (!RHSReg)
+    return false;
+
+  Register ResultReg =
+      X86FastEmitMul(X86::MUL8r, MVT::i8, X86::AL, LHSReg, RHSReg);
   updateValueMap(I, ResultReg);
   return true;
 }
@@ -3709,6 +3729,8 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
   case Instruction::AShr:
   case Instruction::Shl:
     return X86SelectShift(I);
+  case Instruction::Mul:
+    return X86SelectMul(I);
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
