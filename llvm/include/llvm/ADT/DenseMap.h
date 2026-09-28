@@ -208,8 +208,6 @@ template <typename BucketT> class DenseMapStorage {
   unsigned NumBuckets = 0;
 
 public:
-  DenseMapStorage() = default;
-
   unsigned getNumEntries() const { return NumEntries; }
   void setNumEntries(unsigned Num) { NumEntries = Num; }
 
@@ -231,7 +229,7 @@ public:
     NumBuckets = Num;
   }
 
-  void growShared(unsigned MinNumBuckets, BucketHasher Hasher) {
+  void grow(unsigned MinNumBuckets, BucketHasher Hasher) {
     unsigned NewNumBuckets = roundUpNumBuckets(MinNumBuckets);
     setStorage(growRelocatable(Buckets, Used, NumBuckets, NewNumBuckets,
                                sizeof(BucketT), allocAlign<BucketT>(), Hasher,
@@ -1090,7 +1088,7 @@ private:
   typename BaseT::Rep getRep() const { return Storage.getRep(); }
 
   void growShared(unsigned MinNumBuckets) {
-    Storage.growShared(MinNumBuckets, BaseT::hasher());
+    Storage.grow(MinNumBuckets, BaseT::hasher());
   }
 
   UsedT *getUsed() const { return Storage.getUsed(); }
