@@ -1890,7 +1890,7 @@ public:
               !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
         } else {
           assert(I && "Expected instruction");
-          auto [SelectedOp, Ops] = convertTo(I, S);
+          Instruction *SelectedOp = convertTo(I, S).first;
           // We cannot check commutativity by the converted instruction
           // (SelectedOp) because isCommutative also examines def-use
           // relationships.
@@ -6875,7 +6875,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
     for (auto [I, V] :
          make_filter_range(zip(UserBVHead, TE.Scalars), [](const auto &P) {
-           auto [I, V] = P;
+           Value *V = std::get<1>(P);
            return !isa<Constant>(V) && V->hasNUsesOrMore(1);
          })) {
       auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
@@ -8834,7 +8834,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
               Results.swap(UnsortedResults);
             }
           }
-          for (auto [Slice, _] : Results) {
+          for (ArrayRef<Value *> Slice : make_first_range(Results)) {
             LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize gathered loads ("
                               << Slice.size() << ")\n");
             if (any_of(Slice, [&](Value *V) { return isVectorized(V); })) {
@@ -10853,7 +10853,7 @@ class InstructionsCompatibilityAnalysis {
             Ops[Idx] = PoisonValue::get(VL0->getOperand(OpIdx)->getType());
           continue;
         }
-        auto [Op, ConvertedOps] = convertTo(I, S);
+        SmallVector<Value *> ConvertedOps = convertTo(I, S).second;
         for (auto [OpIdx, Ops] : enumerate(Operands))
           Ops[Idx] = ConvertedOps[OpIdx];
       }
@@ -10877,7 +10877,7 @@ class InstructionsCompatibilityAnalysis {
           Operands[2][Idx] = ConstantInt::getNullValue(I->getType());
           continue;
         }
-        auto [Op, ConvertedOps] = convertTo(I, S);
+        SmallVector<Value *> ConvertedOps = convertTo(I, S).second;
         for (auto [OpIdx, Ops] : enumerate(Operands))
           Ops[Idx] = ConvertedOps[OpIdx];
       }
@@ -11461,11 +11461,12 @@ public:
         SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
         SmallMapVector<unsigned, unsigned, 4> AddendIDCounts;
         unsigned MajID0 = 0, MajID1 = 0;
-        for (auto [Idx, V] :
+        for (const auto &P :
              make_filter_range(enumerate(VL), [&](const auto &P) {
-               auto [Idx, V] = P;
-               return !S.isCopyableElement(V) && !isa<PoisonValue>(V);
+               return !S.isCopyableElement(P.value()) &&
+                      !isa<PoisonValue>(P.value());
              })) {
+          size_t Idx = P.index();
           unsigned ID0 = Operands[0][Idx]->getValueID();
           unsigned ID1 = Operands[1][Idx]->getValueID();
           if (S.hasAbsorbedCopyableFMulOrFAdd())
@@ -11474,8 +11475,7 @@ public:
             continue;
           unsigned MinID = std::min(ID0, ID1);
           unsigned MaxID = std::max(ID0, ID1);
-          auto [It, Inserted] =
-              PairCounts.try_emplace(std::make_pair(MinID, MaxID));
+          auto *It = PairCounts.try_emplace(std::make_pair(MinID, MaxID)).first;
           PairInfo &Info = It->second;
           if (ID0 < ID1)
             ++Info.FwdCount;
@@ -11615,8 +11615,9 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
   }
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   auto BuildSubtree = [&](const auto &GroupMap) {
-    for (const auto &[_, Group] : make_filter_range(
+    for (const auto &Entry : make_filter_range(
              GroupMap, [](const auto &P) { return P.second.size() >= 2; })) {
+      const auto &Group = Entry.second;
       // Copyable-aware check so bundles with copyable lanes are not skipped.
       if (!Analysis.buildInstructionsState(Group.getArrayRef(), *this))
         continue;
@@ -21843,8 +21844,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
   // No need to shuffle duplicates for constants.
   for (auto [I, V] : make_filter_range(enumerate(VL), [&](const auto &P) {
-         auto [I, V] = P;
-         return !(ForPoisonSrc && isConstant(V)) && !isa<UndefValue>(V);
+         return !(ForPoisonSrc && isConstant(P.value())) &&
+                !isa<UndefValue>(P.value());
        })) {
     if (isConstant(V)) {
       ConstantShuffleMask[I] = I + VF;
@@ -23062,12 +23063,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
     if (!ExtractShuffles.empty()) {
       SmallVector<const TreeEntry *> ExtractEntries;
-      for (auto [Idx, I] :
+      for (const auto &P :
            make_filter_range(enumerate(ExtractMask), [](const auto &P) {
              return P.value() != PoisonMaskElem;
            })) {
-        if (ArrayRef<TreeEntry *> TEs = getTreeEntries(
-                cast<ExtractElementInst>(StoredGS[Idx])->getVectorOperand());
+        if (ArrayRef<TreeEntry *> TEs =
+                getTreeEntries(cast<ExtractElementInst>(StoredGS[P.index()])
+                                   ->getVectorOperand());
             !TEs.empty())
           ExtractEntries.append(TEs.begin(), TEs.end());
       }
