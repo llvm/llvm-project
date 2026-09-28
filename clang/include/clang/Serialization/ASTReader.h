@@ -1448,15 +1448,10 @@ private:
     const StringRef &operator*() && = delete;
   };
 
-public:
   /// Returns where a loaded module keeps the input file with path \p Path and
   /// size \p Size, or an invalid \c FID if no loaded module has the file.
   serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
 
-private:
-  /// An input file recorded by a loaded module file. \c Size is the size
-  /// recorded by the module, and \c InputID is the file's ID within the
-  /// module's input file table.
   /// An input file recorded by a loaded module file. \c InputID is the file's
   /// ID within the module's input file table.
   struct LoadedInputModuleFile {
