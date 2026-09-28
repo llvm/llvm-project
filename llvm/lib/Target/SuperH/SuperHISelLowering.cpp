@@ -177,15 +177,11 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
     break;
   }
   case ISD::SETLT: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
     SHcc = SHCC::COND_GE;
     SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETLE: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
     SHcc = SHCC::COND_GT;
     SHocc = SHCC::COND_F;
     break;
@@ -225,15 +221,11 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
     break;
   }
   case ISD::SETULT: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
     SHcc = SHCC::COND_HS;
     SHocc = SHCC::COND_F;
     break;
   }
   case ISD::SETULE: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
     SHcc = SHCC::COND_HI;
     SHocc = SHCC::COND_F;
     break;
