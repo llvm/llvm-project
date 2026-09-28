@@ -261,15 +261,16 @@ SkipFunctionNamesFile("skip-funcs-file",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-static cl::list<std::string> SkipFunctionNamesNR(
-    "skip-funcs-no-regex", cl::CommaSeparated,
-    cl::desc("list of functions to skip (non-regex)"),
-    cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
+static cl::list<std::string>
+    SkipFunctionNamesNR("skip-funcs-no-regex", cl::CommaSeparated,
+                        cl::desc("list of functions to skip (non-regex)"),
+                        cl::value_desc("func1,func2,func3,..."), cl::Hidden,
+                        cl::cat(BoltCategory));
 
 static cl::opt<std::string> SkipFunctionNamesFileNR(
     "skip-funcs-file-no-regex",
-    cl::desc("file with list of functions to skip (non-regex)"),
-    cl::Hidden, cl::cat(BoltCategory));
+    cl::desc("file with list of functions to skip (non-regex)"), cl::Hidden,
+    cl::cat(BoltCategory));
 
 static cl::opt<bool> TrapOldCode(
     "trap-old-code",
