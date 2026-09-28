@@ -4196,23 +4196,19 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
-void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
-                                              unsigned UF,
-                                              const TargetTransformInfo &TTI) {
+void VPlanTransforms::widenMemoryAccessesToVFMultiple(
+    VPlan &Plan, ElementCount VF, unsigned UF, const TargetTransformInfo &TTI) {
   assert(UF > 1 && "Expected plan to have an UF > 1");
 
-  Type *IVTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
+  Type *I64Ty = IntegerType::getInt64Ty(Plan.getContext());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      uint64_t Stride;
       VPValue *StoredValue = nullptr;
-      auto m_ConstantStrideVecPtr =
-          m_VecPtr(m_VPValue(), m_ConstantInt(Stride));
-      if ((!match(&R, m_WidenLoad(m_ConstantStrideVecPtr)) &&
-           !match(&R, m_WidenStore(m_ConstantStrideVecPtr,
-                                   m_VPValue(StoredValue)))) ||
-          Stride != 1)
+      auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
+      if ((!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
+           !match(&R,
+                  m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue)))))
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
@@ -4244,21 +4240,21 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
         continue;
 
       VPValue *Ptr = MemOp->getAddr();
-      VPValue *VFMultipleVPV = Plan.getConstantInt(IVTy, VFMultiple);
-      VPValue *Align = Plan.getConstantInt(IVTy, MemOp->getAlign().value());
+      VPValue *VFMultipleVPV = Plan.getConstantInt(I64Ty, VFMultiple);
+      VPValue *Align = Plan.getConstantInt(I64Ty, MemOp->getAlign().value());
 
       VPBuilder Builder(VPBB, R.getIterator());
       if (Opcode == Instruction::Load) {
         VPValue *OldLoad = R.getVPSingleValue();
         VPValue *Load = Builder.createNaryOp(
             VPInstruction::VFMultipleLoad, {VFMultipleVPV, Ptr, Align}, nullptr,
-            {}, {}, DebugLoc::getUnknown(), "", OldLoad->getScalarType());
+            {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
         OldLoad->replaceAllUsesWith(Load);
       } else {
         assert(Opcode == Instruction::Store);
         Builder.createNaryOp(VPInstruction::VFMultipleStore,
-                             {VFMultipleVPV, Ptr, Align, StoredValue},
-                             R.getDebugLoc());
+                             {VFMultipleVPV, Ptr, Align, StoredValue}, nullptr,
+                             {}, *MemOp, R.getDebugLoc());
       }
 
       R.eraseFromParent();
