@@ -498,18 +498,18 @@ def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 
 }  // End SchedModel = GFX12SpeedModel
 
-// Check whether the two matrix inputs of an f8f6f4 wmma instruction are not
-// both interpreted as f4. On gfx1250 an f8f6f4 wmma runs in 4 cycles when both
+// Check whether the two matrix inputs of an f8f6f4 wmma instruction are both
+// interpreted as f4. On gfx1250 an f8f6f4 wmma runs in 4 cycles when both
 // inputs are f4, and in 8 cycles when any input is f6 or f8.
-// TODO: This isn't reflected in MCA.
-def PredIsNotBothF4_WMMA_SCALE : SchedPredicate<[{
-  TII->getNamedOperand(*MI, AMDGPU::OpName::matrix_a_fmt)->getImm() != AMDGPU::WMMA::MATRIX_FMT_FP4 ||
-  TII->getNamedOperand(*MI, AMDGPU::OpName::matrix_b_fmt)->getImm() != AMDGPU::WMMA::MATRIX_FMT_FP4
-}]>;
+def PredIsBothF4_WMMA_SCALE : MCSchedPredicate<
+    CheckAny<[
+      CheckAll<[CheckImmOperand<5, 4>, CheckImmOperand<6, 4>]>,
+      CheckAll<[CheckImmOperand<7, 4>, CheckImmOperand<8, 4>]>
+    ]>>;
 
 def WriteWMMAScale_16X16X128_F8F6F4 : SchedWriteVariant<[
-    SchedVar<PredIsNotBothF4_WMMA_SCALE, [WriteXDL2PassWMMA]>,
-    SchedVar<NoSchedPred, [WriteXDL1PassWMMA]>
+    SchedVar<PredIsBothF4_WMMA_SCALE, [WriteXDL1PassWMMA]>,
+    SchedVar<NoSchedPred,             [WriteXDL2PassWMMA]>
 ]>;
 
 // Check whether matrix_a_fmt and matrix_a_fmt are both MATRIX_FMT_FP4.
