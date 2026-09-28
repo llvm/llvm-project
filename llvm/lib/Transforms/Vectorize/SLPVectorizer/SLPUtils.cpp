@@ -120,9 +120,9 @@ bool allSameBlock(ArrayRef<Value *> VL) {
     return true;
 
   BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V : make_filter_range(iterator_range(It, VL.end()), [](Value *V) {
+         return !isa<PoisonValue>(V);
+       })) {
     auto *II = dyn_cast<Instruction>(V);
     if (!II)
       return false;
@@ -141,9 +141,8 @@ bool allConstant(ArrayRef<Value *> VL) {
 
 bool isSplat(ArrayRef<Value *> VL) {
   Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<UndefValue>(V); })) {
     if (!FirstNonUndef) {
       FirstNonUndef = V;
       continue;
@@ -459,12 +458,10 @@ bool areAllOperandsNonInsts(Value *V) {
   if (!I)
     return true;
   return !mayHaveNonDefUseDependency(*I) &&
-         all_of(I->operands(), [I](Value *V) {
-           auto *IO = dyn_cast<Instruction>(V);
-           if (!IO)
-             return true;
-           return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-         });
+         all_of(make_isa_range<Instruction>(I->operands()),
+                [I](Instruction *IO) {
+                  return isa<PHINode>(IO) || IO->getParent() != I->getParent();
+                });
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -602,15 +599,13 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
-    auto *EE = dyn_cast<ExtractElementInst>(V);
-    if (!EE)
-      return false;
-    Value *Vec = EE->getVectorOperand();
-    if (isa<UndefValue>(Vec))
-      return false;
-    return isGuaranteedNotToBePoison(Vec, AC);
-  });
+  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                               [&](ExtractElementInst *EE) {
+                                 Value *Vec = EE->getVectorOperand();
+                                 if (isa<UndefValue>(Vec))
+                                   return false;
+                                 return isGuaranteedNotToBePoison(Vec, AC);
+                               });
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -873,9 +868,7 @@ Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
   bool AllSameTy = true;
   bool HasNonConstIdx = false;
   bool ConstsFitVL0Ty = true;
-  for (Value *V : VL) {
-    if (!IsGEPLane(V))
-      continue;
+  for (Value *V : make_filter_range(VL, IsGEPLane)) {
     Value *Op = cast<GetElementPtrInst>(V)->getOperand(IndexIdx);
     if (Op->getType() != VL0Ty)
       AllSameTy = false;
@@ -1258,8 +1251,11 @@ matchExtractedField(Value *V) {
     if (match(Val, m_Trunc(m_Shr(m_Value(Src), m_APInt(Amt)))) ||
         match(Val, m_Shr(m_Value(Src), m_APInt(Amt)))) {
       if (std::optional<unsigned> Offset = GetFieldOffset(
-              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth))
+              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth)) {
+        // The truncation of the shifted value keeps the field, look through it.
+        match(Src, m_Trunc(m_Value(Src)));
         return std::make_pair(Src, *Offset);
+      }
       return std::nullopt;
     }
     if (match(Val, m_Trunc(m_Value(Src))) &&
@@ -1329,9 +1325,9 @@ matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL) {
   Value *Src = nullptr;
   unsigned FieldWidth = 0;
   SmallVector<int> Mask(VL.size(), PoisonMaskElem);
-  for (auto [Idx, V] : enumerate(VL)) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (auto [Idx, V] : make_filter_range(enumerate(VL), [](const auto &P) {
+         return !isa<UndefValue>(P.value());
+       })) {
     if (V->getType() != VL.front()->getType())
       return std::nullopt;
     std::optional<std::tuple<Value *, unsigned, unsigned>> Field =

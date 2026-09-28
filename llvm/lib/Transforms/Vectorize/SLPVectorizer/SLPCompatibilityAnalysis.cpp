@@ -605,9 +605,8 @@ bool isAbsorbableCopyableFMulOrFAdd(const InstructionsState &S, Value *V) {
 
 bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL) {
   bool HasFMulOrFAdd = false;
-  for (Value *V : VL) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
     auto *I = dyn_cast<Instruction>(V);
     if (I && RecurrenceDescriptor::isFMulAddIntrinsic(I))
       continue;
@@ -697,9 +696,8 @@ bool InstructionsState::isNonSchedulable(Value *V) const {
 /// - nullptr if no matching instruction is found
 static Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL,
                                               unsigned Opcode) {
-  for (Value *V : VL) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
     assert(isa<Instruction>(V) && "Only accepts PoisonValue and Instruction.");
     auto *Inst = cast<Instruction>(V);
     if (Inst->getOpcode() == Opcode)
@@ -809,11 +807,8 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   bool AnyPoison = InstCnt != VL.size();
   // Check MainOp too to be sure that it matches the requirements for the
   // instructions.
-  for (Value *V : iterator_range(It, VL.end())) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
-
+  for (Instruction *I :
+       make_isa_range<Instruction>(iterator_range(It, VL.end()))) {
     // Cannot combine poison and divisions.
     // TODO: do some smart analysis of the CallInsts to exclude divide-like
     // intrinsics/functions only.

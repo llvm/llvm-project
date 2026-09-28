@@ -2433,7 +2433,7 @@ bool SITargetLowering::isNonGlobalAddrSpace(unsigned AS) {
          AS == AMDGPUAS::PRIVATE_ADDRESS;
 }
 
-bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
+bool SITargetLowering::isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                                            unsigned DestAS) const {
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
@@ -2449,7 +2449,7 @@ bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
 
   const GCNTargetMachine &TM =
       static_cast<const GCNTargetMachine &>(getTargetMachine());
-  return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+  return TM.isNoopAddrSpaceCast(DL, SrcAS, DestAS);
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -3665,7 +3665,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
         const GCNTargetMachine &TM =
             static_cast<const GCNTargetMachine &>(getTargetMachine());
-        if (!TM.isNoopAddrSpaceCast(AMDGPUAS::CONSTANT_ADDRESS,
+        if (!TM.isNoopAddrSpaceCast(DAG.getDataLayout(),
+                                    AMDGPUAS::CONSTANT_ADDRESS,
                                     Arg.Flags.getPointerAddrSpace())) {
           Ptr = DAG.getAddrSpaceCast(DL, VT, Ptr, AMDGPUAS::CONSTANT_ADDRESS,
                                      Arg.Flags.getPointerAddrSpace());
@@ -5350,7 +5351,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
 
   // Update EXEC, save the original EXEC value to VCC.
   BuildMI(LoopBB, I, DL, TII->get(LMC.AndSaveExecOpc), NewExec)
-      .addReg(CondReg, RegState::Kill);
+      .addReg(CondReg, RegState::Kill)
+      .setOperandDead(3); // Dead scc
 
   MRI.setSimpleHint(NewExec, CondReg);
 
@@ -5361,7 +5363,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
       SGPRIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), SGPRIdxReg)
           .addReg(CurrentIdxReg, RegState::Kill)
-          .addImm(Offset);
+          .addImm(Offset)
+          .setOperandDead(3); // Dead scc
     }
   } else {
     // Move index from VCC into M0
@@ -5371,7 +5374,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
     } else {
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
           .addReg(CurrentIdxReg, RegState::Kill)
-          .addImm(Offset);
+          .addImm(Offset)
+          .setOperandDead(3); // Dead scc
     }
   }
 
@@ -5379,7 +5383,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   MachineInstr *InsertPt =
       BuildMI(LoopBB, I, DL, TII->get(LMC.XorTermOpc), LMC.ExecReg)
           .addReg(LMC.ExecReg)
-          .addReg(NewExec);
+          .addReg(NewExec)
+          .setOperandDead(3); // Dead scc
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -5481,7 +5486,8 @@ static void setM0ToIndexFromSGPR(const SIInstrInfo *TII,
   } else {
     BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
         .add(*Idx)
-        .addImm(Offset);
+        .addImm(Offset)
+        .setOperandDead(3); // Dead scc
   }
 }
 
@@ -5500,7 +5506,8 @@ static Register getIndirectSGPRIdx(const SIInstrInfo *TII,
   Register Tmp = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), Tmp)
       .add(*Idx)
-      .addImm(Offset);
+      .addImm(Offset)
+      .setOperandDead(3); // Dead scc
   return Tmp;
 }
 
@@ -5707,6 +5714,7 @@ static MachineBasicBlock *expand64BitScalarArithmetic(MachineInstr &MI,
   MachineOperand &Src1 = MI.getOperand(2);
   bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
   if (ST.hasScalarAddSub64()) {
+    // FIXME: If scc is used, this deletes the def
     unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
     // clang-format off
     BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
@@ -5730,10 +5738,17 @@ static MachineBasicBlock *expand64BitScalarArithmetic(MachineInstr &MI,
     MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
         MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
 
+    const MachineOperand &ImpDefSCC = MI.getOperand(3);
+    assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
+
     unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
     unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
     BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
-    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
+    auto Hi = BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+                  .add(Src0Sub1)
+                  .add(Src1Sub1);
+    if (ImpDefSCC.isDead())
+      Hi.setOperandDead(3);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
         .addReg(DestSub0)
         .addImm(AMDGPU::sub0)
@@ -7320,7 +7335,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
-    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
+    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL))
+              .addDef(ReturnAddrReg, RegState::Dead);
 
     for (const MachineOperand &MO : MI.operands())
       MIB.add(MO);

@@ -30,15 +30,15 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
-# %{jit} runs JIT'd code under ogre, with llvm-jitlink as the controller. Tests
-# that use it must be gated on the llvm-jitlink feature.
+# %{obj-jit} runs JIT-loaded object files under ogre, with llvm-jitlink as the
+# controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
 config.substitutions.append(("%{ogre}", ogre))
 llvm_jitlink = llvm_config.use_llvm_tool("llvm-jitlink")
 if llvm_jitlink:
     config.available_features.add("llvm-jitlink")
     config.substitutions.append(
-        ("%{jit}", "{} -oop-launch={}".format(llvm_jitlink, ogre))
+        ("%{obj-jit}", "{} -oop-launch={}".format(llvm_jitlink, ogre))
     )
 
 
@@ -81,6 +81,14 @@ if llvm_mc:
             "{} -triple={} -filetype=obj".format(llvm_mc, config.target_triple),
         )
     )
+
+# split-file splits a test into several files, e.g. so that a test can build
+# and link more than one object. Tests that use it must be gated on the
+# split-file feature.
+split_file = llvm_config.use_llvm_tool("split-file")
+if split_file:
+    config.available_features.add("split-file")
+    llvm_config.add_tool_substitutions([ToolSubst("split-file", command=split_file)])
 
 # Describe the runtime's target architecture and object format, so that object
 # format tests can gate on them:
@@ -169,7 +177,10 @@ for var in ("ORC_RT_LOG", "ORC_RT_LOG_OUTPUT"):
     config.environment.pop(var, None)
 
 if platform.system() == "Darwin":
-    config.substitutions.append(("%macos-product-version", platform.mac_ver()[0]))
+    config.substitutions.append(("%host-os-version", platform.mac_ver()[0]))
+else:
+    config.substitutions.append(("%host-os-version", ""))
+
 config.substitutions.append(("%target_triple", config.target_triple))
 
 # The architecture the runtime was built for, so tests can check the triple it
