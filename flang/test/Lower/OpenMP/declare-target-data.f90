@@ -8,11 +8,11 @@ module test_0
 INTEGER :: data_int = 10
 !$omp declare target link(data_int)
 
-!CHECK-DAG: fir.global @_QMtest_0Earray_1d({{.*}}) {alignment = 64 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !fir.array<3xi32>
+!CHECK-DAG: fir.global @_QMtest_0Earray_1d({{.*}}) <{alignment = 64 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !fir.array<3xi32>
 INTEGER :: array_1d(3) = (/1,2,3/)
 !$omp declare target link(array_1d)
 
-!CHECK-DAG: fir.global @_QMtest_0Earray_2d({{.*}}) {alignment = 64 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !fir.array<2x2xi32>
+!CHECK-DAG: fir.global @_QMtest_0Earray_2d({{.*}}) <{alignment = 64 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !fir.array<2x2xi32>
 INTEGER :: array_2d(2,2) = reshape((/1,2,3,4/), (/2,2/))
 !$omp declare target link(array_2d)
 
@@ -66,25 +66,25 @@ contains
 end module test_0
 
 PROGRAM commons
-    !CHECK-DAG: fir.global @numbers_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_ <{alignment = 4 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : tuple<f32, f32> {
     REAL :: one = 1
     REAL :: two = 2
     COMMON /numbers/ one, two
     !$omp declare target(/numbers/)
 
-    !CHECK-DAG: fir.global @numbers_link_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_link_ <{alignment = 4 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : tuple<f32, f32> {
     REAL :: one_link = 1
     REAL :: two_link = 2
     COMMON /numbers_link/ one_link, two_link
     !$omp declare target link(/numbers_link/)
 
-    !CHECK-DAG: fir.global @numbers_to_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_to_ <{alignment = 4 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} : tuple<f32, f32> {
     REAL :: one_to = 1
     REAL :: two_to = 2
     COMMON /numbers_to/ one_to, two_to
     !$omp declare target to(/numbers_to/)
 
-    !CHECK-DAG: fir.global @numbers_enter_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_enter_ <{alignment = 4 : i64}> {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} : tuple<f32, f32> {
     REAL :: one_enter = 1
     REAL :: two_enter = 2
     COMMON /numbers_enter/ one_enter, two_enter

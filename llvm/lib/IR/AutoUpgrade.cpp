@@ -988,6 +988,21 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      Intrinsic::ID MinMaxID =
+          StringSwitch<Intrinsic::ID>(Name.split('.').first)
+              .Case("smax", Intrinsic::smax)
+              .Case("smin", Intrinsic::smin)
+              .Case("umax", Intrinsic::umax)
+              .Case("umin", Intrinsic::umin)
+              .Default(Intrinsic::not_intrinsic);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        if (F->arg_size() != 2 || !F->getReturnType()->isIntOrIntVectorTy())
+          return false; // Invalid IR.
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), MinMaxID,
+                                                  F->getReturnType());
+        return true;
+      }
+
       if (Name.starts_with("addp")) {
         // 'aarch64.neon.addp*'.
         if (F->arg_size() != 2)
@@ -1650,13 +1665,11 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
-                                                    Intrinsic::ID IID) {
+static unsigned
+getFullArgCountForDefaultArgUpgrade(Function *F, Intrinsic::ID IID,
+                                    SmallVectorImpl<Type *> &OverloadTys) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
-    return 0;
-
-  if (Intrinsic::isOverloaded(IID))
     return 0;
 
   unsigned FullArgCount = FirstDefault + Defaults.size();
@@ -1665,18 +1678,25 @@ static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
   if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
     return 0;
 
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
+    return 0;
+
   return FullArgCount;
 }
 
 static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = F->getIntrinsicID();
+  SmallVector<Type *, 4> OverloadTys;
 
-  unsigned FullArgCount = getFullArgCountForDefaultArgUpgrade(F, IID);
+  unsigned FullArgCount =
+      getFullArgCountForDefaultArgUpgrade(F, IID, OverloadTys);
   if (FullArgCount == 0)
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
   assert(NewFn->arg_size() == FullArgCount &&
          "total number of default args does not match intrinsic signature");
   return true;
@@ -2323,6 +2343,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 's':
     if (Name == "stackprotectorcheck") {
       NewFn = nullptr;
+      return true;
+    }
+    if (Name.starts_with("strip.invariant.group")) {
+      // For clang's usage it would be safe to just drop the
+      // strip.invariant.group, but to be conservative replace with the
+      // stronger launder.invariant.group instead.
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::launder_invariant_group,
+          F->getReturnType());
       return true;
     }
     break;
@@ -6639,6 +6668,28 @@ MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
   Metadata *Elts[] = {&MD, &MD, ConstantAsMetadata::get(Constant::getNullValue(
                                     Type::getInt64Ty(Context)))};
   return MDNode::get(Context, Elts);
+}
+
+MDNode *llvm::UpgradeTBAAStructNode(MDNode &MD) {
+  // !tbaa.struct is a list of (offset, size, tag) triples. Upgrade any
+  // old-style scalar field tag to struct-path form via UpgradeTBAANode.
+  unsigned NumOperands = MD.getNumOperands();
+  if (NumOperands == 0 || NumOperands % 3 != 0)
+    return &MD; // Malformed; leave it for the verifier to reject.
+
+  SmallVector<Metadata *, 12> Elts(MD.op_begin(), MD.op_end());
+  bool Changed = false;
+  for (unsigned I = 2; I < NumOperands; I += 3) {
+    auto *Tag = dyn_cast_or_null<MDNode>(Elts[I]);
+    if (!Tag)
+      continue;
+    MDNode *Upgraded = UpgradeTBAANode(*Tag);
+    if (Upgraded == Tag)
+      continue;
+    Elts[I] = Upgraded;
+    Changed = true;
+  }
+  return Changed ? MDNode::get(MD.getContext(), Elts) : &MD;
 }
 
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
