@@ -2372,11 +2372,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     llvm::Value *Mat = EmitScalarExpr(E->getBase());
     Address MatMem = CreateMemTemp(E->getBase()->getType());
     QualType Ty = E->getBase()->getType();
-    llvm::Type *LTy = convertTypeForLoadStore(Ty, Mat->getType());
-    if (LTy->getScalarSizeInBits() > Mat->getType()->getScalarSizeInBits())
-      Mat = Builder.CreateZExt(Mat, LTy);
-    Builder.CreateStore(Mat, MatMem);
     Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
+    EmitStoreOfScalar(Mat, Base, /*isInit=*/true);
   }
   QualType ResultType =
       E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
