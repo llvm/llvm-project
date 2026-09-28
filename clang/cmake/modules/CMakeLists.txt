@@ -54,7 +54,7 @@ endif()
 function(clang_config_find_mlir out_var mlir_cmake_dir)
   if(clang_config_needs_mlir)
     set(${out_var}
-find_package(MLIR \${LLVM_VERSION_MAJOR}.\${LLVM_VERSION_MINOR}.\${LLVM_VERSION_PATCH} EXACT CONFIG QUIET
+"find_package(MLIR \${LLVM_VERSION_MAJOR}.\${LLVM_VERSION_MINOR}.\${LLVM_VERSION_PATCH} EXACT CONFIG QUIET
              HINTS \"${mlir_cmake_dir}\")
 if(NOT MLIR_FOUND)
   string(CONCAT \${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
