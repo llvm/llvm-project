@@ -639,11 +639,9 @@ X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
   if (!T)
     T = Ty.getTypePtr();
 
-  if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
-    BuiltinType::Kind K = BT->getKind();
-    if (K == BuiltinType::Float || K == BuiltinType::Double)
+  if (const BuiltinType *BT = T->getAs<BuiltinType>())
+    if (BT->isFloatingPoint())
       return Float;
-  }
   return Integer;
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -target-feature +sse2 %s -emit-llvm -o - | FileCheck %s
 
 __attribute__((regparm(3))) void f1(int a, int b, int c, int d);
 // CHECK: declare void @f1(i32 inreg noundef, i32 inreg noundef, i32 inreg noundef, i32 noundef)
@@ -175,3 +175,27 @@ void g18(void) {
   struct s13 x = {{41}};
   f18(x, 42, 43, 44);
 }
+
+__attribute__((regparm(3))) void pass_f16(_Float16 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_f16(half noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+__attribute__((regparm(3))) void pass_bf16(__bf16 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_bf16(bfloat noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+__attribute__((regparm(3))) void pass_f80(long double a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_f80(x86_fp80 noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+__attribute__((regparm(3))) void pass_f128(__float128 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_f128(fp128 noundef %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+struct s14 {
+  _Float16 x1;
+};
+__attribute__((regparm(3))) void pass_wrapped_f16(struct s14 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_wrapped_f16(ptr noundef byval(%struct.s14) align 4 %a, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
+
+struct s15 {
+  __float128 x1;
+};
+__attribute__((regparm(3))) void pass_wrapped_f128(struct s15 a, int b, int c, int d) {}
+// CHECK-LABEL: define{{.*}} void @pass_wrapped_f128(ptr noundef byval(%struct.s15) align 4 {{%[^,]*}}, i32 inreg noundef %b, i32 inreg noundef %c, i32 inreg noundef %d)
