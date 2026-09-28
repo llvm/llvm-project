@@ -2549,13 +2549,14 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 }
 
 template <typename GetElementTy>
-static Value *EmitHLSLElementwiseCastToVector(
-    CodeGenFunction &CGF, QualType DestTy, unsigned NumSrcElements,
-    GetElementTy GetElement, SourceLocation Loc) {
+static Value *
+EmitHLSLElementwiseCastToVector(CodeGenFunction &CGF, QualType DestTy,
+                                unsigned NumSrcElements,
+                                GetElementTy GetElement, SourceLocation Loc) {
   const auto *VecTy = DestTy->castAs<VectorType>();
   assert(NumSrcElements >= VecTy->getNumElements() &&
-           "Flattened type on RHS must have the same number or more elements "
-           "than vector on LHS.");
+         "Flattened type on RHS must have the same number or more elements "
+         "than vector on LHS.");
   Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
   for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
     auto [Element, ElementTy] = GetElement(I);
@@ -3209,8 +3210,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
           [&](unsigned I) {
             unsigned Row = I / SrcMatTy->getNumColumns();
             unsigned Col = I % SrcMatTy->getNumColumns();
-            unsigned Idx =
-                SrcMatTy->getColumnMajorFlattenedIndex(Row, Col);
+            unsigned Idx = SrcMatTy->getColumnMajorFlattenedIndex(Row, Col);
             Value *Element =
                 Builder.CreateExtractElement(SrcVal, Idx, "matrixext");
             return std::pair(Element, SrcMatTy->getElementType());
