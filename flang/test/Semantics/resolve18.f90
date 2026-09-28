@@ -340,7 +340,7 @@ end
 subroutine s_21_22_b
   use m21
   use m22
-  !ERROR: 'foo' is not a derived type
+  !ERROR: Reference to 'foo' is ambiguous
   type(foo) x ! definite error: GNU and Intel catch
 end
 
