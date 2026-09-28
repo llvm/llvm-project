@@ -435,17 +435,6 @@ void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
   });
 }
 
-/// Returns true if every dimension of `shape` except the innermost
-/// `numInnerDims` is a unit (size-1) dimension.
-[[maybe_unused]] static bool leadingDimsAreUnit(ArrayRef<int64_t> shape,
-                                                int numInnerDims) {
-  int numLeading = static_cast<int>(shape.size()) - numInnerDims;
-  if (numLeading <= 0)
-    return true;
-  return llvm::all_of(shape.take_front(numLeading),
-                      [](int64_t dim) { return dim == 1; });
-}
-
 static xegpu::LayoutAttr buildInstDataLayoutWithLane(
     mlir::MLIRContext *context, ArrayRef<int64_t> instData,
     ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
@@ -2436,8 +2425,7 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 /// Lane kind: a consumer sliced over exactly `reductionDims` is reused verbatim
 /// rather than re-derived, so this stage does not re-decide packing an earlier
 /// run already committed to. Any other consumer goes through the same
-/// derivation, which assumes all leading (non-innermost-two) dims are unit, as
-/// `leadingDimsAreUnit` asserts.
+/// derivation.
 ///
 /// The function returns the *result* layout (the SliceAttr). The *source*
 /// layout it decides on is the parent of that slice; both are listed below so
@@ -2650,11 +2638,6 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       // the layout is not consistent
       srcLayout = consumerSliceLayout.getParent();
     } else {
-      // Only the innermost two dimensions are distributed; all leading
-      // dimensions are assumed to be unit dimensions.
-      assert(leadingDimsAreUnit(srcShape, /*numInnerDims=*/2) &&
-             "Lane reduction layout assumes all leading (non-innermost-two) "
-             "dimensions are unit dimensions");
       auto [laneLayout, laneData, instData] = computeReductionLaneLayoutAndData(
           srcShape, reductionDims, subgroupSize, maxReduceVectorSize,
           consumerLayout);
