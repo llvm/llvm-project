@@ -8013,9 +8013,8 @@ define <2 x i32> @test_pwmacc_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs
 ;
 ; RV64-LABEL: test_pwmacc_i32x2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zip16p a2, a2, a2
-; RV64-NEXT:    zip16p a1, a1, a1
-; RV64-NEXT:    pmacc.w.h01 a0, a1, a2
+; RV64-NEXT:    zip16p a1, a1, a2
+; RV64-NEXT:    pmacc.w.h01 a0, a1, a1
 ; RV64-NEXT:    ret
   %res = call <2 x i32> @llvm.riscv.pwmacc.i32x2.v2i32.v2i16(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i32> %res
@@ -8029,9 +8028,8 @@ define <2 x i32> @test_pwmaccu_u32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %r
 ;
 ; RV64-LABEL: test_pwmaccu_u32x2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zip16p a2, a2, a2
-; RV64-NEXT:    zip16p a1, a1, a1
-; RV64-NEXT:    pmaccu.w.h01 a0, a1, a2
+; RV64-NEXT:    zip16p a1, a1, a2
+; RV64-NEXT:    pmaccu.w.h01 a0, a1, a1
 ; RV64-NEXT:    ret
   %res = call <2 x i32> @llvm.riscv.pwmaccu.u32x2.v2i32.v2i16(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i32> %res
