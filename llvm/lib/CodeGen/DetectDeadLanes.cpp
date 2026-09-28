@@ -72,6 +72,8 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
   assert(lowersToCopies(MI));
   Register SrcReg = MO.getReg();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+  if (DstRC == SrcRC)
+    return false;
 
   unsigned SrcSubIdx = MO.getSubReg();
 
@@ -91,19 +93,6 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
     unsigned SubReg = MI.getOperand(2).getImm();
     SrcSubIdx = TRI.composeSubRegIndices(SubReg, SrcSubIdx);
   }
-  }
-
-  if (DstRC == SrcRC) {
-    // Identical register classes only give a lane-for-lane transfer if the
-    // source operand and the destination subregister slot are the same width.
-    TypeSize SrcSize = SrcSubIdx
-                           ? TypeSize::getFixed(TRI.getSubRegIdxSize(SrcSubIdx))
-                           : TRI.getRegSizeInBits(*SrcRC);
-    TypeSize DstSize = DstSubIdx
-                           ? TypeSize::getFixed(TRI.getSubRegIdxSize(DstSubIdx))
-                           : TRI.getRegSizeInBits(*DstRC);
-    if (SrcSize == DstSize)
-      return false;
   }
 
   return !TRI.findCommonRegClass(SrcRC, SrcSubIdx, DstRC, DstSubIdx);

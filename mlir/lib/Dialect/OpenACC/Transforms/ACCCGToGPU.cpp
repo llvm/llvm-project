@@ -1298,7 +1298,7 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
   if (!threadPrivateVarNames.empty()) {
     accSupport.emitRemark(computeRegion, [&]() {
-      return (llvm::Twine("Thread-private storage used for ") +
+      return (llvm::Twine("Local memory or registers used for ") +
               llvm::join(threadPrivateVarNames, ","))
           .str();
     });
