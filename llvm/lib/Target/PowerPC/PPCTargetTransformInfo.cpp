@@ -1172,13 +1172,9 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
     return Invalid;
   if (Opcode != Instruction::Add)
     return Invalid;
-  if (BinOp && BinOp.value() != Instruction::Mul)
-    return Invalid;
 
   EVT AccVT = TLI->getValueType(DL, AccumType, true);
   if (AccVT != MVT::i32)
-    return Invalid;
-  if (BinOp && InputTypeA != InputTypeB)
     return Invalid;
 
   Type *ATy = VectorType::get(InputTypeA, VF);
@@ -1186,16 +1182,23 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
 
   if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
     return Invalid;
-  if (BinOp && OpBExtend != TTI::PR_SignExtend &&
-      OpBExtend != TTI::PR_ZeroExtend)
-    return Invalid;
 
   if (!BinOp) {
     // It's just an add, so only the LHS type matters. RHS is just 1s.
     if (AVT != MVT::v16i8 && AVT != MVT::v8i16)
       return Invalid;
     // We can do either (sext/-) or (zext/-) for v16i8 and v8i16
-  } else if (AVT == MVT::v16i8) {
+    return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
+  }
+
+  if (BinOp.value() != Instruction::Mul)
+    return Invalid;
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+  if (OpBExtend != TTI::PR_SignExtend && OpBExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (AVT == MVT::v16i8) {
     // For v16i8 PPC supports vmsumubm (zext/zext) and vmsummbm (sext/zext)
     if (OpBExtend != TTI::PR_ZeroExtend)
       return Invalid;
