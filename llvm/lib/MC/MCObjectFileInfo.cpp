@@ -586,6 +586,7 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   ADAEDSection->setAlignment(Align(16)); // Quadword
   ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
                                    GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
+                                                GOFF::ESD_BST_Strong,
                                                 GOFF::ESD_LT_XPLink,
                                                 GOFF::ESD_BSC_Section, 0},
                                    ADAEDSection);
@@ -607,6 +608,7 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
   PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
                                         GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
+                                                     GOFF::ESD_BST_Strong,
                                                      GOFF::ESD_LT_OS,
                                                      GOFF::ESD_BSC_Section, 0},
                                         PPA2ListEDSection);
