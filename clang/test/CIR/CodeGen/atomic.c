@@ -13,8 +13,8 @@ struct S1 {
 
 _Atomic int g1;
 _Atomic int g2 = 42;
-// CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
-// CIR: cir.global external @g1 = #cir.int<0> : !s32i {alignment = 4 : i64}
+// CIR: cir.global external @g2 = #cir.int<42> : !s32i align(4)
+// CIR: cir.global external @g1 = #cir.int<0> : !s32i align(4)
 
 // LLVM: @g2 = global i32 42, align 4
 // LLVM: @g1 = global i32 0, align 4
@@ -950,7 +950,7 @@ void test_and_set(void *p) {
   __atomic_test_and_set(p, __ATOMIC_SEQ_CST);
   // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
-  // CIR:      %[[RES:.+]] = cir.atomic.test_and_set seq_cst %[[PTR]] : !cir.ptr<!s8i> -> !cir.bool
+  // CIR:      %[[RES:.+]] = cir.atomic.test_and_set seq_cst %[[PTR]] align(1) : !cir.ptr<!s8i> -> !cir.bool
   // CIR-NEXT: cir.store align(1) %[[RES]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
 
   // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
@@ -970,7 +970,7 @@ void test_and_set_volatile(volatile void *p) {
   __atomic_test_and_set(p, __ATOMIC_SEQ_CST);
   // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
-  // CIR:      %[[RES:.+]] = cir.atomic.test_and_set seq_cst %[[PTR]] volatile : !cir.ptr<!s8i> -> !cir.bool
+  // CIR:      %[[RES:.+]] = cir.atomic.test_and_set seq_cst %[[PTR]] align(1) volatile : !cir.ptr<!s8i> -> !cir.bool
   // CIR-NEXT: cir.store align(1) %[[RES]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
 
   // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
@@ -990,7 +990,7 @@ void clear(void *p) {
   __atomic_clear(p, __ATOMIC_SEQ_CST);
   // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
-  // CIR:      cir.atomic.clear seq_cst %[[PTR]] : !cir.ptr<!s8i>
+  // CIR:      cir.atomic.clear seq_cst %[[PTR]] align(1) : !cir.ptr<!s8i>
 
   // LLVM: store atomic i8 0, ptr %{{.+}} seq_cst, align 1
 
@@ -1005,7 +1005,7 @@ void clear_volatile(volatile void *p) {
   __atomic_clear(p, __ATOMIC_SEQ_CST);
   // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
-  // CIR:      cir.atomic.clear seq_cst %[[PTR]] volatile : !cir.ptr<!s8i>
+  // CIR:      cir.atomic.clear seq_cst %[[PTR]] align(1) volatile : !cir.ptr<!s8i>
 
   // LLVM: store atomic volatile i8 0, ptr %{{.+}} seq_cst, align 1
 

@@ -1746,6 +1746,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(1);
   case Instruction::InsertElement:
     return Op == getOperand(1) || Op == getOperand(2);
+  case VPInstruction::ExtractLastActive:
+    return Op == getOperand(0);
   case Instruction::PHI:
     return true;
   case Instruction::FCmp:
@@ -2122,9 +2124,8 @@ static VPExecutionFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
 
 void VPIRMetadata::setExecutionFrequency(
     std::optional<VPExecutionFrequency> Freq, LLVMContext &Ctx) {
-  // A recipe that never or always executes needs no annotation.
-  if (!Freq || Freq->Freq.getFrequency() == 0 ||
-      Freq->Freq.getFrequency() == vputils::AlwaysExecutesFreq)
+  // A recipe that always executes needs no annotation.
+  if (!Freq || Freq->Freq.getFrequency() == vputils::AlwaysExecutesFreq)
     return;
   SmallVector<llvm::Metadata *, 2> Ops = {ConstantAsMetadata::get(
       ConstantInt::get(Type::getInt64Ty(Ctx), Freq->Freq.getFrequency()))};

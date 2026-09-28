@@ -8,6 +8,7 @@ set(ORC_RT_HEADERS
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
     orc-rt-c/support/Error.h
+    orc-rt-c/support/LogLevel.h
     orc-rt-c/support/Logging.h
     orc-rt-c/support/WrapperFunction.h
     orc-rt/bedrock/BootstrapInfo.h
