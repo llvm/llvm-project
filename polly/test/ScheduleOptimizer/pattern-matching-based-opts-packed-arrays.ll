@@ -1,9 +1,12 @@
 ; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-1st-cache-level-associativity=8 -polly-target-2nd-cache-level-associativity=8 -polly-target-1st-cache-level-size=32768 -polly-target-vector-register-bitwidth=256 -polly-target-2nd-cache-level-size=262144 '-passes=polly<no-default-opts;opt-isl>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-1st-cache-level-associativity=8 -polly-target-2nd-cache-level-associativity=8 -polly-target-1st-cache-level-size=32768 -polly-target-vector-register-bitwidth=256 -polly-target-2nd-cache-level-size=262144 -polly-pattern-matching-max-stack-array-size=-1 '-passes=polly<no-default-opts;opt-isl>' -S < %s | FileCheck %s --check-prefix=STACK
+; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-1st-cache-level-associativity=8 -polly-target-2nd-cache-level-associativity=8 -polly-target-1st-cache-level-size=32768 -polly-target-vector-register-bitwidth=256 -polly-target-2nd-cache-level-size=262144 -polly-pattern-matching-max-stack-array-size=0 '-passes=polly<no-default-opts;opt-isl>' -S < %s | FileCheck %s --check-prefix=HEAP
 ;
 ; The packed arrays of the matrix multiplication optimization are sized by the
-; cache parameters, which makes them megabytes large. Check that they are
-; allocated on the heap, since a few of them in one function would overflow
-; the stack.
+; cache parameters: here Packed_A takes 192 KiB and Packed_B 4 MiB. Arrays
+; larger than -polly-pattern-matching-max-stack-array-size (1 MiB by default)
+; are allocated on the heap, the others on the stack. With -1 all of them are
+; allocated on the stack, with 0 all of them on the heap.
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)
@@ -15,11 +18,23 @@
 ;        }
 ;
 ; CHECK-LABEL: define internal void @kernel_gemm(
-; CHECK-NOT:     %Packed_{{[AB]}} = alloca
+; CHECK:         %Packed_A = alloca [24 x [256 x [4 x double]]]
 ; CHECK:         %Packed_B = tail call ptr @malloc(i64 4194304)
-; CHECK-NEXT:    %Packed_A = tail call ptr @malloc(i64 196608)
+; CHECK-NOT:     call ptr @malloc
 ; CHECK:         tail call void @free(ptr %Packed_B)
-; CHECK-NEXT:    tail call void @free(ptr %Packed_A)
+; CHECK-NOT:     call void @free
+;
+; STACK-LABEL: define internal void @kernel_gemm(
+; STACK:         %Packed_B = alloca [256 x [256 x [8 x double]]]
+; STACK-NEXT:    %Packed_A = alloca [24 x [256 x [4 x double]]]
+; STACK-NOT:     call ptr @malloc
+;
+; HEAP-LABEL: define internal void @kernel_gemm(
+; HEAP-NOT:      %Packed_{{[AB]}} = alloca
+; HEAP:          %Packed_B = tail call ptr @malloc(i64 4194304)
+; HEAP-NEXT:     %Packed_A = tail call ptr @malloc(i64 196608)
+; HEAP:          tail call void @free(ptr %Packed_B)
+; HEAP-NEXT:     tail call void @free(ptr %Packed_A)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

@@ -128,6 +128,14 @@ static cl::opt<int> PollyPatternMatchingNcQuotient(
              "macro-kernel, by Nr, the parameter of the micro-kernel"),
     cl::Hidden, cl::init(256), cl::cat(PollyCategory));
 
+static cl::opt<int> MaxStackArraySize(
+    "polly-pattern-matching-max-stack-array-size",
+    cl::desc("The maximal size in bytes of a packed array of the matrix "
+             "multiplication optimization that is allocated on the stack; "
+             "larger ones are allocated on the heap (-1: all on the stack, "
+             "0: all on the heap)"),
+    cl::Hidden, cl::init(1024 * 1024), cl::cat(PollyCategory));
+
 static cl::opt<bool>
     PMBasedTCOpts("polly-tc-opt",
                   cl::desc("Perform optimizations of tensor contractions based "
@@ -795,6 +803,19 @@ static isl::schedule_node createExtensionNode(isl::schedule_node Node,
   return Node.graft_before(NewNode);
 }
 
+/// Allocate the packed array @p SAI, whose dimensions have the sizes
+/// @p DimSizes, on the heap if it is larger than
+/// -polly-pattern-matching-max-stack-array-size and that is not negative, and
+/// on the stack otherwise.
+static void setPackedArrayAllocation(ScopArrayInfo *SAI,
+                                     ArrayRef<unsigned> DimSizes) {
+  uint64_t Size = SAI->getElemSizeInBytes();
+  for (unsigned DimSize : DimSizes)
+    Size *= DimSize;
+  SAI->setIsOnHeap(MaxStackArraySize >= 0 &&
+                   Size > uint64_t(MaxStackArraySize));
+}
+
 static isl::schedule_node optimizePackedB(isl::schedule_node Node,
                                           ScopStmt *Stmt, isl::map MapOldIndVar,
                                           MicroKernelParamsTy MicroParams,
@@ -810,10 +831,8 @@ static isl::schedule_node optimizePackedB(isl::schedule_node Node,
   ScopArrayInfo *PackedB =
       S->createScopArrayInfo(MMI.B->getElementType(), "Packed_B",
                              {FirstDimSize, SecondDimSize, ThirdDimSize});
-  // The packed arrays are sized by the cache parameters rather than by the
-  // operands and take megabytes. On the stack, a few of them in one function
-  // would overflow it.
-  PackedB->setIsOnHeap(true);
+  setPackedArrayAllocation(PackedB,
+                           {FirstDimSize, SecondDimSize, ThirdDimSize});
 
   // Compute the access relation for copying from B to PackedB.
   isl::map AccRelB = MMI.B->getLatestAccessRelation();
@@ -853,7 +872,8 @@ static isl::schedule_node optimizePackedA(isl::schedule_node Node, ScopStmt *,
   ScopArrayInfo *PackedA = Stmt->getParent()->createScopArrayInfo(
       MMI.A->getElementType(), "Packed_A",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
-  PackedA->setIsOnHeap(true);
+  setPackedArrayAllocation(PackedA,
+                           {FirstDimSize, SecondDimSize, ThirdDimSize});
 
   // Compute the access relation for copying from A to PackedA.
   isl::map AccRelA = MMI.A->getLatestAccessRelation();
