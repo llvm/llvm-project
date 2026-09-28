@@ -200,6 +200,12 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyHighmemVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
   }
 }
 
@@ -262,6 +268,18 @@ uint32_t ProcessProperties::GetHighmemVirtualAddressableBits() const {
 void ProcessProperties::SetHighmemVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
   SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
+}
+
+void ProcessProperties::AddressMaskChangedCallback() {
+  if (!m_process)
+    return;
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&m_process->GetRunLock()))
+    return;
+  // Never call this from address-fixing code, which runs while frames are being
+  // constructed.
+  for (ThreadSP thread_sp : m_process->Threads())
+    thread_sp->ClearStackFrames();
 }
 
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {

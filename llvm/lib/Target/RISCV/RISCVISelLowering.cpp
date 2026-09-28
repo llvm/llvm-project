@@ -13167,6 +13167,26 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
+  case Intrinsic::riscv_pwsll:
+  case Intrinsic::riscv_pwsla: {
+    MVT VT = Op.getSimpleValueType();
+    SDValue Src = Op.getOperand(1);
+    MVT SrcVT = Src.getSimpleValueType();
+    if (!((VT == MVT::v4i16 && SrcVT == MVT::v4i8) ||
+          (VT == MVT::v2i32 && SrcVT == MVT::v2i16)))
+      reportFatalUsageError("unsupported packed widening shift intrinsic");
+
+    SDValue ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
+    bool IsSigned = IntNo == Intrinsic::riscv_pwsla;
+    if (!Subtarget.is64Bit()) {
+      unsigned Opc = IsSigned ? RISCVISD::PWSLA : RISCVISD::PWSLL;
+      return DAG.getNode(Opc, DL, VT, Src, ShAmt);
+    }
+
+    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    SDValue Wide = DAG.getNode(ExtOpc, DL, VT, Src);
+    return DAG.getNode(RISCVISD::PSLL, DL, VT, Wide, ShAmt);
+  }
   case Intrinsic::riscv_psati:
   case Intrinsic::riscv_pusati: {
     bool IsSigned = IntNo == Intrinsic::riscv_psati;
@@ -19251,7 +19271,8 @@ static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
 }
 
-// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) to
+// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) or
+// (vXi8 (trunc (vselect (setgtu, X, 255), (sext (setgt X, 0)), X))) to
 // (vXi8 (trunc (smin (smax X, 0), 255))). This represents saturating a signed
 // value to an unsigned value. This will be lowered to vmax and series of
 // vnclipu instructions later. This can be extended to other truncated types
@@ -19276,45 +19297,52 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
 
-  // FIXME: Support the version of this pattern with the select operands
-  // swapped.
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-  if (CCVal != ISD::SETULT)
-    return SDValue();
-
-  SDValue CondLHS = Cond.getOperand(0);
+  SDValue X = Cond.getOperand(0);
   SDValue CondRHS = Cond.getOperand(1);
-
-  if (CondLHS != True)
-    return SDValue();
-
   unsigned ScalarBits = VT.getScalarSizeInBits();
+
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  SDValue Other;
+  uint64_t ExpectedC;
+  if (CCVal == ISD::SETULT) {
+    if (True != X)
+      return SDValue();
+    Other = False;
+    ExpectedC = 1ULL << ScalarBits;
+  } else if (CCVal == ISD::SETUGT) {
+    if (False != X)
+      return SDValue();
+    Other = True;
+    ExpectedC = (1ULL << ScalarBits) - 1;
+  } else {
+    return SDValue();
+  }
 
   // FIXME: Support other constants.
   ConstantSDNode *CondRHSC = isConstOrConstSplat(CondRHS);
-  if (!CondRHSC || CondRHSC->getAPIntValue() != (1ULL << ScalarBits))
+  if (!CondRHSC || CondRHSC->getAPIntValue() != ExpectedC)
     return SDValue();
 
-  if (False.getOpcode() != ISD::SIGN_EXTEND)
+  if (Other.getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
 
-  False = False.getOperand(0);
+  Other = Other.getOperand(0);
 
-  if (False.getOpcode() != ISD::SETCC || False.getOperand(0) != True)
+  if (Other.getOpcode() != ISD::SETCC || Other.getOperand(0) != X)
     return SDValue();
 
-  ConstantSDNode *FalseRHSC = isConstOrConstSplat(False.getOperand(1));
-  if (!FalseRHSC || !FalseRHSC->isZero())
+  ConstantSDNode *OtherRHSC = isConstOrConstSplat(Other.getOperand(1));
+  if (!OtherRHSC || !OtherRHSC->isZero())
     return SDValue();
 
-  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(False.getOperand(2))->get();
+  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(Other.getOperand(2))->get();
   if (CCVal2 != ISD::SETGT)
     return SDValue();
 
   // Emit the signed to unsigned saturation pattern.
   SDLoc DL(N);
   SDValue Max =
-      DAG.getNode(ISD::SMAX, DL, SrcVT, True, DAG.getConstant(0, DL, SrcVT));
+      DAG.getNode(ISD::SMAX, DL, SrcVT, X, DAG.getConstant(0, DL, SrcVT));
   SDValue Min =
       DAG.getNode(ISD::UMIN, DL, SrcVT, Max,
                   DAG.getConstant((1ULL << ScalarBits) - 1, DL, SrcVT));
