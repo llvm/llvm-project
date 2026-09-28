@@ -496,10 +496,6 @@ constexpr void test_lwg_3785() {
   }
 }
 
-// A container that spells the hinted insert as the unhinted `emplace`. Before LWG 4121,
-// `ranges::to` probed for `c.emplace(c.end(), *it)` and would call this, passing the end iterator
-// as the first constructor argument. Associative containers spell the hinted form `emplace_hint`,
-// so this overload must no longer be selected and appending has to fall through to `insert`.
 struct EmplaceOrInsert {
   using value_type = int;
 
