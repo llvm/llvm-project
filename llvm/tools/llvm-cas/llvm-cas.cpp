@@ -70,6 +70,7 @@ struct CommandOptions {
   bool AllowRecovery;
   bool Force;
   bool InProcess;
+  bool Verbose;
 
   static CommandKind getCommandKind(opt::Arg &A) {
     switch (A.getOption().getID()) {
@@ -166,6 +167,7 @@ static Expected<CommandOptions> parseOptions(int Argc, char **Argv) {
   Opts.AllowRecovery = Args.hasArg(OPT_allow_recovery);
   Opts.Force = Args.hasArg(OPT_force);
   Opts.InProcess = Args.hasArg(OPT_in_process);
+  Opts.Verbose = Args.hasArg(OPT_verbose);
 
   // Validate options.
   if (Opts.CASPath.empty())
@@ -374,7 +376,8 @@ static Error validateInProcess(const CommandOptions &Opts) {
 
 /// Validates the CAS by re-executing llvm-cas with --in-process, which
 /// protects against crashes during validation. The output of the child process
-/// is forwarded.
+/// is forwarded, except for its errors when they would be followed by recovery
+/// and are not requested with --verbose.
 ///
 /// \returns false if validation failed or crashed.
 static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
@@ -388,15 +391,20 @@ static Expected<bool> validateOutOfProcess(const CommandOptions &Opts,
   if (Opts.Force)
     Args.push_back("--force");
 
+  bool QuietErrors = Opts.AllowRecovery && !Opts.Verbose;
+  std::optional<StringRef> Redirects[] = {std::nullopt, std::nullopt,
+                                          StringRef("")};
+
   outs().flush();
   std::string ErrMsg;
-  int Result = sys::ExecuteAndWait(Exec, Args, /*Env=*/std::nullopt,
-                                   /*Redirects=*/{}, /*SecondsToWait=*/120,
-                                   /*MemoryLimit=*/0, &ErrMsg);
+  int Result = sys::ExecuteAndWait(
+      Exec, Args, /*Env=*/std::nullopt,
+      QuietErrors ? ArrayRef(Redirects) : ArrayRef<std::optional<StringRef>>(),
+      /*SecondsToWait=*/120, /*MemoryLimit=*/0, &ErrMsg);
   if (Result == -1)
     return createStringError("failed to exec " + join(Args, " ") + ": " +
                              ErrMsg);
-  if (Result == -2)
+  if (Result == -2 && !QuietErrors)
     errs() << "llvm-cas: validate-if-needed: validation crashed: " << ErrMsg
            << "\n";
   return Result == 0;
@@ -410,8 +418,13 @@ int validateIfNeeded(const CommandOptions &Opts, const char *Argv0) {
       return 0;
     if (!Opts.AllowRecovery)
       ExitOnErr(std::move(E));
-    errs() << "llvm-cas: validate-if-needed: " << toString(std::move(E))
-           << "\n";
+    // The error is expected when recovering, so only print it on request. It
+    // is also recorded in the CAS log.
+    if (Opts.Verbose)
+      errs() << "llvm-cas: validate-if-needed: " << toString(std::move(E))
+             << "\n";
+    else
+      consumeError(std::move(E));
   } else {
     if (ExitOnErr(validateOutOfProcess(Opts, Argv0)))
       return 0;
