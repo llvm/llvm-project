@@ -76,18 +76,18 @@ void check_listener(SBDebugger &dbg) {
   string state;
 
   // check for "launching" state, this may or may not be present
-  string desc = g_event_descriptions.pop(5, got_description);
+  string desc = g_event_descriptions.pop(got_description);
   state = "launching";
   if (check_state(state, desc, got_description)) {
     // found a 'launching' state, pop next one from queue
-    desc = g_event_descriptions.pop(5, got_description);
+    desc = g_event_descriptions.pop(got_description);
   }
 
   state = "running";
   if (!check_state(state, desc, got_description))
     throw Exception(g_error_desc);
 
-  desc = g_event_descriptions.pop(5, got_description);
+  desc = g_event_descriptions.pop(got_description);
   state = "stopped";
   if (!check_state(state, desc, got_description))
     throw Exception(g_error_desc);
