@@ -791,6 +791,21 @@ void collectTileSizesFromOpenMPConstruct(
       });
 }
 
+namespace {
+// Original loop control belongs outside the outermost loop-associated
+// constituent, including for composites that emit inner regions first.
+class LoopControlContext
+    : public mlir::StateStackFrameBase<LoopControlContext> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoopControlContext)
+
+  explicit LoopControlContext(const pft::Evaluation &evaluation)
+      : evaluation(evaluation) {}
+
+  const pft::Evaluation &evaluation;
+};
+} // namespace
+
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
@@ -823,6 +838,8 @@ void collectLoopRelatedInfo(
     int64_t numCollapse, mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
 
+  mlir::SaveStateStack<LoopControlContext> context{converter.getStateStack(),
+                                                   eval};
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
@@ -1521,9 +1538,22 @@ void collectEnclosingConstructTraits(
   // PARALLEL when lowering the bounds of PARALLEL DO. A selected directive
   // contributes here only through its entered constituents, so its own clause
   // expressions have the same context as a directly written directive's.
+  const auto *loopControl =
+      converter.getStateStack().getStackTop<LoopControlContext>();
+  bool insideLoop = false;
   for (auto [index, frame] : llvm::enumerate(frames)) {
     if (usedFrames[index] || frame->isReplacement)
       continue;
+    if (loopControl && &frame->evaluation == &loopControl->evaluation) {
+      // Keep the prefix before the first loop-associated constituent. For
+      // TEAMS DISTRIBUTE PARALLEL DO this is TEAMS, even though the emitted
+      // PARALLEL region already surrounds the bound calculation. Frames for
+      // genuinely enclosing directives are unaffected.
+      insideLoop |= llvm::omp::getDirectiveAssociation(frame->directive) ==
+                    llvm::omp::Association::LoopNest;
+      if (insideLoop)
+        continue;
+    }
     append(frame->directive);
   }
 }

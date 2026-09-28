@@ -7847,8 +7847,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
     //   if (flag) barrier    into just    barrier
     //   else barrier
     if (std::optional<unsigned> selectedInElse =
-            semantics::omp::SelectBestMetadirectiveCandidate(
-                elsePathCandidates, candidates)) {
+            semantics::omp::SelectBestMetadirectiveCandidate(elsePathCandidates,
+                                                             candidates)) {
       const semantics::omp::MetadirectiveCandidate &candidateInElse =
           candidates[*selectedInElse];
       if (!candidateInElse.dynamicCondition &&
