@@ -562,6 +562,10 @@ defm AshrPkInsts : AMDGPUSubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
+defm ExclusiveScanInsts : AMDGPUSubtargetFeature<"exclusive-scan-insts",
+  "Has exclusive scan instructions"
+>;
+
 defm CvtPkF16F32Inst : AMDGPUSubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
@@ -1279,6 +1283,11 @@ defm VALUTransUseHazard : AMDGPUGenericAnySubtargetFeature<"valu-trans-use-hazar
 
 defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   "Hazard when TRANS co-executes with other VALU instruction",
+  /*GenPredicate=*/0
+>;
+
+defm GFX1250VALUBlockingCycles : AMDGPUSubtargetFeature<"gfx1250-valu-blocking-cycles",
+  "VALU pipe occupancy is modeled with GFX1250BlockingCycles",
   /*GenPredicate=*/0
 >;
 
@@ -2556,6 +2565,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2591,6 +2601,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2654,6 +2665,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresCOV6,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2665,6 +2677,7 @@ def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
    FeatureWaveMatchInsts,
+   FeatureExclusiveScanInsts,
    FeatureAddressableLocalMemorySize196608,
    FeatureLDSAllocGranularity1024,
    FeatureLDSEncodingGranularity1024,

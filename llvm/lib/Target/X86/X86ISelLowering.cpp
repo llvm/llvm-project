@@ -132,7 +132,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM, STI), Subtarget(STI) {
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = Subtarget.isTarget64BitLP64() ? MVT::i64 : MVT::i32;
 
   // Set up the TargetLowering object.
 
@@ -24085,6 +24085,7 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
 static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
                        const SDLoc &dl, SelectionDAG &DAG,
                        const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   if (isNullConstant(Op1))
     return EmitTest(Op0, X86CC, dl, DAG, Subtarget);
 
@@ -24155,6 +24156,31 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
+  // Try to shrink i32 unsigned compares to i8 or i16 when both operands'
+  // high bits are known zero and neither operand is a constant. Eligible
+  // i64 compares are shrunk to i32 above.
+  if (CmpVT == MVT::i32 && !isX86CCSigned(X86CC) &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      !isa<ConstantSDNode>(Op0) && !isa<ConstantSDNode>(Op1)) {
+    auto BothOpsFit = [&](unsigned Bits) {
+      APInt Hi = APInt::getHighBitsSet(32, 32 - Bits);
+      return DAG.MaskedValueIsZero(Op0, Hi) && DAG.MaskedValueIsZero(Op1, Hi);
+    };
+    // Narrowing to i16 is only when this enables an (and x, 0xFFFF) in an
+    // operand to be removed downstream
+    auto IsI16Eliminable = [](SDValue Op) {
+      return sd_match(Op, m_And(m_Value(), m_SpecificInt(0xFFFF)));
+    };
+    if (BothOpsFit(8))
+      CmpVT = MVT::i8;
+    else if (BothOpsFit(16) && (IsI16Eliminable(Op0) || IsI16Eliminable(Op1)))
+      CmpVT = MVT::i16;
+    if (CmpVT != MVT::i32) {
+      Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+      Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+    }
   }
 
   // 0-x == y --> x+y == 0
@@ -24385,10 +24411,9 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
 
   APInt AndRHSVal;
   SDValue Shl, Src, Mask, BitNo;
-  if (sd_match(And,
-               m_And(m_TruncOrSelf(m_Value(Src)),
-                     m_TruncOrSelf(m_AllOf(m_Value(Shl),
-                                           m_Shl(m_One(), m_Value(BitNo))))))) {
+  if (sd_match(And, m_And(m_TruncOrSelf(m_Value(Src)),
+                          m_TruncOrSelf(
+                              m_Value(Shl, m_Shl(m_One(), m_Value(BitNo))))))) {
     // If we looked past a truncate, check that it's only truncating away known
     // zeros.
     unsigned BitWidth = Shl.getValueSizeInBits();
@@ -39029,7 +39054,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(X86::OR32ri), NewCW)
         .addReg(OldCW, RegState::Kill)
-        .addImm(0x300);
+        .addImm(0x300)
+        .setOperandDead(3);
 
     // Extract to 16 bits.
     Register NewCW16 =
@@ -39097,7 +39123,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // OR 0b11 into bit 10 and 11. 0b11 is the encoding for round toward zero.
     Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(X86::OR32ri), NewCW)
-      .addReg(OldCW, RegState::Kill).addImm(0xC00);
+        .addReg(OldCW, RegState::Kill)
+        .addImm(0xC00)
+        .setOperandDead(3);
 
     // Extract to 16 bits.
     Register NewCW16 =
@@ -47762,11 +47790,9 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
               m_SpecificVectorElementVT(
                   MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
                                  m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
-              m_Abs(
-                  m_Sub(m_AllOf(m_Value(Src0),
-                                m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                        m_AllOf(m_Value(Src1),
-                                m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
+              m_Abs(m_Sub(
+                  m_Value(Src0, m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
+                  m_Value(Src1, m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
     return SDValue();
 
   // Create the SAD instruction.
@@ -48870,8 +48896,8 @@ static SDValue combineLogicBlendIntoConditionalNegate(
     return SDValue();
 
   SDValue V;
-  if (!sd_match(Y, m_Neg(m_AllOf(m_Specific(X), m_Value(V)))) &&
-      !sd_match(X, m_Neg(m_AllOf(m_Specific(Y), m_Value(V)))))
+  if (!sd_match(Y, m_Neg(m_Value(V, m_Specific(X)))) &&
+      !sd_match(X, m_Neg(m_Value(V, m_Specific(Y)))))
     return SDValue();
 
   SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
@@ -48902,10 +48928,9 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   ISD::CondCode CC;
   SDValue Cond, X, Y, LHS, RHS;
-  if (!sd_match(
-          N, m_VSelect(m_AllOf(m_Value(Cond),
-                               m_SetCC(m_Value(X), m_Value(Y), m_CondCode(CC))),
-                       m_Value(LHS), m_Value(RHS))))
+  if (!sd_match(N, m_VSelect(m_Value(Cond, m_SetCC(m_Value(X), m_Value(Y),
+                                                   m_CondCode(CC))),
+                             m_Value(LHS), m_Value(RHS))))
     return SDValue();
 
   if (canCombineAsMaskOperation(LHS, Subtarget) ||
@@ -53392,10 +53417,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
         (VT.is512BitVector() || Subtarget.hasVLX()) &&
         (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
-        sd_match(N, m_And(m_Value(X),
-                          m_OneUse(m_SExt(m_AllOf(
-                              m_Value(Y), m_SpecificVT(CondVT),
-                              m_SetCC(m_Value(), m_Value(), m_Value()))))))) {
+        sd_match(N,
+                 m_And(m_Value(X),
+                       m_OneUse(m_SExt(m_Value(
+                           Y, m_SpecificVT(CondVT, m_SetCC(m_Value(), m_Value(),
+                                                           m_Value())))))))) {
       return DAG.getSelect(dl, VT, Y, X,
                            getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
@@ -60701,11 +60727,10 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i32 || VT == MVT::i64) {
     SDValue Y, Z, Shift;
     APInt Amt;
-    if (sd_match(
-            N, m_Add(m_OneUse(m_Sub(m_AllOf(m_Value(Shift),
-                                            m_Shl(m_Value(), m_ConstInt(Amt))),
-                                    m_Value(Y))),
-                     m_Value(Z))) &&
+    if (sd_match(N, m_Add(m_OneUse(m_Sub(
+                              m_Value(Shift, m_Shl(m_Value(), m_ConstInt(Amt))),
+                              m_Value(Y))),
+                          m_Value(Z))) &&
         Amt.ult(4) && !isa<ConstantSDNode>(Z)) {
       return DAG.getNode(ISD::SUB, DL, VT,
                          DAG.getNode(ISD::ADD, DL, VT, Shift, Z), Y);
@@ -60735,8 +60760,8 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     // in generic DAG combine without a legal type check, but adding this there
     // caused regressions.
     if (DAG.getTargetLoweringInfo().isTypeLegal(BoolVT) &&
-        sd_match(N, m_Add(m_ZExt(m_AllOf(m_SpecificVT(BoolVT), m_Value(X))),
-                          m_Value(Y)))) {
+        sd_match(N,
+                 m_Add(m_ZExt(m_Value(X, m_SpecificVT(BoolVT))), m_Value(Y)))) {
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, X);
       return DAG.getNode(ISD::SUB, DL, VT, Y, SExt);
     }
@@ -63024,8 +63049,8 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
     SDValue HalfSrc;
     // Combine (v4i32 (scalar_to_vector (i32 (anyext (bitcast (f16))))))
     // to remove XMM->GPR->XMM moves.
-    if (sd_match(Src, m_AnyExt(m_BitCast(
-                          m_AllOf(m_SpecificVT(MVT::f16), m_Value(HalfSrc))))))
+    if (sd_match(Src,
+                 m_AnyExt(m_BitCast(m_Value(HalfSrc, m_SpecificVT(MVT::f16))))))
       return DAG.getBitcast(
           VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, HalfSrc));
   }
