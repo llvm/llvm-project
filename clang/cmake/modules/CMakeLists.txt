@@ -43,6 +43,10 @@ set(CLANG_CONFIG_INCLUDE_DIRS
   "${CLANG_SOURCE_DIR}/include"
   "${CLANG_BINARY_DIR}/include"
   )
+
+# ClangIR's MLIR dependency is excluded from the aggregate build and install.
+# Promote and install only the MLIR targets reachable from Clang's SDK, along
+# with the headers needed to consume those targets.
 set(clang_config_needs_mlir OFF)
 if(CLANG_ENABLE_CIR AND NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
   set(clang_config_needs_mlir ON)
@@ -50,8 +54,17 @@ endif()
 function(clang_config_find_mlir out_var mlir_cmake_dir)
   if(clang_config_needs_mlir)
     set(${out_var}
-      "find_package(MLIR \${LLVM_VERSION_MAJOR}.\${LLVM_VERSION_MINOR}.\${LLVM_VERSION_PATCH} EXACT REQUIRED CONFIG
-             HINTS \"${mlir_cmake_dir}\")" PARENT_SCOPE)
+find_package(MLIR \${LLVM_VERSION_MAJOR}.\${LLVM_VERSION_MINOR}.\${LLVM_VERSION_PATCH} EXACT CONFIG QUIET
+             HINTS \"${mlir_cmake_dir}\")
+if(NOT MLIR_FOUND)
+  string(CONCAT \${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
+    \"This Clang was built with ClangIR (CLANG_ENABLE_CIR=ON) and its libraries \"
+    \"link against MLIR, but MLIRConfig.cmake was not found. Expected it at \"
+    \"${mlir_cmake_dir}. Install MLIR alongside Clang or set MLIR_DIR to \"
+    \"<prefix>/lib/cmake/mlir.\")
+  set(\${CMAKE_FIND_PACKAGE_NAME}_FOUND FALSE)
+  return()
+endif()" PARENT_SCOPE)
   else()
     set(${out_var} "" PARENT_SCOPE)
   endif()
