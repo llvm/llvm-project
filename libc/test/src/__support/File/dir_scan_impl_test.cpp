@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_dirent.h"
-#include "src/__support/File/scan_impl.h"
+#include "src/__support/File/dir_scan_impl.h"
 #include "src/__support/error_or.h"
 #include "test/UnitTest/Test.h"
 

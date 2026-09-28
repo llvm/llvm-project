@@ -16,7 +16,7 @@
 #include "hdr/errno_macros.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/new.h"
-#include "src/__support/File/scan_impl.h"
+#include "src/__support/File/dir_scan_impl.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"

@@ -38,7 +38,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
   }
   DirType *dir = res_open.value();
 
-  int saved_errno = 0;
+  int error_code = 0;
   struct dirent **entries = nullptr;
   size_t count = 0;
   size_t buffer_capacity = 0;
@@ -57,7 +57,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
   while (true) {
     auto res_read = dir->read();
     if (!res_read) {
-      saved_errno = res_read.error();
+      error_code = res_read.error();
       break;
     }
 
@@ -73,7 +73,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     // Scandir must return the number of entries as int, anything
     // above that is non-representable.
     if (count == cpp::numeric_limits<int>::max()) {
-      saved_errno = EOVERFLOW;
+      error_code = EOVERFLOW;
       break;
     }
 
@@ -83,14 +83,14 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
       // Overflow check
       if (new_capacity >
           cpp::numeric_limits<size_t>::max() / sizeof(struct dirent *)) {
-        saved_errno = EOVERFLOW;
+        error_code = EOVERFLOW;
         break;
       }
 
       struct dirent **bigger_buffer = static_cast<struct dirent **>(
           ::realloc(entries, new_capacity * sizeof(struct dirent *)));
       if (bigger_buffer == nullptr) {
-        saved_errno = ENOMEM;
+        error_code = ENOMEM;
         break;
       }
       buffer_capacity = new_capacity;
@@ -101,7 +101,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
 
     struct dirent *new_entry = static_cast<struct dirent *>(::malloc(reclen));
     if (new_entry == nullptr) {
-      saved_errno = ENOMEM;
+      error_code = ENOMEM;
       break;
     }
     inline_memcpy(new_entry, entry, reclen);
@@ -112,9 +112,9 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
 
   dir->close();
 
-  if (saved_errno != 0) {
+  if (error_code != 0) {
     free_entries();
-    return LIBC_NAMESPACE::Error(saved_errno);
+    return LIBC_NAMESPACE::Error(error_code);
   }
 
   if (compare != nullptr && count > 1) {

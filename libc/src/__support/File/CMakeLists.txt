@@ -42,9 +42,9 @@ add_object_library(
 )
 
 add_header_library(
-  scan_impl
+  dir_scan_impl
   HDRS
-    scan_impl.h
+    dir_scan_impl.h
   DEPENDS
     libc.src.__support.error_or
     libc.src.__support.CPP.limits
@@ -61,7 +61,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
-    .scan_impl
+    .dir_scan_impl
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span

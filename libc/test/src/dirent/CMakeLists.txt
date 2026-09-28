@@ -58,7 +58,6 @@ add_libc_test(
     scandir_test.cpp
   DEPENDS
     libc.hdr.types.struct_dirent
-    libc.src.__support.File.scan_impl
     libc.src.__support.OSUtil.path
     libc.src.__support.error_or
     libc.src.dirent.scandir

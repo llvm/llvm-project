@@ -46,14 +46,14 @@ add_libc_test(
 )
 
 add_libc_test(
-  scan_impl_test
+  dir_scan_impl_test
   SUITE
     libc-support-tests
   SRCS
-    scan_impl_test.cpp
+    dir_scan_impl_test.cpp
   DEPENDS
     libc.hdr.types.struct_dirent
-    libc.src.__support.File.scan_impl
+    libc.src.__support.File.dir_scan_impl
     libc.src.__support.error_or
 )
 
