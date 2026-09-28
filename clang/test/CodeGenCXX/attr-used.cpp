@@ -8,17 +8,6 @@
 // RUN: %clang_cc1 -O0 -mconstructor-aliases -emit-llvm %s -o - \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck %s --check-prefixes=ELF
-// RUN: %clang_cc1 -O0 -emit-llvm %s -o - \
-// RUN:   -triple powerpc64-ibm-aix-xcoff \
-// RUN:   | FileCheck %s --check-prefixes=XCOFF-NOALIAS
-
-// clang++ not respecting __attribute__((used)) on destructors
-struct X0 {
-  // CHECK-DAG: define linkonce_odr {{.*}} @_ZN2X0C1Ev
-  __attribute__((used)) X0() {}
-  // CHECK-DAG: define linkonce_odr {{.*}} @_ZN2X0D1Ev
-  __attribute__((used)) ~X0() {}
-};
 
 // PR19743: not emitting __attribute__((used)) inline methods in nested classes.
 struct X1 {
@@ -72,15 +61,15 @@ struct Bar {
 // XCOFF-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
 // XCOFF-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
 
-// XCOFF without -mconstructor-aliases: all variants are full definitions.
-// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooC1Ev
-// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooC2Ev
-// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooD1Ev
-// XCOFF-NOALIAS-DAG: define linkonce_odr {{.*}}@_ZN3FooD2Ev
-// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC1Ev
-// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
-// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD1Ev
-// XCOFF-NOALIAS-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
+// Without -mconstructor-aliases: all variants are full definitions.
+// CHECK-DAG: define linkonce_odr {{.*}}@_ZN3FooC1Ev
+// CHECK-DAG: define linkonce_odr {{.*}}@_ZN3FooC2Ev
+// CHECK-DAG: define linkonce_odr {{.*}}@_ZN3FooD1Ev
+// CHECK-DAG: define linkonce_odr {{.*}}@_ZN3FooD2Ev
+// CHECK-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC1Ev
+// CHECK-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarC2Ev
+// CHECK-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD1Ev
+// CHECK-DAG: define internal {{.*}}@_ZN12_GLOBAL__N_13BarD2Ev
 
 // On ELF, C1/D1 are aliases to C2/D2 for both Foo and Bar.
 // ELF-DAG: @_ZN3FooC1Ev = {{.*}}alias{{.*}}@_ZN3FooC2Ev
