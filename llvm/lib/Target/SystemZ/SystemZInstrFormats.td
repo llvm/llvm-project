@@ -103,6 +103,11 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   // instead of an actual instruction
   bit IsInsnDirective = 0;
 
+  // Number of trailing optional operands for the .insn directive variant.
+  // Optional operands may be omitted; the parser fills in zero defaults via
+  // addDefaultOperand() in SystemZAsmParser.cpp.
+  int NumOptionalOperands = 0;
+
   let TSFlags{0}     = SimpleBDXLoad;
   let TSFlags{1}     = SimpleBDXStore;
   let TSFlags{2}     = Has20BitOffset;

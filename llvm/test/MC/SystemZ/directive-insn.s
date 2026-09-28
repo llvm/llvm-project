@@ -182,8 +182,14 @@ label.rsi:
 #CHECK: b3 d2 31 12  	adtra	%f1, %f2, %f3, 1
       .insn rrf_a,0xb3d20000,%f1,%f2,%f3,1
 
+#CHECK: b2 21 00 12     ipte %r1, %r2
+      .insn rrf_a,0xb2210000,%r1,%r2
+
 #CHECK: b3 f6 20 13  	iedtr	%f1, %f2, %r3
       .insn rrf_b,0xb3f60000,%f1,%f2,%r3,0
+
+#CHECK: b3 f5 31 21  	qadtr	%f2, %f3, %f1, 1
+      .insn rrf_b,0xb3f50000,%f2,%f3,%f1,1
 
 #CHECK: b9 72 10 23  	crt	%r2, %r3, 1
       .insn rrf_c,0xb9720000,%r2,%r3,1
@@ -236,7 +242,7 @@ label.rsi:
 #CHECK: e9 12 34 56 78 90      pka 1110(%r3), 2192(19,%r7)
       .insn ss_f,0xe90000000000,1110(%r3),2192(19,%r7)
 
-#CHECK: c0 04 00 00 00 03      jgnop 0x180
+#CHECK: c0 04 00 00 00 03      jgnop 0x188
       .insn ril_c,0xc00400000000,0,label.ril_c
 label.ril_c:
 
@@ -270,9 +276,6 @@ label.mii.ri3:
 
 #CHECK: b3 d2 30 12            adtr %f1, %f2, %f3
       .insn rrf_a,0xb3d20000,%f1,%f2,%f3
-
-#CHECK: b3 d2 00 12            adtr %f1, %f2, %f0
-      .insn rrf_a,0xb3d20000,%f1,%f2
 
 #CHECK: b3 f6 20 13            iedtr %f1, %f2, %r3
       .insn rrf_b,0xb3f60000,%f1,%f2,%r3

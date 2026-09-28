@@ -25,6 +25,7 @@ namespace {
 struct InsnMatchEntry {
   std::string Format;
   std::string Opcode;
+  unsigned NumOptionalOperands;
   SmallVector<std::string, 8> OperandKinds;
 };
 
@@ -56,21 +57,30 @@ static std::string getMatchClassKind(const Record &Def, const Init *Arg,
   return "MCK_" + std::string(MC);
 }
 
-static InsnMatchEntry buildInsnMatchEntry(const Record &Def) {
+static InsnMatchEntry buildInsnMatchEntry(const Record &Def, unsigned &MaxNum) {
   const DagInit *OutOperands = Def.getValueAsDag("OutOperandList");
   const DagInit *InOperands = Def.getValueAsDag("InOperandList");
   if (OutOperands->getNumArgs() > 0)
     PrintFatalError(&Def, ".insn directive may not have output operands");
-  if (InOperands->getNumArgs() == 0)
+  unsigned InOps = InOperands->getNumArgs();
+  if (InOps == 0)
     PrintFatalError(&Def, ".insn directive missing encoding operand");
 
   InsnMatchEntry Entry;
   Entry.Format = getFormatName(Def).str();
   Entry.Opcode = ("SystemZ::" + Def.getName()).str();
 
-  for (unsigned I = 0; I < InOperands->getNumArgs(); ++I)
+  for (unsigned I = 0; I < InOps; ++I)
     Entry.OperandKinds.push_back(
         getMatchClassKind(Def, InOperands->getArg(I), I));
+
+  Entry.NumOptionalOperands =
+      (unsigned)Def.getValueAsInt("NumOptionalOperands");
+  if (Entry.NumOptionalOperands > InOps)
+    PrintFatalError(&Def, "NumOptionalOperands exceeds operand count");
+
+  if (MaxNum < InOps)
+    MaxNum = InOps;
 
   return Entry;
 }
@@ -79,38 +89,49 @@ static void emitInsnDirectiveMatchTable(const RecordKeeper &RK,
                                         raw_ostream &OS) {
   emitSourceFileHeader("Match Table for SystemZ .insn directive operand types",
                        OS);
+  unsigned MaxOperandCount = 0;
   // This will hold all .insn directive definitions (~100 plus margin).
   SmallVector<InsnMatchEntry, 128> Entries;
   // Collect all InstSystemZ records that have IsInsnDirective set to 1.
   for (const Record *Def : RK.getAllDerivedDefinitions("InstSystemZ"))
     if (Def->getValueAsBit("IsInsnDirective"))
-      Entries.push_back(buildInsnMatchEntry(*Def));
+      Entries.push_back(buildInsnMatchEntry(*Def, MaxOperandCount));
 
   // Sort entries by format name.
-  // Where multiple entries exist (for optional operands), order the entries
-  // such that the shortest operand list comes first.
   llvm::sort(Entries, [](const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
-    if (LHS.Format == RHS.Format)
-      return LHS.OperandKinds.size() < RHS.OperandKinds.size();
     return LHS.Format < RHS.Format;
   });
 
-  // The OperandKinds array in the runtime InsnMatchEntry struct has a fixed
-  // capacity. Fail loudly at build time if any entry would overflow it.
-  constexpr unsigned MaxOperands = 8;
-  for (const InsnMatchEntry &Entry : Entries)
-    if (Entry.OperandKinds.size() > MaxOperands)
-      PrintFatalError("InsnMatchEntry for format '" + Entry.Format + "' has " +
-                      std::to_string(Entry.OperandKinds.size()) +
-                      " operands; increase MaxOperands (currently " +
-                      std::to_string(MaxOperands) +
-                      ") in both the emitter "
-                      "and InsnMatchEntry::OperandKinds[]");
-
-  OS << "/* Format, Opcode, NumOperands, OperandKinds */\n";
+  OS << "constexpr unsigned MAX_INSN_OPERANDNUM = " << MaxOperandCount << ";\n";
+  OS << "\n";
+  OS << "struct InsnMatchEntry {\n";
+  OS << "  StringRef Format;\n";
+  OS << "  uint64_t Opcode;\n";
+  OS << "  uint32_t NumOperands;\n";
+  OS << "  uint32_t NumOptionalOperands;\n";
+  OS << "  MatchClassKind OperandKinds[MAX_INSN_OPERANDNUM];\n";
+  OS << "};\n";
+  OS << "\n";
+  OS << "struct CompareInsn {\n";
+  OS << "  bool operator()(const InsnMatchEntry &LHS, StringRef RHS) {\n";
+  OS << "    return LHS.Format < RHS;\n";
+  OS << "  }\n";
+  OS << "  bool operator()(StringRef LHS, const InsnMatchEntry &RHS) {\n";
+  OS << "    return LHS < RHS.Format;\n";
+  OS << "  }\n";
+  OS << "  bool operator()(const InsnMatchEntry &LHS,\n";
+  OS << "                  const InsnMatchEntry &RHS) {\n";
+  OS << "    return LHS.Format < RHS.Format;\n";
+  OS << "  }\n";
+  OS << "};\n";
+  OS << "\n";
+  OS << "/* Format, Opcode, NumOperands, NumOptionalOperands, OperandKinds "
+        "*/\n";
+  OS << "static InsnMatchEntry InsnMatchTable[] = {\n";
   for (const InsnMatchEntry &Entry : Entries) {
     OS << "  {\"" << Entry.Format << "\", " << Entry.Opcode << ", "
-       << Entry.OperandKinds.size() << ", {";
+       << Entry.OperandKinds.size() << ", " << Entry.NumOptionalOperands
+       << ", {";
     for (unsigned I = 0; I < Entry.OperandKinds.size(); ++I) {
       if (I != 0)
         OS << ", ";
@@ -118,6 +139,7 @@ static void emitInsnDirectiveMatchTable(const RecordKeeper &RK,
     }
     OS << "}},\n";
   }
+  OS << "};\n";
 }
 } // namespace
 

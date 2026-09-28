@@ -2288,7 +2288,8 @@ let hasSideEffects = 1 in {
 // - Where the format contains an operand not used by all instructions, it
 //   is implemented as an optional operand, *if it is trailing*. To specify
 //   a trailing optional operand, all optional operands to its left must
-//   be specified as well.
+//   be specified as well. Formats with optional operands are listed grouped
+//   by optional operand count after the main list of formats.
 //
 // Exceptions:
 // - Where legacy .insn directives existed that break the above rules, they
@@ -2297,6 +2298,10 @@ let hasSideEffects = 1 in {
 //   Principles of Operation, so those orderings were used. This is kept inline.
 //===----------------------------------------------------------------------===//
 let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
+
+  // First, we list all of the instruction formats that follow all of the rules
+  // and do not contain any optional operands.
+
   def InsnE : InstE<0, (outs),
                     (ins imm64zx16:$enc), ".insn e,$enc", []>;
   def InsnI : InstI<0, (outs),
@@ -2361,86 +2366,16 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                         (ins imm64zx48:$enc, AnyReg:$R1, imm32xx8:$I2,
                              imm32zx4:$M3, (bdaddr12only $B4, $D4):$BD4),
                         ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
-  def InsnRR : InstRR<0, (outs),
-                      (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
-                      ".insn rr,$enc,$R1,$R2", []>;
-  let R2 = 0 in
-    def InsnRR_R2Opt : InstRR<0, (outs),
-                      (ins imm64zx16:$enc, AnyReg:$R1),
-                      ".insn rr,$enc,$R1", []>;
+  def InsnRRFd : InstRRFd<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M4),
+                            ".insn rrf_d,$enc,$R1,$R2,$M4", []>;
   def InsnRRD : InstRRD<0, (outs),
                         (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3),
                         ".insn rrd,$enc,$R1,$R2,$R3", []>;
-  def InsnRRE : InstRRE<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
-                        ".insn rre,$enc,$R1,$R2", []>;
-  let R2 = 0 in {
-      def InsnRRE_R2Opt : InstRRE<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1),
-                        ".insn rre,$enc,$R1", []>;
-      let R1 = 0 in {
-        def InsnRRE_R1R2Opt : InstRRE<0, (outs),
-                        (ins imm64zx32:$enc),
-                        ".insn rre,$enc", []>;
-      }
-  }
-  def InsnRRFa : InstRRFa<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
-                               imm32zx4:$M4),
-                          ".insn rrf_a,$enc,$R1,$R2,$R3,$M4", []>;
-  // For RRF-a, the POP explicitly defines a non-index operand order.
-  let M4 = 0 in {
-      def InsnRRFa_M4Opt : InstRRFa<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3),
-                          ".insn rrf_a,$enc,$R1,$R2,$R3", []>;
-      let R3 = 0 in {
-        def InsnRRFa_R3M4Opt : InstRRFa<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
-                          ".insn rrf_a,$enc,$R1,$R2", []>;
-      }
-  }
-  def InsnRRFb : InstRRFb<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, AnyReg:$R2,
-                              imm32zx4:$M4),
-                          ".insn rrf_b,$enc,$R1,$R3,$R2,$M4", []>;
-  let M4 = 0 in {
-      def InsnRRFb_M4Opt : InstRRFb<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, AnyReg:$R2),
-                          ".insn rrf_b,$enc,$R1,$R3,$R2", []>;
-  }
-  def InsnRRFc : InstRRFc<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3),
-                          ".insn rrf_c,$enc,$R1,$R2,$M3", []>;
-  let M3 = 0 in
-    def InsnRRFc_M3Opt : InstRRFc<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
-                          ".insn rrf_c,$enc,$R1,$R2", []>;
-  def InsnRRFd : InstRRFd<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M4),
-                          ".insn rrf_d,$enc,$R1,$R2,$M4", []>;
-  // For RRF-e, the POP explicitly defines a non-index operand order.
-  def InsnRRFe : InstRRFe<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, imm32zx4:$M3,
-                               AnyReg:$R2, imm32zx4:$M4),
-                          ".insn rrf_e,$enc,$R1,$M3,$R2,$M4", []>;
-  let M4 = 0 in
-    def InsnRRFe_M4Opt : InstRRFe<0, (outs),
-                          (ins imm64zx32:$enc, AnyReg:$R1, imm32zx4:$M3,
-                                AnyReg:$R2),
-                          ".insn rrf_e,$enc,$R1,$M3,$R2", []>;
   def InsnRRS : InstRRS<0, (outs),
                         (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3,
                              (bdaddr12only $B4, $D4):$BD4),
                         ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
-  def InsnRSa : InstRSa<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1,
-                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                        ".insn rs_a,$enc,$R1,$BD2,$R3", []>;
-  let R3 = 0 in
-    def InsnRSa_R3Opt : InstRSa<0, (outs),
-                        (ins imm64zx32:$enc, AnyReg:$R1,
-                             (bdaddr12only $B2, $D2):$BD2),
-                        ".insn rs_a,$enc,$R1,$BD2", []>;
   def InsnRSb : InstRSb<0, (outs),
                         (ins imm64zx32:$enc, AnyReg:$R1,
                              (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M3),
@@ -2468,15 +2403,6 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                         (ins imm64zx32:$enc, imm32zx4:$M1,
                              (bdxaddr12only $B2, $D2, $X2):$XBD2),
                         ".insn rx_b,$enc,$M1,$XBD2", []>;
-  def InsnRXE : InstRXE<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1,
-                             (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
-                        ".insn rxe,$enc,$R1,$XBD2,$M3", []>;
-  let M3 = 0 in
-    def InsnRXE_M3Opt : InstRXE<0, (outs),
-                        (ins imm64zx48:$enc, AnyReg:$R1,
-                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                        ".insn rxe,$enc,$R1,$XBD2", []>;
   def InsnRXY : InstRXYa<0, (outs),
                          (ins imm64zx48:$enc, AnyReg:$R1,
                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
@@ -2494,27 +2420,6 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                           (ins imm64zx48:$enc, AnyReg:$R1,
                                (bdxaddr20only $B2, $D2, $X2):$XBD2),
                           ".insn rxy_c,$enc,$R1,$XBD2", []>;
-  def InsnS : InstS<0, (outs),
-                    (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
-                    ".insn s,$enc,$BD2", []>;
-  let B2 = 0, D2 = 0 in
-    def InsnS_BD2Opt : InstS<0, (outs),
-                    (ins imm64zx32:$enc),
-                    ".insn s,$enc", []>;
-  def InsnSI : InstSI<0, (outs),
-                      (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx8:$I2),
-                      ".insn si,$enc,$BD1,$I2", []>;
-  def InsnSIY : InstSIY<0, (outs),
-                        (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1, imm32xx8:$I2),
-                        ".insn siy,$enc,$BD1,$I2", []>;
-  let I2 = 0 in {
-    def InsnSI_I2Opt : InstSI<0, (outs),
-                      (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1),
-                      ".insn si,$enc,$BD1", []>;
-    def InsnSIY_I2Opt : InstSIY<0, (outs),
-                        (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1),
-                        ".insn siy,$enc,$BD1", []>;
-  }
   def InsnSIL : InstSIL<0, (outs),
                         (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx16:$I2),
                         ".insn sil,$enc,$BD1,$I2", []>;
@@ -2554,13 +2459,6 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                         (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
                              (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
                         ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
-  def InsnVRIa : InstVRIa<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2, imm32zx4:$M3),
-                          ".insn vri_a,$enc,$V1,$I2,$M3", []>;
-  let M3 = 0 in
-    def InsnVRIa_M3Opt : InstVRIa<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2),
-                          ".insn vri_a,$enc,$V1,$I2", []>;
   def InsnVRIb : InstVRIb<0, (outs),
                           (ins imm64zx48:$enc, VR128:$V1, imm32zx8:$I2,
                                imm32zx8:$I3, imm32zx4:$M4),
@@ -2569,16 +2467,6 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                           (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
                                VR128:$V3, imm32zx4:$M4),
                           ".insn vri_c,$enc,$V1,$I2,$V3,$M4", []>;
-  def InsnVRId : InstVRId<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               imm32zx8:$I4, imm32zx4:$M5),
-                          ".insn vri_d,$enc,$V1,$V2,$V3,$I4,$M5", []>;
-  let M5 = 0 in {
-    def InsnVRId_M5Opt : InstVRId<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               imm32zx8:$I4),
-                          ".insn vri_d,$enc,$V1,$V2,$V3,$I4", []>;
-  }
   def InsnVRIe : InstVRIe<0, (outs),
                           (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
                                imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
@@ -2610,108 +2498,10 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
   def InsnVRIl : InstVRIl<0, (outs),
                           (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx16:$I3),
                           ".insn vri_l,$enc,$V1,$V2,$I3", []>;
-  def InsnVRRa : InstVRRa<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
-                               imm32zx4:$M4, imm32zx4:$M5),
-                          ".insn vrr_a,$enc,$V1,$V2,$M3,$M4,$M5", []>;
-  def InsnVRRb : InstVRRb<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               imm32zx4:$M4, imm32zx4:$M5),
-                          ".insn vrr_b,$enc,$V1,$V2,$V3,$M4,$M5", []>;
-  // VRR formats with optional M fields starting at M5
-  let M5 = 0 in {
-    def InsnVRRa_M5Opt : InstVRRa<0, (outs),
-                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
-                                imm32zx4:$M4),
-                            ".insn vrr_a,$enc,$V1,$V2,$M3,$M4", []>;
-    def InsnVRRb_M5Opt : InstVRRb<0, (outs),
-                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                                imm32zx4:$M4),
-                            ".insn vrr_b,$enc,$V1,$V2,$V3,$M4", []>;
-    let M4 = 0 in {
-        def InsnVRRa_M4M5Opt : InstVRRa<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
-                          ".insn vrr_a,$enc,$V1,$V2,$M3", []>;
-        def InsnVRRb_M4M5Opt : InstVRRb<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3),
-                          ".insn vrr_b,$enc,$V1,$V2,$V3", []>;
-        let M3 = 0 in
-          def InsnVRRa_M3M4M5Opt : InstVRRa<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2),
-                          ".insn vrr_a,$enc,$V1,$V2", []>;
-    }
-  }
-  def InsnVRRc : InstVRRc<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
-                          ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
-  def InsnVRRd : InstVRRd<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
-                          ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
-  def InsnVRRe : InstVRRe<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
-                          ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
-  // VRR formats with optional M fields starting at M6
-  let M6 = 0 in {
-    def InsnVRRc_M6Opt : InstVRRc<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               imm32zx4:$M4, imm32zx4:$M5),
-                          ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5", []>;
-    def InsnVRRd_M6Opt : InstVRRd<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               VR128:$V4, imm32zx4:$M5),
-                          ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5", []>;
-    def InsnVRRe_M6Opt : InstVRRe<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               VR128:$V4, imm32zx4:$M5),
-                          ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5", []>;
-    let M5 = 0 in {
-      def InsnVRRc_M5M6Opt : InstVRRc<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               imm32zx4:$M4),
-                          ".insn vrr_c,$enc,$V1,$V2,$V3,$M4", []>;
-      def InsnVRRd_M5M6Opt : InstVRRd<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               VR128:$V4),
-                          ".insn vrr_d,$enc,$V1,$V2,$V3,$V4", []>;
-      def InsnVRRe_M5M6Opt : InstVRRe<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
-                               VR128:$V4),
-                          ".insn vrr_e,$enc,$V1,$V2,$V3,$V4", []>;
-      let M4 = 0 in
-        def InsnVRRc_M4M5M6Opt : InstVRRc<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3),
-                          ".insn vrr_c,$enc,$V1,$V2,$V3", []>;
-    }
-  }
+
   def InsnVRRf : InstVRRf<0, (outs),
                           (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2, AnyReg:$R3),
                           ".insn vrr_f,$enc,$V1,$R2,$R3", []>;
-  def InsnVRRg : InstVRRg<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2),
-                          ".insn vrr_g,$enc,$V1,$I2", []>;
-  let I2 = 0 in
-    def InsnVRRg_I2Opt : InstVRRg<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1),
-                          ".insn vrr_g,$enc,$V1", []>;
-  def InsnVRRh : InstVRRh<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
-                          ".insn vrr_h,$enc,$V1,$V2,$M3", []>;
-  let M3 = 0 in
-    def InsnVRRh_M3Opt : InstVRRh<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2),
-                          ".insn vrr_h,$enc,$V1,$V2", []>;
-  def InsnVRRi : InstVRRi<0, (outs),
-                          (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
-                               imm32zx4:$M3, imm32zx4:$M4),
-                          ".insn vrr_i,$enc,$R1,$V2,$M3,$M4", []>;
-  let M4 = 0 in
-    def InsnVRRi_M4Opt : InstVRRi<0, (outs),
-                          (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
-                               imm32zx4:$M3),
-                          ".insn vrr_i,$enc,$R1,$V2,$M3", []>;
   def InsnVRRj : InstVRRj<0, (outs),
                           (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
                                imm32zx4:$M4),
@@ -2719,24 +2509,6 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
   def InsnVRRk : InstVRRk<0, (outs),
                           (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
                           ".insn vrr_k,$enc,$V1,$V2,$M3", []>;
-  def InsnVRSa : InstVRSa<0, (outs),
-                         (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
-                              VR128:$V3, imm32zx4:$M4),
-                         ".insn vrs_a,$enc,$V1,$BD2,$V3,$M4", []>;
-  def InsnVRSb : InstVRSb<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
-                               AnyReg:$R3, imm32zx4:$M4),
-                          ".insn vrs_b,$enc,$V1,$BD2,$R3,$M4", []>;
-  let M4 = 0 in {
-    def InsnVRSa_M4Opt : InstVRSa<0, (outs),
-                         (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
-                              VR128:$V3),
-                         ".insn vrs_a,$enc,$V1,$BD2,$V3", []>;
-    def InsnVRSb_M4Opt : InstVRSb<0, (outs),
-                          (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
-                               AnyReg:$R3),
-                          ".insn vrs_b,$enc,$V1,$BD2,$R3", []>;
-  }
   def InsnVRSc : InstVRSc<0, (outs),
                           (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
                                VR128:$V3, imm32zx4:$M4),
@@ -2745,29 +2517,120 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                           (ins imm64zx48:$enc, VR128:$V1,
                                (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
                           ".insn vrs_d,$enc,$V1,$BD2,$R3", []>;
-  def InsnVRV : InstVRV<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1,
-                             (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
-                        ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
-  def InsnVRX : InstVRX<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1,
-                             (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
-                        ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
-  let M3 = 0 in {
-    def InsnVRV_M3Opt : InstVRV<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1,
-                             (bdvaddr12only $B2, $D2, $V2):$VBD2),
-                        ".insn vrv,$enc,$V1,$VBD2", []>;
-    def InsnVRX_M3Opt : InstVRX<0, (outs),
-                        (ins imm64zx48:$enc, VR128:$V1,
-                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                        ".insn vrx,$enc,$V1,$XBD2", []>;
-  }
-
   def InsnVSI : InstVSI<0, (outs),
                         (ins imm64zx48:$enc, VR128:$V1,
                              (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
                         ".insn vsi,$enc,$V1,$BD2,$I3", []>;
+
+  // The following .insn directive definitions contain one or more optional
+  // operands, i.e. operands that are not used by all of the instructions
+  // following that format.
+
+  let NumOptionalOperands = 1 in {
+    def InsnRR : InstRR<0, (outs),
+                        (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
+                        ".insn rr,$enc,$R1,$R2", []>;
+    def InsnRRFb : InstRRFb<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, AnyReg:$R2,
+                                 imm32zx4:$M4),
+                            ".insn rrf_b,$enc,$R1,$R3,$R2,$M4", []>;
+    // Contrary to the instruction format description, RRF-c and RRF-e
+    // only allow a single optional operand.
+    def InsnRRFc : InstRRFc<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3),
+                            ".insn rrf_c,$enc,$R1,$R2,$M3", []>;
+    // For RRF-e, the POP explicitly defines a non-index operand order.
+    def InsnRRFe : InstRRFe<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, imm32zx4:$M3,
+                                 AnyReg:$R2, imm32zx4:$M4),
+                            ".insn rrf_e,$enc,$R1,$M3,$R2,$M4", []>;
+    def InsnRSa : InstRSa<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1,
+                               (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                          ".insn rs_a,$enc,$R1,$BD2,$R3", []>;
+    def InsnRXE : InstRXE<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
+                          ".insn rxe,$enc,$R1,$XBD2,$M3", []>;
+    def InsnS : InstS<0, (outs),
+                  (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
+                  ".insn s,$enc,$BD2", []>;
+    def InsnSI : InstSI<0, (outs),
+                        (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx8:$I2),
+                        ".insn si,$enc,$BD1,$I2", []>;
+    def InsnSIY : InstSIY<0, (outs),
+                          (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1, imm32xx8:$I2),
+                          ".insn siy,$enc,$BD1,$I2", []>;
+    def InsnVRIa : InstVRIa<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2, imm32zx4:$M3),
+                            ".insn vri_a,$enc,$V1,$I2,$M3", []>;
+    def InsnVRId : InstVRId<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                              imm32zx8:$I4, imm32zx4:$M5),
+                        ".insn vri_d,$enc,$V1,$V2,$V3,$I4,$M5", []>;
+    def InsnVRRg : InstVRRg<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2),
+                            ".insn vrr_g,$enc,$V1,$I2", []>;
+    def InsnVRRh : InstVRRh<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
+                            ".insn vrr_h,$enc,$V1,$V2,$M3", []>;
+    def InsnVRRi : InstVRRi<0, (outs),
+                            (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
+                                  imm32zx4:$M3, imm32zx4:$M4),
+                            ".insn vrr_i,$enc,$R1,$V2,$M3,$M4", []>;
+    def InsnVRSa : InstVRSa<0, (outs),
+                           (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                                VR128:$V3, imm32zx4:$M4),
+                           ".insn vrs_a,$enc,$V1,$BD2,$V3,$M4", []>;
+    def InsnVRSb : InstVRSb<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                                 AnyReg:$R3, imm32zx4:$M4),
+                            ".insn vrs_b,$enc,$V1,$BD2,$R3,$M4", []>;
+    def InsnVRV : InstVRV<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1,
+                               (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
+                          ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
+    def InsnVRX : InstVRX<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1,
+                               (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
+                          ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
+  }
+
+  let NumOptionalOperands = 2 in {
+    def InsnRRE : InstRRE<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
+                          ".insn rre,$enc,$R1,$R2", []>;
+    // For RRF-a, the POP explicitly defines a non-index operand order.
+    // Contrary to the instruction format description, RRF-a considers
+    // R3 to be optional.
+    def InsnRRFa : InstRRFa<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
+                                 imm32zx4:$M4),
+                            ".insn rrf_a,$enc,$R1,$R2,$R3,$M4", []>;
+    def InsnVRRb : InstVRRb<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                              imm32zx4:$M4, imm32zx4:$M5),
+                        ".insn vrr_b,$enc,$V1,$V2,$V3,$M4,$M5", []>;
+    def InsnVRRd : InstVRRd<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                  VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+                            ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
+    def InsnVRRe : InstVRRe<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                 VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+                            ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
+  }
+
+  let NumOptionalOperands = 3 in {
+    def InsnVRRa : InstVRRa<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
+                                 imm32zx4:$M4, imm32zx4:$M5),
+                            ".insn vrr_a,$enc,$V1,$V2,$M3,$M4,$M5", []>;
+    def InsnVRRc : InstVRRc<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                 imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
+                            ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
+  }
 
   // The following .insn directive definitions do not follow the rule for
   // operand order, and/or reference the base instruction format even where
