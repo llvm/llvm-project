@@ -148,6 +148,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  theModule->setAttr(cir::CIRDialect::getTargetABIAttrName(),
+                     builder.getStringAttr(getTarget().getABI()));
   if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
       !sdkVersion.empty())
     theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
