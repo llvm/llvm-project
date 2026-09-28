@@ -6,9 +6,18 @@
 
 @alias3 = hidden alias void (), ptr @aliasee_vgpr256_sgpr102
 
+; CHECK:      .set .Laliasee_vgpr256_sgpr102.num_vgpr, 253
+; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.num_agpr, 0
+; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.numbered_sgpr, 33
+define internal void @aliasee_vgpr256_sgpr102() #1 {
+bb:
+  call void asm sideeffect "; clobber v252 ", "~{v252}"()
+  ret void
+}
+
 ; CHECK-LABEL: {{^}}kernel3:
-; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(.Lkernel3.num_agpr, .Lkernel3.num_vgpr), 1, 0)
-; CHECK-NEXT: .amdhsa_next_free_sgpr max(.Lkernel3.numbered_sgpr+extrasgprs(.Lkernel3.uses_vcc, .Lkernel3.uses_flat_scratch, 1), 1, 0)-extrasgprs(.Lkernel3.uses_vcc, .Lkernel3.uses_flat_scratch, 1)
+; CHECK:      .amdhsa_next_free_vgpr 253
+; CHECK-NEXT: .amdhsa_next_free_sgpr 33
 
 ; CHECK:      .set .Lkernel3.num_vgpr, max(41, .Laliasee_vgpr256_sgpr102.num_vgpr)
 ; CHECK-NEXT: .set .Lkernel3.num_agpr, max(0, .Laliasee_vgpr256_sgpr102.num_agpr)
@@ -16,15 +25,6 @@
 define amdgpu_kernel void @kernel3() #0 {
 bb:
   call void @alias3() #2
-  ret void
-}
-
-; CHECK:      .set .Laliasee_vgpr256_sgpr102.num_vgpr, 253
-; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.num_agpr, 0
-; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.numbered_sgpr, 33
-define internal void @aliasee_vgpr256_sgpr102() #1 {
-bb:
-  call void asm sideeffect "; clobber v252 ", "~{v252}"()
   ret void
 }
 

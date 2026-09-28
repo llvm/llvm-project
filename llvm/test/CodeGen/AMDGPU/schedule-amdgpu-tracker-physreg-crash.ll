@@ -1,4 +1,5 @@
-; RUN: not --crash llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
+; FIXME: NPM's "verify-each" errors out earlier.
+; RUN: not --crash llc -enable-new-pm=0 -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true 2>&1  < %s | FileCheck -check-prefixes=GCN %s
 
 %asm.output = type { <16 x i32>, <16 x i32>, <16 x i32>, <8 x i32>, <2 x i32>, i32, ; sgprs
