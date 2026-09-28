@@ -28059,7 +28059,7 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     return DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE);
   };
   const size_t NumBundles = BS->ScheduledBundlesList.size();
-  SmallPtrSet<const ScheduleData *, 16> TrimmedSDs;
+  SmallPtrSet<const ScheduleData *, 16> ClearedSDs;
   erase_if(BS->ScheduledBundlesList,
            [&](const std::unique_ptr<ScheduleBundle> &Bundle) {
              const TreeEntry *TE = Bundle->getTreeEntry();
@@ -28069,12 +28069,21 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
                                << TE->Idx << " bundle " << *Bundle << "\n");
              for (ScheduleEntity *SE : Bundle->getBundle())
                if (auto *SD = dyn_cast<ScheduleData>(SE))
-                 TrimmedSDs.insert(SD);
+                 ClearedSDs.insert(SD);
              BS->cancelScheduling(*Bundle);
              return true;
            });
-  if (BS->ScheduledBundlesList.size() != NumBundles)
+  if (BS->ScheduledBundlesList.size() != NumBundles) {
+    // Need to schedule all the instructions with the calculated dependencies,
+    // not only the users of the remaining bundles, otherwise they are moved
+    // above all the scheduled instructions.
+    for (Instruction &I : make_range(BS->ScheduleStart->getIterator(),
+                                     BS->ScheduleEnd->getIterator()))
+      if (ScheduleData *SD = BS->getScheduleData(&I);
+          SD && SD->hasValidDependencies())
+        ClearedSDs.insert(SD);
     BS->clearDependencies();
+  }
 
   // A key point - if we got here, pre-scheduling was able to find a valid
   // scheduling of the sub-graph of the scheduling window which consists
@@ -28163,7 +28172,8 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
               doesNotNeedToBeScheduled(I)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
-      if (TrimmedSDs.contains(SD) || !CopyableData.empty() ||
+      if ((!SD->hasValidDependencies() && ClearedSDs.contains(SD)) ||
+          !CopyableData.empty() ||
           any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
             assert(TE->isGather() && "expected gather node");
             return TE->hasState() && TE->hasCopyableElements() &&
@@ -33074,8 +33084,16 @@ public:
         // the absorbed narrow shls are masked off before the widening.
         if (!NarrowedLeafShifts.empty()) {
           Type *WideTy = ReductionRoot->getType();
-          Type *NarrowTy = VectorizedRoot->getType()->getScalarType();
+          Type *NarrowTy = VL.front()->getType();
           unsigned VF = getNumElements(VectorizedRoot->getType());
+          // The root may be demoted and resized to the reduction bitwidth,
+          // which is computed for the wide reduction operations.
+          if (VectorizedRoot->getType()->getScalarType() != NarrowTy) {
+            VectorizedRoot = Builder.CreateIntCast(
+                VectorizedRoot, getWidenedType(NarrowTy, VF),
+                V.isSignedMinBitwidthRootNode());
+            ++NumVectorInstructions;
+          }
           SmallVector<Constant *> ShiftConsts(VF, ConstantInt::get(WideTy, 0));
           SmallVector<Constant *> MaskConsts(
               VF, Constant::getAllOnesValue(NarrowTy));
