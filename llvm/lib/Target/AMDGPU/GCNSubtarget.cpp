@@ -859,7 +859,8 @@ void GCNSubtarget::adjustSchedDependency(
     // to back copies. For example, on gfx1250, v_mov_b64 blocks execution of
     // subsequent VALU (e.g. v_mov_b64) for a number of cycles.
     //
-    // TODO: Plug this into getInstrLatency override to use consistent latency queries/
+    // TODO: Plug this into getInstrLatency override to use consistent latency
+    // queries.
     unsigned Latency = Dep.getLatency();
     Latency += InstrInfo.getIssueCyclesForCopy(*DefI) - 1;
     Dep.setLatency(Latency);
