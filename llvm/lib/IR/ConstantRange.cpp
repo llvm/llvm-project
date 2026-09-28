@@ -295,8 +295,7 @@ bool ConstantRange::icmp(CmpInst::Predicate Pred,
 }
 
 /// Exact mul nuw region for single element RHS.
-LLVM_ATTRIBUTE_ALWAYS_INLINE static ConstantRange
-makeExactMulNUWRegion(const APInt &V) {
+static ConstantRange makeExactMulNUWRegion(const APInt &V) {
   unsigned BitWidth = V.getBitWidth();
   if (V == 0)
     return ConstantRange::getFull(V.getBitWidth());
@@ -332,39 +331,20 @@ static ConstantRange makeExactMulNSWRegion(const APInt &V) {
   return ConstantRange::getNonEmpty(Lower, Upper + 1);
 }
 
-namespace {
-/// Wrapper providing a ConstantRange-like API for an APInt.
-struct SingleElementBounds {
-  const APInt &C;
-
-  SingleElementBounds(const APInt &C) : C(C) {}
-
-  unsigned getBitWidth() const { return C.getBitWidth(); }
-  const APInt &getSignedMin() const { return C; }
-  const APInt &getSignedMax() const { return C; }
-  const APInt &getUnsignedMax() const { return C; }
-  const APInt *getSingleElement() const { return &C; }
-  ConstantRange intersectWith(const ConstantRange &CR) const {
-    return ConstantRange(C).intersectWith(CR);
-  }
-};
-} // end anonymous namespace
-
-/// No-wrap region for \p BinOp, where \p RHS is a ConstantRange or a
-/// SingleElementBounds.
-template <typename RHSTy>
-LLVM_ATTRIBUTE_ALWAYS_INLINE static ConstantRange
-makeNoWrapRegion(Instruction::BinaryOps BinOp, const RHSTy &RHS,
-                 unsigned NoWrapKind) {
+ConstantRange
+ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
+                                          const ConstantRange &Other,
+                                          unsigned NoWrapKind) {
   using OBO = OverflowingBinaryOperator;
 
   assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
+
   assert((NoWrapKind == OBO::NoSignedWrap ||
           NoWrapKind == OBO::NoUnsignedWrap) &&
          "NoWrapKind invalid!");
 
   bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
-  unsigned BitWidth = RHS.getBitWidth();
+  unsigned BitWidth = Other.getBitWidth();
 
   switch (BinOp) {
   default:
@@ -372,83 +352,105 @@ makeNoWrapRegion(Instruction::BinaryOps BinOp, const RHSTy &RHS,
 
   case Instruction::Add: {
     if (Unsigned)
-      return ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
-                                        -RHS.getUnsignedMax());
+      return getNonEmpty(APInt::getZero(BitWidth), -Other.getUnsignedMax());
 
-    const APInt &SMin = RHS.getSignedMin(), &SMax = RHS.getSignedMax();
-    APInt Lower = APInt::getSignedMinValue(BitWidth);
-    APInt Upper = APInt::getSignedMinValue(BitWidth);
-    if (SMin.isNegative())
-      Lower -= SMin;
-    if (SMax.isStrictlyPositive())
-      Upper -= SMax;
-    return ConstantRange::getNonEmpty(std::move(Lower), std::move(Upper));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    APInt SMin = Other.getSignedMin(), SMax = Other.getSignedMax();
+    return getNonEmpty(
+        SMin.isNegative() ? SignedMinVal - SMin : SignedMinVal,
+        SMax.isStrictlyPositive() ? SignedMinVal - SMax : SignedMinVal);
   }
 
   case Instruction::Sub: {
     if (Unsigned)
-      return ConstantRange::getNonEmpty(RHS.getUnsignedMax(),
-                                        APInt::getMinValue(BitWidth));
+      return getNonEmpty(Other.getUnsignedMax(), APInt::getMinValue(BitWidth));
 
-    const APInt &SMin = RHS.getSignedMin(), &SMax = RHS.getSignedMax();
-    APInt Lower = APInt::getSignedMinValue(BitWidth);
-    APInt Upper = APInt::getSignedMinValue(BitWidth);
-    if (SMax.isStrictlyPositive())
-      Lower += SMax;
-    if (SMin.isNegative())
-      Upper += SMin;
-    return ConstantRange::getNonEmpty(std::move(Lower), std::move(Upper));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    APInt SMin = Other.getSignedMin(), SMax = Other.getSignedMax();
+    return getNonEmpty(
+        SMax.isStrictlyPositive() ? SignedMinVal + SMax : SignedMinVal,
+        SMin.isNegative() ? SignedMinVal + SMin : SignedMinVal);
   }
 
   case Instruction::Mul:
     if (Unsigned)
-      return makeExactMulNUWRegion(RHS.getUnsignedMax());
+      return makeExactMulNUWRegion(Other.getUnsignedMax());
 
     // Avoid one makeExactMulNSWRegion() call for the common case of constants.
-    if (const APInt *C = RHS.getSingleElement())
+    if (const APInt *C = Other.getSingleElement())
       return makeExactMulNSWRegion(*C);
 
-    return makeExactMulNSWRegion(RHS.getSignedMin())
-        .intersectWith(makeExactMulNSWRegion(RHS.getSignedMax()));
+    return makeExactMulNSWRegion(Other.getSignedMin())
+        .intersectWith(makeExactMulNSWRegion(Other.getSignedMax()));
 
   case Instruction::Shl: {
     // For given range of shift amounts, if we ignore all illegal shift amounts
     // (that always produce poison), what shift amount range is left?
-    ConstantRange ShAmt = RHS.intersectWith(
+    ConstantRange ShAmt = Other.intersectWith(
         ConstantRange(APInt(BitWidth, 0), APInt(BitWidth, (BitWidth - 1) + 1)));
     if (ShAmt.isEmptySet()) {
       // If the entire range of shift amounts is already poison-producing,
       // then we can freely add more poison-producing flags ontop of that.
-      return ConstantRange::getFull(BitWidth);
+      return getFull(BitWidth);
     }
     // There are some legal shift amounts, we can compute conservatively-correct
     // range of no-wrap inputs. Note that by now we have clamped the ShAmtUMax
     // to be at most bitwidth-1, which results in most conservative range.
     APInt ShAmtUMax = ShAmt.getUnsignedMax();
     if (Unsigned)
-      return ConstantRange::getNonEmpty(
-          APInt::getZero(BitWidth),
-          APInt::getMaxValue(BitWidth).lshr(ShAmtUMax) + 1);
-    return ConstantRange::getNonEmpty(
-        APInt::getSignedMinValue(BitWidth).ashr(ShAmtUMax),
-        APInt::getSignedMaxValue(BitWidth).ashr(ShAmtUMax) + 1);
+      return getNonEmpty(APInt::getZero(BitWidth),
+                         APInt::getMaxValue(BitWidth).lshr(ShAmtUMax) + 1);
+    return getNonEmpty(APInt::getSignedMinValue(BitWidth).ashr(ShAmtUMax),
+                       APInt::getSignedMaxValue(BitWidth).ashr(ShAmtUMax) + 1);
   }
   }
-}
-
-ConstantRange
-ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
-                                          const ConstantRange &Other,
-                                          unsigned NoWrapKind) {
-  return makeNoWrapRegion(BinOp, Other, NoWrapKind);
 }
 
 ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
                                                    const APInt &Other,
                                                    unsigned NoWrapKind) {
-  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
-  // "for all" and "for any" coincide in this case.
-  return makeNoWrapRegion(BinOp, SingleElementBounds(Other), NoWrapKind);
+  using OBO = OverflowingBinaryOperator;
+
+  assert(
+      (NoWrapKind == OBO::NoSignedWrap || NoWrapKind == OBO::NoUnsignedWrap) &&
+      "NoWrapKind invalid!");
+
+  bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
+  unsigned BitWidth = Other.getBitWidth();
+  switch (BinOp) {
+  case Instruction::Add: {
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth), -Other);
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal - Other, SignedMinVal)
+                              : getNonEmpty(SignedMinVal, SignedMinVal - Other);
+  }
+
+  case Instruction::Sub: {
+    if (Unsigned)
+      return getNonEmpty(Other, APInt::getZero(BitWidth));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal, SignedMinVal + Other)
+                              : getNonEmpty(SignedMinVal + Other, SignedMinVal);
+  }
+
+  case Instruction::Mul:
+    return Unsigned ? makeExactMulNUWRegion(Other)
+                    : makeExactMulNSWRegion(Other);
+
+  case Instruction::Shl:
+    // Shift amounts >= BitWidth always produce poison.
+    if (Other.uge(BitWidth))
+      return getFull(BitWidth);
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth),
+                         APInt::getMaxValue(BitWidth).lshr(Other) + 1);
+    return getNonEmpty(APInt::getSignedMinValue(BitWidth).ashr(Other),
+                       APInt::getSignedMaxValue(BitWidth).ashr(Other) + 1);
+
+  default:
+    llvm_unreachable("Unsupported binary op");
+  }
 }
 
 ConstantRange ConstantRange::makeMaskNotEqualRange(const APInt &Mask,
