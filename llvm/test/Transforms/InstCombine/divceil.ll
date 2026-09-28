@@ -214,13 +214,11 @@ define i16 @divceil_i8_var_divisor_assume_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_zext(
 ; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], -9
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
-; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[Q_EXT:%.*]] = zext i8 [[Q]] to i16
-; CHECK-NEXT:    [[ROUND:%.*]] = zext i1 [[COND]] to i16
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i16 [[ROUND]], [[Q_EXT]]
-; CHECK-NEXT:    ret i16 [[RESULT]]
+; CHECK-NEXT:    ret i16 [[Q_EXT]]
 ;
   %bound = icmp ule i8 %x, 246
   call void @llvm.assume(i1 %bound)
@@ -238,12 +236,10 @@ define i16 @divceil_i8_var_divisor_assume_zext(i8 %x, i8 range(i8 1, 11) %y) {
 define i16 @divceil_i8_var_divisor_assume_after_add_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_after_add_zext(
 ; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], 101
-; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
-; CHECK-NEXT:    [[Q_EXT:%.*]] = zext nneg i8 [[Q]] to i16
-; CHECK-NEXT:    [[ROUND:%.*]] = zext i1 [[COND]] to i16
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i16 [[ROUND]], [[Q_EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[RESULT:%.*]] = zext i8 [[TMP3]] to i16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
 ; CHECK-NEXT:    ret i16 [[RESULT]]
 ;
