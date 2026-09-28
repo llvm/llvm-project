@@ -4853,10 +4853,10 @@ class VPlan {
   friend class VPSlotTracker;
 
   /// VPBasicBlock corresponding to the original preheader. Used to place
-  /// VPExpandSCEV recipes for expressions used during skeleton creation and the
-  /// rest of VPlan execution.
-  /// When this VPlan is used for the epilogue vector loop, the entry will be
-  /// replaced by a new entry block created during skeleton creation.
+  /// VPExpandSCEV recipes for expressions used during VPlan execution.
+  /// When this VPlan is used for the epilogue vector loop, the entry models the
+  /// main plan's entry and its edges move to the epilogue iteration check (see
+  /// VPlanTransforms::modelGeneratedMainLoopBlocks).
   VPBasicBlock *Entry;
 
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
