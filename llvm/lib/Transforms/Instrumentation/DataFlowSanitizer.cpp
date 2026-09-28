@@ -1070,10 +1070,11 @@ void DFSanFunction::addConditionalCallbacksIfEnabled(Instruction &I,
     Value *CondOrigin = getOrigin(Condition);
     CI = IRB.CreateCall(DFS.DFSanConditionalCallbackOriginFn,
                         {CondShadow, CondOrigin});
+    CI->maybeAddParamAttr(1, TLI.getExtAttrForI32Param(/*Signed=*/false));
   } else {
     CI = IRB.CreateCall(DFS.DFSanConditionalCallbackFn, {CondShadow});
   }
-  CI->maybeAddParamAttr(0, TLI.getExtAttrForI32Param(/*Signed=*/false));
+  CI->maybeAddParamAttr(0, TLI.getExtAttrForI8Param(/*Signed=*/false));
 }
 
 void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
@@ -1103,21 +1104,20 @@ void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
   CallInst *CB;
   std::vector<Value *> args;
 
-  Attribute::AttrKind ParamExtAttr =
+  Attribute::AttrKind I32ParamExtAttr =
       TLI.getExtAttrForI32Param(/*Signed=*/false);
   if (DFS.shouldTrackOrigins()) {
     Value *DataOrigin = getOrigin(Data);
     args = { DataShadow, DataOrigin, FilePathPtr, CILine, FunctionNamePtr };
     CB = IRB.CreateCall(DFS.DFSanReachesFunctionCallbackOriginFn, args);
-    CB->maybeAddParamAttr(0, ParamExtAttr);
-    CB->maybeAddParamAttr(1, ParamExtAttr);
-    CB->maybeAddParamAttr(3, ParamExtAttr);
+    CB->maybeAddParamAttr(1, I32ParamExtAttr);
+    CB->maybeAddParamAttr(3, I32ParamExtAttr);
   } else {
     args = { DataShadow, FilePathPtr, CILine, FunctionNamePtr };
     CB = IRB.CreateCall(DFS.DFSanReachesFunctionCallbackFn, args);
-    CB->maybeAddParamAttr(0, ParamExtAttr);
-    CB->maybeAddParamAttr(2, ParamExtAttr);
+    CB->maybeAddParamAttr(2, I32ParamExtAttr);
   }
+  CB->maybeAddParamAttr(0, TLI.getExtAttrForI8Param(/*Signed=*/false));
   CB->setDebugLoc(dbgloc);
 }
 
@@ -1357,8 +1357,11 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
 // Initialize DataFlowSanitizer runtime functions and declare them in the module
 void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
   LLVMContext &C = M.getContext();
-  Attribute::AttrKind ParamExtAttr = TargetLibraryInfo::getExtAttrForI32Param(
-      M.getTargetTriple(), /*Signed=*/false);
+  Attribute::AttrKind I8ParamExtAttr =
+      TargetLibraryInfo::getExtAttrForI8Param(/*Signed=*/false);
+  Attribute::AttrKind I32ParamExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Param(M.getTargetTriple(),
+                                               /*Signed=*/false);
   {
     AttributeList AL;
     AL = AL.addFnAttribute(C, Attribute::NoUnwind);
@@ -1383,8 +1386,8 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       "__dfsan_wrapper_extern_weak_null", DFSanWrapperExternWeakNullFnTy);
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 1, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 1, I32ParamExtAttr);
     DFSanSetLabelFn =
         Mod->getOrInsertFunction("__dfsan_set_label", DFSanSetLabelFnTy, AL);
   }
@@ -1394,15 +1397,15 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
                                                   DFSanVarargWrapperFnTy);
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I32ParamExtAttr);
     AL = AL.addRetAttribute(M.getContext(), Attribute::ZExt);
     DFSanChainOriginFn = Mod->getOrInsertFunction("__dfsan_chain_origin",
                                                   DFSanChainOriginFnTy, AL);
   }
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 1, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 1, I32ParamExtAttr);
     AL = AL.addRetAttribute(M.getContext(), Attribute::ZExt);
     DFSanChainOriginIfTaintedFn = Mod->getOrInsertFunction(
         "__dfsan_chain_origin_if_tainted", DFSanChainOriginIfTaintedFnTy, AL);
@@ -1415,7 +1418,7 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
 
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
     DFSanMemShadowOriginConditionalExchangeFn = Mod->getOrInsertFunction(
         "__dfsan_mem_shadow_origin_conditional_exchange",
         DFSanMemShadowOriginConditionalExchangeFnTy, AL);
@@ -1423,8 +1426,8 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
 
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 3, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 3, I32ParamExtAttr);
     DFSanMaybeStoreOriginFn = Mod->getOrInsertFunction(
         "__dfsan_maybe_store_origin", DFSanMaybeStoreOriginFnTy, AL);
   }
@@ -1476,17 +1479,20 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
 
 // Initializes event callback functions and declare them in the module
 void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
-  Attribute::AttrKind ParamExtAttr = TargetLibraryInfo::getExtAttrForI32Param(
-      M.getTargetTriple(), /*Signed=*/false);
+  Attribute::AttrKind I8ParamExtAttr =
+      TargetLibraryInfo::getExtAttrForI8Param(/*Signed=*/false);
+  Attribute::AttrKind I32ParamExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Param(M.getTargetTriple(),
+                                               /*Signed=*/false);
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
     DFSanLoadCallbackFn = Mod->getOrInsertFunction(
         "__dfsan_load_callback", DFSanLoadStoreCallbackFnTy, AL);
   }
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
     DFSanStoreCallbackFn = Mod->getOrInsertFunction(
         "__dfsan_store_callback", DFSanLoadStoreCallbackFnTy, AL);
   }
@@ -1494,37 +1500,37 @@ void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
       "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
     DFSanCmpCallbackFn = Mod->getOrInsertFunction("__dfsan_cmp_callback",
                                                   DFSanCmpCallbackFnTy, AL);
   }
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
     DFSanConditionalCallbackFn = Mod->getOrInsertFunction(
         "__dfsan_conditional_callback", DFSanConditionalCallbackFnTy, AL);
   }
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 1, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 1, I32ParamExtAttr);
     DFSanConditionalCallbackOriginFn =
         Mod->getOrInsertFunction("__dfsan_conditional_callback_origin",
                                  DFSanConditionalCallbackOriginFnTy, AL);
   }
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 2, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 2, I32ParamExtAttr);
     DFSanReachesFunctionCallbackFn =
         Mod->getOrInsertFunction("__dfsan_reaches_function_callback",
                                  DFSanReachesFunctionCallbackFnTy, AL);
   }
   {
     AttributeList AL;
-    AL = AL.maybeAddParamAttribute(M.getContext(), 0, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 1, ParamExtAttr);
-    AL = AL.maybeAddParamAttribute(M.getContext(), 3, ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 0, I8ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 1, I32ParamExtAttr);
+    AL = AL.maybeAddParamAttribute(M.getContext(), 3, I32ParamExtAttr);
     DFSanReachesFunctionCallbackOriginFn =
         Mod->getOrInsertFunction("__dfsan_reaches_function_callback_origin",
                                  DFSanReachesFunctionCallbackOriginFnTy, AL);
@@ -2488,7 +2494,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     Value *Addr = LI.getPointerOperand();
     CallInst *CI =
         IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr});
-    CI->maybeAddParamAttr(0, DFSF.TLI.getExtAttrForI32Param(/*Signed=*/false));
+    CI->maybeAddParamAttr(0, DFSF.TLI.getExtAttrForI8Param(/*Signed=*/false));
   }
 
   IRBuilder<> IRB(AfterLi->getParent(), AfterLi);
@@ -2746,7 +2752,7 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     Value *Addr = SI.getPointerOperand();
     CallInst *CI =
         IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr});
-    CI->maybeAddParamAttr(0, DFSF.TLI.getExtAttrForI32Param(/*Signed=*/false));
+    CI->maybeAddParamAttr(0, DFSF.TLI.getExtAttrForI8Param(/*Signed=*/false));
   }
 }
 
@@ -2811,7 +2817,7 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
     CallInst *CallI =
         IRB.CreateCall(DFSF.DFS.DFSanCmpCallbackFn, CombinedShadow);
     CallI->maybeAddParamAttr(0,
-                             DFSF.TLI.getExtAttrForI32Param(/*Signed=*/false));
+                             DFSF.TLI.getExtAttrForI8Param(/*Signed=*/false));
   }
 }
 
@@ -3118,7 +3124,9 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
 }
 
 bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
-  Attribute::AttrKind ParamExtAttr =
+  Attribute::AttrKind I8ParamExtAttr =
+      DFSF.TLI.getExtAttrForI8Param(/*Signed=*/false);
+  Attribute::AttrKind I32ParamExtAttr =
       DFSF.TLI.getExtAttrForI32Param(/*Signed=*/false);
   IRBuilder<> IRB(&CB);
   switch (DFSF.DFS.getWrapperKind(&F)) {
@@ -3161,17 +3169,20 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
 
       // Ensure all narrow integer arguments (both original and added
       // shadow/origin) have an extension attribute on the function
-      // declaration. If none is present, add ZExt as all DFSan args are
-      // unsigned. TODO: Avoid getting here with missing attributes in the
-      // first place (use TLI/emitLibFunc()?).
+      // declaration. If none is present, add the right attribute for zero
+      // extend as all DFSan args are unsigned. TODO: Avoid getting here with
+      // missing attributes in the first place (use TLI/emitLibFunc()?).
       for (unsigned I = 0, E = CustomFn->arg_size(); I < E; ++I) {
         Type *ParamTy = CustomFn->getFunctionType()->getParamType(I);
         if (ParamTy->isIntegerTy() && ParamTy->getIntegerBitWidth() <= 32) {
-          if (ParamExtAttr != Attribute::AttrKind::None &&
+          Attribute::AttrKind IntArgAttr = ParamTy->getIntegerBitWidth() == 8
+                                               ? I8ParamExtAttr
+                                               : I32ParamExtAttr;
+          if (IntArgAttr != Attribute::AttrKind::None &&
               !CustomFn->hasParamAttribute(I, Attribute::ZExt) &&
               !CustomFn->hasParamAttribute(I, Attribute::SExt) &&
               !CustomFn->hasParamAttribute(I, Attribute::NoExt)) {
-            CustomFn->addParamAttr(I, ParamExtAttr);
+            CustomFn->addParamAttr(I, IntArgAttr);
           }
         }
       }
@@ -3222,13 +3233,13 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
       const unsigned ArgNo = ShadowArgStart + N;
       if (CustomCI->getArgOperand(ArgNo)->getType() ==
           DFSF.DFS.PrimitiveShadowTy)
-        CustomCI->maybeAddParamAttr(ArgNo, ParamExtAttr);
+        CustomCI->maybeAddParamAttr(ArgNo, I8ParamExtAttr);
 
       if (ShouldTrackOrigins) {
         const unsigned OriginArgNo = OriginArgStart + N;
         if (CustomCI->getArgOperand(OriginArgNo)->getType() ==
             DFSF.DFS.OriginTy)
-          CustomCI->maybeAddParamAttr(OriginArgNo, ParamExtAttr);
+          CustomCI->maybeAddParamAttr(OriginArgNo, I32ParamExtAttr);
       }
     }
 
@@ -3383,7 +3394,7 @@ void DFSanVisitor::visitLibAtomicCompareExchange(CallBase &CB) {
       {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false), TargetPtr,
        ExpectedPtr, DesiredPtr,
        NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
-  CI->maybeAddParamAttr(0, DFSF.TLI.getExtAttrForI32Param(/*Signed=*/false));
+  CI->maybeAddParamAttr(0, DFSF.TLI.getExtAttrForI8Param(/*Signed=*/false));
 }
 
 void DFSanVisitor::visitCallBase(CallBase &CB) {
