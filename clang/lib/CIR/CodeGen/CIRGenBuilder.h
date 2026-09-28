@@ -195,9 +195,12 @@ public:
     return op;
   }
 
-  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
-                             mlir::Value src, mlir::Value len) {
-    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  cir::MemCpyOp createMemCpy(mlir::Location loc, Address dst, Address src,
+                             mlir::Value len) {
+    return cir::MemCpyOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
@@ -828,6 +831,17 @@ public:
     return cir::LLVMIntrinsicCallOp::create(*this, loc,
                                             this->getStringAttr(str), resTy,
                                             std::forward<Operands>(op)...)
+        .getResult();
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy,
+                                  cir::FastMathFlagsAttr fastmath,
+                                  Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(
+               *this, loc, this->getStringAttr(str), resTy,
+               std::forward<Operands>(op)..., fastmath)
         .getResult();
   }
 };

@@ -35,7 +35,7 @@ end
 ! CHECK-LABEL: func.func @test_callee_c_ptr(
 ! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:         %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_ptrElocal"}
+! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> <{bindc_name = "local", uniq_name = "_QFtest_callee_c_ptrElocal"}>
 ! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtest_callee_c_ptrElocal"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK:         %[[VAL_133:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_134:.*]] = fir.coordinate_of %[[VAL_133]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
@@ -56,7 +56,7 @@ end subroutine
 ! CHECK-LABEL: func.func @test_callee_c_funptr(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:         %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> {bindc_name = "local", uniq_name = "_QFtest_callee_c_funptrElocal"}
+! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> <{bindc_name = "local", uniq_name = "_QFtest_callee_c_funptrElocal"}>
 ! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtest_callee_c_funptrElocal"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
 ! CHECK:         %[[VAL_133:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:         %[[VAL_134:.*]] = fir.coordinate_of %[[VAL_133]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> !fir.ref<i64>

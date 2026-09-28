@@ -61,10 +61,9 @@ extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                llvm::bolt::DeprecatedICFNumericOptionParser>
     ICF;
 
-static cl::opt<bool>
-DynoStatsAll("dyno-stats-all",
-  cl::desc("print dyno stats after each stage"),
-  cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool> DynoStatsAll("dyno-stats-all",
+                                  cl::desc("print dyno stats after each stage"),
+                                  cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
     EliminateUnreachable("eliminate-unreachable",
@@ -247,12 +246,13 @@ cl::opt<bool> SimplifyRODataLoads(
              "operand with the constant found in the corresponding section"),
     cl::init(false), cl::cat(BoltOptCategory));
 
-static cl::list<std::string>
-SpecializeMemcpy1("memcpy1-spec",
-  cl::desc("list of functions with call sites for which to specialize memcpy() "
-           "for size 1"),
-  cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."),
-  cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::list<std::string> SpecializeMemcpy1(
+    "memcpy1-spec",
+    cl::desc(
+        "list of functions with call sites for which to specialize memcpy() "
+        "for size 1"),
+    cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."),
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
                            cl::cat(BoltOptCategory));
