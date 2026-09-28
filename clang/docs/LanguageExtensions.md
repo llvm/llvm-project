@@ -6589,6 +6589,13 @@ static char build[] = "@(#) Level 42";                      // build     -> _ZL5
 -mloadtime-comment-vars=_ZN1N6sccsidE,_ZL5build
 ```
 
+A variable declared with C language linkage (`extern "C"`) is not mangled and
+is named by its identifier. A variable in an unnamed namespace is mangled with
+the unnamed-namespace marker, for example `namespace { char anon[]; }` is
+`_ZN12_GLOBAL__N_14anonE`. Names are matched exactly against the mangled name;
+surrounding whitespace is not trimmed, so `-mloadtime-comment-vars=foo, bar`
+names `foo` and ` bar`.
+
 Valid variable types:
 
 A variable named in the list must meet all of these conditions to be
@@ -6624,10 +6631,11 @@ variables of unsupported kinds: function-local `static` variables, static data
 members, and variable template specializations (an explicit specialization is
 diagnosed at its definition, an implicit one in each translation unit that
 instantiates it). A name-matched variable of any other type -- for example, an
-`int` or a `struct` -- is likewise diagnosed. A definition without an
-initializer is silently skipped. Names that match no variable defined in the
-translation unit are also silently ignored, since the option is typically
-given to every compilation of a build.
+`int` or a `struct` -- is likewise diagnosed. These diagnostics are in the
+`-Wloadtime-comment-var` group. A definition without an initializer is
+silently skipped. Names that match no variable defined in the translation unit
+are also silently ignored, since the option is typically given to every
+compilation of a build.
 
 For C++20 modules, a named variable defined in a module unit is processed
 using the option as specified when the module unit itself is compiled -- in a

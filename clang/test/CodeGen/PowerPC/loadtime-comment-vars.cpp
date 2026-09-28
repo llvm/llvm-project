@@ -23,23 +23,25 @@
 //
 // Names used in the matching scenario:
 //
-//   Source        IR symbol        Expected treatment
-//   ------        ---------        ------------------
-//   x             x                preserved (no mangling at C++ file scope)
-//   N::x          _ZN1N1xE         preserved
-//   N::ptr        _ZN1NL3ptrE      preserved ('static' gives internal linkage)
-//   A::x          _ZN1A1xE         static data member: diagnosed, unpreserved
-//   B::ver        _ZN1B3verE       static data member: diagnosed, unpreserved
-//   C::info       _ZN1C4infoE      no definition in this TU: skipped
-//   wstr          _ZL4wstr         wchar_t element type: diagnosed, not emitted
-//   u16str        _ZL6u16str       char16_t element type: diagnosed, not emitted
-//   u8str         _ZL5u8str        char8_t element type: diagnosed, not emitted
-//   not_string    not_string       int: unsupported type: diagnosed, not emitted
-//   sccsid_ce     _ZL9sccsid_ce    preserved (static constexpr, internal)
-//   sccsid_ci     sccsid_ci        preserved (constinit; needs -std=c++20)
-//   sccsid_inl    sccsid_inl       preserved (inline variable, linkonce_odr)
-//   [a, b, c]     _ZDC1a1b1cE      preserved (structured binding: the
-//                                  DecompositionDecl owns the storage)
+//   Source        IR symbol                Expected treatment
+//   ------        ---------                ------------------
+//   x             x                        preserved (no mangling at C++ file scope)
+//   N::x          _ZN1N1xE                 preserved
+//   N::ptr        _ZN1NL3ptrE              preserved ('static' gives internal linkage)
+//   A::x          _ZN1A1xE                 static data member: diagnosed, unpreserved
+//   B::ver        _ZN1B3verE               static data member: diagnosed, unpreserved
+//   C::info       _ZN1C4infoE              no definition in this TU: skipped
+//   wstr          _ZL4wstr                 wchar_t element type: diagnosed, not emitted
+//   u16str        _ZL6u16str               char16_t element type: diagnosed, not emitted
+//   u8str         _ZL5u8str                char8_t element type: diagnosed, not emitted
+//   not_string    not_string               int: unsupported type: diagnosed, not emitted
+//   cver          cver                     preserved (C linkage, not mangled)
+//   anon          _ZN12_GLOBAL__N_14anonE  preserved (unnamed namespace)
+//   sccsid_ce     _ZL9sccsid_ce            preserved (static constexpr, internal)
+//   sccsid_ci     sccsid_ci                preserved (constinit; needs -std=c++20)
+//   sccsid_inl    sccsid_inl               preserved (inline variable, linkonce_odr)
+//   [a, b, c]     _ZDC1a1b1cE              preserved (structured binding: the
+//                                          DecompositionDecl owns the storage)
 //
 // Names used in the storage scenario (namespaces and structs are renamed to
 // avoid redefinition against the matching-scenario symbols):
@@ -53,7 +55,7 @@
 //   g()::fn       _ZZ1gvE2fn       function-local static: diagnosed, no metadata
 
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var \
-// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl,_ZDC1a1b1cE \
+// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE \
 // RUN:   -emit-llvm -disable-llvm-passes -o %t.ll %s
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT < %t.ll
@@ -137,31 +139,40 @@ auto [a, b, c] = "ab";
 
 void f() {}
 
+// 11. C language linkage: the name is not mangled, so the identifier is the
+//     IR name and the listed name.
+extern "C" char cver[] = "@(#) c linkage";
+
+// 12. An unnamed namespace mangles with the _GLOBAL__N_1 marker.
+namespace {
+char anon[] = "@(#) anon";
+} // namespace
+
 // ===========================================================================
 // Storage-duration filtering (STORAGE)
 // ===========================================================================
 
-// 11. A file-scope pointer with static storage duration is preserved.
+// 13. A file-scope pointer with static storage duration is preserved.
 const char *keep = "@(#) keep";
 
 namespace S {
-// 12. A thread_local variable (N renamed to S to avoid redefinition) is
+// 14. A thread_local variable (N renamed to S to avoid redefinition) is
 //     diagnosed and receives no metadata.
 thread_local const char *tl = "@(#) tl";
 } // namespace S
 
-// 13. The 'static' specifier changes linkage only; the storage duration is
+// 15. The 'static' specifier changes linkage only; the storage duration is
 //     still thread, so this is diagnosed as well.
 static thread_local const char *stl = "@(#) stl";
 
-// 14. A thread_local static data member (A renamed to T) is diagnosed and
+// 16. A thread_local static data member (A renamed to T) is diagnosed and
 //     receives no metadata.
 struct T {
   static thread_local const char *tm;
 };
 thread_local const char *T::tm = "@(#) tm";
 
-// 15. Function-local static (f renamed to g) — name-matched, so diagnosed by
+// 17. Function-local static (f renamed to g) — name-matched, so diagnosed by
 //     Sema (see the Sema tests); receives no metadata either way.
 void g() { static const char *fn = "@(#) fn"; (void)fn; }
 
@@ -169,7 +180,7 @@ void g() { static const char *fn = "@(#) fn"; (void)fn; }
 // Sources — list-parsing edge cases (SPACE, DUP)
 // ===========================================================================
 
-// 16. Simple arrays used only by the SPACE/DUP checks.
+// 18. Simple arrays used only by the SPACE/DUP checks.
 char foo[] = "@(#) foo";
 char bar[] = "@(#) bar";
 
@@ -197,6 +208,9 @@ char bar[] = "@(#) bar";
 // C::info has no definition — must not appear.
 // CHECK-NOT: @_ZN1C4infoE
 
+// CHECK-DAG: @cver = global [15 x i8] c"@(#) c linkage\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
+// CHECK-DAG: @_ZN12_GLOBAL__N_14anonE = internal global [10 x i8] c"@(#) anon\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
+
 // Eligible C++ forms: static constexpr (internal, constant), constinit
 // (external), and inline (linkonce_odr) are all preserved.
 // CHECK-DAG: @_ZL9sccsid_ce = internal constant ptr @[[CE_STR:.*]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
@@ -207,9 +221,9 @@ char bar[] = "@(#) bar";
 // CHECK-DAG: @[[INL_STR]] = private unnamed_addr constant [12 x i8] c"@(#) inline\00", align {{[0-9]+}}
 // CHECK-DAG: @_ZDC1a1b1cE = internal constant [3 x i8] c"ab\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 
-// The seven supported matched globals are preserved in llvm.compiler.used;
+// The nine supported matched globals are preserved in llvm.compiler.used;
 // the two static data members are not.
-// CHECK: @llvm.compiler.used = appending global [7 x ptr]
+// CHECK: @llvm.compiler.used = appending global [9 x ptr]
 // CHECK-SAME: @x
 // CHECK-SAME: @_ZN1N1xE
 // CHECK-SAME: @_ZN1NL3ptrE
@@ -217,6 +231,8 @@ char bar[] = "@(#) bar";
 // CHECK-SAME: @sccsid_ci
 // CHECK-SAME: @sccsid_inl
 // CHECK-SAME: @_ZDC1a1b1cE
+// CHECK-SAME: @cver
+// CHECK-SAME: @_ZN12_GLOBAL__N_14anonE
 // CHECK-SAME: section "llvm.metadata"
 
 // ===========================================================================
