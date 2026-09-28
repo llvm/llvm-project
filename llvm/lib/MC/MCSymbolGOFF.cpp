@@ -28,12 +28,11 @@ MCSectionGOFF *MCSymbolGOFF::getSectionForCommonSymbol(MCContext &Ctx,
       SD);
   ED->setAlignment(ByteAlignment);
 
-  return Ctx.getGOFFSection(SectionKind::getBSS(), getName(),
-                            GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
-                                         GOFF::ESD_BST_Strong,
-                                         GOFF::ESD_LT_XPLink, getBindingScope(),
-                                         0},
-                            ED);
+  return Ctx.getGOFFSection(
+      SectionKind::getBSS(), getName(),
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, getBindingScope(), 0},
+      ED);
 }
 
 bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {

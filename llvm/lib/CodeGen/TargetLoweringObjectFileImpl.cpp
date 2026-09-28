@@ -2913,12 +2913,11 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
                    GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
   WSA->setAlignment(Align(4)); // Fullword
-  return getContext().getGOFFSection(SectionKind::getData(), Name,
-                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                  GOFF::ESD_BST_Strong,
-                                                  GOFF::ESD_LT_XPLink,
-                                                  GOFF::ESD_BSC_Section, 0},
-                                     WSA);
+  return getContext().getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
+      WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
