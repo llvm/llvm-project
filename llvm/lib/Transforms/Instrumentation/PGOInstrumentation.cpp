@@ -176,6 +176,10 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
                                            cl::Hidden,
                                            cl::desc("Disable Value Profiling"));
 
+static cl::opt<bool> PGOUniformityMetadata(
+    "pgo-uniformity-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Enable uniformity profile metadata during PGO use"));
+
 // Command line option to set the maximum number of VP annotations to write to
 // the metadata for a single indirect call callsite.
 static cl::opt<unsigned> MaxNumAnnotations(
@@ -1788,9 +1792,9 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   if (ProfileRecord.UniformityBits.empty())
     return;
 
-  // Annotate each uniform instrumented IR basic block so later codegen passes
-  // (MachineFunction) can consume it without relying on fragile block numbering
-  // heuristics.
+  // Mark the function as having uniformity profile, then annotate each uniform
+  // instrumented IR basic block so later codegen passes (MachineFunction) can
+  // consume it without relying on fragile block numbering heuristics.
   // Metadata presence on a terminator means uniform; divergent blocks have no
   // terminator metadata.
 
@@ -1799,13 +1803,28 @@ void PGOUseFunc::setBlockUniformityAttribute() {
 
   LLVMContext &Ctx = F.getContext();
   MDNode *UniformMD = MDNode::get(Ctx, {});
+  F.setMetadata(LLVMContext::MD_uniformity_profile, UniformMD);
+  DenseMap<CondBrInst *, bool> BranchUniformity;
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
     if (!BB || !BB->getTerminator())
       continue;
     bool IsUniform = ProfileRecord.isBlockUniform(I);
+    // A counter placed in a block with a single conditional predecessor also
+    // measures the active lanes on that outgoing edge. Record the branch as
+    // uniform only when every instrumented outgoing edge is uniform.
+    if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+      if (auto *Branch = dyn_cast<CondBrInst>(Pred->getTerminator())) {
+        auto It = BranchUniformity.try_emplace(Branch, true).first;
+        It->second &= IsUniform;
+      }
+    }
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
                                      IsUniform ? UniformMD : nullptr);
+  }
+  for (auto [Branch, IsUniform] : BranchUniformity) {
+    Branch->setMetadata(LLVMContext::MD_branch_uniformity_profile,
+                        IsUniform ? UniformMD : nullptr);
   }
 
   LLVM_DEBUG({
@@ -2278,6 +2297,16 @@ static bool annotateAllFunctions(
 
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
+    if (!PGOUniformityMetadata) {
+      // Also remove existing annotations when the replacement profile has no
+      // usable record for this function.
+      F.setMetadata(LLVMContext::MD_uniformity_profile, nullptr);
+      for (BasicBlock &BB : F) {
+        Instruction *TI = BB.getTerminator();
+        TI->setMetadata(LLVMContext::MD_block_uniformity_profile, nullptr);
+        TI->setMetadata(LLVMContext::MD_branch_uniformity_profile, nullptr);
+      }
+    }
     if (skipPGOUse(F))
       continue;
     TargetLibraryInfo &TLI = LookupTLI(F);
@@ -2326,7 +2355,8 @@ static bool annotateAllFunctions(
     Func.setBranchWeights();
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
-    Func.setBlockUniformityAttribute();
+    if (PGOUniformityMetadata)
+      Func.setBlockUniformityAttribute();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);
