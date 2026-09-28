@@ -2464,10 +2464,16 @@ def : GCNPat <
 }
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
-  (fcopysign fp16vt:$src0, fp16vt:$src1),
+  (UniformBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
+  (S_OR_B32 (S_AND_B32 SReg_32:$src0, (i32 0x00007fff)),
+            (S_AND_B32 SReg_32:$src1, (i32 0x00008000)))
+>;
+
+def : GCNPat <
+  (DivergentBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-    (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
-    (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
+    (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+    (REG_SEQUENCE VGPR_32, VGPR_16:$src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
 >;
 
 // TODO: Scalar case for 0 magnitude special case
