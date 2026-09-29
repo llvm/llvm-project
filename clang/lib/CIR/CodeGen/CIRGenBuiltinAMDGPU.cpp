@@ -1097,8 +1097,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
 }
 
-// Emit AMDGPU printf CIR stand-in function call. This stand-in function call is
-// lowered to the appropriate call structure during LLVM IR lowering.
+// Emit an AMDGPU device printf as a cir.offload.printf, which is expanded into
+// the AMDGPU printf runtime sequence during LLVM lowering.
 mlir::Value
 CIRGenFunction::emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr) {
   assert(cgm.getTriple().isAMDGCN() ||
@@ -1115,9 +1115,14 @@ CIRGenFunction::emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr) {
 
   mlir::Location loc = getLoc(expr->getBeginLoc());
 
-  // We don't know how to emit non-scalar varargs.
+  // We don't know how to emit non-scalar varargs, nor scalars the printf
+  // runtime has no encoding for, such as vectors.
   bool hasNonScalar = llvm::any_of(args, [&](const CallArg &a) {
-    return a.hasLValue() || !a.getKnownRValue().isScalar();
+    if (a.hasLValue() || !a.getKnownRValue().isScalar())
+      return true;
+    mlir::Type ty = a.getKnownRValue().getValue().getType();
+    return !mlir::isa<cir::IntType, cir::PointerType>(ty) &&
+           !cir::isAnyFloatingPointType(ty);
   });
   if (hasNonScalar) {
     cgm.errorUnsupported(expr, "non-scalar args to printf");
@@ -1128,13 +1133,7 @@ CIRGenFunction::emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr) {
   for (const CallArg &a : args)
     callArgs.push_back(a.getKnownRValue().getValue());
 
-  // int __cir_amdgpu_printf(char *format, ...);
-  auto fnTy = cir::FuncType::get({cir::PointerType::get(builder.getSInt8Ty())},
-                                 builder.getSInt32Ty(),
-                                 /*isVarArg=*/true);
-  cir::FuncOp fn = cgm.createRuntimeFunction(fnTy, "__cir_amdgpu_printf");
-  cir::CallOp call = builder.createCallOp(loc, fn, callArgs);
-  // The sequence the marker expands into never unwinds.
-  call.setNothrowAttr(builder.getUnitAttr());
-  return call.getResult();
+  return cir::OffloadPrintfOp::create(builder, loc, builder.getSInt32Ty(),
+                                      callArgs.front(),
+                                      llvm::drop_begin(callArgs));
 }

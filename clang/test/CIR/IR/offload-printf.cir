@@ -1,0 +1,15 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!s8i = !cir.int<s, 8>
+module {
+  cir.func @f(%fmt : !cir.ptr<!s8i>, %i : !s32i, %l : !s64i, %d : !cir.double,
+              %p : !cir.ptr<!s8i>) -> !s32i {
+    // CHECK: cir.offload.printf(%{{.*}}) : (!cir.ptr<!s8i>) -> !s32i
+    %0 = cir.offload.printf(%fmt) : (!cir.ptr<!s8i>) -> !s32i
+    // CHECK: cir.offload.printf(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!cir.ptr<!s8i>, !s32i, !s64i, !cir.double, !cir.ptr<!s8i>) -> !s32i
+    %1 = cir.offload.printf(%fmt, %i, %l, %d, %p) : (!cir.ptr<!s8i>, !s32i, !s64i, !cir.double, !cir.ptr<!s8i>) -> !s32i
+    cir.return %1 : !s32i
+  }
+}

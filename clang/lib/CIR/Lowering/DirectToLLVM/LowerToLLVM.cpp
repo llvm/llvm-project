@@ -49,14 +49,12 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 
 using namespace cir;
 using namespace llvm;
@@ -4598,9 +4596,8 @@ mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
 void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
                                 mlir::Operation *srcOp, llvm::StringRef fnName,
-                                mlir::Type fnTy,
-                                mlir::ArrayAttr argAttrs = nullptr,
-                                mlir::ArrayAttr resAttrs = nullptr) {
+                                mlir::Type fnTy, mlir::ArrayAttr argAttrs,
+                                mlir::ArrayAttr resAttrs) {
   mlir::ModuleOp modOp = srcOp->getParentOfType<mlir::ModuleOp>();
   mlir::Operation *sourceSymbol = symbolTables.lookupSymbolIn(
       modOp, mlir::StringAttr::get(fnTy.getContext(), fnName));
@@ -5916,55 +5913,6 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP) {
     pm.addPass(mlir::omp::createHostOpFilteringPass());
 }
 
-// Expand calls to the internal __cir_amdgpu_printf marker CIRGen emits for a
-// device-side printf into the real AMDGPU sequence.
-static void expandAMDGPUDevicePrintf(llvm::Module &module) {
-  llvm::Function *marker = module.getFunction("__cir_amdgpu_printf");
-  if (!marker)
-    return;
-
-  // CIR records the requested lowering as a module flag. The flag is stored
-  // under the LLVM-side name (see amendModule in LowerToLLVMIR.cpp), not the
-  // CIR attribute name.
-  bool isBuffered = false;
-  if (llvm::Metadata *md = module.getModuleFlag("amdgpu_printf_kind"))
-    if (auto *mdStr = llvm::dyn_cast<llvm::MDString>(md))
-      isBuffered = mdStr->getString() == "buffered";
-
-  // Snapshot marker's users before mutating anything.
-  llvm::SmallVector<llvm::User *, 8> users(marker->user_begin(),
-                                           marker->user_end());
-  for (llvm::User *u : users) {
-    // CIRGen marks the marker call nothrow, so it is never an invoke.
-    auto *ci = llvm::cast<llvm::CallInst>(u);
-
-    // Buffered lowering splits the call site's block and build new control flow
-    // of its own. It expects to be the one driving codegen for the rest of the
-    // block, as it would if called from normal frontend codegen. Since we're
-    // expanding a marker call after the fact, split off everything that
-    // was already emitted after it into its own block first, then
-    // reconnect to that block once the real printf sequence has been
-    // built.
-    llvm::BasicBlock *originalBB = ci->getParent();
-    llvm::SmallVector<llvm::Value *, 8> args(ci->args());
-    llvm::BasicBlock *continuation =
-        originalBB->splitBasicBlock(ci->getNextNode());
-    originalBB->getTerminator()->eraseFromParent();
-
-    llvm::IRBuilder<> irb(originalBB);
-    irb.SetCurrentDebugLocation(ci->getDebugLoc());
-    llvm::Value *res = llvm::emitAMDGPUPrintfCall(irb, args, isBuffered);
-    irb.CreateBr(continuation);
-
-    if (res && !ci->use_empty())
-      ci->replaceAllUsesWith(res);
-    ci->eraseFromParent();
-  }
-
-  assert(marker->use_empty() && "printf marker should have no remaining uses");
-  marker->eraseFromParent();
-}
-
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
                              bool enableOpenMP, StringRef mlirSaveTempsOutFile,
@@ -6006,8 +5954,6 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
     // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
   }
-
-  expandAMDGPUDevicePrintf(*llvmModule);
 
   return llvmModule;
 }

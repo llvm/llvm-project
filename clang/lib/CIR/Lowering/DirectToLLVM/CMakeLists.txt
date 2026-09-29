@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMOffloadPrintf.cpp
   LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS

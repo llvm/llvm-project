@@ -180,14 +180,14 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 
 // Scan the format string to locate all specifiers, and mark the ones that
 // specify a string, i.e, the "%s" specifier with optional '*' characters.
-static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
+void llvm::locateAMDGPUPrintfCStrings(SparseBitVector<8> &BV, StringRef Str) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
   size_t SpecPos = 0;
   // Skip the first argument, the format string.
   unsigned ArgIdx = 1;
 
   while ((SpecPos = Str.find_first_of('%', SpecPos)) != StringRef::npos) {
-    if (Str[SpecPos + 1] == '%') {
+    if (SpecPos + 1 < Str.size() && Str[SpecPos + 1] == '%') {
       SpecPos += 2;
       continue;
     }
@@ -305,10 +305,25 @@ static Value *callBufferedPrintfStart(
   return Builder.CreateCall(PrintfAllocFn, Alloc_args, "printf_alloc_fn");
 }
 
-// Prepare constant string argument to push onto the buffer
-static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
-                                     SmallVectorImpl<Value *> &WhatToStore) {
-  std::string Str(SD->Str.str() + '\0');
+uint64_t llvm::getAMDGPUPrintfFormatHash(StringRef Fmt) {
+  MD5 Hasher;
+  MD5::MD5Result Hash;
+  Hasher.update(Fmt);
+  Hasher.final(Hash);
+  return Hash.low();
+}
+
+std::string llvm::getAMDGPUPrintfFormatMetadata(StringRef Fmt) {
+  // Try sticking to llvm.printf.fmts format, although we are not going to
+  // use the ID and argument size fields while printing,
+  return "0:0:" +
+         llvm::utohexstr(getAMDGPUPrintfFormatHash(Fmt), /*LowerCase=*/true) +
+         "," + Fmt.str();
+}
+
+void llvm::packAMDGPUPrintfConstantString(StringRef S,
+                                          SmallVectorImpl<uint32_t> &Words) {
+  std::string Str(S.str() + '\0');
 
   DataExtractor Extractor(Str, /*IsLittleEndian=*/true);
   DataExtractor::Cursor Offset(0);
@@ -333,20 +348,21 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
       break;
     }
     cantFail(Offset.takeError(), "failed to read bytes from constant array");
-
-    APInt IntVal(8 * ReadSize, ReadBytes);
-
-    // TODO: Should not bother aligning up.
-    if (ReadNow < ReadSize)
-      IntVal = IntVal.zext(8 * ReadSize);
-
-    Type *IntTy = Type::getIntNTy(Builder.getContext(), IntVal.getBitWidth());
-    WhatToStore.push_back(ConstantInt::get(IntTy, IntVal));
+    Words.push_back(static_cast<uint32_t>(ReadBytes));
   }
   // Additional padding for 8 byte alignment
   int Rem = (Str.size() % 8);
   if (Rem > 0 && Rem <= 4)
-    WhatToStore.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
+    Words.push_back(0);
+}
+
+// Prepare constant string argument to push onto the buffer
+static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
+                                     SmallVectorImpl<Value *> &WhatToStore) {
+  SmallVector<uint32_t, 16> Words;
+  packAMDGPUPrintfConstantString(SD->Str, Words);
+  for (uint32_t Word : Words)
+    WhatToStore.push_back(Builder.getInt32(Word));
 }
 
 static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
@@ -432,7 +448,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   StringRef FmtStr;
 
   if (getConstantStringInfo(Fmt, FmtStr))
-    locateCStrings(SpecIsCString, FmtStr);
+    locateAMDGPUPrintfCStrings(SpecIsCString, FmtStr);
 
   if (IsBuffered) {
     SmallVector<StringData, 8> StringContents;
@@ -479,21 +495,13 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     // same onto buffer and metadata.
     NamedMDNode *metaD = M->getOrInsertNamedMetadata("llvm.printf.fmts");
     if (IsConstFmtStr) {
-      MD5 Hasher;
-      MD5::MD5Result Hash;
-      Hasher.update(FmtStr);
-      Hasher.final(Hash);
-
-      // Try sticking to llvm.printf.fmts format, although we are not going to
-      // use the ID and argument size fields while printing,
-      std::string MetadataStr =
-          "0:0:" + llvm::utohexstr(Hash.low(), /*LowerCase=*/true) + "," +
-          FmtStr.str();
-      MDString *fmtStrArray = MDString::get(Ctx, MetadataStr);
+      MDString *fmtStrArray =
+          MDString::get(Ctx, getAMDGPUPrintfFormatMetadata(FmtStr));
       MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
       metaD->addOperand(myMD);
 
-      Builder.CreateStore(Builder.getInt64(Hash.low()), Ptr);
+      Builder.CreateStore(Builder.getInt64(getAMDGPUPrintfFormatHash(FmtStr)),
+                          Ptr);
       Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 8);
     } else {
       // Include a dummy metadata instance in case of only non constant
@@ -501,7 +509,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       // be done for completeness
       if (metaD->getNumOperands() == 0) {
         MDString *fmtStrArray =
-            MDString::get(Ctx, "0:0:ffffffff,\"Non const format string\"");
+            MDString::get(Ctx, AMDGPUPrintfNonConstFormatMetadata);
         MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
         metaD->addOperand(myMD);
       }

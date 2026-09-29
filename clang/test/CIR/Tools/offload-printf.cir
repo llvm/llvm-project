@@ -1,0 +1,86 @@
+// RUN: cir-translate --cir-to-llvmir --target amdgcn-amd-amdhsa --disable-cc-lowering --split-input-file %s -o %t.ll
+// RUN: FileCheck %s -input-file %t.ll -check-prefixes=HOSTCALL,BUFFERED
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module attributes {cir.amdgpu_printf_kind = "hostcall"} {
+  cir.func @hostcall(%fmt: !cir.ptr<!s8i>, %v: !s32i) -> !s32i {
+    %0 = cir.offload.printf(%fmt, %v) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+}
+
+// The format is not a constant, so its length is computed at runtime.
+// HOSTCALL-LABEL: define{{.*}} i32 @hostcall(ptr %0, i32 %1)
+// HOSTCALL: [[DESC:%.*]] = call i64 @__ockl_printf_begin(i64 0)
+// HOSTCALL: [[ISNULL:%.*]] = icmp eq ptr %0, null
+// HOSTCALL: br i1 [[ISNULL]], label %[[JOIN:.*]], label %[[WHILE:.*]]
+// HOSTCALL: [[WHILE]]:
+// HOSTCALL: [[CUR:%.*]] = phi ptr [ [[NEXT:%.*]], %[[WHILE]] ], [ %0, %{{.*}} ]
+// HOSTCALL: [[NEXT]] = getelementptr i8, ptr [[CUR]], i64 1
+// HOSTCALL: [[CH:%.*]] = load i8, ptr [[CUR]], align 1
+// HOSTCALL: [[ISNUL:%.*]] = icmp eq i8 [[CH]], 0
+// HOSTCALL: br i1 [[ISNUL]], label %[[DONE:.*]], label %[[WHILE]]
+// HOSTCALL: [[DONE]]:
+// HOSTCALL: [[END:%.*]] = ptrtoaddr ptr [[CUR]] to i64
+// HOSTCALL: [[BEGIN:%.*]] = ptrtoaddr ptr %0 to i64
+// HOSTCALL: [[DIFF:%.*]] = sub i64 [[END]], [[BEGIN]]
+// HOSTCALL: [[LEN:%.*]] = add i64 [[DIFF]], 1
+// HOSTCALL: br label %[[JOIN]]
+// HOSTCALL: [[JOIN]]:
+// HOSTCALL: [[SIZE:%.*]] = phi i64 [ [[LEN]], %[[DONE]] ], [ 0, %{{.*}} ]
+// HOSTCALL: [[DESC1:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[DESC]], ptr %0, i64 [[SIZE]], i32 0)
+// HOSTCALL: [[ARG:%.*]] = zext i32 %1 to i64
+// HOSTCALL: [[DESC2:%.*]] = call i64 @__ockl_printf_append_args(i64 [[DESC1]], i32 1, i64 [[ARG]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// HOSTCALL: [[RES:%.*]] = trunc i64 [[DESC2]] to i32
+// HOSTCALL: ret i32 [[RES]]
+// HOSTCALL-NOT: !llvm.printf.fmts
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module attributes {cir.amdgpu_printf_kind = "buffered"} {
+  cir.global "private" constant cir_private @".str" = #cir.const_array<"%d %s\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7> {alignment = 1 : i64}
+  cir.func @buffered(%v: !s32i, %str: !cir.ptr<!s8i>) -> !s32i {
+    %0 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 7>>
+    %1 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!s8i x 7>> -> !cir.ptr<!s8i>
+    %2 = cir.offload.printf(%1, %v, %str) : (!cir.ptr<!s8i>, !s32i, !cir.ptr<!s8i>) -> !s32i
+    cir.return %2 : !s32i
+  }
+}
+
+// The format is a constant and only its hash (the low 64 bits of its MD5,
+// which also keys the !llvm.printf.fmts entry) is stored. The %s argument is not
+// a constant, so it is copied after its length is computed at runtime.
+// BUFFERED-LABEL: define{{.*}} i32 @buffered(i32 %0, ptr %1)
+// BUFFERED: icmp eq ptr %1, null
+// BUFFERED: getelementptr i8, ptr %{{.*}}, i64 1
+// BUFFERED: [[LEN:%.*]] = phi i64
+// BUFFERED: [[ADD:%.*]] = add i64 [[LEN]], 7
+// BUFFERED: [[ALIGNED:%.*]] = and i64 [[ADD]], 4294967288
+// BUFFERED: [[SUM:%.*]] = add i64 [[ALIGNED]], 20
+// BUFFERED: [[SIZE:%.*]] = trunc i64 [[SUM]] to i32
+// BUFFERED: [[BUF:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 [[SIZE]])
+// BUFFERED: [[OK:%.*]] = icmp ne ptr addrspace(1) [[BUF]], null
+// BUFFERED: br i1 [[OK]], label %[[PUSH:.*]], label %[[CONT:.*]]
+// BUFFERED: [[PUSH]]:
+// BUFFERED: [[SHL:%.*]] = shl i32 [[SIZE]], 2
+// BUFFERED: [[CTRL:%.*]] = or i32 [[SHL]], 2
+// BUFFERED: store i32 [[CTRL]], ptr addrspace(1) [[BUF]], align 4
+// BUFFERED: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[BUF]], i32 4
+// BUFFERED: store i64 -3179066091271850508, ptr addrspace(1) [[P1]], align 8
+// BUFFERED: [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P1]], i32 8
+// BUFFERED: [[ARG:%.*]] = zext i32 %0 to i64
+// BUFFERED: store i64 [[ARG]], ptr addrspace(1) [[P2]], align 8
+// BUFFERED: [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P2]], i32 8
+// BUFFERED: call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) [[P3]], ptr %1, i64 [[LEN]], i1 false)
+// BUFFERED: br label %[[CONT]]
+// BUFFERED: [[CONT]]:
+// BUFFERED: [[FAIL:%.*]] = xor i1 [[OK]], true
+// BUFFERED: [[RES:%.*]] = sext i1 [[FAIL]] to i32
+// BUFFERED: ret i32 [[RES]]
+// BUFFERED: !llvm.printf.fmts = !{[[FMT:![0-9]+]]}
+// BUFFERED: [[FMT]] = !{!"0:0:d3e1b03bc04075f4,%d %s\0A"}
