@@ -239,7 +239,9 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           continue;
 
         auto Subregs = getUsesAndDefsFor(*It);
-        if (Subregs.second.anyCommon(OldRegClobbers))
+        BitVector UnclobberedSubregs = OldRegClobbers;
+        UnclobberedSubregs.reset(ClobberedSubregs);
+        if (Subregs.second.anyCommon(UnclobberedSubregs))
           NewKiller = &*It;
 
         // A component defined here for the first time is the producing def of
@@ -285,13 +287,18 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     if (KillerIns) {
       BitVector ClobberedSubregs(NumVGPR32);
       MachineInstr *NewDef = DefToRename ? DefToRename : nullptr;
+      bool PassedDefToRename = false;
       for (MachineBasicBlock::reverse_iterator RIt =
                std::next(MachineBasicBlock::reverse_iterator(
                    KillerIns->getReverseIterator()));
            RIt != MBB.rend(); ++RIt) {
+        auto UsesAndDefs = getUsesAndDefsFor(*RIt);
+        if (&*RIt == DefToRename)
+          PassedDefToRename = true;
         if (RIt->modifiesRegister(OldReg, TRI))
-          ClobberedSubregs |= getUsesAndDefsFor(*RIt).first;
-
+          ClobberedSubregs |= UsesAndDefs.first;
+        if (!PassedDefToRename && RIt->readsRegister(OldReg, TRI))
+          ClobberedSubregs.reset(UsesAndDefs.second);
         if (!anyLanesOutside(OldRegClobbers, ClobberedSubregs)) {
           NewDef = &*RIt;
           break;
@@ -382,9 +389,12 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         Register NewDef =
             renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                            DefToRename->getOperand(Op).getReg());
-        if (!DryRun)
+        if (!DryRun) {
           DefToRename->getOperand(Op).setReg(NewDef);
-        else if (!DefToRename->getOperand(Op).isRenamable())
+          // setReg clears the renamable flag; restore it since the dry run
+          // already verified this operand was renamable.
+          DefToRename->getOperand(Op).setIsRenamable(true);
+        } else if (!DefToRename->getOperand(Op).isRenamable())
           return false;
         RedefinedRegs |= getVGPR32Components(NewDef);
       }
@@ -401,9 +411,10 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           Register NewReg =
               renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                              RenameIt->getOperand(Op).getReg());
-          if (!DryRun)
+          if (!DryRun) {
             RenameIt->getOperand(Op).setReg(NewReg);
-          else if (!RenameIt->getOperand(Op).isRenamable())
+            RenameIt->getOperand(Op).setIsRenamable(true);
+          } else if (!RenameIt->getOperand(Op).isRenamable())
             return false;
 
           if (RenameIt->getOperand(Op).isDef())
@@ -413,11 +424,12 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       if (KillerIns->getOperand(Op).isReg() &&
           KillerIns->getOperand(Op).isUse() &&
           TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg)) {
-        if (!DryRun)
+        if (!DryRun) {
           KillerIns->getOperand(Op).setReg(
               renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                              KillerIns->getOperand(Op).getReg()));
-        else if (!KillerIns->getOperand(Op).isRenamable())
+          KillerIns->getOperand(Op).setIsRenamable(true);
+        } else if (!KillerIns->getOperand(Op).isRenamable())
           return false;
       }
 
