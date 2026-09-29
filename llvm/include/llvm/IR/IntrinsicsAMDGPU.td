@@ -917,6 +917,12 @@ def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrNoCreateUndefOrPoison]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
 
+let TargetFeatures = "wave-match-insts" in
+def int_amdgcn_wave_match_b32 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison]
+>, ClangBuiltin<"__builtin_amdgcn_wave_match_b32">;
+
 def int_amdgcn_bitop3 :
   PureIntrinsic<[llvm_anyint_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],

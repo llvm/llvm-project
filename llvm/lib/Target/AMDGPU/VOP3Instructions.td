@@ -2120,7 +2120,7 @@ def VOP_WAVE_MATCH_B32 : VOP3_Profile<VOP_I32_I32_I32> {
 }
 
 let isConvergent = 1, SubtargetPredicate = HasWaveMatchInsts in {
-  defm V_WAVE_MATCH_B32 : VOP3Inst<"v_wave_match_b32", VOP_WAVE_MATCH_B32>;
+  defm V_WAVE_MATCH_B32 : VOP3Inst<"v_wave_match_b32", VOP_WAVE_MATCH_B32, int_amdgcn_wave_match_b32>;
 }
 
 class VOP_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f = VOP3_REGULAR> : VOP3_Profile<p, f> {
