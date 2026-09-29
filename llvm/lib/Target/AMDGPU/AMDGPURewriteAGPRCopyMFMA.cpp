@@ -119,6 +119,17 @@ public:
   bool tryFoldCopiesToAGPR(Register VReg, MCRegister AssignedAGPR) const;
   bool tryFoldCopiesFromAGPR(Register VReg, MCRegister AssignedAGPR) const;
 
+  /// Derives the subregister index from a spill reload pseudo instruction by
+  /// constructing a lane mask that covers the reloaded portion and finding
+  /// the matching subregister.
+  ///
+  /// \p MI the spill reload pseudo instruction containing the offset and
+  /// spill size info
+  /// \p Reg the original virtual register being spilled (mostly a tuple
+  /// register)
+  /// \return the subregister index corresponding to the reload portion.
+  unsigned getSubRegFromReload(MachineInstr &MI, Register VReg) const;
+
   /// Replace spill instruction \p SpillMI which loads/stores from/to \p SpillFI
   /// with a COPY to the replacement register value \p VReg.
   void replaceSpillWithCopyToVReg(MachineInstr &SpillMI, int SpillFI,
@@ -439,6 +450,24 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
   return MadeChange;
 }
 
+unsigned
+AMDGPURewriteAGPRCopyMFMAImpl::getSubRegFromReload(MachineInstr &MI,
+                                                   Register Reg) const {
+  unsigned NumRegs = TRI.getRegSizeInBits(*MRI.getRegClass(Reg)) / 32;
+  unsigned NumSpilledRegs = TII.getNumSubRegsForSpillOp(MI);
+  // SubReg accesses for the tuple registers are of interest here.
+  // Skip if the entire tuple is reloaded.
+  // Note: We don't support 16-bit subreg reloads. If that assumption is
+  // changed in the future, this function should be revised.
+  if (NumRegs == 1 || NumRegs == NumSpilledRegs)
+    return AMDGPU::NoSubRegister;
+
+  unsigned StackSlotBitOffset =
+      TII.getNamedOperand(MI, AMDGPU::OpName::offset)->getImm() * 8;
+  return TRI.getSubRegIdxFromOffsetSize(StackSlotBitOffset,
+                                        NumSpilledRegs * 32);
+}
+
 void AMDGPURewriteAGPRCopyMFMAImpl::replaceSpillWithCopyToVReg(
     MachineInstr &SpillMI, int SpillFI, Register VReg) const {
   const DebugLoc &DL = SpillMI.getDebugLoc();
@@ -448,9 +477,11 @@ void AMDGPURewriteAGPRCopyMFMAImpl::replaceSpillWithCopyToVReg(
     NewCopy = BuildMI(MBB, SpillMI, DL, TII.get(TargetOpcode::COPY), VReg)
                   .add(SpillMI.getOperand(0));
   } else {
+    // Identify the subregs if SpillMI is really a subreg-load.
+    unsigned SubReg = getSubRegFromReload(SpillMI, VReg);
     NewCopy = BuildMI(MBB, SpillMI, DL, TII.get(TargetOpcode::COPY))
                   .add(SpillMI.getOperand(0))
-                  .addReg(VReg);
+                  .addReg(VReg, RegState::NoFlags, SubReg);
   }
 
   LIS.ReplaceMachineInstrInMaps(SpillMI, *NewCopy);

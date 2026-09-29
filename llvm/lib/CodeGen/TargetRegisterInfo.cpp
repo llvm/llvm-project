@@ -603,6 +603,18 @@ unsigned TargetRegisterInfo::getSubRegIdxOffset(unsigned Idx) const {
   return SubRegIdxRanges[HwMode * getNumSubRegIndices() + Idx].Offset;
 }
 
+unsigned TargetRegisterInfo::getSubRegIdxFromOffsetSize(unsigned Offset,
+                                                        unsigned Size) const {
+  unsigned NumIdx = getNumSubRegIndices();
+  unsigned Base = HwMode * NumIdx;
+  for (unsigned Idx = 1; Idx < NumIdx; Idx++) {
+    if (SubRegIdxRanges[Base + Idx].Offset == Offset &&
+        SubRegIdxRanges[Base + Idx].Size == Size)
+      return Idx;
+  }
+  return 0;
+}
+
 Register
 TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
